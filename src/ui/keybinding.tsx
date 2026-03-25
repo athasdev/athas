@@ -10,7 +10,7 @@ interface KeybindingProps {
 }
 
 const keybindingKeyVariants = cva(
-  "ui-font inline-flex min-h-4 min-w-4 items-center justify-center rounded-md border border-border bg-secondary-bg px-1 text-[10px] leading-none text-text-lighter shadow-[inset_0_-1px_0_rgba(0,0,0,0.12)]",
+  "ui-font ui-text-sm inline-flex min-h-4 min-w-4 items-center justify-center rounded-md border border-border bg-secondary-bg px-1 leading-none text-text-lighter shadow-[inset_0_-1px_0_rgba(0,0,0,0.12)]",
 );
 
 export default function Keybinding({ keys, binding, className, separator = "+" }: KeybindingProps) {
@@ -26,7 +26,7 @@ export default function Keybinding({ keys, binding, className, separator = "+" }
         <span key={index} className="flex items-center gap-0.5">
           <kbd className={keybindingKeyVariants()}>{key}</kbd>
           {index < displayKeys.length - 1 && (
-            <span className="text-[10px] text-text-lighter">{separator}</span>
+            <span className="ui-text-sm text-text-lighter">{separator}</span>
           )}
         </span>
       ))}

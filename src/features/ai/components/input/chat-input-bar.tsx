@@ -5,6 +5,7 @@ import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
@@ -649,13 +650,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   alt={image.name}
                   className="h-16 w-auto max-w-[120px] object-cover"
                 />
-                <button
+                <Button
                   onClick={() => removePastedImage(image.id)}
-                  className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
                   aria-label="Remove image"
                 >
-                  <X size={12} />
-                </button>
+                  <X />
+                </Button>
               </div>
             ))}
           </div>
@@ -726,7 +729,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             <ChatModeSelector />
 
             {hasSlashCommands && (
-              <button
+              <Button
                 onClick={() => {
                   if (inputRef.current && isInputEnabled) {
                     inputRef.current.textContent = "/";
@@ -736,21 +739,24 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
-                className="flex items-center p-1 text-text-lighter transition-colors hover:text-text"
+                variant="ghost"
+                size="icon-xs"
+                className="text-text-lighter hover:text-text"
                 title="Show slash commands"
                 aria-label="Show slash commands"
               >
-                <Slash size={10} />
-              </button>
+                <Slash />
+              </Button>
             )}
 
-            <button
+            <Button
               type="button"
               disabled={isSendDisabled}
               onClick={isStreaming ? onStopStreaming : handleSendMessage}
+              variant="ghost"
+              size="xs"
               className={cn(
-                "ui-font p-1 text-xs transition-colors duration-150",
-                "button-transition focus:outline-none",
+                "ui-font",
                 isSendDisabled
                   ? "cursor-not-allowed text-text-lighter opacity-50"
                   : (hasInputText || hasImages) && isInputEnabled
@@ -767,7 +773,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               aria-label={isStreaming ? "Stop generation" : "Send message"}
             >
               {isStreaming ? "Stop" : "Send"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

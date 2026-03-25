@@ -18,6 +18,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import Input from "@/ui/input";
@@ -28,6 +29,9 @@ interface ActionItem {
   icon: React.ReactNode;
   action: () => void;
 }
+
+const newTabRowClassName =
+  "h-auto w-full justify-start gap-3 rounded-md px-3 py-1.5 text-left hover:bg-hover";
 
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
@@ -141,38 +145,38 @@ export function EmptyEditorState() {
       {
         id: "open-folder",
         label: "Open Folder",
-        icon: <FolderOpen size={12} />,
+        icon: <FolderOpen />,
         onClick: handleOpenFolder,
       },
       {
         id: "open-file",
         label: "Open File",
-        icon: <FileText size={12} />,
+        icon: <FileText />,
         onClick: handleOpenFile,
       },
       { id: "sep-1", label: "", separator: true, onClick: () => {} },
       {
         id: "new-terminal",
         label: "New Terminal",
-        icon: <Terminal size={12} />,
+        icon: <Terminal />,
         onClick: handleOpenTerminal,
       },
       {
         id: "new-agent",
         label: "New Agent",
-        icon: <Sparkles size={12} />,
+        icon: <Sparkles />,
         onClick: handleOpenAgent,
       },
       {
         id: "open-url",
         label: "Open URL",
-        icon: <Globe size={12} />,
+        icon: <Globe />,
         onClick: handleOpenWebViewer,
       },
       {
         id: "connect-database",
         label: "Connect Database",
-        icon: <Database size={12} />,
+        icon: <Database />,
         onClick: handleOpenDatabaseConnection,
       },
     ];
@@ -189,37 +193,37 @@ export function EmptyEditorState() {
     {
       id: "folder",
       label: "Open Folder",
-      icon: <FolderOpen size={14} className="text-text-light" />,
+      icon: <FolderOpen className="text-text-light" />,
       action: handleOpenFolder,
     },
     {
       id: "file",
       label: "Open File",
-      icon: <FileText size={14} className="text-text-light" />,
+      icon: <FileText className="text-text-light" />,
       action: handleOpenFile,
     },
     {
       id: "terminal",
       label: "New Terminal",
-      icon: <Terminal size={14} className="text-text-light" />,
+      icon: <Terminal className="text-text-light" />,
       action: handleOpenTerminal,
     },
     {
       id: "agent",
       label: "New Agent",
-      icon: <Sparkles size={14} className="text-text-light" />,
+      icon: <Sparkles className="text-text-light" />,
       action: handleOpenAgent,
     },
     {
       id: "web",
       label: "Open URL",
-      icon: <Globe size={14} className="text-text-light" />,
+      icon: <Globe className="text-text-light" />,
       action: handleOpenWebViewer,
     },
     {
       id: "database",
       label: "Connect Database",
-      icon: <Database size={14} className="text-text-light" />,
+      icon: <Database className="text-text-light" />,
       action: handleOpenDatabaseConnection,
     },
   ];
@@ -231,15 +235,17 @@ export function EmptyEditorState() {
     >
       <div className="flex w-48 flex-col gap-0.5">
         {actions.map((item) => (
-          <button
+          <Button
             key={item.id}
             type="button"
             onClick={item.action}
-            className="flex items-center gap-3 rounded px-3 py-1.5 text-left transition-colors hover:bg-hover"
+            variant="ghost"
+            size="sm"
+            className={newTabRowClassName}
           >
             <span className="shrink-0">{item.icon}</span>
             <span className="text-text text-xs">{item.label}</span>
-          </button>
+          </Button>
         ))}
 
         {customActions.length > 0 && (
@@ -262,32 +268,38 @@ export function EmptyEditorState() {
               ) : (
                 <div
                   key={action.id}
-                  className="group flex items-center gap-3 rounded px-3 py-1.5 text-left transition-colors hover:bg-hover"
+                  className="group flex items-center gap-1 rounded-md px-3 py-1.5 hover:bg-hover"
                 >
-                  <button
+                  <Button
                     type="button"
                     onClick={() =>
                       openTerminalBuffer({ name: action.name, command: action.command })
                     }
-                    className="flex flex-1 items-center gap-3"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
                   >
-                    <Terminal size={14} className="shrink-0 text-text-light" />
+                    <Terminal className="shrink-0 text-text-light" />
                     <span className="text-text text-xs">{action.name}</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => handleStartEdit(action.id, action.command)}
-                    className="shrink-0 p-0.5 text-text-lighter opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
                   >
-                    <Pencil size={12} />
-                  </button>
-                  <button
+                    <Pencil />
+                  </Button>
+                  <Button
                     type="button"
                     onClick={(e) => handleDelete(action.id, e)}
-                    className="shrink-0 p-0.5 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
                   >
-                    <Trash2 size={12} />
-                  </button>
+                    <Trash2 />
+                  </Button>
                 </div>
               ),
             )}
@@ -310,14 +322,16 @@ export function EmptyEditorState() {
             />
           </div>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={handleStartAdd}
-            className="flex items-center gap-3 rounded px-3 py-1.5 text-left transition-colors hover:bg-hover"
+            variant="ghost"
+            size="sm"
+            className={newTabRowClassName}
           >
-            <Plus size={14} className="shrink-0 text-text-lighter" />
+            <Plus className="shrink-0 text-text-lighter" />
             <span className="text-text-light text-xs">Add custom action...</span>
-          </button>
+          </Button>
         )}
       </div>
 

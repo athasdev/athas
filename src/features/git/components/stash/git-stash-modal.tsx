@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
@@ -76,22 +77,23 @@ export const StashMessageModal = ({
           }}
         />
         <div className="flex justify-end gap-2">
-          <button
+          <Button
             onClick={onClose}
-            className="rounded px-3 py-1 text-text-lighter text-xs hover:bg-hover hover:text-text"
+            variant="ghost"
+            size="sm"
+            className="text-text-lighter text-xs hover:text-text"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleConfirm}
             disabled={isLoading}
-            className={cn(
-              "rounded bg-blue-600 px-3 py-1 text-white text-xs",
-              "hover:bg-blue-700 disabled:opacity-50",
-            )}
+            variant="primary"
+            size="sm"
+            className="text-xs disabled:opacity-50"
           >
             {isLoading ? "Stashing..." : "Stash"}
-          </button>
+          </Button>
         </div>
       </motion.div>
     </motion.div>,

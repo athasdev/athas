@@ -2,7 +2,7 @@ import { Database, Plus, Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Section, { SettingRow } from "../settings-section";
 
 const formatDbType = (dbType: string) => {
@@ -50,7 +50,7 @@ export const DatabaseSettings = () => {
             size="xs"
             className="gap-1.5 px-2 py-1"
           >
-            <Plus size={12} />
+            <Plus />
             Connect
           </Button>
         </SettingRow>
@@ -75,8 +75,8 @@ export const DatabaseSettings = () => {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Database size={13} className="text-text-lighter" />
-                    <div className="truncate font-medium text-text text-xs">{connection.name}</div>
+                    <Database className="text-text-lighter" />
+                    <div className="truncate text-text text-xs">{connection.name}</div>
                     <span className="rounded-full bg-primary-bg/70 px-2 py-0.5 text-[10px] text-text-lighter uppercase">
                       {formatDbType(connection.db_type)}
                     </span>
@@ -92,7 +92,7 @@ export const DatabaseSettings = () => {
                   size="xs"
                   className="gap-1.5 px-2 py-1 text-red-400 hover:text-red-300"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 />
                   Remove
                 </Button>
               </div>

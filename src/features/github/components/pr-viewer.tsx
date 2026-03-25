@@ -1,8 +1,8 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  ChevronDown,
-  ChevronRight,
+  Check,
+  CheckCircle2,
   Copy,
+  FileCode2,
   ExternalLink,
   FileText,
   GitBranch,
@@ -12,10 +12,10 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  User,
 } from "lucide-react";
 import {
   memo,
-  type ReactNode,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -24,592 +24,64 @@ import {
   useState,
   useTransition,
 } from "react";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { ReactNode } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import Badge from "@/ui/badge";
+import { Button, buttonVariants } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
+import { Tabs, type TabsItem } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
-import { useGitHubStore } from "../stores/github-store";
-import type { Label, LinkedIssue, PullRequestFile, ReviewRequest } from "../types/github";
-import GitHubMarkdown from "./github-markdown";
+import type { Commit, FilePatchState, FileStatusFilter, TabType } from "../types/pr-viewer";
 import {
-  AssigneesList,
-  CIStatusIndicator,
-  LabelBadges,
-  LinkedIssuesList,
-  MergeStatusBadge,
-  ReviewRequestsList,
-} from "./pr-status";
+  buildDiffSectionIndex,
+  copyToClipboard,
+  EXPAND_ALL_EAGER_PATCH_LIMIT,
+  EXPANDED_PATCH_BACKGROUND_BATCH,
+  extractFilePatch,
+  getCommentKey,
+  normalizeCommit,
+  resolveSafeRepoFilePath,
+  toFileDiffFromMetadata,
+} from "../utils/pr-viewer-utils";
+import { useGitHubStore } from "../stores/github-store";
+import { CommentItem } from "./comment-item";
+import { CommitItem } from "./commit-item";
+import { FileDiffView } from "./file-diff-view";
+import GitHubMarkdown from "./github-markdown";
 
-interface FileDiff {
-  path: string;
-  oldPath?: string;
-  additions: number;
-  deletions: number;
-  status: "added" | "deleted" | "modified" | "renamed";
-  lines?: string[];
-}
-
-interface Commit {
-  oid: string;
-  messageHeadline: string;
-  messageBody: string;
-  authoredDate: string;
-  url?: string;
-  authors: { login: string; name: string; email: string }[];
-}
-
-interface FilePatchData {
-  path: string;
-  oldPath?: string;
-  status: FileDiff["status"];
-  lines: string[];
-}
-
-interface DiffSectionRef {
-  start: number;
-  end: number;
-  oldPath: string;
-  newPath: string;
-}
-
-type DiffSectionIndex = Record<string, DiffSectionRef>;
-
-const EXPAND_ALL_EAGER_PATCH_LIMIT = 10;
-const EXPANDED_PATCH_BACKGROUND_BATCH = 4;
-
-function inferFileStatus(additions: number, deletions: number): FileDiff["status"] {
-  if (additions > 0 && deletions === 0) return "added";
-  if (deletions > 0 && additions === 0) return "deleted";
-  return "modified";
-}
-
-function toFileDiffFromMetadata(file: PullRequestFile): FileDiff {
-  const path = typeof file.path === "string" ? file.path.trim() : "";
-  return {
-    path,
-    additions: Number.isFinite(file.additions) ? file.additions : 0,
-    deletions: Number.isFinite(file.deletions) ? file.deletions : 0,
-    status: inferFileStatus(
-      Number.isFinite(file.additions) ? file.additions : 0,
-      Number.isFinite(file.deletions) ? file.deletions : 0,
-    ),
-  };
-}
-
-function buildDiffSectionIndex(diffText: string): DiffSectionIndex {
-  if (!diffText) return {};
-
-  const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm;
-  const headers: Array<Pick<DiffSectionRef, "start" | "oldPath" | "newPath">> = [];
-  for (let match = headerRegex.exec(diffText); match !== null; match = headerRegex.exec(diffText)) {
-    headers.push({
-      start: match.index,
-      oldPath: match[1],
-      newPath: match[2],
-    });
-  }
-
-  if (headers.length === 0) return {};
-
-  const index: DiffSectionIndex = {};
-  for (let i = 0; i < headers.length; i += 1) {
-    const current = headers[i];
-    const next = headers[i + 1];
-    const sectionRef: DiffSectionRef = {
-      start: current.start,
-      end: next ? next.start : diffText.length,
-      oldPath: current.oldPath,
-      newPath: current.newPath,
-    };
-
-    if (!index[current.newPath]) {
-      index[current.newPath] = sectionRef;
-    }
-    if (current.oldPath !== current.newPath && !index[current.oldPath]) {
-      index[current.oldPath] = sectionRef;
-    }
-  }
-
-  return index;
-}
-
-function extractFilePatch(
-  diffText: string,
-  targetPath: string,
-  sectionIndex: DiffSectionIndex,
-): FilePatchData | null {
-  if (!diffText || !targetPath) return null;
-  const sectionRef = sectionIndex[targetPath];
-  if (!sectionRef) return null;
-
-  const section = diffText.slice(sectionRef.start, sectionRef.end);
-
-  const lines = section.split("\n");
-  if (lines.length === 0) return null;
-
-  const oldPath = sectionRef.oldPath;
-  const newPath = sectionRef.newPath;
-  const patchLines: string[] = [];
-  let status: FileDiff["status"] = oldPath !== newPath ? "renamed" : "modified";
-  let inPatch = false;
-
-  for (const line of lines.slice(1)) {
-    if (line.startsWith("new file mode")) {
-      status = "added";
-      continue;
-    }
-    if (line.startsWith("deleted file mode")) {
-      status = "deleted";
-      continue;
-    }
-    if (line.startsWith("@@")) {
-      inPatch = true;
-      patchLines.push(line);
-      continue;
-    }
-    if (inPatch) {
-      patchLines.push(line);
-    }
-  }
-
-  return {
-    path: newPath,
-    oldPath: oldPath !== newPath ? oldPath : undefined,
-    status,
-    lines: patchLines,
-  };
-}
-
-function resolveSafeRepoFilePath(repoPath: string, relativePath: string): string | null {
-  const normalizedBase = repoPath.replace(/[\\/]$/, "");
-  const normalizedInput = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
-
-  if (!normalizedBase || !normalizedInput) return null;
-  if (/^[A-Za-z]:/.test(normalizedInput) || normalizedInput.startsWith("//")) return null;
-
-  const segments = normalizedInput.split("/").filter(Boolean);
-  if (
-    segments.length === 0 ||
-    segments.some((segment) => segment === "." || segment === ".." || segment.includes("\0"))
-  ) {
-    return null;
-  }
-
-  const separator = normalizedBase.includes("\\") ? "\\" : "/";
-  return `${normalizedBase}${separator}${segments.join(separator)}`;
-}
-
-function getCommentKey(comment: {
-  author: { login: string };
-  createdAt: string;
-  body: string;
-}): string {
-  return `${comment.author.login}:${comment.createdAt}:${comment.body.slice(0, 32)}`;
-}
-
-function getTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  return `${Math.floor(seconds / 604800)}w ago`;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== "object" || value === null) return null;
-  return value as Record<string, unknown>;
-}
-
-function asNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function normalizeCommitAuthor(value: unknown): Commit["authors"][number] | null {
-  const record = asRecord(value);
-  if (!record) return null;
-
-  return {
-    login: asNonEmptyString(record.login) ?? "",
-    name: asNonEmptyString(record.name) ?? "",
-    email: asNonEmptyString(record.email) ?? "",
-  };
-}
-
-function normalizeCommit(raw: unknown, index: number): Commit | null {
-  const record = asRecord(raw);
-  if (!record) return null;
-
-  const oid =
-    asNonEmptyString(record.oid) ??
-    asNonEmptyString(record.sha) ??
-    asNonEmptyString(record.id) ??
-    `commit-${index + 1}`;
-
-  const fullMessage = asNonEmptyString(record.message) ?? "";
-  const firstMessageLine = fullMessage.split("\n")[0]?.trim();
-  const messageHeadline =
-    asNonEmptyString(record.messageHeadline) ??
-    asNonEmptyString(record.title) ??
-    firstMessageLine ??
-    oid.slice(0, 7);
-
-  const messageBody =
-    asNonEmptyString(record.messageBody) ??
-    (fullMessage.includes("\n") ? fullMessage.split("\n").slice(1).join("\n").trim() : "");
-
-  const authoredDate =
-    asNonEmptyString(record.authoredDate) ??
-    asNonEmptyString(record.committedDate) ??
-    asNonEmptyString(record.committedAt) ??
-    asNonEmptyString(record.createdAt) ??
-    new Date().toISOString();
-
-  const authorsField = record.authors;
-  const authorsRecord = asRecord(authorsField);
-  const rawAuthors = (Array.isArray(authorsField) ? authorsField : null) ??
-    (authorsRecord && Array.isArray(authorsRecord.nodes) ? authorsRecord.nodes : null) ?? [
-      record.author,
-    ];
-  const normalizedAuthors = rawAuthors
-    .map(normalizeCommitAuthor)
-    .filter((author): author is Commit["authors"][number] => !!author);
-
-  return {
-    oid,
-    messageHeadline,
-    messageBody,
-    authoredDate,
-    url: asNonEmptyString(record.url) ?? undefined,
-    authors: normalizedAuthors,
-  };
-}
-
-async function copyToClipboard(value: string, successMessage: string) {
-  try {
-    await writeText(value);
-    toast.success(successMessage);
-  } catch {
-    try {
-      if (typeof navigator === "undefined" || !navigator.clipboard) {
-        throw new Error("Clipboard API is unavailable.");
-      }
-      await navigator.clipboard.writeText(value);
-      toast.success(successMessage);
-    } catch (error) {
-      toast.error(`Failed to copy: ${String(error)}`);
-    }
-  }
-}
-
-/**
- * Render content with syntax highlighting tokens
- */
-function renderTokenizedContent(content: string, tokens: HighlightToken[]): ReactNode[] {
-  if (!content || tokens.length === 0) {
-    return [content];
-  }
-
-  const sortedTokens = [...tokens].sort((a, b) => {
-    const startDiff = a.startPosition.column - b.startPosition.column;
-    if (startDiff !== 0) return startDiff;
-    const aSize = a.endPosition.column - a.startPosition.column;
-    const bSize = b.endPosition.column - b.startPosition.column;
-    return aSize - bSize;
-  });
-
-  const result: ReactNode[] = [];
-  let currentPos = 0;
-
-  for (const token of sortedTokens) {
-    const start = token.startPosition.column;
-    const end = token.endPosition.column;
-
-    if (start >= content.length) continue;
-    if (start < currentPos) continue;
-
-    if (start > currentPos) {
-      result.push(content.slice(currentPos, start));
-    }
-
-    const tokenEnd = Math.min(end, content.length);
-    if (tokenEnd > start) {
-      const tokenText = content.slice(start, tokenEnd);
-      if (token.type === "token-text") {
-        result.push(tokenText);
-      } else {
-        result.push(
-          <span key={`${start}-${tokenEnd}`} className={token.type}>
-            {tokenText}
-          </span>,
-        );
-      }
-    }
-
-    currentPos = Math.max(currentPos, tokenEnd);
-  }
-
-  if (currentPos < content.length) {
-    result.push(content.slice(currentPos));
-  }
-
-  return result;
-}
-
-interface DiffLineDisplayProps {
-  line: string;
-  index: number;
-  tokens?: HighlightToken[];
-}
-
-const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayProps) => {
-  let bgClass = "";
-  let textClass = "text-text";
-  let content = line;
-
-  if (line.startsWith("@@")) {
-    bgClass = "bg-blue-500/10";
-    textClass = "text-blue-400";
-  } else if (line.startsWith("+")) {
-    bgClass = "bg-git-added/10";
-    textClass = tokens && tokens.length > 0 ? "text-text" : "text-git-added";
-    content = line.slice(1);
-  } else if (line.startsWith("-")) {
-    bgClass = "bg-git-deleted/10";
-    textClass = tokens && tokens.length > 0 ? "text-text" : "text-git-deleted";
-    content = line.slice(1);
-  }
-
-  const renderContent = () => {
-    if (tokens && tokens.length > 0) {
-      return renderTokenizedContent(content, tokens);
-    }
-    return content || " ";
-  };
-
-  return (
-    <div className={cn("px-3 py-0 font-mono text-[11px] leading-4", bgClass, textClass)}>
-      <span className="mr-3 inline-block w-10 select-none text-right text-text-lighter/50">
-        {index + 1}
-      </span>
-      <span className="whitespace-pre">{renderContent()}</span>
-    </div>
-  );
-});
-
-DiffLineDisplay.displayName = "DiffLineDisplay";
-
-interface FileDiffViewProps {
-  file: FileDiff;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onOpenFile: (relativePath: string) => void;
-  isLoadingPatch: boolean;
-  patchError?: string;
-}
-
-const FileDiffView = memo(
-  ({ file, isExpanded, onToggle, onOpenFile, isLoadingPatch, patchError }: FileDiffViewProps) => {
-    const fileLines = file.lines ?? [];
-    const tokenMap = usePRDiffHighlighting(isExpanded ? fileLines : [], file.path);
-    const statusColors: Record<FileDiff["status"], string> = {
-      added: "bg-git-added/15 text-git-added",
-      deleted: "bg-git-deleted/15 text-git-deleted",
-      modified: "bg-git-modified/15 text-git-modified",
-      renamed: "bg-git-renamed/15 text-git-renamed",
-    };
-
-    return (
-      <div className="min-w-0 overflow-hidden rounded-lg bg-secondary-bg/35">
-        <button
-          onClick={onToggle}
-          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-hover/60"
-        >
-          {isExpanded ? (
-            <ChevronDown size={14} className="text-text-lighter" />
-          ) : (
-            <ChevronRight size={14} className="text-text-lighter" />
-          )}
-          <FileText size={14} className="text-text-lighter" />
-          <span className="min-w-0 flex-1 truncate text-text text-xs">{file.path}</span>
-          {file.oldPath && (
-            <span className="max-w-48 truncate text-[10px] text-text-lighter">
-              from {file.oldPath}
-            </span>
-          )}
-          <span
-            className={cn(
-              "rounded px-1.5 py-0.5 text-[10px] capitalize",
-              statusColors[file.status],
-            )}
-          >
-            {file.status}
-          </span>
-          <span className="text-[10px] text-git-added">+{file.additions}</span>
-          <span className="text-[10px] text-git-deleted">-{file.deletions}</span>
-        </button>
-        {isExpanded && (
-          <div className="bg-primary-bg/65">
-            <div className="flex items-center justify-between px-3 py-1.5">
-              <Tooltip content="Open file in editor" side="top">
-                <button
-                  onClick={() => onOpenFile(file.path)}
-                  className="rounded-md border border-border/70 bg-secondary-bg/70 px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
-                >
-                  Open File
-                </button>
-              </Tooltip>
-              <span className="text-[10px] text-text-lighter">
-                {isLoadingPatch ? "Loading patch..." : `${fileLines.length} diff lines`}
-              </span>
-            </div>
-            <div className="max-h-[540px] overflow-auto">
-              {isLoadingPatch ? (
-                <div className="flex items-center justify-center py-6">
-                  <RefreshCw size={14} className="animate-spin text-text-lighter" />
-                  <span className="ml-2 text-text-lighter text-xs">Loading file diff...</span>
-                </div>
-              ) : patchError ? (
-                <div className="px-3 py-4 text-center text-error text-xs">{patchError}</div>
-              ) : fileLines.length === 0 ? (
-                <div className="px-3 py-4 text-center text-text-lighter text-xs">
-                  No diff hunks available for this file.
-                </div>
-              ) : (
-                fileLines.map((line, index) => (
-                  <DiffLineDisplay
-                    key={index}
-                    line={line}
-                    index={index}
-                    tokens={tokenMap.get(index)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  },
+const prInlineButtonClass = cn(
+  buttonVariants({ variant: "outline", size: "xs" }),
+  "text-text-lighter",
 );
-
-FileDiffView.displayName = "FileDiffView";
-
-interface CommitItemProps {
-  commit: Commit;
-}
-
-const CommitItem = memo(({ commit }: CommitItemProps) => {
-  const author = commit.authors[0];
-  const shortSha = commit.oid.slice(0, 7);
-  const authorName = author?.login || author?.name || "Unknown";
-  const avatarLogin = (author?.login || "").trim();
-
-  return (
-    <div className="flex items-start gap-3 rounded-lg bg-secondary-bg/35 px-4 py-3 hover:bg-hover/50">
-      <img
-        src={`https://github.com/${encodeURIComponent(avatarLogin || "github")}.png?size=32`}
-        alt={authorName}
-        className="h-6 w-6 shrink-0 rounded-full bg-secondary-bg"
-        loading="lazy"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-text">{commit.messageHeadline}</p>
-        {commit.messageBody && (
-          <div className="mt-1">
-            <GitHubMarkdown content={commit.messageBody} className="text-text-lighter text-xs" />
-          </div>
-        )}
-        <div className="mt-1.5 flex items-center gap-2 text-text-lighter text-xs">
-          <span className="font-medium">{authorName}</span>
-          <span>committed {getTimeAgo(commit.authoredDate)}</span>
-          <code className="rounded bg-primary-bg px-1.5 py-0.5 font-mono">{shortSha}</code>
-          <Tooltip content="Copy full commit SHA" side="top">
-            <button
-              onClick={() => void copyToClipboard(commit.oid, "Commit SHA copied")}
-              className="rounded border border-transparent p-0.5 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
-              aria-label="Copy commit SHA"
-            >
-              <Copy size={11} />
-            </button>
-          </Tooltip>
-          {commit.url && (
-            <Tooltip content="Open commit on GitHub" side="top">
-              <button
-                onClick={() => window.open(commit.url, "_blank", "noopener,noreferrer")}
-                className="rounded border border-transparent p-0.5 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
-                aria-label="Open commit in browser"
-              >
-                <ExternalLink size={11} />
-              </button>
-            </Tooltip>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-CommitItem.displayName = "CommitItem";
-
-interface CommentItemProps {
-  comment: {
-    author: { login: string };
-    body: string;
-    createdAt: string;
-  };
-}
-
-const CommentItem = memo(({ comment }: CommentItemProps) => {
-  const authorLogin = comment.author.login;
-
-  return (
-    <div className="flex gap-3 rounded-lg bg-secondary-bg/35 px-4 py-4">
-      <img
-        src={`https://github.com/${authorLogin}.png?size=40`}
-        alt={authorLogin}
-        className="h-8 w-8 shrink-0 rounded-full bg-secondary-bg"
-        loading="lazy"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm text-text">{authorLogin}</span>
-          <span className="text-text-lighter text-xs">{getTimeAgo(comment.createdAt)}</span>
-        </div>
-        <div className="mt-2">
-          <GitHubMarkdown content={comment.body} />
-        </div>
-      </div>
-    </div>
-  );
-});
-
-CommentItem.displayName = "CommentItem";
 
 interface PRViewerProps {
   prNumber: number;
 }
 
-type TabType = "description" | "files" | "commits" | "comments";
-type FileStatusFilter = "all" | "added" | "deleted" | "modified" | "renamed";
-type FilePatchState = {
-  loading: boolean;
-  error?: string;
-  data?: FilePatchData;
-};
+interface OverviewFieldProps {
+  icon?: ReactNode;
+  children: ReactNode;
+}
+
+function OverviewField({ icon, children }: OverviewFieldProps) {
+  return (
+    <div className="ui-font ui-text-sm flex min-w-0 items-center gap-2 text-text-lighter">
+      {icon ? <span className="shrink-0 text-text-lighter">{icon}</span> : null}
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
 
 const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+  const buffers = useBufferStore.use.buffers();
   const {
     selectedPRDetails,
     selectedPRDiff,
@@ -631,7 +103,6 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const patchLoadSeqRef = useRef(0);
   const [, startTabTransition] = useTransition();
 
-  // Load PR data when component mounts
   useEffect(() => {
     if (repoPath && prNumber) {
       void selectPR(repoPath, prNumber);
@@ -653,6 +124,46 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       void fetchPRContent(repoPath, prNumber, { mode: "comments" });
     }
   }, [activeTab, repoPath, prNumber, fetchPRContent]);
+
+  useEffect(() => {
+    if (!repoPath || !prNumber || !selectedPRDetails || activeTab !== "description") return;
+
+    const requestIdle = (
+      window as Window & {
+        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      }
+    ).requestIdleCallback;
+
+    const prefetch = () => {
+      void fetchPRContent(repoPath, prNumber, { mode: "comments" });
+
+      if ((selectedPRDetails.changedFiles ?? 0) <= 12) {
+        void fetchPRContent(repoPath, prNumber, { mode: "files" });
+      }
+    };
+
+    if (typeof requestIdle === "function") {
+      requestIdle(prefetch, { timeout: 250 });
+      return;
+    }
+
+    const timeoutId = window.setTimeout(prefetch, 120);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeTab, fetchPRContent, prNumber, repoPath, selectedPRDetails]);
+
+  useEffect(() => {
+    if (!selectedPRDetails) return;
+
+    const prBuffer = buffers.find(
+      (buffer) => buffer.type === "pullRequest" && buffer.prNumber === selectedPRDetails.number,
+    );
+    if (!prBuffer || prBuffer.name === selectedPRDetails.title) return;
+
+    useBufferStore.getState().actions.updateBuffer({
+      ...prBuffer,
+      name: selectedPRDetails.title,
+    });
+  }, [buffers, selectedPRDetails]);
 
   const baseDiffFiles = useMemo(() => {
     return selectedPRFiles.map(toFileDiffFromMetadata).filter((file) => file.path.length > 0);
@@ -684,6 +195,93 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       .map((commit, index) => normalizeCommit(commit, index))
       .filter((commit): commit is Commit => !!commit);
   }, [selectedPRDetails?.commits]);
+
+  const reviewerLogins = useMemo(() => {
+    return (selectedPRDetails?.reviewRequests ?? []).map((reviewer) => `@${reviewer.login}`);
+  }, [selectedPRDetails?.reviewRequests]);
+
+  const passedChecksCount = useMemo(() => {
+    return (selectedPRDetails?.statusChecks ?? []).filter(
+      (check) => check.conclusion === "SUCCESS",
+    ).length;
+  }, [selectedPRDetails?.statusChecks]);
+
+  const tabItems = useMemo<TabsItem[]>(() => {
+    return [
+      {
+        id: "description",
+        label: "Description",
+        icon: <FileText />,
+        isActive: activeTab === "description",
+        onClick: () =>
+          startTabTransition(() => {
+            setActiveTab("description");
+          }),
+        tooltip: { content: "PR description", side: "bottom" },
+      },
+      {
+        id: "files",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <span>Files</span>
+            <Badge variant="muted" size="compact" shape="pill">
+              {selectedPRDetails?.changedFiles || selectedPRFiles.length || 0}
+            </Badge>
+          </span>
+        ),
+        icon: <FileCode2 />,
+        isActive: activeTab === "files",
+        onClick: () =>
+          startTabTransition(() => {
+            setActiveTab("files");
+          }),
+        tooltip: { content: "Changed files and diff", side: "bottom" },
+      },
+      {
+        id: "commits",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <span>Commits</span>
+            <Badge variant="muted" size="compact" shape="pill">
+              {commits.length}
+            </Badge>
+          </span>
+        ),
+        icon: <GitCommit />,
+        isActive: activeTab === "commits",
+        onClick: () =>
+          startTabTransition(() => {
+            setActiveTab("commits");
+          }),
+        tooltip: { content: "Commits in this PR", side: "bottom" },
+      },
+      {
+        id: "comments",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <span>Comments</span>
+            <Badge variant="muted" size="compact" shape="pill">
+              {selectedPRComments.length}
+            </Badge>
+          </span>
+        ),
+        icon: <MessageSquare />,
+        isActive: activeTab === "comments",
+        onClick: () =>
+          startTabTransition(() => {
+            setActiveTab("comments");
+          }),
+        tooltip: { content: "Discussion and comments", side: "bottom" },
+      },
+    ];
+  }, [
+    activeTab,
+    commits.length,
+    selectedPRComments.length,
+    selectedPRDetails?.changedFiles,
+    selectedPRFiles.length,
+    startTabTransition,
+  ]);
 
   const deferredFileQuery = useDeferredValue(fileQuery);
   const filteredDiff = useMemo(() => {
@@ -721,7 +319,10 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       if (activeTab === "files") {
         void fetchPRContent(repoPath, prNumber, { force: true, mode: "files" });
       } else if (activeTab === "comments") {
-        void fetchPRContent(repoPath, prNumber, { force: true, mode: "comments" });
+        void fetchPRContent(repoPath, prNumber, {
+          force: true,
+          mode: "comments",
+        });
       }
     }
   }, [activeTab, repoPath, prNumber, selectPR, fetchPRContent]);
@@ -874,8 +475,8 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
     return (
       <div className="flex h-full flex-col bg-primary-bg">
         <div className="flex flex-1 items-center justify-center">
-          <RefreshCw size={20} className="animate-spin text-text-lighter" />
-          <span className="ml-2 text-sm text-text-lighter">Loading PR #{prNumber}...</span>
+          <RefreshCw className="animate-spin text-text-lighter" />
+          <span className="ml-2 ui-font ui-text-sm text-text-lighter">Loading PR #{prNumber}...</span>
         </div>
       </div>
     );
@@ -885,13 +486,10 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
     return (
       <div className="flex h-full flex-col bg-primary-bg">
         <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-          <p className="text-error text-sm">{detailsError}</p>
-          <button
-            onClick={handleRefresh}
-            className="mt-3 rounded bg-hover px-4 py-2 text-sm text-text hover:bg-selected"
-          >
+          <p className="ui-font ui-text-sm text-error">{detailsError}</p>
+          <Button onClick={handleRefresh} variant="secondary" size="sm" className="mt-3">
             Try again
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -904,368 +502,289 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const isRefreshingDetails = isLoadingDetails && !!selectedPRDetails;
   const pr = selectedPRDetails;
   const changedFilesCount = pr.changedFiles || selectedPRFiles.length || 0;
+  const checksSummary =
+    pr.statusChecks?.length > 0 ? `${passedChecksCount} checks passed` : "No checks reported";
+  const changesSummary = `${changedFilesCount} files +${pr.additions} -${pr.deletions}`;
+  const metaItems = [
+    pr.reviewDecision === "APPROVED"
+      ? "Approved"
+      : pr.reviewDecision === "CHANGES_REQUESTED"
+        ? "Changes requested"
+        : pr.reviewDecision === "REVIEW_REQUIRED"
+          ? "Review required"
+          : null,
+    pr.mergeable === "CONFLICTING"
+      ? "Has conflicts"
+      : pr.mergeStateStatus === "BEHIND"
+        ? "Behind base"
+        : null,
+    pr.isDraft ? "Draft" : null,
+    pr.assignees?.length
+      ? `Assigned ${pr.assignees.map((assignee) => `@${assignee.login}`).join(", ")}`
+      : null,
+    pr.linkedIssues?.length
+      ? `Linked ${pr.linkedIssues.map((issue) => `#${issue.number}`).join(", ")}`
+      : null,
+    pr.labels?.length ? pr.labels.map((label) => label.name).join(", ") : null,
+  ].filter((item): item is string => !!item);
 
   return (
-    <div className="flex h-full flex-col bg-primary-bg">
+    <div className="flex h-full flex-col overflow-y-auto bg-primary-bg">
       {isRefreshingDetails && (
         <div className="h-px w-full overflow-hidden bg-border">
           <div className="h-full w-1/3 animate-pulse bg-accent/70" />
         </div>
       )}
-      {/* Header */}
-      <div className="shrink-0 bg-secondary-bg/60 px-3 py-3 sm:px-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start gap-2">
-              <GitPullRequest
-                size={18}
-                className={cn(
-                  "mt-0.5 shrink-0",
-                  pr.state === "MERGED"
-                    ? "text-purple-500"
-                    : pr.state === "CLOSED"
-                      ? "text-red-500"
-                      : "text-green-500",
-                )}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 font-mono text-[11px] text-text-lighter">
-                    #{pr.number}
-                  </span>
-                  <h1 className="min-w-0 break-words font-medium text-sm text-text sm:text-base">
-                    {pr.title}
-                  </h1>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-lighter">
-                  <span className="font-medium text-text-light">@{pr.author.login}</span>
-                  <span>opened {getTimeAgo(pr.createdAt)}</span>
-                  <span>updated {getTimeAgo(pr.updatedAt)}</span>
-                  <div className="flex min-w-0 items-center gap-1 rounded-md border border-border/70 bg-primary-bg/65 px-1.5 py-0.5">
-                    <GitBranch size={11} />
-                    <span className="truncate font-mono text-[10px]">
-                      {pr.headRef} → {pr.baseRef}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
-                  <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                    {changedFilesCount} files
-                  </span>
-                  <span className="rounded-md bg-git-added/15 px-2 py-1 text-git-added">
-                    +{pr.additions}
-                  </span>
-                  <span className="rounded-md bg-git-deleted/15 px-2 py-1 text-git-deleted">
-                    -{pr.deletions}
-                  </span>
-                  <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                    {commits.length} commits
-                  </span>
-                </div>
+
+      <div className="shrink-0 px-3 py-4 sm:px-5">
+        <div className="flex flex-col gap-4 border-border/60 border-b pb-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <h1 className="ui-font ui-text-lg leading-tight font-medium text-text">{pr.title}</h1>
+              <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 text-text-lighter">
+                <span>{`athas#${pr.number}`}</span>
+                <span>&middot;</span>
+                <span>{pr.baseRef}</span>
+                <span>{`← ${pr.headRef}`}</span>
               </div>
             </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-1">
-            {pr.isDraft && (
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
-                Draft
-              </span>
-            )}
-            {pr.reviewDecision && (
-              <span
-                className={cn(
-                  "rounded-md px-2 py-1 text-[10px]",
-                  pr.reviewDecision === "APPROVED"
-                    ? "bg-green-500/20 text-green-500"
-                    : pr.reviewDecision === "CHANGES_REQUESTED"
-                      ? "bg-red-500/20 text-red-500"
-                      : "bg-yellow-500/20 text-yellow-500",
-                )}
-              >
-                {pr.reviewDecision === "APPROVED"
-                  ? "Approved"
-                  : pr.reviewDecision === "CHANGES_REQUESTED"
-                    ? "Changes Requested"
-                    : "Review Required"}
-              </span>
-            )}
-            <Tooltip content="Refresh PR data" side="bottom">
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshingDetails}
-                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
-                aria-label="Refresh PR data"
-              >
-                <RefreshCw size={14} className={isRefreshingDetails ? "animate-spin" : ""} />
-              </button>
-            </Tooltip>
-            <Tooltip content="Checkout PR branch" side="bottom">
-              <button
-                onClick={handleCheckout}
-                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
-                aria-label="Checkout PR branch"
-              >
-                <GitBranch size={14} />
-              </button>
-            </Tooltip>
-            <Tooltip content="Open on GitHub" side="bottom">
-              <button
-                onClick={handleOpenInBrowser}
-                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
-                aria-label="Open pull request in browser"
-              >
-                <ExternalLink size={14} />
-              </button>
-            </Tooltip>
-            <Tooltip content="Copy PR link" side="bottom">
-              <button
-                onClick={handleCopyPRLink}
-                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
-                aria-label="Copy PR link"
-              >
-                <Copy size={14} />
-              </button>
-            </Tooltip>
-            <Tooltip content="Copy branch name" side="bottom">
-              <button
-                onClick={handleCopyBranchName}
-                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
-                aria-label="Copy branch name"
-              >
-                <GitBranch size={14} />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
-      </div>
 
-      {/* Status bar */}
-      {(pr.statusChecks?.length > 0 ||
-        pr.mergeStateStatus ||
-        pr.linkedIssues?.length > 0 ||
-        pr.reviewRequests?.length > 0 ||
-        pr.labels?.length > 0 ||
-        pr.assignees?.length > 0) && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 bg-secondary-bg/45 px-4 py-2">
-          {pr.statusChecks && pr.statusChecks.length > 0 && (
-            <CIStatusIndicator checks={pr.statusChecks} />
-          )}
-          <MergeStatusBadge
-            mergeStateStatus={pr.mergeStateStatus}
-            mergeable={pr.mergeable}
-            reviewDecision={pr.reviewDecision}
-          />
-          {pr.linkedIssues && pr.linkedIssues.length > 0 && (
-            <LinkedIssuesList issues={pr.linkedIssues as LinkedIssue[]} />
-          )}
-          {pr.reviewRequests && pr.reviewRequests.length > 0 && (
-            <ReviewRequestsList reviewRequests={pr.reviewRequests as ReviewRequest[]} />
-          )}
-          {pr.labels && pr.labels.length > 0 && <LabelBadges labels={pr.labels as Label[]} />}
-          {pr.assignees && pr.assignees.length > 0 && <AssigneesList assignees={pr.assignees} />}
-        </div>
-      )}
-      {detailsError && (
-        <div className="flex shrink-0 items-center justify-between gap-2 bg-error/8 px-4 py-2">
-          <p className="truncate text-[11px] text-error/90">{detailsError}</p>
-          <button
-            onClick={handleRefresh}
-            className="shrink-0 rounded-md border border-error/40 px-2 py-1 text-[10px] text-error/90 hover:bg-error/10"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="shrink-0 bg-secondary-bg/55 px-3 py-2 sm:px-4">
-        <div className="scrollbar-hidden flex min-w-0 overflow-x-auto">
-          <div className="inline-flex items-center gap-1 rounded-xl border border-border/70 bg-primary-bg/55 p-1">
-            <Tooltip content="PR description" side="bottom">
-              <button
-                onClick={() =>
-                  startTabTransition(() => {
-                    setActiveTab("description");
-                  })
-                }
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
-                  activeTab === "description"
-                    ? "border border-border/80 bg-primary-bg text-text"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
-                )}
-              >
-                <FileText size={13} />
-                Description
-              </button>
-            </Tooltip>
-            <Tooltip content="Changed files and diff" side="bottom">
-              <button
-                onClick={() =>
-                  startTabTransition(() => {
-                    setActiveTab("files");
-                  })
-                }
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
-                  activeTab === "files"
-                    ? "border border-border/80 bg-primary-bg text-text"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
-                )}
-              >
-                <FileText size={13} />
-                Files
-                <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
-                  {changedFilesCount}
-                </span>
-              </button>
-            </Tooltip>
-            <Tooltip content="Commits in this PR" side="bottom">
-              <button
-                onClick={() =>
-                  startTabTransition(() => {
-                    setActiveTab("commits");
-                  })
-                }
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
-                  activeTab === "commits"
-                    ? "border border-border/80 bg-primary-bg text-text"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
-                )}
-              >
-                <GitCommit size={13} />
-                Commits
-                <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
-                  {commits.length}
-                </span>
-              </button>
-            </Tooltip>
-            <Tooltip content="Discussion and comments" side="bottom">
-              <button
-                onClick={() =>
-                  startTabTransition(() => {
-                    setActiveTab("comments");
-                  })
-                }
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
-                  activeTab === "comments"
-                    ? "border border-border/80 bg-primary-bg text-text"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
-                )}
-              >
-                <MessageSquare size={13} />
-                Comments
-                <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
-                  {selectedPRComments.length}
-                </span>
-              </button>
-            </Tooltip>
+            <div className="flex shrink-0 flex-wrap items-center gap-1">
+              <Tooltip content="Refresh PR data" side="bottom">
+                <Button
+                  onClick={handleRefresh}
+                  disabled={isRefreshingDetails}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Refresh PR data"
+                >
+                  <RefreshCw className={isRefreshingDetails ? "animate-spin" : ""} />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Checkout PR branch" side="bottom">
+                <Button
+                  onClick={handleCheckout}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Checkout PR branch"
+                >
+                  <GitBranch />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Open on GitHub" side="bottom">
+                <Button
+                  onClick={handleOpenInBrowser}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Open pull request in browser"
+                >
+                  <ExternalLink />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Copy PR link" side="bottom">
+                <Button
+                  onClick={handleCopyPRLink}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Copy PR link"
+                >
+                  <Copy />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Copy branch name" side="bottom">
+                <Button
+                  onClick={handleCopyBranchName}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Copy branch name"
+                >
+                  <GitBranch />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        {/* Description Tab */}
-        {activeTab === "description" && (
-          <div className="p-3 sm:p-4">
-            {pr.body ? (
-              <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-3 sm:p-4">
-                <GitHubMarkdown
-                  content={pr.body}
-                  className="github-markdown-pr"
-                  contentClassName="github-markdown-pr-content"
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <OverviewField icon={<User />}>
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <img
+                  src={
+                    pr.author.avatarUrl ||
+                    `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`
+                  }
+                  alt={pr.author.login}
+                  className="size-4 shrink-0 rounded-full bg-secondary-bg"
+                  loading="lazy"
                 />
-              </div>
+                <span className="truncate text-text-light">{pr.author.login}</span>
+              </span>
+            </OverviewField>
+            <OverviewField icon={<FileCode2 />}>
+              <span className="text-text-lighter">Changes </span>
+              <span className="text-text-light">{changesSummary}</span>
+            </OverviewField>
+            <OverviewField icon={<Check />}>
+              {pr.statusChecks?.length > 0 && <CheckCircle2 className="mr-1 inline text-green-500" />}
+              <span className="text-text-light">{checksSummary}</span>
+            </OverviewField>
+            <OverviewField icon={<GitPullRequest />}>
+              {pr.reviewRequests?.length > 0 ? (
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <span className="text-text-lighter">Reviewers </span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    {pr.reviewRequests.slice(0, 3).map((reviewer) => (
+                      <img
+                        key={reviewer.login}
+                        src={
+                          reviewer.avatarUrl ||
+                          `https://github.com/${encodeURIComponent(reviewer.login || "github")}.png?size=32`
+                        }
+                        alt={reviewer.login}
+                        className="size-4 shrink-0 rounded-full bg-secondary-bg"
+                        loading="lazy"
+                      />
+                    ))}
+                    <span className="truncate text-text-light">{reviewerLogins.join(", ")}</span>
+                  </span>
+                </span>
+              ) : (
+                <span className="text-text-light">No reviewers</span>
+              )}
+            </OverviewField>
+          </div>
+
+          {metaItems.length > 0 && (
+            <div className="ui-font ui-text-sm flex flex-wrap items-center gap-x-2 text-text-lighter">
+              {metaItems.map((item, index) => (
+                <span key={`${item}-${index}`} className="inline-flex items-center gap-x-2">
+                  {index > 0 ? <span>&middot;</span> : null}
+                  <span>{item}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {detailsError && (
+        <div className="px-3 pb-3 sm:px-5">
+          <div className="flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
+            <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              size="xs"
+              className="shrink-0 border-error/40 text-error/90 hover:bg-error/10"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="shrink-0 px-3 pb-3 sm:px-5">
+        <Tabs items={tabItems} variant="pill" size="md" className="w-fit max-w-full overflow-x-auto" />
+      </div>
+
+      <div className="min-w-0 px-3 pb-4 sm:px-5">
+        {activeTab === "description" && (
+          <div className="min-w-0">
+            {pr.body ? (
+              <GitHubMarkdown
+                content={pr.body}
+                className="github-markdown-pr"
+                contentClassName="github-markdown-pr-content"
+              />
             ) : (
-              <p className="text-xs text-text-lighter italic">No description provided</p>
+              <p className="ui-font ui-text-sm italic text-text-lighter">No description provided</p>
             )}
           </div>
         )}
 
-        {/* Files Tab */}
         {activeTab === "files" && (
-          <div className="min-w-0 p-3 sm:p-4">
-            <div className="mb-3 rounded-xl border border-border/60 bg-secondary-bg/35 p-2.5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={handleExpandAllFiles}
-                    className="rounded-md border border-border/70 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
-                  >
-                    Expand All
-                  </button>
-                  <button
-                    onClick={handleCollapseAllFiles}
-                    className="rounded-md border border-border/70 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
-                  >
-                    Collapse All
-                  </button>
-                  <span className="rounded-md border border-border/70 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
-                    {filteredDiff.length} of {diffFiles.length} files
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <div className="relative">
-                    <Input
-                      value={fileQuery}
-                      onChange={(e) => setFileQuery(e.target.value)}
-                      placeholder="Search changed files..."
-                      leftIcon={Search}
-                      size="md"
-                      className="ui-font w-full rounded-md border-border/70 bg-primary-bg/70 sm:w-56"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Select
-                      value={fileStatusFilter}
-                      onChange={(value) => setFileStatusFilter(value as FileStatusFilter)}
-                      options={[
-                        { value: "all", label: "All statuses" },
-                        { value: "added", label: "Added" },
-                        { value: "modified", label: "Modified" },
-                        { value: "deleted", label: "Deleted" },
-                        { value: "renamed", label: "Renamed" },
-                      ]}
-                      size="md"
-                      leftIcon={SlidersHorizontal}
-                      className="w-full rounded-md border-border/70 bg-primary-bg/70 sm:w-40"
-                    />
-                  </div>
-                </div>
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={handleExpandAllFiles}
+                  className={prInlineButtonClass}
+                  aria-label="Expand all files"
+                >
+                  Expand All
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={handleCollapseAllFiles}
+                  className={prInlineButtonClass}
+                  aria-label="Collapse all files"
+                >
+                  Collapse All
+                </Button>
+                <Badge shape="pill" className="text-text-lighter">
+                  {filteredDiff.length} of {diffFiles.length} files
+                </Badge>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={fileQuery}
+                  onChange={(e) => setFileQuery(e.target.value)}
+                  placeholder="Search changed files..."
+                  leftIcon={Search}
+                  size="md"
+                  className="w-full border-border/70 bg-primary-bg/70 sm:w-64"
+                />
+                <Select
+                  value={fileStatusFilter}
+                  onChange={(value) => setFileStatusFilter(value as FileStatusFilter)}
+                  options={[
+                    { value: "all", label: "All statuses" },
+                    { value: "added", label: "Added" },
+                    { value: "modified", label: "Modified" },
+                    { value: "deleted", label: "Deleted" },
+                    { value: "renamed", label: "Renamed" },
+                  ]}
+                  size="md"
+                  leftIcon={SlidersHorizontal}
+                  className="w-full border-border/70 bg-primary-bg/70 sm:w-44"
+                />
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-1">
+            <div className="pt-1">
               {isLoadingContent && !selectedPRDiff ? (
                 <div className="flex items-center justify-center p-8">
-                  <RefreshCw size={16} className="animate-spin text-text-lighter" />
-                  <span className="ml-2 text-text-lighter text-xs">Loading diff...</span>
+                  <RefreshCw className="animate-spin text-text-lighter" />
+                  <span className="ml-2 ui-font ui-text-sm text-text-lighter">Loading diff...</span>
                 </div>
               ) : contentError ? (
                 <div className="flex items-center justify-center p-8 text-center">
                   <div>
-                    <p className="text-error text-xs">{contentError}</p>
-                    <button
+                    <p className="ui-font ui-text-sm text-error">{contentError}</p>
+                    <Button
                       onClick={handleRefresh}
-                      className="mt-2 rounded-md border border-error/40 px-2 py-1 text-[10px] text-error/90 hover:bg-error/10"
+                      variant="outline"
+                      size="xs"
+                      className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
                     >
                       Retry
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : diffFiles.length === 0 ? (
                 <div className="flex items-center justify-center p-8">
-                  <p className="text-sm text-text-lighter">No file changes</p>
+                  <p className="ui-font ui-text-sm text-text-lighter">No file changes</p>
                 </div>
               ) : filteredDiff.length === 0 ? (
                 <div className="flex items-center justify-center p-8">
-                  <p className="text-sm text-text-lighter">No files match your filters</p>
+                  <p className="ui-font ui-text-sm text-text-lighter">No files match your filters</p>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {filteredDiff.map((file) => (
                     <FileDiffView
                       key={file.path}
@@ -1283,58 +802,56 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
           </div>
         )}
 
-        {/* Commits Tab */}
         {activeTab === "commits" && (
-          <div className="p-3 sm:p-4">
-            <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-1">
-              {commits.length === 0 ? (
-                <div className="flex items-center justify-center p-8">
-                  <p className="text-sm text-text-lighter">No commits</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {commits.map((commit) => (
-                    <CommitItem key={commit.oid} commit={commit} />
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="pt-1">
+            {commits.length === 0 ? (
+              <div className="flex items-center justify-center p-8">
+                <p className="ui-font ui-text-sm text-text-lighter">No commits</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {commits.map((commit) => (
+                  <CommitItem key={commit.oid} commit={commit} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Comments Tab */}
         {activeTab === "comments" && (
-          <div className="p-3 sm:p-4">
-            <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-1">
-              {isLoadingContent && selectedPRComments.length === 0 ? (
-                <div className="flex items-center justify-center p-8">
-                  <RefreshCw size={16} className="animate-spin text-text-lighter" />
-                  <span className="ml-2 text-text-lighter text-xs">Loading comments...</span>
+          <div className="pt-1">
+            {isLoadingContent && selectedPRComments.length === 0 ? (
+              <div className="flex items-center justify-center p-8">
+                <RefreshCw className="animate-spin text-text-lighter" />
+                <span className="ml-2 ui-font ui-text-sm text-text-lighter">
+                  Loading comments...
+                </span>
+              </div>
+            ) : contentError ? (
+              <div className="flex items-center justify-center p-8 text-center">
+                <div>
+                  <p className="ui-font ui-text-sm text-error">{contentError}</p>
+                  <Button
+                    onClick={handleRefresh}
+                    variant="outline"
+                    size="xs"
+                    className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+                  >
+                    Retry
+                  </Button>
                 </div>
-              ) : contentError ? (
-                <div className="flex items-center justify-center p-8 text-center">
-                  <div>
-                    <p className="text-error text-xs">{contentError}</p>
-                    <button
-                      onClick={handleRefresh}
-                      className="mt-2 rounded-md border border-error/40 px-2 py-1 text-[10px] text-error/90 hover:bg-error/10"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                </div>
-              ) : selectedPRComments.length === 0 ? (
-                <div className="flex items-center justify-center p-8">
-                  <p className="text-sm text-text-lighter">No comments</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {selectedPRComments.map((comment, index) => (
-                    <CommentItem key={getCommentKey(comment) || `${index}`} comment={comment} />
-                  ))}
-                </div>
-              )}
-            </div>
+              </div>
+            ) : selectedPRComments.length === 0 ? (
+              <div className="flex items-center justify-center p-8">
+                <p className="ui-font ui-text-sm text-text-lighter">No comments</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {selectedPRComments.map((comment, index) => (
+                  <CommentItem key={getCommentKey(comment) || `${index}`} comment={comment} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

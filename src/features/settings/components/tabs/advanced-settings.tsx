@@ -1,6 +1,6 @@
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Section, { SettingRow } from "../settings-section";
 
 export const AdvancedSettings = () => {

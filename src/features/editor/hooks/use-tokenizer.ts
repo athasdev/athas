@@ -1,19 +1,13 @@
 /**
- * Syntax tokenization hook with support for incremental tokenization
- * Uses WASM Tree-sitter parsers loaded from IndexedDB
+ * Syntax tokenization hook backed by a dedicated worker.
+ * This keeps Tree-sitter parsing and query execution off the UI thread.
  */
 
 import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
-import { indexedDBParserCache, type ParserCacheEntry } from "../lib/wasm-parser/cache-indexeddb";
-import { fetchHighlightQuery, getDefaultParserWasmUrl } from "../lib/wasm-parser/extension-assets";
-import {
-  tokenizeCodeWithTree,
-  tokenizeRange as wasmTokenizeRange,
-} from "../lib/wasm-parser/tokenizer";
+import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "../lib/wasm-parser/types";
-import { useTreeCacheStore } from "../stores/tree-cache-store";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { usePerformanceMonitor } from "./use-performance";
@@ -28,7 +22,6 @@ interface TokenizerOptions {
 
 interface TokenCache {
   fullTokens: Token[];
-  lastFullTokenizeTime: number;
   previousContent: string;
 }
 
@@ -39,81 +32,10 @@ interface TextMetricsCache {
   lineCount: number;
 }
 
-const QUERY_REFRESHED_THIS_SESSION = new Set<string>();
-
 export function getLanguageId(filePath: string): string | null {
   return getLanguageIdFromPath(filePath);
 }
 
-function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string): boolean {
-  if (!queryText.trim()) {
-    return true;
-  }
-
-  // Existing TypeScript query in old installs was too limited, refresh from local extension.
-  if (languageId === "typescript" && queryText.trim().length < 1000) {
-    return true;
-  }
-
-  // Older cached C++ queries can reference nodes not present in the shipped parser.
-  if (languageId === "cpp" && queryText.includes("(module_name")) {
-    return true;
-  }
-
-  return false;
-}
-
-async function resolveHighlightQuery(
-  languageId: string,
-  cached?: ParserCacheEntry,
-): Promise<string> {
-  let highlightQuery = cached?.highlightQuery || "";
-  const shouldTryRefresh =
-    shouldRefreshLegacyHighlightQuery(languageId, highlightQuery) ||
-    !QUERY_REFRESHED_THIS_SESSION.has(languageId) ||
-    !highlightQuery.trim();
-
-  if (!shouldTryRefresh) {
-    return highlightQuery;
-  }
-
-  try {
-    const { query: latestQuery, sourceUrl } = await fetchHighlightQuery(languageId, {
-      wasmUrl: cached?.sourceUrl,
-      cacheMode: "no-store",
-    });
-
-    if (!latestQuery.trim()) {
-      QUERY_REFRESHED_THIS_SESSION.add(languageId);
-      return highlightQuery;
-    }
-
-    if (cached && latestQuery !== highlightQuery) {
-      await indexedDBParserCache.set({
-        ...cached,
-        highlightQuery: latestQuery,
-      });
-      logger.info(
-        "Editor",
-        `[Tokenizer] Refreshed highlight query from ${sourceUrl || "fallback source"}`,
-      );
-      highlightQuery = latestQuery;
-    } else if (!cached) {
-      highlightQuery = latestQuery;
-    }
-
-    QUERY_REFRESHED_THIS_SESSION.add(languageId);
-  } catch {
-    logger.warn("Editor", `[Tokenizer] Failed to refresh highlight query for ${languageId}`);
-    QUERY_REFRESHED_THIS_SESSION.add(languageId);
-  }
-
-  return highlightQuery;
-}
-
-/**
- * Convert WASM HighlightToken to Token format used by the editor
- */
 function convertToToken(highlightToken: HighlightToken): Token {
   return {
     start: highlightToken.startIndex,
@@ -122,8 +44,9 @@ function convertToToken(highlightToken: HighlightToken): Token {
   };
 }
 
-const FULL_TOKENIZE_INTERVAL = 30000; // Re-tokenize full document every 30 seconds
-const LARGE_FILE_LINE_THRESHOLD = 20000; // Use viewport-only strategy for very large files
+const LARGE_FILE_LINE_THRESHOLD = 20000;
+const BACKGROUND_FULL_TOKENIZE_CHAR_THRESHOLD = 200_000;
+const BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD = 4_000;
 
 export function useTokenizer({
   filePath,
@@ -136,12 +59,11 @@ export function useTokenizer({
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<TokenCache>({
     fullTokens: [],
-    lastFullTokenizeTime: 0,
     previousContent: "",
   });
   const textMetricsRef = useRef<TextMetricsCache | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const treeCacheActions = useTreeCacheStore.use.actions();
+  const requestVersionRef = useRef(0);
+  const backgroundSweepVersionRef = useRef(0);
   const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
 
   const getTextMetrics = useCallback((text: string): TextMetricsCache => {
@@ -162,12 +84,9 @@ export function useTokenizer({
     return nextMetrics;
   }, []);
 
-  /**
-   * Tokenize the full document using WASM parser
-   */
   const tokenizeFull = useCallback(
     async (text: string) => {
-      if (!enabled || !filePath) return;
+      if (!enabled || !filePath || !bufferId) return;
 
       const languageId = getLanguageId(filePath);
       if (!languageId) {
@@ -176,165 +95,92 @@ export function useTokenizer({
         return;
       }
 
-      // Abort any in-flight tokenization
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
+      const requestVersion = ++requestVersionRef.current;
+      const normalizedText = normalizeLineEndings(text);
 
       setLoading(true);
+      startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
+
       try {
-        const normalizedText = normalizeLineEndings(text);
-        startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
-
-        const wasmPath = getDefaultParserWasmUrl(languageId);
-        const cached = await indexedDBParserCache.get(languageId);
-        if (controller.signal.aborted) return;
-
-        const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
-        if (controller.signal.aborted) return;
-
-        const parseResult = await tokenizeCodeWithTree(normalizedText, languageId, {
+        const result = await tokenizerWorkerClient.tokenize({
+          bufferId,
+          content: normalizedText,
           languageId,
-          wasmPath,
-          highlightQuery,
+          mode: "full",
         });
-        if (controller.signal.aborted) return;
 
-        if (bufferId && parseResult.tree) {
-          treeCacheActions.setTree(bufferId, parseResult.tree, normalizedText.length, languageId);
-        }
+        if (requestVersion !== requestVersionRef.current) return;
 
-        const newTokens = parseResult.tokens.map(convertToToken);
-
+        const newTokens = result.tokens.map(convertToToken);
         setTokens(newTokens);
-        setTokenizedContent(normalizedText);
+        setTokenizedContent(result.normalizedText);
         cacheRef.current = {
           fullTokens: newTokens,
-          lastFullTokenizeTime: Date.now(),
-          previousContent: normalizedText,
+          previousContent: result.normalizedText,
         };
       } catch (error) {
-        if (controller.signal.aborted) return;
+        if (requestVersion !== requestVersionRef.current) return;
         logger.warn("Editor", "[Tokenizer] Full tokenization failed:", error);
         setTokens([]);
         setTokenizedContent("");
       } finally {
-        if (!controller.signal.aborted) {
+        if (requestVersion === requestVersionRef.current) {
           setLoading(false);
         }
-        endMeasure(`tokenizeFull (len: ${normalizeLineEndings(text).length})`);
+        endMeasure(`tokenizeFull (len: ${normalizedText.length})`);
       }
     },
-    [enabled, filePath, bufferId, treeCacheActions],
+    [enabled, filePath, bufferId, startMeasure, endMeasure],
   );
 
-  /**
-   * Tokenize only a specific line range (incremental)
-   */
   const tokenizeRangeInternal = useCallback(
     async (text: string, viewportRange: ViewportRange) => {
-      if (!enabled || !filePath) return;
+      if (!enabled || !filePath || !bufferId) return;
 
       const languageId = getLanguageId(filePath);
       if (!languageId) return;
 
-      // Abort any in-flight tokenization
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      startMeasure("tokenizeRangeInternal");
-
+      const requestVersion = ++requestVersionRef.current;
       const { normalizedText, lineOffsets, lineCount } = getTextMetrics(text);
-
-      if (lineCount < EDITOR_CONSTANTS.SMALL_FILE_THRESHOLD) {
-        return tokenizeFull(text);
-      }
-
-      if (lineCount >= LARGE_FILE_LINE_THRESHOLD) {
-        setLoading(true);
-        try {
-          const wasmPath = getDefaultParserWasmUrl(languageId);
-          const cached = await indexedDBParserCache.get(languageId);
-          if (controller.signal.aborted) return;
-          const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
-          if (controller.signal.aborted) return;
-
-          const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
-          const clampedEndLine = Math.max(
-            clampedStartLine + 1,
-            Math.min(viewportRange.endLine, lineCount),
-          );
-
-          const highlightTokens = await wasmTokenizeRange(
-            text,
-            languageId,
-            clampedStartLine,
-            clampedEndLine,
-            {
-              languageId,
-              wasmPath,
-              highlightQuery,
-            },
-          );
-          if (controller.signal.aborted) return;
-
-          const rangeTokens = highlightTokens.map(convertToToken);
-          setTokens(rangeTokens);
-          setTokenizedContent(normalizedText);
-          cacheRef.current = {
-            fullTokens: rangeTokens,
-            lastFullTokenizeTime: Date.now(),
-            previousContent: normalizedText,
-          };
-        } catch (error) {
-          if (controller.signal.aborted) return;
-          logger.warn("Editor", "[Tokenizer] Large-file viewport tokenization failed:", error);
-          setTokens([]);
-          setTokenizedContent(normalizedText);
-        } finally {
-          if (!controller.signal.aborted) {
-            setLoading(false);
-          }
-          endMeasure("tokenizeRangeInternal");
-        }
-        return;
-      }
-
-      const timeSinceLastFull = Date.now() - cacheRef.current.lastFullTokenizeTime;
-      if (timeSinceLastFull > FULL_TOKENIZE_INTERVAL) {
-        return tokenizeFull(text);
-      }
+      const shouldScheduleBackgroundFullSweep =
+        lineCount <= BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD &&
+        normalizedText.length <= BACKGROUND_FULL_TOKENIZE_CHAR_THRESHOLD;
 
       setLoading(true);
+      startMeasure("tokenizeRangeInternal");
+
       try {
-        const wasmPath = getDefaultParserWasmUrl(languageId);
-        const cached = await indexedDBParserCache.get(languageId);
-        if (controller.signal.aborted) return;
-        const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
-        if (controller.signal.aborted) return;
-
-        const highlightTokens = await wasmTokenizeRange(
-          text,
-          languageId,
-          viewportRange.startLine,
-          viewportRange.endLine,
-          {
-            languageId,
-            wasmPath,
-            highlightQuery,
-          },
+        const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
+        const clampedEndLine = Math.max(
+          clampedStartLine + 1,
+          Math.min(viewportRange.endLine, Math.max(lineCount - 1, 0)),
         );
-        if (controller.signal.aborted) return;
 
-        const rangeTokens = highlightTokens.map(convertToToken);
+        const result = await tokenizerWorkerClient.tokenize({
+          bufferId,
+          content: normalizedText,
+          languageId,
+          mode: "range",
+          viewportRange: {
+            startLine: clampedStartLine,
+            endLine:
+              lineCount >= LARGE_FILE_LINE_THRESHOLD
+                ? clampedEndLine
+                : Math.min(clampedEndLine + EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES, lineCount - 1),
+          },
+        });
 
-        const { fullTokens } = cacheRef.current;
+        if (requestVersion !== requestVersionRef.current) return;
 
-        const rangeStartOffset = lineOffsets[viewportRange.startLine] || 0;
-        const rangeEndOffset = lineOffsets[viewportRange.endLine] || text.length;
+        const rangeTokens = result.tokens.map(convertToToken);
+        const rangeStartOffset = lineOffsets[clampedStartLine] || 0;
+        const rangeEndLine = Math.min(clampedEndLine + 1, lineOffsets.length - 1);
+        const rangeEndOffset =
+          rangeEndLine >= 0 && lineOffsets[rangeEndLine] !== undefined
+            ? lineOffsets[rangeEndLine]
+            : normalizedText.length;
 
-        const cachedTokensOutsideRange = fullTokens.filter(
+        const cachedTokensOutsideRange = cacheRef.current.fullTokens.filter(
           (token) => token.end <= rangeStartOffset || token.start >= rangeEndOffset,
         );
 
@@ -343,31 +189,31 @@ export function useTokenizer({
         );
 
         setTokens(mergedTokens);
-        setTokenizedContent(normalizedText);
-
+        setTokenizedContent(result.normalizedText);
         cacheRef.current.fullTokens = mergedTokens;
-        cacheRef.current.previousContent = normalizedText;
+        cacheRef.current.previousContent = result.normalizedText;
+
+        if (shouldScheduleBackgroundFullSweep) {
+          const sweepVersion = ++backgroundSweepVersionRef.current;
+          globalThis.setTimeout(() => {
+            if (requestVersionRef.current !== requestVersion) return;
+            if (backgroundSweepVersionRef.current !== sweepVersion) return;
+            void tokenizeFull(result.normalizedText);
+          }, 0);
+        }
       } catch (error) {
-        if (controller.signal.aborted) return;
-        logger.warn(
-          "Editor",
-          "[Tokenizer] Range tokenization failed, falling back to full:",
-          error,
-        );
-        tokenizeFull(text);
+        if (requestVersion !== requestVersionRef.current) return;
+        logger.warn("Editor", "[Tokenizer] Range tokenization failed:", error);
       } finally {
-        if (!controller.signal.aborted) {
+        if (requestVersion === requestVersionRef.current) {
           setLoading(false);
         }
         endMeasure("tokenizeRangeInternal");
       }
     },
-    [enabled, filePath, getTextMetrics, tokenizeFull],
+    [enabled, filePath, bufferId, getTextMetrics, tokenizeFull, startMeasure, endMeasure],
   );
 
-  /**
-   * Main tokenize function - chooses between full and incremental
-   */
   const tokenize = useCallback(
     async (text: string, viewportRange?: ViewportRange) => {
       if (!incremental || !viewportRange) {
@@ -379,25 +225,16 @@ export function useTokenizer({
     [incremental, tokenizeFull, tokenizeRangeInternal],
   );
 
-  /**
-   * Force a full re-tokenization
-   */
   const forceFullTokenize = useCallback(
-    async (text: string) => {
-      return tokenizeFull(text);
-    },
+    async (text: string) => tokenizeFull(text),
     [tokenizeFull],
   );
 
-  /**
-   * Reset tokenizer state for buffer switch — aborts in-flight work and clears cache
-   */
   const resetForBufferSwitch = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
+    requestVersionRef.current += 1;
+    backgroundSweepVersionRef.current += 1;
     cacheRef.current = {
       fullTokens: [],
-      lastFullTokenizeTime: 0,
       previousContent: "",
     };
     textMetricsRef.current = null;

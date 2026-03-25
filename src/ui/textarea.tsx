@@ -20,8 +20,8 @@ const textareaVariants = cva(
         ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
       },
       size: {
-        sm: "px-2 py-1 text-xs",
-        md: "px-3 py-2 text-sm",
+        sm: "px-2 py-1 ui-text-sm",
+        md: "px-3 py-2 ui-text-md",
       },
     },
     defaultVariants: {

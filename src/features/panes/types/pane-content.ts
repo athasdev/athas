@@ -51,6 +51,7 @@ export interface EditorContent extends PaneContentBase {
   isDirty: boolean;
   isVirtual: boolean;
   language?: string;
+  languageOverride?: string;
   tokens: TokenEntry[];
 }
 

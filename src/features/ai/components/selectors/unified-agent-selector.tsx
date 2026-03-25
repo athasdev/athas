@@ -6,6 +6,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { paneIconButtonClassName } from "@/ui/pane";
@@ -223,30 +224,33 @@ export function UnifiedAgentSelector({
   return (
     <>
       {variant === "header" ? (
-        <button
+        <Button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           type="button"
+          variant="ghost"
+          size="icon-sm"
           className={paneIconButtonClassName()}
           aria-label="New chat"
           title="New chat"
         >
-          <Plus size={14} />
-        </button>
+          <Plus />
+        </Button>
       ) : (
-        <button
+        <Button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           type="button"
+          variant="ghost"
+          size="sm"
           className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
           <ChevronDown
-            size={12}
             className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
           />
-        </button>
+        </Button>
       )}
 
       <Dropdown
@@ -291,13 +295,16 @@ export function UnifiedAgentSelector({
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                   )}
                 >
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() =>
                       item.isInstalled || item.id === "custom"
                         ? handleAgentChange(item.id as AgentType)
                         : handleInstallAgent(item.id)
                     }
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 hover:bg-transparent"
                   >
                     <ProviderIcon providerId={item.id} size={10} className="text-text-lighter" />
                     <div className="min-w-0 flex-1">
@@ -308,18 +315,19 @@ export function UnifiedAgentSelector({
                         </div>
                       ) : null}
                     </div>
-                  </button>
+                  </Button>
                   <div className="flex min-w-18 shrink-0 items-center justify-end gap-1">
                     {item.id === "custom" && onOpenSettings ? (
-                      <button
+                      <Button
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
                           setIsOpen(false);
                           onOpenSettings();
                         }}
+                        variant="ghost"
+                        size="icon-xs"
                         className={cn(
-                          "flex size-6 shrink-0 items-center justify-center rounded-md transition-colors",
                           item.isCurrent
                             ? "bg-accent/15 text-accent"
                             : "text-text-lighter hover:bg-secondary-bg hover:text-text",
@@ -327,27 +335,25 @@ export function UnifiedAgentSelector({
                         aria-label="Open Athas Agent settings"
                         title="Athas Agent settings"
                       >
-                        <Settings2 size={12} />
-                      </button>
+                        <Settings2 />
+                      </Button>
                     ) : null}
-                    {item.isCurrent && <Check size={10} className="shrink-0 text-accent" />}
+                    {item.isCurrent && <Check className="shrink-0 text-accent" />}
                     {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
-                      <Check size={10} className="shrink-0 text-green-500" />
+                      <Check className="shrink-0 text-green-500" />
                     )}
                     {isUnavailable && item.canInstall ? (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => void handleInstallAgent(item.id)}
                         disabled={isInstalling}
-                        className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter transition-colors hover:bg-hover disabled:cursor-wait disabled:opacity-70"
+                        variant="outline"
+                        size="xs"
+                        className="h-6 shrink-0 gap-1 rounded-full bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter disabled:cursor-wait disabled:opacity-70"
                       >
-                        {isInstalling ? (
-                          <LoaderCircle size={10} className="animate-spin" />
-                        ) : (
-                          <Download size={10} />
-                        )}
+                        {isInstalling ? <LoaderCircle className="animate-spin" /> : <Download />}
                         {isInstalling ? "Installing" : "Install"}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>

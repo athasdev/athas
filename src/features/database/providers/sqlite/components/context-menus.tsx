@@ -17,14 +17,14 @@ export const SqliteTableMenu = ({
         {
           id: "create-row",
           label: "Add New Row",
-          icon: <PlusIcon size={12} />,
+          icon: <PlusIcon />,
           onClick: () => onCreateRow(databaseTableMenu.tableName),
         },
         { id: "separator", label: "", separator: true, onClick: () => {} },
         {
           id: "delete-table",
           label: "Delete Table",
-          icon: <TrashIcon size={12} />,
+          icon: <TrashIcon />,
           onClick: () => onDeleteTable(databaseTableMenu.tableName),
         },
       ]
@@ -57,13 +57,13 @@ export const SqliteRowMenu = ({
         {
           id: "edit-row",
           label: "Edit Row",
-          icon: <EditIcon size={12} />,
+          icon: <EditIcon />,
           onClick: () => onEditRow(databaseRowMenu.tableName, databaseRowMenu.rowData),
         },
         {
           id: "delete-row",
           label: "Delete Row",
-          icon: <TrashIcon size={12} />,
+          icon: <TrashIcon />,
           onClick: () => onDeleteRow(databaseRowMenu.tableName, databaseRowMenu.rowData),
         },
       ]

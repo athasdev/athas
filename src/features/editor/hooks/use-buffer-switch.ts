@@ -11,7 +11,6 @@ interface UseBufferSwitchOptions {
   forceUpdateViewport: (scrollTop: number, totalLines: number) => void;
   totalLines: number;
   resetTokenizer: () => void;
-  tokenize: (text: string, viewportRange?: ViewportRange) => Promise<void>;
 }
 
 export function useBufferSwitch({
@@ -22,7 +21,6 @@ export function useBufferSwitch({
   forceUpdateViewport,
   totalLines,
   resetTokenizer,
-  tokenize,
 }: UseBufferSwitchOptions) {
   const prevBufferIdRef = useRef<string | null>(null);
   const switchGuardRef = useRef(0);
@@ -70,9 +68,9 @@ export function useBufferSwitch({
     // 5. Recalculate viewport range
     forceUpdateViewport(restored.scrollTop, totalLines);
 
-    // 6. Reset and re-trigger tokenization
+    // 6. Reset token state. Tokenization is triggered by the editor effect
+    // once viewport state is ready, avoiding duplicate work on buffer open.
     resetTokenizer();
-    void tokenize(content);
   }, [
     enabled,
     bufferId,
@@ -81,7 +79,6 @@ export function useBufferSwitch({
     forceUpdateViewport,
     totalLines,
     resetTokenizer,
-    tokenize,
   ]);
 
   return { switchGuardRef };

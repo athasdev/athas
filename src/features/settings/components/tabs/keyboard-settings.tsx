@@ -5,7 +5,7 @@ import { useKeymapStore } from "@/features/keymaps/stores/store";
 import type { Keybinding } from "@/features/keymaps/types";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { TableHeadCell, TableHeader } from "@/ui/table";
 
@@ -115,7 +115,7 @@ export const KeyboardSettings = () => {
           <Button
             variant="ghost"
             size="xs"
-            active={filterType === "all"}
+            data-active={filterType === "all"}
             onClick={() => setFilterType("all")}
           >
             All
@@ -123,7 +123,7 @@ export const KeyboardSettings = () => {
           <Button
             variant="ghost"
             size="xs"
-            active={filterType === "user"}
+            data-active={filterType === "user"}
             onClick={() => setFilterType("user")}
           >
             User
@@ -131,7 +131,7 @@ export const KeyboardSettings = () => {
           <Button
             variant="ghost"
             size="xs"
-            active={filterType === "default"}
+            data-active={filterType === "default"}
             onClick={() => setFilterType("default")}
           >
             Default
@@ -139,7 +139,7 @@ export const KeyboardSettings = () => {
           <Button
             variant="ghost"
             size="xs"
-            active={filterType === "extension"}
+            data-active={filterType === "extension"}
             onClick={() => setFilterType("extension")}
           >
             Extension

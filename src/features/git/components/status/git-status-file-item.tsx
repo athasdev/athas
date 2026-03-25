@@ -2,6 +2,8 @@ import { Archive, Minus, Plus, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useSettingsStore } from "@/features/settings/store";
+import { Button } from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git-types";
 
@@ -43,26 +45,13 @@ export const GitFileItem = ({
   const pathParts = file.path.split("/");
   const fileName = pathParts.pop() || file.path;
   const directory = pathParts.join("/");
-  const indentPx = 8 + indentLevel * 14;
-  const fileNameTextClass = "text-inherit";
+  const indentPx = 14 + indentLevel * 20;
   const hasDiffStats = !!diffStats && (diffStats.additions > 0 || diffStats.deletions > 0);
-  const fileStatusTextClass =
-    file.status === "modified"
-      ? file.staged
-        ? "text-git-modified-staged"
-        : "text-git-modified"
-      : file.status === "added"
-        ? "text-git-added"
-        : file.status === "deleted"
-          ? "text-git-deleted"
-          : file.status === "untracked"
-            ? "text-git-untracked"
-            : "text-git-renamed";
 
   return (
     <div
       className={cn(
-        "group relative mx-1 mb-1 flex cursor-pointer items-center gap-2 rounded-lg py-1.5 hover:bg-hover",
+        "ui-text-sm group relative mx-1 flex min-h-[22px] cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-0.5 hover:bg-hover",
         className,
       )}
       style={{ paddingLeft: `${indentPx}px`, paddingRight: "8px" }}
@@ -77,18 +66,28 @@ export const GitFileItem = ({
           size={12}
         />
       )}
-      <div className="flex min-w-0 flex-1 items-center gap-1.5" title={file.path}>
-        <span className={cn("shrink-0", fileNameTextClass, fileStatusTextClass)}>{fileName}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden" title={file.path}>
+        <span
+          className={cn(
+            "min-w-0 truncate leading-none",
+            showDirectory ? "max-w-[55%]" : "flex-1",
+            "text-text",
+          )}
+        >
+          {fileName}
+        </span>
         {showDirectory && directory && (
-          <span className="truncate text-[0.82em] text-text-lighter">{directory}</span>
+          <span className="ui-text-sm min-w-0 flex-1 truncate leading-none text-text-lighter/80">
+            {directory}
+          </span>
         )}
       </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {hasDiffStats && (
           <div
             className={cn(
               "hidden items-center leading-none sm:flex",
-              compactGitStatusBadges ? "gap-0.5 text-[0.72em]" : "gap-1 text-[0.78em]",
+              compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >
             {diffStats.additions > 0 && (
@@ -100,69 +99,95 @@ export const GitFileItem = ({
           </div>
         )}
         {file.staged && !compactGitStatusBadges && (
-          <span className="hidden shrink-0 text-[0.72em] text-git-added opacity-60 md:inline">
+          <span className="ui-text-sm hidden shrink-0 text-git-added opacity-60 md:inline">
             staged
           </span>
         )}
+        <div
+          className="shrink-0"
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={file.staged}
+            onChange={(checked) => {
+              if (checked) {
+                onStage?.();
+                return;
+              }
+              onUnstage?.();
+            }}
+            disabled={disabled}
+            ariaLabel={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
+          />
+        </div>
       </div>
       <div
         className={cn(
-          "absolute top-1.5 right-1 z-10 flex gap-0.5 rounded-md border border-border/70 bg-secondary-bg/95 p-0.5 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.65)] backdrop-blur-sm",
+          "absolute top-0.5 right-1 z-10 flex gap-0.5 rounded-md border border-border/70 bg-secondary-bg/95 p-0.5 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.65)] backdrop-blur-sm",
           "opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
         )}
       >
         {file.staged ? (
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               onUnstage?.();
             }}
             disabled={disabled}
-            className="rounded bg-primary-bg/70 p-0.5 text-text-lighter hover:bg-primary-bg hover:text-text disabled:opacity-50"
+            variant="ghost"
+            size="icon-xs"
+            className="bg-primary-bg/70 text-text-lighter hover:bg-primary-bg disabled:opacity-50"
             title="Unstage"
             aria-label="Unstage file"
           >
-            <Minus size={10} />
-          </button>
+            <Minus />
+          </Button>
         ) : (
           <>
-            <button
+            <Button
               onClick={(e) => {
                 e.stopPropagation();
                 onStage?.();
               }}
               disabled={disabled}
-              className="rounded bg-primary-bg/70 p-0.5 text-text-lighter hover:bg-primary-bg hover:text-text disabled:opacity-50"
+              variant="ghost"
+              size="icon-xs"
+              className="bg-primary-bg/70 text-text-lighter hover:bg-primary-bg disabled:opacity-50"
               title="Stage"
               aria-label="Stage file"
             >
-              <Plus size={10} />
-            </button>
-            <button
+              <Plus />
+            </Button>
+            <Button
               onClick={(e) => {
                 e.stopPropagation();
                 onStash?.();
               }}
               disabled={disabled}
-              className="rounded bg-primary-bg/70 p-0.5 text-text-lighter hover:bg-primary-bg hover:text-text disabled:opacity-50"
+              variant="ghost"
+              size="icon-xs"
+              className="bg-primary-bg/70 text-text-lighter hover:bg-primary-bg disabled:opacity-50"
               title="Stash file"
               aria-label="Stash file"
             >
-              <Archive size={10} />
-            </button>
+              <Archive />
+            </Button>
             {file.status !== "untracked" && (
-              <button
+              <Button
                 onClick={(e) => {
                   e.stopPropagation();
                   onDiscard?.();
                 }}
                 disabled={disabled}
-                className="rounded bg-primary-bg/70 p-0.5 text-git-deleted hover:bg-git-deleted/10 hover:opacity-80 disabled:opacity-50"
+                variant="ghost"
+                size="icon-xs"
+                className="bg-primary-bg/70 text-git-deleted hover:bg-git-deleted/10 hover:text-git-deleted disabled:opacity-50"
                 title="Discard changes"
                 aria-label="Discard changes"
               >
-                <Trash2 size={10} />
-              </button>
+                <Trash2 />
+              </Button>
             )}
           </>
         )}

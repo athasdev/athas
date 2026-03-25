@@ -31,6 +31,7 @@ import {
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
+import { Button, buttonVariants } from "@/ui/button";
 import { MenuPopover } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import {
@@ -63,6 +64,31 @@ interface FilteredItem {
   hasKey?: boolean;
   isCurrent?: boolean;
 }
+
+const selectorTriggerClass = cn(
+  buttonVariants({ variant: "secondary", size: "sm" }),
+  "h-auto rounded-lg px-3 py-1.5 text-xs",
+);
+
+const selectorIconButtonClass = cn(
+  buttonVariants({ variant: "ghost", size: "icon-sm" }),
+  "rounded-md text-text-lighter",
+);
+
+const selectorInlineActionClass = cn(
+  buttonVariants({ variant: "ghost", size: "xs" }),
+  "h-auto px-1.5 text-[10px] text-text-lighter",
+);
+
+const selectorAccentActionClass = cn(
+  buttonVariants({ variant: "primary", size: "xs" }),
+  "h-auto gap-1 px-1.5 text-[10px]",
+);
+
+const selectorSaveButtonClass = cn(
+  buttonVariants({ variant: "primary", size: "xs" }),
+  "shrink-0 px-2",
+);
 
 export function AIModelSelector({
   providerId,
@@ -436,12 +462,14 @@ export function AIModelSelector({
 
   return (
     <div>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
         onClick={() => !disabled && setIsOpen((open) => !open)}
         disabled={disabled}
-        className="flex items-center gap-2 rounded-lg border border-border bg-secondary-bg px-3 py-1.5 text-xs transition-colors hover:bg-hover disabled:opacity-50"
+        variant="secondary"
+        size="sm"
+        className="h-auto rounded-lg px-3 py-1.5 text-xs"
         aria-label="Select AI provider and model"
       >
         <ProviderIcon providerId={providerId} size={14} className="text-text-lighter" />
@@ -451,10 +479,9 @@ export function AIModelSelector({
           {currentModelName}
         </span>
         <ChevronDown
-          size={12}
           className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
         />
-      </button>
+      </Button>
 
       <MenuPopover
         isOpen={isOpen && !!position}
@@ -489,31 +516,35 @@ export function AIModelSelector({
               className="min-w-0 flex-1 py-2"
             />
             {supportsDynamicModels && (
-              <button
+              <Button
                 type="button"
                 onClick={() => void fetchDynamicModels()}
                 disabled={isLoadingModels}
-                className="rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-md text-text-lighter"
                 aria-label="Refresh models"
               >
-                <RefreshCw size={12} className={cn(isLoadingModels && "animate-spin")} />
-              </button>
+                <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
+              </Button>
             )}
-            <button
+            <Button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-md text-text-lighter"
               aria-label="Close model selector"
             >
-              <X size={12} />
-            </button>
+              <X />
+            </Button>
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
           {modelFetchError && (
             <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 py-2 text-red-400 text-xs">
-              <AlertCircle size={12} className="shrink-0" />
+              <AlertCircle className="shrink-0" />
               <span>{modelFetchError}</span>
             </div>
           )}
@@ -551,45 +582,53 @@ export function AIModelSelector({
                           !isEditing &&
                           (hasKey ? (
                             <>
-                              <button
+                              <Button
                                 type="button"
                                 onClick={() => startEditing(item.providerId)}
-                                className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                variant="ghost"
+                                size="xs"
+                                className="h-auto px-1.5 text-[10px] text-text-lighter"
                                 aria-label={`Edit ${item.name} API key`}
                               >
                                 Edit Key
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 type="button"
                                 onClick={() => void handleRemoveKey(item.providerId)}
-                                className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="rounded-md text-red-400 hover:bg-red-500/10 hover:text-red-300"
                                 aria-label={`Remove ${item.name} API key`}
                               >
-                                <Trash2 size={10} />
-                              </button>
+                                <Trash2 />
+                              </Button>
                             </>
                           ) : (
-                            <button
+                            <Button
                               type="button"
                               onClick={() => startEditing(item.providerId)}
-                              className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                              variant="primary"
+                              size="xs"
+                              className="h-auto gap-1 px-1.5 text-[10px]"
                               aria-label={`Set ${item.name} API key`}
                             >
-                              <Key size={8} />
+                              <Key />
                               Set Key
-                            </button>
+                            </Button>
                           ))}
 
                         {item.providerId === "ollama" && !isEditing && (
-                          <button
+                          <Button
                             type="button"
                             onClick={() => startEditing(item.providerId)}
-                            className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                            variant="primary"
+                            size="xs"
+                            className="h-auto gap-1 px-1.5 text-[10px]"
                             aria-label="Set Ollama URL"
                           >
-                            <Globe size={8} />
+                            <Globe />
                             Set URL
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -607,7 +646,7 @@ export function AIModelSelector({
                             {item.providerId === "ollama" ? (
                               <>
                                 <div className="flex items-center gap-1.5">
-                                  <Globe size={12} className="ml-1 shrink-0 text-text-lighter" />
+                                  <Globe className="ml-1 shrink-0 text-text-lighter" />
                                   <Input
                                     ref={apiKeyInputRef}
                                     type="text"
@@ -634,27 +673,31 @@ export function AIModelSelector({
                                     disabled={ollamaUrlStatus === "checking"}
                                   />
                                   {ollamaUrlStatus === "ok" && (
-                                    <CheckCircle size={12} className="shrink-0 text-green-500" />
+                                    <CheckCircle className="shrink-0 text-green-500" />
                                   )}
                                   {ollamaUrlStatus === "error" && (
-                                    <AlertCircle size={12} className="shrink-0 text-red-400" />
+                                    <AlertCircle className="shrink-0 text-red-400" />
                                   )}
-                                  <button
+                                  <Button
                                     type="button"
                                     onClick={() => void handleSaveOllamaUrl(ollamaUrlInput)}
                                     disabled={ollamaUrlStatus === "checking"}
-                                    className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
+                                    variant="primary"
+                                    size="xs"
+                                    className="shrink-0 px-2"
                                   >
                                     {ollamaUrlStatus === "checking" ? "..." : "Save"}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
                                     onClick={cancelEditing}
-                                    className="mr-1 shrink-0 rounded p-1 text-text-lighter hover:text-text"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="mr-1 shrink-0 rounded-md text-text-lighter"
                                     aria-label="Cancel editing"
                                   >
-                                    <X size={10} />
-                                  </button>
+                                    <X />
+                                  </Button>
                                 </div>
 
                                 {ollamaUrlStatus === "error" && (
@@ -666,7 +709,7 @@ export function AIModelSelector({
                             ) : (
                               <>
                                 <div className="flex items-center gap-1.5">
-                                  <Key size={12} className="ml-1 shrink-0 text-text-lighter" />
+                                  <Key className="ml-1 shrink-0 text-text-lighter" />
                                   <div className="relative min-w-0 flex-1">
                                     <Input
                                       ref={apiKeyInputRef}
@@ -689,39 +732,45 @@ export function AIModelSelector({
                                       className="w-full py-2 pr-6"
                                       disabled={isValidating}
                                     />
-                                    <button
+                                    <Button
                                       type="button"
                                       onClick={() => setShowKey((visible) => !visible)}
-                                      className="-translate-y-1/2 absolute top-1/2 right-0 text-text-lighter hover:text-text"
+                                      variant="ghost"
+                                      size="icon-xs"
+                                      className="-translate-y-1/2 absolute top-1/2 right-0 size-5 p-0 text-text-lighter"
                                       aria-label={showKey ? "Hide key" : "Show key"}
                                     >
-                                      {showKey ? <EyeOff size={10} /> : <Eye size={10} />}
-                                    </button>
+                                      {showKey ? <EyeOff /> : <Eye />}
+                                    </Button>
                                   </div>
 
                                   {showingValidation &&
                                     (validationStatus.status === "valid" ? (
-                                      <CheckCircle size={12} className="shrink-0 text-green-500" />
+                                      <CheckCircle className="shrink-0 text-green-500" />
                                     ) : (
-                                      <AlertCircle size={12} className="shrink-0 text-red-400" />
+                                      <AlertCircle className="shrink-0 text-red-400" />
                                     ))}
 
-                                  <button
+                                  <Button
                                     type="button"
                                     onClick={() => void handleSaveKey(item.providerId)}
                                     disabled={!apiKeyInput.trim() || isValidating}
-                                    className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
+                                    variant="primary"
+                                    size="xs"
+                                    className="shrink-0 px-2"
                                   >
                                     {isValidating ? "..." : "Save"}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
                                     onClick={cancelEditing}
-                                    className="mr-1 shrink-0 rounded p-1 text-text-lighter hover:text-text"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="mr-1 shrink-0 rounded-md text-text-lighter"
                                     aria-label="Cancel editing"
                                   >
-                                    <X size={10} />
-                                  </button>
+                                    <X />
+                                  </Button>
                                 </div>
 
                                 {showingValidation && validationStatus.message && (
@@ -751,20 +800,22 @@ export function AIModelSelector({
               const isHighlighted = itemIndex === selectedIndex;
 
               return (
-                <button
+                <Button
                   key={`${item.providerId}-${item.id}`}
                   type="button"
                   onClick={() => handleModelSelect(item.providerId, item.id)}
                   onMouseEnter={() => setSelectedIndex(itemIndex)}
+                  variant="ghost"
+                  size="sm"
                   className={cn(
-                    "mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors last:mb-0",
+                    "mb-1 h-auto w-full justify-start rounded-lg px-2.5 py-2 text-left text-xs last:mb-0",
                     isHighlighted ? "bg-hover" : "bg-transparent",
                     item.isCurrent && "bg-accent/10",
                   )}
                 >
                   <span className="flex-1 truncate text-text">{item.name}</span>
-                  {item.isCurrent && <Check size={12} className="shrink-0 text-accent" />}
-                </button>
+                  {item.isCurrent && <Check className="shrink-0 text-accent" />}
+                </Button>
               );
             })
           )}

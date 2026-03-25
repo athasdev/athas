@@ -17,6 +17,70 @@ function applyFallbackTheme(theme: Theme) {
   document.documentElement.classList.add(`force-${theme}`);
 }
 
+type SystemThemePreference = "light" | "dark";
+
+interface LegacyMediaQueryList extends MediaQueryList {
+  addListener(listener: (event: MediaQueryListEvent) => void): void;
+  removeListener(listener: (event: MediaQueryListEvent) => void): void;
+}
+
+let currentThemeSyncQuery: MediaQueryList | null = null;
+let removeThemeSyncListener: (() => void) | null = null;
+
+function getSystemThemePreference(): SystemThemePreference {
+  if (typeof window !== "undefined" && window.matchMedia) {
+    try {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch (error) {
+      console.warn("matchMedia not available:", error);
+    }
+  }
+
+  return "dark";
+}
+
+function getEffectiveTheme(settings: Pick<Settings, "theme" | "syncSystemTheme" | "autoThemeLight" | "autoThemeDark">): Theme {
+  if (!settings.syncSystemTheme) {
+    return settings.theme;
+  }
+
+  return getSystemThemePreference() === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
+}
+
+function stopSystemThemeSync() {
+  removeThemeSyncListener?.();
+  removeThemeSyncListener = null;
+  currentThemeSyncQuery = null;
+}
+
+function syncThemeWithSystem(settings: Settings) {
+  if (typeof window === "undefined" || !window.matchMedia) {
+    return;
+  }
+
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const handleChange = () => {
+    void applyTheme(getEffectiveTheme(settings));
+  };
+
+  if (currentThemeSyncQuery === mediaQuery && removeThemeSyncListener) {
+    return;
+  }
+
+  stopSystemThemeSync();
+
+  if ("addEventListener" in mediaQuery) {
+    mediaQuery.addEventListener("change", handleChange);
+    removeThemeSyncListener = () => mediaQuery.removeEventListener("change", handleChange);
+  } else {
+    const legacyMediaQuery = mediaQuery as LegacyMediaQueryList;
+    legacyMediaQuery.addListener(handleChange);
+    removeThemeSyncListener = () => legacyMediaQuery.removeListener(handleChange);
+  }
+
+  currentThemeSyncQuery = mediaQuery;
+}
+
 export async function applyTheme(theme: Theme) {
   if (typeof window === "undefined") return;
 
@@ -65,7 +129,12 @@ export function syncOllamaBaseUrl(baseUrl: string) {
 
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
-  void applyTheme(settings.theme);
+  void applyTheme(getEffectiveTheme(settings));
+  if (settings.syncSystemTheme) {
+    syncThemeWithSystem(settings);
+  } else {
+    stopSystemThemeSync();
+  }
   syncOllamaBaseUrl(settings.ollamaBaseUrl);
 }
 
@@ -75,7 +144,18 @@ export function applySettingSideEffect<K extends keyof Settings>(
   getSettings: () => Settings,
 ) {
   if (key === "theme") {
-    void applyTheme(value as Theme);
+    void applyTheme(getEffectiveTheme(getSettings()));
+  }
+
+  if (key === "syncSystemTheme" || key === "autoThemeLight" || key === "autoThemeDark") {
+    const settings = getSettings();
+    void applyTheme(getEffectiveTheme(settings));
+
+    if (settings.syncSystemTheme) {
+      syncThemeWithSystem(settings);
+    } else {
+      stopSystemThemeSync();
+    }
   }
 
   if (key === "ollamaBaseUrl") {

@@ -15,6 +15,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import Badge from "@/ui/badge";
+import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -27,6 +29,21 @@ const filterLabels: Record<PRFilter, string> = {
   "my-prs": "My PRs",
   "review-requests": "Review Requests",
 };
+
+const prIconButtonClass = cn(
+  buttonVariants({ variant: "ghost", size: "icon-sm" }),
+  "rounded-md text-text-lighter",
+);
+
+const prLinkButtonClass = cn(
+  buttonVariants({ variant: "ghost", size: "xs" }),
+  "h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80",
+);
+
+const repoOptionButtonClass = cn(
+  buttonVariants({ variant: "ghost", size: "sm" }),
+  "h-auto w-full justify-start rounded-lg px-2 py-1.5 text-left",
+);
 
 interface PRListItemProps {
   pr: PullRequest;
@@ -52,21 +69,21 @@ const PRListItem = memo(({ pr, onSelect, onOpenExternal, onCheckout }: PRListIte
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-1.5">
-              <span className="rounded-md border border-border bg-secondary-bg/70 px-1.5 py-0.5 font-mono text-[10px] text-text-lighter">
+              <span className="ui-text-sm rounded-md border border-border bg-secondary-bg/70 px-1.5 py-0.5 font-mono text-text-lighter">
                 #{pr.number}
               </span>
-              <span className={cn("rounded-md px-1.5 py-0.5 text-[10px]", stateClass)}>
+              <span className={cn("ui-text-sm rounded-md px-1.5 py-0.5", stateClass)}>
                 {stateLabel}
               </span>
               {pr.isDraft && (
-                <span className="rounded-md bg-text-lighter/20 px-1.5 py-0.5 text-[10px] text-text-lighter">
+                <span className="ui-text-sm rounded-md bg-text-lighter/20 px-1.5 py-0.5 text-text-lighter">
                   Draft
                 </span>
               )}
               {pr.reviewDecision && (
                 <span
                   className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[10px]",
+                    "ui-text-sm rounded-md px-1.5 py-0.5",
                     pr.reviewDecision === "APPROVED"
                       ? "bg-green-500/20 text-green-500"
                       : pr.reviewDecision === "CHANGES_REQUESTED"
@@ -83,43 +100,49 @@ const PRListItem = memo(({ pr, onSelect, onOpenExternal, onCheckout }: PRListIte
               )}
             </div>
 
-            <button
+            <Button
               onClick={onSelect}
-              className="block w-full text-left text-text text-xs leading-4 transition-colors hover:text-accent"
+              variant="ghost"
+              size="sm"
+              className="ui-text-sm block h-auto w-full justify-start p-0 text-left text-text leading-4 hover:bg-transparent hover:text-accent"
             >
               {pr.title}
-            </button>
+            </Button>
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
             <Tooltip content="Checkout PR branch" side="bottom">
-              <button
+              <Button
                 onClick={(e) => {
                   e.stopPropagation();
                   onCheckout();
                 }}
-                className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border/60 hover:bg-selected hover:text-text"
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-md text-text-lighter"
                 aria-label="Checkout PR branch"
               >
-                <GitBranch size={12} />
-              </button>
+                <GitBranch />
+              </Button>
             </Tooltip>
             <Tooltip content="Open pull request on GitHub" side="bottom">
-              <button
+              <Button
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenExternal();
                 }}
-                className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border/60 hover:bg-selected hover:text-text"
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-md text-text-lighter"
                 aria-label="Open pull request in browser"
               >
-                <ExternalLink size={12} />
-              </button>
+                <ExternalLink />
+              </Button>
             </Tooltip>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-text-lighter">
+        <div className="ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
           <span className="font-medium text-text-light">@{pr.author.login}</span>
           <span>created {createdAgo}</span>
           <span>updated {updatedAgo}</span>
@@ -130,7 +153,7 @@ const PRListItem = memo(({ pr, onSelect, onOpenExternal, onCheckout }: PRListIte
             -{pr.deletions}
           </span>
           <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/60 bg-secondary-bg/55 px-1.5 py-0.5">
-            <GitBranch size={10} />
+            <GitBranch />
             <span className="truncate">
               {pr.headRef} → {pr.baseRef}
             </span>
@@ -281,44 +304,46 @@ const GitHubPRsView = memo(() => {
     isActive: boolean,
     onClick: () => void,
   ) => (
-    <button
+    <Button
       key={repoPath}
       onClick={onClick}
       className={cn(
-        "group flex w-full items-start gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-hover",
+        repoOptionButtonClass,
+        "group items-start gap-1.5",
         isActive ? "bg-hover text-text" : "text-text-lighter",
       )}
     >
       <Check
-        size={10}
         className={cn("mt-0.5 shrink-0", isActive ? "text-success opacity-100" : "opacity-0")}
       />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-text text-xs">{label}</div>
-        <div className="truncate text-[10px] text-text-lighter">{subtitle}</div>
+        <div className="ui-text-sm truncate text-text">{label}</div>
+        <div className="ui-text-sm truncate text-text-lighter">{subtitle}</div>
       </div>
-    </button>
+    </Button>
   );
 
   if (!isAuthenticated) {
     return (
       <div className="flex h-full flex-col gap-2 p-2">
         <div className="flex items-center justify-between px-0.5 py-0.5">
-          <span className="font-medium text-text text-xs">Pull Requests</span>
+          <span className="ui-text-sm font-medium text-text">Pull Requests</span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
-          <AlertCircle size={24} className="mb-2 text-text-lighter" />
-          <p className="text-text text-xs">GitHub CLI not authenticated</p>
-          <p className="mt-1 text-[10px] text-text-lighter">
+          <AlertCircle className="mb-2 text-text-lighter" />
+          <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
+          <p className="ui-text-sm mt-1 text-text-lighter">
             Run <code className="rounded bg-hover px-1 py-0.5">gh auth login</code> in terminal
           </p>
-          <button
+          <Button
             onClick={() => void checkAuth()}
-            className="mt-2 text-accent text-xs hover:underline"
+            variant="ghost"
+            size="xs"
+            className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
             aria-label="Retry authentication check"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -330,21 +355,23 @@ const GitHubPRsView = memo(() => {
       <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">
         <div>
           <Tooltip content="Filter pull requests" side="bottom">
-            <button
+            <Button
               ref={filterTriggerRef}
               onClick={() => setIsFilterOpen(!isFilterOpen)}
+              variant="ghost"
+              size="sm"
               className={dropdownTriggerClassName()}
             >
-              <GitPullRequest size={11} className="shrink-0" />
+              <GitPullRequest className="shrink-0" />
               <span className="truncate">{filterLabels[currentFilter]}</span>
-              <ChevronDown size={8} />
-            </button>
+              <ChevronDown />
+            </Button>
           </Tooltip>
         </div>
         <div className="flex min-w-0 items-center gap-1.5">
           <div>
             <Tooltip content={activeRepoPath ?? "Select repository"} side="bottom">
-              <button
+              <Button
                 ref={repoTriggerRef}
                 onClick={() =>
                   setIsRepoMenuOpen((value) => {
@@ -355,26 +382,30 @@ const GitHubPRsView = memo(() => {
                     return nextOpen;
                   })
                 }
+                variant="ghost"
+                size="sm"
                 className={dropdownTriggerClassName("max-w-44")}
               >
-                <FolderOpen size={11} className="shrink-0" />
+                <FolderOpen className="shrink-0" />
                 <span className="truncate">
                   {activeRepoPath ? getFolderName(activeRepoPath) : "Select Repo"}
                 </span>
-                <ChevronDown size={8} />
-              </button>
+                <ChevronDown />
+              </Button>
             </Tooltip>
           </div>
 
           <Tooltip content="Refresh pull requests" side="bottom">
-            <button
+            <Button
               onClick={handleRefresh}
               disabled={isLoading || !activeRepoPath}
-              className="rounded-lg border border-transparent p-1 text-text-lighter hover:border-border/60 hover:bg-hover hover:text-text disabled:opacity-50"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-lg text-text-lighter"
               aria-label="Refresh pull requests"
             >
-              <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            </button>
+              <RefreshCw className={isLoading ? "animate-spin" : ""} />
+            </Button>
           </Tooltip>
         </div>
       </div>
@@ -386,16 +417,18 @@ const GitHubPRsView = memo(() => {
         className="min-w-40"
       >
         {(Object.keys(filterLabels) as PRFilter[]).map((filter) => (
-          <button
+          <Button
             key={filter}
             onClick={() => handleFilterChange(filter)}
+            variant="ghost"
+            size="sm"
             className={cn(
               dropdownItemClassName(),
               filter === currentFilter && "bg-selected text-accent",
             )}
           >
             {filterLabels[filter]}
-          </button>
+          </Button>
         ))}
       </Dropdown>
 
@@ -408,25 +441,30 @@ const GitHubPRsView = memo(() => {
       >
         <div className="flex items-center justify-between bg-secondary-bg/75 px-3 py-2.5">
           <div className="flex min-w-0 items-center gap-1.5">
-            <FolderOpen size={12} className="shrink-0 text-text-lighter" />
-            <span className="truncate font-medium text-text text-xs">
+            <FolderOpen className="shrink-0 text-text-lighter" />
+            <span className="ui-text-sm truncate font-medium text-text">
               {activeRepoPath ? getFolderName(activeRepoPath) : "Repositories"}
             </span>
-            <span className="rounded-full bg-selected px-1.5 py-0.5 text-[9px] text-text-lighter">
+            <Badge
+              shape="pill"
+              className="ui-text-sm border-0 bg-selected px-1.5 text-text-lighter"
+            >
               {workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}
-            </span>
+            </Badge>
           </div>
-          <button
+          <Button
             onClick={() => setIsRepoMenuOpen(false)}
-            className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-md text-text-lighter"
             aria-label="Close repository dropdown"
           >
-            <X size={12} />
-          </button>
+            <X />
+          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter uppercase tracking-wide">
+          <div className="ui-text-sm mb-1 flex items-center justify-between px-1 text-text-lighter">
             <span>Repositories</span>
             <span>{workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}</span>
           </div>
@@ -462,39 +500,43 @@ const GitHubPRsView = memo(() => {
           </div>
 
           {rootFolderPath && workspaceRepoPaths.length === 0 && !isResolvingWorkspaceRepo && (
-            <div className="px-2 py-2 text-[10px] text-text-lighter">
+            <div className="ui-text-sm px-2 py-2 text-text-lighter">
               No repositories found in this workspace.
             </div>
           )}
 
           {isResolvingWorkspaceRepo && (
-            <div className="flex items-center gap-1.5 px-2 py-2 text-[10px] text-text-lighter">
-              <RefreshCw size={10} className="animate-spin" />
+            <div className="ui-text-sm flex items-center gap-1.5 px-2 py-2 text-text-lighter">
+              <RefreshCw className="animate-spin" />
               Detecting workspace repositories...
             </div>
           )}
 
           <div className="mt-1 border-border/60 border-t pt-2">
-            <button
+            <Button
               onClick={() => void handleSelectRepository()}
               disabled={isSelectingRepo}
-              className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-60"
+              variant="outline"
+              size="sm"
+              className="w-full justify-start rounded-lg px-2 text-left text-text"
             >
-              <FolderOpen size={12} />
+              <FolderOpen />
               {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
-            </button>
+            </Button>
 
             {manualRepoPath && (
-              <button
+              <Button
                 onClick={() => void handleUseWorkspaceRoot()}
-                className="mt-1 w-full rounded-lg px-2 py-1 text-left text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+                variant="ghost"
+                size="xs"
+                className="ui-text-sm mt-1 h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-text-lighter"
               >
                 Use workspace repositories
-              </button>
+              </Button>
             )}
 
             {repoSelectionError && (
-              <div className="mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-[10px] text-error/90">
+              <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
                 {repoSelectionError}
               </div>
             )}
@@ -507,54 +549,60 @@ const GitHubPRsView = memo(() => {
         {!activeRepoPath ? (
           <div className="flex h-full items-center justify-center">
             <div className="ui-font flex flex-col items-center text-center">
-              <span className="text-[0.78em] text-text-lighter">No repository selected</span>
-              <button
+              <span className="ui-text-sm text-text-lighter">No repository selected</span>
+              <Button
                 onClick={() => void handleSelectRepository()}
-                className="mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80"
+                variant="ghost"
+                size="xs"
+                className="ui-text-sm mt-1.5 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
               >
                 Browse Repository
-              </button>
+              </Button>
             </div>
           </div>
         ) : error ? (
           <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
-            <AlertCircle size={20} className="mb-2 text-error" />
+            <AlertCircle className="mb-2 text-error" />
             {isRepoError ? (
               <>
-                <p className="text-error text-xs">Repository is not a Git repository</p>
-                <p className="mt-1 text-[10px] text-text-lighter">
+                <p className="ui-text-sm text-error">Repository is not a Git repository</p>
+                <p className="ui-text-sm mt-1 text-text-lighter">
                   Select another folder that contains a `.git` repository.
                 </p>
-                <button
+                <Button
                   onClick={() => void handleSelectRepository()}
-                  className="mt-2 rounded-lg border border-border/60 bg-primary-bg px-3 py-1 text-text text-xs hover:bg-hover"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 rounded-lg"
                 >
                   Browse Repository
-                </button>
+                </Button>
               </>
             ) : (
               <>
-                <p className="text-error text-xs">{error}</p>
-                <button
+                <p className="ui-text-sm text-error">{error}</p>
+                <Button
                   onClick={handleRefresh}
-                  className="mt-2 text-accent text-xs hover:underline"
+                  variant="ghost"
+                  size="xs"
+                  className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
                 >
                   Try again
-                </button>
+                </Button>
               </>
             )}
             {repoSelectionError && (
-              <p className="mt-2 text-[10px] text-error/80">{repoSelectionError}</p>
+              <p className="ui-text-sm mt-2 text-error/80">{repoSelectionError}</p>
             )}
           </div>
         ) : isLoading && prs.length === 0 ? (
           <div className="flex items-center justify-center p-4">
-            <RefreshCw size={16} className="animate-spin text-text-lighter" />
+            <RefreshCw className="animate-spin text-text-lighter" />
           </div>
         ) : prs.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-4 text-center">
-            <GitPullRequest size={20} className="mb-2 text-text-lighter" />
-            <p className="text-text-lighter text-xs">No pull requests</p>
+            <GitPullRequest className="mb-2 text-text-lighter" />
+            <p className="ui-text-sm text-text-lighter">No pull requests</p>
           </div>
         ) : (
           <div className="space-y-2">

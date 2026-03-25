@@ -16,7 +16,7 @@ export default function MentionBadge({ fileName, className }: MentionBadgeProps)
         className,
       )}
     >
-      <FileText size={10} className="text-blue-500" />
+      <FileText className="text-blue-500" />
       <span className="max-w-20 truncate">{fileName}</span>
     </Badge>
   );

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::{
    env,
    ffi::OsStr,
@@ -33,6 +33,8 @@ pub struct PullRequest {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestAuthor {
    pub login: String,
+   #[serde(rename = "avatarUrl", default)]
+   pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -51,6 +53,13 @@ pub struct StatusCheck {
 pub struct LinkedIssue {
    pub number: i64,
    pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReviewRequest {
+   pub login: String,
+   #[serde(rename = "avatarUrl", default)]
+   pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -85,12 +94,20 @@ pub struct PullRequestDetails {
    pub changed_files: i64,
    pub commits: Vec<serde_json::Value>,
    // New fields for enhanced PR info
-   #[serde(rename = "statusCheckRollup", default)]
+   #[serde(
+      rename = "statusCheckRollup",
+      default,
+      deserialize_with = "deserialize_status_checks"
+   )]
    pub status_checks: Vec<StatusCheck>,
    #[serde(rename = "closingIssuesReferences", default)]
    pub linked_issues: Vec<LinkedIssue>,
-   #[serde(rename = "reviewRequests", default)]
-   pub review_requests: Vec<serde_json::Value>,
+   #[serde(
+      rename = "reviewRequests",
+      default,
+      deserialize_with = "deserialize_review_requests"
+   )]
+   pub review_requests: Vec<ReviewRequest>,
    #[serde(rename = "mergeStateStatus", default)]
    pub merge_state_status: Option<String>,
    #[serde(default)]
@@ -114,6 +131,82 @@ pub struct PullRequestComment {
    pub body: String,
    #[serde(rename = "createdAt")]
    pub created_at: String,
+}
+
+fn deserialize_status_checks<'de, D>(deserializer: D) -> Result<Vec<StatusCheck>, D::Error>
+where
+   D: Deserializer<'de>,
+{
+   let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+   let Some(value) = value else {
+      return Ok(Vec::new());
+   };
+
+   let contexts = value
+      .get("contexts")
+      .and_then(|contexts| contexts.get("nodes"))
+      .and_then(|nodes| nodes.as_array())
+      .cloned()
+      .unwrap_or_default();
+
+   let mut checks = Vec::new();
+
+   for context in contexts {
+      let workflow_name = context
+         .get("workflowName")
+         .and_then(|value| value.as_str())
+         .map(ToOwned::to_owned);
+
+      let check = StatusCheck {
+         name: context
+            .get("name")
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
+         status: context
+            .get("status")
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
+         conclusion: context
+            .get("conclusion")
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
+         workflow_name,
+      };
+
+      if check.name.is_some() || check.status.is_some() || check.conclusion.is_some() {
+         checks.push(check);
+      }
+   }
+
+   Ok(checks)
+}
+
+fn deserialize_review_requests<'de, D>(deserializer: D) -> Result<Vec<ReviewRequest>, D::Error>
+where
+   D: Deserializer<'de>,
+{
+   let values = Vec::<serde_json::Value>::deserialize(deserializer).unwrap_or_default();
+   let mut review_requests = Vec::new();
+
+   for value in values {
+      let reviewer = value.get("requestedReviewer").unwrap_or(&value);
+      let login = reviewer
+         .get("login")
+         .and_then(|value| value.as_str())
+         .map(ToOwned::to_owned);
+
+      if let Some(login) = login {
+         review_requests.push(ReviewRequest {
+            login,
+            avatar_url: reviewer
+               .get("avatarUrl")
+               .and_then(|value| value.as_str())
+               .map(ToOwned::to_owned),
+         });
+      }
+   }
+
+   Ok(review_requests)
 }
 
 pub fn github_check_cli_auth(app: AppHandle) -> Result<bool, String> {

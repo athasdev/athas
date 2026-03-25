@@ -47,12 +47,12 @@ const FileDiffSection = memo(
           onClick={onToggle}
         >
           {isExpanded ? (
-            <ChevronDown size={12} className="text-text-lighter" />
+            <ChevronDown className="text-text-lighter" />
           ) : (
-            <ChevronRight size={12} className="text-text-lighter" />
+            <ChevronRight className="text-text-lighter" />
           )}
 
-          <FileText size={12} className={cn("shrink-0", statusColors[summary.status])} />
+          <FileText className={cn("shrink-0", statusColors[summary.status])} />
 
           <span className="truncate font-medium text-text">{summary.fileName}</span>
 

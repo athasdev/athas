@@ -18,6 +18,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
+import { logger } from "../utils/logger";
 import type { Position } from "../types/editor";
 
 interface UseLspIntegrationOptions {
@@ -141,7 +142,7 @@ export const useLspIntegration = ({
     // Start LSP server for this file and then notify about document open
     const initLsp = async () => {
       try {
-        console.log("LSP: Starting LSP for file", filePath, "in workspace", workspacePath);
+        logger.debug("LspIntegration", `Starting LSP for ${filePath} in ${workspacePath}`);
         // Reset document version for this file
         // Rust sends version 1 on document open, so we start at 1
         // First change will increment to 2
@@ -152,7 +153,7 @@ export const useLspIntegration = ({
         await lspClient.notifyDocumentOpen(filePath, value);
         // Mark document as opened so changes can be sent
         openedDocumentsRef.current.add(filePath);
-        console.log("LSP: LSP started and document opened for", filePath);
+        logger.debug("LspIntegration", `LSP started and document opened for ${filePath}`);
       } catch (error) {
         console.error("LSP initialization error:", error);
       }

@@ -2,7 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, Loader2, PlugZap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
@@ -163,7 +163,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               className="gap-1.5"
               aria-label="Test connection"
             >
-              {isTesting ? <Loader2 size={14} className="animate-spin" /> : <PlugZap size={14} />}
+              {isTesting ? <Loader2 className="animate-spin" /> : <PlugZap />}
               Test
             </Button>
           )}
@@ -178,7 +178,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
           >
-            {isConnecting && <Loader2 size={14} className="animate-spin" />}
+            {isConnecting && <Loader2 className="animate-spin" />}
             {isFileBased ? "Open Database" : "Connect"}
           </Button>
         </>
@@ -202,32 +202,40 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
 
       <div className="rounded-full bg-primary-bg/70 p-1">
         <div className="grid grid-cols-2 gap-1">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setMode("form")}
             className={cn(
-              "ui-font rounded-full px-3 py-1.5 text-xs transition-colors",
+              "rounded-full",
               mode === "form"
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover hover:text-text",
+                ? "bg-selected text-text hover:bg-selected"
+                : "text-text-lighter hover:text-text",
             )}
+            data-active={mode === "form"}
             aria-label="Form mode"
           >
             Form
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => !isFileBased && setMode("string")}
             disabled={isFileBased}
             className={cn(
-              "ui-font rounded-full px-3 py-1.5 text-xs transition-colors",
+              "rounded-full",
               mode === "string"
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover hover:text-text",
-              isFileBased && "cursor-not-allowed opacity-45 hover:bg-transparent",
+                ? "bg-selected text-text hover:bg-selected"
+                : "text-text-lighter hover:text-text",
+              isFileBased && "hover:bg-transparent",
             )}
+            data-active={mode === "string"}
             aria-label="Connection string mode"
           >
             Connection String
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -266,7 +274,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   className="gap-1.5"
                   onClick={handleBrowseDatabaseFile}
                 >
-                  <FolderOpen size={14} />
+                  <FolderOpen />
                   Browse
                 </Button>
               </div>

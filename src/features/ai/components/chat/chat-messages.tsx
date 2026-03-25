@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import { Button } from "@/ui/button";
 import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
 import { AcpInlineEvent } from "./acp-inline-event";
@@ -84,23 +85,28 @@ export const ChatMessages = memo(
         <div className="flex h-full flex-col items-center justify-center p-4">
           <div className="w-full max-w-sm overflow-hidden rounded-xl border border-border/40 bg-secondary-bg/30 p-1">
             {recentChats.map((chat) => (
-              <button
+              <Button
                 key={chat.id}
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => switchToChat(chat.id)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-hover"
+                className="h-auto w-full justify-start gap-2.5 px-2 py-1.5 text-left"
               >
                 <ProviderIcon
                   providerId={chat.agentId || "custom"}
                   size={12}
                   className="shrink-0 text-text-lighter"
                 />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-text text-xs">{chat.title}</span>
-                  <span className="select-none text-[10px] text-text-lighter">
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
+                  <span className="block w-full truncate text-left text-text text-xs">
+                    {chat.title}
+                  </span>
+                  <span className="block w-full select-none text-left text-[10px] text-text-lighter">
                     {getRelativeTime(chat.lastMessageAt)}
                   </span>
                 </div>
-              </button>
+              </Button>
             ))}
           </div>
         </div>

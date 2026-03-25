@@ -61,20 +61,10 @@ export function EditorStylesheet() {
           display: none;
         }
 
-        /* Hide scrollbars on editor textarea */
-        .editor-textarea {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        .editor-textarea::-webkit-scrollbar {
-          display: none;
-        }
-
-        /* Hide scrollbars on viewport and content elements */
+        /* Hide scrollbars on passive viewport/content layers */
         .editor-content-new,
         .virtual-editor-container,
-        [data-editor-viewport],
-        .editor-viewport {
+        [data-editor-viewport] {
           scrollbar-width: none;
           -ms-overflow-style: none;
           /* Avoid 3D transforms to keep overlay and base layers aligned */
@@ -83,8 +73,7 @@ export function EditorStylesheet() {
         }
         .editor-content-new::-webkit-scrollbar,
         .virtual-editor-container::-webkit-scrollbar,
-        [data-editor-viewport]::-webkit-scrollbar,
-        .editor-viewport::-webkit-scrollbar {
+        [data-editor-viewport]::-webkit-scrollbar {
           display: none;
         }
 

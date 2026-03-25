@@ -31,11 +31,13 @@ export interface Settings {
   // Theme
   theme: Theme;
   iconTheme: string;
+  syncSystemTheme: boolean;
   autoThemeLight: Theme;
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   titleBarProjectMode: "tabs" | "window";
+  openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;
   aiModelId: string;
@@ -59,7 +61,14 @@ export interface Settings {
   autoCompletion: boolean;
   parameterHints: boolean;
   // External Editor
-  externalEditor: "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom";
+  externalEditor:
+    | "none"
+    | "nvim"
+    | "helix"
+    | "vim"
+    | "nano"
+    | "emacs"
+    | "custom";
   customEditorCommand: string;
   // Features
   coreFeatures: CoreFeaturesState;

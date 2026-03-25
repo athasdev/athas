@@ -1,5 +1,6 @@
 export interface PullRequestAuthor {
   login: string;
+  avatarUrl?: string | null;
 }
 
 export interface StatusCheck {
@@ -21,6 +22,7 @@ export interface Label {
 
 export interface ReviewRequest {
   login: string;
+  avatarUrl?: string | null;
 }
 
 export interface PullRequest {

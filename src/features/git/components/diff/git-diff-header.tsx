@@ -11,6 +11,7 @@ import {
 import { memo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { DiffHeaderProps } from "../../types/git-diff-types";
 import { getFileStatus } from "../../utils/git-diff-helpers";
@@ -32,9 +33,9 @@ const DiffHeader = memo(
     const { closeBuffer } = useBufferStore.use.actions();
     const activeBufferId = useBufferStore.use.activeBufferId();
     const iconButtonClass =
-      "flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text";
+      "flex size-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text";
     const segmentedButtonClass =
-      "flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text";
+      "flex size-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
     const handleClose = () => {
       if (onClose) {
@@ -95,7 +96,7 @@ const DiffHeader = memo(
 
       return (
         <div className="flex min-w-0 items-center gap-0.5 overflow-hidden" title={fullPath}>
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-lighter">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded text-text-lighter">
             <FileExplorerIcon
               fileName={pathSegments[pathSegments.length - 1] || fullPath}
               isDir={false}
@@ -108,9 +109,7 @@ const DiffHeader = memo(
 
             return (
               <div key={`${segment}-${index}`} className="flex min-w-0 items-center gap-0.5">
-                {index > 0 && (
-                  <ChevronRight size={10} className="mx-0.5 shrink-0 text-text-lighter" />
-                )}
+                {index > 0 && <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" />}
                 <span
                   className={cn(
                     "truncate rounded px-1 py-0.5 text-xs",
@@ -157,28 +156,34 @@ const DiffHeader = memo(
         <div className="flex items-center gap-1.5 leading-none">
           {isMultiFileView && (
             <>
-              <button
+              <Button
                 onClick={onExpandAll}
+                variant="ghost"
+                size="icon-xs"
                 className={iconButtonClass}
                 title="Expand all"
                 aria-label="Expand all files"
               >
-                <ChevronDown size={12} />
-              </button>
-              <button
+                <ChevronDown />
+              </Button>
+              <Button
                 onClick={onCollapseAll}
+                variant="ghost"
+                size="icon-xs"
                 className={iconButtonClass}
                 title="Collapse all"
                 aria-label="Collapse all files"
               >
-                <ChevronUp size={12} />
-              </button>
+                <ChevronUp />
+              </Button>
               <div className="mx-1 h-4 w-px bg-border" />
             </>
           )}
 
-          <button
+          <Button
             onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
+            variant="ghost"
+            size="xs"
             className={cn(
               "flex h-5 items-center gap-1 rounded px-1.5 transition-colors hover:bg-hover hover:text-text",
               showWhitespace ? "bg-hover text-text" : "text-text-lighter",
@@ -186,41 +191,47 @@ const DiffHeader = memo(
             title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
             aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
           >
-            <Trash2 size={12} />
-            {showWhitespace && <Check size={10} />}
-          </button>
+            <Trash2 />
+            {showWhitespace && <Check />}
+          </Button>
 
           {onViewModeChange && (
             <div className="flex items-center gap-0.5">
-              <button
+              <Button
                 onClick={() => onViewModeChange("unified")}
+                variant="ghost"
+                size="icon-xs"
                 className={cn(segmentedButtonClass, viewMode === "unified" && "bg-hover text-text")}
                 title="Unified view"
                 aria-label="Unified diff view"
               >
-                <Rows3 size={12} />
-              </button>
-              <button
+                <Rows3 />
+              </Button>
+              <Button
                 onClick={() => onViewModeChange("split")}
+                variant="ghost"
+                size="icon-xs"
                 className={cn(segmentedButtonClass, viewMode === "split" && "bg-hover text-text")}
                 title="Split view"
                 aria-label="Split diff view"
               >
-                <Columns2 size={12} />
-              </button>
+                <Columns2 />
+              </Button>
             </div>
           )}
 
           <div className="mx-1 h-4 w-px bg-border" />
 
-          <button
+          <Button
             onClick={handleClose}
+            variant="ghost"
+            size="icon-xs"
             className={iconButtonClass}
             title="Close"
             aria-label="Close diff view"
           >
-            <X size={12} />
-          </button>
+            <X />
+          </Button>
         </div>
       </div>
     );

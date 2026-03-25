@@ -1,5 +1,6 @@
 import { Minus, Plus, ZoomIn, ZoomOut } from "lucide-react";
 import { memo, useCallback, useState } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff-types";
 import { getFileStatus, getImgSrc } from "../../utils/git-diff-helpers";
@@ -18,7 +19,7 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
         labelColor,
       )}
     >
-      {label === "Removed" ? <Minus size={10} /> : <Plus size={10} />}
+      {label === "Removed" ? <Minus /> : <Plus />}
       {label}
     </div>
     <div className="flex flex-1 items-center justify-center overflow-auto bg-[length:16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
@@ -65,34 +66,38 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
       />
 
       <div className="flex items-center justify-center gap-2 border-border border-b bg-secondary-bg py-1">
-        <button
+        <Button
           onClick={handleZoomOut}
           disabled={zoom <= MIN_ZOOM}
-          className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text disabled:opacity-50"
+          variant="ghost"
+          size="icon-sm"
+          className="text-text-lighter disabled:opacity-50"
           title="Zoom out"
           aria-label="Zoom out"
         >
-          <ZoomOut size={14} />
-        </button>
+          <ZoomOut />
+        </Button>
         <span className="ui-font w-12 text-center text-text-lighter text-xs">
           {Math.round(zoom * 100)}%
         </span>
-        <button
+        <Button
           onClick={handleZoomIn}
           disabled={zoom >= MAX_ZOOM}
-          className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text disabled:opacity-50"
+          variant="ghost"
+          size="icon-sm"
+          className="text-text-lighter disabled:opacity-50"
           title="Zoom in"
           aria-label="Zoom in"
         >
-          <ZoomIn size={14} />
-        </button>
+          <ZoomIn />
+        </Button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {status === "added" ? (
           <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added/20 py-1 font-medium text-[10px] text-git-added">
-              <Plus size={10} />
+              <Plus />
               New Image
             </div>
             <div className="flex flex-1 items-center justify-center overflow-auto bg-[length:16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
@@ -107,7 +112,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
         ) : status === "deleted" ? (
           <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted/20 py-1 font-medium text-[10px] text-git-deleted">
-              <Minus size={10} />
+              <Minus />
               Removed Image
             </div>
             <div className="flex flex-1 items-center justify-center overflow-auto bg-[length:16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">

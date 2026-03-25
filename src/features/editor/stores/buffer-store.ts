@@ -147,6 +147,7 @@ interface BufferActions {
     diffData?: GitDiff | MultiFileDiff,
   ) => void;
   updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => void;
+  updateBufferLanguage: (bufferId: string, language: string) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
   updateBufferPath: (bufferId: string, newPath: string) => void;
   updateBuffer: (updatedBuffer: PaneContent) => void;
@@ -321,7 +322,7 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
         ...base,
         type: "pullRequest",
         path: `pr://${spec.prNumber}`,
-        name: `PR #${spec.prNumber}`,
+        name: "Pull Request",
         isPreview: false,
         prNumber: spec.prNumber,
       };
@@ -371,7 +372,7 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
  * Run extension checking and LSP logic for a newly opened editor file.
  */
 const checkExtensionSupport = (path: string) => {
-  logger.info("BufferStore", `Checking extension support for ${path}`);
+  logger.debug("BufferStore", `Checking extension support for ${path}`);
   import("@/extensions/loader/extension-loader")
     .then(({ extensionLoader }) => {
       logger.debug("BufferStore", "Waiting for extension loader initialization...");
@@ -399,7 +400,7 @@ const checkExtensionSupport = (path: string) => {
       if (extension) {
         const isBundled = !extension.manifest.installation;
         const installed = extension.isInstalled || isBundled;
-        logger.info(
+        logger.debug(
           "BufferStore",
           `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
         );
@@ -407,7 +408,7 @@ const checkExtensionSupport = (path: string) => {
         if (installed) {
           logger.debug("BufferStore", `Extension ready for ${path}`);
         } else {
-          logger.info(
+          logger.debug(
             "BufferStore",
             `Extension ${extension.manifest.name} not installed for ${path}`,
           );
@@ -423,7 +424,7 @@ const checkExtensionSupport = (path: string) => {
           );
         }
       } else {
-        logger.info("BufferStore", `No extension available for ${path}`);
+        logger.debug("BufferStore", `No extension available for ${path}`);
       }
     })
     .catch((error) => {
@@ -1097,6 +1098,16 @@ export const useBufferStore = createSelectors(
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer && isEditorContent(buffer)) {
               buffer.tokens = tokens;
+            }
+          });
+        },
+
+        updateBufferLanguage: (bufferId: string, language: string) => {
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer && isEditorContent(buffer)) {
+              buffer.languageOverride = language;
+              buffer.tokens = [];
             }
           });
         },

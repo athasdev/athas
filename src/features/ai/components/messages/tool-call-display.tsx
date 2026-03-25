@@ -7,6 +7,7 @@ import {
   TerminalSquare,
 } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface ToolCallDisplayProps {
@@ -146,11 +147,14 @@ export default function ToolCallDisplay({
     <div className="rounded-xl border border-border/55 bg-primary-bg/55 px-2.5 py-2 leading-tight">
       <div className="flex items-center gap-1.5">
         <div className="flex size-5 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-secondary-bg/60">
-          <TerminalSquare size={10} className="text-text-lighter/75" />
+          <TerminalSquare className="text-text-lighter/75" />
         </div>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="group flex min-w-0 flex-1 items-center gap-1 text-left text-xs"
+          className="group h-auto min-w-0 flex-1 justify-start gap-1 px-0 py-0 text-left hover:bg-transparent"
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -170,32 +174,30 @@ export default function ToolCallDisplay({
             <div className="mt-0.5 truncate text-text-lighter/65">{formatInput(input)}</div>
           </div>
           <ChevronRight
-            size={9}
             className={cn(
               "opacity-30 transition-transform duration-200 group-hover:opacity-50",
               isExpanded && "rotate-90",
             )}
           />
-        </button>
+        </Button>
         {toolName === "Read" && hasInput && input?.file_path && !isStreaming && !error && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={() => onOpenInEditor?.(input.file_path)}
-            className="rounded-full p-1 text-text-lighter/60 transition-all hover:bg-hover hover:text-text-lighter/90"
+            className="rounded-full text-text-lighter/60 hover:text-text-lighter/90"
             title="Open in editor"
             aria-label="Open file in editor"
           >
-            <ExternalLink size={10} />
-          </button>
+            <ExternalLink />
+          </Button>
         )}
         {status === "running" ? (
-          <Clock size={10} className={cn("shrink-0 animate-spin", statusClass)} />
+          <Clock className={cn("shrink-0 animate-spin", statusClass)} />
         ) : null}
-        {status === "completed" ? (
-          <CheckCircle size={10} className={cn("shrink-0", statusClass)} />
-        ) : null}
-        {status === "failed" ? (
-          <AlertCircle size={10} className={cn("shrink-0", statusClass)} />
-        ) : null}
+        {status === "completed" ? <CheckCircle className={cn("shrink-0", statusClass)} /> : null}
+        {status === "failed" ? <AlertCircle className={cn("shrink-0", statusClass)} /> : null}
       </div>
 
       {isExpanded && (

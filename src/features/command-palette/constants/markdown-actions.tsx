@@ -34,7 +34,7 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
       id: "markdown-preview",
       label: "Markdown: Preview Markdown",
       description: "Open markdown preview in a new tab",
-      icon: <Eye size={14} />,
+      icon: <Eye />,
       category: "Markdown",
       action: () => {
         // Create a virtual path for the preview

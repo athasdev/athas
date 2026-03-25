@@ -89,6 +89,75 @@ export function getLanguageIdFromExtension(extension: string): string | null {
   return EXTENSION_TO_LANGUAGE[normalized] || null;
 }
 
+export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+  javascript: "JavaScript",
+  javascriptreact: "JSX",
+  typescript: "TypeScript",
+  typescriptreact: "TSX",
+  python: "Python",
+  rust: "Rust",
+  go: "Go",
+  java: "Java",
+  c: "C",
+  cpp: "C++",
+  csharp: "C#",
+  ruby: "Ruby",
+  php: "PHP",
+  html: "HTML",
+  css: "CSS",
+  json: "JSON",
+  yaml: "YAML",
+  toml: "TOML",
+  markdown: "Markdown",
+  bash: "Bash",
+  swift: "Swift",
+  kotlin: "Kotlin",
+  scala: "Scala",
+  lua: "Lua",
+  dart: "Dart",
+  elixir: "Elixir",
+  ocaml: "OCaml",
+  sql: "SQL",
+  solidity: "Solidity",
+  zig: "Zig",
+  vue: "Vue",
+  embedded_template: "ERB",
+  text: "Plain Text",
+  dockerfile: "Dockerfile",
+  makefile: "Makefile",
+  cmake: "CMake",
+  gitignore: "Git Ignore",
+  scss: "SCSS",
+  sass: "Sass",
+  less: "Less",
+  xml: "XML",
+  restructuredtext: "reStructuredText",
+  latex: "LaTeX",
+  haskell: "Haskell",
+  fsharp: "F#",
+  clojure: "Clojure",
+  lisp: "Lisp",
+  scheme: "Scheme",
+  shell: "Shell",
+  powershell: "PowerShell",
+  batch: "Batch",
+  ini: "INI",
+  csv: "CSV",
+  r: "R",
+  vim: "Vim",
+  elm: "Elm",
+};
+
+export function getLanguageDisplayName(languageId: string): string {
+  return LANGUAGE_DISPLAY_NAMES[languageId] || languageId;
+}
+
+export function getAllLanguages(): Array<{ id: string; displayName: string }> {
+  return Object.entries(LANGUAGE_DISPLAY_NAMES)
+    .map(([id, displayName]) => ({ id, displayName }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
 export function getLanguageIdFromPath(filePath: string): string | null {
   const fromRegistry = extensionRegistry.getLanguageId(filePath);
   if (fromRegistry) {

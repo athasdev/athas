@@ -5,6 +5,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
+import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -12,6 +13,7 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import { useGitStore } from "@/features/git/stores/git-store";
 import type { GitFile } from "@/features/git/types/git-types";
 import { useSettingsStore } from "@/features/settings/store";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -531,8 +533,14 @@ function FileExplorerTreeComponent({
       }
       e.preventDefault();
       e.stopPropagation();
+      if (!t.isDir) {
+        fileOpenBenchmark.ensureStarted(t.path, "explorer-click");
+        fileOpenBenchmark.mark(t.path, "explorer-click");
+      }
       onFileSelect(t.path, t.isDir);
-      updateActivePath?.(t.path);
+      if (t.isDir) {
+        updateActivePath?.(t.path);
+      }
     },
     [onFileSelect, updateActivePath, pathToFile],
   );
@@ -543,8 +551,14 @@ function FileExplorerTreeComponent({
       if (!t) return;
       e.preventDefault();
       e.stopPropagation();
+      if (!t.isDir) {
+        fileOpenBenchmark.ensureStarted(t.path, "explorer-double-click");
+        fileOpenBenchmark.mark(t.path, "explorer-double-click");
+      }
       onFileOpen?.(t.path, t.isDir);
-      updateActivePath?.(t.path);
+      if (t.isDir) {
+        updateActivePath?.(t.path);
+      }
     },
     [onFileOpen, updateActivePath, pathToFile],
   );
@@ -619,6 +633,18 @@ function FileExplorerTreeComponent({
       setIsDeletingPath(false);
     }
   }, [deleteCandidate, onDeletePath]);
+
+  useEffect(() => {
+    if (!activePath || !fileOpenBenchmark.has(activePath)) return;
+
+    fileOpenBenchmark.mark(activePath, "explorer-active-path");
+
+    const rafId = requestAnimationFrame(() => {
+      fileOpenBenchmark.mark(activePath, "explorer-painted");
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [activePath]);
 
   return (
     <div
@@ -787,12 +813,14 @@ function FileExplorerTreeComponent({
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <div className="ui-font flex flex-col items-center text-center">
             <span className="text-[0.78em] text-text-lighter">No folder open</span>
-            <button
+            <Button
               onClick={handleOpenFolder}
-              className="mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80"
+              variant="ghost"
+              size="sm"
+              className="mt-1.5 text-[0.78em] text-accent hover:text-accent/80"
             >
               Open Folder
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -814,7 +842,7 @@ function FileExplorerTreeComponent({
                       file={row.file}
                       depth={row.depth}
                       isExpanded={row.isExpanded}
-                      activePath={activePath}
+                      isActive={activePath === row.file.path}
                       dragOverPath={dragState.dragOverPath}
                       isDragging={dragState.isDragging}
                       editingValue={editingValue}
@@ -843,20 +871,24 @@ function FileExplorerTreeComponent({
           size="sm"
           footer={
             <>
-              <button
+              <Button
                 onClick={() => setDeleteCandidate(null)}
                 disabled={isDeletingPath}
-                className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+                variant="outline"
+                size="sm"
+                className="disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => void handleDeleteConfirm()}
                 disabled={isDeletingPath}
-                className="rounded bg-git-deleted px-3 py-1.5 text-white text-xs transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                variant="danger"
+                size="sm"
+                className="disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingPath ? "Deleting..." : "Delete"}
-              </button>
+              </Button>
             </>
           }
         >

@@ -75,6 +75,8 @@ const initialState: GitHubState = {
 let prsRequestSeq = 0;
 const prDetailsRequestSeqByKey: Record<string, number> = {};
 const prContentRequestSeqByKey: Record<string, number> = {};
+const prDetailsInFlightByKey: Record<string, Promise<void> | undefined> = {};
+const prContentInFlightByKey: Record<string, Promise<void> | undefined> = {};
 
 function getPRListCacheKey(repoPath: string, filter: PRFilter): string {
   return `${repoPath}::${filter}`;
@@ -216,6 +218,11 @@ export const useGitHubStore = create(
         const hasFreshDetails =
           cached && !force && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS);
 
+        if (!force && prDetailsInFlightByKey[cacheKey]) {
+          await prDetailsInFlightByKey[cacheKey];
+          return;
+        }
+
         if (hasFreshDetails) {
           set({
             selectedPRNumber: prNumber,
@@ -257,36 +264,43 @@ export const useGitHubStore = create(
         const requestId = (prDetailsRequestSeqByKey[cacheKey] ?? 0) + 1;
         prDetailsRequestSeqByKey[cacheKey] = requestId;
 
-        try {
-          const details = await invoke<PullRequestDetails>("github_get_pr_details", {
-            repoPath,
-            prNumber,
-          });
+        const run = (async () => {
+          try {
+            const details = await invoke<PullRequestDetails>("github_get_pr_details", {
+              repoPath,
+              prNumber,
+            });
 
-          if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
+            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
 
-          set((state) => ({
-            selectedPRDetails: details,
-            isLoadingDetails: false,
-            detailsError: null,
-            contentError: null,
-            prDetailsCache: {
-              ...state.prDetailsCache,
-              [cacheKey]: {
-                ...state.prDetailsCache[cacheKey],
-                fetchedAt: Date.now(),
-                details,
+            set((state) => ({
+              selectedPRDetails: details,
+              isLoadingDetails: false,
+              detailsError: null,
+              contentError: null,
+              prDetailsCache: {
+                ...state.prDetailsCache,
+                [cacheKey]: {
+                  ...state.prDetailsCache[cacheKey],
+                  fetchedAt: Date.now(),
+                  details,
+                },
               },
-            },
-          }));
-        } catch (err) {
-          if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
+            }));
+          } catch (err) {
+            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
 
-          set({
-            detailsError: err instanceof Error ? err.message : String(err),
-            isLoadingDetails: false,
-          });
-        }
+            set({
+              detailsError: err instanceof Error ? err.message : String(err),
+              isLoadingDetails: false,
+            });
+          } finally {
+            delete prDetailsInFlightByKey[cacheKey];
+          }
+        })();
+
+        prDetailsInFlightByKey[cacheKey] = run;
+        await run;
       },
 
       fetchPRContent: async (
@@ -299,9 +313,15 @@ export const useGitHubStore = create(
         const needsFiles = mode === "full" || mode === "files";
         const needsComments = mode === "full" || mode === "comments";
         const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
+        const inFlightKey = `${cacheKey}::${mode}`;
         const cached = get().prDetailsCache[cacheKey];
         const filesFetchedAt = cached?.filesFetchedAt ?? cached?.contentFetchedAt;
         const commentsFetchedAt = cached?.commentsFetchedAt ?? cached?.contentFetchedAt;
+
+        if (!force && prContentInFlightByKey[inFlightKey]) {
+          await prContentInFlightByKey[inFlightKey];
+          return;
+        }
 
         const hasFreshFiles =
           filesFetchedAt &&
@@ -359,80 +379,87 @@ export const useGitHubStore = create(
         const requestId = (prContentRequestSeqByKey[cacheKey] ?? 0) + 1;
         prContentRequestSeqByKey[cacheKey] = requestId;
 
-        try {
-          const [diff, files, comments] = await Promise.all([
-            shouldFetchFiles
-              ? invoke<string>("github_get_pr_diff", { repoPath, prNumber })
-              : Promise.resolve(undefined),
-            shouldFetchFiles
-              ? invoke<PullRequestFile[]>("github_get_pr_files", { repoPath, prNumber })
-              : Promise.resolve(undefined),
-            shouldFetchComments
-              ? invoke<PullRequestComment[]>("github_get_pr_comments", { repoPath, prNumber })
-              : Promise.resolve(undefined),
-          ]);
+        const run = (async () => {
+          try {
+            const [diff, files, comments] = await Promise.all([
+              shouldFetchFiles
+                ? invoke<string>("github_get_pr_diff", { repoPath, prNumber })
+                : Promise.resolve(undefined),
+              shouldFetchFiles
+                ? invoke<PullRequestFile[]>("github_get_pr_files", { repoPath, prNumber })
+                : Promise.resolve(undefined),
+              shouldFetchComments
+                ? invoke<PullRequestComment[]>("github_get_pr_comments", { repoPath, prNumber })
+                : Promise.resolve(undefined),
+            ]);
 
-          if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
+            if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
 
-          const normalizedFiles = shouldFetchFiles ? normalizePullRequestFiles(files) : undefined;
+            const normalizedFiles = shouldFetchFiles ? normalizePullRequestFiles(files) : undefined;
 
-          set((state) => {
-            const now = Date.now();
-            const baseDetails =
-              state.prDetailsCache[cacheKey]?.details ??
-              (state.selectedPRNumber === prNumber ? state.selectedPRDetails : null);
-            const currentEntry = state.prDetailsCache[cacheKey];
+            set((state) => {
+              const now = Date.now();
+              const baseDetails =
+                state.prDetailsCache[cacheKey]?.details ??
+                (state.selectedPRNumber === prNumber ? state.selectedPRDetails : null);
+              const currentEntry = state.prDetailsCache[cacheKey];
 
-            return {
-              selectedPRDiff: needsFiles
-                ? shouldFetchFiles
-                  ? (diff ?? null)
-                  : state.selectedPRDiff
-                : state.selectedPRDiff,
-              selectedPRFiles: needsFiles
-                ? shouldFetchFiles
-                  ? (normalizedFiles ?? [])
-                  : state.selectedPRFiles
-                : state.selectedPRFiles,
-              selectedPRComments: needsComments
-                ? shouldFetchComments
-                  ? (comments ?? [])
-                  : state.selectedPRComments
-                : state.selectedPRComments,
-              isLoadingContent: false,
-              contentError: null,
-              prDetailsCache: baseDetails
-                ? {
-                    ...state.prDetailsCache,
-                    [cacheKey]: {
-                      ...(currentEntry ?? {
-                        fetchedAt: now,
-                        details: baseDetails,
-                      }),
-                      diff: shouldFetchFiles ? diff : currentEntry?.diff,
-                      files: shouldFetchFiles ? normalizedFiles : currentEntry?.files,
-                      comments: shouldFetchComments ? comments : currentEntry?.comments,
-                      filesFetchedAt: shouldFetchFiles ? now : currentEntry?.filesFetchedAt,
-                      commentsFetchedAt: shouldFetchComments
-                        ? now
-                        : currentEntry?.commentsFetchedAt,
-                      contentFetchedAt:
-                        shouldFetchFiles || shouldFetchComments
+              return {
+                selectedPRDiff: needsFiles
+                  ? shouldFetchFiles
+                    ? (diff ?? null)
+                    : state.selectedPRDiff
+                  : state.selectedPRDiff,
+                selectedPRFiles: needsFiles
+                  ? shouldFetchFiles
+                    ? (normalizedFiles ?? [])
+                    : state.selectedPRFiles
+                  : state.selectedPRFiles,
+                selectedPRComments: needsComments
+                  ? shouldFetchComments
+                    ? (comments ?? [])
+                    : state.selectedPRComments
+                  : state.selectedPRComments,
+                isLoadingContent: false,
+                contentError: null,
+                prDetailsCache: baseDetails
+                  ? {
+                      ...state.prDetailsCache,
+                      [cacheKey]: {
+                        ...(currentEntry ?? {
+                          fetchedAt: now,
+                          details: baseDetails,
+                        }),
+                        diff: shouldFetchFiles ? diff : currentEntry?.diff,
+                        files: shouldFetchFiles ? normalizedFiles : currentEntry?.files,
+                        comments: shouldFetchComments ? comments : currentEntry?.comments,
+                        filesFetchedAt: shouldFetchFiles ? now : currentEntry?.filesFetchedAt,
+                        commentsFetchedAt: shouldFetchComments
                           ? now
-                          : currentEntry?.contentFetchedAt,
-                    },
-                  }
-                : state.prDetailsCache,
-            };
-          });
-        } catch (err) {
-          if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
+                          : currentEntry?.commentsFetchedAt,
+                        contentFetchedAt:
+                          shouldFetchFiles || shouldFetchComments
+                            ? now
+                            : currentEntry?.contentFetchedAt,
+                      },
+                    }
+                  : state.prDetailsCache,
+              };
+            });
+          } catch (err) {
+            if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
 
-          set({
-            contentError: err instanceof Error ? err.message : String(err),
-            isLoadingContent: false,
-          });
-        }
+            set({
+              contentError: err instanceof Error ? err.message : String(err),
+              isLoadingContent: false,
+            });
+          } finally {
+            delete prContentInFlightByKey[inFlightKey];
+          }
+        })();
+
+        prContentInFlightByKey[inFlightKey] = run;
+        await run;
       },
 
       deselectPR: () => {

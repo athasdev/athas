@@ -65,18 +65,54 @@
   tab-size: inherit;
 
   scroll-behavior: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-border) 72%, transparent) transparent;
+  scrollbar-gutter: stable;
 }
 
-/* Ensure both layers have matching scroll behavior */
-.highlight-layer::-webkit-scrollbar,
-.input-layer::-webkit-scrollbar {
+/* Keep passive layers visually clean */
+.highlight-layer::-webkit-scrollbar {
   display: none;
 }
 
-.highlight-layer,
-.input-layer {
+.highlight-layer {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.input-layer::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.input-layer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.input-layer::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-border) 58%, transparent);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+  transition: background-color 0.18s ease;
+}
+
+.input-layer:hover::-webkit-scrollbar-thumb,
+.input-layer:focus::-webkit-scrollbar-thumb,
+.input-layer:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-border) 90%, transparent);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.input-layer::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-text-lighter) 90%, transparent);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.input-layer::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Selection styling for the input layer */

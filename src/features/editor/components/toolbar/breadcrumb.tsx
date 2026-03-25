@@ -1,11 +1,8 @@
-import { ArrowLeft, ArrowRight, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { logger } from "@/features/editor/utils/logger";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
@@ -14,7 +11,7 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { buttonClassName } from "@/ui/button";
+import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import { isMac } from "@/utils/platform";
@@ -33,42 +30,7 @@ export default function Breadcrumb() {
   const { isFindVisible, setIsFindVisible } = useUIState();
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
 
-  const jumpListActions = useJumpListStore.use.actions();
-  const canGoBack = jumpListActions.canGoBack();
-  const canGoForward = jumpListActions.canGoForward();
   const inlineEditShortcutLabel = isMac() ? "Cmd+I" : "Ctrl+I";
-
-  const handleJumpBack = async () => {
-    const bufferStore = useBufferStore.getState();
-    const editorState = useEditorStateStore.getState();
-    const activeBufferId = bufferStore.activeBufferId;
-    const activeBuffer = bufferStore.buffers.find((b) => b.id === activeBufferId);
-
-    const currentPosition =
-      activeBufferId && activeBuffer?.path
-        ? {
-            bufferId: activeBufferId,
-            filePath: activeBuffer.path,
-            line: editorState.cursorPosition.line,
-            column: editorState.cursorPosition.column,
-            offset: editorState.cursorPosition.offset,
-            scrollTop: editorState.scrollTop,
-            scrollLeft: editorState.scrollLeft,
-          }
-        : undefined;
-
-    const entry = jumpListActions.goBack(currentPosition);
-    if (entry) {
-      await navigateToJumpEntry(entry);
-    }
-  };
-
-  const handleJumpForward = async () => {
-    const entry = jumpListActions.goForward();
-    if (entry) {
-      await navigateToJumpEntry(entry);
-    }
-  };
 
   const handleNavigate = async (path: string) => {
     try {
@@ -275,87 +237,65 @@ export default function Breadcrumb() {
   return (
     <>
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
-        <div className="ui-font flex items-center gap-0.5 overflow-hidden text-text-lighter text-xs">
-          <div className="mr-1 flex items-center gap-0.5">
-            <button
-              onClick={handleJumpBack}
-              disabled={!canGoBack}
-              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
-              title="Go Back (Ctrl+-)"
-              aria-label="Go back to previous location"
-            >
-              <ArrowLeft size={12} />
-            </button>
-            <button
-              onClick={handleJumpForward}
-              disabled={!canGoForward}
-              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
-              title="Go Forward (Ctrl+Shift+-)"
-              aria-label="Go forward to next location"
-            >
-              <ArrowRight size={12} />
-            </button>
+        <div className="ui-font flex min-w-0 items-center gap-0.5 text-text-lighter text-xs">
+          <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto scrollbar-none">
+            {segments.map((segment, index) => (
+              <div key={index} className="flex shrink-0 items-center gap-0.5">
+                {index > 0 && <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" />}
+                <Button
+                  ref={(el) => {
+                    buttonRefs.current[index] = el;
+                  }}
+                  onClick={(e) => handleSegmentClick(index, e)}
+                  variant="ghost"
+                  size="xs"
+                  className="min-w-0 gap-1 whitespace-nowrap text-text-lighter hover:text-text"
+                  title={segment}
+                >
+                  {segment}
+                </Button>
+              </div>
+            ))}
           </div>
-          {segments.map((segment, index) => (
-            <div key={index} className="flex min-w-0 items-center gap-0.5">
-              {index > 0 && (
-                <ChevronRight size={10} className="mx-0.5 shrink-0 text-text-lighter" />
-              )}
-              <button
-                ref={(el) => {
-                  buttonRefs.current[index] = el;
-                }}
-                onClick={(e) => handleSegmentClick(index, e)}
-                className="flex max-w-60 items-center gap-1 truncate rounded-md px-1 py-0.5 text-xs transition-colors hover:bg-hover hover:text-text"
-                title={segment}
-              >
-                {segment}
-              </button>
-            </div>
-          ))}
         </div>
         <div className="flex items-center gap-1">
           {((isMarkdownFile() && activeBuffer?.type !== "markdownPreview") ||
             (isHtmlFile() && activeBuffer?.type !== "htmlPreview") ||
             (isCsvFile() && activeBuffer?.type !== "csvPreview")) && (
-            <button
-              onClick={handlePreviewClick}
-              className={buttonClassName({
-                variant: "ghost",
-                size: "icon-xs",
-                className: "rounded text-text-lighter",
-              })}
-              title="Preview"
-              aria-label="Preview"
-            >
-              <Eye size={12} />
-            </button>
+            <Tooltip content="Preview" side="bottom">
+              <Button
+                onClick={handlePreviewClick}
+                variant="ghost"
+                size="icon-xs"
+                className="rounded text-text-lighter"
+                aria-label="Preview"
+              >
+                <Eye />
+              </Button>
+            </Tooltip>
           )}
           <Tooltip content={inlineEditTooltip} side="bottom">
-            <button
+            <Button
               onClick={handleInlineEditClick}
-              className={buttonClassName({
-                variant: "ghost",
-                size: "icon-xs",
-                className: "rounded text-text-lighter",
-              })}
-              title={inlineEditTooltip}
+              variant="ghost"
+              size="icon-xs"
+              className="rounded text-text-lighter"
               aria-label={`AI inline edit (${inlineEditShortcutLabel})`}
             >
-              <Sparkles size={12} />
-            </button>
+              <Sparkles />
+            </Button>
           </Tooltip>
-          <button
-            onClick={onSearchClick}
-            className={buttonClassName({
-              variant: "ghost",
-              size: "icon-xs",
-              className: "rounded text-text-lighter",
-            })}
-            title="Find in file"
-          >
-            <Search size={12} />
-          </button>
+          <Tooltip content="Find in file" side="bottom">
+            <Button
+              onClick={onSearchClick}
+              variant="ghost"
+              size="icon-xs"
+              className="rounded text-text-lighter"
+              aria-label="Find in file"
+            >
+              <Search />
+            </Button>
+          </Tooltip>
           <div className="mx-1 h-3.5 w-px bg-border/70" />
           <EditorStatusActions />
         </div>
@@ -374,19 +314,21 @@ export default function Breadcrumb() {
           }}
         >
           {dropdown.navigationStack.length > 0 && (
-            <button
+            <Button
               onClick={handleGoBack}
+              variant="ghost"
+              size="sm"
               className={dropdownItemClassName(
-                "border-border/70 border-b text-text-lighter hover:text-text",
+                "justify-start border-border/70 border-b text-text-lighter hover:text-text",
               )}
             >
-              <ArrowLeft size={12} className="shrink-0" />
+              <ArrowLeft className="shrink-0" />
               <span>Go back</span>
-            </button>
+            </Button>
           )}
 
           {dropdown.items.map((item) => (
-            <button
+            <Button
               key={item.path}
               onClick={async () => {
                 if (item.isDir) {
@@ -423,7 +365,9 @@ export default function Breadcrumb() {
                   setDropdown(null);
                 }
               }}
-              className={dropdownItemClassName()}
+              variant="ghost"
+              size="sm"
+              className={dropdownItemClassName("justify-start")}
             >
               <FileExplorerIcon
                 fileName={item.name}
@@ -432,7 +376,7 @@ export default function Breadcrumb() {
                 className="shrink-0 text-text-lighter"
               />
               <span className="truncate">{item.name}</span>
-            </button>
+            </Button>
           ))}
         </Dropdown>
       )}

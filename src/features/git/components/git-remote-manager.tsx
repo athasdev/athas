@@ -1,6 +1,6 @@
 import { Globe, Plus, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
@@ -98,7 +98,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
       <div className="ui-font flex max-h-[70vh] flex-col">
         <div className="border-border/70 border-b p-4">
           <div className="mb-3 flex items-center gap-2 text-text text-xs">
-            <Plus size={12} className="text-text-lighter" />
+            <Plus className="text-text-lighter" />
             <span className="font-medium">Add remote</span>
           </div>
 
@@ -151,7 +151,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-2">
-                        <Globe size={12} className="text-text-lighter" />
+                        <Globe className="text-text-lighter" />
                         <span className="font-medium text-text text-xs">{remote.name}</span>
                       </div>
                       <div className="break-all text-[10px] text-text-lighter">{remote.url}</div>
@@ -164,7 +164,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                       className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
                       title="Remove remote"
                     >
-                      <Trash2 size={10} />
+                      <Trash2 />
                     </Button>
                   </div>
                 </div>

@@ -27,6 +27,15 @@ mod menu;
 mod secure_storage;
 mod terminal;
 
+fn get_active_webview_window<R: tauri::Runtime>(
+   app: &tauri::AppHandle<R>,
+) -> Option<tauri::WebviewWindow<R>> {
+   app.get_focused_window()
+      .and_then(|window| app.get_webview_window(window.label()))
+      .or_else(|| app.get_webview_window("main"))
+      .or_else(|| app.webview_windows().into_values().next())
+}
+
 #[cfg(target_os = "macos")]
 #[allow(unexpected_cfgs)]
 fn disable_macos_autofill_heuristics() {
@@ -165,26 +174,7 @@ fn main() {
 
          // Platform-specific window configuration
          if let Some(window) = app.get_webview_window("main") {
-            #[cfg(target_os = "macos")]
-            {
-               use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
-
-               // Apply vibrancy effect for macOS
-               apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
-                  .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-               // Keep decorations enabled on Windows (native controls)
-               let _ = window.set_decorations(true);
-            }
-
-            #[cfg(target_os = "linux")]
-            {
-               // Disable decorations on Linux (use custom controls only)
-               let _ = window.set_decorations(false);
-            }
+            commands::ui::window::configure_app_window(&window);
          }
 
          // Auto-fix CLI script if it contains wrong-platform commands
@@ -192,143 +182,154 @@ fn main() {
          commands::development::cli::auto_fix_cli_on_startup();
 
          app.on_menu_event(move |_app_handle: &tauri::AppHandle, event| {
-            if let Some(window) = _app_handle.get_webview_window("main") {
-               match event.id().0.as_str() {
-                  "quit" => {
-                     info!("Quit menu item clicked");
-                     std::process::exit(0);
-                  }
-                  "quit_app" => {
-                     info!("Quit app menu item triggered");
-                     std::process::exit(0);
-                  }
-                  "new_file" => {
-                     let _ = window.emit("menu_new_file", ());
-                  }
-                  "new_window" => {
-                     let _ = window.emit("menu_new_window", ());
-                  }
-                  "open_folder" => {
-                     let _ = window.emit("menu_open_folder", ());
-                  }
-                  "close_folder" => {
-                     let _ = window.emit("menu_close_folder", ());
-                  }
-                  "save" => {
-                     let _ = window.emit("menu_save", ());
-                  }
-                  "save_as" => {
-                     let _ = window.emit("menu_save_as", ());
-                  }
-                  "close_tab" => {
-                     debug!("Close tab menu item triggered");
-                     let _ = window.emit("menu_close_tab", ());
-                  }
-                  "undo" => {
-                     let _ = window.emit("menu_undo", ());
-                  }
-                  "redo" => {
-                     let _ = window.emit("menu_redo", ());
-                  }
-                  "find" => {
-                     let _ = window.emit("menu_find", ());
-                  }
-                  "find_replace" => {
-                     let _ = window.emit("menu_find_replace", ());
-                  }
-                  "command_palette" => {
-                     let _ = window.emit("menu_command_palette", ());
-                  }
-                  "toggle_sidebar" => {
-                     let _ = window.emit("menu_toggle_sidebar", ());
-                  }
-                  "toggle_terminal" => {
-                     let _ = window.emit("menu_toggle_terminal", ());
-                  }
-                  "toggle_ai_chat" => {
-                     let _ = window.emit("menu_toggle_ai_chat", ());
-                  }
-                  "split_editor" => {
-                     let _ = window.emit("menu_split_editor", ());
-                  }
-                  "toggle_menu_bar" => {
-                     // Toggle menu visibility by setting it to None or recreating it
-                     let current_menu = _app_handle.menu();
-                     if current_menu.is_some() {
-                        // Hide menu by setting it to None
-                        if let Err(e) = _app_handle.remove_menu() {
-                           log::error!("Failed to hide menu: {}", e);
-                        } else {
-                           log::info!("Menu bar hidden");
+            match event.id().0.as_str() {
+               "new_window" => {
+                  let app_handle = _app_handle.clone();
+                  std::thread::spawn(move || {
+                     if let Err(error) =
+                        commands::ui::window::create_app_window_internal(&app_handle, None)
+                     {
+                        log::error!("Failed to create app window from menu: {}", error);
+                     }
+                  });
+               }
+               event_id => {
+                  if let Some(window) = get_active_webview_window(_app_handle) {
+                     match event_id {
+                        "quit" => {
+                           info!("Quit menu item clicked");
+                           std::process::exit(0);
                         }
-                     } else {
-                        // Show menu by recreating it
-                        match menu::create_menu(_app_handle) {
-                           Ok(new_menu) => {
-                              if let Err(e) = _app_handle.set_menu(new_menu) {
-                                 log::error!("Failed to show menu: {}", e);
+                        "quit_app" => {
+                           info!("Quit app menu item triggered");
+                           std::process::exit(0);
+                        }
+                        "new_file" => {
+                           let _ = window.emit("menu_new_file", ());
+                        }
+                        "open_folder" => {
+                           let _ = window.emit("menu_open_folder", ());
+                        }
+                        "close_folder" => {
+                           let _ = window.emit("menu_close_folder", ());
+                        }
+                        "save" => {
+                           let _ = window.emit("menu_save", ());
+                        }
+                        "save_as" => {
+                           let _ = window.emit("menu_save_as", ());
+                        }
+                        "close_tab" => {
+                           debug!("Close tab menu item triggered");
+                           let _ = window.emit("menu_close_tab", ());
+                        }
+                        "undo" => {
+                           let _ = window.emit("menu_undo", ());
+                        }
+                        "redo" => {
+                           let _ = window.emit("menu_redo", ());
+                        }
+                        "find" => {
+                           let _ = window.emit("menu_find", ());
+                        }
+                        "find_replace" => {
+                           let _ = window.emit("menu_find_replace", ());
+                        }
+                        "command_palette" => {
+                           let _ = window.emit("menu_command_palette", ());
+                        }
+                        "toggle_sidebar" => {
+                           let _ = window.emit("menu_toggle_sidebar", ());
+                        }
+                        "toggle_terminal" => {
+                           let _ = window.emit("menu_toggle_terminal", ());
+                        }
+                        "toggle_ai_chat" => {
+                           let _ = window.emit("menu_toggle_ai_chat", ());
+                        }
+                        "split_editor" => {
+                           let _ = window.emit("menu_split_editor", ());
+                        }
+                        "toggle_menu_bar" => {
+                           // Toggle menu visibility by setting it to None or recreating it
+                           let current_menu = _app_handle.menu();
+                           if current_menu.is_some() {
+                              // Hide menu by setting it to None
+                              if let Err(e) = _app_handle.remove_menu() {
+                                 log::error!("Failed to hide menu: {}", e);
                               } else {
-                                 log::info!("Menu bar shown");
+                                 log::info!("Menu bar hidden");
+                              }
+                           } else {
+                              // Show menu by recreating it
+                              match menu::create_menu(_app_handle) {
+                                 Ok(new_menu) => {
+                                    if let Err(e) = _app_handle.set_menu(new_menu) {
+                                       log::error!("Failed to show menu: {}", e);
+                                    } else {
+                                       log::info!("Menu bar shown");
+                                    }
+                                 }
+                                 Err(e) => {
+                                    log::error!("Failed to create menu: {}", e);
+                                 }
                               }
                            }
-                           Err(e) => {
-                              log::error!("Failed to create menu: {}", e);
+                        }
+                        "toggle_vim" => {
+                           let _ = window.emit("menu_toggle_vim", ());
+                        }
+                        "quick_open" => {
+                           let _ = window.emit("menu_quick_open", ());
+                        }
+                        "go_to_line" => {
+                           let _ = window.emit("menu_go_to_line", ());
+                        }
+                        "next_tab" => {
+                           let _ = window.emit("menu_next_tab", ());
+                        }
+                        "prev_tab" => {
+                           let _ = window.emit("menu_prev_tab", ());
+                        }
+                        "about" => {
+                           // Native About dialog is handled automatically by macOS
+                        }
+                        "help" => {
+                           let _ = window.emit("menu_help", ());
+                        }
+                        "report_bug" => {
+                           let _ = window.emit("menu_report_bug", ());
+                        }
+                        "about_athas" => {
+                           let _ = window.emit("menu_about_athas", ());
+                        }
+                        // Window menu items
+                        "minimize_window" => {
+                           if let Err(e) = window.minimize() {
+                              log::error!("Failed to minimize window: {}", e);
                            }
                         }
+                        "maximize_window" => {
+                           if let Err(e) = window.maximize() {
+                              log::error!("Failed to maximize window: {}", e);
+                           }
+                        }
+                        "toggle_fullscreen" => {
+                           let is_fullscreen = window.is_fullscreen().unwrap_or(false);
+                           if let Err(e) = window.set_fullscreen(!is_fullscreen) {
+                              log::error!("Failed to toggle fullscreen: {}", e);
+                           }
+                        }
+                        // Theme menu items - handle theme IDs from registry
+                        // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
+                        theme_id if theme_id.contains('-') => {
+                           // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
+                           // "tokyo-night")
+                           let _ = window.emit("menu_theme_change", theme_id);
+                        }
+                        _ => {}
                      }
                   }
-                  "toggle_vim" => {
-                     let _ = window.emit("menu_toggle_vim", ());
-                  }
-                  "quick_open" => {
-                     let _ = window.emit("menu_quick_open", ());
-                  }
-                  "go_to_line" => {
-                     let _ = window.emit("menu_go_to_line", ());
-                  }
-                  "next_tab" => {
-                     let _ = window.emit("menu_next_tab", ());
-                  }
-                  "prev_tab" => {
-                     let _ = window.emit("menu_prev_tab", ());
-                  }
-                  "about" => {
-                     // Native About dialog is handled automatically by macOS
-                  }
-                  "help" => {
-                     let _ = window.emit("menu_help", ());
-                  }
-                  "report_bug" => {
-                     let _ = window.emit("menu_report_bug", ());
-                  }
-                  "about_athas" => {
-                     let _ = window.emit("menu_about_athas", ());
-                  }
-                  // Window menu items
-                  "minimize_window" => {
-                     if let Err(e) = window.minimize() {
-                        log::error!("Failed to minimize window: {}", e);
-                     }
-                  }
-                  "maximize_window" => {
-                     if let Err(e) = window.maximize() {
-                        log::error!("Failed to maximize window: {}", e);
-                     }
-                  }
-                  "toggle_fullscreen" => {
-                     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
-                     if let Err(e) = window.set_fullscreen(!is_fullscreen) {
-                        log::error!("Failed to toggle fullscreen: {}", e);
-                     }
-                  }
-                  // Theme menu items - handle theme IDs from registry
-                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
-                  theme_id if theme_id.contains('-') => {
-                     // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
-                     // "tokyo-night")
-                     let _ = window.emit("menu_theme_change", theme_id);
-                  }
-                  _ => {}
                }
             }
          });
@@ -417,6 +418,7 @@ fn main() {
          search_chats,
          get_chat_stats,
          // Window commands
+         create_app_window,
          create_embedded_webview,
          close_embedded_webview,
          navigate_embedded_webview,

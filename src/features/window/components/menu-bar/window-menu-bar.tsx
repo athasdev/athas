@@ -1,12 +1,12 @@
-import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import Menu from "./menu";
 import MenuItem from "./menu-item";
@@ -18,13 +18,17 @@ interface Props {
   compactFloating?: boolean;
 }
 
-const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
+const CustomMenuBar = ({
+  activeMenu,
+  setActiveMenu,
+  compactFloating = false,
+}: Props) => {
   const { settings } = useSettingsStore();
   const [themes, setThemes] = useState<ThemeDefinition[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
 
   const handleClickEmit = (event: string, payload?: unknown) => {
-    emit(event, payload);
+    void getCurrentWebviewWindow().emit(event, payload);
     setActiveMenu(null);
   };
 
@@ -44,25 +48,45 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     () => ({
       File: (
         <Menu aria-label="File">
-          <MenuItem shortcut="Ctrl+Shift+N" onClick={() => handleClickEmit("menu_new_window")}>
+          <MenuItem
+            shortcut="Ctrl+Shift+N"
+            onClick={() => handleClickEmit("menu_new_window")}
+          >
             New Window
           </MenuItem>
-          <MenuItem shortcut="Ctrl+N" onClick={() => handleClickEmit("menu_new_file")}>
+          <MenuItem
+            shortcut="Ctrl+N"
+            onClick={() => handleClickEmit("menu_new_file")}
+          >
             New File
           </MenuItem>
-          <MenuItem shortcut="Ctrl+O" onClick={() => handleClickEmit("menu_open_folder")}>
+          <MenuItem
+            shortcut="Ctrl+O"
+            onClick={() => handleClickEmit("menu_open_folder")}
+          >
             Open Folder
           </MenuItem>
-          <MenuItem onClick={() => handleClickEmit("menu_close_folder")}>Close Folder</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_close_folder")}>
+            Close Folder
+          </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+S" onClick={() => handleClickEmit("menu_save")}>
+          <MenuItem
+            shortcut="Ctrl+S"
+            onClick={() => handleClickEmit("menu_save")}
+          >
             Save
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Shift+S" onClick={() => handleClickEmit("menu_save_as")}>
+          <MenuItem
+            shortcut="Ctrl+Shift+S"
+            onClick={() => handleClickEmit("menu_save_as")}
+          >
             Save As...
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+W" onClick={() => handleClickEmit("menu_close_tab")}>
+          <MenuItem
+            shortcut="Ctrl+W"
+            onClick={() => handleClickEmit("menu_close_tab")}
+          >
             Close Tab
           </MenuItem>
           <MenuItem separator />
@@ -73,10 +97,16 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
       ),
       Edit: (
         <Menu aria-label="Edit">
-          <MenuItem shortcut="Ctrl+Z" onClick={() => handleClickEmit("menu_undo")}>
+          <MenuItem
+            shortcut="Ctrl+Z"
+            onClick={() => handleClickEmit("menu_undo")}
+          >
             Undo
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Shift+Z" onClick={() => handleClickEmit("menu_redo")}>
+          <MenuItem
+            shortcut="Ctrl+Shift+Z"
+            onClick={() => handleClickEmit("menu_redo")}
+          >
             Redo
           </MenuItem>
           <MenuItem separator />
@@ -85,31 +115,51 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenuItem shortcut="Ctrl+V">Paste</MenuItem>
           <MenuItem shortcut="Ctrl+A">Select All</MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+F" onClick={() => handleClickEmit("menu_find")}>
+          <MenuItem
+            shortcut="Ctrl+F"
+            onClick={() => handleClickEmit("menu_find")}
+          >
             Find
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Alt+F" onClick={() => handleClickEmit("menu_find_replace")}>
+          <MenuItem
+            shortcut="Ctrl+Alt+F"
+            onClick={() => handleClickEmit("menu_find_replace")}
+          >
             Find and Replace
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+Shift+P" onClick={() => handleClickEmit("menu_command_palette")}>
+          <MenuItem
+            shortcut="Ctrl+Shift+P"
+            onClick={() => handleClickEmit("menu_command_palette")}
+          >
             Command Palette
           </MenuItem>
         </Menu>
       ),
       View: (
         <Menu aria-label="View">
-          <MenuItem shortcut="Ctrl+B" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
+          <MenuItem
+            shortcut="Ctrl+B"
+            onClick={() => handleClickEmit("menu_toggle_sidebar")}
+          >
             Toggle Sidebar
           </MenuItem>
-          <MenuItem shortcut="Ctrl+J" onClick={() => handleClickEmit("menu_toggle_terminal")}>
+          <MenuItem
+            shortcut="Ctrl+J"
+            onClick={() => handleClickEmit("menu_toggle_terminal")}
+          >
             Toggle Terminal
           </MenuItem>
-          <MenuItem shortcut="Ctrl+R" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
+          <MenuItem
+            shortcut="Ctrl+R"
+            onClick={() => handleClickEmit("menu_toggle_ai_chat")}
+          >
             Toggle AI Chat
           </MenuItem>
           <MenuItem separator />
-          <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>
+            Split Editor
+          </MenuItem>
           <MenuItem separator />
           <MenuItem
             shortcut="Alt+M"
@@ -132,17 +182,29 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
       ),
       Go: (
         <Menu aria-label="Go">
-          <MenuItem shortcut="Ctrl+P" onClick={() => handleClickEmit("menu_quick_open")}>
+          <MenuItem
+            shortcut="Ctrl+P"
+            onClick={() => handleClickEmit("menu_quick_open")}
+          >
             Quick Open
           </MenuItem>
-          <MenuItem shortcut="Ctrl+G" onClick={() => handleClickEmit("menu_go_to_line")}>
+          <MenuItem
+            shortcut="Ctrl+G"
+            onClick={() => handleClickEmit("menu_go_to_line")}
+          >
             Go to Line
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+Alt+Right" onClick={() => handleClickEmit("menu_next_tab")}>
+          <MenuItem
+            shortcut="Ctrl+Alt+Right"
+            onClick={() => handleClickEmit("menu_next_tab")}
+          >
             Next Tab
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Alt+Left" onClick={() => handleClickEmit("menu_prev_tab")}>
+          <MenuItem
+            shortcut="Ctrl+Alt+Left"
+            onClick={() => handleClickEmit("menu_prev_tab")}
+          >
             Previous Tab
           </MenuItem>
         </Menu>
@@ -189,7 +251,9 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         <Menu aria-label="Help">
           <MenuItem onClick={() => handleClickEmit("menu_help")}>Help</MenuItem>
           <MenuItem separator />
-          <MenuItem onClick={() => handleClickEmit("menu_about_athas")}>About Athas</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_about_athas")}>
+            About Athas
+          </MenuItem>
         </Menu>
       ),
     }),
@@ -200,7 +264,10 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     if (!activeMenu) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
+      if (
+        menuBarRef.current &&
+        !menuBarRef.current.contains(e.target as Node)
+      ) {
         setActiveMenu(null);
       }
     };
@@ -230,10 +297,14 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           variant="ghost"
           size="sm"
           className={cn(
-            "h-5 rounded-md px-1.5 text-[11px] text-text-lighter",
-            activeMenu === menuName ? "bg-hover/80 text-text" : "hover:bg-hover/50 hover:text-text",
+            "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
+            activeMenu === menuName
+              ? "bg-hover/80 text-text"
+              : "hover:bg-hover/50 hover:text-text",
           )}
-          onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
+          onClick={() =>
+            setActiveMenu((current) => (current === menuName ? null : menuName))
+          }
         >
           {menuName}
         </Button>

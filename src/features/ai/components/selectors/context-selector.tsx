@@ -6,6 +6,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -170,10 +171,11 @@ export function ContextSelector({
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <div className="relative shrink-0" ref={triggerRef}>
-        <button
+        <Button
           onClick={onToggleOpen}
+          variant="ghost"
+          size="icon-xs"
           className={cn(
-            "flex select-none items-center justify-center p-1",
             "text-text-lighter text-xs transition-colors",
             "hover:text-text focus:outline-none",
           )}
@@ -182,8 +184,8 @@ export function ContextSelector({
           aria-expanded={isOpen}
           aria-haspopup="true"
         >
-          <Plus size={12} />
-        </button>
+          <Plus />
+        </Button>
       </div>
 
       <Dropdown
@@ -218,7 +220,7 @@ export function ContextSelector({
             </div>
           ) : (
             allItems.map((item: any) => (
-              <button
+              <Button
                 key={`${item.type}-${item.id}`}
                 onClick={() => {
                   if (item.type === "buffer") {
@@ -227,8 +229,10 @@ export function ContextSelector({
                     onToggleFile(item.path);
                   }
                 }}
+                variant="ghost"
+                size="sm"
                 className={cn(
-                  "group ui-font flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-hover",
+                  "group ui-font flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
                   item.isSelected && "bg-selected",
                 )}
                 aria-label={`${item.isSelected ? "Remove" : "Add"} ${item.name} ${item.isSelected ? "from" : "to"} context`}
@@ -236,9 +240,9 @@ export function ContextSelector({
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {item.type === "buffer" ? (
                     item.databaseType ? (
-                      <Database size={10} className="shrink-0 text-text-lighter" />
+                      <Database className="shrink-0 text-text-lighter" />
                     ) : (
-                      <FileText size={10} className="shrink-0 text-text-lighter" />
+                      <FileText className="shrink-0 text-text-lighter" />
                     )
                   ) : (
                     <FileExplorerIcon
@@ -269,7 +273,7 @@ export function ContextSelector({
                   )}
                 </div>
                 {item.isSelected && (
-                  <div className="flex h-4 w-4 items-center justify-center rounded text-accent opacity-60">
+                  <div className="flex size-4 items-center justify-center rounded text-accent opacity-60">
                     <svg
                       width="10"
                       height="10"
@@ -281,7 +285,7 @@ export function ContextSelector({
                     </svg>
                   </div>
                 )}
-              </button>
+              </Button>
             ))
           )}
         </div>
@@ -295,12 +299,12 @@ export function ContextSelector({
           >
             {item.type === "buffer" ? (
               item.databaseType ? (
-                <Database size={8} className="text-text-lighter" />
+                <Database className="text-text-lighter" />
               ) : (
-                <FileText size={8} className="text-text-lighter" />
+                <FileText className="text-text-lighter" />
               )
             ) : (
-              <FileText size={8} className="text-blue-500" />
+              <FileText className="text-blue-500" />
             )}
             <span
               className={cn(
@@ -315,7 +319,7 @@ export function ContextSelector({
                 ●
               </span>
             )}
-            <button
+            <Button
               onClick={() => {
                 if (item.type === "buffer") {
                   onToggleBuffer(item.id);
@@ -323,14 +327,16 @@ export function ContextSelector({
                   onToggleFile(item.id);
                 }
               }}
-              className="rounded-full p-0.5 text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 focus:opacity-100 focus:outline-none focus:ring-1 focus:ring-red-400/50 group-hover:opacity-100"
+              variant="ghost"
+              size="icon-xs"
+              className="rounded-full text-text-lighter opacity-0 hover:bg-red-500/20 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
               aria-label={`Remove ${item.name} from context`}
               tabIndex={0}
             >
               <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" />
               </svg>
-            </button>
+            </Button>
           </div>
         ))}
       </div>

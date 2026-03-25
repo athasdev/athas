@@ -17,7 +17,7 @@ import {
   DesktopAuthError,
   waitForDesktopAuthToken,
 } from "@/features/window/services/auth-api";
-import { buttonClassName } from "@/ui/button";
+import { Button, buttonVariants } from "@/ui/button";
 import {
   type AutocompleteModel,
   fetchAutocompleteModels,
@@ -26,17 +26,15 @@ import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 
-const footerIconButtonClass = buttonClassName({
-  variant: "subtle",
-  size: "xs",
-  className: "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
-});
+const footerIconButtonClass = cn(
+  buttonVariants({ variant: "secondary", size: "xs" }),
+  "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+);
 
-const footerCompactButtonClass = buttonClassName({
-  variant: "subtle",
-  size: "icon-sm",
-  className: "rounded-md bg-primary-bg/40 text-text-lighter",
-});
+const footerCompactButtonClass = cn(
+  buttonVariants({ variant: "secondary", size: "icon-sm" }),
+  "rounded-md bg-primary-bg/40 text-text-lighter",
+);
 
 const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
@@ -64,6 +62,17 @@ const AiUsageStatusIndicator = () => {
     (state) => state.providerApiKeys.get("openrouter") || false,
   );
   const uiState = useUIState();
+  const hasBlockingModalOpen = useUIState(
+    (state) =>
+      state.isQuickOpenVisible ||
+      state.isCommandPaletteVisible ||
+      state.isGlobalSearchVisible ||
+      state.isSettingsDialogVisible ||
+      state.isThemeSelectorVisible ||
+      state.isIconThemeSelectorVisible ||
+      state.isProjectPickerVisible ||
+      state.isDatabaseConnectionVisible,
+  );
 
   const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
@@ -127,6 +136,11 @@ const AiUsageStatusIndicator = () => {
     void refreshAll();
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || !hasBlockingModalOpen) return;
+    setIsOpen(false);
+  }, [hasBlockingModalOpen, isOpen]);
+
   const handleSignIn = async () => {
     setIsSigningIn(true);
     try {
@@ -154,21 +168,23 @@ const AiUsageStatusIndicator = () => {
 
   return (
     <div className="relative">
-      <button
+      <Button
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        variant="secondary"
+        size="xs"
         className={cn(
-          footerIconButtonClass,
-          "ui-font gap-1 font-medium text-xs",
+          "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+          "ui-font ui-text-sm gap-1 font-medium",
           modeToneClass,
           isOpen && "border-border/60 bg-hover/80",
         )}
         style={{ minHeight: 0, minWidth: 0 }}
         title={`${planLabel} • ${modeLabel}`}
       >
-        <span className="ui-font text-[11px]">{indicatorLabel}</span>
-      </button>
+        <span className="ui-font ui-text-sm">{indicatorLabel}</span>
+      </Button>
       <Dropdown
         isOpen={isOpen}
         anchorRef={buttonRef}
@@ -178,60 +194,68 @@ const AiUsageStatusIndicator = () => {
         className="w-[320px] overflow-hidden rounded-xl p-0"
       >
         <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/55 px-3 py-2.5">
-          <span className="ui-font font-medium text-text text-xs">AI</span>
+          <span className="ui-font ui-text-md font-medium text-text">AI</span>
           <div className="flex items-center gap-1.5">
-            <button
+            <Button
               onClick={() => {
                 void refreshAll();
               }}
-              className={cn(footerIconButtonClass, "h-6 px-2 text-[10px]")}
+              variant="secondary"
+              size="xs"
+              className="ui-text-sm h-6 px-2 text-text-lighter"
             >
               Refresh
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setIsOpen(false);
                 uiState.openSettingsDialog("ai");
               }}
-              className={cn(footerIconButtonClass, "h-6 px-2 text-[10px]")}
+              variant="secondary"
+              size="xs"
+              className="ui-text-sm h-6 px-2 text-text-lighter"
             >
               AI Settings
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setIsOpen(false)}
-              className={cn(footerCompactButtonClass, "px-0")}
+              variant="secondary"
+              size="icon-sm"
+              className="px-0 text-text-lighter"
               aria-label="Close AI status dropdown"
             >
-              <X size={12} />
-            </button>
+              <X />
+            </Button>
           </div>
         </div>
         {!isAuthenticated ? (
           <div className="p-2.5">
-            <button
+            <Button
               onClick={() => void handleSignIn()}
               disabled={isSigningIn}
-              className="ui-font mt-2 flex w-full items-center justify-center rounded-lg border border-accent bg-accent p-1 text-white text-xs hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="primary"
+              size="sm"
+              className="mt-2 w-full justify-center rounded-lg text-white hover:opacity-90"
             >
               {isSigningIn ? "Signing in..." : "Sign in"}
-            </button>
+            </Button>
           </div>
         ) : (
           <>
             <div className="border-border/60 border-b p-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-text-lighter text-xs">Plan</span>
-                <span className="font-medium text-text text-xs">{planLabel}</span>
+                <span className="ui-text-sm text-text-lighter">Plan</span>
+                <span className="ui-text-sm font-medium text-text">{planLabel}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className="text-text-lighter text-xs">Mode</span>
-                <span className={cn("font-medium text-xs", modeToneClass)}>{modeLabel}</span>
+                <span className="ui-text-sm text-text-lighter">Mode</span>
+                <span className={cn("ui-text-sm font-medium", modeToneClass)}>{modeLabel}</span>
               </div>
             </div>
             <div className="p-2.5">
               <label
                 htmlFor="footer-ai-model-select"
-                className="mb-1 block text-text-lighter text-xs"
+                className="ui-text-sm mb-1 block text-text-lighter"
               >
                 Model
               </label>
@@ -272,7 +296,7 @@ const Footer = () => {
 
   return (
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
-      <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
+      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {/* Git branch manager */}
         {rootFolderPath && workspaceGitStatus?.branch && (
           <GitBranchManager
@@ -290,7 +314,7 @@ const Footer = () => {
 
         {/* Terminal indicator */}
         {settings.coreFeatures.terminal && (
-          <button
+          <Button
             onClick={() => {
               uiState.setBottomPaneActiveTab("terminal");
               const showingTerminal =
@@ -303,26 +327,30 @@ const Footer = () => {
                 }, 100);
               }
             }}
-            className={footerCompactButtonClass}
+            variant="secondary"
+            size="icon-sm"
+            className="rounded-md bg-primary-bg/40 text-text-lighter"
             data-active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
             style={{ minHeight: 0, minWidth: 0 }}
             title="Toggle Terminal"
           >
-            <TerminalIcon size={12} />
-          </button>
+            <TerminalIcon />
+          </Button>
         )}
 
         {/* Diagnostics indicator - clickable */}
         {settings.coreFeatures.diagnostics && (
-          <button
+          <Button
             onClick={() => {
               uiState.setBottomPaneActiveTab("diagnostics");
               const showingDiagnostics =
                 !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
               uiState.setIsBottomPaneVisible(showingDiagnostics);
             }}
+            variant="secondary"
+            size="xs"
             className={cn(
-              footerIconButtonClass,
+              "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
               !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
                 diagnosticsCount > 0 &&
                 "text-warning",
@@ -337,17 +365,19 @@ const Footer = () => {
                 : "Toggle Diagnostics Panel"
             }
           >
-            <AlertCircle size={12} />
-            {diagnosticsCount > 0 && <span className="ml-0.5 text-[10px]">{diagnosticsCount}</span>}
-          </button>
+            <AlertCircle />
+            {diagnosticsCount > 0 && <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>}
+          </Button>
         )}
         {/* Update indicator */}
         {available && (
-          <button
+          <Button
             onClick={downloadAndInstall}
             disabled={downloading || installing}
+            variant="secondary"
+            size="icon-sm"
             className={cn(
-              footerCompactButtonClass,
+              "rounded-md bg-primary-bg/40 text-text-lighter",
               downloading || installing
                 ? "cursor-not-allowed opacity-60"
                 : "text-blue-400 hover:text-blue-300",
@@ -361,26 +391,28 @@ const Footer = () => {
                   : `Update available: ${updateInfo?.version}`
             }
           >
-            <Download size={12} className={downloading || installing ? "animate-pulse" : ""} />
-          </button>
+            <Download className={downloading || installing ? "animate-pulse" : ""} />
+          </Button>
         )}
       </div>
 
-      <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
+      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {isAuthenticated && <AiUsageStatusIndicator />}
 
         {/* AI Chat button */}
-        <button
+        <Button
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
-          className={footerCompactButtonClass}
+          variant="secondary"
+          size="icon-sm"
+          className="rounded-md bg-primary-bg/40 text-text-lighter"
           data-active={settings.isAIChatVisible}
           style={{ minHeight: 0, minWidth: 0 }}
           title="Toggle AI Chat"
         >
-          <Sparkles size={12} />
-        </button>
+          <Sparkles />
+        </Button>
       </div>
     </div>
   );

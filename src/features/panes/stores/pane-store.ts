@@ -3,7 +3,7 @@ import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { ROOT_PANE_ID } from "../constants/pane";
-import type { PaneGroup, PaneNode, SplitDirection } from "../types/pane";
+import type { PaneGroup, PaneNode, SplitDirection, SplitPlacement } from "../types/pane";
 import {
   addBufferToPane,
   closePane,
@@ -23,11 +23,17 @@ import {
 interface PaneState {
   root: PaneNode;
   activePaneId: string;
+  fullscreenPaneId: string | null;
   actions: PaneActions;
 }
 
 interface PaneActions {
-  splitPane: (paneId: string, direction: SplitDirection, bufferId?: string) => string | null;
+  splitPane: (
+    paneId: string,
+    direction: SplitDirection,
+    bufferId?: string,
+    placement?: SplitPlacement,
+  ) => string | null;
   closePane: (paneId: string) => void;
   setActivePane: (paneId: string) => void;
   addBufferToPane: (paneId: string, bufferId: string, setActive?: boolean) => void;
@@ -42,6 +48,8 @@ interface PaneActions {
   getActivePane: () => PaneGroup | null;
   getPaneByBufferId: (bufferId: string) => PaneGroup | null;
   getAllPaneGroups: () => PaneGroup[];
+  togglePaneFullscreen: (paneId: string) => void;
+  exitPaneFullscreen: () => void;
   reset: () => void;
 }
 
@@ -57,20 +65,22 @@ function createInitialRoot(): PaneGroup {
 const initialState = {
   root: createInitialRoot(),
   activePaneId: ROOT_PANE_ID,
+  fullscreenPaneId: null,
 };
 
 const usePaneStoreBase = createWithEqualityFn<PaneState>()(
   immer((set, get) => ({
     ...initialState,
     actions: {
-      splitPane: (paneId, direction, bufferId) => {
+      splitPane: (paneId, direction, bufferId, placement = "after") => {
         let newPaneId: string | null = null;
         set((state) => {
-          const newRoot = splitPane(state.root, paneId, direction, bufferId);
+          const existingPaneIds = new Set(getAllPaneGroups(state.root).map((pane) => pane.id));
+          const newRoot = splitPane(state.root, paneId, direction, bufferId, placement);
           if (newRoot !== state.root) {
             state.root = newRoot;
             const allGroups = getAllPaneGroups(newRoot);
-            const newPane = allGroups.find((g) => g.id !== paneId && g.bufferIds.length <= 1);
+            const newPane = allGroups.find((g) => !existingPaneIds.has(g.id));
             if (newPane) {
               newPaneId = newPane.id;
               state.activePaneId = newPane.id;
@@ -85,6 +95,9 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
           const newRoot = closePane(state.root, paneId);
           if (newRoot) {
             state.root = newRoot;
+            if (state.fullscreenPaneId === paneId) {
+              state.fullscreenPaneId = null;
+            }
             if (state.activePaneId === paneId) {
               const firstGroup = getFirstPaneGroup(newRoot);
               state.activePaneId = firstGroup.id;
@@ -211,10 +224,27 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
         return getAllPaneGroups(state.root);
       },
 
+      togglePaneFullscreen: (paneId) => {
+        set((state) => {
+          const pane = findPaneGroup(state.root, paneId);
+          if (!pane) return;
+
+          state.fullscreenPaneId = state.fullscreenPaneId === paneId ? null : paneId;
+          state.activePaneId = paneId;
+        });
+      },
+
+      exitPaneFullscreen: () => {
+        set((state) => {
+          state.fullscreenPaneId = null;
+        });
+      },
+
       reset: () => {
         set((state) => {
           state.root = createInitialRoot();
           state.activePaneId = ROOT_PANE_ID;
+          state.fullscreenPaneId = null;
         });
       },
     },

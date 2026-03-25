@@ -46,7 +46,7 @@ export default function PostgresSubscriptionSchemaView({
   return (
     <div className="flex-1 overflow-auto">
       <div className="flex items-center gap-2 px-3 py-3">
-        <Radio size={14} className="text-text-lighter" />
+        <Radio className="text-text-lighter" />
         <div>
           <div className="text-sm">{subscriptionInfo.name}</div>
           <div className="text-text-lighter text-xs">logical replication subscription</div>

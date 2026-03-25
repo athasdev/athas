@@ -1,6 +1,7 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import type { ViewMode } from "../../models/common.types";
 import { SqliteRowMenu, SqliteTableMenu } from "./components/context-menus";
 import { CreateRowModal, CreateTableModal, EditRowModal } from "./components/crud-modals";
@@ -176,7 +177,7 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
               <div className="flex items-center gap-2 text-sm text-text-lighter">
-                <RefreshCw size={16} className="animate-spin" />
+                <RefreshCw className="animate-spin" />
                 Loading...
               </div>
             </div>
@@ -321,16 +322,21 @@ function InfoView({
         <div className="mb-2 text-text-lighter text-xs">tables</div>
         <div className="space-y-1">
           {tables.map((t) => (
-            <button
+            <Button
               key={t.name}
+              type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => onSelectTable(t.name)}
-              className={`block w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-hover ${
-                selectedTable === t.name ? "bg-selected" : ""
-              }`}
+              className={
+                selectedTable === t.name
+                  ? "w-full justify-start bg-selected"
+                  : "w-full justify-start"
+              }
               aria-label={`View table ${t.name}`}
             >
               {t.name}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -339,14 +345,17 @@ function InfoView({
           <div className="mb-2 text-text-lighter text-xs">recent</div>
           <div className="max-h-32 space-y-1 overflow-y-auto">
             {sqlHistory.map((q, i) => (
-              <button
+              <Button
                 key={i}
+                type="button"
+                variant="ghost"
+                size="xs"
                 onClick={() => onSelectHistory(q)}
-                className="block w-full truncate rounded-lg px-2 py-1 text-left text-xs hover:bg-hover"
+                className="w-full justify-start truncate"
                 title={q}
               >
                 {q}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

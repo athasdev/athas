@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
+import { Button } from "@/ui/button";
 import {
   fetchHighlightQuery,
   getDefaultParserWasmUrl,
@@ -320,13 +321,16 @@ function CodeBlock({
             <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
           )}
           {onApplyCode && code.trim() && (
-            <button
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
               onClick={() => onApplyCode(code)}
-              className="ui-font whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
+              className="whitespace-nowrap opacity-0 group-hover:opacity-100"
               title="Apply this code to current buffer"
             >
               Apply
-            </button>
+            </Button>
           )}
         </div>
         <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">
@@ -372,13 +376,16 @@ function ErrorBlock({ errorData }: { errorData: string }) {
         <span className="text-red-100/95">{summary}</span>
         {code ? <span className="text-red-200/55">({code})</span> : null}
         {normalizedDetails && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="inline-flex items-center gap-1 text-red-200/70 transition-colors hover:text-red-100"
+            className="h-auto px-1 text-red-200/70 hover:bg-transparent hover:text-red-100"
           >
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {isExpanded ? <ChevronDown /> : <ChevronRight />}
             {isExpanded ? "Hide details" : "Details"}
-          </button>
+          </Button>
         )}
       </div>
       {normalizedDetails && isExpanded && (

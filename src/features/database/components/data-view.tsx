@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo, QueryResult } from "../models/common.types";
@@ -156,14 +157,14 @@ export default function DataViewComponent({
   if (queryResult.rows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="ui-font text-sm text-text-lighter italic">No data returned</div>
+        <div className="ui-font ui-text-md text-text-lighter italic">No data returned</div>
       </div>
     );
   }
 
   return (
     <div className="select-none">
-      <table className="ui-font w-full border-collapse text-xs">
+      <table className="ui-font ui-text-sm w-full border-collapse">
         <thead className="sticky top-0 z-10">
           <tr className="bg-secondary-bg">
             {/* Row number column */}
@@ -185,24 +186,27 @@ export default function DataViewComponent({
                         {column}
                         {isSorted &&
                           (sortDirection === "asc" ? (
-                            <ArrowUp size={10} className="text-blue-500" />
+                            <ArrowUp className="text-blue-500" />
                           ) : (
-                            <ArrowDown size={10} className="text-blue-500" />
+                            <ArrowDown className="text-blue-500" />
                           ))}
                       </span>
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           onAddColumnFilter(column);
                         }}
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                        className="opacity-0 group-hover:opacity-100"
                         title="Add filter"
                       >
-                        <Filter size={10} className="text-text-lighter hover:text-text" />
-                      </button>
+                        <Filter className="text-text-lighter hover:text-text" />
+                      </Button>
                     </div>
                     {showColumnTypes && columnInfo && (
-                      <div className="text-text-lighter text-xs opacity-75">
+                      <div className="ui-text-sm text-text-lighter opacity-75">
                         {columnInfo.type}
                         {columnInfo.primary_key && " • PK"}
                         {columnInfo.notnull && " • NN"}
@@ -274,7 +278,7 @@ export default function DataViewComponent({
                           }
                           onKeyDown={handleCellKeyDown}
                           onBlur={handleCellEditSubmit}
-                          className="w-full min-w-0 border-none bg-transparent p-0 text-xs focus:ring-0"
+                          className="ui-text-sm w-full min-w-0 border-none bg-transparent p-0 focus:ring-0"
                           placeholder={
                             columnInfo?.notnull ? "Required" : "Optional (empty for NULL)"
                           }

@@ -9,7 +9,7 @@ import {
   SYSTEM_DEFAULT_PROFILE_ID,
   getAllTerminalProfiles,
 } from "@/features/terminal/utils/terminal-profiles";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "../settings-section";
@@ -186,7 +186,7 @@ export const TerminalSettings = () => {
                 })
               }
             >
-              <Plus size={12} className="mr-1" />
+              <Plus className="mr-1" />
               Add Profile
             </Button>
           </div>
@@ -203,7 +203,7 @@ export const TerminalSettings = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="mb-1 font-medium text-text text-xs">{profile.name}</div>
+                    <div className="mb-1 text-text text-xs">{profile.name}</div>
                     <div className="text-text-lighter text-xs">
                       Visible in the terminal profile picker.
                     </div>
@@ -214,24 +214,26 @@ export const TerminalSettings = () => {
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 />
                   </Button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className="font-medium text-text text-xs">Name</label>
+                    <label className="text-text text-xs">Name</label>
                     <Input
                       value={profile.name}
                       onChange={(event) =>
-                        profileActions.updateProfile(profile.id, { name: event.target.value })
+                        profileActions.updateProfile(profile.id, {
+                          name: event.target.value,
+                        })
                       }
                       placeholder="My Profile"
                       size="sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="font-medium text-text text-xs">Shell</label>
+                    <label className="text-text text-xs">Shell</label>
                     <Select
                       value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
                       options={shellOptions}
@@ -247,7 +249,7 @@ export const TerminalSettings = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-medium text-text text-xs">Startup Directory</label>
+                  <label className="text-text text-xs">Startup Directory</label>
                   <Input
                     value={profile.startupDirectory || ""}
                     onChange={(event) =>
@@ -261,7 +263,7 @@ export const TerminalSettings = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-medium text-text text-xs">Startup Commands</label>
+                  <label className="text-text text-xs">Startup Commands</label>
                   <Textarea
                     value={(profile.startupCommands || []).join("\n")}
                     onChange={(event) =>
@@ -303,7 +305,7 @@ export const TerminalSettings = () => {
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT} side="left">
-              <Info className="h-4 w-4 cursor-help text-text-lighter transition-colors hover:text-text" />
+              <Info className="size-4 cursor-help text-text-lighter transition-colors hover:text-text" />
             </Tooltip>
           </div>
         </SettingRow>

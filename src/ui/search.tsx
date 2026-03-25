@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
@@ -45,7 +46,7 @@ const searchSurfaceVariants = cva(
 );
 
 const searchIconButtonVariants = cva(
-  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
+  "flex size-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
   {
     variants: {
       disabled: {
@@ -60,7 +61,7 @@ const searchIconButtonVariants = cva(
 );
 
 const searchToggleButtonVariants = cva(
-  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-border/70 hover:bg-hover",
+  "flex size-6 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-border/70 hover:bg-hover",
   {
     variants: {
       active: {
@@ -75,7 +76,7 @@ const searchToggleButtonVariants = cva(
 );
 
 const searchActionButtonVariants = cva(
-  "ui-font flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-xs text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
+  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
   {
     variants: {
       disabled: {
@@ -112,10 +113,7 @@ export function SearchPopover({
         {leadingControl}
 
         <div className="relative min-w-0 flex-1">
-          <Search
-            size={12}
-            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter"
-          />
+          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter" />
           <Input
             ref={inputRef}
             type="text"
@@ -123,77 +121,93 @@ export function SearchPopover({
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            className="h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8 text-xs"
+            className="ui-text-sm h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8"
           />
           {value && (
-            <button
+            <Button
               type="button"
               onClick={() => onChange("")}
-              className="-translate-y-1/2 absolute top-1/2 right-1 flex size-6 items-center justify-center rounded-md text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="icon-xs"
+              className="-translate-y-1/2 absolute top-1/2 right-1"
               aria-label="Clear search"
             >
-              <X size={11} />
-            </button>
+              <X />
+            </Button>
           )}
         </div>
 
         {matchLabel && (
-          <span className="ui-font shrink-0 text-text-lighter text-xs">{matchLabel}</span>
+          <span className="ui-font ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
         )}
 
         {extraActions}
 
-        <button
+        <Button
           type="button"
           onClick={onClose}
+          variant="ghost"
+          size="icon-xs"
           className={searchIconButtonVariants()}
           aria-label="Close search"
         >
-          <X size={12} />
-        </button>
+          <X />
+        </Button>
       </div>
 
       {(options.length > 0 || onPrevious || onNext) && (
         <div className="mt-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
             {options.map((option) => (
-              <button
+              <Button
                 key={option.id}
                 type="button"
                 onClick={option.onToggle}
-                className={searchToggleButtonVariants({ active: option.active })}
+                variant="ghost"
+                size="icon-xs"
+                className={searchToggleButtonVariants({
+                  active: option.active,
+                })}
                 title={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
               >
                 {option.icon}
-              </button>
+              </Button>
             ))}
           </div>
 
           {(onPrevious || onNext) && (
             <div className="flex items-center gap-1">
               {onPrevious && (
-                <button
+                <Button
                   type="button"
                   onClick={onPrevious}
                   disabled={!canNavigate}
-                  className={searchIconButtonVariants({ disabled: !canNavigate })}
+                  variant="ghost"
+                  size="icon-xs"
+                  className={searchIconButtonVariants({
+                    disabled: !canNavigate,
+                  })}
                   aria-label="Previous match"
                 >
-                  <ChevronUp size={12} />
-                </button>
+                  <ChevronUp />
+                </Button>
               )}
               {onNext && (
-                <button
+                <Button
                   type="button"
                   onClick={onNext}
                   disabled={!canNavigate}
-                  className={searchIconButtonVariants({ disabled: !canNavigate })}
+                  variant="ghost"
+                  size="icon-xs"
+                  className={searchIconButtonVariants({
+                    disabled: !canNavigate,
+                  })}
                   aria-label="Next match"
                 >
-                  <ChevronDown size={12} />
-                </button>
+                  <ChevronDown />
+                </Button>
               )}
             </div>
           )}
@@ -213,15 +227,17 @@ export function SearchReplaceToggle({
   onToggle: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onToggle}
+      variant="ghost"
+      size="icon-xs"
       className={searchIconButtonVariants()}
       title={isExpanded ? "Hide replace" : "Show replace"}
       aria-label={isExpanded ? "Hide replace" : "Show replace"}
     >
-      <ChevronRight size={12} className={cn("transition-transform", isExpanded && "rotate-90")} />
-    </button>
+      <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
+    </Button>
   );
 }
 
@@ -245,7 +261,7 @@ export function SearchReplaceRow({
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
-        <Replace size={12} />
+        <Replace />
       </span>
 
       <Input
@@ -255,31 +271,116 @@ export function SearchReplaceRow({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Replace with..."
-        className="h-8 flex-1 rounded-lg border-border/80 bg-primary-bg py-1 text-xs"
+        className="ui-text-sm h-8 flex-1 rounded-lg border-border/80 bg-primary-bg py-1"
       />
 
-      <button
+      <Button
         type="button"
         onClick={onReplace}
         disabled={!canReplace}
+        variant="ghost"
+        size="sm"
         className={searchActionButtonVariants({ disabled: !canReplace })}
       >
         Replace
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         onClick={onReplaceAll}
         disabled={!canReplace}
+        variant="ghost"
+        size="sm"
         className={searchActionButtonVariants({ disabled: !canReplace })}
       >
         All
-      </button>
+      </Button>
+    </div>
+  );
+}
+
+interface SearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  placeholder: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  matchLabel?: string | null;
+  options?: SearchToggleOption[];
+  extraActions?: ReactNode;
+  className?: string;
+}
+
+export function SearchInput({
+  value,
+  onChange,
+  onKeyDown,
+  placeholder,
+  inputRef,
+  matchLabel,
+  options = [],
+  extraActions,
+  className,
+}: SearchInputProps) {
+  return (
+    <div className={cn("flex min-w-0 flex-1 items-center gap-1.5", className)}>
+      <div className="relative min-w-0 flex-1">
+        <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter" />
+        <Input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={placeholder}
+          className="ui-text-sm h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8"
+        />
+        {value && (
+          <Button
+            type="button"
+            onClick={() => onChange("")}
+            variant="ghost"
+            size="icon-xs"
+            className="-translate-y-1/2 absolute top-1/2 right-1"
+            aria-label="Clear search"
+          >
+            <X />
+          </Button>
+        )}
+      </div>
+
+      {options.length > 0 && (
+        <div className="flex shrink-0 items-center gap-1">
+          {options.map((option) => (
+            <Button
+              key={option.id}
+              type="button"
+              onClick={option.onToggle}
+              variant="ghost"
+              size="icon-xs"
+              className={searchToggleButtonVariants({
+                active: option.active,
+              })}
+              title={option.label}
+              aria-label={option.label}
+              aria-pressed={option.active}
+            >
+              {option.icon}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {matchLabel && (
+        <span className="ui-font ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
+      )}
+
+      {extraActions}
     </div>
   );
 }
 
 export const SEARCH_TOGGLE_ICONS = {
-  caseSensitive: <CaseSensitive size={12} />,
-  wholeWord: <WholeWord size={12} />,
-  regex: <Regex size={12} />,
+  caseSensitive: <CaseSensitive />,
+  wholeWord: <WholeWord />,
+  regex: <Regex />,
 };

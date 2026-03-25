@@ -6,7 +6,7 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 
 interface UnifiedExtension {
@@ -54,7 +54,7 @@ const ExtensionRow = ({
     <div className="flex items-center justify-between gap-4 border-border/50 border-b px-1 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-medium text-sm text-text">{extension.name}</span>
+          <span className="text-sm text-text">{extension.name}</span>
           <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
             {getCategoryLabel(extension.category)}
           </span>
@@ -82,36 +82,42 @@ const ExtensionRow = ({
         <span className="shrink-0 text-accent text-xs">Built-in</span>
       ) : isInstalling ? (
         <div className="flex shrink-0 items-center gap-1.5 text-accent">
-          <RefreshCw size={12} className="animate-spin" />
+          <RefreshCw className="animate-spin" />
           <span className="text-xs">Installing</span>
         </div>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {hasUpdate && onUpdate && (
-            <button
+            <Button
               onClick={onUpdate}
-              className="text-accent text-xs transition-colors hover:text-accent/80"
+              variant="ghost"
+              size="xs"
+              className="text-accent text-xs hover:text-accent/80"
               title="Update available"
             >
               Update
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={onToggle}
-            className="text-text-lighter text-xs transition-colors hover:text-red-500"
+            variant="ghost"
+            size="xs"
+            className="text-text-lighter text-xs hover:text-red-500"
             title="Uninstall"
           >
             Uninstall
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
+        <Button
           onClick={onToggle}
-          className="shrink-0 text-text-lighter text-xs transition-colors hover:text-accent"
+          variant="ghost"
+          size="xs"
+          className="shrink-0 text-text-lighter text-xs hover:text-accent"
           title="Install"
         >
           Install
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -316,7 +322,7 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "all")}
           variant="ghost"
           size="xs"
-          active={settings.extensionsActiveTab === "all"}
+          data-active={settings.extensionsActiveTab === "all"}
           className="h-6 px-2 text-[11px]"
         >
           All
@@ -325,40 +331,40 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "language")}
           variant="ghost"
           size="xs"
-          active={settings.extensionsActiveTab === "language"}
+          data-active={settings.extensionsActiveTab === "language"}
           className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
-          <Languages size={11} />
+          <Languages />
           Languages
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "theme")}
           variant="ghost"
           size="xs"
-          active={settings.extensionsActiveTab === "theme"}
+          data-active={settings.extensionsActiveTab === "theme"}
           className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
-          <Palette size={11} />
+          <Palette />
           Themes
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "icon-theme")}
           variant="ghost"
           size="xs"
-          active={settings.extensionsActiveTab === "icon-theme"}
+          data-active={settings.extensionsActiveTab === "icon-theme"}
           className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
-          <Package size={11} />
+          <Package />
           Icon Themes
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "database")}
           variant="ghost"
           size="xs"
-          active={settings.extensionsActiveTab === "database"}
+          data-active={settings.extensionsActiveTab === "database"}
           className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
-          <Database size={11} />
+          <Database />
           Databases
         </Button>
       </div>
@@ -366,7 +372,7 @@ export const ExtensionsSettings = () => {
       <div className="flex-1 overflow-auto pr-1.5">
         {filteredExtensions.length === 0 ? (
           <div className="py-6 text-center text-text-lighter">
-            <Package size={20} className="mx-auto mb-1.5 opacity-50" />
+            <Package className="mx-auto mb-1.5 opacity-50" />
             <p className="text-[11px]">No extensions found matching your search.</p>
           </div>
         ) : (

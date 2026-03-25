@@ -1,10 +1,10 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut, Settings } from "lucide-react";
-import { useRef, useState } from "react";
+import { BookOpen, CircleUser, CreditCard, ExternalLink, LogIn, LogOut, Settings } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { toast } from "@/ui/toast";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Tooltip from "@/ui/tooltip";
 import {
@@ -25,6 +25,17 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const logout = useAuthStore((s) => s.logout);
   const handleAuthCallback = useAuthStore((s) => s.handleAuthCallback);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const hasBlockingModalOpen = useUIState(
+    (state) =>
+      state.isQuickOpenVisible ||
+      state.isCommandPaletteVisible ||
+      state.isGlobalSearchVisible ||
+      state.isSettingsDialogVisible ||
+      state.isThemeSelectorVisible ||
+      state.isIconThemeSelectorVisible ||
+      state.isProjectPickerVisible ||
+      state.isDatabaseConnectionVisible,
+  );
 
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -77,6 +88,10 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     await openUrl("https://athas.dev/pricing");
   };
 
+  const handleOpenDocs = async () => {
+    await openUrl("https://athas.dev/docs");
+  };
+
   const handleOpenSettings = () => {
     setIsSettingsDialogVisible(true);
   };
@@ -88,8 +103,14 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "settings",
       label: "Settings",
-      icon: <Settings size={12} />,
+      icon: <Settings />,
       onClick: handleOpenSettings,
+    },
+    {
+      id: "docs",
+      label: "Docs",
+      icon: <BookOpen />,
+      onClick: handleOpenDocs,
     },
     {
       id: "settings-separator",
@@ -100,7 +121,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "sign-in",
       label: "Sign In",
-      icon: <LogIn size={12} />,
+      icon: <LogIn />,
       onClick: handleSignIn,
     },
   ];
@@ -110,9 +131,9 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
       id: "user-info",
       label: user?.name || user?.email || "Account",
       icon: user?.avatar_url ? (
-        <img src={user.avatar_url} alt="" className="h-3 w-3 rounded-full" />
+        <img src={user.avatar_url} alt="" className="size-3 rounded-full" />
       ) : (
-        <CircleUser size={12} />
+        <CircleUser />
       ),
       onClick: () => {},
       disabled: true,
@@ -126,20 +147,26 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "subscription",
       label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : "Free"}`,
-      icon: <CreditCard size={12} />,
+      icon: <CreditCard />,
       onClick: handleViewPricing,
     },
     {
       id: "manage-account",
       label: "Manage Account",
-      icon: <ExternalLink size={12} />,
+      icon: <ExternalLink />,
       onClick: handleManageAccount,
     },
     {
       id: "settings",
       label: "Settings",
-      icon: <Settings size={12} />,
+      icon: <Settings />,
       onClick: handleOpenSettings,
+    },
+    {
+      id: "docs",
+      label: "Docs",
+      icon: <BookOpen />,
+      onClick: handleOpenDocs,
     },
     {
       id: "sign-out-separator",
@@ -150,12 +177,17 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "sign-out",
       label: "Sign Out",
-      icon: <LogOut size={12} />,
+      icon: <LogOut />,
       onClick: handleSignOut,
     },
   ];
 
   const tooltipLabel = isAuthenticated ? user?.name || user?.email || "Account" : "Account";
+
+  useEffect(() => {
+    if (!isOpen || !hasBlockingModalOpen) return;
+    setIsOpen(false);
+  }, [hasBlockingModalOpen, isOpen]);
 
   return (
     <>
@@ -164,7 +196,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
           ref={buttonRef}
           onClick={handleClick}
           type="button"
-          variant="subtle"
+          variant="secondary"
           size="icon-sm"
           className={className}
         >

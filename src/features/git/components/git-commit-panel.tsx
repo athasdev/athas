@@ -3,6 +3,7 @@ import type React from "react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
+import { Button } from "@/ui/button";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -155,7 +156,7 @@ const GitCommitPanel = ({
             "bg-error/20 px-2 py-1 text-[0.84em] text-error",
           )}
         >
-          <AlertCircle size={12} />
+          <AlertCircle />
           {error}
         </div>
       )}
@@ -185,34 +186,36 @@ const GitCommitPanel = ({
         <div className="flex items-center gap-1">
           <Tooltip content="Generate commit message with AI" side="top">
             <span className="inline-flex">
-              <button
+              <Button
                 onClick={() => void handleGenerateCommitMessage()}
                 disabled={isGenerateDisabled}
+                variant="ghost"
+                size="icon-xs"
                 className={cn(
-                  "flex items-center p-1 transition-colors",
                   isGenerateDisabled
                     ? "cursor-not-allowed text-text-lighter opacity-50"
                     : "text-text-lighter hover:text-text",
                 )}
                 aria-label="Generate commit message with AI"
               >
-                <Sparkles size={10} />
-              </button>
+                <Sparkles />
+              </Button>
             </span>
           </Tooltip>
 
-          <button
+          <Button
             onClick={() => void handleCommit()}
             disabled={isCommitDisabled}
+            variant="ghost"
+            size="xs"
             className={cn(
-              "ui-font px-1 py-0.5 text-xs transition-colors duration-150",
               isCommitDisabled
                 ? "cursor-not-allowed text-text-lighter opacity-50"
                 : "text-accent hover:text-accent/80",
             )}
           >
             {isCommitting ? "Committing..." : "Commit"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

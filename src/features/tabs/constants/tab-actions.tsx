@@ -25,7 +25,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-close",
       label: "Tab: Close Tab",
       description: "Close current tab",
-      icon: <X size={14} />,
+      icon: <X />,
       category: "File",
       keybinding: ["⌘", "W"],
       action: () => {
@@ -39,7 +39,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-next",
       label: "Tab: Next Tab",
       description: "Switch to the next open tab",
-      icon: <ArrowRight size={14} />,
+      icon: <ArrowRight />,
       category: "File",
       keybinding: ["Ctrl", "⇟"],
       action: () => {
@@ -51,7 +51,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-previous",
       label: "Tab: Previous Tab",
       description: "Switch to the previous open tab",
-      icon: <ArrowLeft size={14} />,
+      icon: <ArrowLeft />,
       category: "File",
       keybinding: ["Ctrl", "⇞"],
       action: () => {
@@ -63,7 +63,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-reopen",
       label: "Tab: Reopen Closed Tab",
       description: "Reopen the most recently closed tab",
-      icon: <RotateCcw size={14} />,
+      icon: <RotateCcw />,
       category: "File",
       keybinding: ["⌘", "Shift", "T"],
       action: async () => {

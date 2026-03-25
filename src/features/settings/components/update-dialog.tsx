@@ -1,5 +1,6 @@
 import { Download, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import type { DownloadProgress, UpdateInfo } from "../hooks/use-updater";
 
@@ -44,39 +45,42 @@ const UpdateDialog = ({
       size="sm"
       footer={
         <>
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
             onClick={onDismiss}
             disabled={isUpdating}
-            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             Later
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
             onClick={onDownload}
             disabled={isUpdating}
-            className="rounded bg-accent px-3 py-1.5 text-white text-xs transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {downloading
               ? `Downloading ${downloadProgress?.percentage ?? 0}%`
               : installing
                 ? "Installing..."
                 : "Update Now"}
-          </button>
+          </Button>
         </>
       }
     >
       <div className="space-y-4">
         <div className="text-text text-xs">
           <p>
-            A new version of Athas is available:{" "}
-            <span className="font-semibold">{updateInfo.version}</span>
+            A new version of Athas is available: <span>{updateInfo.version}</span>
           </p>
           <p className="mt-1 text-text-lighter">Current version: {updateInfo.currentVersion}</p>
         </div>
 
         {updateInfo.body && (
           <div className="rounded border border-border bg-secondary-bg p-3">
-            <h4 className="mb-2 font-medium text-text-lighter text-xs">Release Notes</h4>
+            <h4 className="mb-2 text-text-lighter text-xs">Release Notes</h4>
             <div className="max-h-40 overflow-y-auto whitespace-pre-wrap text-text text-xs">
               {updateInfo.body}
             </div>
@@ -100,7 +104,7 @@ const UpdateDialog = ({
 
         {installing && (
           <div className="flex items-center gap-2 text-text-lighter text-xs">
-            <RefreshCw size={12} className="animate-spin" />
+            <RefreshCw className="animate-spin" />
             <span>Installing update... The app will restart automatically.</span>
           </div>
         )}

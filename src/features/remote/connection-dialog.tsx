@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Server } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
@@ -134,7 +134,7 @@ const ConnectionDialog = ({
 
   const inputClassName = cn(
     "w-full rounded border border-border bg-secondary-bg",
-    "px-3 py-2 text-text text-xs placeholder-text-lighter",
+    "ui-text-sm px-3 py-2 text-text placeholder-text-lighter",
     "focus:border-accent focus:outline-none",
   );
 
@@ -179,7 +179,7 @@ const ConnectionDialog = ({
           >
             {isTesting ? (
               <span className="inline-flex items-center gap-1">
-                <Loader2 size={12} className="animate-spin" /> Testing
+                <Loader2 className="animate-spin" /> Testing
               </span>
             ) : (
               "Test Connection"
@@ -196,7 +196,7 @@ const ConnectionDialog = ({
       }
     >
       <div className="space-y-4">
-        <p className="text-text-lighter text-xs">
+        <p className="ui-text-sm text-text-lighter">
           {editingConnection
             ? "Update your remote connection settings."
             : "Connect to remote servers via SSH or SFTP."}
@@ -204,7 +204,7 @@ const ConnectionDialog = ({
 
         {/* Connection Name */}
         <div className="space-y-1.5">
-          <label htmlFor="connection-name" className="font-medium text-text text-xs">
+          <label htmlFor="connection-name" className="ui-text-sm font-medium text-text">
             Connection Name <span className="text-text-lighter">*</span>
           </label>
           <Input
@@ -221,7 +221,7 @@ const ConnectionDialog = ({
         {/* Host and Port */}
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-8 space-y-1.5">
-            <label htmlFor="host" className="font-medium text-text text-xs">
+            <label htmlFor="host" className="ui-text-sm font-medium text-text">
               Host <span className="text-text-lighter">*</span>
             </label>
             <Input
@@ -235,7 +235,7 @@ const ConnectionDialog = ({
             />
           </div>
           <div className="col-span-4 space-y-1.5">
-            <label htmlFor="port" className="font-medium text-text text-xs">
+            <label htmlFor="port" className="ui-text-sm font-medium text-text">
               Port
             </label>
             <Input
@@ -254,20 +254,20 @@ const ConnectionDialog = ({
 
         {/* Type */}
         <div className="space-y-1.5">
-          <label htmlFor="type" className="font-medium text-text text-xs">
+          <label htmlFor="type" className="ui-text-sm font-medium text-text">
             Connection Type
           </label>
           <Select
             value={formData.type}
             options={connectionTypeOptions}
             onChange={(value) => updateFormData({ type: value as "ssh" | "sftp" })}
-            className="text-xs"
+            className="ui-text-sm"
           />
         </div>
 
         {/* Username */}
         <div className="space-y-1.5">
-          <label htmlFor="username" className="font-medium text-text text-xs">
+          <label htmlFor="username" className="ui-text-sm font-medium text-text">
             Username <span className="text-text-lighter">*</span>
           </label>
           <Input
@@ -283,7 +283,7 @@ const ConnectionDialog = ({
 
         {/* Password */}
         <div className="space-y-1.5">
-          <label htmlFor="password" className="font-medium text-text text-xs">
+          <label htmlFor="password" className="ui-text-sm font-medium text-text">
             Password <span className="text-text-lighter">(optional)</span>
           </label>
           <div className="relative">
@@ -296,14 +296,16 @@ const ConnectionDialog = ({
               className={`${inputClassName} pr-10`}
               disabled={isValidating}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setShowPassword(!showPassword)}
-              className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter transition-colors hover:text-text"
+              className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter hover:text-text"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
+              {showPassword ? <EyeOff /> : <Eye />}
+            </Button>
           </div>
         </div>
 
@@ -316,13 +318,13 @@ const ConnectionDialog = ({
               onChange={(checked) => updateFormData({ saveCredentials: !!checked })}
               disabled={isValidating}
             />
-            <span className="text-text text-xs">Save password for future connections</span>
+            <span className="ui-text-sm text-text">Save password for future connections</span>
           </label>
         )}
 
         {/* Private Key Path */}
         <div className="space-y-1.5">
-          <label htmlFor="keypath" className="font-medium text-text text-xs">
+          <label htmlFor="keypath" className="ui-text-sm font-medium text-text">
             Private Key Path <span className="text-text-lighter">(optional)</span>
           </label>
           <Input
@@ -339,22 +341,22 @@ const ConnectionDialog = ({
         {/* Validation/Test Status */}
         {testStatus !== "idle" && (
           <div
-            className={`flex items-center gap-2 text-xs ${testStatus === "success" ? "text-green-500" : "text-red-500"}`}
+            className={`ui-text-sm flex items-center gap-2 ${testStatus === "success" ? "text-green-500" : "text-red-500"}`}
           >
-            {testStatus === "success" ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+            {testStatus === "success" ? <CheckCircle /> : <AlertCircle />}
             {testMessage}
           </div>
         )}
         {validationStatus === "valid" && (
-          <div className="flex items-center gap-2 text-green-500 text-xs">
-            <CheckCircle size={12} />
+          <div className="ui-text-sm flex items-center gap-2 text-green-500">
+            <CheckCircle />
             Connection saved successfully!
           </div>
         )}
 
         {validationStatus === "invalid" && (
-          <div className="flex items-center gap-2 text-red-500 text-xs">
-            <AlertCircle size={12} />
+          <div className="ui-text-sm flex items-center gap-2 text-red-500">
+            <AlertCircle />
             {errorMessage}
           </div>
         )}

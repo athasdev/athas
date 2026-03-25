@@ -1,6 +1,6 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -104,13 +104,13 @@ const PasswordPromptDialog = ({
       }
     >
       <div className="space-y-4">
-        <p className="text-text-lighter text-xs">
+        <p className="ui-text-sm text-text-lighter">
           Enter the password for <span className="font-medium text-text">{connection.name}</span> (
           {connection.username}@{connection.host}:{connection.port})
         </p>
 
         <div className="space-y-1.5">
-          <label htmlFor="password-prompt" className="font-medium text-text text-xs">
+          <label htmlFor="password-prompt" className="ui-text-sm font-medium text-text">
             Password
           </label>
           <div className="relative">
@@ -127,21 +127,23 @@ const PasswordPromptDialog = ({
               className={cn("w-full pr-10", "focus:border-accent focus:ring-accent/30")}
               disabled={isConnecting}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setShowPassword(!showPassword)}
               className={cn(
                 "-translate-y-1/2 absolute top-1/2 right-3 transform",
-                "text-text-lighter transition-colors hover:text-text",
+                "text-text-lighter hover:text-text",
               )}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
+              {showPassword ? <EyeOff /> : <Eye />}
+            </Button>
           </div>
         </div>
 
-        {errorMessage && <p className="text-red-500 text-xs">{errorMessage}</p>}
+        {errorMessage && <p className="ui-text-sm text-red-500">{errorMessage}</p>}
       </div>
     </Dialog>
   );

@@ -14,6 +14,7 @@ import {
   SplitSquareHorizontal,
   Terminal as TerminalIcon,
   PanelLeft,
+  PanelRight,
   Rows3,
 } from "lucide-react";
 import type React from "react";
@@ -23,12 +24,14 @@ import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-st
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
 import {
   type TerminalTabLayout,
+  type TerminalTabSidebarPosition,
   type TerminalWidthMode,
   useTerminalStore,
 } from "@/features/terminal/stores/terminal-store";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, dropdownItemClassName, MenuItemsList, type MenuItem } from "@/ui/dropdown";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
@@ -40,13 +43,17 @@ interface ToolbarContextMenuProps {
   onClose: () => void;
   currentMode: TerminalWidthMode;
   currentLayout: TerminalTabLayout;
+  currentSidebarPosition: TerminalTabSidebarPosition;
   onModeChange: (mode: TerminalWidthMode) => void;
   onLayoutChange: (layout: TerminalTabLayout) => void;
+  onSidebarPositionChange: (position: TerminalTabSidebarPosition) => void;
   onNewTerminal?: () => void;
   onSearchTerminal?: () => void;
   onSplitView?: () => void;
   onNextTerminal?: () => void;
   onPrevTerminal?: () => void;
+  onFullScreen?: () => void;
+  isFullScreen?: boolean;
 }
 
 const ToolbarContextMenu = ({
@@ -55,116 +62,153 @@ const ToolbarContextMenu = ({
   onClose,
   currentMode,
   currentLayout,
+  currentSidebarPosition,
   onModeChange,
   onLayoutChange,
+  onSidebarPositionChange,
   onNewTerminal,
   onSearchTerminal,
   onSplitView,
   onNextTerminal,
   onPrevTerminal,
+  onFullScreen,
+  isFullScreen,
 }: ToolbarContextMenuProps) => {
-  const modes: { value: TerminalWidthMode; label: string; icon: React.ReactNode }[] = [
-    { value: "full", label: "Full Width", icon: <Maximize size={12} /> },
-    { value: "editor", label: "Editor Width", icon: <AlignCenter size={12} /> },
+  const modes: {
+    value: TerminalWidthMode;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    { value: "full", label: "Full Width", icon: <Maximize /> },
+    { value: "editor", label: "Editor Width", icon: <AlignCenter /> },
   ];
-  const layouts: { value: TerminalTabLayout; label: string; icon: React.ReactNode }[] = [
-    { value: "horizontal", label: "Horizontal Tabs", icon: <Rows3 size={12} /> },
-    { value: "vertical", label: "Vertical Tabs", icon: <PanelLeft size={12} /> },
+  const layouts: {
+    value: TerminalTabLayout;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      value: "horizontal",
+      label: "Horizontal Tabs",
+      icon: <Rows3 />,
+    },
+    {
+      value: "vertical",
+      label: "Vertical Tabs",
+      icon: <PanelLeft />,
+    },
+  ];
+  const modeItems: MenuItem[] = modes.map((mode) => ({
+    id: `mode-${mode.value}`,
+    label: mode.label,
+    icon: mode.icon,
+    onClick: () => onModeChange(mode.value),
+    className: currentMode === mode.value ? "bg-selected" : undefined,
+  }));
+  const layoutItems: MenuItem[] = layouts.map((layout) => ({
+    id: `layout-${layout.value}`,
+    label: layout.label,
+    icon: layout.icon,
+    onClick: () => onLayoutChange(layout.value),
+    className: currentLayout === layout.value ? "bg-selected" : undefined,
+  }));
+  const sidebarPositions: {
+    value: TerminalTabSidebarPosition;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    { value: "left", label: "Tabs on Left", icon: <PanelLeft /> },
+    { value: "right", label: "Tabs on Right", icon: <PanelRight /> },
+  ];
+  const sidebarPositionItems: MenuItem[] = sidebarPositions.map((pos) => ({
+    id: `sidebar-pos-${pos.value}`,
+    label: pos.label,
+    icon: pos.icon,
+    onClick: () => onSidebarPositionChange(pos.value),
+    className: currentSidebarPosition === pos.value ? "bg-selected" : undefined,
+  }));
+  const actionItems: MenuItem[] = [
+    ...(onNewTerminal
+      ? [
+          {
+            id: "new-terminal",
+            label: "New Terminal",
+            icon: <Plus />,
+            onClick: onNewTerminal,
+          },
+        ]
+      : []),
+    ...(onSearchTerminal
+      ? [
+          {
+            id: "search-terminal",
+            label: "Search",
+            icon: <Search />,
+            onClick: onSearchTerminal,
+          },
+        ]
+      : []),
+    ...(onSplitView
+      ? [
+          {
+            id: "toggle-split-view",
+            label: "Toggle Split View",
+            icon: <SplitSquareHorizontal />,
+            onClick: onSplitView,
+          },
+        ]
+      : []),
+    ...(onNextTerminal
+      ? [
+          {
+            id: "next-terminal",
+            label: "Next Tab",
+            icon: <ArrowDown />,
+            onClick: onNextTerminal,
+          },
+        ]
+      : []),
+    ...(onPrevTerminal
+      ? [
+          {
+            id: "previous-terminal",
+            label: "Previous Tab",
+            icon: <ArrowUp />,
+            onClick: onPrevTerminal,
+          },
+        ]
+      : []),
+    ...(onFullScreen
+      ? [
+          {
+            id: "toggle-fullscreen",
+            label: isFullScreen ? "Exit Full Screen" : "Full Screen",
+            icon: isFullScreen ? <Minimize2 /> : <Maximize2 />,
+            onClick: onFullScreen,
+          },
+        ]
+      : []),
   ];
 
   return (
     <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-[180px]">
-      <div className="ui-font px-2.5 py-1 text-[10px] text-text-lighter">Terminal Width</div>
+      <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">Terminal Width</div>
+      <MenuItemsList items={modeItems} onItemSelect={onClose} />
       <div className="my-0.5 border-border/70 border-t" />
-      {modes.map((mode) => (
-        <button
-          key={mode.value}
-          className={cn(dropdownItemClassName(), currentMode === mode.value && "bg-selected")}
-          onClick={() => {
-            onModeChange(mode.value);
-            onClose();
-          }}
-        >
-          {mode.icon}
-          {mode.label}
-        </button>
-      ))}
-      <div className="my-0.5 border-border/70 border-t" />
-      <div className="ui-font px-2.5 py-1 text-[10px] text-text-lighter">Tab Layout</div>
-      <div className="my-0.5 border-border/70 border-t" />
-      {layouts.map((layout) => (
-        <button
-          key={layout.value}
-          className={cn(dropdownItemClassName(), currentLayout === layout.value && "bg-selected")}
-          onClick={() => {
-            onLayoutChange(layout.value);
-            onClose();
-          }}
-        >
-          {layout.icon}
-          {layout.label}
-        </button>
-      ))}
-      <div className="my-0.5 border-border/70 border-t" />
-      {onNewTerminal && (
-        <button
-          className={dropdownItemClassName()}
-          onClick={() => {
-            onNewTerminal();
-            onClose();
-          }}
-        >
-          <Plus size={12} />
-          New Terminal
-        </button>
+      <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">Tab Layout</div>
+      <MenuItemsList items={layoutItems} onItemSelect={onClose} />
+      {currentLayout === "vertical" && (
+        <>
+          <div className="my-0.5 border-border/70 border-t" />
+          <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">Tab Position</div>
+          <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} />
+        </>
       )}
-      {onSearchTerminal && (
-        <button
-          className={dropdownItemClassName()}
-          onClick={() => {
-            onSearchTerminal();
-            onClose();
-          }}
-        >
-          <Search size={12} />
-          Search
-        </button>
-      )}
-      {onSplitView && (
-        <button
-          className={dropdownItemClassName()}
-          onClick={() => {
-            onSplitView();
-            onClose();
-          }}
-        >
-          <SplitSquareHorizontal size={12} />
-          Toggle Split View
-        </button>
-      )}
-      {onNextTerminal && (
-        <button
-          className={dropdownItemClassName()}
-          onClick={() => {
-            onNextTerminal();
-            onClose();
-          }}
-        >
-          <ArrowDown size={12} />
-          Next Tab
-        </button>
-      )}
-      {onPrevTerminal && (
-        <button
-          className={dropdownItemClassName()}
-          onClick={() => {
-            onPrevTerminal();
-            onClose();
-          }}
-        >
-          <ArrowUp size={12} />
-          Previous Tab
-        </button>
+      {actionItems.length > 0 && (
+        <>
+          <div className="my-0.5 border-border/70 border-t" />
+          <MenuItemsList items={actionItems} onItemSelect={onClose} />
+        </>
       )}
     </Dropdown>
   );
@@ -249,6 +293,8 @@ const TerminalTabBar = ({
   const setTabLayout = useTerminalStore((state) => state.setTabLayout);
   const tabSidebarWidth = useTerminalStore((state) => state.tabSidebarWidth);
   const setTabSidebarWidth = useTerminalStore((state) => state.setTabSidebarWidth);
+  const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
+  const setTabSidebarPosition = useTerminalStore((state) => state.setTabSidebarPosition);
   const sessions = useTerminalStore((state) => state.sessions);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
@@ -543,7 +589,7 @@ const TerminalTabBar = ({
   const profileMenuItems: MenuItem[] = terminalProfiles.map((profile) => ({
     id: profile.id,
     label: profile.name,
-    icon: <TerminalIcon size={12} className="text-text-lighter" />,
+    icon: <TerminalIcon className="text-text-lighter" />,
     onClick: () => {
       onNewTerminalWithProfile?.(profile.id);
       closeProfileMenu();
@@ -583,34 +629,32 @@ const TerminalTabBar = ({
         )}
       >
         <div className="flex items-center gap-1.5">
-          <TerminalIcon size={10} className="text-text-lighter" />
-          <span className="ui-font text-text-lighter text-xs">No terminals</span>
+          <TerminalIcon className="text-text-lighter" />
+          <span className="ui-font ui-text-sm text-text-lighter">No terminals</span>
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-0.5">
             <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-              <button
+              <Button
                 onClick={onNewTerminal}
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent",
-                  "text-text-lighter text-xs transition-colors hover:border-border/70 hover:bg-hover",
-                )}
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-lg text-text-lighter"
               >
-                <Plus size={9} />
-              </button>
+                <Plus />
+              </Button>
             </Tooltip>
             {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
               <Tooltip content="Choose Terminal Profile" side="bottom">
-                <button
+                <Button
                   ref={profileMenuButtonRef}
                   onClick={openProfileMenu}
-                  className={cn(
-                    "flex h-6 w-5 items-center justify-center rounded-lg border border-transparent",
-                    "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="h-6 w-5 rounded-lg text-text-lighter"
                 >
-                  <ChevronDown size={10} />
-                </button>
+                  <ChevronDown />
+                </Button>
               </Tooltip>
             )}
           </div>
@@ -771,32 +815,38 @@ const TerminalTabBar = ({
           <div className="flex shrink-0 items-center gap-1 px-1">
             {onSearchTerminal && (
               <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-                <button
+                <Button
                   onClick={onSearchTerminal}
-                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 rounded-lg text-text-lighter"
                 >
-                  <Search size={12} />
-                </button>
+                  <Search />
+                </Button>
               </Tooltip>
             )}
             <div className="flex shrink-0 items-center gap-0.5">
               <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-                <button
+                <Button
                   onClick={onNewTerminal}
-                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 rounded-lg text-text-lighter"
                 >
-                  <Plus size={14} />
-                </button>
+                  <Plus />
+                </Button>
               </Tooltip>
               {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
                 <Tooltip content="Choose Terminal Profile" side="bottom">
-                  <button
+                  <Button
                     ref={profileMenuButtonRef}
                     onClick={openProfileMenu}
-                    className="flex h-6 w-5 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-6 w-5 shrink-0 rounded-lg text-text-lighter"
                   >
-                    <ChevronDown size={11} />
-                  </button>
+                    <ChevronDown />
+                  </Button>
                 </Tooltip>
               )}
             </div>
@@ -805,17 +855,17 @@ const TerminalTabBar = ({
                 content={isSplitView ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
                 side="bottom"
               >
-                <button
+                <Button
                   onClick={onSplitView}
+                  variant={isSplitView ? "secondary" : "ghost"}
+                  size="icon-sm"
                   className={cn(
-                    "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border p-1",
-                    isSplitView
-                      ? "border-border/80 bg-primary-bg text-text"
-                      : "border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
+                    "shrink-0 rounded-lg",
+                    isSplitView ? "text-text" : "text-text-lighter",
                   )}
                 >
-                  <SplitSquareHorizontal size={12} />
-                </button>
+                  <SplitSquareHorizontal />
+                </Button>
               </Tooltip>
             )}
             {onFullScreen && (
@@ -823,12 +873,14 @@ const TerminalTabBar = ({
                 content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
                 side="bottom"
               >
-                <button
+                <Button
                   onClick={onFullScreen}
-                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 rounded-lg text-text-lighter"
                 >
-                  {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                </button>
+                  {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+                </Button>
               </Tooltip>
             )}
           </div>
@@ -844,7 +896,7 @@ const TerminalTabBar = ({
                 el.style.top = `${dragCurrentPosition.y - rect.height / 2}px`;
               }
             }}
-            className="ui-font fixed z-50 flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 text-xs shadow-sm"
+            className="ui-font ui-text-sm fixed z-50 flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 shadow-sm"
             style={{
               opacity: 0.95,
               minWidth: 60,
@@ -854,10 +906,10 @@ const TerminalTabBar = ({
             }}
           >
             <span className="shrink-0">
-              <TerminalIcon size={12} className="text-text-lighter" />
+              <TerminalIcon className="text-text-lighter" />
             </span>
             {sortedTerminals[draggedIndex].isPinned && (
-              <Pin size={8} className="shrink-0 fill-current text-accent" />
+              <Pin className="shrink-0 fill-current text-accent" />
             )}
             <span className="truncate">
               {getTerminalDisplayName(sortedTerminals[draggedIndex])}
@@ -969,13 +1021,17 @@ const TerminalTabBar = ({
             onClose={closeToolbarContextMenu}
             currentMode={widthMode}
             currentLayout={tabLayout}
+            currentSidebarPosition={tabSidebarPosition}
             onModeChange={setWidthMode}
             onLayoutChange={setTabLayout}
+            onSidebarPositionChange={setTabSidebarPosition}
             onNewTerminal={onNewTerminal}
             onSearchTerminal={onSearchTerminal}
             onSplitView={onSplitView}
             onNextTerminal={onNextTerminal}
             onPrevTerminal={onPrevTerminal}
+            onFullScreen={onFullScreen}
+            isFullScreen={isFullScreen}
           />
           <Dropdown
             isOpen={profileMenu.isOpen}
@@ -983,7 +1039,7 @@ const TerminalTabBar = ({
             onClose={closeProfileMenu}
             className="w-[220px]"
           >
-            <div className="ui-font px-2.5 py-1 text-[10px] text-text-lighter">New Terminal</div>
+            <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">New Terminal</div>
             <div className="my-0.5 border-border/70 border-t" />
             <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
           </Dropdown>

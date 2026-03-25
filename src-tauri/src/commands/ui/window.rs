@@ -1,8 +1,117 @@
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
-use tauri::{Manager, WebviewBuilder, WebviewUrl, command};
+use tauri::{
+   AppHandle, Manager, TitleBarStyle, WebviewBuilder, WebviewUrl, WebviewWindow, command,
+};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
+static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateAppWindowRequest {
+   pub path: Option<String>,
+   pub is_directory: Option<bool>,
+   pub line: Option<u32>,
+   pub remote_connection_id: Option<String>,
+   pub remote_connection_name: Option<String>,
+}
+
+fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
+   let Some(request) = request else {
+      return "/".to_string();
+   };
+
+   let has_payload = request.path.is_some() || request.remote_connection_id.is_some();
+   if !has_payload {
+      return "/".to_string();
+   }
+
+   let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+   serializer.append_pair("target", "open");
+
+   if let Some(connection_id) = &request.remote_connection_id {
+      serializer.append_pair("type", "remote");
+      serializer.append_pair("connectionId", connection_id);
+
+      if let Some(connection_name) = &request.remote_connection_name {
+         serializer.append_pair("name", connection_name);
+      }
+   } else if let Some(path) = &request.path {
+      serializer.append_pair(
+         "type",
+         if request.is_directory.unwrap_or(false) {
+            "directory"
+         } else {
+            "file"
+         },
+      );
+      serializer.append_pair("path", path);
+
+      if let Some(line) = request.line {
+         serializer.append_pair("line", &line.to_string());
+      }
+   }
+
+   format!("/?{}", serializer.finish())
+}
+
+pub fn configure_app_window(window: &WebviewWindow) {
+   #[cfg(target_os = "macos")]
+   {
+      use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
+
+      apply_vibrancy(window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
+         .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+   }
+
+   #[cfg(target_os = "windows")]
+   {
+      let _ = window.set_decorations(true);
+   }
+
+   #[cfg(target_os = "linux")]
+   {
+      let _ = window.set_decorations(false);
+   }
+}
+
+pub fn create_app_window_internal(
+   app: &AppHandle,
+   request: Option<CreateAppWindowRequest>,
+) -> Result<String, String> {
+   let label = format!(
+      "main-{}",
+      APP_WINDOW_COUNTER.fetch_add(1, Ordering::SeqCst) + 1
+   );
+   let url = build_window_open_url(request.as_ref());
+
+   let window = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
+      .title("")
+      .inner_size(1200.0, 800.0)
+      .min_inner_size(400.0, 400.0)
+      .center()
+      .decorations(true)
+      .resizable(true)
+      .shadow(true)
+      .hidden_title(true)
+      .title_bar_style(TitleBarStyle::Overlay)
+      .build()
+      .map_err(|e| format!("Failed to create app window: {e}"))?;
+
+   configure_app_window(&window);
+
+   Ok(label)
+}
+
+#[command]
+pub async fn create_app_window(
+   app: tauri::AppHandle,
+   request: Option<CreateAppWindowRequest>,
+) -> Result<String, String> {
+   create_app_window_internal(&app, request)
+}
 
 /// Keyboard shortcut interceptor for web viewer
 /// Captures app-level shortcuts and stores them for polling

@@ -12,7 +12,7 @@ import {
   UI_FONT_SIZE_MIN,
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
@@ -21,8 +21,12 @@ import { FontSelector } from "../font-selector";
 
 export const AppearanceSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
-  const [themeOptions, setThemeOptions] = useState<{ value: string; label: string }[]>([]);
-  const [iconThemeOptions, setIconThemeOptions] = useState<{ value: string; label: string }[]>([]);
+  const [themeOptions, setThemeOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [iconThemeOptions, setIconThemeOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   const sidebarOptions = [
     { value: "left", label: "Left" },
@@ -60,8 +64,29 @@ export const AppearanceSettings = () => {
       return themeOptions;
     }
 
-    return [{ value: fallbackTheme.id, label: fallbackTheme.name }, ...themeOptions];
+    return [
+      { value: fallbackTheme.id, label: fallbackTheme.name },
+      ...themeOptions,
+    ];
   }, [themeOptions, settings.theme]);
+
+  const lightThemeOptions = useMemo(
+    () =>
+      normalizedThemeOptions.filter((option) => {
+        const theme = themeRegistry.getTheme(option.value);
+        return theme ? !theme.isDark : true;
+      }),
+    [normalizedThemeOptions],
+  );
+
+  const darkThemeOptions = useMemo(
+    () =>
+      normalizedThemeOptions.filter((option) => {
+        const theme = themeRegistry.getTheme(option.value);
+        return theme ? !!theme.isDark : true;
+      }),
+    [normalizedThemeOptions],
+  );
 
   // Load icon themes from icon theme registry
   useEffect(() => {
@@ -81,7 +106,9 @@ export const AppearanceSettings = () => {
   }, []);
 
   const normalizedIconThemeOptions = useMemo(() => {
-    if (iconThemeOptions.some((option) => option.value === settings.iconTheme)) {
+    if (
+      iconThemeOptions.some((option) => option.value === settings.iconTheme)
+    ) {
       return iconThemeOptions;
     }
 
@@ -90,7 +117,10 @@ export const AppearanceSettings = () => {
       return iconThemeOptions;
     }
 
-    return [{ value: fallbackIconTheme.id, label: fallbackIconTheme.name }, ...iconThemeOptions];
+    return [
+      { value: fallbackIconTheme.id, label: fallbackIconTheme.name },
+      ...iconThemeOptions,
+    ];
   }, [iconThemeOptions, settings.iconTheme]);
 
   const handleUploadTheme = async () => {
@@ -100,7 +130,8 @@ export const AppearanceSettings = () => {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
+        const { uploadTheme } =
+          await import("@/features/settings/utils/theme-upload");
         const result = await uploadTheme(file);
         if (result.success) {
           console.log("Theme uploaded successfully:", result.theme?.name);
@@ -149,18 +180,86 @@ export const AppearanceSettings = () => {
               className="w-40"
               size="xs"
               searchable
+              disabled={settings.syncSystemTheme}
             />
-            <Button onClick={handleUploadTheme} variant="ghost" size="xs" className="gap-1 px-2">
-              <Upload size={12} />
+            <Button
+              onClick={handleUploadTheme}
+              variant="ghost"
+              size="xs"
+              className="gap-1 px-2"
+            >
+              <Upload />
               Upload
             </Button>
           </div>
         </SettingRow>
 
         <SettingRow
+          label="Sync With OS"
+          description="Automatically switch between your preferred light and dark themes"
+          onReset={() =>
+            updateSetting(
+              "syncSystemTheme",
+              getDefaultSetting("syncSystemTheme"),
+            )
+          }
+          canReset={
+            settings.syncSystemTheme !== getDefaultSetting("syncSystemTheme")
+          }
+        >
+          <Switch
+            checked={settings.syncSystemTheme}
+            onChange={(checked) => updateSetting("syncSystemTheme", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Preferred Light Theme"
+          description="Used when Sync With OS is enabled and the system appearance is light"
+          onReset={() =>
+            updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))
+          }
+          canReset={
+            settings.autoThemeLight !== getDefaultSetting("autoThemeLight")
+          }
+        >
+          <Select
+            value={settings.autoThemeLight}
+            options={lightThemeOptions}
+            onChange={(value) => updateSetting("autoThemeLight", value)}
+            className="w-40"
+            size="xs"
+            searchable
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Preferred Dark Theme"
+          description="Used when Sync With OS is enabled and the system appearance is dark"
+          onReset={() =>
+            updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))
+          }
+          canReset={
+            settings.autoThemeDark !== getDefaultSetting("autoThemeDark")
+          }
+        >
+          <Select
+            value={settings.autoThemeDark}
+            options={darkThemeOptions}
+            onChange={(value) => updateSetting("autoThemeDark", value)}
+            className="w-40"
+            size="xs"
+            searchable
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Icon Theme"
           description="Icons displayed in the file tree and tabs"
-          onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
+          onReset={() =>
+            updateSetting("iconTheme", getDefaultSetting("iconTheme"))
+          }
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
           <Select
@@ -178,7 +277,9 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="UI Font Family"
           description="Font family for UI elements (file tree, markdown, etc.)"
-          onReset={() => updateSetting("uiFontFamily", getDefaultSetting("uiFontFamily"))}
+          onReset={() =>
+            updateSetting("uiFontFamily", getDefaultSetting("uiFontFamily"))
+          }
           canReset={settings.uiFontFamily !== getDefaultSetting("uiFontFamily")}
         >
           <FontSelector
@@ -192,7 +293,9 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="UI Font Size"
           description="Adjust UI text and icon scale in 0.5px steps"
-          onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
+          onReset={() =>
+            updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))
+          }
           canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
         >
           <div className="flex items-center gap-1.5">
@@ -205,7 +308,7 @@ export const AppearanceSettings = () => {
               aria-label="Decrease UI font size"
               className="px-1.5"
             >
-              <Minus size="var(--app-ui-icon-size-sm)" />
+              <Minus />
             </Button>
 
             <div className="ui-font min-w-[52px] text-center text-text text-xs tabular-nums">
@@ -221,7 +324,7 @@ export const AppearanceSettings = () => {
               aria-label="Increase UI font size"
               className="px-1.5"
             >
-              <Plus size="var(--app-ui-icon-size-sm)" />
+              <Plus />
             </Button>
           </div>
         </SettingRow>
@@ -231,13 +334,22 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Sidebar Position"
           description="Choose where to position the sidebar"
-          onReset={() => updateSetting("sidebarPosition", getDefaultSetting("sidebarPosition"))}
-          canReset={settings.sidebarPosition !== getDefaultSetting("sidebarPosition")}
+          onReset={() =>
+            updateSetting(
+              "sidebarPosition",
+              getDefaultSetting("sidebarPosition"),
+            )
+          }
+          canReset={
+            settings.sidebarPosition !== getDefaultSetting("sidebarPosition")
+          }
         >
           <Select
             value={settings.sidebarPosition}
             options={sidebarOptions}
-            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
+            onChange={(value) =>
+              updateSetting("sidebarPosition", value as "left" | "right")
+            }
             className="w-20"
             size="xs"
           />
@@ -247,8 +359,12 @@ export const AppearanceSettings = () => {
           <SettingRow
             label="Native Menu Bar"
             description="Use the native menu bar or a custom UI menu bar"
-            onReset={() => updateSetting("nativeMenuBar", getDefaultSetting("nativeMenuBar"))}
-            canReset={settings.nativeMenuBar !== getDefaultSetting("nativeMenuBar")}
+            onReset={() =>
+              updateSetting("nativeMenuBar", getDefaultSetting("nativeMenuBar"))
+            }
+            canReset={
+              settings.nativeMenuBar !== getDefaultSetting("nativeMenuBar")
+            }
           >
             <Switch
               checked={settings.nativeMenuBar}
@@ -264,8 +380,12 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Compact Menu Bar"
           description="Requires UI menu bar; compact hamburger or full UI menu"
-          onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
-          canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
+          onReset={() =>
+            updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))
+          }
+          canReset={
+            settings.compactMenuBar !== getDefaultSetting("compactMenuBar")
+          }
         >
           <Switch
             checked={settings.compactMenuBar}
@@ -279,14 +399,22 @@ export const AppearanceSettings = () => {
           label="Title Bar Project Mode"
           description="Show project tabs or a single window-style title in the custom title bar"
           onReset={() =>
-            updateSetting("titleBarProjectMode", getDefaultSetting("titleBarProjectMode"))
+            updateSetting(
+              "titleBarProjectMode",
+              getDefaultSetting("titleBarProjectMode"),
+            )
           }
-          canReset={settings.titleBarProjectMode !== getDefaultSetting("titleBarProjectMode")}
+          canReset={
+            settings.titleBarProjectMode !==
+            getDefaultSetting("titleBarProjectMode")
+          }
         >
           <Select
             value={settings.titleBarProjectMode}
             options={titleBarProjectModeOptions}
-            onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
+            onChange={(value) =>
+              updateSetting("titleBarProjectMode", value as "tabs" | "window")
+            }
             className="w-24"
             size="xs"
           />
@@ -295,12 +423,42 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Quick Open Preview"
           description="Show right-side file preview in quick open and global search"
-          onReset={() => updateSetting("quickOpenPreview", getDefaultSetting("quickOpenPreview"))}
-          canReset={settings.quickOpenPreview !== getDefaultSetting("quickOpenPreview")}
+          onReset={() =>
+            updateSetting(
+              "quickOpenPreview",
+              getDefaultSetting("quickOpenPreview"),
+            )
+          }
+          canReset={
+            settings.quickOpenPreview !== getDefaultSetting("quickOpenPreview")
+          }
         >
           <Switch
             checked={settings.quickOpenPreview}
             onChange={(checked) => updateSetting("quickOpenPreview", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Open Projects In New Window"
+          description="When the current window already has a project, opening another folder uses a separate window"
+          onReset={() =>
+            updateSetting(
+              "openFoldersInNewWindow",
+              getDefaultSetting("openFoldersInNewWindow"),
+            )
+          }
+          canReset={
+            settings.openFoldersInNewWindow !==
+            getDefaultSetting("openFoldersInNewWindow")
+          }
+        >
+          <Switch
+            checked={settings.openFoldersInNewWindow}
+            onChange={(checked) =>
+              updateSetting("openFoldersInNewWindow", checked)
+            }
             size="sm"
           />
         </SettingRow>

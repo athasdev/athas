@@ -16,13 +16,13 @@ export const ProjectNameMenu = () => {
       {
         id: "open-folder",
         label: "Open Folder in New Tab",
-        icon: <FolderOpen size={12} />,
+        icon: <FolderOpen />,
         onClick: () => handleOpenFolder(),
       },
       {
         id: "collapse-folders",
         label: "Collapse All Folders",
-        icon: <PanelTopClose size={12} />,
+        icon: <PanelTopClose />,
         onClick: () => handleCollapseAllFolders(),
       },
     ];
@@ -36,7 +36,7 @@ export const ProjectNameMenu = () => {
       .map((folder: RecentFolder) => ({
         id: `recent-${folder.path}`,
         label: folder.name,
-        icon: <ClockIcon size={12} />,
+        icon: <ClockIcon />,
         onClick: () => openRecentFolder(folder.path),
       }));
 

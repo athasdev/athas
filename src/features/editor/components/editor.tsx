@@ -8,6 +8,7 @@ import { isEditorContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
@@ -33,6 +34,7 @@ import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
 import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transformer";
+import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
 import { InlineDiff } from "./diff/inline-diff";
@@ -51,6 +53,7 @@ import { Minimap } from "./minimap/minimap";
 interface EditorProps {
   bufferId?: string;
   isActiveSurface?: boolean;
+  isPreviewMode?: boolean;
   className?: string;
   onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: () => void;
@@ -64,6 +67,7 @@ const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
 export function Editor({
   bufferId: propBufferId,
   isActiveSurface = true,
+  isPreviewMode = false,
   className,
   onMouseMove,
   onMouseLeave,
@@ -111,6 +115,7 @@ export function Editor({
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const gitGutterEnabled = useSettingsStore((state) => state.settings.enableGitGutter);
   const vimMode = useVimStore.use.mode();
+  const vimVisualSelection = useVimStore.use.visualSelection();
 
   const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
@@ -127,7 +132,7 @@ export function Editor({
   useGitGutter({
     filePath: filePath || "",
     content,
-    enabled: !!filePath && gitGutterEnabled,
+    enabled: !!filePath && gitGutterEnabled && isActiveSurface && !isPreviewMode,
   });
 
   const foldActions = useFoldStore.use.actions();
@@ -137,10 +142,28 @@ export function Editor({
   const minimapWidth = useMinimapStore.use.width();
 
   useEffect(() => {
+    if (!filePath || !fileOpenBenchmark.has(filePath)) return;
+    fileOpenBenchmark.mark(filePath, "editor-mounted");
+
+    const rafId = requestAnimationFrame(() => {
+      fileOpenBenchmark.finish(filePath, "editor-ready", `${content.length} chars`);
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [filePath, content.length]);
+
+  useEffect(() => {
+    if (!isActiveSurface || isPreviewMode) return;
     if (filePath && content) {
+      if (fileOpenBenchmark.has(filePath)) {
+        fileOpenBenchmark.mark(filePath, "fold-start");
+      }
       foldActions.computeFoldRegions(filePath, content);
+      if (fileOpenBenchmark.has(filePath)) {
+        fileOpenBenchmark.mark(filePath, "fold-done");
+      }
     }
-  }, [filePath, content, foldActions]);
+  }, [filePath, content, foldActions, isActiveSurface, isPreviewMode]);
 
   const foldTransform = useFoldTransform(filePath, content);
 
@@ -167,11 +190,17 @@ export function Editor({
   const { startMeasure, endMeasure } = usePerformanceMonitor("Editor");
 
   const actualLines = useMemo(() => {
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "split-start");
+    }
     startMeasure(`splitLines (len: ${content.length})`);
     const res = splitLines(content);
     endMeasure(`splitLines (len: ${content.length})`);
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "split-done", `${res.length} lines`);
+    }
     return res;
-  }, [content, startMeasure, endMeasure]);
+  }, [content, filePath, startMeasure, endMeasure]);
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
 
@@ -192,11 +221,12 @@ export function Editor({
     filePath,
     bufferId: bufferId || undefined,
     incremental: true,
-    enabled: hasSyntaxHighlighting,
+    enabled: hasSyntaxHighlighting && isActiveSurface,
   });
   const effectiveTokens = tokens.length > 0 ? tokens : (buffer?.tokens ?? []);
 
   useEffect(() => {
+    if (!isActiveSurface) return;
     if (!bufferId || tokens.length === 0) return;
     updateBufferTokens(
       bufferId,
@@ -205,7 +235,7 @@ export function Editor({
         token_type: token.class_name,
       })),
     );
-  }, [bufferId, tokens, updateBufferTokens]);
+  }, [bufferId, tokens, updateBufferTokens, isActiveSurface]);
 
   // Atomic buffer switch — resets stores, syncs textarea, restores position
   const { switchGuardRef } = useBufferSwitch({
@@ -216,11 +246,11 @@ export function Editor({
     forceUpdateViewport,
     totalLines: lines.length,
     resetTokenizer: resetForBufferSwitch,
-    tokenize,
   });
 
   // Listen for extension installation to re-trigger tokenization
   useEffect(() => {
+    if (!isActiveSurface) return;
     const handleExtensionInstalled = (event: Event) => {
       const customEvent = event as CustomEvent<{ extensionId: string; filePath: string }>;
       if (customEvent.detail.filePath === filePath && content) {
@@ -232,7 +262,7 @@ export function Editor({
     return () => {
       window.removeEventListener("extension-installed", handleExtensionInstalled);
     };
-  }, [filePath, content, forceFullTokenize]);
+  }, [filePath, content, forceFullTokenize, isActiveSurface]);
 
   const visualCursorLine = useMemo(() => {
     if (foldTransform.hasActiveFolds) {
@@ -335,8 +365,14 @@ export function Editor({
 
     const selectionStart = inputRef.current.selectionStart;
     const selectionEnd = inputRef.current.selectionEnd;
-
-    const position = calculateCursorPosition(selectionStart, lines);
+    const isVisualModeActive = vimModeEnabled && vimMode === "visual";
+    const position =
+      isVisualModeActive && vimVisualSelection.end
+        ? {
+            ...vimVisualSelection.end,
+            offset: calculateLineOffset(lines, vimVisualSelection.end.line) + vimVisualSelection.end.column,
+          }
+        : calculateCursorPosition(selectionStart, lines);
 
     if (foldTransform.hasActiveFolds) {
       const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
@@ -402,6 +438,9 @@ export function Editor({
     setSelection,
     foldTransform,
     inlineEditState,
+    vimModeEnabled,
+    vimMode,
+    vimVisualSelection,
   ]);
 
   const handleClick = useCallback(
@@ -465,7 +504,7 @@ export function Editor({
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
 
   useAutocomplete({
-    enabled: aiCompletionEnabled,
+    enabled: aiCompletionEnabled && !isPreviewMode,
     model: aiAutocompleteModelId,
     filePath: filePath || null,
     languageId: filePath ? getLanguageId(filePath) : null,
@@ -591,6 +630,7 @@ export function Editor({
   const tokenizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (!isActiveSurface) return;
     if (!buffer?.content || !buffer?.path) return;
 
     if (tokenizeRafRef.current !== null) {
@@ -630,6 +670,7 @@ export function Editor({
       }
     };
   }, [
+    isActiveSurface,
     bufferId,
     buffer?.path,
     buffer?.content,
@@ -817,13 +858,16 @@ export function Editor({
                         : "Describe the edit for the current line..."
                     }
                   />
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
-                    className="rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                    className="text-text-lighter hover:text-text"
                     aria-label="Close inline edit"
                   >
-                    <X size={13} />
-                  </button>
+                    <X />
+                  </Button>
                 </div>
                 {inlineEditState.inlineEditError && (
                   <div className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
@@ -846,15 +890,17 @@ export function Editor({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
                     onClick={() => void inlineEditState.handleApplyInlineEdit()}
                     disabled={inlineEditState.isInlineEditRunning}
-                    className="ui-font inline-flex items-center gap-1 p-1 text-xs text-accent transition-colors hover:text-accent/80 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"
                   >
-                    <CornerDownLeft size={11} />
+                    <CornerDownLeft />
                     {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

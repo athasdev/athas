@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { WebViewerToolbarButton } from "./web-viewer-toolbar-button";
 
@@ -82,7 +83,7 @@ export function WebViewerToolbar({
           title="Go back"
           aria-label="Go back"
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft />
         </WebViewerToolbarButton>
         <WebViewerToolbarButton
           onClick={onGoForward}
@@ -90,17 +91,17 @@ export function WebViewerToolbar({
           title="Go forward"
           aria-label="Go forward"
         >
-          <ArrowRight size={15} />
+          <ArrowRight />
         </WebViewerToolbarButton>
         <WebViewerToolbarButton
           onClick={isLoading ? onStopLoading : onRefresh}
           title={isLoading ? "Stop loading" : "Refresh"}
           aria-label={isLoading ? "Stop loading" : "Refresh"}
         >
-          {isLoading ? <X size={15} /> : <RefreshCw size={15} />}
+          {isLoading ? <X /> : <RefreshCw />}
         </WebViewerToolbarButton>
         <WebViewerToolbarButton onClick={onHome} title="Go to home" aria-label="Go to home">
-          <Home size={15} />
+          <Home />
         </WebViewerToolbarButton>
       </div>
 
@@ -112,7 +113,7 @@ export function WebViewerToolbar({
             className={`absolute left-2.5 flex items-center ${securityToneClass}`}
             title={securityTooltip}
           >
-            <SecurityIcon size={14} />
+            <SecurityIcon />
           </div>
           <Input
             ref={urlInputRef}
@@ -122,15 +123,17 @@ export function WebViewerToolbar({
             placeholder="Enter URL..."
             className="h-7 w-full rounded-md border-border bg-primary-bg pr-8 pl-8 text-[13px] focus:border-accent focus:ring-accent/30"
           />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onCopyUrl}
-            className="absolute right-2 flex items-center text-text-lighter transition-colors hover:text-text"
+            className="absolute right-1.5 text-text-lighter hover:text-text"
             title="Copy URL"
             aria-label="Copy URL"
           >
-            {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
-          </button>
+            {copied ? <Check className="text-success" /> : <Copy />}
+          </Button>
         </div>
       </form>
 
@@ -143,24 +146,26 @@ export function WebViewerToolbar({
           title="Zoom out"
           aria-label="Zoom out"
         >
-          <Minus size={15} />
+          <Minus />
         </WebViewerToolbarButton>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onResetZoom}
-          className="flex h-7 min-w-[44px] items-center justify-center rounded px-1.5 text-[11px] text-text-light transition-colors hover:bg-hover"
+          className="min-w-[44px] px-1.5 text-[11px] text-text-light"
           title="Reset zoom (click to reset)"
           aria-label="Reset zoom"
         >
           {Math.round(zoomLevel * 100)}%
-        </button>
+        </Button>
         <WebViewerToolbarButton
           onClick={onZoomIn}
           disabled={zoomLevel >= 3}
           title="Zoom in"
           aria-label="Zoom in"
         >
-          <Plus size={15} />
+          <Plus />
         </WebViewerToolbarButton>
       </div>
 
@@ -172,14 +177,14 @@ export function WebViewerToolbar({
           title="Open Developer Tools"
           aria-label="Open Developer Tools"
         >
-          <Code2 size={15} />
+          <Code2 />
         </WebViewerToolbarButton>
         <WebViewerToolbarButton
           onClick={onOpenExternal}
           title="Open in browser"
           aria-label="Open in browser"
         >
-          <ExternalLink size={15} />
+          <ExternalLink />
         </WebViewerToolbarButton>
       </div>
     </div>

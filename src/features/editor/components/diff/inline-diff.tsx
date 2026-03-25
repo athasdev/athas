@@ -1,6 +1,7 @@
 import type React from "react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { GitDiffLine } from "@/features/git/types/git-types";
+import { Button } from "@/ui/button";
 
 interface InlineDiffProps {
   lineNumber: number;
@@ -240,41 +241,29 @@ function InlineDiffComponent({
                 }}
               >
                 {onRevert && line.line_type === "removed" && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
                     onClick={handleRevert}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "var(--text, #d4d4d4)",
-                      cursor: "pointer",
-                      padding: "2px 6px",
-                      fontSize: "11px",
-                      borderRadius: "3px",
-                    }}
+                    className="h-auto px-1.5 py-0.5 text-[11px]"
                     title="Revert this change"
                     aria-label="Revert change"
                   >
                     ↺
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
                   onClick={onClose}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--text-light, rgba(255, 255, 255, 0.5))",
-                    cursor: "pointer",
-                    padding: "2px 6px",
-                    fontSize: "11px",
-                    borderRadius: "3px",
-                  }}
+                  className="h-auto px-1.5 py-0.5 text-[11px]"
                   title="Close"
                   aria-label="Close diff"
                 >
                   ✕
-                </button>
+                </Button>
               </div>
             )}
           </div>

@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
@@ -21,9 +20,11 @@ import { useSettingsStore } from "@/features/settings/store";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
@@ -32,7 +33,6 @@ import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
 
-const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
 const SIDEBAR_COLLAPSE_THRESHOLD = 48;
 
 export function MainLayout() {
@@ -52,20 +52,22 @@ export function MainLayout() {
   const { settings, updateSetting } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
+  const handleOpenFolderByPath =
+    useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const switchToProject = useFileSystemStore.use.switchToProject?.();
-  const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
-  const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
-  const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
-
-  const hasRestoredWorkspace = useRef(false);
-  const [viewportWidth, setViewportWidth] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth : 1440,
+  const setIsSwitchingProject =
+    useFileSystemStore.use.setIsSwitchingProject?.();
+  const refreshWorkspaceGitStatus = useGitStore(
+    (state) => state.actions.refreshWorkspaceGitStatus,
+  );
+  const setWorkspaceGitStatus = useGitStore(
+    (state) => state.actions.setWorkspaceGitStatus,
   );
 
+  const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
@@ -107,38 +109,20 @@ export function MainLayout() {
     return allDiagnostics;
   }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
-  const isCompactAiOverlay = viewportWidth < AI_CHAT_OVERLAY_BREAKPOINT;
-  const showInlineAiChat = settings.isAIChatVisible && !isCompactAiOverlay;
-  const showOverlayAiChat = settings.isAIChatVisible && isCompactAiOverlay;
-  const aiOverlaySide = sidebarPosition === "right" ? "left" : "right";
-
-  useEffect(() => {
-    const handleResize = () => {
-      setViewportWidth(window.innerWidth);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (!showOverlayAiChat) return;
-
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        updateSetting("isAIChatVisible", false);
-      }
-    };
-
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [showOverlayAiChat, updateSetting]);
+  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
+  const showInlineAiChat = settings.isAIChatVisible;
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
-      setRelativeLineNumbers(settings.vimRelativeLineNumbers, { persist: false });
+      setRelativeLineNumbers(settings.vimRelativeLineNumbers, {
+        persist: false,
+      });
     }
-  }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
+  }, [
+    settings.vimRelativeLineNumbers,
+    relativeLineNumbers,
+    setRelativeLineNumbers,
+  ]);
 
   const handleThemeChange = (theme: string) => {
     updateSetting("theme", theme);
@@ -227,7 +211,8 @@ export function MainLayout() {
 
     const refreshGitState = (event?: Event) => {
       const filePath =
-        event instanceof CustomEvent && typeof event.detail?.filePath === "string"
+        event instanceof CustomEvent &&
+        typeof event.detail?.filePath === "string"
           ? event.detail.filePath
           : null;
 
@@ -267,7 +252,10 @@ export function MainLayout() {
       <CustomTitleBarWithSettings />
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-        <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
+        <div
+          className="flex flex-1 flex-row overflow-hidden"
+          style={{ minHeight: 0 }}
+        >
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
@@ -297,11 +285,16 @@ export function MainLayout() {
           )}
 
           {/* Main content area with split view */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2 py-2">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
             <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
-            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+            {terminalWidthMode === "editor" && (
+              <BottomPane
+                diagnostics={diagnostics}
+                onDiagnosticClick={handleDiagnosticClick}
+              />
+            )}
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
@@ -331,31 +324,13 @@ export function MainLayout() {
           )}
         </div>
 
-        {showOverlayAiChat && (
-          <>
-            <button
-              type="button"
-              className="absolute inset-0 z-[10015] bg-black/30 backdrop-blur-[1px]"
-              onClick={() => updateSetting("isAIChatVisible", false)}
-              aria-label="Close AI chat overlay"
+        {terminalWidthMode === "full" && (
+          <div className="px-2">
+            <BottomPane
+              diagnostics={diagnostics}
+              onDiagnosticClick={handleDiagnosticClick}
             />
-
-            <div
-              className={`absolute top-2 bottom-2 z-[10020] w-[min(460px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-border bg-secondary-bg shadow-2xl ${
-                aiOverlaySide === "right" ? "right-2" : "left-2"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => updateSetting("isAIChatVisible", false)}
-                className="absolute top-2 right-2 z-[10030] flex h-7 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/90 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                aria-label="Close AI chat"
-              >
-                <X size={14} />
-              </button>
-              <AIChat mode="chat" className="h-full" />
-            </div>
-          </>
+          </div>
         )}
       </div>
 

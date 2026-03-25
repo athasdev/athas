@@ -1,5 +1,6 @@
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -9,6 +10,7 @@ export interface ProjectTab {
   path: string;
   isActive: boolean;
   lastOpened: number;
+  customIcon?: string;
 }
 
 interface WorkspaceTabsState {
@@ -23,9 +25,14 @@ interface WorkspaceTabsActions {
   closeAllProjectTabs: () => void;
   getActiveProjectTab: () => ProjectTab | undefined;
   hasProjectTab: (path: string) => boolean;
+  setProjectIcon: (projectId: string, iconPath: string | undefined) => void;
 }
 
-const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActions>()(
+const workspaceTabsStorageKey = `workspace-tabs-storage-${getCurrentWebviewWindow().label}`;
+
+const useWorkspaceTabsStoreBase = create<
+  WorkspaceTabsState & WorkspaceTabsActions
+>()(
   persist(
     immer((set, get) => ({
       projectTabs: [],
@@ -65,7 +72,9 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
         const wasActive = tabs[tabIndex].isActive;
 
         set((state) => {
-          state.projectTabs = state.projectTabs.filter((tab) => tab.id !== projectId);
+          state.projectTabs = state.projectTabs.filter(
+            (tab) => tab.id !== projectId,
+          );
         });
 
         // If we closed the active tab, activate another one
@@ -110,9 +119,19 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
       hasProjectTab: (path: string) => {
         return get().projectTabs.some((tab) => tab.path === path);
       },
+
+      setProjectIcon: (projectId: string, iconPath: string | undefined) => {
+        set((state) => {
+          const tab = state.projectTabs.find((t) => t.id === projectId);
+          if (tab) {
+            tab.customIcon = iconPath;
+          }
+        });
+      },
     })),
     {
-      name: "workspace-tabs-storage",
+      name: workspaceTabsStorageKey,
+      storage: createJSONStorage(() => localStorage),
       version: 1,
     },
   ),

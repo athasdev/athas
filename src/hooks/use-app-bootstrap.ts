@@ -18,6 +18,10 @@ import { useDeepLink } from "@/features/window/hooks/use-deep-link";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useAuthStore } from "@/features/window/stores/auth-store";
+import {
+  handleWindowOpenRequest,
+  parseWindowOpenUrl,
+} from "@/features/window/utils/window-open-request";
 
 export function useAppBootstrap() {
   const initializeWhatsNew = useWhatsNewStore((state) => state.initialize);
@@ -54,5 +58,15 @@ export function useAppBootstrap() {
     return () => {
       void cleanupFileClipboardListener();
     };
+  }, []);
+
+  useEffect(() => {
+    const request = parseWindowOpenUrl(new URL(window.location.href));
+    if (!request) return;
+
+    void handleWindowOpenRequest(request);
+
+    const nextUrl = `${window.location.pathname}${window.location.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl || "/");
   }, []);
 }

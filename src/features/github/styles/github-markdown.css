@@ -1,0 +1,59 @@
+.github-markdown.github-markdown-pr {
+  font-size: var(--ui-text-md);
+  font-weight: 400;
+  line-height: 1.68;
+}
+
+.github-markdown.github-markdown-pr h1,
+.github-markdown.github-markdown-pr h2 {
+  font-size: var(--ui-text-lg);
+  font-weight: 500;
+  margin: 0.7em 0 0.35em;
+  padding-bottom: 0.25em;
+}
+
+.github-markdown.github-markdown-pr h3 {
+  font-size: var(--ui-text-md);
+  font-weight: 500;
+  margin: 0.65em 0 0.25em;
+}
+
+.github-markdown.github-markdown-pr h4,
+.github-markdown.github-markdown-pr h5,
+.github-markdown.github-markdown-pr h6 {
+  font-size: var(--ui-text-md);
+  font-weight: 500;
+  margin: 0.55em 0 0.2em;
+}
+
+.github-markdown.github-markdown-pr p,
+.github-markdown.github-markdown-pr li {
+  font-size: 1em;
+  line-height: 1.68;
+}
+
+.github-markdown.github-markdown-pr code {
+  font-size: 0.9em;
+}
+
+.github-markdown.github-markdown-pr pre code {
+  font-size: 0.9em;
+}
+
+.github-markdown.github-markdown-pr blockquote {
+  margin: 0.9em 0;
+  padding: 0.75em 1em;
+}
+
+.github-markdown.github-markdown-pr ul,
+.github-markdown.github-markdown-pr ol {
+  margin: 0.45em 0 0.8em;
+}
+
+.github-markdown.github-markdown-pr pre {
+  margin: 0.9em 0;
+}
+
+.github-markdown.github-markdown-pr .github-markdown-pr-content > :first-child {
+  margin-top: 0;
+}

@@ -9,6 +9,7 @@ import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useSettingsStore } from "@/features/settings/store";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
 import { getCommitDiff } from "../api/git-diff-api";
@@ -279,7 +280,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate font-medium text-sm text-text">{blameLine.author}</span>
                 <div className="flex shrink-0 items-center gap-1 text-text-lighter text-xs">
-                  <Clock size={11} />
+                  <Clock />
                   <span>{formatRelativeTime(blameLine.time)}</span>
                 </div>
               </div>
@@ -289,21 +290,27 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
               </pre>
 
               <div className="flex items-center gap-1.5 text-text-lighter text-xs">
-                <button
-                  className="flex items-center gap-1.5 rounded px-1.5 py-1 transition-colors hover:bg-accent/10"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="gap-1.5 px-1.5"
                   onClick={handleViewCommit}
                   title="View commit details"
                 >
-                  <GitCommit size={11} />
+                  <GitCommit />
                   <span className="ui-font text-text">{blameLine.commit_hash.substring(0, 7)}</span>
-                </button>
-                <button
-                  className="ml-auto text-text-lighter transition-colors hover:text-text"
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-auto text-text-lighter hover:text-text"
                   onClick={handleCopyCommitHash}
                   title="Copy commit hash"
                 >
-                  {isCopied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
-                </button>
+                  {isCopied ? <Check className="text-green-500" /> : <Copy />}
+                </Button>
               </div>
             </div>
           </div>,

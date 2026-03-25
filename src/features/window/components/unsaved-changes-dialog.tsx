@@ -1,5 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { useEffect } from "react";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 
 interface Props {
@@ -30,24 +31,15 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
       size="sm"
       footer={
         <>
-          <button
-            onClick={onCancel}
-            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
-          >
+          <Button onClick={onCancel} variant="outline" size="sm">
             Cancel
-          </button>
-          <button
-            onClick={onDiscard}
-            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
-          >
+          </Button>
+          <Button onClick={onDiscard} variant="outline" size="sm">
             Don't Save
-          </button>
-          <button
-            onClick={onSave}
-            className="rounded bg-accent px-3 py-1.5 text-white text-xs transition-colors hover:bg-accent-hover"
-          >
+          </Button>
+          <Button onClick={onSave} variant="primary" size="sm">
             Save
-          </button>
+          </Button>
         </>
       }
     >

@@ -1,6 +1,7 @@
 import { Pin, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
@@ -112,8 +113,10 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onAuxClick={handleAuxClick}
         action={
           !isEditing ? (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 if (terminal.isPinned) {
@@ -123,23 +126,22 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                 }
               }}
               className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
+                "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
                 "hover:bg-hover/80 hover:text-text",
-                terminal.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                terminal.isPinned || isActive
+                  ? "opacity-100"
+                  : "opacity-0 group-hover/tab:opacity-100",
               )}
               title={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
               tabIndex={-1}
               draggable={false}
             >
               {terminal.isPinned ? (
-                <Pin
-                  className="pointer-events-none select-none fill-current text-accent"
-                  size={10}
-                />
+                <Pin className="pointer-events-none select-none fill-current text-accent" />
               ) : (
-                <X className="pointer-events-none select-none" size={10} />
+                <X className="pointer-events-none select-none" />
               )}
-            </button>
+            </Button>
           ) : null
         }
       >
@@ -165,7 +167,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             }}
             variant="ghost"
             className={cn(
-              "ui-font h-5 min-w-0 px-0 text-xs",
+              "ui-font ui-text-sm h-5 min-w-0 px-0",
               orientation === "vertical" ? "text-left" : "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}
@@ -179,7 +181,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "ui-font max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+              "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}

@@ -119,7 +119,7 @@ const GitActionsMenu = ({
         {
           id: "select-repository",
           label: isSelectingRepository ? "Selecting..." : "Select Repository",
-          icon: <FolderOpen size={12} />,
+          icon: <FolderOpen />,
           disabled: isSelectingRepository,
           onClick: () => void handleSelectRepository(),
         },
@@ -127,7 +127,7 @@ const GitActionsMenu = ({
         {
           id: "push",
           label: "Push Changes",
-          icon: <Upload size={12} />,
+          icon: <Upload />,
           disabled: isLoading,
           onClick: handlePush,
         },
@@ -135,14 +135,14 @@ const GitActionsMenu = ({
         {
           id: "pull",
           label: "Pull Changes",
-          icon: <Download size={12} />,
+          icon: <Download />,
           disabled: isLoading,
           onClick: handlePull,
         },
         {
           id: "fetch",
           label: "Fetch",
-          icon: <GitPullRequest size={12} />,
+          icon: <GitPullRequest />,
           disabled: isLoading,
           onClick: handleFetch,
         },
@@ -150,20 +150,20 @@ const GitActionsMenu = ({
         {
           id: "manage-remotes",
           label: "Manage Remotes",
-          icon: <Server size={12} />,
+          icon: <Server />,
           onClick: handleRemoteManager,
         },
         {
           id: "manage-tags",
           label: "Manage Tags",
-          icon: <Tag size={12} />,
+          icon: <Tag />,
           onClick: handleTagManager,
         },
         { id: "sep-4", label: "", separator: true, onClick: () => {} },
         {
           id: "refresh",
           label: "Refresh Status",
-          icon: <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />,
+          icon: <RefreshCw className={isRefreshing ? "animate-spin" : ""} />,
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },
@@ -171,7 +171,7 @@ const GitActionsMenu = ({
         {
           id: "discard-all",
           label: "Discard All Changes",
-          icon: <RotateCcw size={12} />,
+          icon: <RotateCcw />,
           disabled: isLoading,
           className: "text-red-400",
           onClick: () => void handleDiscardAllChanges(),
@@ -181,7 +181,7 @@ const GitActionsMenu = ({
         {
           id: "init-repository",
           label: "Initialize Repository",
-          icon: <Settings size={12} />,
+          icon: <Settings />,
           disabled: isLoading,
           onClick: handleInitRepository,
         },
@@ -189,7 +189,7 @@ const GitActionsMenu = ({
         {
           id: "refresh",
           label: "Refresh Status",
-          icon: <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />,
+          icon: <RefreshCw className={isRefreshing ? "animate-spin" : ""} />,
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },

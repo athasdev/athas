@@ -21,7 +21,9 @@ import type { EditorContent, PullRequestContent } from "../types/pane-content";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 
 const AgentTab = lazy(() =>
-  import("@/features/ai/components/agent-tab").then((m) => ({ default: m.AgentTab })),
+  import("@/features/ai/components/agent-tab").then((m) => ({
+    default: m.AgentTab,
+  })),
 );
 
 const databaseViewerCache = new Map<
@@ -47,7 +49,9 @@ const ImageViewer = lazy(() =>
   })),
 );
 const PdfViewer = lazy(() =>
-  import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
+  import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({
+    default: m.PdfViewer,
+  })),
 );
 const BinaryFileViewer = lazy(() =>
   import("@/features/binary-viewer/components/binary-file-viewer").then((m) => ({
@@ -55,10 +59,14 @@ const BinaryFileViewer = lazy(() =>
   })),
 );
 const TerminalTab = lazy(() =>
-  import("@/features/terminal/components/terminal-tab").then((m) => ({ default: m.TerminalTab })),
+  import("@/features/terminal/components/terminal-tab").then((m) => ({
+    default: m.TerminalTab,
+  })),
 );
 const WebViewer = lazy(() =>
-  import("@/features/web-viewer/components/web-viewer").then((m) => ({ default: m.WebViewer })),
+  import("@/features/web-viewer/components/web-viewer").then((m) => ({
+    default: m.WebViewer,
+  })),
 );
 
 interface PaneContainerProps {
@@ -133,7 +141,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="shrink-0 bg-secondary-bg/60 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] bg-green-500/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-green-500/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 font-mono text-[11px] text-text-lighter">
@@ -489,10 +497,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       // Create a split — new pane is always child[1]
       const direction = zone === "left" || zone === "right" ? "horizontal" : "vertical";
-      const newPaneId = splitPane(pane.id, direction);
+      const placement = zone === "left" || zone === "top" ? "before" : "after";
+      const newPaneId = splitPane(pane.id, direction, undefined, placement);
       if (!newPaneId) return;
 
-      // Move the dragged buffer into the new pane (child[1] = right/bottom)
+      // Move the dragged buffer into the newly created pane.
       if (sourcePaneId && sourcePaneId !== pane.id) {
         moveBufferToPane(bufferId, sourcePaneId, newPaneId);
       } else {
@@ -751,7 +760,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           );
 
         default:
-          return <CodeEditor paneId={pane.id} bufferId={buffer.id} />;
+          return (
+            <CodeEditor paneId={pane.id} bufferId={buffer.id} isActiveSurface={isActivePane} />
+          );
       }
     },
     [
@@ -854,7 +865,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         <CodeEditor
                           paneId={pane.id}
                           bufferId={buffer.id}
-                          isActiveSurface={isActiveBuffer}
+                          isActiveSurface={isActivePane && isActiveBuffer}
                           showToolbar={false}
                           className={isActiveBuffer ? undefined : "pointer-events-none"}
                         />

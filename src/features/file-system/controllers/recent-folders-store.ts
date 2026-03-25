@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { useSettingsStore } from "@/features/settings/store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import type { RecentFolder } from "../types/recent-folders";
 
 interface RecentFoldersState {
@@ -14,7 +16,9 @@ interface RecentFoldersActions {
   clearRecents: () => void;
 }
 
-export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersActions>()(
+export const useRecentFoldersStore = create<
+  RecentFoldersState & RecentFoldersActions
+>()(
   immer(
     persist(
       (set, get) => ({
@@ -22,7 +26,8 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
 
         addToRecents: (folderPath: string) => {
           const pathSeparator = folderPath.includes("\\") ? "\\" : "/";
-          const folderName = folderPath.split(pathSeparator).pop() || folderPath;
+          const folderName =
+            folderPath.split(pathSeparator).pop() || folderPath;
           const now = new Date();
           const timeString = now.toLocaleString();
 
@@ -34,7 +39,9 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
 
           set((state) => {
             // Remove existing entry if it exists
-            state.recentFolders = state.recentFolders.filter((f) => f.path !== folderPath);
+            state.recentFolders = state.recentFolders.filter(
+              (f) => f.path !== folderPath,
+            );
             // Add new entry at the beginning
             state.recentFolders.unshift(newFolder);
             // Keep only 5 most recent
@@ -45,7 +52,22 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
         openRecentFolder: async (folderPath: string) => {
           try {
             const { useFileSystemStore } = await import("./store");
-            const { handleOpenFolderByPath } = useFileSystemStore.getState();
+            const { handleOpenFolderByPath, rootFolderPath } =
+              useFileSystemStore.getState();
+            const { settings } = useSettingsStore.getState();
+            const hasOpenWorkspace =
+              !!rootFolderPath ||
+              useFileSystemStore.getState().files.length > 0;
+
+            if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+              await createAppWindow({
+                path: folderPath,
+                isDirectory: true,
+              });
+              get().addToRecents(folderPath);
+              return;
+            }
+
             await handleOpenFolderByPath(folderPath);
             get().addToRecents(folderPath);
           } catch (error) {
@@ -55,7 +77,9 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
 
         removeFromRecents: (folderPath: string) => {
           set((state) => {
-            state.recentFolders = state.recentFolders.filter((f) => f.path !== folderPath);
+            state.recentFolders = state.recentFolders.filter(
+              (f) => f.path !== folderPath,
+            );
           });
         },
 

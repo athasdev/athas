@@ -12,6 +12,7 @@ import {
   Type,
 } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -34,13 +35,13 @@ const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
-  if (isPrimaryKey) return <Key size={12} className="text-text-lighter" />;
-  if (isForeignKey) return <Link size={12} className="text-accent" />;
+  if (isPrimaryKey) return <Key className="text-text-lighter" />;
+  if (isForeignKey) return <Link className="text-accent" />;
   const lowerType = type.toLowerCase();
   for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
-    if (lowerType.includes(key)) return <Icon size={12} className={color} />;
+    if (lowerType.includes(key)) return <Icon className={color} />;
   }
-  return <Type size={12} className="text-text-lighter" />;
+  return <Type className="text-text-lighter" />;
 }
 
 interface DataGridProps {
@@ -119,7 +120,7 @@ export default function DataGrid({
     {
       id: "copy-value",
       label: "Copy value",
-      icon: <Copy size={12} />,
+      icon: <Copy />,
       onClick: copyValue,
     },
   ];
@@ -136,19 +137,20 @@ export default function DataGrid({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="group flex items-center justify-between border-border/50 border-b px-3 py-2">
         <span className="text-text-lighter text-xs">{queryResult.rows.length} rows</span>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={onCreateRow}
           className={cn(
-            "rounded-full border border-transparent px-1.5 py-1 transition-colors",
-            canCreateRows
-              ? "opacity-0 hover:border-border/70 hover:bg-hover group-hover:opacity-100"
-              : "cursor-default opacity-30",
+            "rounded-full",
+            canCreateRows ? "opacity-0 group-hover:opacity-100" : "cursor-default opacity-30",
           )}
           aria-label="Add row"
           disabled={!canCreateRows}
         >
-          <Plus size={10} className="text-text-lighter hover:text-text" />
-        </button>
+          <Plus className="text-text-lighter hover:text-text" />
+        </Button>
       </div>
       <div className="custom-scrollbar flex-1 overflow-auto px-2 pb-2">
         <table className="w-full border-separate border-spacing-0 text-xs">
@@ -177,9 +179,9 @@ export default function DataGrid({
                           {col}
                           {sorted &&
                             (sortDirection === "asc" ? (
-                              <ArrowUp size={10} className="text-accent" />
+                              <ArrowUp className="text-accent" />
                             ) : (
-                              <ArrowDown size={10} className="text-accent" />
+                              <ArrowDown className="text-accent" />
                             ))}
                         </span>
                         {fk && (
@@ -190,7 +192,10 @@ export default function DataGrid({
                             FK
                           </span>
                         )}
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (canFilterColumns) onAddColumnFilter(col);
@@ -201,8 +206,8 @@ export default function DataGrid({
                           )}
                           aria-label={`Filter by ${col}`}
                         >
-                          <Filter size={10} className="text-text-lighter hover:text-text" />
-                        </button>
+                          <Filter className="text-text-lighter hover:text-text" />
+                        </Button>
                       </div>
                       {showColumnTypes && info && (
                         <div className="text-text-lighter text-xs opacity-75">

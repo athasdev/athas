@@ -35,13 +35,13 @@ const ProjectTabsContextMenu = ({
     {
       id: "copy-path",
       label: "Copy Path",
-      icon: <Copy size={12} />,
+      icon: <Copy />,
       onClick: () => onCopyPath(tab.path),
     },
     {
       id: "reveal",
       label: "Reveal in Finder",
-      icon: <FolderOpen size={12} />,
+      icon: <FolderOpen />,
       onClick: () => onRevealInFinder(tab.path),
     },
     { id: "sep-1", label: "", separator: true, onClick: () => {} },
@@ -50,7 +50,7 @@ const ProjectTabsContextMenu = ({
           {
             id: "close-project",
             label: "Close Project",
-            icon: <X size={12} />,
+            icon: <X />,
             onClick: () => onCloseProject(tab.id),
           },
         ]

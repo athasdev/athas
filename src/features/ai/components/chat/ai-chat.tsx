@@ -24,6 +24,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
@@ -764,20 +765,24 @@ details: ${errorDetails || mainError}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => handlePermission(false)}
-                      className="rounded-full border border-border bg-secondary-bg/80 px-3 py-1.5 text-text-lighter hover:bg-hover"
+                      className="rounded-full"
                     >
                       Deny
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => handlePermission(true)}
-                      className="rounded-full border border-border bg-secondary-bg/80 px-3 py-1.5 text-text hover:bg-hover"
+                      className="rounded-full"
                     >
                       Allow
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

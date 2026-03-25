@@ -14,9 +14,11 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
+import { Button } from "@/ui/button";
 import { dropdownTriggerClassName } from "@/ui/dropdown";
 import { PANE_GROUP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
 import { Dropdown } from "@/ui/dropdown";
+import { Tab, TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { getBranches } from "../api/git-branches-api";
@@ -481,7 +483,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const renderActionsButton = () => (
-    <button
+    <Button
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         setGitActionsMenuAnchor({
@@ -495,27 +497,31 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         setShowGitActionsMenu(!showGitActionsMenu);
         setIsRepoMenuOpen(false);
       }}
-      className={cn(paneIconButtonClassName(), "h-6 w-6")}
+      variant="ghost"
+      size="icon-sm"
+      className={cn(paneIconButtonClassName(), "size-6")}
       title="Git Actions"
       aria-label="Git Actions"
     >
-      <MoreHorizontal size={12} />
-    </button>
+      <MoreHorizontal />
+    </Button>
   );
 
   const renderSelectRepositoryButton = () => (
-    <button
+    <Button
       onClick={handleSelectRepository}
       disabled={isSelectingRepo}
+      variant="ghost"
+      size="sm"
       className={cn(
-        "mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80",
+        "mt-1.5 ui-font ui-text-sm text-accent transition-colors hover:text-accent/80",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}
       title="Select repository folder"
       aria-label="Select repository folder"
     >
       {isSelectingRepo ? "Selecting..." : "Browse Repository"}
-    </button>
+    </Button>
   );
 
   const renderRepoOption = (
@@ -525,23 +531,24 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     isActive: boolean,
     onClick: () => void,
   ) => (
-    <button
+    <Button
       key={path}
       onClick={onClick}
+      variant="ghost"
+      size="sm"
       className={cn(
         "group flex w-full items-start gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-hover",
         isActive ? "bg-hover text-text" : "text-text-lighter",
       )}
     >
       <Check
-        size={10}
         className={cn("mt-0.5 shrink-0", isActive ? "text-success opacity-100" : "opacity-0")}
       />
       <div className="min-w-0 flex-1 pt-px">
-        <div className="truncate text-[0.8em] leading-[1.15] text-text">{label}</div>
-        <div className="truncate text-[0.68em] leading-[1.15] text-text-lighter/78">{subtitle}</div>
+        <div className="ui-text-sm truncate leading-[1.15] text-text">{label}</div>
+        <div className="ui-text-sm truncate leading-[1.15] text-text-lighter/78">{subtitle}</div>
       </div>
-    </button>
+    </Button>
   );
 
   if (!activeRepoPath) {
@@ -552,10 +559,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="ui-font flex flex-col items-center text-center">
-            <span className="text-[0.78em] text-text-lighter">No repository selected</span>
+            <span className="ui-text-sm text-text-lighter">No repository selected</span>
             {renderSelectRepositoryButton()}
             {repoSelectionError && (
-              <span className="mt-1.5 text-[0.68em] text-red-400">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             )}
           </div>
         </div>
@@ -570,7 +577,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="ui-font text-center text-[0.8em] text-text-lighter">
+          <div className="ui-font ui-text-sm text-center text-text-lighter">
             Loading Git status...
           </div>
         </div>
@@ -586,10 +593,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="ui-font flex flex-col items-center text-center">
-            <span className="text-[0.78em] text-text-lighter">Not a Git repository</span>
+            <span className="ui-text-sm text-text-lighter">Not a Git repository</span>
             {renderSelectRepositoryButton()}
             {repoSelectionError && (
-              <span className="mt-1.5 text-[0.68em] text-red-400">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             )}
           </div>
         </div>
@@ -629,10 +636,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <div
-        className="ui-font flex h-full select-none flex-col gap-2 p-2"
-        style={{ fontSize: "calc(var(--app-ui-font-size) * 0.82)" }}
-      >
+      <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
         <div className={paneHeaderClassName("justify-between rounded-lg")}>
           <div className={cn(PANE_GROUP_BASE, "min-w-0")}>
             <GitBranchManager
@@ -642,7 +646,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               compact
             />
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-              <span className="text-[0.78em] text-text-lighter">
+              <span className="ui-text-sm text-text-lighter">
                 {gitStatus.ahead > 0 && <span className="text-git-added">↑{gitStatus.ahead}</span>}
                 {gitStatus.behind > 0 && (
                   <span className="text-git-deleted">↓{gitStatus.behind}</span>
@@ -652,7 +656,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
 
           <div className="flex items-center gap-1">
-            <button
+            <Button
               ref={repoTriggerRef}
               onClick={() => {
                 setIsRepoMenuOpen((value) => {
@@ -664,59 +668,70 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 });
                 setShowGitActionsMenu(false);
               }}
+              variant="ghost"
+              size="sm"
               className={dropdownTriggerClassName("max-w-44")}
               title={activeRepoPath}
             >
-              <FolderOpen size={11} className="shrink-0" />
+              <FolderOpen className="shrink-0" />
               <span className="truncate">{getFolderName(activeRepoPath)}</span>
-              <ChevronDown size={8} />
-            </button>
-            <button
+              <ChevronDown />
+            </Button>
+            <Button
               onClick={handleManualRefresh}
               disabled={isLoadingGitData || isRefreshing}
-              className={cn(paneIconButtonClassName(), "h-6 w-6", "disabled:opacity-50")}
+              variant="ghost"
+              size="icon-sm"
+              className={cn(paneIconButtonClassName(), "size-6", "disabled:opacity-50")}
               title="Refresh"
               aria-label="Refresh git status"
             >
-              <RefreshCw
-                size={12}
-                className={isLoadingGitData || isRefreshing ? "animate-spin" : ""}
-              />
-            </button>
+              <RefreshCw className={isLoadingGitData || isRefreshing ? "animate-spin" : ""} />
+            </Button>
             {renderActionsButton()}
           </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          <div className="grid shrink-0 grid-cols-4 gap-1 rounded-lg border border-border/60 bg-secondary-bg/40 p-1">
+          <TabsList
+            variant="segmented"
+            className="grid h-auto shrink-0 grid-cols-4 border-border/60 bg-secondary-bg/40"
+          >
             {gitTabs.map((tab) => {
               const Icon = tab.icon;
               const isSelected = activeTab === tab.id;
 
               return (
-                <button
+                <Tab
                   key={tab.id}
-                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
                   onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 transition-colors",
-                    isSelected
-                      ? "bg-hover/85 text-text"
-                      : "text-text-lighter hover:bg-hover hover:text-text",
-                  )}
+                  isActive={isSelected}
+                  size="md"
+                  variant="segmented"
+                  contentLayout="stacked"
+                  className="h-auto min-h-12 min-w-0 px-1 py-1.5 whitespace-normal transition-colors"
                 >
                   <div className="relative flex items-center justify-center">
-                    <Icon size={16} strokeWidth={2.2} />
+                    <Icon strokeWidth={2.2} />
                   </div>
-                  <span className="truncate text-[0.84em] leading-none">{tab.label}</span>
-                </button>
+                  <span className="ui-text-sm text-center leading-none">{tab.label}</span>
+                </Tab>
               );
             })}
-          </div>
+          </TabsList>
 
-          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-secondary-bg/20">
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-hidden",
+              activeTab === "changes"
+                ? ""
+                : "rounded-xl border border-border/60 bg-secondary-bg/20",
+            )}
+          >
             {activeTab === "changes" && (
-              <div className="scrollbar-none h-full overflow-y-auto">
+              <div className="h-full overflow-hidden">
                 <GitStatusPanel
                   files={visibleGitFiles}
                   fileDiffStats={fileDiffStats}
@@ -788,25 +803,26 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       >
         <div className="flex items-center justify-between bg-secondary-bg/75 px-3 py-2.5">
           <div className="flex min-w-0 items-center gap-1.5">
-            <FolderOpen size={12} className="shrink-0 text-text-lighter" />
-            <span className="truncate font-medium text-text text-xs">
+            <FolderOpen className="shrink-0 text-text-lighter" />
+            <span className="ui-text-sm truncate font-medium text-text">
               {activeRepoPath ? getFolderName(activeRepoPath) : "Repositories"}
             </span>
-            <span className="rounded-full bg-selected px-1.5 py-0.5 text-[9px] text-text-lighter">
+            <span className="ui-text-sm rounded-full bg-selected px-1.5 py-0.5 text-text-lighter">
               {workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}
             </span>
           </div>
-          <button
+          <Button
             onClick={() => setIsRepoMenuOpen(false)}
-            className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+            variant="ghost"
+            size="icon-xs"
             aria-label="Close repository dropdown"
           >
-            <X size={12} />
-          </button>
+            <X />
+          </Button>
         </div>
 
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
-          <div className="mb-1 flex items-center justify-between px-1 text-[0.78em] text-text-lighter">
+          <div className="ui-text-sm mb-1 flex items-center justify-between px-1 text-text-lighter">
             <span>Repositories</span>
             <span>{workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}</span>
           </div>
@@ -842,39 +858,43 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
 
           {repoPath && workspaceRepoPaths.length === 0 && !isDiscoveringRepos && (
-            <div className="px-2 py-2 text-[0.78em] text-text-lighter">
+            <div className="ui-text-sm px-2 py-2 text-text-lighter">
               No repositories found in this workspace.
             </div>
           )}
 
           {isDiscoveringRepos && (
-            <div className="flex items-center gap-1.5 px-2 py-2 text-[0.78em] text-text-lighter">
-              <RefreshCw size={10} className="animate-spin" />
+            <div className="ui-text-sm flex items-center gap-1.5 px-2 py-2 text-text-lighter">
+              <RefreshCw className="animate-spin" />
               Detecting workspace repositories...
             </div>
           )}
 
           <div className="mt-1 border-border/60 border-t pt-2">
-            <button
+            <Button
               onClick={() => void handleSelectRepository()}
               disabled={isSelectingRepo}
-              className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-60"
+              variant="outline"
+              size="sm"
+              className="ui-text-sm flex w-full items-center gap-2 rounded-lg text-left text-text disabled:opacity-60"
             >
-              <FolderOpen size={12} />
+              <FolderOpen />
               {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
-            </button>
+            </Button>
 
             {manualRepoPath && (
-              <button
+              <Button
                 onClick={handleUseWorkspaceRoot}
-                className="mt-1 w-full rounded-lg px-2 py-1 text-left text-[0.78em] text-text-lighter hover:bg-hover hover:text-text"
+                variant="ghost"
+                size="sm"
+                className="ui-text-sm mt-1 w-full rounded-lg px-2 py-1 text-left text-text-lighter hover:text-text"
               >
                 Use workspace repositories
-              </button>
+              </Button>
             )}
 
             {repoSelectionError && (
-              <div className="mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-[0.78em] text-error/90">
+              <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
                 {repoSelectionError}
               </div>
             )}

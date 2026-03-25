@@ -1,7 +1,8 @@
-import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
+import { Database, GitPullRequest, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
+import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
@@ -80,8 +81,10 @@ const TabBarItem = memo(function TabBarItem({
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
         action={
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={(e) => {
               e.stopPropagation();
               if (buffer.isPinned) {
@@ -90,30 +93,32 @@ const TabBarItem = memo(function TabBarItem({
                 handleTabClose(buffer.id);
               }
             }}
-            className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
-              "hover:bg-hover/80 hover:text-text",
-              buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-            )}
+              className={cn(
+                "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
+                "hover:bg-hover/80 hover:text-text",
+                buffer.isPinned || isActive
+                  ? "opacity-100"
+                  : "opacity-0 group-hover/tab:opacity-100",
+              )}
             title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
             tabIndex={-1}
             draggable={false}
           >
             {buffer.isPinned ? (
-              <Pin className="pointer-events-none select-none fill-current text-accent" size={10} />
+              <Pin className="pointer-events-none select-none fill-current text-accent" />
             ) : (
-              <X className="pointer-events-none select-none" size={10} />
+              <X className="pointer-events-none select-none" />
             )}
-          </button>
+          </Button>
         }
       >
         <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
-            <Package size={12} className="text-text-lighter" />
+            <Package className="text-text-lighter" />
           ) : buffer.type === "terminal" ? (
-            <Terminal size={12} className="text-text-lighter" />
+            <Terminal className="text-text-lighter" />
           ) : buffer.type === "agent" ? (
-            <Sparkles size={12} className="text-text-lighter" />
+            <Sparkles className="text-text-lighter" />
           ) : buffer.type === "webViewer" ? (
             buffer.favicon && !faviconError ? (
               <img
@@ -123,10 +128,12 @@ const TabBarItem = memo(function TabBarItem({
                 onError={() => setFaviconError(true)}
               />
             ) : (
-              <Globe size={12} className="text-text-lighter" />
+              <Globe className="text-text-lighter" />
             )
           ) : buffer.type === "database" ? (
-            <Database size={12} className="text-text-lighter" />
+            <Database className="text-text-lighter" />
+          ) : buffer.type === "pullRequest" ? (
+            <GitPullRequest className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={buffer.name}
@@ -138,7 +145,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "ui-font max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+            "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}

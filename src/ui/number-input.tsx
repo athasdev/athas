@@ -17,9 +17,9 @@ const numberInputFieldVariants = cva(
   {
     variants: {
       size: {
-        xs: "px-2 py-1 text-xs",
-        sm: "px-2 py-1 text-xs",
-        md: "px-3 py-1.5 text-sm",
+        xs: "ui-text-sm px-2 py-1",
+        sm: "ui-text-sm px-2 py-1",
+        md: "ui-text-md px-3 py-1.5",
       },
     },
     defaultVariants: {
@@ -145,7 +145,7 @@ export default function NumberInput({
           disabled={numericValue >= max}
           className={numberInputStepperButtonVariants({ segment: "top" })}
         >
-          <Plus size={14} className="text-text-lighter" />
+          <Plus className="text-text-lighter" />
         </button>
         <button
           type="button"
@@ -153,7 +153,7 @@ export default function NumberInput({
           disabled={numericValue <= min}
           className={numberInputStepperButtonVariants({ segment: "bottom" })}
         >
-          <Minus size={14} className="text-text-lighter" />
+          <Minus className="text-text-lighter" />
         </button>
       </div>
     </div>

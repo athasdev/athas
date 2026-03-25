@@ -168,7 +168,9 @@ class SyntaxHighlighter {
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      const languageId = getLanguageIdFromPath(targetFilePath || "");
+      const languageId =
+        (isEditorContent(targetBufferAtStart) && targetBufferAtStart.languageOverride) ||
+        getLanguageIdFromPath(targetFilePath || "");
       if (!languageId) {
         logger.debug("SyntaxHighlighter", "No language mapping for extension:", extension);
         this.tokens = [];

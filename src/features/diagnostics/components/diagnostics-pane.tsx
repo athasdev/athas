@@ -2,27 +2,35 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   AlertCircle,
   AlertTriangle,
+  AlignCenter,
   Check,
   ChevronDown,
   ChevronRight,
   Copy,
   Filter,
   Info,
+  Maximize,
+  Maximize2,
+  Minimize2,
   Search,
   WandSparkles,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import type { TerminalWidthMode } from "@/features/terminal/stores/terminal-store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import { PANE_CHIP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
+import Tooltip from "@/ui/tooltip";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
 
 interface DiagnosticsPaneProps {
@@ -31,6 +39,8 @@ interface DiagnosticsPaneProps {
   onClose: () => void;
   onDiagnosticClick?: (diagnostic: Diagnostic) => void;
   isEmbedded?: boolean;
+  onFullScreen?: () => void;
+  isFullScreen?: boolean;
 }
 
 type GroupBy = "severity" | "file" | "none";
@@ -86,7 +96,7 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
 };
 
 const CONTROL_PILL_BASE =
-  "ui-font inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text";
+  "ui-font ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const CHIP_BASE = PANE_CHIP_BASE;
 
@@ -174,12 +184,17 @@ const DiagnosticsPane = ({
   onClose,
   onDiagnosticClick,
   isEmbedded = false,
+  onFullScreen,
+  isFullScreen = false,
 }: DiagnosticsPaneProps) => {
   const { showToast } = useToast();
   const lspClient = useMemo(() => LspClient.getInstance(), []);
+  const widthMode = useTerminalStore((state) => state.widthMode);
+  const setWidthMode = useTerminalStore((state) => state.setWidthMode);
 
   const diagnosticContextMenu = useContextMenu<Diagnostic>();
   const filterContextMenu = useContextMenu<FilterMenuType>();
+  const headerContextMenu = useContextMenu<"header">();
 
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -484,7 +499,7 @@ const DiagnosticsPane = ({
       items.push({
         id: "loading-actions",
         label: "Loading quick fixes...",
-        icon: <WandSparkles size={12} />,
+        icon: <WandSparkles />,
         onClick: () => {},
         disabled: true,
       });
@@ -496,7 +511,7 @@ const DiagnosticsPane = ({
         items.push({
           id: `quick-fix-${action.id}`,
           label: action.title,
-          icon: <WandSparkles size={12} />,
+          icon: <WandSparkles />,
           onClick: () => {
             void applyCodeAction(diagnostic, action);
           },
@@ -507,7 +522,7 @@ const DiagnosticsPane = ({
       items.push({
         id: "no-actions",
         label: "No quick fixes available",
-        icon: <WandSparkles size={12} />,
+        icon: <WandSparkles />,
         onClick: () => {},
         disabled: true,
       });
@@ -524,7 +539,7 @@ const DiagnosticsPane = ({
       {
         id: "copy-message",
         label: "Copy Message",
-        icon: <Copy size={12} />,
+        icon: <Copy />,
         onClick: () => {
           void copyDiagnosticMessage(diagnostic);
         },
@@ -532,7 +547,7 @@ const DiagnosticsPane = ({
       {
         id: "copy-location",
         label: "Copy Location",
-        icon: <Copy size={12} />,
+        icon: <Copy />,
         onClick: () => {
           void copyDiagnosticLocation(diagnostic);
         },
@@ -540,7 +555,7 @@ const DiagnosticsPane = ({
       {
         id: "copy-details",
         label: "Copy Full Details",
-        icon: <Copy size={12} />,
+        icon: <Copy />,
         onClick: () => {
           void copyDiagnosticDetails(diagnostic);
         },
@@ -553,14 +568,14 @@ const DiagnosticsPane = ({
         items.push({
           id: "clear-source-filter",
           label: "Clear Source Filter",
-          icon: <Filter size={12} />,
+          icon: <Filter />,
           onClick: () => setSourceFilter(null),
         });
       } else {
         items.push({
           id: "filter-by-source",
           label: `Filter by Source: ${source}`,
-          icon: <Filter size={12} />,
+          icon: <Filter />,
           onClick: () => setSourceFilter(source),
         });
       }
@@ -633,7 +648,7 @@ const DiagnosticsPane = ({
       ...GROUP_OPTIONS.map((option) => ({
         id: `group-${option.value}`,
         label: `Group by: ${option.label}`,
-        icon: preferences.groupBy === option.value ? <Check size={12} /> : undefined,
+        icon: preferences.groupBy === option.value ? <Check /> : undefined,
         onClick: () => {
           setPreferences((prev) => ({
             ...prev,
@@ -649,7 +664,7 @@ const DiagnosticsPane = ({
       ...SORT_OPTIONS.map((option) => ({
         id: `sort-${option.value}`,
         label: `Sort by: ${option.label}`,
-        icon: preferences.sortBy === option.value ? <Check size={12} /> : undefined,
+        icon: preferences.sortBy === option.value ? <Check /> : undefined,
         onClick: () => {
           setPreferences((prev) => ({
             ...prev,
@@ -665,7 +680,7 @@ const DiagnosticsPane = ({
       items.push({
         id: `severity-${severity}`,
         label: `${SEVERITY_LABEL[severity]} (${visibleBySeverity[severity]}/${totalBySeverity[severity]})`,
-        icon: severityFilter[severity] ? <Check size={12} /> : undefined,
+        icon: severityFilter[severity] ? <Check /> : undefined,
         onClick: () => toggleSeverity(severity),
       });
     }
@@ -674,7 +689,7 @@ const DiagnosticsPane = ({
       items.push({
         id: "only-current-file",
         label: "Only Current File",
-        icon: preferences.onlyCurrentFile ? <Check size={12} /> : undefined,
+        icon: preferences.onlyCurrentFile ? <Check /> : undefined,
         onClick: () => togglePreference("onlyCurrentFile"),
       });
     }
@@ -713,16 +728,53 @@ const DiagnosticsPane = ({
     visibleBySeverity,
   ]);
 
+  const headerContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    if (!headerContextMenu.data) return [];
+
+    const widthModes: { value: TerminalWidthMode; label: string; icon: ReactNode }[] = [
+      { value: "full", label: "Full Width", icon: <Maximize /> },
+      { value: "editor", label: "Editor Width", icon: <AlignCenter /> },
+    ];
+
+    const items: ContextMenuItem[] = widthModes.map((mode) => ({
+      id: `width-${mode.value}`,
+      label: mode.label,
+      icon: mode.icon,
+      onClick: () => setWidthMode(mode.value),
+      className: widthMode === mode.value ? "bg-selected" : undefined,
+    }));
+
+    if (onFullScreen) {
+      items.push(
+        { id: "sep-fullscreen", label: "", separator: true, onClick: () => {} },
+        {
+          id: "toggle-fullscreen",
+          label: isFullScreen ? "Exit Full Screen" : "Full Screen",
+          icon: isFullScreen ? <Minimize2 /> : <Maximize2 />,
+          onClick: onFullScreen,
+        },
+      );
+    }
+
+    return items;
+  }, [headerContextMenu.data, widthMode, setWidthMode, onFullScreen, isFullScreen]);
+
   if (!isVisible) return null;
 
   const content = (
     <div className="flex h-full min-h-0 flex-col bg-primary-bg">
-      <div className={paneHeaderClassName()}>
+      <div
+        className={paneHeaderClassName()}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          headerContextMenu.open(e, "header");
+        }}
+      >
         <div className="relative flex min-h-7 w-full items-center gap-1.5">
-          <span className={cn("ui-font text-xs", problemSummaryTone)}>{problemSummary}</span>
+          <span className={cn("ui-font ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
 
           <div className="ml-auto flex items-center gap-1">
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setIsSearchVisible((visible) => {
@@ -732,20 +784,24 @@ const DiagnosticsPane = ({
                   return true;
                 });
               }}
+              variant="ghost"
+              size="icon-sm"
               className={cn(
                 paneIconButtonClassName(),
                 (isSearchVisible || hasSearch) && "border-border/70 bg-hover text-text",
               )}
               title="Search problems"
             >
-              <Search size={12} />
-            </button>
+              <Search />
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={(event) => {
                 filterContextMenu.open(event, "filters");
               }}
+              variant="ghost"
+              size="icon-sm"
               className={cn(
                 "relative",
                 paneIconButtonClassName(),
@@ -753,27 +809,44 @@ const DiagnosticsPane = ({
               )}
               title="Filter problems"
             >
-              <Filter size={12} />
+              <Filter />
               {activeFilterCount > 0 && (
                 <Badge
                   variant="accent"
                   shape="pill"
-                  className="-top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1 text-[9px]"
+                  className="ui-text-sm -top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1"
                 >
                   {activeFilterCount}
                 </Badge>
               )}
-            </button>
+            </Button>
+
+            {isEmbedded && onFullScreen && (
+              <Tooltip content={isFullScreen ? "Exit Full Screen" : "Full Screen"} side="bottom">
+                <Button
+                  type="button"
+                  onClick={onFullScreen}
+                  variant="ghost"
+                  size="icon-sm"
+                  className={paneIconButtonClassName()}
+                  aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
+                >
+                  {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+                </Button>
+              </Tooltip>
+            )}
 
             {!isEmbedded && (
-              <button
+              <Button
                 type="button"
                 onClick={onClose}
+                variant="ghost"
+                size="icon-sm"
                 className={paneIconButtonClassName()}
                 title="Close problems pane"
               >
-                <X size={13} />
-              </button>
+                <X />
+              </Button>
             )}
           </div>
 
@@ -801,11 +874,13 @@ const DiagnosticsPane = ({
                 placeholder="Search problems"
                 inputRef={searchInputRef}
                 extraActions={
-                  <button
+                  <Button
                     type="button"
                     onClick={(event) => {
                       filterContextMenu.open(event, "filters");
                     }}
+                    variant="ghost"
+                    size="icon-sm"
                     className={cn(
                       "relative",
                       paneIconButtonClassName(),
@@ -813,17 +888,17 @@ const DiagnosticsPane = ({
                     )}
                     title="Filter problems"
                   >
-                    <Filter size={12} />
+                    <Filter />
                     {activeFilterCount > 0 && (
                       <Badge
                         variant="accent"
                         shape="pill"
-                        className="-top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1 text-[9px]"
+                        className="ui-text-sm -top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1"
                       >
                         {activeFilterCount}
                       </Badge>
                     )}
-                  </button>
+                  </Button>
                 }
               />
             </div>
@@ -833,16 +908,22 @@ const DiagnosticsPane = ({
 
       <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
         {diagnostics.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-text-lighter text-xs">
+          <div className="ui-text-sm flex h-full items-center justify-center text-text-lighter">
             No problems detected
           </div>
         ) : filteredDiagnostics.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-1 text-text-lighter text-xs">
+          <div className="ui-text-sm flex h-full flex-col items-center justify-center gap-1 text-text-lighter">
             <p>No problems match the current filters</p>
             {hasFilters && (
-              <button type="button" onClick={resetFilters} className={CONTROL_PILL_BASE}>
+              <Button
+                type="button"
+                onClick={resetFilters}
+                variant="ghost"
+                size="xs"
+                className={CONTROL_PILL_BASE}
+              >
                 Reset filters
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -857,29 +938,31 @@ const DiagnosticsPane = ({
                   className="overflow-hidden rounded-xl border border-border/60 bg-secondary-bg/40"
                 >
                   {hasGroupHeader && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => toggleGroupCollapse(group.id)}
-                      className="flex w-full items-center gap-1.5 border-border/60 border-b bg-primary-bg/70 px-2 py-1 text-left hover:bg-hover"
+                      className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-primary-bg/70 px-2 py-1 text-left hover:bg-hover"
                     >
                       {isCollapsed ? (
-                        <ChevronRight size={12} className="text-text-lighter" />
+                        <ChevronRight className="text-text-lighter" />
                       ) : (
-                        <ChevronDown size={12} className="text-text-lighter" />
+                        <ChevronDown className="text-text-lighter" />
                       )}
 
                       {group.severity ? (
                         getSeverityIcon(group.severity)
                       ) : (
-                        <Info size={10} className="text-text-lighter" />
+                        <Info className="text-text-lighter" />
                       )}
 
-                      <span className="ui-font flex-1 truncate font-medium text-text text-xs">
+                      <span className="ui-font ui-text-sm flex-1 truncate font-medium text-text">
                         {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
                       </span>
 
                       <span className={CHIP_BASE}>{group.items.length}</span>
-                    </button>
+                    </Button>
                   )}
 
                   {!isCollapsed && (
@@ -912,7 +995,7 @@ const DiagnosticsPane = ({
 
                               <span
                                 className={cn(
-                                  "ui-font min-w-0 flex-1 text-xs",
+                                  "ui-font ui-text-sm min-w-0 flex-1",
                                   preferences.wrapMessages
                                     ? "whitespace-pre-wrap break-words leading-snug"
                                     : "truncate",
@@ -933,7 +1016,7 @@ const DiagnosticsPane = ({
                               {description && (
                                 <div
                                   className={cn(
-                                    "mb-1 text-[11px] text-text-lighter/90 leading-snug",
+                                    "ui-text-sm mb-1 text-text-lighter/90 leading-snug",
                                     preferences.wrapMessages
                                       ? "whitespace-pre-wrap break-words"
                                       : "truncate",
@@ -944,7 +1027,7 @@ const DiagnosticsPane = ({
                               )}
 
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="max-w-[420px] truncate text-[10px] text-text-lighter/75">
+                                <span className="ui-text-sm max-w-[420px] truncate text-text-lighter/75">
                                   {diagnostic.filePath}
                                 </span>
 
@@ -981,6 +1064,13 @@ const DiagnosticsPane = ({
         position={filterContextMenu.position}
         items={filterContextMenuItems}
         onClose={filterContextMenu.close}
+      />
+
+      <ContextMenu
+        isOpen={headerContextMenu.isOpen}
+        position={headerContextMenu.position}
+        items={headerContextMenuItems}
+        onClose={headerContextMenu.close}
       />
     </div>
   );

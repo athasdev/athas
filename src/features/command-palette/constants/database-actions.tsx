@@ -14,7 +14,7 @@ export const createDatabaseActions = (params: DatabaseActionsParams): Action[] =
       id: "database-connect",
       label: "Database: Connect to Database",
       description: "Open database connection dialog",
-      icon: <Database size={14} />,
+      icon: <Database />,
       category: "Database",
       keybinding: ["\u2318", "\u21e7", "D"],
       action: () => {
