@@ -63,7 +63,16 @@
           "url": "https://generativelanguage.googleapis.com/**"
         },
         {
-          "url": "http://localhost:11434/**"
+          "url": "http://localhost:*/**"
+        },
+        {
+          "url": "http://127.0.0.1:*/**"
+        },
+        {
+          "url": "https://localhost:*/**"
+        },
+        {
+          "url": "https://127.0.0.1:*/**"
         }
       ]
     },
