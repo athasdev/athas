@@ -41,6 +41,7 @@ export class AcpStreamHandler {
   private listeners: AcpListeners = {};
   private timeout?: NodeJS.Timeout;
   private lastActivityTime = Date.now();
+  private hasObservedResponseActivity = false;
   private activeTools = new Map<string, string>();
   private sessionComplete = false;
   private pendingNewMessage = false;
@@ -232,7 +233,7 @@ export class AcpStreamHandler {
         break;
 
       case "thought_chunk":
-        // Thought chunks are surfaced through generic ACP event stream UI for now
+        this.hasObservedResponseActivity = true;
         break;
 
       case "tool_start":
@@ -272,6 +273,7 @@ export class AcpStreamHandler {
         break;
 
       case "plan_update":
+        this.hasObservedResponseActivity = true;
         // Plan updates are surfaced through generic ACP event stream UI for now
         break;
 
@@ -378,6 +380,7 @@ export class AcpStreamHandler {
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
+    this.hasObservedResponseActivity = true;
     if (this.pendingNewMessage && this.handlers.onNewMessage) {
       this.handlers.onNewMessage();
     }
@@ -402,6 +405,7 @@ export class AcpStreamHandler {
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
+    this.hasObservedResponseActivity = true;
     this.activeTools.set(event.toolId, event.toolName);
     if (this.handlers.onToolUse) {
       this.handlers.onToolUse(event.toolName, event.input, event.toolId);
@@ -409,6 +413,7 @@ export class AcpStreamHandler {
   }
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
+    this.hasObservedResponseActivity = true;
     const toolName = this.activeTools.get(event.toolId);
     if (toolName && this.handlers.onToolComplete) {
       const toolError =
@@ -428,6 +433,7 @@ export class AcpStreamHandler {
   }
 
   private handlePermissionRequest(event: Extract<AcpEvent, { type: "permission_request" }>): void {
+    this.hasObservedResponseActivity = true;
     if (this.handlers.onPermissionRequest) {
       this.handlers.onPermissionRequest(event);
     } else {
@@ -467,8 +473,8 @@ export class AcpStreamHandler {
         return;
       }
 
-      // If no activity for 10 seconds and no active tool, consider complete
-      if (inactiveTime > 10000 && this.activeTools.size === 0) {
+      // Only auto-complete once the agent has produced real response activity.
+      if (this.hasObservedResponseActivity && inactiveTime > 10000 && this.activeTools.size === 0) {
         console.log("No activity for 10 seconds, conversation appears complete");
         this.cleanup();
         this.handlers.onComplete();
@@ -498,6 +504,7 @@ export class AcpStreamHandler {
       this.timeout = undefined;
     }
     this.pendingNewMessage = false;
+    this.hasObservedResponseActivity = false;
     this.activeTools.clear();
 
     if (this.listeners.event) {
