@@ -5,6 +5,7 @@ import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import {
   getPendingAcpPermissions,
   getStaleAcpPermissions,
+  reconcileIdleAcpRestore,
 } from "@/features/ai/lib/chat-acp-activity";
 import { isCompactionTriggerEnabled } from "@/features/ai/lib/chat-compaction-policy";
 import { buildConversationHistory } from "@/features/ai/lib/chat-context";
@@ -14,6 +15,7 @@ import {
   DEFAULT_HARNESS_SESSION_KEY,
   filterChatsForScope,
   getDefaultChatTitle,
+  isDefaultHarnessSessionKey,
   PANEL_CHAT_SCOPE_ID,
 } from "@/features/ai/lib/chat-scope";
 import {
@@ -37,6 +39,7 @@ import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
 import { cn } from "@/utils/cn";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { useAIChatStore } from "../../store/store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
@@ -767,6 +770,7 @@ const AIChat = memo(function AIChat({
           sessionKey: buffer.agentSessionId!,
           title: buffer.name,
           isActive: buffer.agentSessionId === currentSessionKey,
+          isDefault: isDefaultHarnessSessionKey(buffer.agentSessionId!),
           isRunning: harnessSessionStatuses[buffer.agentSessionId!] ?? false,
         })),
     [buffers, currentSessionKey, harnessSessionStatuses],
@@ -894,6 +898,49 @@ const AIChat = memo(function AIChat({
       window.clearInterval(statusInterval);
     };
   }, [buffers, surface]);
+
+  useEffect(() => {
+    if (surface !== "harness" || !currentChat) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const reconcileRestoredHarnessState = async () => {
+      try {
+        const status = await AcpStreamHandler.getStatus(resolvedScopeId);
+        if (cancelled) {
+          return;
+        }
+
+        const reconciled = reconcileIdleAcpRestore(currentChat.acpActivity, status);
+        if (!reconciled.shouldResetTransientUi) {
+          return;
+        }
+
+        const currentScopeState = useAIChatStore.getState().chatScopes[resolvedScopeId];
+        if (currentScopeState?.isTyping) {
+          useAIChatStore.getState().setIsTyping(false, resolvedScopeId);
+        }
+
+        if (currentScopeState?.streamingMessageId) {
+          useAIChatStore.getState().setStreamingMessageId(null, resolvedScopeId);
+        }
+
+        if (pendingPermissions.length > 0) {
+          useAIChatStore.getState().markPendingAcpPermissionsStale(resolvedScopeId);
+        }
+      } catch (error) {
+        console.error("Failed to reconcile restored Harness session state", error);
+      }
+    };
+
+    void reconcileRestoredHarnessState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentChat?.id, pendingPermissions.length, resolvedScopeId, surface]);
 
   return (
     <div

@@ -8,6 +8,10 @@ export function createHarnessSessionKey(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export function isDefaultHarnessSessionKey(sessionKey: string): boolean {
+  return sessionKey === DEFAULT_HARNESS_SESSION_KEY;
+}
+
 export function isHarnessChatId(chatId: string): boolean {
   return chatId.startsWith(HARNESS_CHAT_PREFIX);
 }
@@ -49,7 +53,7 @@ export function getDefaultChatTitle(scopeOrSurface: ChatScopeId | AIChatSurface)
 }
 
 export function getDefaultHarnessBufferTitle(sessionKey = DEFAULT_HARNESS_SESSION_KEY): string {
-  return sessionKey === DEFAULT_HARNESS_SESSION_KEY ? "Harness" : "Harness Session";
+  return isDefaultHarnessSessionKey(sessionKey) ? "Harness" : "Harness Session";
 }
 
 export function getHarnessBufferTitle(

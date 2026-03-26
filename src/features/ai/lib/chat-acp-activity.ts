@@ -3,7 +3,7 @@ import {
   type ChatAcpEventInput,
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
-import type { AcpPlanEntry } from "@/features/ai/types/acp";
+import type { AcpAgentStatus, AcpPlanEntry } from "@/features/ai/types/acp";
 import type { ChatAcpActivity } from "@/features/ai/types/ai-chat";
 import type {
   ChatAcpEvent,
@@ -138,6 +138,21 @@ export const markPendingAcpPermissionsStale = (
           }
         : permission,
     ),
+  };
+};
+
+export const reconcileIdleAcpRestore = (
+  activity: ChatAcpActivity | null | undefined,
+  status: Pick<AcpAgentStatus, "running" | "sessionActive">,
+): { activity: ChatAcpActivity; shouldResetTransientUi: boolean } => {
+  const normalizedActivity = normalizeChatAcpActivity(activity);
+  const shouldResetTransientUi = !status.running && !status.sessionActive;
+
+  return {
+    activity: shouldResetTransientUi
+      ? markPendingAcpPermissionsStale(normalizedActivity)
+      : normalizedActivity,
+    shouldResetTransientUi,
   };
 };
 

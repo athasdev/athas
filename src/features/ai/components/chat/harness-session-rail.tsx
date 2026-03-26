@@ -9,6 +9,7 @@ interface HarnessRailSession {
   sessionKey: string;
   title: string;
   isActive: boolean;
+  isDefault: boolean;
   isRunning: boolean;
 }
 
@@ -129,6 +130,11 @@ export function HarnessSessionRail({
                 >
                   {session.title}
                 </span>
+                {session.isDefault ? (
+                  <span className="shrink-0 rounded-full border border-border/80 bg-primary-bg/75 px-1.5 py-0.5 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
+                    Main
+                  </span>
+                ) : null}
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-1.5 py-0.5 font-medium text-[10px] uppercase tracking-wide",

@@ -605,7 +605,7 @@ const EditorFooter = () => {
             useSettingsStore.getState().toggleHarnessEntry();
           }}
           className={cn(
-            "flex h-6 items-center justify-center rounded-full border border-transparent px-2 transition-colors",
+            "flex h-7 min-w-8 items-center justify-center rounded-full border border-transparent px-2.5 transition-colors",
             isHarnessEntryActive
               ? "border-border bg-selected text-text"
               : "text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
@@ -619,7 +619,7 @@ const EditorFooter = () => {
         {/* Settings button */}
         <button
           onClick={() => uiState.setIsSettingsDialogVisible(true)}
-          className="flex h-6 items-center justify-center rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+          className="ml-0.5 flex h-6 items-center justify-center rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
           style={{ minHeight: 0, minWidth: 0 }}
           title="Settings"
         >

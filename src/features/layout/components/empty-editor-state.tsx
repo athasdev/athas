@@ -18,6 +18,11 @@ import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
+import {
+  EMPTY_EDITOR_CONTEXT_ACTIONS,
+  EMPTY_EDITOR_PRIMARY_ACTIONS,
+  type EmptyEditorActionId,
+} from "./empty-editor-state-actions";
 
 interface ActionItem {
   id: string;
@@ -27,13 +32,8 @@ interface ActionItem {
 }
 
 export function EmptyEditorState() {
-  const {
-    createAgentBuffer,
-    openTerminalBuffer,
-    openAgentBuffer,
-    openWebViewerBuffer,
-    openBuffer,
-  } = useBufferStore.use.actions();
+  const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
+    useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
 
   const customActions = useCustomActionsStore.use.actions();
@@ -53,10 +53,6 @@ export function EmptyEditorState() {
   const handleOpenAgent = useCallback(() => {
     openAgentBuffer();
   }, [openAgentBuffer]);
-
-  const handleCreateAgent = useCallback(() => {
-    createAgentBuffer();
-  }, [createAgentBuffer]);
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
@@ -131,92 +127,57 @@ export function EmptyEditorState() {
     [deleteAction],
   );
 
+  const emptyStateActionsById = {
+    folder: handleOpenFolder,
+    file: handleOpenFile,
+    terminal: handleOpenTerminal,
+    agent: handleOpenAgent,
+    web: handleOpenWebViewer,
+    "open-folder": handleOpenFolder,
+    "open-file": handleOpenFile,
+    "new-terminal": handleOpenTerminal,
+    "new-agent": handleOpenAgent,
+    "open-url": handleOpenWebViewer,
+  } satisfies Record<EmptyEditorActionId, () => void>;
+
+  const emptyStateIconsById = {
+    folder: <FolderOpen size={14} className="text-text-light" />,
+    file: <FileText size={14} className="text-text-light" />,
+    terminal: <Terminal size={14} className="text-text-light" />,
+    agent: <Sparkles size={14} className="text-text-light" />,
+    web: <Globe size={14} className="text-text-light" />,
+    "open-folder": <FolderOpen size={12} />,
+    "open-file": <FileText size={12} />,
+    "new-terminal": <Terminal size={12} />,
+    "new-agent": <Sparkles size={12} />,
+    "open-url": <Globe size={12} />,
+  } satisfies Record<EmptyEditorActionId, React.ReactNode>;
+
   const getContextMenuItems = useCallback((): ContextMenuItem[] => {
     return [
-      {
-        id: "open-folder",
-        label: "Open Folder",
-        icon: <FolderOpen size={12} />,
-        onClick: handleOpenFolder,
-      },
-      {
-        id: "open-file",
-        label: "Open File",
-        icon: <FileText size={12} />,
-        onClick: handleOpenFile,
-      },
+      ...EMPTY_EDITOR_CONTEXT_ACTIONS.slice(0, 2).map((action) => ({
+        id: action.id,
+        label: action.label,
+        icon: emptyStateIconsById[action.id],
+        onClick: emptyStateActionsById[action.id],
+      })),
       { id: "sep-1", label: "", separator: true, onClick: () => {} },
-      {
-        id: "new-terminal",
-        label: "New Terminal",
-        icon: <Terminal size={12} />,
-        onClick: handleOpenTerminal,
-      },
-      {
-        id: "new-agent",
-        label: "Open Harness",
-        icon: <Sparkles size={12} />,
-        onClick: handleOpenAgent,
-      },
-      {
-        id: "new-agent-session",
-        label: "New Harness Session",
-        icon: <Plus size={12} />,
-        onClick: handleCreateAgent,
-      },
-      {
-        id: "open-url",
-        label: "Open URL",
-        icon: <Globe size={12} />,
-        onClick: handleOpenWebViewer,
-      },
+      ...EMPTY_EDITOR_CONTEXT_ACTIONS.slice(2).map((action) => ({
+        id: action.id,
+        label: action.label,
+        icon: emptyStateIconsById[action.id],
+        onClick: emptyStateActionsById[action.id],
+      })),
     ];
-  }, [
-    handleCreateAgent,
-    handleOpenFolder,
-    handleOpenFile,
-    handleOpenTerminal,
-    handleOpenAgent,
-    handleOpenWebViewer,
-  ]);
+  }, [emptyStateActionsById, emptyStateIconsById]);
 
   const actions: ActionItem[] = [
-    {
-      id: "folder",
-      label: "Open Folder",
-      icon: <FolderOpen size={14} className="text-text-light" />,
-      action: handleOpenFolder,
-    },
-    {
-      id: "file",
-      label: "Open File",
-      icon: <FileText size={14} className="text-text-light" />,
-      action: handleOpenFile,
-    },
-    {
-      id: "terminal",
-      label: "New Terminal",
-      icon: <Terminal size={14} className="text-text-light" />,
-      action: handleOpenTerminal,
-    },
-    {
-      id: "agent",
-      label: "Open Harness",
-      icon: <Sparkles size={14} className="text-text-light" />,
-      action: handleOpenAgent,
-    },
-    {
-      id: "agent-session",
-      label: "New Harness Session",
-      icon: <Plus size={14} className="text-text-light" />,
-      action: handleCreateAgent,
-    },
-    {
-      id: "web",
-      label: "Open URL",
-      icon: <Globe size={14} className="text-text-light" />,
-      action: handleOpenWebViewer,
-    },
+    ...EMPTY_EDITOR_PRIMARY_ACTIONS.map((action) => ({
+      id: action.id,
+      label: action.label,
+      icon: emptyStateIconsById[action.id],
+      action: emptyStateActionsById[action.id],
+    })),
   ];
 
   return (

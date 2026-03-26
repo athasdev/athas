@@ -8,6 +8,7 @@ import {
   getDefaultChatTitle,
   getDefaultHarnessBufferTitle,
   getHarnessBufferTitle,
+  isDefaultHarnessSessionKey,
   PANEL_CHAT_SCOPE_ID,
 } from "./chat-scope";
 
@@ -41,6 +42,11 @@ describe("chat scope helpers", () => {
     expect(first).toStartWith("session-");
     expect(second).toStartWith("session-");
     expect(first).not.toBe(second);
+  });
+
+  test("distinguishes the default Harness session key from extra sessions", () => {
+    expect(isDefaultHarnessSessionKey(DEFAULT_HARNESS_SESSION_KEY)).toBe(true);
+    expect(isDefaultHarnessSessionKey("session-123")).toBe(false);
   });
 
   test("resolves harness buffer titles from session and chat titles", () => {

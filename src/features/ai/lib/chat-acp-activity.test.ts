@@ -9,6 +9,7 @@ import {
   getStaleAcpPermissions,
   markPendingAcpPermissionsStale,
   normalizeChatAcpActivity,
+  reconcileIdleAcpRestore,
   resolveAcpPermissionRequest,
   setAcpActivityPlanEntries,
 } from "./chat-acp-activity";
@@ -90,6 +91,36 @@ describe("chat ACP activity helpers", () => {
     const stale = markPendingAcpPermissionsStale(requested);
     expect(getPendingAcpPermissions(stale)).toHaveLength(0);
     expect(getStaleAcpPermissions(stale)).toHaveLength(1);
+  });
+
+  test("downgrades restored pending permissions when ACP status is idle", () => {
+    const requested = addAcpPermissionRequest(null, {
+      requestId: "perm-3",
+      description: "Write file",
+      permissionType: "write",
+      resource: "/tmp/file",
+    });
+
+    const reconciled = reconcileIdleAcpRestore(requested, { running: false, sessionActive: false });
+
+    expect(reconciled.shouldResetTransientUi).toBe(true);
+    expect(getPendingAcpPermissions(reconciled.activity)).toHaveLength(0);
+    expect(getStaleAcpPermissions(reconciled.activity)).toHaveLength(1);
+  });
+
+  test("leaves restored activity alone while ACP status is still live", () => {
+    const requested = addAcpPermissionRequest(null, {
+      requestId: "perm-4",
+      description: "Write file",
+      permissionType: "write",
+      resource: "/tmp/file",
+    });
+
+    const reconciled = reconcileIdleAcpRestore(requested, { running: true, sessionActive: true });
+
+    expect(reconciled.shouldResetTransientUi).toBe(false);
+    expect(getPendingAcpPermissions(reconciled.activity)).toHaveLength(1);
+    expect(getStaleAcpPermissions(reconciled.activity)).toHaveLength(0);
   });
 
   test("returns recent tool events in reverse chronological order", () => {
