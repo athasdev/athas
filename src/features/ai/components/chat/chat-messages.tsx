@@ -11,6 +11,10 @@ import { forwardRef, memo, useMemo } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import { getAcpPlanEntryCounts } from "@/features/ai/lib/chat-acp-activity";
 import { filterChatsForScope, getDefaultChatTitle } from "@/features/ai/lib/chat-scope";
+import {
+  filterTranscriptAcpEvents,
+  getTranscriptAcpEventGroupLabel,
+} from "@/features/ai/lib/chat-transcript-events";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatScopeId } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -90,26 +94,6 @@ const getTimestampMs = (value: Date | string): number => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
-const getEventGroupLabel = (events: ChatAcpEvent[]): string => {
-  const toolEvents = events.filter((event) => event.kind === "tool");
-  const actionableToolEvents = toolEvents.filter(
-    (event) =>
-      event.tool?.input ||
-      event.tool?.output ||
-      event.tool?.error ||
-      !["tool output", "tool failure"].includes(event.label.toLowerCase()),
-  );
-  if (actionableToolEvents.length > 0) {
-    return actionableToolEvents.length === 1
-      ? "Tool call"
-      : `Tool calls (${actionableToolEvents.length})`;
-  }
-  if (events.some((event) => event.kind === "plan")) {
-    return "Plan update";
-  }
-  return "Session activity";
-};
-
 const isStructuredToolEvent = (event: ChatAcpEvent): boolean =>
   event.kind === "tool" &&
   Boolean(
@@ -180,12 +164,14 @@ export const ChatMessages = memo(
 
       const flushPendingEvents = () => {
         if (pendingEvents.length === 0) return;
+        const visibleEvents = filterTranscriptAcpEvents(pendingEvents);
+        pendingEvents = [];
+        if (visibleEvents.length === 0) return;
         rows.push({
           type: "event-group",
-          id: `event-group-${pendingEvents[0]!.id}-${pendingEvents[pendingEvents.length - 1]!.id}`,
-          events: pendingEvents,
+          id: `event-group-${visibleEvents[0]!.id}-${visibleEvents[visibleEvents.length - 1]!.id}`,
+          events: visibleEvents,
         });
-        pendingEvents = [];
       };
 
       for (const item of timelineItems) {
@@ -332,7 +318,7 @@ export const ChatMessages = memo(
           }
 
           const events = row.events;
-          const groupLabel = getEventGroupLabel(events);
+          const groupLabel = getTranscriptAcpEventGroupLabel(events);
           const hasStructuredToolEvent = events.some(isStructuredToolEvent);
 
           return (
