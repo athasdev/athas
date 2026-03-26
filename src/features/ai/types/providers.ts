@@ -44,6 +44,13 @@ export const AI_AGENTS: AIAgent[] = [
     description: "OpenAI Codex agent via ACP adapter",
     installed: false,
   },
+  {
+    id: "pi",
+    name: "Pi",
+    binaryName: "pi",
+    description: "Pi Coding Agent via local RPC bridge",
+    installed: false,
+  },
 ];
 
 // Helper to check if a provider ID is an agent

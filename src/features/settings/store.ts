@@ -4,6 +4,10 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import {
+  type ChatCompactionPolicy,
+  normalizeChatCompactionPolicy,
+} from "@/features/ai/lib/chat-compaction-policy";
 import { getProviderById } from "@/features/ai/types/providers";
 import { settingsSearchIndex } from "./config/search-index";
 import { cacheFontsForBootstrap, cacheThemeForBootstrap } from "./lib/appearance-bootstrap";
@@ -43,6 +47,9 @@ const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
   "google/gemini-2.5-flash-lite": "google/gemini-3-flash-preview",
 };
 
+const clampNumber = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
+
 interface Settings {
   // General
   autoSave: boolean;
@@ -78,6 +85,9 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  aiAutoCompactionPolicy: ChatCompactionPolicy;
+  aiAutoCompactionReserveTokens: number;
+  aiAutoCompactionKeepRecentTokens: number;
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
   ollamaBaseUrl: string;
@@ -119,7 +129,14 @@ interface Settings {
   gitChangesFolderView: boolean;
 }
 
-const normalizeAISettings = (settings: Settings): Settings => {
+type SettingsWithLegacyAutoCompaction = Settings & {
+  aiAutoCompaction?: boolean;
+};
+
+const normalizeAISettings = (
+  settings: SettingsWithLegacyAutoCompaction,
+  explicitAutoCompactionPolicy: string | null | undefined = settings.aiAutoCompactionPolicy,
+): Settings => {
   const normalizedSettings = { ...settings };
   const provider =
     getProviderById(normalizedSettings.aiProviderId) || getProviderById(DEFAULT_AI_PROVIDER_ID);
@@ -152,6 +169,21 @@ const normalizeAISettings = (settings: Settings): Settings => {
     AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
     normalizedSettings.aiAutocompleteModelId ||
     DEFAULT_AI_AUTOCOMPLETE_MODEL_ID;
+  normalizedSettings.aiAutoCompactionPolicy = normalizeChatCompactionPolicy(
+    explicitAutoCompactionPolicy,
+    settings.aiAutoCompaction,
+  );
+
+  normalizedSettings.aiAutoCompactionReserveTokens = clampNumber(
+    Math.round(normalizedSettings.aiAutoCompactionReserveTokens || 16384),
+    1024,
+    262144,
+  );
+  normalizedSettings.aiAutoCompactionKeepRecentTokens = clampNumber(
+    Math.round(normalizedSettings.aiAutoCompactionKeepRecentTokens || 20000),
+    1024,
+    262144,
+  );
 
   return normalizedSettings;
 };
@@ -191,6 +223,9 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  aiAutoCompactionPolicy: "threshold_and_overflow",
+  aiAutoCompactionReserveTokens: 16384,
+  aiAutoCompactionKeepRecentTokens: 20000,
   aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   aiDefaultSessionMode: "",
   ollamaBaseUrl: "http://localhost:11434",
@@ -255,7 +290,18 @@ const getStore = async () => {
     for (const [key, value] of Object.entries(defaultSettings)) {
       const current = await storeInstance.get(key);
       if (current === null || current === undefined) {
-        await storeInstance.set(key, value);
+        if (key === "aiAutoCompactionPolicy") {
+          const legacyAutoCompaction = await storeInstance.get("aiAutoCompaction");
+          await storeInstance.set(
+            key,
+            normalizeChatCompactionPolicy(
+              null,
+              typeof legacyAutoCompaction === "boolean" ? legacyAutoCompaction : undefined,
+            ),
+          );
+        } else {
+          await storeInstance.set(key, value);
+        }
       } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         // Merge nested objects to add new keys from defaults
         const merged = { ...value, ...current };
@@ -357,7 +403,7 @@ const initializeSettings = async () => {
 
   try {
     const store = await getStore();
-    const loadedSettings: Settings = { ...defaultSettings };
+    const loadedSettings: SettingsWithLegacyAutoCompaction = { ...defaultSettings };
 
     // Load settings from store
     for (const key of Object.keys(defaultSettings) as Array<keyof Settings>) {
@@ -366,6 +412,12 @@ const initializeSettings = async () => {
         (loadedSettings as any)[key] = value as Settings[typeof key];
       }
     }
+
+    const legacyAutoCompaction = await store.get("aiAutoCompaction");
+    if (typeof legacyAutoCompaction === "boolean") {
+      loadedSettings.aiAutoCompaction = legacyAutoCompaction;
+    }
+    const storedAutoCompactionPolicy = await store.get("aiAutoCompactionPolicy");
 
     // Detect theme if none exists
     if (!loadedSettings.theme) {
@@ -381,7 +433,10 @@ const initializeSettings = async () => {
       loadedSettings.theme = detectedTheme;
     }
 
-    const normalizedSettings = normalizeAISettings(loadedSettings);
+    const normalizedSettings = normalizeAISettings(
+      loadedSettings,
+      typeof storedAutoCompactionPolicy === "string" ? storedAutoCompactionPolicy : null,
+    );
     normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
 
     applyTheme(normalizedSettings.theme);
@@ -429,10 +484,19 @@ export const useSettingsStore = create(
         updateSettingsFromJSON: (jsonString: string): boolean => {
           try {
             const parsedSettings = JSON.parse(jsonString);
-            const validatedSettings = normalizeAISettings({
-              ...defaultSettings,
-              ...parsedSettings,
-            });
+            const parsedAutoCompactionPolicy =
+              typeof parsedSettings === "object" &&
+              parsedSettings !== null &&
+              "aiAutoCompactionPolicy" in parsedSettings
+                ? parsedSettings.aiAutoCompactionPolicy
+                : null;
+            const validatedSettings = normalizeAISettings(
+              {
+                ...defaultSettings,
+                ...parsedSettings,
+              },
+              parsedAutoCompactionPolicy,
+            );
 
             set((state) => {
               state.settings = validatedSettings;

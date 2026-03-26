@@ -1,4 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { cloneChatAcpActivity } from "@/features/ai/lib/chat-acp-activity";
+import { cloneChatAcpState } from "@/features/ai/lib/chat-acp-state";
+import { normalizeChatMessage } from "@/features/ai/lib/chat-lineage";
 import type { AgentType, Chat, Message, ToolCall } from "@/features/ai/types/ai-chat";
 
 /**
@@ -13,14 +16,24 @@ interface ChatData {
   created_at: number;
   last_message_at: number;
   agent_id: string | null;
+  parent_chat_id: string | null;
+  root_chat_id: string | null;
+  branch_point_message_id: string | null;
+  lineage_depth: number | null;
+  session_name: string | null;
+  acp_state: string | null;
+  acp_activity: string | null;
 }
 
 interface MessageData {
   id: string;
   chat_id: string;
+  lineage_message_id: string | null;
   role: string;
   content: string;
   timestamp: number;
+  message_kind: string | null;
+  summary_meta: string | null;
   is_streaming: boolean;
   is_tool_use: boolean;
   tool_name: string | null;
@@ -47,6 +60,32 @@ interface ChatStats {
   total_messages: number;
   total_tool_calls: number;
 }
+
+const parseChatAcpState = (serializedState: string | null) => {
+  if (!serializedState) {
+    return null;
+  }
+
+  try {
+    return cloneChatAcpState(JSON.parse(serializedState));
+  } catch (error) {
+    console.error("Error parsing chat ACP state:", error);
+    return null;
+  }
+};
+
+const parseChatAcpActivity = (serializedActivity: string | null) => {
+  if (!serializedActivity) {
+    return null;
+  }
+
+  try {
+    return cloneChatAcpActivity(JSON.parse(serializedActivity));
+  } catch (error) {
+    console.error("Error parsing chat ACP activity:", error);
+    return null;
+  }
+};
 
 /**
  * Initialize the chat history database
@@ -75,14 +114,24 @@ function chatToData(chat: Chat): {
     created_at: chat.createdAt.getTime(),
     last_message_at: chat.lastMessageAt.getTime(),
     agent_id: chat.agentId,
+    parent_chat_id: chat.parentChatId,
+    root_chat_id: chat.rootChatId,
+    branch_point_message_id: chat.branchPointMessageId,
+    lineage_depth: chat.lineageDepth,
+    session_name: chat.sessionName,
+    acp_state: chat.acpState ? JSON.stringify(chat.acpState) : null,
+    acp_activity: chat.acpActivity ? JSON.stringify(chat.acpActivity) : null,
   };
 
   const messages: MessageData[] = chat.messages.map((msg) => ({
     id: msg.id,
     chat_id: chat.id,
+    lineage_message_id: msg.lineageMessageId,
     role: msg.role,
     content: msg.content,
     timestamp: msg.timestamp.getTime(),
+    message_kind: msg.kind || "default",
+    summary_meta: msg.summaryMeta ? JSON.stringify(msg.summaryMeta) : null,
     is_streaming: msg.isStreaming || false,
     is_tool_use: msg.isToolUse || false,
     tool_name: msg.toolName || null,
@@ -129,16 +178,23 @@ function dataToChat(data: ChatWithMessages): Chat {
     });
   }
 
-  const messages: Message[] = data.messages.map((msg) => ({
-    id: msg.id,
-    role: msg.role as "user" | "assistant" | "system",
-    content: msg.content,
-    timestamp: new Date(msg.timestamp),
-    isStreaming: msg.is_streaming,
-    isToolUse: msg.is_tool_use,
-    toolName: msg.tool_name || undefined,
-    toolCalls: toolCallsMap.get(msg.id),
-  }));
+  const messages: Message[] = data.messages.map((msg) =>
+    normalizeChatMessage({
+      id: msg.id,
+      lineageMessageId: msg.lineage_message_id || msg.id,
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+      timestamp: new Date(msg.timestamp),
+      kind: (msg.message_kind as Message["kind"]) || "default",
+      summaryMeta: msg.summary_meta
+        ? (JSON.parse(msg.summary_meta) as Message["summaryMeta"])
+        : undefined,
+      isStreaming: msg.is_streaming,
+      isToolUse: msg.is_tool_use,
+      toolName: msg.tool_name || undefined,
+      toolCalls: toolCallsMap.get(msg.id),
+    }),
+  );
 
   return {
     id: data.chat.id,
@@ -147,6 +203,13 @@ function dataToChat(data: ChatWithMessages): Chat {
     createdAt: new Date(data.chat.created_at),
     lastMessageAt: new Date(data.chat.last_message_at),
     agentId: (data.chat.agent_id || "custom") as AgentType,
+    parentChatId: data.chat.parent_chat_id,
+    rootChatId: data.chat.root_chat_id || data.chat.id,
+    branchPointMessageId: data.chat.branch_point_message_id,
+    lineageDepth: data.chat.lineage_depth ?? 0,
+    sessionName: data.chat.session_name,
+    acpState: parseChatAcpState(data.chat.acp_state),
+    acpActivity: parseChatAcpActivity(data.chat.acp_activity),
   };
 }
 
@@ -176,6 +239,13 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       createdAt: new Date(chat.created_at),
       lastMessageAt: new Date(chat.last_message_at),
       agentId: (chat.agent_id || "custom") as AgentType,
+      parentChatId: chat.parent_chat_id,
+      rootChatId: chat.root_chat_id || chat.id,
+      branchPointMessageId: chat.branch_point_message_id,
+      lineageDepth: chat.lineage_depth ?? 0,
+      sessionName: chat.session_name,
+      acpState: parseChatAcpState(chat.acp_state),
+      acpActivity: parseChatAcpActivity(chat.acp_activity),
     }));
   } catch (error) {
     console.error("Error loading chats from database:", error);
@@ -221,6 +291,13 @@ export const searchChatsInDb = async (query: string): Promise<Omit<Chat, "messag
       createdAt: new Date(chat.created_at),
       lastMessageAt: new Date(chat.last_message_at),
       agentId: (chat.agent_id || "custom") as AgentType,
+      parentChatId: chat.parent_chat_id,
+      rootChatId: chat.root_chat_id || chat.id,
+      branchPointMessageId: chat.branch_point_message_id,
+      lineageDepth: chat.lineage_depth ?? 0,
+      sessionName: chat.session_name,
+      acpState: parseChatAcpState(chat.acp_state),
+      acpActivity: parseChatAcpActivity(chat.acp_activity),
     }));
   } catch (error) {
     console.error(`Error searching chats for "${query}":`, error);

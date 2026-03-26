@@ -1,6 +1,6 @@
 import { ChevronsUpDown } from "lucide-react";
 import { memo, useMemo } from "react";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import Dropdown from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 
@@ -11,8 +11,9 @@ interface SessionModeSelectorProps {
 export const SessionModeSelector = memo(function SessionModeSelector({
   className,
 }: SessionModeSelectorProps) {
-  const sessionModeState = useAIChatStore((state) => state.sessionModeState);
-  const changeSessionMode = useAIChatStore((state) => state.changeSessionMode);
+  const chatState = useChatState();
+  const chatActions = useChatActions();
+  const sessionModeState = chatState.sessionModeState;
 
   const modeOptions = useMemo(() => {
     return sessionModeState.availableModes.map((mode) => ({
@@ -26,7 +27,7 @@ export const SessionModeSelector = memo(function SessionModeSelector({
   );
 
   const handleModeChange = (modeId: string) => {
-    changeSessionMode(modeId);
+    chatActions.changeSessionMode(modeId);
   };
 
   // Don't render if no modes available

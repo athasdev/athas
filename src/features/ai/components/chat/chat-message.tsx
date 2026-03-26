@@ -1,8 +1,11 @@
-import { Check, Copy, RefreshCw, RotateCcw, Undo2 } from "lucide-react";
+import { Check, Copy, GitBranch, Layers3, RefreshCw, RotateCcw, Split, Undo2 } from "lucide-react";
 import { memo, useCallback, useState } from "react";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
+import { createHarnessChatScopeId, createHarnessSessionKey } from "@/features/ai/lib/chat-scope";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
-import type { Message } from "@/features/ai/types/ai-chat";
+import type { AIChatSurface, ChatScopeId, Message } from "@/features/ai/types/ai-chat";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import Tooltip from "@/ui/tooltip";
 import { isAcpAgent } from "@/utils/ai-chat";
@@ -15,6 +18,8 @@ interface ChatMessageProps {
   message: Message;
   isLastMessage: boolean;
   onApplyCode?: (code: string, language?: string) => void;
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
 }
 
 function hasError(messageContent: string): boolean {
@@ -25,13 +30,14 @@ export const ChatMessage = memo(function ChatMessage({
   message,
   isLastMessage,
   onApplyCode,
+  surface = "panel",
+  scopeId,
 }: ChatMessageProps) {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
-  const currentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
-  const regenerateResponse = useAIChatStore((state) => state.regenerateResponse);
+  const chatState = useChatState(scopeId);
+  const chatActions = useChatActions(scopeId);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+  const { openAgentBuffer } = useBufferStore.use.actions();
 
   const handleOpenInEditor = useCallback(
     (filePath: string) => {
@@ -58,9 +64,9 @@ export const ChatMessage = memo(function ChatMessage({
 
   const handleRestoreCheckpoint = useCallback(
     (messageId: string) => {
-      if (!currentChatId) return;
+      if (!chatState.currentChatId) return;
 
-      const chat = getCurrentChat();
+      const chat = chatActions.getCurrentChat();
       if (!chat) return;
 
       const messageIndex = chat.messages.findIndex((m) => m.id === messageId);
@@ -74,49 +80,120 @@ export const ChatMessage = memo(function ChatMessage({
       };
 
       const chats = useAIChatStore.getState().chats;
-      const chatIndex = chats.findIndex((c) => c.id === currentChatId);
+      const chatIndex = chats.findIndex((c) => c.id === chatState.currentChatId);
       if (chatIndex !== -1) {
         useAIChatStore.setState((state) => {
           state.chats[chatIndex] = updatedChat;
         });
       }
 
-      useAIChatStore.getState().syncChatToDatabase(currentChatId);
+      useAIChatStore.getState().syncChatToDatabase(chatState.currentChatId);
     },
-    [currentChatId, getCurrentChat],
+    [chatActions, chatState.currentChatId],
   );
 
   const handleRetryMessage = useCallback(() => {
-    const lastUserMessage = regenerateResponse();
+    const lastUserMessage = chatActions.regenerateResponse();
     if (lastUserMessage) {
-      useAIChatStore.getState().addMessageToQueue(lastUserMessage);
+      useAIChatStore.getState().addMessageToQueue(lastUserMessage, "follow-up", scopeId);
     }
-  }, [regenerateResponse]);
+  }, [chatActions, scopeId]);
 
-  const handleExecuteStep = useCallback((step: PlanStep, stepIndex: number) => {
-    const { setMode, addMessageToQueue } = useAIChatStore.getState();
-    setMode("chat");
-    addMessageToQueue(
-      `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
-    );
-  }, []);
+  const handleForkCheckpoint = useCallback(
+    async (messageId: string) => {
+      if (!chatState.currentChatId) return;
+
+      if (surface === "harness") {
+        const nextSessionKey = createHarnessSessionKey();
+        openAgentBuffer(nextSessionKey);
+        await chatActions.forkChatFromChat(
+          chatState.currentChatId,
+          createHarnessChatScopeId(nextSessionKey),
+          messageId,
+        );
+        return;
+      }
+
+      await chatActions.forkChatFromChat(chatState.currentChatId, scopeId, messageId);
+    },
+    [chatActions, chatState.currentChatId, openAgentBuffer, scopeId, surface],
+  );
+
+  const handleExecuteStep = useCallback(
+    (step: PlanStep, stepIndex: number) => {
+      const { setMode, addMessageToQueue } = useAIChatStore.getState();
+      setMode("chat", scopeId);
+      addMessageToQueue(
+        `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
+        "follow-up",
+        scopeId,
+      );
+    },
+    [scopeId],
+  );
 
   if (message.role === "user") {
     return (
       <div className="w-full">
         <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
           <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
-          <Tooltip content="Restore to this point" side="top">
-            <button
-              onClick={() => handleRestoreCheckpoint(message.id)}
-              className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
-              title="Restore checkpoint"
-              aria-label="Restore to this checkpoint"
-            >
-              <Undo2 size={10} />
-            </button>
-          </Tooltip>
+          <div className="-translate-y-1/2 absolute top-1/2 right-1.5 flex items-center gap-1 opacity-40 transition-all hover:opacity-100">
+            <Tooltip content="Fork from this checkpoint" side="top">
+              <button
+                onClick={() => void handleForkCheckpoint(message.id)}
+                className="flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter hover:bg-hover"
+                title="Fork from checkpoint"
+                aria-label="Fork from this checkpoint"
+              >
+                <Split size={10} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Trim this chat to this point" side="top">
+              <button
+                onClick={() => handleRestoreCheckpoint(message.id)}
+                className="flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter hover:bg-hover"
+                title="Restore checkpoint"
+                aria-label="Restore to this checkpoint"
+              >
+                <Undo2 size={10} />
+              </button>
+            </Tooltip>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  if (message.kind === "compaction-summary" || message.kind === "branch-summary") {
+    const isCompaction = message.kind === "compaction-summary";
+    const branchSummaryMeta = message.summaryMeta?.type === "branch" ? message.summaryMeta : null;
+
+    return (
+      <div className="rounded-2xl border border-border bg-secondary-bg/80 px-3 py-2.5">
+        <div className="mb-2 flex items-center gap-2 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+            {isCompaction ? <Layers3 size={10} /> : <GitBranch size={10} />}
+            {isCompaction ? "Compaction Summary" : "Branch Summary"}
+          </span>
+          {message.summaryMeta?.type === "compaction" ? (
+            <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+              {message.summaryMeta.trigger} · {message.summaryMeta.tokensBefore}
+            </span>
+          ) : null}
+          {branchSummaryMeta ? (
+            <button
+              onClick={() => {
+                if (chatState.chats.some((chat) => chat.id === branchSummaryMeta.sourceChatId)) {
+                  chatActions.switchToChat(branchSummaryMeta.sourceChatId);
+                }
+              }}
+              className="rounded-full border border-border bg-primary-bg/80 px-2 py-1 normal-case tracking-normal hover:bg-hover"
+            >
+              {branchSummaryMeta.sourceChatTitle}
+            </button>
+          ) : null}
+        </div>
+        <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
       </div>
     );
   }
@@ -145,7 +222,7 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    if (isAcpAgent(currentAgentId())) {
+    if (isAcpAgent(chatActions.getCurrentAgentId())) {
       return null;
     }
 

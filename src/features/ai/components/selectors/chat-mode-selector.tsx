@@ -1,12 +1,15 @@
 import { Check, ChevronDown } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import type { ChatMode } from "@/features/ai/store/types";
+import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import { cn } from "@/utils/cn";
 
 interface ChatModeSelectorProps {
   className?: string;
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
 }
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -16,35 +19,33 @@ const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
 
 export const ChatModeSelector = memo(function ChatModeSelector({
   className,
+  scopeId,
 }: ChatModeSelectorProps) {
-  const mode = useAIChatStore((state) => state.mode);
-  const setMode = useAIChatStore((state) => state.setMode);
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
-  const sessionModeState = useAIChatStore((state) => state.sessionModeState);
-  const changeSessionMode = useAIChatStore((state) => state.changeSessionMode);
+  const chatState = useChatState(scopeId);
+  const chatActions = useChatActions(scopeId);
 
-  const currentAgentId = getCurrentAgentId();
+  const currentAgentId = chatActions.getCurrentAgentId();
   const isAcpAgent = currentAgentId !== "custom";
   const hasDynamicModes = isAcpAgent;
-  const shouldHideForAcp = isAcpAgent && sessionModeState.availableModes.length === 0;
+  const shouldHideForAcp = isAcpAgent && chatState.sessionModeState.availableModes.length === 0;
 
   const modeOptions = useMemo(() => {
     if (hasDynamicModes) {
-      return sessionModeState.availableModes.map((m) => ({
+      return chatState.sessionModeState.availableModes.map((m) => ({
         id: m.id,
         label: m.name,
       }));
     }
 
     return FALLBACK_MODES;
-  }, [hasDynamicModes, sessionModeState.availableModes]);
+  }, [chatState.sessionModeState.availableModes, hasDynamicModes]);
 
   const selectedModeId = useMemo(() => {
     if (hasDynamicModes) {
-      return sessionModeState.currentModeId ?? modeOptions[0]?.id ?? null;
+      return chatState.sessionModeState.currentModeId ?? modeOptions[0]?.id ?? null;
     }
-    return mode;
-  }, [hasDynamicModes, sessionModeState.currentModeId, modeOptions, mode]);
+    return chatState.mode;
+  }, [chatState.mode, chatState.sessionModeState.currentModeId, hasDynamicModes, modeOptions]);
 
   const selectedModeLabel = useMemo(
     () => modeOptions.find((m) => m.id === selectedModeId)?.label ?? "Mode",
@@ -56,15 +57,15 @@ export const ChatModeSelector = memo(function ChatModeSelector({
     console.info("[AI][ModeSelector] state", {
       agentId: currentAgentId,
       isAcpAgent,
-      currentModeId: sessionModeState.currentModeId,
-      availableModeIds: sessionModeState.availableModes.map((m) => m.id),
+      currentModeId: chatState.sessionModeState.currentModeId,
+      availableModeIds: chatState.sessionModeState.availableModes.map((m) => m.id),
       visible: !shouldHideForAcp,
     });
   }, [
+    chatState.sessionModeState.availableModes,
+    chatState.sessionModeState.currentModeId,
     currentAgentId,
     isAcpAgent,
-    sessionModeState.currentModeId,
-    sessionModeState.availableModes,
     shouldHideForAcp,
   ]);
 
@@ -215,12 +216,12 @@ export const ChatModeSelector = memo(function ChatModeSelector({
                           agentId: currentAgentId,
                           modeId: modeOption.id,
                         });
-                        void changeSessionMode(modeOption.id);
+                        void chatActions.changeSessionMode(modeOption.id);
                       } else {
                         console.info("[AI][ModeSelector] set local mode", {
                           modeId: modeOption.id,
                         });
-                        setMode(modeOption.id as ChatMode);
+                        chatActions.setMode(modeOption.id as ChatMode);
                       }
                       setIsOpen(false);
                     }}

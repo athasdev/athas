@@ -1,9 +1,25 @@
-import { History } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { History, Layers3, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
+import {
+  getChatCompactionPolicyShortLabel,
+  isAutoCompactionEnabled,
+} from "@/features/ai/lib/chat-compaction-policy";
+import {
+  estimateChatMessagesTokens,
+  getChatSummaryCounts,
+  getEffectiveChatMessages,
+} from "@/features/ai/lib/chat-context";
+import { getChatLineagePath } from "@/features/ai/lib/chat-lineage";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
-import { useAIChatStore } from "../../store/store";
+import { cn } from "@/utils/cn";
+import { AGENT_OPTIONS, type AIChatProps, type Chat } from "../../types/ai-chat";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
+
+const formatTokenCount = (count: number): string =>
+  count >= 1000 ? `${Math.round(count / 100) / 10}k ctx` : `${count} ctx`;
 
 function EditableChatTitle({
   title,
@@ -77,24 +93,221 @@ function EditableChatTitle({
   );
 }
 
-export function ChatHeader() {
-  const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
-  const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
-  const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
-  const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
+interface ChatHeaderProps {
+  surface?: AIChatProps["surface"];
+  scopeId?: AIChatProps["scopeId"];
+}
 
+export function ChatHeader({ surface = "panel", scopeId }: ChatHeaderProps) {
+  const chatState = useChatState(scopeId);
+  const chatActions = useChatActions(scopeId);
+  const { settings } = useSettingsStore();
   const { openSettingsDialog } = useUIState();
-  const currentChat = getCurrentChat();
+  const currentChat = useMemo(
+    () => chatState.chats.find((chat) => chat.id === chatState.currentChatId),
+    [chatState.chats, chatState.currentChatId],
+  );
+  const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
+  const currentAgentLabel =
+    AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name ?? "Custom API";
+  const currentModeLabel =
+    currentAgentId === "custom"
+      ? chatState.mode === "plan"
+        ? "Plan"
+        : "Chat"
+      : chatState.sessionModeState.availableModes.find(
+          (entry) => entry.id === chatState.sessionModeState.currentModeId,
+        )?.name || "Session";
+  const lineageChats = useMemo(() => {
+    if (!currentChat) {
+      return [];
+    }
+
+    const lineagePath = getChatLineagePath(chatState.chats, currentChat.id);
+    const chatsById = new Map(chatState.chats.map((chat) => [chat.id, chat]));
+    return lineagePath
+      .map((chatId) => chatsById.get(chatId))
+      .filter((chat): chat is Chat => Boolean(chat));
+  }, [chatState.chats, currentChat]);
+  const summaryCounts = currentChat ? getChatSummaryCounts(currentChat) : null;
+  const contextTokenCount = currentChat
+    ? estimateChatMessagesTokens(getEffectiveChatMessages(currentChat))
+    : null;
+  const compactionPolicyLabel = getChatCompactionPolicyShortLabel(settings.aiAutoCompactionPolicy);
+  const isAutoCompactionArmed = isAutoCompactionEnabled(settings.aiAutoCompactionPolicy);
+
+  if (surface === "harness") {
+    return (
+      <div className="relative z-[10020] flex items-center gap-3 border-border border-b bg-secondary-bg/80 px-4 py-3 backdrop-blur-sm">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 font-medium text-[10px] text-blue-300 uppercase tracking-[0.12em]">
+              <Sparkles size={10} />
+              Harness
+            </span>
+            <span className="rounded-full border border-border bg-primary-bg/80 px-2.5 py-1 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+              {currentAgentLabel}
+            </span>
+            <span className="rounded-full border border-border bg-primary-bg/80 px-2.5 py-1 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+              {currentModeLabel}
+            </span>
+          </div>
+
+          {chatState.currentChatId ? (
+            <>
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Session"}
+                onUpdateTitle={(title) =>
+                  chatActions.updateChatTitle(chatState.currentChatId!, title)
+                }
+              />
+              {currentChat ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-text-lighter">
+                  {lineageChats.map((chat, index) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => chatActions.switchToChat(chat.id)}
+                      className={cn(
+                        "rounded-full border border-border bg-primary-bg/80 px-2 py-1 hover:bg-hover",
+                        chat.id === currentChat.id &&
+                          "border-blue-500/30 bg-blue-500/10 text-blue-300",
+                      )}
+                    >
+                      {index === 0 ? "Root" : chat.title}
+                    </button>
+                  ))}
+                  {summaryCounts ? (
+                    <>
+                      {contextTokenCount !== null ? (
+                        <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+                          {formatTokenCount(contextTokenCount)}
+                        </span>
+                      ) : null}
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-1",
+                          isAutoCompactionArmed
+                            ? "border-border bg-primary-bg/80"
+                            : "border-border/60 bg-primary-bg/60 text-text-lighter",
+                        )}
+                      >
+                        Compact {compactionPolicyLabel}
+                      </span>
+                      {summaryCounts.compaction > 0 ? (
+                        <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+                          C{summaryCounts.compaction}
+                        </span>
+                      ) : null}
+                      {summaryCounts.branch > 0 ? (
+                        <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+                          B{summaryCounts.branch}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <span className="font-medium text-sm text-text">New Session</span>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Tooltip content="Session History" side="bottom">
+            <button
+              onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
+                chatState.isChatHistoryVisible && "border-blue-500/30 bg-blue-500/10 text-blue-300",
+              )}
+              aria-label="Toggle session history"
+            >
+              <History size={14} />
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Compact context" side="bottom">
+            <button
+              onClick={() => {
+                void chatActions.compactChat("manual");
+              }}
+              className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              aria-label="Compact session context"
+            >
+              <Layers3 size={14} />
+            </button>
+          </Tooltip>
+
+          <UnifiedAgentSelector
+            scopeId={scopeId}
+            surface={surface}
+            variant="header"
+            onOpenSettings={() => openSettingsDialog("ai")}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative z-[10020] flex items-center gap-2 border-border border-b bg-secondary-bg/70 px-3 py-2 backdrop-blur-sm">
       <div className="min-w-0 flex-1">
-        {currentChatId ? (
-          <EditableChatTitle
-            title={currentChat ? currentChat.title : "New Chat"}
-            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
-          />
+        {chatState.currentChatId ? (
+          <>
+            <EditableChatTitle
+              title={currentChat ? currentChat.title : "New Chat"}
+              onUpdateTitle={(title) =>
+                chatActions.updateChatTitle(chatState.currentChatId!, title)
+              }
+            />
+            {currentChat ? (
+              <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-text-lighter">
+                {lineageChats.map((chat, index) => (
+                  <button
+                    key={chat.id}
+                    onClick={() => chatActions.switchToChat(chat.id)}
+                    className={cn(
+                      "rounded-full border border-border bg-primary-bg/80 px-2 py-1 hover:bg-hover",
+                      chat.id === currentChat.id &&
+                        "border-blue-500/30 bg-blue-500/10 text-blue-300",
+                    )}
+                  >
+                    {index === 0 ? "Root" : chat.title}
+                  </button>
+                ))}
+                {summaryCounts ? (
+                  <>
+                    {contextTokenCount !== null ? (
+                      <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+                        {formatTokenCount(contextTokenCount)}
+                      </span>
+                    ) : null}
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-1",
+                        isAutoCompactionArmed
+                          ? "border-border bg-primary-bg/80"
+                          : "border-border/60 bg-primary-bg/60 text-text-lighter",
+                      )}
+                    >
+                      Compact {compactionPolicyLabel}
+                    </span>
+                    {summaryCounts.compaction > 0 ? (
+                      <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+                        C{summaryCounts.compaction}
+                      </span>
+                    ) : null}
+                    {summaryCounts.branch > 0 ? (
+                      <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+                        B{summaryCounts.branch}
+                      </span>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         ) : (
           <span className="font-medium text-text text-xs">New Chat</span>
         )}
@@ -103,7 +316,7 @@ export function ChatHeader() {
       <div className="flex shrink-0 items-center gap-1.5">
         <Tooltip content="Chat History" side="bottom">
           <button
-            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
+            onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
             className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             aria-label="Toggle chat history"
           >
@@ -111,7 +324,24 @@ export function ChatHeader() {
           </button>
         </Tooltip>
 
-        <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
+        <Tooltip content="Compact context" side="bottom">
+          <button
+            onClick={() => {
+              void chatActions.compactChat("manual");
+            }}
+            className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+            aria-label="Compact chat context"
+          >
+            <Layers3 size={14} />
+          </button>
+        </Tooltip>
+
+        <UnifiedAgentSelector
+          scopeId={scopeId}
+          surface={surface}
+          variant="header"
+          onOpenSettings={() => openSettingsDialog("ai")}
+        />
       </div>
     </div>
   );

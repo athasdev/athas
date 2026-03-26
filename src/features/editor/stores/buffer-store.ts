@@ -2,6 +2,18 @@ import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
+import {
+  createHarnessChatScopeId,
+  createHarnessSessionKey,
+  DEFAULT_HARNESS_SESSION_KEY,
+  getDefaultHarnessBufferTitle,
+  getHarnessBufferTitle,
+} from "@/features/ai/lib/chat-scope";
+import {
+  type ClosedBufferHistoryEntry,
+  createClosedBufferHistoryEntry,
+  getMostRecentClosedHarnessSession,
+} from "@/features/ai/lib/harness-session-lifecycle";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
@@ -11,6 +23,7 @@ import type { MultiFileDiff } from "@/features/git/types/diff";
 import type { GitDiff } from "@/features/git/types/git";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { cleanupBufferHistoryTracking } from "@/stores/app-store";
+import type { ActiveSessionBuffer, PersistedBufferSession } from "@/stores/session-store";
 import { useSessionStore } from "@/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -103,18 +116,12 @@ interface PendingClose {
   keepBufferId?: string;
 }
 
-interface ClosedBuffer {
-  path: string;
-  name: string;
-  isPinned: boolean;
-}
-
 interface BufferState {
   buffers: Buffer[];
   activeBufferId: string | null;
   maxOpenTabs: number;
   pendingClose: PendingClose | null;
-  closedBuffersHistory: ClosedBuffer[];
+  closedBuffersHistory: ClosedBufferHistoryEntry[];
   actions: BufferActions;
 }
 
@@ -146,6 +153,8 @@ interface BufferActions {
     workingDirectory?: string;
   }) => string;
   openAgentBuffer: (sessionId?: string) => string;
+  createAgentBuffer: () => string;
+  setAgentBufferTitle: (sessionId: string, title?: string | null) => void;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -185,6 +194,7 @@ interface BufferActions {
   confirmCloseWithoutSaving: () => void;
   cancelPendingClose: () => void;
   reopenClosedTab: () => Promise<void>;
+  reopenClosedHarnessSession: () => Promise<void>;
 }
 
 const generateBufferId = (path: string): string => {
@@ -193,6 +203,113 @@ const generateBufferId = (path: string): string => {
 
 let saveSessionTimer: NodeJS.Timeout | null = null;
 const SAVE_SESSION_DEBOUNCE_MS = 300;
+
+const getHarnessSessionId = (buffer: Pick<Buffer, "agentSessionId">): string =>
+  buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY;
+
+export const stopHarnessBufferSession = async (
+  buffer: Pick<Buffer, "isAgent" | "agentSessionId">,
+): Promise<void> => {
+  if (!buffer.isAgent) return;
+
+  const { AcpStreamHandler } = await import("@/utils/acp-handler");
+  await AcpStreamHandler.stopAgent(createHarnessChatScopeId(getHarnessSessionId(buffer)));
+};
+
+export const isHarnessBufferRunning = async (
+  buffer: Pick<Buffer, "isAgent" | "agentSessionId">,
+): Promise<boolean> => {
+  if (!buffer.isAgent) return false;
+
+  const { AcpStreamHandler } = await import("@/utils/acp-handler");
+  const status = await AcpStreamHandler.getStatus(
+    createHarnessChatScopeId(getHarnessSessionId(buffer)),
+  );
+
+  return status.running;
+};
+
+export const getRunningHarnessBuffers = async (buffers: Buffer[]): Promise<Buffer[]> => {
+  const runningBuffers = await Promise.all(
+    buffers.map(async (buffer) => {
+      if (!(await isHarnessBufferRunning(buffer))) {
+        return null;
+      }
+
+      return buffer;
+    }),
+  );
+
+  return runningBuffers.filter((buffer): buffer is Buffer => buffer !== null);
+};
+
+export const serializeProjectSessionBuffers = (buffers: Buffer[]): PersistedBufferSession[] => {
+  return buffers
+    .filter(
+      (b) =>
+        !b.isDiff &&
+        !b.isImage &&
+        !b.isSQLite &&
+        !b.isMarkdownPreview &&
+        !b.isHtmlPreview &&
+        !b.isCsvPreview &&
+        !b.isExternalEditor &&
+        !b.isWebViewer &&
+        !b.isPullRequest &&
+        !b.isPdf &&
+        !b.isTerminal &&
+        (!b.isVirtual || b.isAgent),
+    )
+    .map((buffer) =>
+      buffer.isAgent
+        ? {
+            kind: "agent" as const,
+            sessionId: buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY,
+            name: buffer.name,
+            isPinned: buffer.isPinned,
+          }
+        : {
+            kind: "file" as const,
+            path: buffer.path,
+            name: buffer.name,
+            isPinned: buffer.isPinned,
+          },
+    );
+};
+
+export const serializeActiveProjectBuffer = (
+  buffers: Buffer[],
+  activeBufferId: string | null,
+): ActiveSessionBuffer | null => {
+  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  if (!activeBuffer) return null;
+
+  if (activeBuffer.isAgent) {
+    return {
+      kind: "agent",
+      sessionId: activeBuffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY,
+    };
+  }
+
+  if (
+    activeBuffer.isVirtual ||
+    activeBuffer.isDiff ||
+    activeBuffer.isImage ||
+    activeBuffer.isSQLite ||
+    activeBuffer.isMarkdownPreview ||
+    activeBuffer.isHtmlPreview ||
+    activeBuffer.isCsvPreview ||
+    activeBuffer.isExternalEditor ||
+    activeBuffer.isWebViewer ||
+    activeBuffer.isPullRequest ||
+    activeBuffer.isPdf ||
+    activeBuffer.isTerminal
+  ) {
+    return null;
+  }
+
+  return { kind: "file", path: activeBuffer.path };
+};
 
 const saveSessionToStore = (_buffers: Buffer[], _activeBufferId: string | null) => {
   if (saveSessionTimer) clearTimeout(saveSessionTimer);
@@ -211,51 +328,10 @@ const saveSessionToStoreImmediate = (buffers: Buffer[], activeBufferId: string |
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer/PR/terminal/agent buffers
-    const persistableBuffers = buffers
-      .filter(
-        (b) =>
-          !b.isVirtual &&
-          !b.isDiff &&
-          !b.isImage &&
-          !b.isSQLite &&
-          !b.isMarkdownPreview &&
-          !b.isHtmlPreview &&
-          !b.isCsvPreview &&
-          !b.isExternalEditor &&
-          !b.isWebViewer &&
-          !b.isPullRequest &&
-          !b.isPdf &&
-          !b.isTerminal &&
-          !b.isAgent,
-      )
-      .map((b) => ({
-        path: b.path,
-        name: b.name,
-        isPinned: b.isPinned,
-      }));
+    const persistableBuffers = serializeProjectSessionBuffers(buffers);
+    const activeBuffer = serializeActiveProjectBuffer(buffers, activeBufferId);
 
-    // Find the active buffer path
-    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-    const activeBufferPath =
-      activeBuffer &&
-      !activeBuffer.isVirtual &&
-      !activeBuffer.isDiff &&
-      !activeBuffer.isImage &&
-      !activeBuffer.isSQLite &&
-      !activeBuffer.isMarkdownPreview &&
-      !activeBuffer.isHtmlPreview &&
-      !activeBuffer.isCsvPreview &&
-      !activeBuffer.isExternalEditor &&
-      !activeBuffer.isWebViewer &&
-      !activeBuffer.isPullRequest &&
-      !activeBuffer.isPdf &&
-      !activeBuffer.isTerminal &&
-      !activeBuffer.isAgent
-        ? activeBuffer.path
-        : null;
-
-    useSessionStore.getState().saveSession(rootFolderPath, persistableBuffers, activeBufferPath);
+    useSessionStore.getState().saveSession(rootFolderPath, persistableBuffers, activeBuffer);
   });
 };
 
@@ -313,6 +389,7 @@ export const useBufferStore = createSelectors(
               }));
             });
             syncBufferToPane(existing.id);
+            saveSessionToStore(get().buffers, get().activeBufferId);
             return existing.id;
           }
 
@@ -608,6 +685,7 @@ export const useBufferStore = createSelectors(
           });
 
           syncBufferToPane(newBuffer.id);
+          saveSessionToStore(get().buffers, get().activeBufferId);
           return newBuffer.id;
         },
 
@@ -733,31 +811,25 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
-        openAgentBuffer: (sessionId?: string): string => {
+        openAgentBuffer: (sessionId = DEFAULT_HARNESS_SESSION_KEY): string => {
           const { buffers, maxOpenTabs } = get();
 
-          // If sessionId provided, check if already open
-          if (sessionId) {
-            const existing = buffers.find((b) => b.isAgent && b.agentSessionId === sessionId);
-            if (existing) {
-              set((state) => {
-                state.activeBufferId = existing.id;
-                state.buffers = state.buffers.map((b) => ({
-                  ...b,
-                  isActive: b.id === existing.id,
-                }));
-              });
-              syncBufferToPane(existing.id);
-              return existing.id;
-            }
+          const agentSessionId = sessionId;
+          const existing = buffers.find((b) => b.isAgent && b.agentSessionId === agentSessionId);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            syncBufferToPane(existing.id);
+            return existing.id;
           }
 
-          // Count existing agent buffers to generate next number
-          const agentCount = buffers.filter((b) => b.isAgent).length;
-          const agentNumber = agentCount + 1;
-          const agentSessionId = sessionId || `agent-tab-${Date.now()}`;
           const path = `agent://${agentSessionId}`;
-          const displayName = `Agent ${agentNumber}`;
+          const displayName = getDefaultHarnessBufferTitle(agentSessionId);
 
           // Handle max tabs limit
           let newBuffers = [...buffers];
@@ -803,10 +875,47 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
+        createAgentBuffer: (): string => {
+          return get().actions.openAgentBuffer(createHarnessSessionKey());
+        },
+
+        setAgentBufferTitle: (sessionId: string, title?: string | null) => {
+          set((state) => {
+            const buffer = state.buffers.find(
+              (entry) => entry.isAgent && entry.agentSessionId === sessionId,
+            );
+            if (!buffer) return;
+
+            const nextTitle = getHarnessBufferTitle(sessionId, title);
+            if (buffer.name === nextTitle) return;
+
+            buffer.name = nextTitle;
+          });
+
+          saveSessionToStore(get().buffers, get().activeBufferId);
+        },
+
         closeBuffer: (bufferId: string) => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
 
           if (!buffer) return;
+
+          if (buffer.isAgent) {
+            void (async () => {
+              try {
+                await stopHarnessBufferSession(buffer);
+              } catch (error) {
+                logger.error(
+                  "BufferStore",
+                  "Failed to stop Harness session before closing:",
+                  error,
+                );
+              } finally {
+                get().actions.closeBufferForce(bufferId);
+              }
+            })();
+            return;
+          }
 
           // Check if buffer has unsaved changes
           if (buffer.isDirty) {
@@ -880,16 +989,11 @@ export const useBufferStore = createSelectors(
               .catch((error) => {
                 logger.error("BufferStore", "Failed to stop LSP:", error);
               });
+          }
 
-            // Add to closed history
-            const closedBufferInfo: ClosedBuffer = {
-              path: closedBuffer.path,
-              name: closedBuffer.name,
-              isPinned: closedBuffer.isPinned,
-            };
-
-            // Keep only last N closed buffers
-            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
+          const closedBufferEntry = createClosedBufferHistoryEntry(closedBuffer);
+          if (closedBufferEntry) {
+            const updatedHistory = [closedBufferEntry, ...closedBuffersHistory].slice(
               0,
               EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
             );
@@ -1106,7 +1210,14 @@ export const useBufferStore = createSelectors(
             return;
           }
 
-          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+          buffersToClose.forEach((buffer) => {
+            if (buffer.isAgent) {
+              get().actions.closeBuffer(buffer.id);
+              return;
+            }
+
+            get().actions.closeBufferForce(buffer.id);
+          });
         },
 
         handleCloseAllTabs: () => {
@@ -1125,7 +1236,14 @@ export const useBufferStore = createSelectors(
             return;
           }
 
-          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+          buffersToClose.forEach((buffer) => {
+            if (buffer.isAgent) {
+              get().actions.closeBuffer(buffer.id);
+              return;
+            }
+
+            get().actions.closeBufferForce(buffer.id);
+          });
         },
 
         handleCloseTabsToRight: (bufferId: string) => {
@@ -1147,7 +1265,14 @@ export const useBufferStore = createSelectors(
             return;
           }
 
-          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+          buffersToClose.forEach((buffer) => {
+            if (buffer.isAgent) {
+              get().actions.closeBuffer(buffer.id);
+              return;
+            }
+
+            get().actions.closeBufferForce(buffer.id);
+          });
         },
 
         reorderBuffers: (startIndex: number, endIndex: number) => {
@@ -1290,14 +1415,28 @@ export const useBufferStore = createSelectors(
               if (keepBufferId) {
                 const { buffers } = get();
                 const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
-                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                buffersToClose.forEach((buffer) => {
+                  if (buffer.isAgent) {
+                    get().actions.closeBuffer(buffer.id);
+                    return;
+                  }
+
+                  get().actions.closeBufferForce(buffer.id);
+                });
               }
               break;
             case "all":
               {
                 const { buffers } = get();
                 const buffersToClose = buffers.filter((b) => !b.isPinned);
-                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                buffersToClose.forEach((buffer) => {
+                  if (buffer.isAgent) {
+                    get().actions.closeBuffer(buffer.id);
+                    return;
+                  }
+
+                  get().actions.closeBufferForce(buffer.id);
+                });
               }
               break;
             case "to-right":
@@ -1306,7 +1445,14 @@ export const useBufferStore = createSelectors(
                 const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
                 if (bufferIndex !== -1) {
                   const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
-                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                  buffersToClose.forEach((buffer) => {
+                    if (buffer.isAgent) {
+                      get().actions.closeBuffer(buffer.id);
+                      return;
+                    }
+
+                    get().actions.closeBufferForce(buffer.id);
+                  });
                 }
               }
               break;
@@ -1334,6 +1480,15 @@ export const useBufferStore = createSelectors(
             state.closedBuffersHistory = remainingHistory;
           });
 
+          if (closedBuffer.kind === "agent") {
+            const bufferId = get().actions.openAgentBuffer(closedBuffer.sessionId);
+            const reopenedBuffer = get().buffers.find((buffer) => buffer.id === bufferId);
+            if (reopenedBuffer && reopenedBuffer.isPinned !== closedBuffer.isPinned) {
+              get().actions.handleTabPin(reopenedBuffer.id);
+            }
+            return;
+          }
+
           try {
             // Read the file content and reopen it
             const content = await readFileContent(closedBuffer.path);
@@ -1353,6 +1508,32 @@ export const useBufferStore = createSelectors(
             }
           } catch (error) {
             logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
+          }
+        },
+
+        reopenClosedHarnessSession: async () => {
+          const { closedBuffersHistory } = get();
+          const closedHarnessSession = getMostRecentClosedHarnessSession(closedBuffersHistory);
+
+          if (!closedHarnessSession) {
+            return;
+          }
+
+          set((state) => {
+            state.closedBuffersHistory = state.closedBuffersHistory.filter(
+              (entry) =>
+                !(
+                  entry.kind === "agent" &&
+                  entry.sessionId === closedHarnessSession.sessionId &&
+                  entry.name === closedHarnessSession.name
+                ),
+            );
+          });
+
+          const bufferId = get().actions.openAgentBuffer(closedHarnessSession.sessionId);
+          const reopenedBuffer = get().buffers.find((buffer) => buffer.id === bufferId);
+          if (reopenedBuffer && reopenedBuffer.isPinned !== closedHarnessSession.isPinned) {
+            get().actions.handleTabPin(reopenedBuffer.id);
           }
         },
       },

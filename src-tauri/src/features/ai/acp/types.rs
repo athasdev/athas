@@ -34,6 +34,21 @@ pub struct SessionModeState {
    pub available_modes: Vec<SessionMode>,
 }
 
+/// Runtime state cached for an agent session
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpRuntimeState {
+   pub agent_id: String,
+   pub source: Option<String>,
+   pub session_id: Option<String>,
+   pub session_path: Option<String>,
+   pub workspace_path: Option<String>,
+   pub provider: Option<String>,
+   pub model_id: Option<String>,
+   pub thinking_level: Option<String>,
+   pub behavior: Option<String>,
+}
+
 /// Reason why a prompt turn ended
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -143,6 +158,26 @@ pub struct AcpAgentStatus {
    pub session_id: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BootstrapMessage {
+   pub role: String,
+   pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpBootstrapContext {
+   pub conversation_history: Vec<BootstrapMessage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpToolLocation {
+   pub path: String,
+   pub line: Option<u32>,
+}
+
 /// Content block types in ACP messages
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -180,6 +215,7 @@ pub enum AcpEvent {
    /// User message content chunk
    #[serde(rename_all = "camelCase")]
    UserMessageChunk {
+      route_key: String,
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
@@ -187,6 +223,7 @@ pub enum AcpEvent {
    /// Agent message content chunk
    #[serde(rename_all = "camelCase")]
    ContentChunk {
+      route_key: String,
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
@@ -194,6 +231,7 @@ pub enum AcpEvent {
    /// Agent thought content chunk
    #[serde(rename_all = "camelCase")]
    ThoughtChunk {
+      route_key: String,
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
@@ -201,6 +239,7 @@ pub enum AcpEvent {
    /// Tool use started
    #[serde(rename_all = "camelCase")]
    ToolStart {
+      route_key: String,
       session_id: String,
       tool_name: String,
       tool_id: String,
@@ -209,64 +248,128 @@ pub enum AcpEvent {
    /// Tool use completed
    #[serde(rename_all = "camelCase")]
    ToolComplete {
+      route_key: String,
       session_id: String,
       tool_id: String,
       success: bool,
+      output: Option<serde_json::Value>,
+      locations: Option<Vec<AcpToolLocation>>,
    },
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
    PermissionRequest {
+      route_key: String,
       request_id: String,
       permission_type: String,
       resource: String,
       description: String,
+      title: Option<String>,
+      placeholder: Option<String>,
+      default_value: Option<String>,
+      options: Option<Vec<String>>,
    },
    /// Session completed
    #[serde(rename_all = "camelCase")]
-   SessionComplete { session_id: String },
+   SessionComplete {
+      route_key: String,
+      session_id: String,
+   },
    /// Error occurred
    #[serde(rename_all = "camelCase")]
    Error {
+      route_key: String,
       session_id: Option<String>,
       error: String,
    },
    /// Agent status changed
    #[serde(rename_all = "camelCase")]
-   StatusChanged { status: AcpAgentStatus },
+   StatusChanged {
+      route_key: String,
+      status: AcpAgentStatus,
+   },
    /// Available slash commands updated
    #[serde(rename_all = "camelCase")]
    SlashCommandsUpdate {
+      route_key: String,
       session_id: String,
       commands: Vec<SlashCommand>,
    },
    /// Agent plan update
    #[serde(rename_all = "camelCase")]
    PlanUpdate {
+      route_key: String,
       session_id: String,
       entries: Vec<AcpPlanEntry>,
+   },
+   /// Runtime/session metadata updated
+   #[serde(rename_all = "camelCase")]
+   RuntimeStateUpdate {
+      route_key: String,
+      session_id: Option<String>,
+      runtime_state: AcpRuntimeState,
    },
    /// Session mode state updated (full state with available modes)
    #[serde(rename_all = "camelCase")]
    SessionModeUpdate {
+      route_key: String,
       session_id: String,
       mode_state: SessionModeState,
    },
    /// Current session mode changed (only the current mode id)
    #[serde(rename_all = "camelCase")]
    CurrentModeUpdate {
+      route_key: String,
       session_id: String,
       current_mode_id: String,
    },
    /// Prompt turn completed with a stop reason
    #[serde(rename_all = "camelCase")]
    PromptComplete {
+      route_key: String,
       session_id: String,
       stop_reason: StopReason,
    },
    /// UI action request from agent
    #[serde(rename_all = "camelCase")]
    UiAction {
+      route_key: String,
       session_id: String,
       action: UiAction,
    },
+}
+
+#[cfg(test)]
+mod tests {
+   use super::{AcpAgentStatus, AcpEvent};
+
+   #[test]
+   fn serializes_route_key_as_camel_case() {
+      let event = AcpEvent::StatusChanged {
+         route_key: "harness:session-1".to_string(),
+         status: AcpAgentStatus::default(),
+      };
+
+      let value = serde_json::to_value(event).unwrap();
+      assert_eq!(value["routeKey"], "harness:session-1");
+      assert_eq!(value["type"], "status_changed");
+   }
+
+   #[test]
+   fn serializes_permission_request_route_key() {
+      let event = AcpEvent::PermissionRequest {
+         route_key: "harness:session-2".to_string(),
+         request_id: "req-1".to_string(),
+         permission_type: "tool_call".to_string(),
+         resource: "tool-1".to_string(),
+         description: "Run tool".to_string(),
+         title: None,
+         placeholder: None,
+         default_value: None,
+         options: None,
+      };
+
+      let value = serde_json::to_value(event).unwrap();
+      assert_eq!(value["routeKey"], "harness:session-2");
+      assert_eq!(value["requestId"], "req-1");
+   }
 }

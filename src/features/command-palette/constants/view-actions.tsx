@@ -8,6 +8,7 @@ import {
   PanelLeft,
   RotateCcw,
   Search,
+  Sparkles,
   Terminal,
   ZoomIn,
   ZoomOut,
@@ -34,6 +35,8 @@ interface ViewActionsParams {
   zoomIn: (target: "editor" | "terminal") => void;
   zoomOut: (target: "editor" | "terminal") => void;
   resetZoom: (target: "editor" | "terminal") => void;
+  openAgentBuffer: () => void;
+  createAgentBuffer: () => void;
   openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
 }
@@ -53,6 +56,8 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     zoomIn,
     zoomOut,
     resetZoom,
+    createAgentBuffer,
+    openAgentBuffer,
     openWebViewerBuffer,
     onClose,
   } = params;
@@ -259,6 +264,28 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       category: "Terminal",
       action: () => {
         resetZoom("terminal");
+        onClose();
+      },
+    },
+    {
+      id: "open-harness",
+      label: "View: Open Harness",
+      description: "Open the harness workspace tab",
+      icon: <Sparkles size={14} />,
+      category: "View",
+      action: () => {
+        openAgentBuffer();
+        onClose();
+      },
+    },
+    {
+      id: "new-harness-session",
+      label: "View: New Harness Session",
+      description: "Open a new harness session tab",
+      icon: <Sparkles size={14} />,
+      category: "View",
+      action: () => {
+        createAgentBuffer();
         onClose();
       },
     },

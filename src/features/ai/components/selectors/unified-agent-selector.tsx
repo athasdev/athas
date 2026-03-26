@@ -3,15 +3,23 @@ import { Check, ChevronDown, Key, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
-import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
+import {
+  AGENT_OPTIONS,
+  type AgentType,
+  type AIChatSurface,
+  type ChatScopeId,
+} from "@/features/ai/types/ai-chat";
 import { getAvailableProviders } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
 import { getProvider } from "@/utils/providers";
 
 interface UnifiedAgentSelectorProps {
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
   variant?: "header" | "input";
   onOpenSettings?: () => void;
 }
@@ -24,6 +32,7 @@ interface DropdownPosition {
 }
 
 export function UnifiedAgentSelector({
+  scopeId,
   variant = "header",
   onOpenSettings,
 }: UnifiedAgentSelectorProps) {
@@ -35,18 +44,19 @@ export function UnifiedAgentSelector({
   const [position, setPosition] = useState<DropdownPosition | null>(null);
 
   const { settings, updateSetting } = useSettingsStore();
+  const chatState = useChatState(scopeId);
   const { dynamicModels, setDynamicModels } = useAIChatStore();
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
-  const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
-  const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
+  const chatActions = useChatActions(scopeId);
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const currentAgentId = getCurrentAgentId();
+  const currentAgentId = useMemo(() => {
+    const currentChat = chatState.chats.find((chat) => chat.id === chatState.currentChatId);
+    return currentChat?.agentId ?? chatState.selectedAgentId;
+  }, [chatState.chats, chatState.currentChatId, chatState.selectedAgentId]);
   const currentAgent = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
   const isCustomAgent = currentAgentId === "custom";
   const providers = getAvailableProviders();
@@ -298,30 +308,30 @@ export function UnifiedAgentSelector({
 
       // In header variant, selecting Custom API should show models tab
       if (variant === "header" && agentId === "custom") {
-        setSelectedAgentId(agentId);
+        chatActions.setSelectedAgentId(agentId);
         setActiveSection("models");
         return;
       }
 
       setIsOpen(false);
-      setSelectedAgentId(agentId);
+      chatActions.setSelectedAgentId(agentId);
 
       const currentAgentInfo = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
       if (currentAgentInfo?.isAcp) {
         try {
-          await invoke("stop_acp_agent");
+          await invoke("stop_acp_agent", { routeKey: scopeId ?? "panel" });
         } catch {
           // Silent fail
         }
       }
 
       if (variant === "header") {
-        createNewChat(agentId);
+        chatActions.createNewChat(agentId);
       } else {
-        changeCurrentChatAgent(agentId);
+        chatActions.changeCurrentChatAgent(agentId);
       }
     },
-    [variant, currentAgentId, setSelectedAgentId, changeCurrentChatAgent, createNewChat],
+    [chatActions, currentAgentId, scopeId, variant],
   );
 
   const handleModelSelect = useCallback(
@@ -330,10 +340,10 @@ export function UnifiedAgentSelector({
       updateSetting("aiModelId", modelId);
       setIsOpen(false);
       if (variant === "header") {
-        createNewChat();
+        chatActions.createNewChat();
       }
     },
-    [updateSetting, variant, createNewChat],
+    [chatActions, updateSetting, variant],
   );
 
   const handleKeyDown = useCallback(

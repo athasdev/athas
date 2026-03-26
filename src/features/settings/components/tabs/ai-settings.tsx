@@ -2,6 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AIModelSelector } from "@/features/ai/components/selectors/ai-model-selector";
+import {
+  CHAT_COMPACTION_POLICY_OPTIONS,
+  type ChatCompactionPolicy,
+  isAutoCompactionEnabled,
+} from "@/features/ai/lib/chat-compaction-policy";
+import { PANEL_CHAT_SCOPE_ID } from "@/features/ai/lib/chat-scope";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -67,9 +73,14 @@ export const AISettings = () => {
 
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
-      setAvailableModes(state.sessionModeState.availableModes);
+      setAvailableModes(
+        state.chatScopes[PANEL_CHAT_SCOPE_ID]?.sessionModeState.availableModes ?? [],
+      );
     });
-    setAvailableModes(useAIChatStore.getState().sessionModeState.availableModes);
+    setAvailableModes(
+      useAIChatStore.getState().chatScopes[PANEL_CHAT_SCOPE_ID]?.sessionModeState.availableModes ??
+        [],
+    );
     return unsubscribe;
   }, []);
 
@@ -152,6 +163,7 @@ export const AISettings = () => {
   );
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
+  const isAutoCompactionActive = isAutoCompactionEnabled(settings.aiAutoCompactionPolicy);
 
   return (
     <div className="space-y-4">
@@ -306,6 +318,55 @@ export const AISettings = () => {
             {byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}
           </div>
         ) : null}
+      </Section>
+
+      <Section title="Chat Behavior">
+        <SettingRow
+          label="Compaction Mode"
+          description="Choose when chats auto-compact. Manual compact stays available either way."
+        >
+          <Dropdown
+            value={settings.aiAutoCompactionPolicy}
+            options={CHAT_COMPACTION_POLICY_OPTIONS}
+            onChange={(value) =>
+              updateSetting("aiAutoCompactionPolicy", value as ChatCompactionPolicy)
+            }
+            size="xs"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Reserve Tokens"
+          description="How much context budget to keep free when auto-compaction runs"
+        >
+          <input
+            type="number"
+            min={1024}
+            max={262144}
+            step={1024}
+            value={settings.aiAutoCompactionReserveTokens}
+            onChange={(e) =>
+              updateSetting("aiAutoCompactionReserveTokens", Number(e.target.value) || 1024)
+            }
+            disabled={!isAutoCompactionActive}
+            className="w-24 rounded-lg border border-border bg-secondary-bg px-2 py-1 text-right text-text text-xs focus:border-accent focus:outline-none disabled:opacity-50"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Keep Recent Tokens"
+          description="Approximate recent context preserved verbatim after compaction"
+        >
+          <input
+            type="number"
+            min={1024}
+            max={262144}
+            step={1024}
+            value={settings.aiAutoCompactionKeepRecentTokens}
+            onChange={(e) =>
+              updateSetting("aiAutoCompactionKeepRecentTokens", Number(e.target.value) || 1024)
+            }
+            className="w-24 rounded-lg border border-border bg-secondary-bg px-2 py-1 text-right text-text text-xs focus:border-accent focus:outline-none disabled:opacity-50"
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Chat History">

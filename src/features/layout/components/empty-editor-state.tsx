@@ -27,8 +27,13 @@ interface ActionItem {
 }
 
 export function EmptyEditorState() {
-  const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
-    useBufferStore.use.actions();
+  const {
+    createAgentBuffer,
+    openTerminalBuffer,
+    openAgentBuffer,
+    openWebViewerBuffer,
+    openBuffer,
+  } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
 
   const customActions = useCustomActionsStore.use.actions();
@@ -48,6 +53,10 @@ export function EmptyEditorState() {
   const handleOpenAgent = useCallback(() => {
     openAgentBuffer();
   }, [openAgentBuffer]);
+
+  const handleCreateAgent = useCallback(() => {
+    createAgentBuffer();
+  }, [createAgentBuffer]);
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
@@ -145,9 +154,15 @@ export function EmptyEditorState() {
       },
       {
         id: "new-agent",
-        label: "New Agent",
+        label: "Open Harness",
         icon: <Sparkles size={12} />,
         onClick: handleOpenAgent,
+      },
+      {
+        id: "new-agent-session",
+        label: "New Harness Session",
+        icon: <Plus size={12} />,
+        onClick: handleCreateAgent,
       },
       {
         id: "open-url",
@@ -156,7 +171,14 @@ export function EmptyEditorState() {
         onClick: handleOpenWebViewer,
       },
     ];
-  }, [handleOpenFolder, handleOpenFile, handleOpenTerminal, handleOpenAgent, handleOpenWebViewer]);
+  }, [
+    handleCreateAgent,
+    handleOpenFolder,
+    handleOpenFile,
+    handleOpenTerminal,
+    handleOpenAgent,
+    handleOpenWebViewer,
+  ]);
 
   const actions: ActionItem[] = [
     {
@@ -179,9 +201,15 @@ export function EmptyEditorState() {
     },
     {
       id: "agent",
-      label: "New Agent",
+      label: "Open Harness",
       icon: <Sparkles size={14} className="text-text-light" />,
       action: handleOpenAgent,
+    },
+    {
+      id: "agent-session",
+      label: "New Harness Session",
+      icon: <Plus size={14} className="text-text-light" />,
+      action: handleCreateAgent,
     },
     {
       id: "web",

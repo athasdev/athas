@@ -372,7 +372,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 key={buffer.id}
                 className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
               >
-                <AgentTab />
+                <AgentTab buffer={buffer} />
               </div>
             ))}
 

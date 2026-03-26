@@ -4,4 +4,4 @@ mod config;
 pub mod types;
 
 pub use bridge::AcpAgentBridge;
-pub use types::{AcpAgentStatus, AgentConfig};
+pub use types::{AcpAgentStatus, AcpBootstrapContext, AgentConfig};

@@ -325,6 +325,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Use your own OpenRouter API key for autocomplete on the free plan",
     keywords: ["ai", "autocomplete", "byok", "openrouter", "api key", "free"],
   },
+  {
+    id: "ai-auto-compaction",
+    tab: "ai",
+    section: "Chat Behavior",
+    label: "Compaction Mode",
+    description: "Choose whether chats compact before send, on overflow, both, or manual only",
+    keywords: ["ai", "compact", "compaction", "context", "overflow", "threshold", "manual"],
+  },
+  {
+    id: "ai-auto-compaction-reserve",
+    tab: "ai",
+    section: "Chat Behavior",
+    label: "Reserve Tokens",
+    description: "How much context budget to keep free before auto-compaction triggers",
+    keywords: ["ai", "compact", "compaction", "reserve", "tokens", "context window"],
+  },
+  {
+    id: "ai-auto-compaction-keep-recent",
+    tab: "ai",
+    section: "Chat Behavior",
+    label: "Keep Recent Tokens",
+    description: "How much recent context to preserve verbatim after compaction",
+    keywords: ["ai", "compact", "compaction", "recent", "tokens", "history"],
+  },
 
   // Keyboard Settings
   {

@@ -4,16 +4,30 @@ import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface BufferSession {
-  id?: string;
+  kind?: "file";
   path: string;
   name: string;
   isPinned: boolean;
 }
 
+export interface AgentBufferSession {
+  kind: "agent";
+  sessionId: string;
+  name: string;
+  isPinned: boolean;
+}
+
+export type PersistedBufferSession = BufferSession | AgentBufferSession;
+
+export type ActiveSessionBuffer =
+  | { kind: "file"; path: string }
+  | { kind: "agent"; sessionId: string };
+
 interface ProjectSession {
   projectPath: string;
+  activeBuffer: ActiveSessionBuffer | null;
   activeBufferPath: string | null;
-  buffers: BufferSession[];
+  buffers: PersistedBufferSession[];
   terminals: PersistedTerminal[];
   lastSaved: number;
 }
@@ -22,8 +36,8 @@ interface SessionState {
   sessions: Record<string, ProjectSession>;
   saveSession: (
     projectPath: string,
-    buffers: BufferSession[],
-    activeBufferPath: string | null,
+    buffers: PersistedBufferSession[],
+    activeBuffer: ActiveSessionBuffer | null,
     terminals?: PersistedTerminal[],
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
@@ -36,13 +50,14 @@ const useSessionStoreBase = create<SessionState>()(
     (set, get) => ({
       sessions: {},
 
-      saveSession: (projectPath, buffers, activeBufferPath, terminals = []) => {
+      saveSession: (projectPath, buffers, activeBuffer, terminals = []) => {
         set((state) => ({
           sessions: {
             ...state.sessions,
             [projectPath]: {
               projectPath,
-              activeBufferPath,
+              activeBuffer,
+              activeBufferPath: activeBuffer?.kind === "file" ? activeBuffer.path : null,
               buffers,
               terminals,
               lastSaved: Date.now(),
@@ -68,7 +83,7 @@ const useSessionStoreBase = create<SessionState>()(
     }),
     {
       name: "athas-tab-sessions",
-      version: 1,
+      version: 2,
     },
   ),
 );

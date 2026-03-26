@@ -2,7 +2,12 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpEvent } from "@/features/ai/types/acp";
-import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
+import {
+  AGENT_OPTIONS,
+  type AgentType,
+  type AIChatSurface,
+  type ChatScopeId,
+} from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
 import { AcpStreamHandler } from "./acp-handler";
@@ -39,18 +44,23 @@ export const getChatCompletionStream = async (
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
   onToolUse?: (toolName: string, toolInput?: any, toolId?: string) => void,
-  onToolComplete?: (toolName: string, toolId?: string) => void,
+  onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void,
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void,
   onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
   onImageChunk?: (data: string, mediaType: string) => void,
   onResourceChunk?: (uri: string, name: string | null) => void,
+  surface: AIChatSurface = "panel",
+  acpResumeKey: ChatScopeId = "panel",
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
     if (isAcpAgent(agentId)) {
       const handler = new AcpStreamHandler(agentId, {
+        surface,
+        scopeId: acpResumeKey,
+        resumeKey: acpResumeKey,
         onChunk,
         onComplete,
         onError,
@@ -62,7 +72,7 @@ export const getChatCompletionStream = async (
         onImageChunk,
         onResourceChunk,
       });
-      await handler.start(userMessage, context);
+      await handler.start(userMessage, context, conversationHistory);
       return;
     }
 

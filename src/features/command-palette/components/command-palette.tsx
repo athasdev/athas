@@ -79,10 +79,12 @@ const CommandPalette = () => {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const {
     closeBuffer,
+    createAgentBuffer,
     setActiveBuffer,
     switchToNextBuffer,
     switchToPreviousBuffer,
     reopenClosedTab,
+    openAgentBuffer,
     openWebViewerBuffer,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
@@ -125,6 +127,8 @@ const CommandPalette = () => {
       zoomIn,
       zoomOut,
       resetZoom,
+      createAgentBuffer,
+      openAgentBuffer,
       openWebViewerBuffer,
       onClose,
     }),

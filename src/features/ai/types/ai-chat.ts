@@ -1,4 +1,11 @@
 import type React from "react";
+import type {
+  AcpPlanEntry,
+  AcpRuntimeState,
+  SessionMode,
+  SlashCommand,
+} from "@/features/ai/types/acp";
+import type { ChatAcpEvent, ChatAcpPermissionRequest } from "@/features/ai/types/chat-ui";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
@@ -22,11 +29,37 @@ export interface ResourceContent {
   name: string | null;
 }
 
+export type ChatScopeId = "panel" | `harness:${string}`;
+export type ChatMessageKind = "default" | "compaction-summary" | "branch-summary";
+export type CompactionTrigger = "manual" | "threshold" | "overflow";
+
+export interface CompactionSummaryMeta {
+  type: "compaction";
+  firstKeptLineageMessageId: string | null;
+  tokensBefore: number;
+  trigger: CompactionTrigger;
+}
+
+export interface BranchSummaryMeta {
+  type: "branch";
+  sourceChatId: string;
+  sourceChatTitle: string;
+  sourceRootChatId: string;
+  sourceSessionName: string | null;
+  commonAncestorLineageMessageId: string | null;
+  sourceLastLineageMessageId: string | null;
+}
+
+export type SummaryMessageMeta = CompactionSummaryMeta | BranchSummaryMeta;
+
 export interface Message {
   id: string;
+  lineageMessageId: string;
   content: string;
   role: "user" | "assistant" | "system";
   timestamp: Date;
+  kind?: ChatMessageKind;
+  summaryMeta?: SummaryMessageMeta;
   isStreaming?: boolean;
   isToolUse?: boolean;
   toolName?: string;
@@ -35,6 +68,8 @@ export interface Message {
   resources?: ResourceContent[];
 }
 
+export type AIChatSurface = "panel" | "harness";
+
 // Agent types for AI chat
 export type AgentType =
   | "claude-code"
@@ -42,6 +77,7 @@ export type AgentType =
   | "gemini-cli"
   | "kimi-cli"
   | "opencode"
+  | "pi"
   | "qwen-code"
   | "custom";
 
@@ -84,6 +120,12 @@ export const AGENT_OPTIONS: AgentInfo[] = [
     isAcp: true,
   },
   {
+    id: "pi",
+    name: "Pi",
+    description: "Pi Coding Agent",
+    isAcp: true,
+  },
+  {
     id: "qwen-code",
     name: "Qwen Code",
     description: "Alibaba Qwen Code",
@@ -97,6 +139,20 @@ export const AGENT_OPTIONS: AgentInfo[] = [
   },
 ];
 
+export interface ChatAcpState {
+  preferredModeId: string | null;
+  currentModeId: string | null;
+  availableModes: SessionMode[];
+  slashCommands: SlashCommand[];
+  runtimeState: AcpRuntimeState | null;
+}
+
+export interface ChatAcpActivity {
+  events: ChatAcpEvent[];
+  planEntries: AcpPlanEntry[];
+  permissions: ChatAcpPermissionRequest[];
+}
+
 export interface Chat {
   id: string;
   title: string;
@@ -104,6 +160,13 @@ export interface Chat {
   createdAt: Date;
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
+  parentChatId: string | null;
+  rootChatId: string;
+  branchPointMessageId: string | null;
+  lineageDepth: number;
+  sessionName: string | null;
+  acpState?: ChatAcpState | null;
+  acpActivity?: ChatAcpActivity | null;
 }
 
 export interface ContextInfo {
@@ -118,6 +181,9 @@ export interface ContextInfo {
 
 export interface AIChatProps {
   className?: string;
+  surface?: AIChatSurface;
+  sessionKey?: string;
+  scopeId?: ChatScopeId;
   // Context from the main app
   activeBuffer?: Buffer | null;
   buffers?: Buffer[];
@@ -146,6 +212,8 @@ export interface MarkdownRendererProps {
 export interface AIChatInputBarProps {
   buffers: Buffer[];
   allProjectFiles: FileEntry[];
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

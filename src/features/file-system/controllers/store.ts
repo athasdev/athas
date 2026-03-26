@@ -4,8 +4,15 @@ import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { buildHarnessTransitionPromptMessage } from "@/features/ai/lib/harness-session-lifecycle";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import {
+  getRunningHarnessBuffers,
+  serializeActiveProjectBuffer,
+  serializeProjectSessionBuffers,
+  stopHarnessBufferSession,
+  useBufferStore,
+} from "@/features/editor/stores/buffer-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
 import { getGitStatus } from "@/features/git/api/status";
 import { useGitBlameStore } from "@/features/git/stores/blame-store";
@@ -65,6 +72,41 @@ const wrapWithRootFolder = (
 };
 
 let latestFileOpenRequestId = 0;
+
+const confirmAndStopRunningHarnessSessions = async (actionLabel: string): Promise<boolean> => {
+  const { buffers } = useBufferStore.getState();
+  const runningHarnessBuffers = await getRunningHarnessBuffers(buffers);
+
+  if (runningHarnessBuffers.length === 0) {
+    return true;
+  }
+
+  const confirmed = window.confirm(
+    buildHarnessTransitionPromptMessage(
+      actionLabel,
+      runningHarnessBuffers.map((buffer) => buffer.name),
+    ),
+  );
+
+  if (!confirmed) {
+    return false;
+  }
+
+  const stopResults = await Promise.allSettled(
+    runningHarnessBuffers.map((buffer) => stopHarnessBufferSession(buffer)),
+  );
+
+  if (stopResults.some((result) => result.status === "rejected")) {
+    stopResults.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error("Failed to stop Harness session before project transition", result.reason);
+      }
+    });
+    return false;
+  }
+
+  return true;
+};
 
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
@@ -181,22 +223,47 @@ export const useFileSystemStore = createSelectors(
 
           // Restore buffers
           for (const buffer of session.buffers) {
+            if (buffer.kind === "agent") {
+              const bufferId = bufferActions.openAgentBuffer(buffer.sessionId);
+              if (buffer.isPinned) {
+                const openedBuffer = useBufferStore
+                  .getState()
+                  .buffers.find((b) => b.id === bufferId);
+                if (openedBuffer && !openedBuffer.isPinned) {
+                  bufferActions.handleTabPin(openedBuffer.id);
+                }
+              }
+              continue;
+            }
+
             // Use handleFileSelect to open the file (it handles reading content)
             await get().handleFileSelect(buffer.path, false);
 
-            // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
-            // We can pin it after opening if needed.
             if (buffer.isPinned) {
               const newBuffers = useBufferStore.getState().buffers;
               const openedBuffer = newBuffers.find((b) => b.path === buffer.path);
-              if (openedBuffer) {
+              if (openedBuffer && !openedBuffer.isPinned) {
                 bufferActions.handleTabPin(openedBuffer.id);
               }
             }
           }
 
           // Restore active buffer
-          if (session.activeBufferPath) {
+          if (session.activeBuffer?.kind === "agent") {
+            const { sessionId } = session.activeBuffer;
+            const { buffers } = useBufferStore.getState();
+            const activeBuffer = buffers.find((b) => b.isAgent && b.agentSessionId === sessionId);
+            if (activeBuffer) {
+              useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+            }
+          } else if (session.activeBuffer?.kind === "file") {
+            const { path } = session.activeBuffer;
+            const { buffers } = useBufferStore.getState();
+            const activeBuffer = buffers.find((b) => b.path === path);
+            if (activeBuffer) {
+              useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+            }
+          } else if (session.activeBufferPath) {
             const { buffers } = useBufferStore.getState();
             const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
             if (activeBuffer) {
@@ -226,6 +293,10 @@ export const useFileSystemStore = createSelectors(
         }
 
         // Fallback: Reset all project-related state to return to welcome screen
+        if (!(await confirmAndStopRunningHarnessSessions("closing the workspace"))) {
+          return false;
+        }
+
         await get().resetWorkspace();
 
         return true;
@@ -1264,6 +1335,10 @@ export const useFileSystemStore = createSelectors(
           return false;
         }
 
+        if (!(await confirmAndStopRunningHarnessSessions("switching projects"))) {
+          return false;
+        }
+
         // Set switching flag to prevent tab bar from hiding
         set((state) => {
           state.isSwitchingProject = true;
@@ -1274,17 +1349,13 @@ export const useFileSystemStore = createSelectors(
         const currentRootPath = get().rootFolderPath;
         if (currentRootPath) {
           const { buffers, activeBufferId } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-          useSessionStore.getState().saveSession(
-            currentRootPath,
-            buffers.map((b) => ({
-              id: b.id,
-              name: b.name,
-              path: b.path,
-              isPinned: b.isPinned,
-            })),
-            activeBuffer?.path || null,
-          );
+          useSessionStore
+            .getState()
+            .saveSession(
+              currentRootPath,
+              serializeProjectSessionBuffers(buffers),
+              serializeActiveProjectBuffer(buffers, activeBufferId),
+            );
 
           const { actions: bufferActions } = useBufferStore.getState();
           bufferActions.closeBuffersBatch(
@@ -1352,10 +1423,18 @@ export const useFileSystemStore = createSelectors(
         const wasActive = tab.isActive;
         const isLastTab = tabs.length <= 1;
 
+        if (
+          wasActive &&
+          !(await confirmAndStopRunningHarnessSessions(
+            isLastTab ? "closing the workspace" : "closing this project",
+          ))
+        ) {
+          return false;
+        }
+
         // Save session before closing if it's the active project
         if (wasActive) {
           const { buffers, activeBufferId } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
 
           // Get current terminals from local storage (temporary persistence)
           let terminals: any[] = [];
@@ -1368,17 +1447,14 @@ export const useFileSystemStore = createSelectors(
             console.error("Failed to read terminal sessions", e);
           }
 
-          useSessionStore.getState().saveSession(
-            tab.path,
-            buffers.map((b) => ({
-              id: b.id,
-              name: b.name,
-              path: b.path,
-              isPinned: b.isPinned,
-            })),
-            activeBuffer?.path || null,
-            terminals,
-          );
+          useSessionStore
+            .getState()
+            .saveSession(
+              tab.path,
+              serializeProjectSessionBuffers(buffers),
+              serializeActiveProjectBuffer(buffers, activeBufferId),
+              terminals,
+            );
         }
 
         // Remove project tab

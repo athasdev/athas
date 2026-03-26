@@ -141,6 +141,8 @@ export function ProviderIcon({
       return <MoonshotIcon {...props} />;
     case "qwen-code":
       return <QwenIcon {...props} />;
+    case "pi":
+      return <CustomAPIIcon {...props} />;
     case "opencode":
     case "custom":
       return <CustomAPIIcon {...props} />;

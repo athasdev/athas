@@ -1,5 +1,6 @@
 import type { Chat } from "@/features/ai/types/ai-chat";
 import { saveChatToDb } from "@/utils/chat-history-db";
+import { createRootChatLineage, normalizeChatMessage } from "./chat-lineage";
 
 /**
  * Migrate chat history from localStorage to SQLite
@@ -51,17 +52,22 @@ function getLegacyChats(): Chat[] {
     return rawChats.map((chat: any) => ({
       id: chat.id,
       title: chat.title,
-      messages: (chat.messages || []).map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp),
-        toolCalls: msg.toolCalls?.map((tc: any) => ({
-          ...tc,
-          timestamp: new Date(tc.timestamp),
-        })),
-      })),
+      messages: (chat.messages || []).map((msg: any) =>
+        normalizeChatMessage({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+          toolCalls: msg.toolCalls?.map((tc: any) => ({
+            ...tc,
+            timestamp: new Date(tc.timestamp),
+          })),
+        }),
+      ),
       createdAt: new Date(chat.createdAt),
       lastMessageAt: new Date(chat.lastMessageAt),
       agentId: "custom" as const,
+      acpState: null,
+      acpActivity: null,
+      ...createRootChatLineage(chat.id),
     }));
   } catch (error) {
     console.error("Error reading legacy chats:", error);

@@ -1,19 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getChatPreferredAcpModeId } from "@/features/ai/lib/chat-acp-state";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
+import type { AIMessage } from "@/features/ai/types/messages";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { buildContextPrompt } from "./context-builder";
 import type { ContextInfo } from "./types";
 
 interface AcpHandlers {
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
+  resumeKey?: string;
   onChunk: (chunk: string) => void;
   onComplete: () => void;
   onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
   onToolUse?: (toolName: string, toolInput?: unknown, toolId?: string) => void;
-  onToolComplete?: (toolName: string, toolId?: string) => void;
+  onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
   onImageChunk?: (data: string, mediaType: string) => void;
@@ -24,9 +31,13 @@ interface AcpListeners {
   event?: () => void;
 }
 
+interface AcpBootstrapContext {
+  conversationHistory: AIMessage[];
+}
+
 export class AcpStreamHandler {
-  private static activeHandler: AcpStreamHandler | null = null;
-  private static lastSessionIdByAgent = new Map<string, string>();
+  private static activeHandlers = new Map<ChatScopeId, AcpStreamHandler>();
+  private static lastSessionIdByKey = new Map<string, string>();
   private listeners: AcpListeners = {};
   private timeout?: NodeJS.Timeout;
   private lastActivityTime = Date.now();
@@ -35,41 +46,75 @@ export class AcpStreamHandler {
   private pendingNewMessage = false;
   private cancelled = false;
   private wasRunning = false;
+  private sessionId: string | null = null;
+  private readonly surface: AIChatSurface;
+  private readonly scopeId: ChatScopeId;
+  private readonly resumeKey: string;
 
   constructor(
     private agentId: string,
     private handlers: AcpHandlers,
-  ) {}
+  ) {
+    this.surface = handlers.surface ?? "panel";
+    this.scopeId = handlers.scopeId ?? "panel";
+    this.resumeKey = handlers.resumeKey ?? this.scopeId;
+  }
 
-  async start(userMessage: string, context: ContextInfo): Promise<void> {
+  async start(
+    userMessage: string,
+    context: ContextInfo,
+    conversationHistory?: AIMessage[],
+  ): Promise<void> {
     try {
-      AcpStreamHandler.activeHandler = this;
+      AcpStreamHandler.activeHandlers.set(this.scopeId, this);
       await this.setupListeners();
-      await this.ensureAgentRunning();
+      await this.ensureAgentRunning(conversationHistory);
       const fullMessage = this.buildMessage(userMessage, context);
-      await invoke("send_acp_prompt", { prompt: fullMessage });
+      await invoke("send_acp_prompt", { prompt: fullMessage, routeKey: this.resumeKey });
       this.setupTimeout();
     } catch (error) {
       console.error("ACP agent error:", error);
       this.cleanup();
-      this.handlers.onError(`${this.agentId} is currently unavailable`);
+      this.handlers.onError(
+        error instanceof Error ? error.message : `${this.agentId} is currently unavailable`,
+      );
     }
   }
 
-  private async ensureAgentRunning(): Promise<void> {
+  private async ensureAgentRunning(conversationHistory?: AIMessage[]): Promise<void> {
     try {
-      const status = await invoke<AcpAgentStatus>("get_acp_status");
+      const status = await invoke<AcpAgentStatus>("get_acp_status", { routeKey: this.resumeKey });
+      const cachedChatSessionId = this.normalizeResumeSessionId(
+        useAIChatStore.getState().getCurrentChat(this.scopeId)?.acpState?.runtimeState?.sessionId ??
+          null,
+      );
+      const desiredSessionId =
+        this.normalizeResumeSessionId(AcpStreamHandler.lastSessionIdByKey.get(this.resumeKey)) ??
+        cachedChatSessionId;
+      this.setSessionId(desiredSessionId);
+      const shouldReuseRunningSession =
+        status.running &&
+        status.agentId === this.agentId &&
+        (!desiredSessionId || status.sessionId === desiredSessionId);
 
-      if (!status.running || status.agentId !== this.agentId) {
+      if (!shouldReuseRunningSession) {
         console.log(`Starting agent ${this.agentId}...`);
 
         // Get current workspace path if available
         const workspacePath = this.getWorkspacePath();
+        const freshSession = desiredSessionId === null;
+        const bootstrap: AcpBootstrapContext | null =
+          freshSession && conversationHistory && conversationHistory.length > 0
+            ? { conversationHistory }
+            : null;
 
         const startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
           agentId: this.agentId,
           workspacePath,
-          sessionId: AcpStreamHandler.lastSessionIdByAgent.get(this.agentId) ?? null,
+          sessionId: desiredSessionId,
+          freshSession,
+          bootstrap,
+          routeKey: this.resumeKey,
         });
 
         if (!startStatus.running) {
@@ -77,14 +122,17 @@ export class AcpStreamHandler {
         }
 
         if (startStatus.sessionId) {
-          AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, startStatus.sessionId);
+          this.setSessionId(startStatus.sessionId);
         }
-
         this.wasRunning = true;
 
         // Wait for initialization
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (freshSession) {
+          await this.applyPreferredSessionMode();
+        }
       } else {
+        this.setSessionId(status.sessionId ?? desiredSessionId);
         this.wasRunning = true;
       }
     } catch (error) {
@@ -96,9 +144,67 @@ export class AcpStreamHandler {
     return useProjectStore.getState().rootFolderPath ?? null;
   }
 
+  private normalizeResumeSessionId(sessionId: string | null | undefined): string | null {
+    if (!sessionId || sessionId.startsWith("pi:")) {
+      return null;
+    }
+
+    return sessionId;
+  }
+
+  private getPreferredSessionModeId(): string | null {
+    const currentChat = useAIChatStore.getState().getCurrentChat(this.scopeId);
+    const defaultModeId = useSettingsStore.getState().settings.aiDefaultSessionMode;
+    return getChatPreferredAcpModeId(currentChat, defaultModeId);
+  }
+
+  private async applyPreferredSessionMode(): Promise<void> {
+    const preferredModeId = this.getPreferredSessionModeId();
+    if (!preferredModeId) {
+      return;
+    }
+
+    try {
+      await invoke("set_acp_session_mode", { modeId: preferredModeId, routeKey: this.resumeKey });
+    } catch (error) {
+      console.warn("Failed to apply preferred ACP mode:", error);
+    }
+  }
+
   private buildMessage(userMessage: string, context: ContextInfo): string {
     const contextPrompt = buildContextPrompt(context);
-    return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
+    const sections = [contextPrompt, userMessage].filter(Boolean);
+    return sections.join("\n\n");
+  }
+
+  private setSessionId(sessionId: string | null): void {
+    this.sessionId = sessionId;
+    if (!sessionId) return;
+
+    AcpStreamHandler.lastSessionIdByKey.set(this.resumeKey, sessionId);
+  }
+
+  private shouldHandleEvent(event: AcpEvent): boolean {
+    if (event.routeKey !== this.resumeKey) {
+      return false;
+    }
+
+    if (
+      event.type === "runtime_state_update" &&
+      event.runtimeState.sessionId &&
+      event.runtimeState.sessionId !== this.sessionId
+    ) {
+      return true;
+    }
+
+    if ("sessionId" in event && event.sessionId) {
+      if (!this.sessionId) {
+        this.setSessionId(event.sessionId);
+      }
+      return !this.sessionId || event.sessionId === this.sessionId;
+    }
+
+    return true;
   }
 
   private async setupListeners(): Promise<void> {
@@ -108,7 +214,7 @@ export class AcpStreamHandler {
   }
 
   private handleAcpEvent(event: AcpEvent): void {
-    if (this.cancelled) return;
+    if (this.cancelled || !this.shouldHandleEvent(event)) return;
     console.log("ACP event:", event.type);
     if (this.handlers.onEvent) {
       this.handlers.onEvent(event);
@@ -162,12 +268,15 @@ export class AcpStreamHandler {
         break;
 
       case "slash_commands_update":
-        // Handle slash commands update
-        useAIChatStore.getState().setAvailableSlashCommands(event.commands);
+        useAIChatStore.getState().setAvailableSlashCommands(event.commands, this.scopeId);
         break;
 
       case "plan_update":
         // Plan updates are surfaced through generic ACP event stream UI for now
+        break;
+
+      case "runtime_state_update":
+        this.handleRuntimeStateUpdate(event);
         break;
 
       case "prompt_complete":
@@ -190,6 +299,13 @@ export class AcpStreamHandler {
       this.handlers.onComplete();
       return;
     }
+
+    if (event.stopReason === "max_tokens") {
+      this.cleanup();
+      this.handlers.onError("ACP context window exceeded");
+      return;
+    }
+
     // Treat all other stop reasons as completion in case no session_complete arrives
     this.handleSessionComplete();
   }
@@ -198,19 +314,28 @@ export class AcpStreamHandler {
     console.log("Session mode state updated:", event.modeState);
     useAIChatStore
       .getState()
-      .setSessionModeState(event.modeState.currentModeId, event.modeState.availableModes);
+      .setSessionModeState(
+        event.modeState.currentModeId,
+        event.modeState.availableModes,
+        this.scopeId,
+      );
   }
 
   private handleCurrentModeUpdate(event: Extract<AcpEvent, { type: "current_mode_update" }>): void {
     console.log("Current mode changed:", event.currentModeId);
-    useAIChatStore.getState().setCurrentModeId(event.currentModeId);
+    useAIChatStore.getState().setCurrentModeId(event.currentModeId, this.scopeId);
   }
 
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
 
     if (event.status.running && event.status.sessionId) {
-      AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, event.status.sessionId);
+      this.setSessionId(event.status.sessionId);
+    }
+
+    if (!event.status.running) {
+      useAIChatStore.getState().markPendingAcpPermissionsStale(this.scopeId);
+      useAIChatStore.getState().hydrateAcpStateFromCurrentChat(this.scopeId);
     }
 
     // Detect unexpected agent crash: was running but now stopped without user action
@@ -220,6 +345,16 @@ export class AcpStreamHandler {
       // Pass canReconnect=true to indicate the error is recoverable
       this.handlers.onError("Agent disconnected unexpectedly. Click retry to restart.", true);
     }
+  }
+
+  private handleRuntimeStateUpdate(
+    event: Extract<AcpEvent, { type: "runtime_state_update" }>,
+  ): void {
+    if (event.runtimeState.sessionId) {
+      this.setSessionId(event.runtimeState.sessionId);
+    }
+
+    useAIChatStore.getState().setAcpRuntimeState(event.runtimeState, this.scopeId);
   }
 
   private handleUiAction(event: Extract<AcpEvent, { type: "ui_action" }>): void {
@@ -276,7 +411,13 @@ export class AcpStreamHandler {
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
     const toolName = this.activeTools.get(event.toolId);
     if (toolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(toolName, event.toolId);
+      const toolError =
+        event.success === false
+          ? typeof event.output === "string"
+            ? event.output
+            : "Tool failed"
+          : undefined;
+      this.handlers.onToolComplete(toolName, event.toolId, event.output, toolError);
     }
     this.activeTools.delete(event.toolId);
     this.pendingNewMessage = true;
@@ -295,7 +436,9 @@ export class AcpStreamHandler {
         "Permission request received but no handler set, auto-rejecting for safety:",
         event.description,
       );
-      AcpStreamHandler.respondToPermission(event.requestId, false).catch(console.error);
+      AcpStreamHandler.respondToPermission(event.requestId, false, false, this.scopeId).catch(
+        console.error,
+      );
     }
   }
 
@@ -362,8 +505,8 @@ export class AcpStreamHandler {
       this.listeners.event = undefined;
     }
 
-    if (AcpStreamHandler.activeHandler === this) {
-      AcpStreamHandler.activeHandler = null;
+    if (AcpStreamHandler.activeHandlers.get(this.scopeId) === this) {
+      AcpStreamHandler.activeHandlers.delete(this.scopeId);
     }
   }
 
@@ -380,8 +523,12 @@ export class AcpStreamHandler {
     requestId: string,
     approved: boolean,
     cancelled = false,
+    scopeId: ChatScopeId = "panel",
+    value?: string | null,
   ): Promise<void> {
-    await invoke("respond_acp_permission", { args: { requestId, approved, cancelled } });
+    await invoke("respond_acp_permission", {
+      args: { requestId, approved, cancelled, routeKey: scopeId, value },
+    });
   }
 
   // Static method to get available agents
@@ -396,16 +543,24 @@ export class AcpStreamHandler {
     return invoke("get_available_agents");
   }
 
+  static async getStatus(scopeId: ChatScopeId = "panel"): Promise<AcpAgentStatus> {
+    return invoke("get_acp_status", { routeKey: scopeId });
+  }
+
   // Static method to stop the current agent
-  static async stopAgent(): Promise<void> {
-    await invoke("stop_acp_agent");
+  static async stopAgent(scopeId: ChatScopeId = "panel"): Promise<void> {
+    AcpStreamHandler.activeHandlers.get(scopeId)?.forceStop();
+    AcpStreamHandler.lastSessionIdByKey.delete(scopeId);
+    await invoke("stop_acp_agent", { routeKey: scopeId });
   }
 
   // Static method to cancel the current prompt turn
-  static async cancelPrompt(): Promise<void> {
-    AcpStreamHandler.activeHandler?.forceStop();
+  static async cancelPrompt(scopeId?: ChatScopeId): Promise<void> {
+    const routeKey = scopeId ?? "panel";
+    AcpStreamHandler.activeHandlers.get(routeKey)?.forceStop();
+
     try {
-      await invoke("cancel_acp_prompt");
+      await invoke("cancel_acp_prompt", { routeKey });
     } catch (error) {
       console.error("Failed to cancel ACP prompt on backend:", error);
     }

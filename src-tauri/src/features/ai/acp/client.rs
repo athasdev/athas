@@ -1,5 +1,6 @@
 use super::types::{
-   AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus, UiAction,
+   AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
+   AcpToolLocation, UiAction,
 };
 use crate::terminal::{TerminalManager, config::TerminalConfig};
 use agent_client_protocol as acp;
@@ -17,6 +18,7 @@ pub struct PermissionResponse {
    pub request_id: String,
    pub approved: bool,
    pub cancelled: bool,
+   pub value: Option<String>,
 }
 
 /// Tracks state for an ACP terminal session
@@ -100,6 +102,7 @@ impl AcpTerminalState {
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
    app_handle: AppHandle,
+   route_key: String,
    workspace_path: Option<String>,
    permission_tx: mpsc::Sender<PermissionResponse>,
    permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
@@ -112,12 +115,14 @@ pub struct AthasAcpClient {
 impl AthasAcpClient {
    pub fn new(
       app_handle: AppHandle,
+      route_key: String,
       workspace_path: Option<String>,
       terminal_manager: Arc<TerminalManager>,
    ) -> Self {
       let (permission_tx, permission_rx) = mpsc::channel(32);
       Self {
          app_handle,
+         route_key,
          workspace_path,
          permission_tx,
          permission_rx: Arc::new(Mutex::new(permission_rx)),
@@ -358,10 +363,15 @@ impl acp::Client for AthasAcpClient {
 
       // Emit permission request to frontend
       self.emit_event(AcpEvent::PermissionRequest {
+         route_key: self.route_key.clone(),
          request_id: request_id.clone(),
          permission_type: "tool_call".to_string(),
          resource: tool_call_id.to_string(),
          description: format!("{} ({})", tool_title, tool_call_id),
+         title: None,
+         placeholder: None,
+         default_value: None,
+         options: None,
       });
 
       // Wait for user response with timeout
@@ -388,6 +398,7 @@ impl acp::Client for AthasAcpClient {
                   // Claude Code adapters may try to invoke ext_method via shell command.
                   // Execute the equivalent Athas UI action directly and reject the shell tool call.
                   self.emit_event(AcpEvent::UiAction {
+                     route_key: self.route_key.clone(),
                      session_id: session_id.clone(),
                      action: UiAction::OpenWebViewer { url },
                   });
@@ -397,6 +408,7 @@ impl acp::Client for AthasAcpClient {
                if let Some(command) = fallback_terminal_command.clone() {
                   // Same fallback for athas.openTerminal misuse through shell commands.
                   self.emit_event(AcpEvent::UiAction {
+                     route_key: self.route_key.clone(),
                      session_id: session_id.clone(),
                      action: UiAction::OpenTerminal {
                         command: Some(command),
@@ -470,6 +482,7 @@ impl acp::Client for AthasAcpClient {
             };
 
             self.emit_event(AcpEvent::UserMessageChunk {
+               route_key: self.route_key.clone(),
                session_id,
                content,
                is_complete: false,
@@ -481,6 +494,7 @@ impl acp::Client for AthasAcpClient {
             };
 
             self.emit_event(AcpEvent::ContentChunk {
+               route_key: self.route_key.clone(),
                session_id,
                content,
                is_complete: false,
@@ -492,6 +506,7 @@ impl acp::Client for AthasAcpClient {
             };
 
             self.emit_event(AcpEvent::ThoughtChunk {
+               route_key: self.route_key.clone(),
                session_id,
                content,
                is_complete: false,
@@ -509,6 +524,7 @@ impl acp::Client for AthasAcpClient {
             });
 
             self.emit_event(AcpEvent::ToolStart {
+               route_key: self.route_key.clone(),
                session_id,
                tool_name: tool_call.title.clone(),
                tool_id: tool_call.tool_call_id.to_string(),
@@ -516,20 +532,43 @@ impl acp::Client for AthasAcpClient {
             });
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
+            let output = update.fields.raw_output.clone().or_else(|| {
+               update
+                  .fields
+                  .content
+                  .as_ref()
+                  .and_then(|content| serde_json::to_value(content).ok())
+            });
+            let locations = update.fields.locations.as_ref().map(|locations| {
+               locations
+                  .iter()
+                  .map(|location| AcpToolLocation {
+                     path: location.path.display().to_string(),
+                     line: location.line,
+                  })
+                  .collect::<Vec<_>>()
+            });
+
             // Only emit completion for terminal statuses.
             match update.fields.status {
                Some(acp::ToolCallStatus::Completed) => {
                   self.emit_event(AcpEvent::ToolComplete {
+                     route_key: self.route_key.clone(),
                      session_id,
                      tool_id: update.tool_call_id.to_string(),
                      success: true,
+                     output: output.clone(),
+                     locations: locations.clone(),
                   });
                }
                Some(acp::ToolCallStatus::Failed) => {
                   self.emit_event(AcpEvent::ToolComplete {
+                     route_key: self.route_key.clone(),
                      session_id,
                      tool_id: update.tool_call_id.to_string(),
                      success: false,
+                     output,
+                     locations,
                   });
                }
                _ => {}
@@ -538,12 +577,14 @@ impl acp::Client for AthasAcpClient {
          acp::SessionUpdate::CurrentModeUpdate(update) => {
             // Handle current mode change
             self.emit_event(AcpEvent::CurrentModeUpdate {
+               route_key: self.route_key.clone(),
                session_id,
                current_mode_id: update.current_mode_id.to_string(),
             });
          }
          acp::SessionUpdate::AvailableCommandsUpdate(commands_update) => {
             self.emit_event(AcpEvent::SlashCommandsUpdate {
+               route_key: self.route_key.clone(),
                session_id,
                commands: commands_update
                   .available_commands
@@ -567,6 +608,7 @@ impl acp::Client for AthasAcpClient {
          }
          acp::SessionUpdate::Plan(plan) => {
             self.emit_event(AcpEvent::PlanUpdate {
+               route_key: self.route_key.clone(),
                session_id,
                entries: plan
                   .entries
@@ -948,6 +990,7 @@ impl acp::Client for AthasAcpClient {
                .to_string();
 
             self.emit_event(AcpEvent::UiAction {
+               route_key: self.route_key.clone(),
                session_id,
                action: UiAction::OpenWebViewer { url },
             });
@@ -964,6 +1007,7 @@ impl acp::Client for AthasAcpClient {
                .map(|s| s.to_string());
 
             self.emit_event(AcpEvent::UiAction {
+               route_key: self.route_key.clone(),
                session_id,
                action: UiAction::OpenTerminal { command },
             });

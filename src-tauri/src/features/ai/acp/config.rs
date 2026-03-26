@@ -71,6 +71,14 @@ impl AgentRegistry {
             .with_args(vec!["--acp"]),
       );
 
+      // Pi Coding Agent - RPC mode, reuses the user's existing ~/.pi state
+      agents.insert(
+         "pi".to_string(),
+         AgentConfig::new("pi", "Pi", "pi")
+            .with_description("Pi Coding Agent")
+            .with_args(vec!["--mode", "rpc"]),
+      );
+
       Self {
          agents,
          last_detection: None,
@@ -290,5 +298,19 @@ fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
          return Some(candidate);
       }
       None
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::AgentRegistry;
+
+   #[test]
+   fn registry_includes_pi_rpc_agent() {
+      let registry = AgentRegistry::new();
+      let pi = registry.get("pi").expect("pi agent should be registered");
+
+      assert_eq!(pi.binary_name, "pi");
+      assert_eq!(pi.args, vec!["--mode".to_string(), "rpc".to_string()]);
    }
 }

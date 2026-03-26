@@ -10,15 +10,25 @@ pub struct ChatData {
    pub created_at: i64,
    pub last_message_at: i64,
    pub agent_id: Option<String>,
+   pub parent_chat_id: Option<String>,
+   pub root_chat_id: Option<String>,
+   pub branch_point_message_id: Option<String>,
+   pub lineage_depth: Option<i64>,
+   pub session_name: Option<String>,
+   pub acp_state: Option<String>,
+   pub acp_activity: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MessageData {
    pub id: String,
    pub chat_id: String,
+   pub lineage_message_id: Option<String>,
    pub role: String,
    pub content: String,
    pub timestamp: i64,
+   pub message_kind: Option<String>,
+   pub summary_meta: Option<String>,
    pub is_streaming: bool,
    pub is_tool_use: bool,
    pub tool_name: Option<String>,
@@ -70,7 +80,14 @@ pub async fn init_chat_database(app: tauri::AppHandle) -> Result<(), String> {
             title TEXT NOT NULL,
             created_at INTEGER NOT NULL,
             last_message_at INTEGER NOT NULL,
-            agent_id TEXT DEFAULT 'custom'
+            agent_id TEXT DEFAULT 'custom',
+            parent_chat_id TEXT,
+            root_chat_id TEXT,
+            branch_point_message_id TEXT,
+            lineage_depth INTEGER NOT NULL DEFAULT 0,
+            session_name TEXT,
+            acp_state TEXT,
+            acp_activity TEXT
         )",
          [],
       )
@@ -81,15 +98,39 @@ pub async fn init_chat_database(app: tauri::AppHandle) -> Result<(), String> {
       "ALTER TABLE chats ADD COLUMN agent_id TEXT DEFAULT 'custom'",
       [],
    );
+   let _ = conn.execute("ALTER TABLE chats ADD COLUMN parent_chat_id TEXT", []);
+   let _ = conn.execute("ALTER TABLE chats ADD COLUMN root_chat_id TEXT", []);
+   let _ = conn.execute(
+      "ALTER TABLE chats ADD COLUMN branch_point_message_id TEXT",
+      [],
+   );
+   let _ = conn.execute(
+      "ALTER TABLE chats ADD COLUMN lineage_depth INTEGER NOT NULL DEFAULT 0",
+      [],
+   );
+   let _ = conn.execute("ALTER TABLE chats ADD COLUMN session_name TEXT", []);
+   let _ = conn.execute("ALTER TABLE chats ADD COLUMN acp_state TEXT", []);
+   let _ = conn.execute("ALTER TABLE chats ADD COLUMN acp_activity TEXT", []);
+   let _ = conn.execute(
+      "UPDATE chats SET root_chat_id = id WHERE root_chat_id IS NULL",
+      [],
+   );
+   let _ = conn.execute(
+      "UPDATE chats SET lineage_depth = 0 WHERE lineage_depth IS NULL",
+      [],
+   );
 
    conn
       .execute(
          "CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
             chat_id TEXT NOT NULL,
+            lineage_message_id TEXT,
             role TEXT NOT NULL,
             content TEXT NOT NULL,
             timestamp INTEGER NOT NULL,
+            message_kind TEXT NOT NULL DEFAULT 'default',
+            summary_meta TEXT,
             is_streaming BOOLEAN DEFAULT 0,
             is_tool_use BOOLEAN DEFAULT 0,
             tool_name TEXT,
@@ -115,6 +156,24 @@ pub async fn init_chat_database(app: tauri::AppHandle) -> Result<(), String> {
          [],
       )
       .map_err(|e| format!("Failed to create tool_calls table: {}", e))?;
+
+   let _ = conn.execute(
+      "ALTER TABLE messages ADD COLUMN lineage_message_id TEXT",
+      [],
+   );
+   let _ = conn.execute(
+      "ALTER TABLE messages ADD COLUMN message_kind TEXT NOT NULL DEFAULT 'default'",
+      [],
+   );
+   let _ = conn.execute("ALTER TABLE messages ADD COLUMN summary_meta TEXT", []);
+   let _ = conn.execute(
+      "UPDATE messages SET lineage_message_id = id WHERE lineage_message_id IS NULL",
+      [],
+   );
+   let _ = conn.execute(
+      "UPDATE messages SET message_kind = 'default' WHERE message_kind IS NULL",
+      [],
+   );
 
    // Create indexes for performance
    conn
@@ -157,8 +216,20 @@ pub async fn save_chat(
 
    // Insert or replace chat
    match conn.execute(
-      "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at, agent_id) VALUES \
-       (?1, ?2, ?3, ?4, ?5)",
+      "INSERT OR REPLACE INTO chats (
+         id,
+         title,
+         created_at,
+         last_message_at,
+         agent_id,
+         parent_chat_id,
+         root_chat_id,
+         branch_point_message_id,
+         lineage_depth,
+         session_name,
+         acp_state,
+         acp_activity
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
       params![
          chat.id,
          chat.title,
@@ -167,7 +238,14 @@ pub async fn save_chat(
          chat
             .agent_id
             .clone()
-            .unwrap_or_else(|| "custom".to_string())
+            .unwrap_or_else(|| "custom".to_string()),
+         chat.parent_chat_id,
+         chat.root_chat_id.clone().unwrap_or_else(|| chat.id.clone()),
+         chat.branch_point_message_id,
+         chat.lineage_depth.unwrap_or(0),
+         chat.session_name,
+         chat.acp_state,
+         chat.acp_activity,
       ],
    ) {
       Ok(_) => {}
@@ -189,15 +267,34 @@ pub async fn save_chat(
    // Insert messages
    for message in messages {
       match conn.execute(
-         "INSERT INTO messages (id, chat_id, role, content, timestamp, is_streaming, is_tool_use, \
-          tool_name)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+         "INSERT INTO messages (
+            id,
+            chat_id,
+            lineage_message_id,
+            role,
+            content,
+            timestamp,
+            message_kind,
+            summary_meta,
+            is_streaming,
+            is_tool_use,
+            tool_name
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
          params![
             message.id,
             message.chat_id,
+            message
+               .lineage_message_id
+               .clone()
+               .unwrap_or_else(|| message.id.clone()),
             message.role,
             message.content,
             message.timestamp,
+            message
+               .message_kind
+               .clone()
+               .unwrap_or_else(|| "default".to_string()),
+            message.summary_meta,
             message.is_streaming,
             message.is_tool_use,
             message.tool_name
@@ -248,7 +345,8 @@ pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, Stri
 
    let mut stmt = conn
       .prepare(
-         "SELECT id, title, created_at, last_message_at, agent_id FROM chats ORDER BY \
+         "SELECT id, title, created_at, last_message_at, agent_id, parent_chat_id, root_chat_id, \
+          branch_point_message_id, lineage_depth, session_name, acp_state, acp_activity FROM chats ORDER BY \
           last_message_at DESC",
       )
       .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -261,6 +359,13 @@ pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, Stri
             created_at: row.get(2)?,
             last_message_at: row.get(3)?,
             agent_id: row.get(4)?,
+            parent_chat_id: row.get(5)?,
+            root_chat_id: row.get(6)?,
+            branch_point_message_id: row.get(7)?,
+            lineage_depth: row.get(8)?,
+            session_name: row.get(9)?,
+            acp_state: row.get(10)?,
+            acp_activity: row.get(11)?,
          })
       })
       .map_err(|e| format!("Failed to query chats: {}", e))?
@@ -276,7 +381,10 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
 
    // Load chat
    let mut stmt = conn
-      .prepare("SELECT id, title, created_at, last_message_at, agent_id FROM chats WHERE id = ?1")
+      .prepare(
+         "SELECT id, title, created_at, last_message_at, agent_id, parent_chat_id, root_chat_id, \
+          branch_point_message_id, lineage_depth, session_name, acp_state, acp_activity FROM chats WHERE id = ?1",
+      )
       .map_err(|e| format!("Failed to prepare chat query: {}", e))?;
 
    let chat = stmt
@@ -287,6 +395,13 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
             created_at: row.get(2)?,
             last_message_at: row.get(3)?,
             agent_id: row.get(4)?,
+            parent_chat_id: row.get(5)?,
+            root_chat_id: row.get(6)?,
+            branch_point_message_id: row.get(7)?,
+            lineage_depth: row.get(8)?,
+            session_name: row.get(9)?,
+            acp_state: row.get(10)?,
+            acp_activity: row.get(11)?,
          })
       })
       .map_err(|e| format!("Failed to load chat: {}", e))?;
@@ -294,8 +409,19 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
    // Load messages
    let mut stmt = conn
       .prepare(
-         "SELECT id, chat_id, role, content, timestamp, is_streaming, is_tool_use, tool_name
-                  FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
+         "SELECT
+            id,
+            chat_id,
+            lineage_message_id,
+            role,
+            content,
+            timestamp,
+            message_kind,
+            summary_meta,
+            is_streaming,
+            is_tool_use,
+            tool_name
+          FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
       )
       .map_err(|e| format!("Failed to prepare messages query: {}", e))?;
 
@@ -304,12 +430,15 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
          Ok(MessageData {
             id: row.get(0)?,
             chat_id: row.get(1)?,
-            role: row.get(2)?,
-            content: row.get(3)?,
-            timestamp: row.get(4)?,
-            is_streaming: row.get(5)?,
-            is_tool_use: row.get(6)?,
-            tool_name: row.get(7)?,
+            lineage_message_id: row.get(2)?,
+            role: row.get(3)?,
+            content: row.get(4)?,
+            timestamp: row.get(5)?,
+            message_kind: row.get(6)?,
+            summary_meta: row.get(7)?,
+            is_streaming: row.get(8)?,
+            is_tool_use: row.get(9)?,
+            tool_name: row.get(10)?,
          })
       })
       .map_err(|e| format!("Failed to query messages: {}", e))?
@@ -384,7 +513,8 @@ pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<Ch
 
    let mut stmt = conn
       .prepare(
-         "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at, c.agent_id
+         "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at, c.agent_id,
+             c.parent_chat_id, c.root_chat_id, c.branch_point_message_id, c.lineage_depth, c.session_name, c.acp_state, c.acp_activity
              FROM chats c
              LEFT JOIN messages m ON c.id = m.chat_id
              WHERE c.title LIKE ?1 OR m.content LIKE ?1
@@ -400,6 +530,13 @@ pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<Ch
             created_at: row.get(2)?,
             last_message_at: row.get(3)?,
             agent_id: row.get(4)?,
+            parent_chat_id: row.get(5)?,
+            root_chat_id: row.get(6)?,
+            branch_point_message_id: row.get(7)?,
+            lineage_depth: row.get(8)?,
+            session_name: row.get(9)?,
+            acp_state: row.get(10)?,
+            acp_activity: row.get(11)?,
          })
       })
       .map_err(|e| format!("Failed to query search results: {}", e))?

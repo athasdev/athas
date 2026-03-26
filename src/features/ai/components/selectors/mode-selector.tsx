@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import Dropdown from "@/ui/dropdown";
@@ -20,13 +21,14 @@ const outputStyleOptions = [
 ];
 
 export const ModeSelector = memo(function ModeSelector({ className }: ModeSelectorProps) {
-  const mode = useAIChatStore((state) => state.mode);
+  const chatState = useChatState();
+  const chatActions = useChatActions();
+  const mode = chatState.mode;
   const outputStyle = useAIChatStore((state) => state.outputStyle);
-  const setMode = useAIChatStore((state) => state.setMode);
   const setOutputStyle = useAIChatStore((state) => state.setOutputStyle);
 
   const handleModeChange = (newMode: string) => {
-    setMode(newMode as ChatMode);
+    chatActions.setMode(newMode as ChatMode);
   };
 
   const handleOutputStyleChange = (newStyle: string) => {

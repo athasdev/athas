@@ -101,8 +101,7 @@ mod tests {
 
    #[test]
    fn resolves_url_placeholders() {
-      let template =
-         "https://example.com/${os}/${arch}/${platformArch}/${targetOs}/${targetArch}.${archiveExt}?v=${version}";
+      let template = "https://example.com/${os}/${arch}/${platformArch}/${targetOs}/${targetArch}.${archiveExt}?v=${version}";
       let resolved = ToolRegistry::resolve_url_template(template);
 
       assert!(!resolved.contains("${"));
