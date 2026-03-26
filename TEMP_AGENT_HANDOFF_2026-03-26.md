@@ -737,34 +737,29 @@ At the time this handoff was prepared:
 
 - branch: `adding-pi-mono`
 - latest commit: `239ff9b1 Docs: note cold-start CLI open verification`
-- working tree includes a new uncommitted Harness redundancy cleanup across:
-  - `src/features/ai/components/chat/ai-chat.tsx`
-  - `src/features/ai/components/chat/chat-header.tsx`
-  - `src/features/ai/components/chat/chat-messages.tsx`
-  - `src/features/ai/components/chat/harness-session-rail.tsx`
-  - `src/features/ai/components/input/chat-input-bar.tsx`
+- working tree includes a new uncommitted Pi RPC failure-path fix in:
+  - `src-tauri/src/features/ai/acp/bridge.rs`
 - recent validator run succeeded with:
+  - `cargo test -p athas fail_response_waiters_notifies_all_pending_requests -- --nocapture`
+  - `cargo test -p athas get_closed_error_returns_recorded_stream_failure -- --nocapture`
+  - `cargo build -p athas`
   - `bun typecheck`
-  - `bun test`
   - `bun check`
+  - `git diff --check`
 
 ### Live verification snapshot
 
 - updated app bundle verified in a real Athas window on X display `:106`
 - empty state still shows `Open Harness` / `New Harness Session`
 - Harness opens via `Ctrl+R`
-- wide-window Harness now shows:
-  - title-only header with history + compact actions
-  - sessions-first rail
-  - compact live-status block instead of dashboard cards
-  - no idle “Harness is ready” transcript card
-- prompt submission still works after the UI cleanup:
-  - the prompt was entered and submitted in-app
-  - session title updated from the first prompt
-  - transcript shows the user message
-  - composer entered the streaming / stop state
-- not fully proven in that fresh `:106` profile:
-  - Pi did not complete a visible assistant response within the wait window, so response completion should be re-checked on a warm/runtime-ready profile
+- no-Pi failure-path verification:
+  - with no `PI_CODING_AGENT_DIR` / models configured, submitting a Harness prompt no longer leaves the composer stuck in stop mode
+  - the session now surfaces an in-app error card: `ACP agent process exited: exit status: 1`
+  - session activity also records the agent error instead of silently hanging
+- Pi positive-path verification:
+  - with `PI_CODING_AGENT_DIR=/home/fsos/.pi/agent`, a real Harness prompt still runs successfully after this bridge change
+  - prompt: `Reply with exactly READY and nothing else.`
+  - visible assistant response: `READY`
 
 ---
 

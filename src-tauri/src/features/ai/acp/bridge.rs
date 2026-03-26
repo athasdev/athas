@@ -46,6 +46,7 @@ struct AcpRouteWorkerHandle {
 struct PiRpcSession {
    stdin: Arc<Mutex<tokio::process::ChildStdin>>,
    response_waiters: Arc<Mutex<HashMap<String, oneshot::Sender<Result<serde_json::Value>>>>>,
+   closed_error: Arc<Mutex<Option<String>>>,
    pending_permission_requests: Arc<Mutex<HashMap<String, String>>>,
    request_counter: Arc<AtomicU64>,
    current_session_id: Arc<Mutex<Option<String>>>,
@@ -66,6 +67,27 @@ struct ParsedPiThoughtToolEvent {
 }
 
 impl PiRpcSession {
+   async fn fail_response_waiters(
+      response_waiters: &Arc<Mutex<HashMap<String, oneshot::Sender<Result<serde_json::Value>>>>>,
+      error_message: String,
+   ) {
+      let waiters = {
+         let mut pending = response_waiters.lock().await;
+         pending
+            .drain()
+            .map(|(_, waiter)| waiter)
+            .collect::<Vec<_>>()
+      };
+
+      for waiter in waiters {
+         let _ = waiter.send(Err(anyhow::anyhow!("{}", error_message)));
+      }
+   }
+
+   async fn get_closed_error(closed_error: &Arc<Mutex<Option<String>>>) -> Option<String> {
+      closed_error.lock().await.clone()
+   }
+
    fn new(
       route_key: String,
       app_handle: AppHandle,
@@ -79,9 +101,11 @@ impl PiRpcSession {
          String,
          oneshot::Sender<Result<serde_json::Value>>,
       >::new()));
+      let closed_error = Arc::new(Mutex::new(None));
       let pending_permission_requests = Arc::new(Mutex::new(HashMap::<String, String>::new()));
       let current_session_id = Arc::new(Mutex::new(initial_session_id));
       let response_waiters_reader = response_waiters.clone();
+      let closed_error_reader = closed_error.clone();
       let pending_permission_requests_reader = pending_permission_requests.clone();
       let current_session_id_reader = current_session_id.clone();
       let route_key_reader = route_key.clone();
@@ -92,8 +116,13 @@ impl PiRpcSession {
          let mut last_stop_reason: Option<String> = None;
          let mut last_error_message: Option<String> = None;
          let mut synthetic_tool_counter = 0_u64;
+         let stream_close_error = loop {
+            let line = match lines.next_line().await {
+               Ok(Some(line)) => line,
+               Ok(None) => break "Pi RPC stream ended before responding".to_string(),
+               Err(error) => break format!("Pi RPC stream failed: {}", error),
+            };
 
-         while let Ok(Some(line)) = lines.next_line().await {
             let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
                log::warn!("Failed to parse pi rpc output: {}", line);
                continue;
@@ -173,12 +202,19 @@ impl PiRpcSession {
                }
                None => {}
             }
+         };
+
+         {
+            let mut closed = closed_error_reader.lock().await;
+            *closed = Some(stream_close_error.clone());
          }
+         Self::fail_response_waiters(&response_waiters_reader, stream_close_error).await;
       });
 
       Self {
          stdin,
          response_waiters,
+         closed_error,
          pending_permission_requests,
          request_counter: Arc::new(AtomicU64::new(1)),
          current_session_id,
@@ -186,6 +222,10 @@ impl PiRpcSession {
    }
 
    async fn send_command(&self, mut value: serde_json::Value) -> Result<serde_json::Value> {
+      if let Some(error) = Self::get_closed_error(&self.closed_error).await {
+         bail!("{}", error);
+      }
+
       let request_id = format!(
          "pi-rpc-{}",
          self.request_counter.fetch_add(1, Ordering::Relaxed)
@@ -193,22 +233,40 @@ impl PiRpcSession {
       value["id"] = serde_json::Value::String(request_id.clone());
 
       let (tx, rx) = oneshot::channel();
-      self.response_waiters.lock().await.insert(request_id, tx);
+      self
+         .response_waiters
+         .lock()
+         .await
+         .insert(request_id.clone(), tx);
 
-      let mut stdin = self.stdin.lock().await;
-      stdin
-         .write_all(serde_json::to_string(&value)?.as_bytes())
+      if let Some(error) = Self::get_closed_error(&self.closed_error).await {
+         self.response_waiters.lock().await.remove(&request_id);
+         bail!("{}", error);
+      }
+
+      {
+         let mut stdin = self.stdin.lock().await;
+         if let Err(error) = async {
+            stdin
+               .write_all(serde_json::to_string(&value)?.as_bytes())
+               .await
+               .context("Failed to write pi rpc command")?;
+            stdin
+               .write_all(b"\n")
+               .await
+               .context("Failed to terminate pi rpc command")?;
+            stdin
+               .flush()
+               .await
+               .context("Failed to flush pi rpc command")?;
+            Ok::<(), anyhow::Error>(())
+         }
          .await
-         .context("Failed to write pi rpc command")?;
-      stdin
-         .write_all(b"\n")
-         .await
-         .context("Failed to terminate pi rpc command")?;
-      stdin
-         .flush()
-         .await
-         .context("Failed to flush pi rpc command")?;
-      drop(stdin);
+         {
+            self.response_waiters.lock().await.remove(&request_id);
+            return Err(error);
+         }
+      }
 
       rx.await.context("Pi rpc response channel closed")?
    }
@@ -2214,13 +2272,14 @@ impl AcpAgentBridge {
 
 #[cfg(test)]
 mod tests {
-   use super::{AcpWorker, PiWorkspaceSessionInfo};
+   use super::{AcpWorker, PiRpcSession, PiWorkspaceSessionInfo};
    use serde_json::json;
    use std::{
       env, fs,
       path::PathBuf,
       sync::{LazyLock, Mutex},
    };
+   use tokio::sync::{Mutex as AsyncMutex, oneshot};
 
    static PI_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
@@ -2345,6 +2404,47 @@ mod tests {
             output: json!("error: command failed"),
             success: false,
          }]
+      );
+   }
+
+   #[tokio::test]
+   async fn fail_response_waiters_notifies_all_pending_requests() {
+      let response_waiters = std::sync::Arc::new(AsyncMutex::new(std::collections::HashMap::<
+         String,
+         oneshot::Sender<anyhow::Result<serde_json::Value>>,
+      >::new()));
+      let (first_tx, first_rx) = oneshot::channel();
+      let (second_tx, second_rx) = oneshot::channel();
+
+      {
+         let mut waiters = response_waiters.lock().await;
+         waiters.insert("first".to_string(), first_tx);
+         waiters.insert("second".to_string(), second_tx);
+      }
+
+      PiRpcSession::fail_response_waiters(
+         &response_waiters,
+         "Pi RPC stream ended before responding".to_string(),
+      )
+      .await;
+
+      let first_error = first_rx.await.unwrap().unwrap_err().to_string();
+      let second_error = second_rx.await.unwrap().unwrap_err().to_string();
+
+      assert!(first_error.contains("Pi RPC stream ended before responding"));
+      assert!(second_error.contains("Pi RPC stream ended before responding"));
+      assert!(response_waiters.lock().await.is_empty());
+   }
+
+   #[tokio::test]
+   async fn get_closed_error_returns_recorded_stream_failure() {
+      let closed_error = std::sync::Arc::new(AsyncMutex::new(Some(
+         "Pi RPC stream ended before responding".to_string(),
+      )));
+
+      assert_eq!(
+         PiRpcSession::get_closed_error(&closed_error).await,
+         Some("Pi RPC stream ended before responding".to_string())
       );
    }
 }
