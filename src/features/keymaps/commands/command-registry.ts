@@ -350,12 +350,12 @@ const viewCommands: Command[] = [
     },
   },
   {
-    id: "workbench.toggleAIChat",
-    title: "Toggle AI Chat",
+    id: "workbench.toggleHarness",
+    title: "Toggle Harness",
     category: "View",
     keybinding: "cmd+r",
     execute: () => {
-      useSettingsStore.getState().toggleAIChatVisible();
+      useSettingsStore.getState().toggleHarnessEntry();
     },
   },
   {
@@ -737,4 +737,6 @@ export function registerCommands(): void {
   for (const command of allCommands) {
     keymapRegistry.registerCommand(command);
   }
+
+  keymapRegistry.registerCommandAlias("workbench.toggleAIChat", "workbench.toggleHarness");
 }

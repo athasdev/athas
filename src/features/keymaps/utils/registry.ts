@@ -8,6 +8,7 @@ import type { Command, Keybinding } from "../types";
 
 class KeymapRegistry {
   private commands = new Map<string, Command>();
+  private commandAliases = new Map<string, string>();
   private keybindings: Keybinding[] = [];
 
   registerCommand(command: Command): void {
@@ -22,11 +23,27 @@ class KeymapRegistry {
 
   unregisterCommand(commandId: string): void {
     this.commands.delete(commandId);
+    this.commandAliases.forEach((targetId, aliasId) => {
+      if (targetId === commandId || aliasId === commandId) {
+        this.commandAliases.delete(aliasId);
+      }
+    });
     logger.debug("Keymaps", `Unregistered command: ${commandId}`);
   }
 
+  registerCommandAlias(aliasId: string, targetId: string): void {
+    if (!this.commands.has(targetId)) {
+      logger.warn("Keymaps", `Cannot alias missing command ${targetId} to ${aliasId}`);
+      return;
+    }
+
+    this.commandAliases.set(aliasId, targetId);
+    logger.debug("Keymaps", `Registered command alias: ${aliasId} -> ${targetId}`);
+  }
+
   getCommand(commandId: string): Command | undefined {
-    return this.commands.get(commandId);
+    const resolvedId = this.commandAliases.get(commandId) ?? commandId;
+    return this.commands.get(resolvedId);
   }
 
   getAllCommands(): Command[] {
@@ -62,7 +79,8 @@ class KeymapRegistry {
   }
 
   async executeCommand(commandId: string, args?: unknown): Promise<void> {
-    const command = this.commands.get(commandId);
+    const resolvedId = this.commandAliases.get(commandId) ?? commandId;
+    const command = this.commands.get(resolvedId);
 
     if (!command) {
       logger.error("Keymaps", `Command not found: ${commandId}`);
@@ -70,15 +88,16 @@ class KeymapRegistry {
     }
 
     try {
-      logger.debug("Keymaps", `Executing command: ${commandId}`);
+      logger.debug("Keymaps", `Executing command: ${resolvedId}`);
       await command.execute(args);
     } catch (error) {
-      logger.error("Keymaps", `Error executing command ${commandId}:`, error);
+      logger.error("Keymaps", `Error executing command ${resolvedId}:`, error);
     }
   }
 
   clear(): void {
     this.commands.clear();
+    this.commandAliases.clear();
     this.keybindings = [];
   }
 }

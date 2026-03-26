@@ -104,7 +104,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
             Toggle Terminal
           </MenuItem>
           <MenuItem shortcut="Ctrl+R" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
-            Toggle AI Chat
+            Toggle Harness
           </MenuItem>
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>

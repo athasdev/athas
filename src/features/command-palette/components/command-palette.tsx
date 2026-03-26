@@ -106,6 +106,7 @@ const CommandPalette = () => {
       onClose,
     }),
     ...createViewActions({
+      isHarnessActive: Boolean(activeBuffer?.isAgent),
       isSidebarVisible,
       setIsSidebarVisible,
       isBottomPaneVisible,
@@ -115,7 +116,6 @@ const CommandPalette = () => {
       isFindVisible,
       setIsFindVisible,
       settings: {
-        isAIChatVisible: settings.isAIChatVisible,
         sidebarPosition: settings.sidebarPosition,
         nativeMenuBar: settings.nativeMenuBar,
         compactMenuBar: settings.compactMenuBar,

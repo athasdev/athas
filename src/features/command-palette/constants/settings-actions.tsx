@@ -376,9 +376,11 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     {
       id: "toggle-ai-chat-feature",
       label: settings.coreFeatures.aiChat
-        ? "Features: Disable AI Chat"
-        : "Features: Enable AI Chat",
-      description: settings.coreFeatures.aiChat ? "Disable AI chat panel" : "Enable AI chat panel",
+        ? "Features: Disable AI Assistant"
+        : "Features: Enable AI Assistant",
+      description: settings.coreFeatures.aiChat
+        ? "Disable AI assistant and Harness access"
+        : "Enable AI assistant and Harness access",
       icon: <MessageSquare size={14} />,
       category: "Features",
       action: () => {

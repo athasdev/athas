@@ -17,6 +17,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
+  isHarnessActive: boolean;
   isSidebarVisible: boolean;
   setIsSidebarVisible: (v: boolean) => void;
   isBottomPaneVisible: boolean;
@@ -26,7 +27,6 @@ interface ViewActionsParams {
   isFindVisible: boolean;
   setIsFindVisible: (v: boolean) => void;
   settings: {
-    isAIChatVisible: boolean;
     sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
@@ -43,6 +43,7 @@ interface ViewActionsParams {
 
 export const createViewActions = (params: ViewActionsParams): Action[] => {
   const {
+    isHarnessActive,
     isSidebarVisible,
     setIsSidebarVisible,
     isBottomPaneVisible,
@@ -128,13 +129,15 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     },
     {
       id: "toggle-ai-chat-view",
-      label: settings.isAIChatVisible ? "View: Hide AI Chat" : "View: Show AI Chat",
-      description: settings.isAIChatVisible ? "Hide AI chat panel" : "Show AI chat panel",
+      label: isHarnessActive ? "View: Close Harness" : "View: Open Harness",
+      description: isHarnessActive
+        ? "Close the active harness tab"
+        : "Open the harness workspace tab",
       icon: <MessageSquare size={14} />,
       category: "View",
       keybinding: ["⌘", "R"],
       action: () => {
-        useSettingsStore.getState().toggleAIChatVisible();
+        useSettingsStore.getState().toggleHarnessEntry();
         onClose();
       },
     },

@@ -8,6 +8,7 @@ describe("createViewActions", () => {
     let closedPalette = false;
 
     const actions = createViewActions({
+      isHarnessActive: false,
       isSidebarVisible: true,
       setIsSidebarVisible: () => {},
       isBottomPaneVisible: false,
@@ -17,7 +18,6 @@ describe("createViewActions", () => {
       isFindVisible: false,
       setIsFindVisible: () => {},
       settings: {
-        isAIChatVisible: true,
         sidebarPosition: "left",
         nativeMenuBar: false,
         compactMenuBar: false,
@@ -54,6 +54,7 @@ describe("createViewActions", () => {
     let closedPalette = false;
 
     const actions = createViewActions({
+      isHarnessActive: false,
       isSidebarVisible: true,
       setIsSidebarVisible: () => {},
       isBottomPaneVisible: false,
@@ -63,7 +64,6 @@ describe("createViewActions", () => {
       isFindVisible: false,
       setIsFindVisible: () => {},
       settings: {
-        isAIChatVisible: true,
         sidebarPosition: "left",
         nativeMenuBar: false,
         compactMenuBar: false,

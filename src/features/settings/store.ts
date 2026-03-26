@@ -539,6 +539,36 @@ export const useSettingsStore = create(
           await saveSettingsToStore(defaultSettings);
         },
 
+        toggleHarnessEntry: (forceValue?: boolean) => {
+          const now = Date.now();
+          const previousToggleAt = get()._lastAiChatToggleAt;
+          if (now - previousToggleAt < AI_CHAT_TOGGLE_COOLDOWN_MS) {
+            return;
+          }
+
+          set((state) => {
+            state.settings.isAIChatVisible = false;
+            state._lastAiChatToggleAt = now;
+          });
+
+          debouncedSaveSettingsToStore({ isAIChatVisible: false });
+          void Promise.all([
+            import("@/features/editor/stores/buffer-store"),
+            import("@/features/layout/components/footer/editor-footer-ai-entry"),
+          ]).then(([{ useBufferStore }, { toggleHarnessFromAiChatToggle }]) => {
+            const { buffers, activeBufferId, actions } = useBufferStore.getState();
+            const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) ?? null;
+            const nextValue = forceValue !== undefined ? forceValue : !activeBuffer?.isAgent;
+
+            toggleHarnessFromAiChatToggle(
+              activeBuffer,
+              actions.openAgentBuffer,
+              actions.closeBuffer,
+              nextValue,
+            );
+          });
+        },
+
         toggleAIChatVisible: (forceValue?: boolean) => {
           const now = Date.now();
           const previousToggleAt = get()._lastAiChatToggleAt;
@@ -546,14 +576,27 @@ export const useSettingsStore = create(
             return;
           }
 
-          const nextValue = forceValue !== undefined ? forceValue : !get().settings.isAIChatVisible;
-
           set((state) => {
-            state.settings.isAIChatVisible = nextValue;
+            state.settings.isAIChatVisible = false;
             state._lastAiChatToggleAt = now;
           });
 
-          debouncedSaveSettingsToStore({ isAIChatVisible: nextValue });
+          debouncedSaveSettingsToStore({ isAIChatVisible: false });
+          void Promise.all([
+            import("@/features/editor/stores/buffer-store"),
+            import("@/features/layout/components/footer/editor-footer-ai-entry"),
+          ]).then(([{ useBufferStore }, { toggleHarnessFromAiChatToggle }]) => {
+            const { buffers, activeBufferId, actions } = useBufferStore.getState();
+            const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) ?? null;
+            const nextValue = forceValue !== undefined ? forceValue : !activeBuffer?.isAgent;
+
+            toggleHarnessFromAiChatToggle(
+              activeBuffer,
+              actions.openAgentBuffer,
+              actions.closeBuffer,
+              nextValue,
+            );
+          });
         },
 
         // Update individual setting

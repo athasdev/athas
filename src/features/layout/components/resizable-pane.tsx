@@ -1,15 +1,12 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
 const MIN_PANE_WIDTH = 50;
-const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
-
 interface ResizablePaneProps {
   children: React.ReactNode;
   position: "left" | "right";
@@ -31,45 +28,19 @@ export function ResizablePane({
   onCollapse,
 }: ResizablePaneProps) {
   const { settings, updateSetting } = useSettingsStore();
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const [width, setWidth] = useState(Math.max(settings[widthKey], MIN_PANE_WIDTH));
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
 
   const getViewportWidth = () => (typeof window !== "undefined" ? window.innerWidth : 1280);
 
-  const getMinWidth = useCallback(() => {
-    if (widthKey === "aiChatWidth") {
-      // Keep AI chat usable on normal widths, but relax for very small windows.
-      return getViewportWidth() < 1100 ? 220 : 300;
-    }
-    // Sidebar can be narrower than AI chat.
-    return 180;
-  }, [widthKey]);
+  const getMinWidth = useCallback(() => 180, []);
 
   const getMaxWidth = useCallback(() => {
     const windowWidth = getViewportWidth();
     const MIN_MAIN_CONTENT_WIDTH = 360; // Keep editor area readable on smaller windows
-    const isCompactAiOverlay = windowWidth < AI_CHAT_OVERLAY_BREAKPOINT;
-    const shouldAccountForAiChat = settings.isAIChatVisible && !isCompactAiOverlay;
-
-    // Calculate available space accounting for both sidebars and minimum main content
-    if (widthKey === "sidebarWidth" && shouldAccountForAiChat) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.aiChatWidth - MIN_MAIN_CONTENT_WIDTH);
-    }
-    if (widthKey === "aiChatWidth" && isSidebarVisible) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.sidebarWidth - MIN_MAIN_CONTENT_WIDTH);
-    }
-
-    // Single sidebar case - leave room for main content
     return Math.max(MIN_PANE_WIDTH, windowWidth - MIN_MAIN_CONTENT_WIDTH);
-  }, [
-    widthKey,
-    settings.isAIChatVisible,
-    settings.aiChatWidth,
-    settings.sidebarWidth,
-    isSidebarVisible,
-  ]);
+  }, []);
 
   const clampWidth = useCallback(
     (value: number) => {

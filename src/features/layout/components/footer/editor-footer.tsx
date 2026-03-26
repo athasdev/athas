@@ -477,6 +477,7 @@ const EditorFooter = () => {
   const footerPillClass =
     "flex h-6 items-center gap-0.5 rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text";
   const footerActiveClass = "border-border bg-selected text-text";
+  const isHarnessEntryActive = Boolean(activeBuffer?.isAgent);
 
   return (
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
@@ -601,16 +602,16 @@ const EditorFooter = () => {
         {/* AI Chat button */}
         <button
           onClick={() => {
-            useSettingsStore.getState().toggleAIChatVisible();
+            useSettingsStore.getState().toggleHarnessEntry();
           }}
           className={cn(
             "flex h-6 items-center justify-center rounded-full border border-transparent px-2 transition-colors",
-            settings.isAIChatVisible
+            isHarnessEntryActive
               ? "border-border bg-selected text-text"
               : "text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
           )}
           style={{ minHeight: 0, minWidth: 0 }}
-          title="Toggle AI Chat"
+          title={isHarnessEntryActive ? "Close Harness" : "Open Harness"}
         >
           <Sparkles size={12} />
         </button>
