@@ -71,7 +71,7 @@ const UpdateDialog = ({
       }
     >
       <div className="space-y-4">
-        <div className="text-text text-xs">
+        <div className="ui-font ui-text-sm text-text">
           <p>
             A new version of Athas is available: <span>{updateInfo.version}</span>
           </p>
@@ -80,8 +80,8 @@ const UpdateDialog = ({
 
         {updateInfo.body && (
           <div className="rounded border border-border bg-secondary-bg p-3">
-            <h4 className="mb-2 text-text-lighter text-xs">Release Notes</h4>
-            <div className="max-h-40 overflow-y-auto whitespace-pre-wrap text-text text-xs">
+            <h4 className="ui-font ui-text-sm mb-2 text-text-lighter">Release Notes</h4>
+            <div className="ui-font ui-text-sm max-h-40 overflow-y-auto whitespace-pre-wrap text-text">
               {updateInfo.body}
             </div>
           </div>
@@ -89,7 +89,7 @@ const UpdateDialog = ({
 
         {downloading && downloadProgress && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-text-lighter text-xs">
+            <div className="ui-font ui-text-sm flex items-center justify-between text-text-lighter">
               <span>Downloading update...</span>
               <span>{downloadProgress.percentage}%</span>
             </div>
@@ -103,14 +103,14 @@ const UpdateDialog = ({
         )}
 
         {installing && (
-          <div className="flex items-center gap-2 text-text-lighter text-xs">
+          <div className="ui-font ui-text-sm flex items-center gap-2 text-text-lighter">
             <RefreshCw className="animate-spin" />
             <span>Installing update... The app will restart automatically.</span>
           </div>
         )}
 
         {error && (
-          <div className="rounded border border-error/30 bg-error/10 p-2 text-error text-xs">
+          <div className="ui-font ui-text-sm rounded border border-error/30 bg-error/10 p-2 text-error">
             {error}
           </div>
         )}

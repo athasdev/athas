@@ -39,7 +39,9 @@ const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
       onClick={onClick}
     >
       <span>{children}</span>
-      {shortcut && <span className="ui-text-sm ml-8 text-text-lighter/90">{shortcutOsSpecific}</span>}
+      {shortcut && (
+        <span className="ui-text-sm ml-8 text-text-lighter/90">{shortcutOsSpecific}</span>
+      )}
     </button>
   );
 };

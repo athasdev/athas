@@ -1,12 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
-  Maximize2,
-  MenuIcon,
-  Minimize2,
-  Minus,
-  SquareArrowOutUpRight,
-  X,
-} from "lucide-react";
+import { Maximize2, MenuIcon, Minimize2, Minus, SquareArrowOutUpRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -40,9 +33,7 @@ interface CustomTitleBarProps {
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
-  const handleOpenFolder = useFileSystemStore(
-    (state) => state.handleOpenFolder,
-  );
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const {
     isGitViewActive,
@@ -55,9 +46,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     setIsProjectPickerVisible,
   } = useUIState();
 
-  const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(
-    null,
-  );
+  const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -251,10 +240,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 <Minus className="size-3.5 text-text-lighter" />
               </Button>
             </Tooltip>
-            <Tooltip
-              content={isMaximized ? "Restore" : "Maximize"}
-              side="bottom"
-            >
+            <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
                 variant="secondary"
@@ -298,10 +284,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Left side: keep clear of traffic lights */}
         <div className="pointer-events-auto flex h-8 min-w-0 items-center gap-1">
           {!settings.nativeMenuBar && !settings.compactMenuBar && (
-            <CustomMenuBar
-              activeMenu={menuBarActiveMenu}
-              setActiveMenu={setMenuBarActiveMenu}
-            />
+            <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
           )}
           {!settings.nativeMenuBar && settings.compactMenuBar && (
             <div className="relative">
@@ -329,9 +312,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
             onViewChange={handleSidebarViewChange}
-            onSearchClick={() =>
-              setIsGlobalSearchVisible(!isGlobalSearchVisible)
-            }
+            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
             compact
           />
         </div>
@@ -342,11 +323,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             data-title-bar-project-tabs="true"
             className="pointer-events-auto flex h-8 items-center"
           >
-            {titleBarProjectMode === "window" ? (
-              <WindowTitleDisplay />
-            ) : (
-              <ProjectTabs />
-            )}
+            {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
           </div>
         </div>
 
@@ -370,10 +347,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center px-1">
         {!settings.nativeMenuBar && !settings.compactMenuBar && (
-          <CustomMenuBar
-            activeMenu={menuBarActiveMenu}
-            setActiveMenu={setMenuBarActiveMenu}
-          />
+          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
         )}
 
         {/* Menu bar button */}
@@ -405,9 +379,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
             onViewChange={handleSidebarViewChange}
-            onSearchClick={() =>
-              setIsGlobalSearchVisible(!isGlobalSearchVisible)
-            }
+            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
             compact
           />
         </div>
@@ -421,11 +393,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               "-translate-x-1/2 absolute left-1/2",
           )}
         >
-          {titleBarProjectMode === "window" ? (
-            <WindowTitleDisplay />
-          ) : (
-            <ProjectTabs />
-          )}
+          {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
         </div>
       </div>
 
@@ -448,10 +416,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 <Minus className="size-3.5 text-text-lighter" />
               </Button>
             </Tooltip>
-            <Tooltip
-              content={isMaximized ? "Restore" : "Maximize"}
-              side="bottom"
-            >
+            <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
                 variant="secondary"
@@ -484,18 +449,13 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 };
 
 const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
-  const isSettingsDialogVisible = useUIState(
-    (state) => state.isSettingsDialogVisible,
-  );
-  const setIsSettingsDialogVisible = useUIState(
-    (state) => state.setIsSettingsDialogVisible,
-  );
+  const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
+  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
 
   // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const isSettingsShortcut =
-        event.key === "," && (IS_MAC ? event.metaKey : event.ctrlKey);
+      const isSettingsShortcut = event.key === "," && (IS_MAC ? event.metaKey : event.ctrlKey);
 
       if (isSettingsShortcut) {
         event.preventDefault();

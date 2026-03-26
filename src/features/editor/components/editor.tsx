@@ -370,7 +370,9 @@ export function Editor({
       isVisualModeActive && vimVisualSelection.end
         ? {
             ...vimVisualSelection.end,
-            offset: calculateLineOffset(lines, vimVisualSelection.end.line) + vimVisualSelection.end.column,
+            offset:
+              calculateLineOffset(lines, vimVisualSelection.end.line) +
+              vimVisualSelection.end.column,
           }
         : calculateCursorPosition(selectionStart, lines);
 

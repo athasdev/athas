@@ -80,4 +80,81 @@ export interface PullRequestComment {
   createdAt: string;
 }
 
+export interface IssueListItem {
+  number: number;
+  title: string;
+  state: string;
+  author: PullRequestAuthor;
+  updatedAt: string;
+  url: string;
+  labels: Label[];
+}
+
+export interface IssueComment {
+  author: PullRequestAuthor;
+  body: string;
+  createdAt: string;
+}
+
+export interface IssueDetails {
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  author: PullRequestAuthor;
+  createdAt: string;
+  updatedAt: string;
+  url: string;
+  labels: Label[];
+  assignees: PullRequestAuthor[];
+  comments: IssueComment[];
+}
+
+export interface WorkflowRunStep {
+  name: string;
+  status: string | null;
+  conclusion: string | null;
+  number?: number | null;
+}
+
+export interface WorkflowRunJob {
+  name: string;
+  status: string | null;
+  conclusion: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  url?: string | null;
+  steps: WorkflowRunStep[];
+}
+
+export interface WorkflowRunDetails {
+  databaseId: number;
+  name: string | null;
+  displayTitle: string | null;
+  workflowName: string | null;
+  event: string | null;
+  status: string | null;
+  conclusion: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  url: string;
+  headBranch: string | null;
+  headSha: string | null;
+  jobs: WorkflowRunJob[];
+}
+
+export interface WorkflowRunListItem {
+  databaseId: number;
+  displayTitle: string | null;
+  name: string | null;
+  workflowName: string | null;
+  event: string | null;
+  status: string | null;
+  conclusion: string | null;
+  updatedAt: string | null;
+  url: string;
+  headBranch: string | null;
+  headSha: string | null;
+}
+
 export type PRFilter = "all" | "my-prs" | "review-requests";

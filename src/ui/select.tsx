@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
 import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-import { buttonVariants } from "@/ui/button";
+import { buttonVariants, type ButtonVariant } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 export interface SelectOption {
@@ -21,6 +21,7 @@ export interface SelectProps {
   menuClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
+  variant?: Extract<ButtonVariant, "ghost" | "secondary" | "outline">;
   searchable?: boolean;
   openDirection?: "up" | "down" | "auto";
   leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
@@ -122,7 +123,9 @@ function SelectSearchField({
 }
 
 function SelectEmptyState() {
-  return <div className="ui-font ui-text-sm p-3 text-center text-text-lighter">No matching options</div>;
+  return (
+    <div className="ui-font ui-text-sm p-3 text-center text-text-lighter">No matching options</div>
+  );
 }
 
 export default function Select({
@@ -134,6 +137,7 @@ export default function Select({
   menuClassName = "",
   disabled = false,
   size = "sm",
+  variant = "ghost",
   searchable = false,
   openDirection = "down",
   leftIcon,
@@ -162,10 +166,10 @@ export default function Select({
   const resolvedTriggerClassName = cn(
     selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
     buttonVariants({
-      variant: "ghost",
+      variant,
       size,
     }),
-    "rounded-md bg-transparent text-text-lighter hover:bg-hover hover:text-text focus:ring-1 focus:ring-accent/20",
+    "focus:ring-1 focus:ring-accent/20",
     className,
   );
 

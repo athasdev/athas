@@ -225,10 +225,7 @@ export function useTokenizer({
     [incremental, tokenizeFull, tokenizeRangeInternal],
   );
 
-  const forceFullTokenize = useCallback(
-    async (text: string) => tokenizeFull(text),
-    [tokenizeFull],
-  );
+  const forceFullTokenize = useCallback(async (text: string) => tokenizeFull(text), [tokenizeFull]);
 
   const resetForBufferSwitch = useCallback(() => {
     requestVersionRef.current += 1;

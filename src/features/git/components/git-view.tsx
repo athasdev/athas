@@ -9,7 +9,6 @@ import {
   History,
   MoreHorizontal,
   RefreshCw,
-  X,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -134,15 +133,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     setRepoSelectionError(null);
     setIsRepoMenuOpen(false);
   }, [clearManualRepository]);
-
-  const getWorkspaceRepoSubtitle = useCallback(
-    (path: string) => {
-      if (!repoPath) return "Workspace repository";
-      if (path === repoPath) return "Workspace root repository";
-      return "Workspace repository";
-    },
-    [repoPath],
-  );
 
   const loadInitialGitData = useCallback(async () => {
     if (!activeRepoPath) return;
@@ -527,7 +517,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const renderRepoOption = (
     path: string,
     label: string,
-    subtitle: string,
     isActive: boolean,
     onClick: () => void,
   ) => (
@@ -544,10 +533,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <Check
         className={cn("mt-0.5 shrink-0", isActive ? "text-success opacity-100" : "opacity-0")}
       />
-      <div className="min-w-0 flex-1 pt-px">
-        <div className="ui-text-sm truncate leading-[1.15] text-text">{label}</div>
-        <div className="ui-text-sm truncate leading-[1.15] text-text-lighter/78">{subtitle}</div>
-      </div>
+      <span className={cn("min-w-0 flex-1 truncate", isActive ? "text-text" : "text-text-lighter")}>
+        {label}
+      </span>
     </Button>
   );
 
@@ -670,7 +658,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               }}
               variant="ghost"
               size="sm"
-              className={dropdownTriggerClassName("max-w-44")}
+              className={dropdownTriggerClassName("ui-text-sm max-w-40")}
               title={activeRepoPath}
             >
               <FolderOpen className="shrink-0" />
@@ -799,72 +787,43 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         anchorRef={repoTriggerRef}
         anchorAlign="end"
         onClose={() => setIsRepoMenuOpen(false)}
-        className="flex w-[288px] flex-col overflow-hidden rounded-2xl p-0"
+        className="w-[240px]"
       >
-        <div className="flex items-center justify-between bg-secondary-bg/75 px-3 py-2.5">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <FolderOpen className="shrink-0 text-text-lighter" />
-            <span className="ui-text-sm truncate font-medium text-text">
-              {activeRepoPath ? getFolderName(activeRepoPath) : "Repositories"}
-            </span>
-            <span className="ui-text-sm rounded-full bg-selected px-1.5 py-0.5 text-text-lighter">
-              {workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}
-            </span>
-          </div>
-          <Button
-            onClick={() => setIsRepoMenuOpen(false)}
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Close repository dropdown"
-          >
-            <X />
-          </Button>
-        </div>
+        <div className="space-y-1">
+          {workspaceRepoPaths.map((workspaceRepoPath) =>
+            renderRepoOption(
+              workspaceRepoPath,
+              getFolderName(workspaceRepoPath),
+              activeRepoPath === workspaceRepoPath,
+              () => {
+                selectRepository(workspaceRepoPath);
+                setRepoSelectionError(null);
+                setIsRepoMenuOpen(false);
+              },
+            ),
+          )}
 
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
-          <div className="ui-text-sm mb-1 flex items-center justify-between px-1 text-text-lighter">
-            <span>Repositories</span>
-            <span>{workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}</span>
-          </div>
-
-          <div className="space-y-1">
-            {workspaceRepoPaths.map((workspaceRepoPath) =>
-              renderRepoOption(
-                workspaceRepoPath,
-                getFolderName(workspaceRepoPath),
-                getWorkspaceRepoSubtitle(workspaceRepoPath),
-                activeRepoPath === workspaceRepoPath,
-                () => {
-                  selectRepository(workspaceRepoPath);
-                  setRepoSelectionError(null);
-                  setIsRepoMenuOpen(false);
-                },
-              ),
+          {manualRepoPath &&
+            !workspaceRepoPaths.includes(manualRepoPath) &&
+            renderRepoOption(
+              manualRepoPath,
+              getFolderName(manualRepoPath),
+              activeRepoPath === manualRepoPath,
+              () => {
+                selectRepository(manualRepoPath);
+                setRepoSelectionError(null);
+                setIsRepoMenuOpen(false);
+              },
             )}
 
-            {manualRepoPath &&
-              !workspaceRepoPaths.includes(manualRepoPath) &&
-              renderRepoOption(
-                manualRepoPath,
-                getFolderName(manualRepoPath),
-                "Manual selection",
-                activeRepoPath === manualRepoPath,
-                () => {
-                  selectRepository(manualRepoPath);
-                  setRepoSelectionError(null);
-                  setIsRepoMenuOpen(false);
-                },
-              )}
-          </div>
-
           {repoPath && workspaceRepoPaths.length === 0 && !isDiscoveringRepos && (
-            <div className="ui-text-sm px-2 py-2 text-text-lighter">
+            <div className="ui-text-sm px-2 py-1.5 text-text-lighter">
               No repositories found in this workspace.
             </div>
           )}
 
           {isDiscoveringRepos && (
-            <div className="ui-text-sm flex items-center gap-1.5 px-2 py-2 text-text-lighter">
+            <div className="ui-text-sm flex items-center gap-1.5 px-2 py-1.5 text-text-lighter">
               <RefreshCw className="animate-spin" />
               Detecting workspace repositories...
             </div>
@@ -874,9 +833,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             <Button
               onClick={() => void handleSelectRepository()}
               disabled={isSelectingRepo}
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="ui-text-sm flex w-full items-center gap-2 rounded-lg text-left text-text disabled:opacity-60"
+              className="ui-text-sm flex w-full items-center gap-2 rounded-lg text-left text-text-lighter disabled:opacity-60"
             >
               <FolderOpen />
               {isSelectingRepo ? "Selecting..." : "Browse Repository..."}

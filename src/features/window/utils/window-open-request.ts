@@ -35,8 +35,7 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
 }
 
 export async function handleWindowOpenRequest(request: WindowOpenRequest) {
-  const { useFileSystemStore } =
-    await import("@/features/file-system/controllers/store");
+  const { useFileSystemStore } = await import("@/features/file-system/controllers/store");
   const { handleFileSelect, handleOpenFolderByPath, handleOpenRemoteProject } =
     useFileSystemStore.getState();
 

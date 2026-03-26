@@ -161,9 +161,7 @@ const GitCommitHistory = ({
             {isCollapsed ? <ChevronRight /> : <ChevronDown />}
             <span className="ui-text-sm font-medium text-text">History</span>
             <div className="flex-1" />
-            <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">
-              {commits.length}
-            </span>
+            <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{commits.length}</span>
           </Button>
         )}
 

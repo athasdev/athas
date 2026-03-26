@@ -394,6 +394,8 @@ fn main() {
          remove_github_token,
          github_check_cli_auth,
          github_list_prs,
+         github_list_issues,
+         github_list_workflow_runs,
          github_get_current_user,
          github_open_pr_in_browser,
          github_checkout_pr,
@@ -401,6 +403,8 @@ fn main() {
          github_get_pr_diff,
          github_get_pr_files,
          github_get_pr_comments,
+         github_get_issue_details,
+         github_get_workflow_run_details,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,

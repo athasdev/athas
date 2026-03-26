@@ -68,5 +68,7 @@ interface TableHeadCellProps {
 }
 
 export function TableHeadCell({ children, className }: TableHeadCellProps) {
-  return <div className={cn("ui-text-sm font-medium text-text-lighter", className)}>{children}</div>;
+  return (
+    <div className={cn("ui-text-sm font-medium text-text-lighter", className)}>{children}</div>
+  );
 }

@@ -22,9 +22,9 @@ pub struct PullRequest {
    #[serde(rename = "reviewDecision")]
    pub review_decision: Option<String>,
    pub url: String,
-   #[serde(rename = "headRefName")]
+   #[serde(rename(serialize = "headRef", deserialize = "headRefName"))]
    pub head_ref: String,
-   #[serde(rename = "baseRefName")]
+   #[serde(rename(serialize = "baseRef", deserialize = "baseRefName"))]
    pub base_ref: String,
    pub additions: i64,
    pub deletions: i64,
@@ -84,9 +84,9 @@ pub struct PullRequestDetails {
    #[serde(rename = "reviewDecision")]
    pub review_decision: Option<String>,
    pub url: String,
-   #[serde(rename = "headRefName")]
+   #[serde(rename(serialize = "headRef", deserialize = "headRefName"))]
    pub head_ref: String,
-   #[serde(rename = "baseRefName")]
+   #[serde(rename(serialize = "baseRef", deserialize = "baseRefName"))]
    pub base_ref: String,
    pub additions: i64,
    pub deletions: i64,
@@ -131,6 +131,129 @@ pub struct PullRequestComment {
    pub body: String,
    #[serde(rename = "createdAt")]
    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IssueListItem {
+   pub number: i64,
+   pub title: String,
+   pub state: String,
+   pub author: PullRequestAuthor,
+   #[serde(rename = "updatedAt")]
+   pub updated_at: String,
+   pub url: String,
+   #[serde(default)]
+   pub labels: Vec<Label>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IssueComment {
+   pub author: PullRequestAuthor,
+   pub body: String,
+   #[serde(rename = "createdAt")]
+   pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IssueDetails {
+   pub number: i64,
+   pub title: String,
+   pub body: String,
+   pub state: String,
+   pub author: PullRequestAuthor,
+   #[serde(rename = "createdAt")]
+   pub created_at: String,
+   #[serde(rename = "updatedAt")]
+   pub updated_at: String,
+   pub url: String,
+   #[serde(default)]
+   pub labels: Vec<Label>,
+   #[serde(default)]
+   pub assignees: Vec<PullRequestAuthor>,
+   #[serde(default)]
+   pub comments: Vec<IssueComment>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkflowRunStep {
+   pub name: String,
+   #[serde(default)]
+   pub status: Option<String>,
+   #[serde(default)]
+   pub conclusion: Option<String>,
+   #[serde(default)]
+   pub number: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkflowRunJob {
+   pub name: String,
+   #[serde(default)]
+   pub status: Option<String>,
+   #[serde(default)]
+   pub conclusion: Option<String>,
+   #[serde(rename = "startedAt", default)]
+   pub started_at: Option<String>,
+   #[serde(rename = "completedAt", default)]
+   pub completed_at: Option<String>,
+   #[serde(default)]
+   pub url: Option<String>,
+   #[serde(default)]
+   pub steps: Vec<WorkflowRunStep>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkflowRunDetails {
+   #[serde(rename = "databaseId")]
+   pub database_id: i64,
+   #[serde(default)]
+   pub name: Option<String>,
+   #[serde(rename = "displayTitle", default)]
+   pub display_title: Option<String>,
+   #[serde(rename = "workflowName", default)]
+   pub workflow_name: Option<String>,
+   #[serde(default)]
+   pub event: Option<String>,
+   #[serde(default)]
+   pub status: Option<String>,
+   #[serde(default)]
+   pub conclusion: Option<String>,
+   #[serde(rename = "createdAt", default)]
+   pub created_at: Option<String>,
+   #[serde(rename = "updatedAt", default)]
+   pub updated_at: Option<String>,
+   pub url: String,
+   #[serde(rename = "headBranch", default)]
+   pub head_branch: Option<String>,
+   #[serde(rename = "headSha", default)]
+   pub head_sha: Option<String>,
+   #[serde(default)]
+   pub jobs: Vec<WorkflowRunJob>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkflowRunListItem {
+   #[serde(rename = "databaseId")]
+   pub database_id: i64,
+   #[serde(rename = "displayTitle", default)]
+   pub display_title: Option<String>,
+   #[serde(default)]
+   pub name: Option<String>,
+   #[serde(rename = "workflowName", default)]
+   pub workflow_name: Option<String>,
+   #[serde(default)]
+   pub event: Option<String>,
+   #[serde(default)]
+   pub status: Option<String>,
+   #[serde(default)]
+   pub conclusion: Option<String>,
+   #[serde(rename = "updatedAt", default)]
+   pub updated_at: Option<String>,
+   pub url: String,
+   #[serde(rename = "headBranch", default)]
+   pub head_branch: Option<String>,
+   #[serde(rename = "headSha", default)]
+   pub head_sha: Option<String>,
 }
 
 fn deserialize_status_checks<'de, D>(deserializer: D) -> Result<Vec<StatusCheck>, D::Error>
@@ -281,6 +404,52 @@ pub fn github_list_prs(
 
 pub fn github_get_current_user(app: AppHandle) -> Result<String, String> {
    get_github_username(&app)
+}
+
+pub fn github_list_issues(app: AppHandle, repo_path: String) -> Result<Vec<IssueListItem>, String> {
+   let repo_dir = Path::new(&repo_path);
+   let json_fields = "number,title,state,author,updatedAt,url,labels";
+
+   let output = gh_command(&app, Some(repo_dir))
+      .args(["issue", "list", "--state", "open", "--limit", "50", "--json", json_fields])
+      .output()
+      .map_err(|e| format!("Failed to execute gh command: {}", e))?;
+
+   if !output.status.success() {
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      return Err(format!("Failed to list issues: {}", stderr));
+   }
+
+   let stdout = String::from_utf8_lossy(&output.stdout);
+   let issues: Vec<IssueListItem> =
+      serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse issues: {}", e))?;
+
+   Ok(issues)
+}
+
+pub fn github_list_workflow_runs(
+   app: AppHandle,
+   repo_path: String,
+) -> Result<Vec<WorkflowRunListItem>, String> {
+   let repo_dir = Path::new(&repo_path);
+   let json_fields = "databaseId,displayTitle,name,workflowName,event,status,conclusion,\
+                      updatedAt,url,headBranch,headSha";
+
+   let output = gh_command(&app, Some(repo_dir))
+      .args(["run", "list", "--limit", "50", "--json", json_fields])
+      .output()
+      .map_err(|e| format!("Failed to execute gh command: {}", e))?;
+
+   if !output.status.success() {
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      return Err(format!("Failed to list workflow runs: {}", stderr));
+   }
+
+   let stdout = String::from_utf8_lossy(&output.stdout);
+   let runs: Vec<WorkflowRunListItem> = serde_json::from_str(&stdout)
+      .map_err(|e| format!("Failed to parse workflow runs: {}", e))?;
+
+   Ok(runs)
 }
 
 fn get_github_username(app: &AppHandle) -> Result<String, String> {
@@ -444,6 +613,60 @@ pub fn github_get_pr_comments(
       serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse PR comments: {}", e))?;
 
    Ok(response.comments)
+}
+
+pub fn github_get_issue_details(
+   app: AppHandle,
+   repo_path: String,
+   issue_number: i64,
+) -> Result<IssueDetails, String> {
+   let repo_dir = Path::new(&repo_path);
+   let issue_num_str = issue_number.to_string();
+   let json_fields =
+      "number,title,body,state,author,createdAt,updatedAt,url,labels,assignees,comments";
+
+   let output = gh_command(&app, Some(repo_dir))
+      .args(["issue", "view", &issue_num_str, "--json", json_fields])
+      .output()
+      .map_err(|e| format!("Failed to execute gh command: {}", e))?;
+
+   if !output.status.success() {
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      return Err(format!("Failed to get issue details: {}", stderr));
+   }
+
+   let stdout = String::from_utf8_lossy(&output.stdout);
+   let issue: IssueDetails =
+      serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse issue details: {}", e))?;
+
+   Ok(issue)
+}
+
+pub fn github_get_workflow_run_details(
+   app: AppHandle,
+   repo_path: String,
+   run_id: i64,
+) -> Result<WorkflowRunDetails, String> {
+   let repo_dir = Path::new(&repo_path);
+   let run_id_str = run_id.to_string();
+   let json_fields = "databaseId,name,displayTitle,workflowName,event,status,conclusion,\
+                      createdAt,updatedAt,url,headBranch,headSha,jobs";
+
+   let output = gh_command(&app, Some(repo_dir))
+      .args(["run", "view", &run_id_str, "--json", json_fields])
+      .output()
+      .map_err(|e| format!("Failed to execute gh command: {}", e))?;
+
+   if !output.status.success() {
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      return Err(format!("Failed to get workflow run details: {}", stderr));
+   }
+
+   let stdout = String::from_utf8_lossy(&output.stdout);
+   let run: WorkflowRunDetails = serde_json::from_str(&stdout)
+      .map_err(|e| format!("Failed to parse workflow run details: {}", e))?;
+
+   Ok(run)
 }
 
 fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {

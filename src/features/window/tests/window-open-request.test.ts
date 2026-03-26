@@ -35,9 +35,7 @@ describe("parseWindowOpenUrl", () => {
   });
 
   it("parses in-app query based window requests", () => {
-    const url = new URL(
-      "http://localhost/?target=open&type=directory&path=/Users/test/project",
-    );
+    const url = new URL("http://localhost/?target=open&type=directory&path=/Users/test/project");
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
       path: "/Users/test/project",

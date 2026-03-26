@@ -156,9 +156,7 @@ export default function RunActionsButton() {
         onClose={closeMenu}
         className="w-[264px] rounded-xl p-1.5"
       >
-        <div className="ui-text-sm truncate px-2 pt-1 pb-2 text-text-lighter">
-          {workspaceLabel}
-        </div>
+        <div className="ui-text-sm truncate px-2 pt-1 pb-2 text-text-lighter">{workspaceLabel}</div>
 
         <div className="space-y-0.5">
           {actions.length > 0 ? (

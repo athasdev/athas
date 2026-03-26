@@ -183,11 +183,7 @@ export const MergeStatusBadge = memo(
     const Icon = status.icon;
 
     return (
-      <Badge
-        shape="pill"
-        size="compact"
-        className={cn("gap-1", status.color)}
-      >
+      <Badge shape="pill" size="compact" className={cn("gap-1", status.color)}>
         <Icon />
         <span>{status.text}</span>
       </Badge>
@@ -293,7 +289,9 @@ export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
     <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
       <User />
       <span>Assigned</span>
-      <span className="text-text">{assignees.map((assignee) => `@${assignee.login}`).join(", ")}</span>
+      <span className="text-text">
+        {assignees.map((assignee) => `@${assignee.login}`).join(", ")}
+      </span>
     </span>
   );
 });

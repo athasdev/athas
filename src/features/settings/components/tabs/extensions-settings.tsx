@@ -6,6 +6,7 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 
@@ -54,15 +55,15 @@ const ExtensionRow = ({
     <div className="flex items-center justify-between gap-4 border-border/50 border-b px-1 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-sm text-text">{extension.name}</span>
-          <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+          <span className="ui-font ui-text-md text-text">{extension.name}</span>
+          <Badge variant="default" size="compact">
             {getCategoryLabel(extension.category)}
-          </span>
+          </Badge>
           {extension.version && (
-            <span className="text-[10px] text-text-lighter">v{extension.version}</span>
+            <span className="ui-font ui-text-sm text-text-lighter">v{extension.version}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-text-lighter text-xs">
+        <div className="ui-font ui-text-sm flex items-center gap-2 text-text-lighter">
           {extension.publisher && <span>by {extension.publisher}</span>}
           {extension.publisher && extension.extensions && extension.extensions.length > 0 && (
             <span>·</span>
@@ -79,41 +80,31 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <span className="shrink-0 text-accent text-xs">Built-in</span>
+        <Badge variant="accent" size="compact" className="shrink-0">
+          Built-in
+        </Badge>
       ) : isInstalling ? (
         <div className="flex shrink-0 items-center gap-1.5 text-accent">
           <RefreshCw className="animate-spin" />
-          <span className="text-xs">Installing</span>
+          <span className="ui-font ui-text-sm">Installing</span>
         </div>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {hasUpdate && onUpdate && (
-            <Button
-              onClick={onUpdate}
-              variant="ghost"
-              size="xs"
-              className="text-accent text-xs hover:text-accent/80"
-              title="Update available"
-            >
+            <Button onClick={onUpdate} variant="primary" size="xs" title="Update available">
               Update
             </Button>
           )}
-          <Button
-            onClick={onToggle}
-            variant="ghost"
-            size="xs"
-            className="text-text-lighter text-xs hover:text-red-500"
-            title="Uninstall"
-          >
+          <Button onClick={onToggle} variant="danger" size="xs" title="Uninstall">
             Uninstall
           </Button>
         </div>
       ) : (
         <Button
           onClick={onToggle}
-          variant="ghost"
+          variant="secondary"
           size="xs"
-          className="shrink-0 text-text-lighter text-xs hover:text-accent"
+          className="shrink-0"
           title="Install"
         >
           Install
@@ -313,56 +304,54 @@ export const ExtensionsSettings = () => {
           leftIcon={Search}
           size="xs"
           containerClassName="flex-1"
-          className="text-[11px]"
         />
       </div>
 
       <div className="mb-1.5 flex flex-wrap gap-1">
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "all")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
           data-active={settings.extensionsActiveTab === "all"}
-          className="h-6 px-2 text-[11px]"
         >
           All
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "language")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
           data-active={settings.extensionsActiveTab === "language"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          className="gap-1"
         >
           <Languages />
           Languages
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "theme")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
           data-active={settings.extensionsActiveTab === "theme"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          className="gap-1"
         >
           <Palette />
           Themes
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "icon-theme")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
           data-active={settings.extensionsActiveTab === "icon-theme"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          className="gap-1"
         >
           <Package />
           Icon Themes
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "database")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
           data-active={settings.extensionsActiveTab === "database"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          className="gap-1"
         >
           <Database />
           Databases
@@ -373,7 +362,7 @@ export const ExtensionsSettings = () => {
         {filteredExtensions.length === 0 ? (
           <div className="py-6 text-center text-text-lighter">
             <Package className="mx-auto mb-1.5 opacity-50" />
-            <p className="text-[11px]">No extensions found matching your search.</p>
+            <p className="ui-font ui-text-sm">No extensions found matching your search.</p>
           </div>
         ) : (
           <div>

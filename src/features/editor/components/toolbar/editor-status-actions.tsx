@@ -405,11 +405,7 @@ export function EditorStatusActions() {
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
           size="icon-xs"
-          className={cn(
-            actionButtonClass,
-            config.color,
-            isLspOpen && "bg-hover text-text",
-          )}
+          className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
           title={config.title}
           aria-label="Language server status"
         >
@@ -540,61 +536,61 @@ export function EditorStatusActions() {
           className="w-[220px] overflow-hidden rounded-lg p-1.5"
         >
           <div className="space-y-0.5">
-          {displayOptions.slice(0, 2).map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              onClick={() => !option.disabled && void option.onToggle()}
-              variant="ghost"
-              size="sm"
-              className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
-              disabled={option.disabled}
-            >
-              <span>{option.label}</span>
-              <span className="flex items-center gap-2">
-                {option.shortcut ? (
-                  <Keybinding keys={option.shortcut} className="shrink-0" />
-                ) : null}
+            {displayOptions.slice(0, 2).map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={() => !option.disabled && void option.onToggle()}
+                variant="ghost"
+                size="sm"
+                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                disabled={option.disabled}
+              >
+                <span>{option.label}</span>
+                <span className="flex items-center gap-2">
+                  {option.shortcut ? (
+                    <Keybinding keys={option.shortcut} className="shrink-0" />
+                  ) : null}
+                  <span className="flex size-4 items-center justify-center">
+                    {option.checked ? <Check className="text-accent" /> : null}
+                  </span>
+                </span>
+              </Button>
+            ))}
+            <div className="my-1 border-t border-border/70" />
+            {displayOptions.slice(2, 6).map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={() => !option.disabled && void option.onToggle()}
+                variant="ghost"
+                size="sm"
+                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                disabled={option.disabled}
+              >
+                <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
                   {option.checked ? <Check className="text-accent" /> : null}
                 </span>
-              </span>
-            </Button>
-          ))}
-          <div className="my-1 border-t border-border/70" />
-          {displayOptions.slice(2, 6).map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              onClick={() => !option.disabled && void option.onToggle()}
-              variant="ghost"
-              size="sm"
-              className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
-              disabled={option.disabled}
-            >
-              <span>{option.label}</span>
-              <span className="flex size-4 items-center justify-center">
-                {option.checked ? <Check className="text-accent" /> : null}
-              </span>
-            </Button>
-          ))}
-          <div className="my-1 border-t border-border/70" />
-          {displayOptions.slice(6).map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              onClick={() => !option.disabled && void option.onToggle()}
-              variant="ghost"
-              size="sm"
-              className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
-              disabled={option.disabled}
-            >
-              <span>{option.label}</span>
-              <span className="flex size-4 items-center justify-center">
-                {option.checked ? <Check className="text-accent" /> : null}
-              </span>
-            </Button>
-          ))}
+              </Button>
+            ))}
+            <div className="my-1 border-t border-border/70" />
+            {displayOptions.slice(6).map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={() => !option.disabled && void option.onToggle()}
+                variant="ghost"
+                size="sm"
+                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                disabled={option.disabled}
+              >
+                <span>{option.label}</span>
+                <span className="flex size-4 items-center justify-center">
+                  {option.checked ? <Check className="text-accent" /> : null}
+                </span>
+              </Button>
+            ))}
           </div>
         </Dropdown>
       </div>

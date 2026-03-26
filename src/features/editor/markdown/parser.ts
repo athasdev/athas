@@ -179,7 +179,7 @@ export function parseMarkdown(content: string): string {
       processedLines.push(processTable(tableLines, footnotes));
       i = j - 1;
     } else if (trimmedLine === "") {
-      processedLines.push("<br />");
+      continue;
     } else {
       processedLines.push(`<p>${processInline(line, footnotes)}</p>`);
     }

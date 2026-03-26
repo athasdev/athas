@@ -234,11 +234,7 @@ function toHighlightTokens(captures: QueryCapture[]): HighlightToken[] {
   const deduped: HighlightToken[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const next = tokens[i + 1];
-    if (
-      next &&
-      next.startIndex === tokens[i].startIndex &&
-      next.endIndex === tokens[i].endIndex
-    ) {
+    if (next && next.startIndex === tokens[i].startIndex && next.endIndex === tokens[i].endIndex) {
       continue;
     }
     deduped.push(tokens[i]);
@@ -255,8 +251,7 @@ function getRangeQueryOptions(content: string, viewportRange?: ViewportRangePayl
   const lastLine = Math.max(0, lineOffsets.length - 1);
   const startLine = Math.max(0, Math.min(viewportRange.startLine, lastLine));
   const endLine = Math.max(startLine, Math.min(viewportRange.endLine, lastLine));
-  const endIndex =
-    endLine + 1 < lineOffsets.length ? lineOffsets[endLine + 1] : normalized.length;
+  const endIndex = endLine + 1 < lineOffsets.length ? lineOffsets[endLine + 1] : normalized.length;
 
   return {
     startPosition: { row: startLine, column: 0 },
@@ -266,7 +261,12 @@ function getRangeQueryOptions(content: string, viewportRange?: ViewportRangePayl
   };
 }
 
-function upsertTree(session: WorkerSession | undefined, languageId: string, content: string, tree: Tree) {
+function upsertTree(
+  session: WorkerSession | undefined,
+  languageId: string,
+  content: string,
+  tree: Tree,
+) {
   if (session?.tree && session.tree !== tree) {
     try {
       session.tree.delete();
@@ -303,7 +303,11 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
         tree = loadedParser.parser.parse(normalizedContent, previousTreeCopy);
         previousTreeCopy.delete();
       } catch (error) {
-        logger.warn("TokenizerWorker", "Incremental worker parse failed, falling back to full", error);
+        logger.warn(
+          "TokenizerWorker",
+          "Incremental worker parse failed, falling back to full",
+          error,
+        );
       }
     }
   }
@@ -317,15 +321,16 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
   }
 
   const query = loadedParser.highlightQuery;
-  const tokens =
-    query
-      ? toHighlightTokens(
-          query.captures(
-            tree.rootNode,
-            message.mode === "range" ? getRangeQueryOptions(normalizedContent, message.viewportRange) : {},
-          ),
-        )
-      : [];
+  const tokens = query
+    ? toHighlightTokens(
+        query.captures(
+          tree.rootNode,
+          message.mode === "range"
+            ? getRangeQueryOptions(normalizedContent, message.viewportRange)
+            : {},
+        ),
+      )
+    : [];
 
   const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
   nextSession.bufferId = message.bufferId;
@@ -366,7 +371,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         } satisfies WorkerResponse);
         return;
       case "reset":
-        (self as DedicatedWorkerGlobalScope).postMessage(handleReset(message) satisfies WorkerResponse);
+        (self as DedicatedWorkerGlobalScope).postMessage(
+          handleReset(message) satisfies WorkerResponse,
+        );
         return;
       case "tokenize":
         await wasmParserLoader.initialize();

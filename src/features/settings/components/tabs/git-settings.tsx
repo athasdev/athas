@@ -179,6 +179,7 @@ export const GitSettings = () => {
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
             className="w-32"
             size="sm"
+            variant="secondary"
           />
         </SettingRow>
       </Section>

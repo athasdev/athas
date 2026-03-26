@@ -96,9 +96,7 @@ const GitStashPanel = ({
             <span className="ui-text-sm font-medium text-text">Stashes</span>
             <div className="flex-1" />
             {stashes.length > 0 && (
-              <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">
-                {stashes.length}
-              </span>
+              <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{stashes.length}</span>
             )}
           </Button>
         )}

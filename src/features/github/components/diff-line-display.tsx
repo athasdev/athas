@@ -35,7 +35,7 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
   };
 
   return (
-    <div className={cn("px-3 py-0 font-mono text-[11px] leading-4", bgClass, textClass)}>
+    <div className={cn("ui-text-sm px-3 py-0.5 font-mono leading-5", bgClass, textClass)}>
       <span className="mr-3 inline-block w-10 select-none text-right text-text-lighter/50">
         {index + 1}
       </span>

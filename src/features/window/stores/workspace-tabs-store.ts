@@ -30,9 +30,7 @@ interface WorkspaceTabsActions {
 
 const workspaceTabsStorageKey = `workspace-tabs-storage-${getCurrentWebviewWindow().label}`;
 
-const useWorkspaceTabsStoreBase = create<
-  WorkspaceTabsState & WorkspaceTabsActions
->()(
+const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActions>()(
   persist(
     immer((set, get) => ({
       projectTabs: [],
@@ -72,9 +70,7 @@ const useWorkspaceTabsStoreBase = create<
         const wasActive = tabs[tabIndex].isActive;
 
         set((state) => {
-          state.projectTabs = state.projectTabs.filter(
-            (tab) => tab.id !== projectId,
-          );
+          state.projectTabs = state.projectTabs.filter((tab) => tab.id !== projectId);
         });
 
         // If we closed the active tab, activate another one

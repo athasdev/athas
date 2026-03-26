@@ -1,7 +1,4 @@
-import {
-  normalizeUiFontSize,
-  UI_FONT_SIZE_DEFAULT,
-} from "@/features/settings/lib/ui-font-size";
+import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
 import type { Settings } from "@/features/settings/types/settings";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
@@ -55,6 +52,9 @@ export const defaultSettings: Settings = {
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
+  showGitHubPullRequests: true,
+  showGitHubIssues: true,
+  showGitHubActions: true,
   // Keyboard
   vimMode: false,
   vimRelativeLineNumbers: false,
@@ -108,17 +108,14 @@ export const defaultSettings: Settings = {
   enableGitGutter: true,
 };
 
-export const getDefaultSetting = <K extends keyof Settings>(
-  key: K,
-): Settings[K] => defaultSettings[key];
+export const getDefaultSetting = <K extends keyof Settings>(key: K): Settings[K] =>
+  defaultSettings[key];
 
 export function getDefaultSettingsSnapshot(): Settings {
   return {
     ...defaultSettings,
     coreFeatures: { ...defaultSettings.coreFeatures },
-    enterpriseAllowedExtensionIds: [
-      ...defaultSettings.enterpriseAllowedExtensionIds,
-    ],
+    enterpriseAllowedExtensionIds: [...defaultSettings.enterpriseAllowedExtensionIds],
     hiddenFilePatterns: [...defaultSettings.hiddenFilePatterns],
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),

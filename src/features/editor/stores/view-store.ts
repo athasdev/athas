@@ -156,12 +156,10 @@ export const useEditorViewStore = createSelectors(
   ),
 );
 
-let previousActiveBufferSnapshot:
-  | {
-      id: string;
-      content: string;
-    }
-  | null = null;
+let previousActiveBufferSnapshot: {
+  id: string;
+  content: string;
+} | null = null;
 
 // Subscribe to buffer changes and update computed values
 useBufferStore.subscribe((state) => {

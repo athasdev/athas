@@ -39,7 +39,9 @@ function getSystemThemePreference(): SystemThemePreference {
   return "dark";
 }
 
-function getEffectiveTheme(settings: Pick<Settings, "theme" | "syncSystemTheme" | "autoThemeLight" | "autoThemeDark">): Theme {
+function getEffectiveTheme(
+  settings: Pick<Settings, "theme" | "syncSystemTheme" | "autoThemeLight" | "autoThemeDark">,
+): Theme {
   if (!settings.syncSystemTheme) {
     return settings.theme;
   }

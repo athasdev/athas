@@ -14,9 +14,7 @@ export default function WindowTitleDisplay() {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const activeProject = projectTabs.find((tab) => tab.isActive);
   const title = activeProject?.name || getWorkspaceName(rootFolderPath);
-  const isRemote = (activeProject?.path || rootFolderPath || "").startsWith(
-    "remote://",
-  );
+  const isRemote = (activeProject?.path || rootFolderPath || "").startsWith("remote://");
 
   if (!title) {
     return <div className="h-6 min-w-[120px]" aria-hidden="true" />;

@@ -49,6 +49,9 @@ export interface Settings {
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
+  showGitHubPullRequests: boolean;
+  showGitHubIssues: boolean;
+  showGitHubActions: boolean;
   // Keyboard
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
@@ -61,14 +64,7 @@ export interface Settings {
   autoCompletion: boolean;
   parameterHints: boolean;
   // External Editor
-  externalEditor:
-    | "none"
-    | "nvim"
-    | "helix"
-    | "vim"
-    | "nano"
-    | "emacs"
-    | "custom";
+  externalEditor: "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom";
   customEditorCommand: string;
   // Features
   coreFeatures: CoreFeaturesState;

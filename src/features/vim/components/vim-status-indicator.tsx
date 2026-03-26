@@ -60,9 +60,7 @@ const VimStatusIndicator = ({ compact = false }: VimStatusIndicatorProps) => {
 
   return (
     <div className="flex items-center gap-1">
-      <span className={statusChipClass}>
-        {modeDisplay}
-      </span>
+      <span className={statusChipClass}>{modeDisplay}</span>
 
       {keyDisplay && (
         <span className={statusChipClass} title="Current keystroke sequence">

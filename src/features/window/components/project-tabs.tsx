@@ -30,8 +30,7 @@ import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
 
-const isRemoteProjectTab = (tab: ProjectTab) =>
-  tab.path.startsWith("remote://");
+const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
 interface TabPosition {
   index: number;
@@ -162,11 +161,7 @@ const ProjectTabs = () => {
         }
 
         if (prev.isDragging) {
-          const dropTarget = calculateDropTarget(
-            e.clientX,
-            prev.draggedIndex,
-            prev.tabPositions,
-          );
+          const dropTarget = calculateDropTarget(e.clientX, prev.draggedIndex, prev.tabPositions);
           return {
             ...prev,
             currentPosition,
@@ -182,10 +177,7 @@ const ProjectTabs = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
-      if (
-        e.button !== 0 ||
-        (e.target as HTMLElement).closest("button.close-button")
-      ) {
+      if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
         return;
       }
 
@@ -354,8 +346,7 @@ const ProjectTabs = () => {
     };
 
     const handleGlobalMouseUp = () => {
-      const { isDragging, draggedIndex, dropTargetIndex } =
-        dragStateRef.current;
+      const { isDragging, draggedIndex, dropTargetIndex } = dragStateRef.current;
 
       if (
         isDragging &&

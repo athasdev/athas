@@ -127,7 +127,23 @@ interface BufferActions {
   convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
   openWebViewerBuffer: (url: string) => string;
-  openPRBuffer: (prNumber: number) => string;
+  openPRBuffer: (
+    prNumber: number,
+    metadata?: { title?: string; authorAvatarUrl?: string; selectedFilePath?: string },
+  ) => string;
+  openGitHubIssueBuffer: (options: {
+    issueNumber: number;
+    repoPath?: string;
+    title?: string;
+    authorAvatarUrl?: string;
+    url?: string;
+  }) => string;
+  openGitHubActionBuffer: (options: {
+    runId: number;
+    repoPath?: string;
+    title?: string;
+    url?: string;
+  }) => string;
   openTerminalBuffer: (options?: {
     name?: string;
     command?: string;
@@ -321,10 +337,36 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
       return {
         ...base,
         type: "pullRequest",
-        path: `pr://${spec.prNumber}`,
-        name: "Pull Request",
+        path: spec.selectedFilePath
+          ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
+          : `pr://${spec.prNumber}`,
+        name: spec.name ?? "Pull Request",
         isPreview: false,
         prNumber: spec.prNumber,
+        authorAvatarUrl: spec.authorAvatarUrl,
+      };
+    case "githubIssue":
+      return {
+        ...base,
+        type: "githubIssue",
+        path: spec.url ?? `github-issue://${spec.issueNumber}`,
+        name: spec.name ?? "Issue",
+        isPreview: false,
+        repoPath: spec.repoPath,
+        issueNumber: spec.issueNumber,
+        authorAvatarUrl: spec.authorAvatarUrl,
+        url: spec.url,
+      };
+    case "githubAction":
+      return {
+        ...base,
+        type: "githubAction",
+        path: spec.url ?? `github-action://${spec.runId}`,
+        name: spec.name ?? "Action",
+        isPreview: false,
+        repoPath: spec.repoPath,
+        runId: spec.runId,
+        url: spec.url,
       };
     case "markdownPreview":
       return {
@@ -667,17 +709,124 @@ export const useBufferStore = createSelectors(
             }
 
             case "pullRequest": {
-              const path = `pr://${spec.prNumber}`;
+              const path = spec.selectedFilePath
+                ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
+                : `pr://${spec.prNumber}`;
               const existing = buffers.find(
                 (b) => b.type === "pullRequest" && b.prNumber === spec.prNumber,
               );
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  state.buffers = state.buffers.map((b) =>
+                    b.id === existing.id && b.type === "pullRequest"
+                      ? {
+                          ...b,
+                          path,
+                          name: spec.name ?? b.name,
+                          authorAvatarUrl: spec.authorAvatarUrl ?? b.authorAvatarUrl,
+                          isActive: true,
+                        }
+                      : {
+                          ...b,
+                          isActive: b.id === existing.id,
+                        },
+                  );
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "githubIssue": {
+              const path = spec.url ?? `github-issue://${spec.issueNumber}`;
+              const existing = buffers.find(
+                (b) => b.type === "githubIssue" && b.issueNumber === spec.issueNumber,
+              );
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) =>
+                    b.id === existing.id && b.type === "githubIssue"
+                      ? {
+                          ...b,
+                          path,
+                          name: spec.name ?? b.name,
+                          repoPath: spec.repoPath ?? b.repoPath,
+                          authorAvatarUrl: spec.authorAvatarUrl ?? b.authorAvatarUrl,
+                          url: spec.url ?? b.url,
+                          isActive: true,
+                        }
+                      : {
+                          ...b,
+                          isActive: b.id === existing.id,
+                        },
+                  );
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "githubAction": {
+              const path = spec.url ?? `github-action://${spec.runId}`;
+              const existing = buffers.find(
+                (b) => b.type === "githubAction" && b.runId === spec.runId,
+              );
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) =>
+                    b.id === existing.id && b.type === "githubAction"
+                      ? {
+                          ...b,
+                          path,
+                          name: spec.name ?? b.name,
+                          repoPath: spec.repoPath ?? b.repoPath,
+                          url: spec.url ?? b.url,
+                          isActive: true,
+                        }
+                      : {
+                          ...b,
+                          isActive: b.id === existing.id,
+                        },
+                  );
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -892,8 +1041,38 @@ export const useBufferStore = createSelectors(
           return get().actions.openContent({ type: "webViewer", url });
         },
 
-        openPRBuffer: (prNumber: number): string => {
-          return get().actions.openContent({ type: "pullRequest", prNumber });
+        openPRBuffer: (
+          prNumber: number,
+          metadata?: { title?: string; authorAvatarUrl?: string; selectedFilePath?: string },
+        ): string => {
+          return get().actions.openContent({
+            type: "pullRequest",
+            prNumber,
+            name: metadata?.title,
+            authorAvatarUrl: metadata?.authorAvatarUrl,
+            selectedFilePath: metadata?.selectedFilePath,
+          });
+        },
+
+        openGitHubIssueBuffer: ({ issueNumber, repoPath, title, authorAvatarUrl, url }): string => {
+          return get().actions.openContent({
+            type: "githubIssue",
+            issueNumber,
+            repoPath,
+            name: title,
+            authorAvatarUrl,
+            url,
+          });
+        },
+
+        openGitHubActionBuffer: ({ runId, repoPath, title, url }): string => {
+          return get().actions.openContent({
+            type: "githubAction",
+            runId,
+            repoPath,
+            name: title,
+            url,
+          });
         },
 
         openTerminalBuffer: (options?: {

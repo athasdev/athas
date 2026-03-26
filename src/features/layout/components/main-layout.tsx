@@ -52,20 +52,14 @@ export function MainLayout() {
   const { settings, updateSetting } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const handleOpenFolderByPath =
-    useFileSystemStore.use.handleOpenFolderByPath?.();
+  const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const switchToProject = useFileSystemStore.use.switchToProject?.();
-  const setIsSwitchingProject =
-    useFileSystemStore.use.setIsSwitchingProject?.();
-  const refreshWorkspaceGitStatus = useGitStore(
-    (state) => state.actions.refreshWorkspaceGitStatus,
-  );
-  const setWorkspaceGitStatus = useGitStore(
-    (state) => state.actions.setWorkspaceGitStatus,
-  );
+  const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
+  const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
+  const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
 
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
@@ -118,11 +112,7 @@ export function MainLayout() {
         persist: false,
       });
     }
-  }, [
-    settings.vimRelativeLineNumbers,
-    relativeLineNumbers,
-    setRelativeLineNumbers,
-  ]);
+  }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
 
   const handleThemeChange = (theme: string) => {
     updateSetting("theme", theme);
@@ -211,8 +201,7 @@ export function MainLayout() {
 
     const refreshGitState = (event?: Event) => {
       const filePath =
-        event instanceof CustomEvent &&
-        typeof event.detail?.filePath === "string"
+        event instanceof CustomEvent && typeof event.detail?.filePath === "string"
           ? event.detail.filePath
           : null;
 
@@ -252,10 +241,7 @@ export function MainLayout() {
       <CustomTitleBarWithSettings />
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-        <div
-          className="flex flex-1 flex-row overflow-hidden"
-          style={{ minHeight: 0 }}
-        >
+        <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
@@ -290,10 +276,7 @@ export function MainLayout() {
               <SplitViewRoot />
             </div>
             {terminalWidthMode === "editor" && (
-              <BottomPane
-                diagnostics={diagnostics}
-                onDiagnosticClick={handleDiagnosticClick}
-              />
+              <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
             )}
           </div>
 
@@ -326,10 +309,7 @@ export function MainLayout() {
 
         {terminalWidthMode === "full" && (
           <div className="px-2">
-            <BottomPane
-              diagnostics={diagnostics}
-              onDiagnosticClick={handleDiagnosticClick}
-            />
+            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
           </div>
         )}
       </div>

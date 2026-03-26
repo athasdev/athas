@@ -25,6 +25,8 @@ export type PaneContentType =
   | "binary"
   | "database"
   | "pullRequest"
+  | "githubIssue"
+  | "githubAction"
   | "markdownPreview"
   | "htmlPreview"
   | "csvPreview"
@@ -107,6 +109,22 @@ export interface DatabaseContent extends PaneContentBase {
 export interface PullRequestContent extends PaneContentBase {
   type: "pullRequest";
   prNumber: number;
+  authorAvatarUrl?: string;
+}
+
+export interface GitHubIssueContent extends PaneContentBase {
+  type: "githubIssue";
+  repoPath?: string;
+  issueNumber: number;
+  authorAvatarUrl?: string;
+  url?: string;
+}
+
+export interface GitHubActionContent extends PaneContentBase {
+  type: "githubAction";
+  repoPath?: string;
+  runId: number;
+  url?: string;
 }
 
 export interface MarkdownPreviewContent extends PaneContentBase {
@@ -146,6 +164,8 @@ export type PaneContent =
   | BinaryContent
   | DatabaseContent
   | PullRequestContent
+  | GitHubIssueContent
+  | GitHubActionContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
   | CsvPreviewContent
@@ -185,6 +205,14 @@ export function isPullRequestContent(c: PaneContent): c is PullRequestContent {
   return c.type === "pullRequest";
 }
 
+export function isGitHubIssueContent(c: PaneContent): c is GitHubIssueContent {
+  return c.type === "githubIssue";
+}
+
+export function isGitHubActionContent(c: PaneContent): c is GitHubActionContent {
+  return c.type === "githubAction";
+}
+
 export function isExternalEditorContent(c: PaneContent): c is ExternalEditorContent {
   return c.type === "externalEditor";
 }
@@ -203,6 +231,8 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "webViewer",
   "newTab",
   "pullRequest",
+  "githubIssue",
+  "githubAction",
 ]);
 
 export function isVirtualContent(c: PaneContent): boolean {
@@ -278,7 +308,28 @@ export type OpenContentSpec =
       databaseType: DatabaseType;
       connectionId?: string;
     }
-  | { type: "pullRequest"; prNumber: number }
+  | {
+      type: "pullRequest";
+      prNumber: number;
+      authorAvatarUrl?: string;
+      name?: string;
+      selectedFilePath?: string;
+    }
+  | {
+      type: "githubIssue";
+      issueNumber: number;
+      repoPath?: string;
+      authorAvatarUrl?: string;
+      name?: string;
+      url?: string;
+    }
+  | {
+      type: "githubAction";
+      runId: number;
+      repoPath?: string;
+      name?: string;
+      url?: string;
+    }
   | {
       type: "markdownPreview";
       path: string;

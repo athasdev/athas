@@ -1,5 +1,13 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { BookOpen, CircleUser, CreditCard, ExternalLink, LogIn, LogOut, Settings } from "lucide-react";
+import {
+  BookOpen,
+  CircleUser,
+  CreditCard,
+  ExternalLink,
+  LogIn,
+  LogOut,
+  Settings,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";

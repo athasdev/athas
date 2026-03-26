@@ -259,6 +259,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["git", "compact", "badges", "status", "dense"],
   },
   {
+    id: "layout-show-github-pull-requests",
+    tab: "appearance",
+    section: "Layout",
+    label: "Show GitHub Pull Requests",
+    description: "Display the pull requests section in the GitHub sidebar",
+    keywords: ["github", "sidebar", "pull requests", "prs", "visibility"],
+  },
+  {
+    id: "layout-show-github-issues",
+    tab: "appearance",
+    section: "Layout",
+    label: "Show GitHub Issues",
+    description: "Display the issues section in the GitHub sidebar",
+    keywords: ["github", "sidebar", "issues", "visibility"],
+  },
+  {
+    id: "layout-show-github-actions",
+    tab: "appearance",
+    section: "Layout",
+    label: "Show GitHub Actions",
+    description: "Display the actions section in the GitHub sidebar",
+    keywords: ["github", "sidebar", "actions", "workflow runs", "visibility"],
+  },
+  {
     id: "git-collapse-empty-sections",
     tab: "git",
     section: "Git View",
@@ -305,7 +329,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "appearance",
     section: "Theme",
     label: "Sync With OS",
-    description: "Follow the operating system appearance and switch light or dark themes automatically",
+    description:
+      "Follow the operating system appearance and switch light or dark themes automatically",
     keywords: ["theme", "system", "os", "auto", "light", "dark", "appearance", "sync"],
   },
   {

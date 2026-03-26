@@ -74,10 +74,7 @@ export function useKeymaps() {
 
       // When the native menu bar is active, let Tauri's menu accelerators be the only source
       // of truth for overlapping shortcuts to avoid duplicate execution.
-      if (
-        useSettingsStore.getState().settings.nativeMenuBar &&
-        isNativeMenuAccelerator(e)
-      ) {
+      if (useSettingsStore.getState().settings.nativeMenuBar && isNativeMenuAccelerator(e)) {
         return;
       }
 
@@ -103,14 +100,10 @@ export function useKeymaps() {
       // Skip if target is an input (except our editor textarea or terminal)
       const target = e.target as HTMLElement;
       const isEditorTextarea = target.classList.contains("editor-textarea");
-      const isTerminalTextarea = target.classList.contains(
-        "xterm-helper-textarea",
-      );
+      const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
       if (
         target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" &&
-          !isEditorTextarea &&
-          !isTerminalTextarea)
+        (target.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)
       ) {
         return;
       }
@@ -149,10 +142,7 @@ export function useKeymaps() {
 
           // Execute command
           keymapRegistry.executeCommand(keybinding.command, keybinding.args);
-          logger.debug(
-            "Keymaps",
-            `Executed: ${keybinding.key} -> ${keybinding.command}`,
-          );
+          logger.debug("Keymaps", `Executed: ${keybinding.key} -> ${keybinding.command}`);
           return;
         }
 
@@ -175,10 +165,7 @@ export function useKeymaps() {
             logger.debug("Keymaps", "Chord timeout - reset");
           }, CHORD_TIMEOUT);
 
-          logger.debug(
-            "Keymaps",
-            `Chord partial match: ${keybinding.key} (waiting for next key)`,
-          );
+          logger.debug("Keymaps", `Chord partial match: ${keybinding.key} (waiting for next key)`);
           return;
         }
       }

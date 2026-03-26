@@ -1,4 +1,15 @@
-import { Database, GitPullRequest, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
+import {
+  Activity,
+  Database,
+  GitPullRequest,
+  Globe,
+  MessageSquare,
+  Package,
+  Pin,
+  Sparkles,
+  Terminal,
+  X,
+} from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
@@ -72,6 +83,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
+        className={isActive ? "bg-hover/80" : undefined}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -93,13 +105,11 @@ const TabBarItem = memo(function TabBarItem({
                 handleTabClose(buffer.id);
               }
             }}
-              className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
-                "hover:bg-hover/80 hover:text-text",
-                buffer.isPinned || isActive
-                  ? "opacity-100"
-                  : "opacity-0 group-hover/tab:opacity-100",
-              )}
+            className={cn(
+              "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
+              "hover:bg-hover/80 hover:text-text",
+              buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
+            )}
             title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
             tabIndex={-1}
             draggable={false}
@@ -133,7 +143,29 @@ const TabBarItem = memo(function TabBarItem({
           ) : buffer.type === "database" ? (
             <Database className="text-text-lighter" />
           ) : buffer.type === "pullRequest" ? (
-            <GitPullRequest className="text-text-lighter" />
+            buffer.authorAvatarUrl ? (
+              <img
+                src={buffer.authorAvatarUrl}
+                alt=""
+                className="size-3 rounded-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <GitPullRequest className="text-text-lighter" />
+            )
+          ) : buffer.type === "githubIssue" ? (
+            buffer.authorAvatarUrl ? (
+              <img
+                src={buffer.authorAvatarUrl}
+                alt=""
+                className="size-3 rounded-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <MessageSquare className="text-text-lighter" />
+            )
+          ) : buffer.type === "githubAction" ? (
+            <Activity className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={buffer.name}

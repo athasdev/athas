@@ -12,8 +12,8 @@
   font-size: 1.6em;
   font-weight: 700;
   margin: 0.2em 0 0.05em 0;
-  padding-bottom: 0.05em;
-  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  padding-bottom: 0;
+  border-bottom: 0;
   color: var(--color-text);
   line-height: 1.2;
 }
@@ -26,8 +26,8 @@
   font-size: 1.4em;
   font-weight: 700;
   margin: 0.15em 0 0.05em 0;
-  padding-bottom: 0.05em;
-  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  padding-bottom: 0;
+  border-bottom: 0;
   color: var(--color-text);
   line-height: 1.25;
 }
@@ -64,7 +64,7 @@
 
 /* Paragraphs */
 .markdown-preview p {
-  margin: 0.35em 0 0.7em;
+  margin: 0.25em 0 0.55em;
   line-height: 1.68;
 }
 
@@ -102,7 +102,7 @@
 /* Lists */
 .markdown-preview ul,
 .markdown-preview ol {
-  margin: 0.35em 0 0.75em;
+  margin: 0.2em 0 0.55em;
   padding-left: 1.5em;
 }
 

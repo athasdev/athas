@@ -207,7 +207,9 @@ const GitStatusPanel = ({
     setIsLoading(true);
     try {
       await Promise.all(
-        filePaths.map((filePath) => (staged ? stageFile(repoPath, filePath) : unstageFile(repoPath, filePath))),
+        filePaths.map((filePath) =>
+          staged ? stageFile(repoPath, filePath) : unstageFile(repoPath, filePath),
+        ),
       );
       onRefresh?.();
     } finally {

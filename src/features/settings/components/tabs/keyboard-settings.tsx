@@ -113,7 +113,7 @@ export const KeyboardSettings = () => {
         />
         <div className="flex gap-2">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             data-active={filterType === "all"}
             onClick={() => setFilterType("all")}
@@ -121,7 +121,7 @@ export const KeyboardSettings = () => {
             All
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             data-active={filterType === "user"}
             onClick={() => setFilterType("user")}
@@ -129,7 +129,7 @@ export const KeyboardSettings = () => {
             User
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             data-active={filterType === "default"}
             onClick={() => setFilterType("default")}
@@ -137,7 +137,7 @@ export const KeyboardSettings = () => {
             Default
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             data-active={filterType === "extension"}
             onClick={() => setFilterType("extension")}
@@ -160,7 +160,7 @@ export const KeyboardSettings = () => {
 
         {/* Rows */}
         {filteredCommands.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-sm text-text-lighter">
+          <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
             No keybindings found
           </div>
         ) : (
@@ -173,17 +173,17 @@ export const KeyboardSettings = () => {
 
       {/* Footer Actions */}
       <div className="mt-4 flex items-center justify-between border-border border-t pt-4">
-        <div className="text-text-lighter text-xs">
+        <div className="ui-font ui-text-sm text-text-lighter">
           {filteredCommands.length} of {commands.length} keybindings
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={handleResetAll}>
+          <Button variant="secondary" size="sm" onClick={handleResetAll}>
             Reset to Defaults
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleImport}>
+          <Button variant="secondary" size="sm" onClick={handleImport}>
             Import
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleExport}>
+          <Button variant="secondary" size="sm" onClick={handleExport}>
             Export
           </Button>
         </div>

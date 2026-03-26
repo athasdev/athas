@@ -43,6 +43,8 @@ const ExternalEditorTerminal = lazy(() =>
 );
 const DiffViewer = lazy(() => import("@/features/git/components/diff/git-diff-viewer"));
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
+const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
+const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const ImageViewer = lazy(() =>
   import("@/features/image-viewer/components/image-viewer").then((m) => ({
     default: m.ImageViewer,
@@ -89,6 +91,10 @@ function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
         ? buffer.url || "Web view"
         : buffer.type === "pullRequest"
           ? `Pull request #${buffer.prNumber}`
+          : buffer.type === "githubIssue"
+            ? `Issue #${buffer.issueNumber}`
+            : buffer.type === "githubAction"
+              ? `Workflow run #${buffer.runId}`
           : buffer.type === "diff"
             ? "Diff preview"
             : buffer.type === "image"
@@ -724,6 +730,20 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "pullRequest":
           return <PRViewer prNumber={buffer.prNumber} />;
+
+        case "githubIssue":
+          return (
+            <GitHubIssueViewer
+              issueNumber={buffer.issueNumber}
+              repoPath={buffer.repoPath}
+              bufferId={buffer.id}
+            />
+          );
+
+        case "githubAction":
+          return (
+            <GitHubActionViewer runId={buffer.runId} repoPath={buffer.repoPath} bufferId={buffer.id} />
+          );
 
         case "image":
           return <ImageViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;

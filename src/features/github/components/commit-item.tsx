@@ -8,16 +8,18 @@ import GitHubMarkdown from "./github-markdown";
 
 interface CommitItemProps {
   commit: Commit;
+  issueBaseUrl?: string;
+  repoPath?: string;
 }
 
-export const CommitItem = memo(({ commit }: CommitItemProps) => {
+export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemProps) => {
   const author = commit.authors[0];
   const shortSha = commit.oid.slice(0, 7);
   const authorName = author?.login || author?.name || "Unknown";
   const avatarLogin = (author?.login || "").trim();
 
   return (
-    <div className="flex items-start gap-3 rounded-lg bg-secondary-bg/35 px-4 py-3 hover:bg-hover/50">
+    <div className="flex items-start gap-2.5 px-1 py-1.5">
       <img
         src={`https://github.com/${encodeURIComponent(avatarLogin || "github")}.png?size=32`}
         alt={authorName}
@@ -25,16 +27,26 @@ export const CommitItem = memo(({ commit }: CommitItemProps) => {
         loading="lazy"
       />
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-text">{commit.messageHeadline}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="ui-text-sm rounded bg-primary-bg px-1.5 py-0.5 font-mono text-text-lighter">
+            {shortSha}
+          </code>
+          <p className="ui-text-sm font-medium text-text">{commit.messageHeadline}</p>
+        </div>
         {commit.messageBody && (
-          <div className="mt-1">
-            <GitHubMarkdown content={commit.messageBody} className="text-text-lighter text-xs" />
+          <div className="mt-0.5">
+            <GitHubMarkdown
+              content={commit.messageBody}
+              className="github-markdown-pr"
+              contentClassName="ui-text-sm leading-6 text-text-lighter"
+              issueBaseUrl={issueBaseUrl}
+              repoPath={repoPath}
+            />
           </div>
         )}
-        <div className="mt-1.5 flex items-center gap-2 text-text-lighter text-xs">
-          <span className="font-medium">{authorName}</span>
+        <div className="ui-text-sm mt-1 flex flex-wrap items-center gap-2 text-text-lighter">
+          <span className="font-mono text-text-lighter">{authorName}</span>
           <span>committed {getTimeAgo(commit.authoredDate)}</span>
-          <code className="rounded bg-primary-bg px-1.5 py-0.5 font-mono">{shortSha}</code>
           <Tooltip content="Copy full commit SHA" side="top">
             <Button
               onClick={() => void copyToClipboard(commit.oid, "Commit SHA copied")}

@@ -42,17 +42,7 @@ export function useMenuEventsWrapper() {
             },
             {
               name: "Text Files",
-              extensions: [
-                "txt",
-                "md",
-                "json",
-                "js",
-                "ts",
-                "tsx",
-                "jsx",
-                "css",
-                "html",
-              ],
+              extensions: ["txt", "md", "json", "js", "ts", "tsx", "jsx", "css", "html"],
             },
           ],
         });
@@ -62,8 +52,7 @@ export function useMenuEventsWrapper() {
           try {
             await invoke("write_file", {
               path: result,
-              contents:
-                activeBuffer.type === "editor" ? activeBuffer.content : "",
+              contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
             });
             console.log("File saved successfully to:", result);
             // Update buffer with new file path if needed
@@ -80,8 +69,7 @@ export function useMenuEventsWrapper() {
     onCloseTab: () => {
       // Check if terminal is focused - if so, dispatch event to close terminal instead
       const activeElement = document.activeElement as HTMLElement;
-      const isTerminalFocused =
-        activeElement?.closest(".terminal-container") !== null;
+      const isTerminalFocused = activeElement?.closest(".terminal-container") !== null;
 
       if (isTerminalFocused) {
         // Dispatch a custom event that terminal-container listens to
@@ -111,18 +99,14 @@ export function useMenuEventsWrapper() {
       uiState.setIsFindVisible(true);
       // Set a flag or state to indicate replace mode
       // For now, we'll show the find bar and log that replace mode should be active
-      console.log(
-        "Find/Replace mode activated - find bar shown with replace functionality",
-      );
+      console.log("Find/Replace mode activated - find bar shown with replace functionality");
       // In a full implementation, this would enable replace input field in the find bar
     },
     onCommandPalette: () => uiState.setIsCommandPaletteVisible(true),
-    onToggleSidebar: () =>
-      uiState.setIsSidebarVisible(!uiState.isSidebarVisible),
+    onToggleSidebar: () => uiState.setIsSidebarVisible(!uiState.isSidebarVisible),
     onToggleTerminal: () => {
       const showingTerminal =
-        !uiState.isBottomPaneVisible ||
-        uiState.bottomPaneActiveTab !== "terminal";
+        !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
       uiState.setBottomPaneActiveTab("terminal");
       uiState.setIsBottomPaneVisible(showingTerminal);
 
@@ -140,11 +124,7 @@ export function useMenuEventsWrapper() {
       const paneStore = usePaneStore.getState();
       const activePane = paneStore.actions.getActivePane();
       if (activePane?.activeBufferId) {
-        paneStore.actions.splitPane(
-          activePane.id,
-          "horizontal",
-          activePane.activeBufferId,
-        );
+        paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
       }
     },
     onToggleVim: () => {
@@ -177,9 +157,7 @@ export function useMenuEventsWrapper() {
       // Sync buffer store
       const activePane = paneStore.actions.getActivePane();
       if (activePane?.activeBufferId) {
-        useBufferStore
-          .getState()
-          .actions.setActiveBuffer(activePane.activeBufferId);
+        useBufferStore.getState().actions.setActiveBuffer(activePane.activeBufferId);
       }
     },
     onPrevTab: () => {
@@ -188,9 +166,7 @@ export function useMenuEventsWrapper() {
       // Sync buffer store
       const activePane = paneStore.actions.getActivePane();
       if (activePane?.activeBufferId) {
-        useBufferStore
-          .getState()
-          .actions.setActiveBuffer(activePane.activeBufferId);
+        useBufferStore.getState().actions.setActiveBuffer(activePane.activeBufferId);
       }
     },
     onThemeChange: (theme: string) => updateSetting("theme", theme),
@@ -253,8 +229,7 @@ For more help: https://github.com/athasdev/athas`;
 
         const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
         try {
-          const { writeText } =
-            await import("@tauri-apps/plugin-clipboard-manager");
+          const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
           await writeText(text);
         } catch {
           // Fallback to browser clipboard
@@ -262,9 +237,7 @@ For more help: https://github.com/athasdev/athas`;
         }
 
         const { openUrl } = await import("@tauri-apps/plugin-opener");
-        await openUrl(
-          "https://github.com/athasdev/athas/issues/new?template=01-bug.yml",
-        );
+        await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
       } catch (e) {
         console.error("Failed to prepare bug report:", e);
       }

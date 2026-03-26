@@ -101,6 +101,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           orientation === "vertical"
             ? "w-full max-w-none justify-start pr-5 pl-2"
             : "min-w-[88px] w-fit pr-5 pl-2",
+          isActive ? "bg-hover/80" : undefined,
           isEditing ? "pr-2" : undefined,
         )}
         maxWidth={orientation === "vertical" ? undefined : 290}

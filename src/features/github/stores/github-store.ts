@@ -109,6 +109,49 @@ function normalizePullRequestFiles(files: unknown): PullRequestFile[] {
     .filter((file): file is PullRequestFile => !!file);
 }
 
+function getStringValue(record: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function normalizePullRequest(pr: PullRequest): PullRequest {
+  const record = pr as PullRequest & Record<string, unknown>;
+  const headRef = getStringValue(record, ["headRef", "headRefName", "head_ref"]);
+  const baseRef = getStringValue(record, ["baseRef", "baseRefName", "base_ref"]);
+
+  if (!headRef || !baseRef) {
+    console.warn("GitHub PR list item is missing branch refs", {
+      number: pr.number,
+      title: pr.title,
+      headRef,
+      baseRef,
+      rawKeys: Object.keys(record),
+    });
+  }
+
+  return {
+    ...pr,
+    headRef,
+    baseRef,
+  };
+}
+
+function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDetails {
+  const record = details as PullRequestDetails & Record<string, unknown>;
+
+  return {
+    ...details,
+    headRef: getStringValue(record, ["headRef", "headRefName", "head_ref"]),
+    baseRef: getStringValue(record, ["baseRef", "baseRefName", "base_ref"]),
+  };
+}
+
 export const useGitHubStore = create(
   combine(initialState, (set, get) => ({
     actions: {
@@ -148,10 +191,11 @@ export const useGitHubStore = create(
         const requestId = ++prsRequestSeq;
 
         try {
-          const prs = await invoke<PullRequest[]>("github_list_prs", {
+          const prsResponse = await invoke<PullRequest[]>("github_list_prs", {
             repoPath,
             filter: currentFilter,
           });
+          const prs = prsResponse.map(normalizePullRequest);
 
           if (requestId !== prsRequestSeq) return;
 
@@ -266,10 +310,11 @@ export const useGitHubStore = create(
 
         const run = (async () => {
           try {
-            const details = await invoke<PullRequestDetails>("github_get_pr_details", {
+            const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
               repoPath,
               prNumber,
             });
+            const details = normalizePullRequestDetails(detailsResponse);
 
             if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
 

@@ -71,15 +71,7 @@ export function useBufferSwitch({
     // 6. Reset token state. Tokenization is triggered by the editor effect
     // once viewport state is ready, avoiding duplicate work on buffer open.
     resetTokenizer();
-  }, [
-    enabled,
-    bufferId,
-    content,
-    textareaRef,
-    forceUpdateViewport,
-    totalLines,
-    resetTokenizer,
-  ]);
+  }, [enabled, bufferId, content, textareaRef, forceUpdateViewport, totalLines, resetTokenizer]);
 
   return { switchGuardRef };
 }
