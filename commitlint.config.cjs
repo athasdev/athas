@@ -1,11 +1,24 @@
+const teamStyleHeaderPattern = /^(?![A-Z][a-z]+: )[A-Z][^.]+$/;
+
 module.exports = {
   extends: [],
+  plugins: [
+    {
+      rules: {
+        "header-team-style": ({ header }) => [
+          teamStyleHeaderPattern.test(header || ""),
+          "header must be sentence-case without a conventional type prefix like 'Fix:'",
+        ],
+      },
+    },
+  ],
   rules: {
     // Basic message validation
     "header-min-length": [2, "always", 3],
     "header-max-length": [2, "always", 72],
     "header-case": [2, "always", "sentence-case"],
     "header-full-stop": [2, "never", "."],
+    "header-team-style": [2, "always"],
 
     // Allow empty body and subject parsing issues
     "subject-empty": [0],

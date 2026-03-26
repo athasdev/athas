@@ -31,7 +31,7 @@ import {
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
-import { Button, buttonVariants } from "@/ui/button";
+import { Button } from "@/ui/button";
 import { MenuPopover } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import {
@@ -64,31 +64,6 @@ interface FilteredItem {
   hasKey?: boolean;
   isCurrent?: boolean;
 }
-
-const selectorTriggerClass = cn(
-  buttonVariants({ variant: "secondary", size: "sm" }),
-  "h-auto rounded-lg px-3 py-1.5 text-xs",
-);
-
-const selectorIconButtonClass = cn(
-  buttonVariants({ variant: "ghost", size: "icon-sm" }),
-  "rounded-md text-text-lighter",
-);
-
-const selectorInlineActionClass = cn(
-  buttonVariants({ variant: "ghost", size: "xs" }),
-  "h-auto px-1.5 text-[10px] text-text-lighter",
-);
-
-const selectorAccentActionClass = cn(
-  buttonVariants({ variant: "primary", size: "xs" }),
-  "h-auto gap-1 px-1.5 text-[10px]",
-);
-
-const selectorSaveButtonClass = cn(
-  buttonVariants({ variant: "primary", size: "xs" }),
-  "shrink-0 px-2",
-);
 
 export function AIModelSelector({
   providerId,

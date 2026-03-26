@@ -39,11 +39,6 @@ const menuItemClass =
   "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs text-text transition-colors hover:bg-hover";
 
 const menuItemDisabledClass = "cursor-not-allowed opacity-50 hover:bg-transparent";
-const inlineActionButtonClass = cn(
-  buttonVariants({ variant: "secondary", size: "xs" }),
-  "rounded-md px-2 text-[10px] text-text-lighter",
-);
-
 function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
   return getLanguageDisplayName(languageId);

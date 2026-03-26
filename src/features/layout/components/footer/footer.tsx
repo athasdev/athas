@@ -17,7 +17,7 @@ import {
   DesktopAuthError,
   waitForDesktopAuthToken,
 } from "@/features/window/services/auth-api";
-import { Button, buttonVariants } from "@/ui/button";
+import { Button } from "@/ui/button";
 import {
   type AutocompleteModel,
   fetchAutocompleteModels,
@@ -25,16 +25,6 @@ import {
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
-
-const footerIconButtonClass = cn(
-  buttonVariants({ variant: "secondary", size: "xs" }),
-  "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
-);
-
-const footerCompactButtonClass = cn(
-  buttonVariants({ variant: "secondary", size: "icon-sm" }),
-  "rounded-md bg-primary-bg/40 text-text-lighter",
-);
 
 const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },

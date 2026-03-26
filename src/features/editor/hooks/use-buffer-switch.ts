@@ -1,7 +1,6 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
-import type { ViewportRange } from "./use-viewport-lines";
 
 interface UseBufferSwitchOptions {
   enabled?: boolean;

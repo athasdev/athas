@@ -30,7 +30,7 @@ import {
 } from "@/features/terminal/stores/terminal-store";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
-import { Dropdown, dropdownItemClassName, MenuItemsList, type MenuItem } from "@/ui/dropdown";
+import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import Tooltip from "../../../ui/tooltip";
