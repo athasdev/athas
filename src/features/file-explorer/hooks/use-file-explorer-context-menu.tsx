@@ -81,13 +81,13 @@ export function useFileExplorerContextMenu({
         {
           id: "new-file",
           label: "New File",
-          icon: <FilePlus size={12} />,
+          icon: <FilePlus />,
           onClick: () => onStartInlineEditing(contextMenu.path, false),
         },
         {
           id: "new-folder",
           label: "New Folder",
-          icon: <FolderPlus size={12} />,
+          icon: <FolderPlus />,
           onClick: () => {
             if (onCreateNewFolderInDirectory) onStartInlineEditing(contextMenu.path, true);
           },
@@ -95,25 +95,25 @@ export function useFileExplorerContextMenu({
         {
           id: "upload-files",
           label: "Upload Files",
-          icon: <Upload size={12} />,
+          icon: <Upload />,
           onClick: () => onUploadFile?.(contextMenu.path),
         },
         {
           id: "refresh",
           label: "Refresh",
-          icon: <RefreshCw size={12} />,
+          icon: <RefreshCw />,
           onClick: () => onRefreshDirectory?.(contextMenu.path),
         },
         {
           id: "open-all-files",
           label: "Open All Files",
-          icon: <FolderOpen size={12} />,
+          icon: <FolderOpen />,
           onClick: () => void onOpenAllFilesInDirectory(contextMenu.path),
         },
         {
           id: "open-terminal",
           label: "Open in Terminal",
-          icon: <Terminal size={12} />,
+          icon: <Terminal />,
           onClick: () => {
             const folderName = contextMenu.path.split("/").pop() || "terminal";
             const { openTerminalBuffer } = useBufferStore.getState().actions;
@@ -126,7 +126,7 @@ export function useFileExplorerContextMenu({
         {
           id: "find-in-folder",
           label: "Find in Folder",
-          icon: <Search size={12} />,
+          icon: <Search />,
           onClick: () => {},
         },
       );
@@ -135,7 +135,7 @@ export function useFileExplorerContextMenu({
         items.push({
           id: "generate-image",
           label: "Generate Image",
-          icon: <ImageIcon size={12} />,
+          icon: <ImageIcon />,
           onClick: () => onGenerateImage(contextMenu.path),
         });
       }
@@ -146,13 +146,13 @@ export function useFileExplorerContextMenu({
         {
           id: "open",
           label: "Open",
-          icon: <FolderOpen size={12} />,
+          icon: <FolderOpen />,
           onClick: () => onFileSelect(contextMenu.path, false),
         },
         {
           id: "copy-content",
           label: "Copy Content",
-          icon: <Copy size={12} />,
+          icon: <Copy />,
           onClick: async () => {
             try {
               const response = await fetch(contextMenu.path);
@@ -164,13 +164,13 @@ export function useFileExplorerContextMenu({
         {
           id: "duplicate-file",
           label: "Duplicate",
-          icon: <FileText size={12} />,
+          icon: <FileText />,
           onClick: () => onDuplicatePath?.(contextMenu.path),
         },
         {
           id: "properties",
           label: "Properties",
-          icon: <Info size={12} />,
+          icon: <Info />,
           onClick: async () => {
             try {
               const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
@@ -194,7 +194,7 @@ export function useFileExplorerContextMenu({
       {
         id: "copy-path",
         label: "Copy Path",
-        icon: <Link size={12} />,
+        icon: <Link />,
         onClick: async () => {
           try {
             await navigator.clipboard.writeText(contextMenu.path);
@@ -204,7 +204,7 @@ export function useFileExplorerContextMenu({
       {
         id: "copy-relative-path",
         label: "Copy Relative Path",
-        icon: <FileText size={12} />,
+        icon: <FileText />,
         onClick: async () => {
           try {
             let relativePath = contextMenu.path;
@@ -218,14 +218,14 @@ export function useFileExplorerContextMenu({
       {
         id: "copy",
         label: "Copy",
-        icon: <Copy size={12} />,
+        icon: <Copy />,
         onClick: () =>
           clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
       },
       {
         id: "cut",
         label: "Cut",
-        icon: <Scissors size={12} />,
+        icon: <Scissors />,
         onClick: () =>
           clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
       },
@@ -235,7 +235,7 @@ export function useFileExplorerContextMenu({
       items.push({
         id: "paste",
         label: "Paste",
-        icon: <Clipboard size={12} />,
+        icon: <Clipboard />,
         onClick: () => {
           clipboardActions.paste(contextMenu.path).then(() => {
             onRefreshDirectory?.(contextMenu.path);
@@ -248,13 +248,13 @@ export function useFileExplorerContextMenu({
       {
         id: "rename",
         label: "Rename",
-        icon: <Edit size={12} />,
+        icon: <Edit />,
         onClick: () => onRenamePath?.(contextMenu.path),
       },
       {
         id: "reveal",
         label: "Reveal in Finder",
-        icon: <Eye size={12} />,
+        icon: <Eye />,
         onClick: () => {
           if (onRevealInFinder) onRevealInFinder(contextMenu.path);
           else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
@@ -268,7 +268,7 @@ export function useFileExplorerContextMenu({
       {
         id: "delete",
         label: "Delete",
-        icon: <Trash size={12} />,
+        icon: <Trash />,
         className: "text-red-400",
         onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
       },

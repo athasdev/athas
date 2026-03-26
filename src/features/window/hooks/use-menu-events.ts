@@ -1,4 +1,5 @@
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useRef } from "react";
 
 function cleanupMenuListeners() {
@@ -23,37 +24,38 @@ async function setupMenuListeners(handlers: any) {
 
   listenersAreSetup = true;
   currentHandlers = handlers;
+  const currentWindow = getCurrentWebviewWindow();
 
   const removeListeners = await Promise.all([
-    listen("menu_new_window", () => currentHandlers.current.onNewWindow()),
-    listen("menu_new_file", () => currentHandlers.current.onNewFile()),
-    listen("menu_open_folder", () => currentHandlers.current.onOpenFolder()),
-    listen("menu_close_folder", () => currentHandlers.current.onCloseFolder()),
-    listen("menu_save", () => currentHandlers.current.onSave()),
-    listen("menu_save_as", () => currentHandlers.current.onSaveAs()),
-    listen("menu_close_tab", () => currentHandlers.current.onCloseTab()),
-    listen("menu_undo", () => currentHandlers.current.onUndo()),
-    listen("menu_redo", () => currentHandlers.current.onRedo()),
-    listen("menu_find", () => currentHandlers.current.onFind()),
-    listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
-    listen("menu_command_palette", () => currentHandlers.current.onCommandPalette()),
-    listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
-    listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
-    listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
-    listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
-    listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
-    listen("menu_quick_open", () => currentHandlers.current.onQuickOpen()),
-    listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
-    listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
-    listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
-    listen("menu_theme_change", (event) =>
+    currentWindow.listen("menu_new_window", () => currentHandlers.current.onNewWindow()),
+    currentWindow.listen("menu_new_file", () => currentHandlers.current.onNewFile()),
+    currentWindow.listen("menu_open_folder", () => currentHandlers.current.onOpenFolder()),
+    currentWindow.listen("menu_close_folder", () => currentHandlers.current.onCloseFolder()),
+    currentWindow.listen("menu_save", () => currentHandlers.current.onSave()),
+    currentWindow.listen("menu_save_as", () => currentHandlers.current.onSaveAs()),
+    currentWindow.listen("menu_close_tab", () => currentHandlers.current.onCloseTab()),
+    currentWindow.listen("menu_undo", () => currentHandlers.current.onUndo()),
+    currentWindow.listen("menu_redo", () => currentHandlers.current.onRedo()),
+    currentWindow.listen("menu_find", () => currentHandlers.current.onFind()),
+    currentWindow.listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
+    currentWindow.listen("menu_command_palette", () => currentHandlers.current.onCommandPalette()),
+    currentWindow.listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
+    currentWindow.listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
+    currentWindow.listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
+    currentWindow.listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
+    currentWindow.listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
+    currentWindow.listen("menu_quick_open", () => currentHandlers.current.onQuickOpen()),
+    currentWindow.listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
+    currentWindow.listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
+    currentWindow.listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
+    currentWindow.listen("menu_theme_change", (event) =>
       currentHandlers.current.onThemeChange(event.payload as string),
     ),
-    listen("menu_about", () => currentHandlers.current.onAbout()),
-    listen("menu_help", () => currentHandlers.current.onHelp()),
-    listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
-    listen("menu_about_athas", () => currentHandlers.current.onAboutAthas()),
-    listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
+    currentWindow.listen("menu_about", () => currentHandlers.current.onAbout()),
+    currentWindow.listen("menu_help", () => currentHandlers.current.onHelp()),
+    currentWindow.listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
+    currentWindow.listen("menu_about_athas", () => currentHandlers.current.onAboutAthas()),
+    currentWindow.listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
   ]);
 
   cleanupFunctions = removeListeners;

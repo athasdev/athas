@@ -1,10 +1,12 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { CommandInput } from "@/ui/command";
+import { Button } from "@/ui/button";
+import { SEARCH_TOGGLE_ICONS, SearchInput } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import { PREVIEW_DEBOUNCE_DELAY } from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
@@ -13,6 +15,7 @@ import { FilePreview } from "./file-preview";
 import { SearchMatchItem } from "./search-match-item";
 
 const MAX_DISPLAYED_MATCHES = 500;
+const ESTIMATED_ITEM_HEIGHT = 32;
 
 const ContentGlobalSearch = () => {
   const isVisible = useUIState((state) => state.isGlobalSearchVisible);
@@ -21,9 +24,19 @@ const ContentGlobalSearch = () => {
   const quickOpenPreview = useSettingsStore((state) => state.settings.quickOpenPreview);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [previewFilePath, setPreviewFilePath] = useState<string | null>(null);
-  const { query, setQuery, debouncedQuery, results, isSearching, error, rootFolderPath } =
-    useContentSearch(isVisible);
+  const {
+    query,
+    setQuery,
+    debouncedQuery,
+    results,
+    isSearching,
+    error,
+    rootFolderPath,
+    searchOptions,
+    setSearchOption,
+  } = useContentSearch(isVisible);
 
   const debouncedSetPreview = useDebouncedCallback(
     (path: string | null) => setPreviewFilePath(path),
@@ -67,7 +80,6 @@ const ContentGlobalSearch = () => {
           match,
         });
 
-        // Limit total matches for performance
         if (matches.length >= MAX_DISPLAYED_MATCHES) {
           return matches;
         }
@@ -76,6 +88,14 @@ const ContentGlobalSearch = () => {
 
     return matches;
   }, [results, rootFolderPath]);
+
+  // Virtualizer
+  const virtualizer = useVirtualizer({
+    count: flattenedMatches.length,
+    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+    getScrollElement: () => scrollContainerRef.current,
+    overscan: 10,
+  });
 
   // Prepare data for keyboard navigation - convert matches to FileItem format
   const navigationItems = useMemo(() => {
@@ -86,8 +106,15 @@ const ContentGlobalSearch = () => {
     }));
   }, [flattenedMatches]);
 
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      virtualizer.scrollToIndex(index, { align: "auto" });
+    },
+    [virtualizer],
+  );
+
   // Keyboard navigation
-  const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
+  const { selectedIndex } = useKeyboardNavigation({
     isVisible,
     allResults: navigationItems,
     onClose,
@@ -96,6 +123,7 @@ const ContentGlobalSearch = () => {
       const lineNumber = parseInt(lineStr, 10);
       handleFileClick(filePath, lineNumber);
     },
+    scrollToIndex,
   });
 
   // Update preview when selected index changes
@@ -142,9 +170,11 @@ const ContentGlobalSearch = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
       {/* Backdrop */}
-      <button
+      <Button
         type="button"
-        className="absolute inset-0 cursor-default bg-black/20"
+        variant="ghost"
+        size="sm"
+        className="absolute inset-0 cursor-default rounded-none bg-transparent hover:bg-transparent"
         onClick={onClose}
         aria-label="Close global search"
         tabIndex={-1}
@@ -166,23 +196,44 @@ const ContentGlobalSearch = () => {
         >
           {/* Header */}
           <div className="border-border border-b">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <CommandInput
-                ref={inputRef}
+            <div className="flex items-center gap-2 px-3 py-2">
+              <SearchInput
+                inputRef={inputRef}
                 value={query}
                 onChange={setQuery}
                 placeholder="Search in files..."
-                className="ui-font"
+                matchLabel={
+                  hasResults
+                    ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
+                    : null
+                }
+                options={[
+                  {
+                    id: "case-sensitive",
+                    label: "Match case",
+                    icon: SEARCH_TOGGLE_ICONS.caseSensitive,
+                    active: searchOptions.caseSensitive,
+                    onToggle: () => setSearchOption("caseSensitive", !searchOptions.caseSensitive),
+                  },
+                  {
+                    id: "whole-word",
+                    label: "Match whole word",
+                    icon: SEARCH_TOGGLE_ICONS.wholeWord,
+                    active: searchOptions.wholeWord,
+                    onToggle: () => setSearchOption("wholeWord", !searchOptions.wholeWord),
+                  },
+                  {
+                    id: "regex",
+                    label: "Use regular expression",
+                    icon: SEARCH_TOGGLE_ICONS.regex,
+                    active: searchOptions.useRegex,
+                    onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
+                  },
+                ]}
               />
-              {hasResults && (
-                <span className="shrink-0 text-[10px] text-text-lighter">
-                  {displayedCount} {displayedCount === 1 ? "result" : "results"}
-                  {hasMore && ` (${totalMatches} total)`}
-                </span>
-              )}
-              <button onClick={onClose} className="rounded p-0.5 transition-colors hover:bg-hover">
-                <X size={12} className="text-text-lighter" />
-              </button>
+              <Button onClick={onClose} variant="ghost" size="icon-xs" className="shrink-0 rounded">
+                <X className="text-text-lighter" />
+              </Button>
             </div>
           </div>
 
@@ -192,51 +243,67 @@ const ContentGlobalSearch = () => {
             className="custom-scrollbar-thin flex-1 overflow-y-auto p-2"
           >
             {!debouncedQuery && (
-              <div className="flex h-full items-center justify-center text-center text-text-lighter text-xs">
+              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
                 Type to search across all files in your project
               </div>
             )}
 
             {debouncedQuery && isSearching && (
-              <div className="flex h-full items-center justify-center text-center text-text-lighter text-xs">
+              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
                 Searching...
               </div>
             )}
 
             {debouncedQuery && !isSearching && !hasResults && !error && (
-              <div className="flex h-full items-center justify-center text-center text-text-lighter text-xs">
+              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
                 No results found for "{debouncedQuery}"
               </div>
             )}
 
             {error && (
-              <div className="flex h-full items-center justify-center text-center text-red-500 text-xs">
+              <div className="ui-text-sm flex h-full items-center justify-center text-center text-red-500">
                 {error}
               </div>
             )}
 
             {hasResults && (
-              <div>
-                {flattenedMatches.map((item, idx) => (
-                  <SearchMatchItem
-                    key={`${item.filePath}-${item.match.line_number}-${idx}`}
-                    index={idx}
-                    isSelected={idx === selectedIndex}
-                    filePath={item.filePath}
-                    displayPath={item.displayPath}
-                    match={item.match}
-                    onClick={() => handleFileClick(item.filePath, item.match.line_number)}
-                    onHover={
-                      quickOpenPreview ? () => debouncedSetPreview(item.filePath) : undefined
-                    }
-                  />
-                ))}
+              <>
+                <div
+                  style={{
+                    height: virtualizer.getTotalSize(),
+                    position: "relative",
+                    width: "100%",
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const item = flattenedMatches[virtualRow.index];
+                    return (
+                      <SearchMatchItem
+                        key={`${item.filePath}-${item.match.line_number}-${virtualRow.index}`}
+                        index={virtualRow.index}
+                        isSelected={virtualRow.index === selectedIndex}
+                        filePath={item.filePath}
+                        displayPath={item.displayPath}
+                        match={item.match}
+                        onSelect={handleFileClick}
+                        onPreview={quickOpenPreview ? debouncedSetPreview : undefined}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
                 {hasMore && (
-                  <div className="px-3 py-2 text-center text-[10px] text-text-lighter">
+                  <div className="ui-text-sm px-3 py-2 text-center text-text-lighter">
                     Showing first {displayedCount} of {totalMatches} results
                   </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>

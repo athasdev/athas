@@ -10,6 +10,7 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
@@ -183,11 +184,14 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
         aria-label="File list"
       >
         {filteredFiles.map((file, index) => (
-          <button
+          <Button
             key={file.path}
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => handleFileClick(file)}
             className={cn(
-              "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
+              "h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
               "focus:outline-none focus:ring-1 focus:ring-accent/50",
               index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
             )}
@@ -208,7 +212,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
                 {getDirectoryPath(file.path, rootFolderPath) || "root"}
               </span>
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </motion.div>,

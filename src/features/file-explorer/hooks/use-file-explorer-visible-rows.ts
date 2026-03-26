@@ -1,5 +1,6 @@
 import { useEffect, useMemo, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 
@@ -48,8 +49,14 @@ export function useFileExplorerVisibleRows({
 
   useEffect(() => {
     if (!activePath) return;
+    if (fileOpenBenchmark.has(activePath)) {
+      fileOpenBenchmark.mark(activePath, "visible-rows-sync");
+    }
     const index = visibleRows.findIndex((row) => row.file.path === activePath);
     if (index >= 0) {
+      if (fileOpenBenchmark.has(activePath)) {
+        fileOpenBenchmark.mark(activePath, "visible-row-found", `index=${index}`);
+      }
       rowVirtualizer.scrollToIndex(index, { align: "auto" });
     }
   }, [activePath, rowVirtualizer, visibleRows]);

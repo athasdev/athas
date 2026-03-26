@@ -1,7 +1,7 @@
 import { Clock, Key, RefreshCw, Search, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Badge from "@/ui/badge";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useRedisStore } from "./stores/redis-store";
@@ -39,7 +39,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
       <div className="mx-2 mt-2 rounded-2xl bg-primary-bg/85 px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 rounded-full bg-secondary-bg/70 px-2.5 py-1">
-            <Server size={14} className="text-text-lighter" />
+            <Server className="text-text-lighter" />
             <span className="ui-font text-sm">{store.fileName}</span>
           </div>
           <div className="ml-auto flex items-center gap-1">
@@ -47,18 +47,20 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               onClick={() => setShowInfo(!showInfo)}
               variant="ghost"
               size="sm"
-              active={showInfo}
+              data-active={showInfo}
               aria-label="Toggle server info"
             >
               Info
             </Button>
-            <button
+            <Button
               onClick={() => actions.scanKeys(undefined, true)}
-              className="rounded-full border border-transparent p-1.5 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full"
               aria-label="Refresh keys"
             >
-              <RefreshCw size={12} />
-            </button>
+              <RefreshCw />
+            </Button>
           </div>
         </div>
       </div>
@@ -66,7 +68,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
       <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
         <div className="flex w-64 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
-            <Search size={12} className="text-text-lighter" />
+            <Search className="text-text-lighter" />
             <Input
               className="border-0 bg-transparent px-0 py-0 focus:border-transparent focus:ring-0"
               placeholder="Pattern (e.g. user:*)"
@@ -75,21 +77,26 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               aria-label="Key pattern"
             />
-            <button
+            <Button
               onClick={handleSearch}
-              className="rounded-full border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="icon-xs"
+              className="rounded-full"
               aria-label="Search keys"
             >
-              <Search size={12} />
-            </button>
+              <Search />
+            </Button>
           </div>
           <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
             {store.keys.map((keyInfo) => (
-              <button
+              <Button
                 key={keyInfo.key}
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => actions.selectKey(keyInfo.key)}
                 className={cn(
-                  "ui-font flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-xs hover:bg-hover",
+                  "h-auto w-full justify-start gap-1.5 px-2 py-1",
                   store.selectedKey === keyInfo.key && "bg-selected",
                 )}
                 aria-label={`Select key ${keyInfo.key}`}
@@ -105,20 +112,23 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 <span className="flex-1 truncate">{keyInfo.key}</span>
                 {keyInfo.ttl > 0 && (
                   <span className="flex items-center gap-0.5 text-text-lighter">
-                    <Clock size={10} />
+                    <Clock />
                     <span className="text-[10px]">{keyInfo.ttl}s</span>
                   </span>
                 )}
-              </button>
+              </Button>
             ))}
             {store.hasMore && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => actions.scanKeys()}
-                className="ui-font w-full rounded-lg px-2 py-1 text-center text-accent text-xs hover:bg-hover"
+                className="w-full text-accent"
                 aria-label="Load more keys"
               >
                 Load more...
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -133,7 +143,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
               <div className="flex items-center gap-2 text-sm text-text-lighter">
-                <RefreshCw size={16} className="animate-spin" />
+                <RefreshCw className="animate-spin" />
                 Loading...
               </div>
             </div>
@@ -160,7 +170,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {!store.isLoading && !showInfo && store.selectedKey && (
             <div className="flex flex-1 flex-col overflow-hidden">
               <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
-                <Key size={12} className="text-text-lighter" />
+                <Key className="text-text-lighter" />
                 <span className="ui-font font-medium text-xs">{store.selectedKey}</span>
                 <Badge
                   className={cn(
@@ -171,13 +181,15 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                   {store.selectedKeyType}
                 </Badge>
                 <div className="flex-1" />
-                <button
+                <Button
                   onClick={() => actions.deleteKey(store.selectedKey!)}
-                  className="rounded p-1 text-red-400 hover:bg-red-500/10"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-red-400 hover:bg-red-500/10 hover:text-red-400"
                   aria-label="Delete key"
                 >
-                  <Trash2 size={12} />
-                </button>
+                  <Trash2 />
+                </Button>
               </div>
               <div className="flex-1 overflow-auto p-3">
                 <pre className="ui-font whitespace-pre-wrap rounded-2xl bg-secondary-bg/40 p-3 text-xs leading-5">

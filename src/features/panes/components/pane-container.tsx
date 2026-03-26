@@ -21,7 +21,9 @@ import type { EditorContent, PullRequestContent } from "../types/pane-content";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 
 const AgentTab = lazy(() =>
-  import("@/features/ai/components/agent-tab").then((m) => ({ default: m.AgentTab })),
+  import("@/features/ai/components/agent-tab").then((m) => ({
+    default: m.AgentTab,
+  })),
 );
 
 const databaseViewerCache = new Map<
@@ -41,13 +43,17 @@ const ExternalEditorTerminal = lazy(() =>
 );
 const DiffViewer = lazy(() => import("@/features/git/components/diff/git-diff-viewer"));
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
+const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
+const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const ImageViewer = lazy(() =>
   import("@/features/image-viewer/components/image-viewer").then((m) => ({
     default: m.ImageViewer,
   })),
 );
 const PdfViewer = lazy(() =>
-  import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
+  import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({
+    default: m.PdfViewer,
+  })),
 );
 const BinaryFileViewer = lazy(() =>
   import("@/features/binary-viewer/components/binary-file-viewer").then((m) => ({
@@ -55,10 +61,14 @@ const BinaryFileViewer = lazy(() =>
   })),
 );
 const TerminalTab = lazy(() =>
-  import("@/features/terminal/components/terminal-tab").then((m) => ({ default: m.TerminalTab })),
+  import("@/features/terminal/components/terminal-tab").then((m) => ({
+    default: m.TerminalTab,
+  })),
 );
 const WebViewer = lazy(() =>
-  import("@/features/web-viewer/components/web-viewer").then((m) => ({ default: m.WebViewer })),
+  import("@/features/web-viewer/components/web-viewer").then((m) => ({
+    default: m.WebViewer,
+  })),
 );
 
 interface PaneContainerProps {
@@ -81,19 +91,23 @@ function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
         ? buffer.url || "Web view"
         : buffer.type === "pullRequest"
           ? `Pull request #${buffer.prNumber}`
-          : buffer.type === "diff"
-            ? "Diff preview"
-            : buffer.type === "image"
-              ? "Image preview"
-              : buffer.type === "pdf"
-                ? "PDF preview"
-                : buffer.type === "binary"
-                  ? "Binary file preview"
-                  : buffer.type === "database"
-                    ? `${buffer.databaseType} viewer`
-                    : buffer.type === "externalEditor"
-                      ? "External editor session"
-                      : previewText || "No preview available";
+          : buffer.type === "githubIssue"
+            ? `Issue #${buffer.issueNumber}`
+            : buffer.type === "githubAction"
+              ? `Workflow run #${buffer.runId}`
+              : buffer.type === "diff"
+                ? "Diff preview"
+                : buffer.type === "image"
+                  ? "Image preview"
+                  : buffer.type === "pdf"
+                    ? "PDF preview"
+                    : buffer.type === "binary"
+                      ? "Binary file preview"
+                      : buffer.type === "database"
+                        ? `${buffer.databaseType} viewer`
+                        : buffer.type === "externalEditor"
+                          ? "External editor session"
+                          : previewText || "No preview available";
 
   const previewLines = summary.split("\n").slice(0, 12);
 
@@ -133,7 +147,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="shrink-0 bg-secondary-bg/60 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] bg-green-500/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-green-500/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 font-mono text-[11px] text-text-lighter">
@@ -489,10 +503,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       // Create a split — new pane is always child[1]
       const direction = zone === "left" || zone === "right" ? "horizontal" : "vertical";
-      const newPaneId = splitPane(pane.id, direction);
+      const placement = zone === "left" || zone === "top" ? "before" : "after";
+      const newPaneId = splitPane(pane.id, direction, undefined, placement);
       if (!newPaneId) return;
 
-      // Move the dragged buffer into the new pane (child[1] = right/bottom)
+      // Move the dragged buffer into the newly created pane.
       if (sourcePaneId && sourcePaneId !== pane.id) {
         moveBufferToPane(bufferId, sourcePaneId, newPaneId);
       } else {
@@ -716,6 +731,24 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         case "pullRequest":
           return <PRViewer prNumber={buffer.prNumber} />;
 
+        case "githubIssue":
+          return (
+            <GitHubIssueViewer
+              issueNumber={buffer.issueNumber}
+              repoPath={buffer.repoPath}
+              bufferId={buffer.id}
+            />
+          );
+
+        case "githubAction":
+          return (
+            <GitHubActionViewer
+              runId={buffer.runId}
+              repoPath={buffer.repoPath}
+              bufferId={buffer.id}
+            />
+          );
+
         case "image":
           return <ImageViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;
 
@@ -751,7 +784,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           );
 
         default:
-          return <CodeEditor paneId={pane.id} bufferId={buffer.id} />;
+          return (
+            <CodeEditor paneId={pane.id} bufferId={buffer.id} isActiveSurface={isActivePane} />
+          );
       }
     },
     [
@@ -854,7 +889,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         <CodeEditor
                           paneId={pane.id}
                           bufferId={buffer.id}
-                          isActiveSurface={isActiveBuffer}
+                          isActiveSurface={isActivePane && isActiveBuffer}
                           showToolbar={false}
                           className={isActiveBuffer ? undefined : "pointer-events-none"}
                         />

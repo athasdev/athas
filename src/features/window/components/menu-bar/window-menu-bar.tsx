@@ -1,12 +1,12 @@
-import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import Menu from "./menu";
 import MenuItem from "./menu-item";
@@ -24,7 +24,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
   const menuBarRef = useRef<HTMLDivElement>(null);
 
   const handleClickEmit = (event: string, payload?: unknown) => {
-    emit(event, payload);
+    void getCurrentWebviewWindow().emit(event, payload);
     setActiveMenu(null);
   };
 
@@ -230,7 +230,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           variant="ghost"
           size="sm"
           className={cn(
-            "h-5 rounded-md px-1.5 text-[11px] text-text-lighter",
+            "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
             activeMenu === menuName ? "bg-hover/80 text-text" : "hover:bg-hover/50 hover:text-text",
           )}
           onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}

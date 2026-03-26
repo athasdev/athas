@@ -1,16 +1,21 @@
+import { ArrowLeft, ArrowRight, Maximize2, Minimize2, SplitSquareHorizontal } from "lucide-react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import { Button } from "@/ui/button";
+import Tooltip from "@/ui/tooltip";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
@@ -38,7 +43,9 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
   const paneRoot = usePaneStore.use.root();
-  const { moveBufferToPane, addBufferToPane, setActivePane } = usePaneStore.use.actions();
+  const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
+  const { moveBufferToPane, addBufferToPane, setActivePane, splitPane, togglePaneFullscreen } =
+    usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
   const pane = paneId ? findPaneGroup(paneRoot, paneId) : null;
@@ -60,6 +67,10 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
+  const jumpListActions = useJumpListStore.use.actions();
+  const canGoBack = jumpListActions.canGoBack();
+  const canGoForward = jumpListActions.canGoForward();
+  const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -97,6 +108,48 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const dragStateRef = useRef(dragState);
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
+
+  const handleJumpBack = useCallback(async () => {
+    const bufferStore = useBufferStore.getState();
+    const editorState = useEditorStateStore.getState();
+    const currentActiveBufferId = bufferStore.activeBufferId;
+    const currentActiveBuffer = bufferStore.buffers.find((b) => b.id === currentActiveBufferId);
+
+    const currentPosition =
+      currentActiveBufferId && currentActiveBuffer?.path
+        ? {
+            bufferId: currentActiveBufferId,
+            filePath: currentActiveBuffer.path,
+            line: editorState.cursorPosition.line,
+            column: editorState.cursorPosition.column,
+            offset: editorState.cursorPosition.offset,
+            scrollTop: editorState.scrollTop,
+            scrollLeft: editorState.scrollLeft,
+          }
+        : undefined;
+
+    const entry = jumpListActions.goBack(currentPosition);
+    if (entry) {
+      await navigateToJumpEntry(entry);
+    }
+  }, [jumpListActions]);
+
+  const handleJumpForward = useCallback(async () => {
+    const entry = jumpListActions.goForward();
+    if (entry) {
+      await navigateToJumpEntry(entry);
+    }
+  }, [jumpListActions]);
+
+  const handleSplitActivePane = useCallback(() => {
+    if (!paneId || !activeBufferId) return;
+    splitPane(paneId, "horizontal", activeBufferId);
+  }, [activeBufferId, paneId, splitPane]);
+
+  const handleTogglePaneFullscreen = useCallback(() => {
+    if (!paneId) return;
+    togglePaneFullscreen(paneId);
+  }, [paneId, togglePaneFullscreen]);
 
   const canScrollTabsHorizontally = useCallback(() => {
     const container = tabBarRef.current;
@@ -685,7 +738,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     <>
       <div
         ref={tabBarRef}
-        className={`relative flex shrink-0 gap-1 overflow-x-auto overflow-y-hidden bg-primary-bg px-1.5 py-1 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        className={`relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
         role="tablist"
         aria-label="Open files"
         onWheel={handleWheel}
@@ -693,47 +746,110 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         onDragLeave={handleTabBarDragLeave}
         onDrop={handleTabBarDrop}
       >
-        {sortedBuffers.map((buffer, index) => {
-          const isActive = buffer.id === activeBufferId;
-          const isDraggedTab = isDragging && draggedIndex === index;
-          const showDropIndicatorBefore =
-            isDragging && dropTargetIndex === index && draggedIndex !== index;
-          return (
-            <TabBarItem
-              key={buffer.id}
-              buffer={buffer}
-              displayName={displayNames.get(buffer.id) || buffer.name}
-              index={index}
-              isActive={isActive}
-              isDraggedTab={isDraggedTab}
-              showDropIndicatorBefore={showDropIndicatorBefore}
-              tabRef={(el) => {
-                tabRefs.current[index] = el;
-              }}
-              onMouseDown={(e) => handleMouseDown(e, index)}
-              onDoubleClick={(e) => handleDoubleClick(e, index)}
-              onContextMenu={(e) => handleContextMenu(e, buffer)}
-              onKeyDown={(e) => handleKeyDown(e, index)}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragEnd={handleDragEnd}
-              handleTabClose={(id) => {
-                handleTabClose(id);
-                // Clear cached position for this buffer
-                clearPositionCache(id);
-              }}
-              handleTabPin={handleTabPin}
-            />
-          );
-        })}
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Tooltip content="Go Back (Ctrl+-)" side="bottom">
+            <Button
+              type="button"
+              onClick={handleJumpBack}
+              disabled={!canGoBack}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              aria-label="Go back to previous location"
+            >
+              <ArrowLeft />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Go Forward (Ctrl+Shift+-)" side="bottom">
+            <Button
+              type="button"
+              onClick={handleJumpForward}
+              disabled={!canGoForward}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              aria-label="Go forward to next location"
+            >
+              <ArrowRight />
+            </Button>
+          </Tooltip>
+        </div>
 
-        {isDragging && dropTargetIndex === sortedBuffers.length && (
-          <div className="relative">
-            <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {sortedBuffers.map((buffer, index) => {
+            const isActive = buffer.id === activeBufferId;
+            const isDraggedTab = isDragging && draggedIndex === index;
+            const showDropIndicatorBefore =
+              isDragging && dropTargetIndex === index && draggedIndex !== index;
+            return (
+              <TabBarItem
+                key={buffer.id}
+                buffer={buffer}
+                displayName={displayNames.get(buffer.id) || buffer.name}
+                index={index}
+                isActive={isActive}
+                isDraggedTab={isDraggedTab}
+                showDropIndicatorBefore={showDropIndicatorBefore}
+                tabRef={(el) => {
+                  tabRefs.current[index] = el;
+                }}
+                onMouseDown={(e) => handleMouseDown(e, index)}
+                onDoubleClick={(e) => handleDoubleClick(e, index)}
+                onContextMenu={(e) => handleContextMenu(e, buffer)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragEnd={handleDragEnd}
+                handleTabClose={(id) => {
+                  handleTabClose(id);
+                  clearPositionCache(id);
+                }}
+                handleTabPin={handleTabPin}
+              />
+            );
+          })}
+
+          {isDragging && dropTargetIndex === sortedBuffers.length && (
+            <div className="relative">
+              <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 pl-0.5">
+          {paneId && activeBufferId && (
+            <Tooltip content="Split Editor" side="bottom">
+              <Button
+                type="button"
+                onClick={handleSplitActivePane}
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 rounded-lg text-text-lighter"
+                aria-label="Split editor"
+              >
+                <SplitSquareHorizontal />
+              </Button>
+            </Tooltip>
+          )}
+          {paneId && (
+            <Tooltip
+              content={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
+              side="bottom"
+            >
+              <Button
+                type="button"
+                onClick={handleTogglePaneFullscreen}
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 rounded-lg text-text-lighter"
+                aria-label="Toggle editor full screen"
+              >
+                {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+              </Button>
+            </Tooltip>
+          )}
+          <div className="flex shrink-0 items-center">
+            <NewTabMenu />
           </div>
-        )}
-
-        <div className="flex shrink-0 items-center pl-0.5">
-          <NewTabMenu />
         </div>
       </div>
 

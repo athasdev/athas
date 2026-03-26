@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { memo, useCallback, useEffect, useRef } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { useGitStore } from "../stores/git-store";
@@ -25,10 +26,10 @@ const CommitItem = memo(({ commit, onViewCommitDiff }: CommitItemProps) => {
   return (
     <div
       onClick={handleCommitClick}
-      className="mx-1 mb-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-hover"
+      className="ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-hover"
     >
       <div className="truncate text-inherit text-text leading-tight">{commit.message}</div>
-      <div className="flex items-center gap-2 text-[0.82em] text-text-lighter">
+      <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
         <span className="truncate">{commit.author}</span>
         <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
       </div>
@@ -150,18 +151,18 @@ const GitCommitHistory = ({
         )}
       >
         {showHeader && (
-          <button
+          <Button
             type="button"
-            className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+            variant="ghost"
+            size="sm"
+            className="sticky top-0 z-20 w-full shrink-0 justify-start gap-1 rounded-none border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm"
             onClick={onToggle}
           >
-            {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-            <span className="font-medium text-[0.9em] text-text">History</span>
+            {isCollapsed ? <ChevronRight /> : <ChevronDown />}
+            <span className="ui-text-sm font-medium text-text">History</span>
             <div className="flex-1" />
-            <span className="rounded-full bg-primary-bg px-1.5 text-[0.74em]">
-              {commits.length}
-            </span>
-          </button>
+            <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{commits.length}</span>
+          </Button>
         )}
 
         {!isCollapsed && (
@@ -173,7 +174,7 @@ const GitCommitHistory = ({
             ref={scrollContainerRef}
           >
             {commits.length === 0 ? (
-              <div className="px-2.5 py-1.5 text-[0.84em] text-text-lighter italic">No commits</div>
+              <div className="ui-text-sm px-2.5 py-1.5 text-text-lighter italic">No commits</div>
             ) : (
               <>
                 {commits.map((commit) => (
@@ -185,13 +186,13 @@ const GitCommitHistory = ({
                 ))}
 
                 {isLoadingMoreCommits && (
-                  <div className="px-3 py-1.5 text-center text-[0.84em] text-text-lighter">
+                  <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
                     Loading...
                   </div>
                 )}
 
                 {!hasMoreCommits && commits.length > 0 && (
-                  <div className="px-3 py-1.5 text-center text-[0.84em] text-text-lighter">
+                  <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
                     end of history
                   </div>
                 )}

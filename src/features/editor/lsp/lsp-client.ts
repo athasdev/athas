@@ -164,7 +164,7 @@ export class LspClient {
           const { setDiagnostics } = useDiagnosticsStore.getState().actions;
           setDiagnostics(filePath, convertedDiagnostics);
 
-          logger.info(
+          logger.debug(
             "LSPClient",
             `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
           );
@@ -194,7 +194,7 @@ export class LspClient {
         serverArgs = extensionRegistry.getLspServerArgs(filePath);
         languageId = extensionRegistry.getLanguageId(filePath) || undefined;
 
-        logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
+        logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
         // Check if this language server is already running for this workspace
         if (serverPath && languageId) {
@@ -219,7 +219,7 @@ export class LspClient {
         return;
       }
 
-      logger.info("LSPClient", `Invoking lsp_start with:`, {
+      logger.debug("LSPClient", `Invoking lsp_start with:`, {
         workspacePath,
         serverPath,
         serverArgs,
@@ -301,7 +301,7 @@ export class LspClient {
         return;
       }
 
-      logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
+      logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
       // Track this language server BEFORE invoking backend to prevent race conditions
       if (languageId) {
@@ -315,7 +315,7 @@ export class LspClient {
         this.updateLspStatus();
       }
 
-      logger.info("LSPClient", `Invoking lsp_start_for_file with:`, {
+      logger.debug("LSPClient", `Invoking lsp_start_for_file with:`, {
         filePath,
         workspacePath,
         serverPath,

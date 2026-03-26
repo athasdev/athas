@@ -22,7 +22,7 @@ export function useMenuEventsWrapper() {
 
   useMenuEvents({
     onNewWindow: () => {
-      createAppWindow();
+      void createAppWindow();
     },
     onNewFile: fileSystemStore.handleCreateNewFile,
     onOpenFolder: fileSystemStore.handleOpenFolder,

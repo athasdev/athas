@@ -4,7 +4,7 @@ import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "../../store/store";
@@ -46,10 +46,6 @@ export const ChatMessage = memo(function ChatMessage({
     message.toolCalls &&
     message.toolCalls.length > 0 &&
     (!message.content || message.content.trim().length === 0);
-  const toolCalls = message.toolCalls || [];
-  const runningToolCount = toolCalls.filter(
-    (toolCall) => !toolCall.isComplete && message.isStreaming,
-  ).length;
 
   const handleCopyMessage = useCallback(async (messageContent: string, messageId: string) => {
     try {
@@ -112,14 +108,16 @@ export const ChatMessage = memo(function ChatMessage({
         <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
           <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
           <Tooltip content="Restore to this point" side="top">
-            <button
+            <Button
               onClick={() => handleRestoreCheckpoint(message.id)}
-              className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
+              variant="ghost"
+              size="icon-xs"
+              className="-translate-y-1/2 absolute top-1/2 right-1.5 rounded-full border border-border bg-secondary-bg/80 text-text-lighter opacity-40 hover:bg-hover hover:opacity-100"
               title="Restore checkpoint"
               aria-label="Restore to this checkpoint"
             >
-              <Undo2 size={10} />
-            </button>
+              <Undo2 />
+            </Button>
           </Tooltip>
         </div>
       </div>
@@ -128,33 +126,18 @@ export const ChatMessage = memo(function ChatMessage({
 
   if (isToolOnlyMessage) {
     return (
-      <div className="rounded-2xl border border-border/65 bg-secondary-bg/30 p-2.5">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-lighter/80">
-            Tool Activity
-          </div>
-          <Badge shape="pill" className="text-text-lighter">
-            {toolCalls.length} call{toolCalls.length !== 1 ? "s" : ""}
-          </Badge>
-          {runningToolCount > 0 ? (
-            <Badge shape="pill" className="text-text-lighter">
-              {runningToolCount} running
-            </Badge>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          {toolCalls.map((toolCall, toolIndex) => (
-            <ToolCallDisplay
-              key={`${message.id}-tool-${toolIndex}`}
-              toolName={toolCall.name}
-              input={toolCall.input}
-              output={toolCall.output}
-              error={toolCall.error}
-              isStreaming={!toolCall.isComplete && message.isStreaming}
-              onOpenInEditor={handleOpenInEditor}
-            />
-          ))}
-        </div>
+      <div className="space-y-2">
+        {message.toolCalls!.map((toolCall, toolIndex) => (
+          <ToolCallDisplay
+            key={`${message.id}-tool-${toolIndex}`}
+            toolName={toolCall.name}
+            input={toolCall.input}
+            output={toolCall.output}
+            error={toolCall.error}
+            isStreaming={!toolCall.isComplete && message.isStreaming}
+            onOpenInEditor={handleOpenInEditor}
+          />
+        ))}
       </div>
     );
   }
@@ -184,28 +167,18 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div className="group relative w-full">
       {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="mb-2 rounded-2xl border border-border/60 bg-secondary-bg/25 p-2">
-          <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-lighter/80">
-              Tool Activity
-            </div>
-            <Badge shape="pill" className="text-text-lighter">
-              {toolCalls.length} call{toolCalls.length !== 1 ? "s" : ""}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {message.toolCalls!.map((toolCall, toolIndex) => (
-              <ToolCallDisplay
-                key={`${message.id}-tool-${toolIndex}`}
-                toolName={toolCall.name}
-                input={toolCall.input}
-                output={toolCall.output}
-                error={toolCall.error}
-                isStreaming={!toolCall.isComplete && message.isStreaming}
-                onOpenInEditor={handleOpenInEditor}
-              />
-            ))}
-          </div>
+        <div className="mb-2 space-y-2">
+          {message.toolCalls!.map((toolCall, toolIndex) => (
+            <ToolCallDisplay
+              key={`${message.id}-tool-${toolIndex}`}
+              toolName={toolCall.name}
+              input={toolCall.input}
+              output={toolCall.output}
+              error={toolCall.error}
+              isStreaming={!toolCall.isComplete && message.isStreaming}
+              onOpenInEditor={handleOpenInEditor}
+            />
+          ))}
         </div>
       )}
 
@@ -256,39 +229,41 @@ export const ChatMessage = memo(function ChatMessage({
             {isLastMessage &&
               (hasError(message.content) ? (
                 <Tooltip content="Retry" side="top">
-                  <button
+                  <Button
                     onClick={handleRetryMessage}
-                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
                     title="Retry"
                     aria-label="Retry failed message"
                   >
-                    <RefreshCw size={12} />
-                  </button>
+                    <RefreshCw />
+                  </Button>
                 </Tooltip>
               ) : (
                 <Tooltip content="Regenerate" side="top">
-                  <button
+                  <Button
                     onClick={handleRetryMessage}
-                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
                     title="Regenerate"
                     aria-label="Regenerate response"
                   >
-                    <RotateCcw size={12} />
-                  </button>
+                    <RotateCcw />
+                  </Button>
                 </Tooltip>
               ))}
-            <button
+            <Button
               onClick={() => handleCopyMessage(message.content, message.id)}
-              className="pointer-events-auto rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+              variant="ghost"
+              size="icon-sm"
+              className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
               title="Copy message"
               aria-label="Copy message"
             >
-              {copiedMessageId === message.id ? (
-                <Check size={12} className="text-green-400" />
-              ) : (
-                <Copy size={12} />
-              )}
-            </button>
+              {copiedMessageId === message.id ? <Check className="text-green-400" /> : <Copy />}
+            </Button>
           </div>
         </>
       )}

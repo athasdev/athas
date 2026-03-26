@@ -12,8 +12,10 @@ interface DialogProps {
   icon?: React.ForwardRefExoticComponent<
     Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
+  headerActions?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
+  headerBorder?: boolean;
   classNames?: Partial<{
     backdrop: string;
     modal: string;
@@ -46,8 +48,10 @@ const Dialog = ({
   onClose,
   title,
   icon: Icon,
+  headerActions,
   footer,
   size = "md",
+  headerBorder = true,
   classNames,
 }: DialogProps) => {
   return (
@@ -74,22 +78,30 @@ const Dialog = ({
             transition={{ duration: 0.15, ease: "easeOut" }}
             className={cn(dialogContentVariants({ size }), classNames?.modal)}
           >
-            <div className="flex shrink-0 items-center justify-between border-border border-b bg-primary-bg px-4 py-3">
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
+                headerBorder && "border-border border-b",
+              )}
+            >
               <div className="flex items-center gap-2">
-                {Icon && <Icon size={15} className="text-text-lighter" />}
-                <DialogPrimitive.Title className="ui-font font-medium text-text text-xs">
+                {Icon && <Icon className="text-text-lighter" />}
+                <DialogPrimitive.Title className="ui-font ui-text-md font-medium text-text">
                   {title}
                 </DialogPrimitive.Title>
               </div>
 
-              <DialogPrimitive.Close asChild>
-                <button
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
-                  aria-label="Close dialog"
-                >
-                  <X size={14} />
-                </button>
-              </DialogPrimitive.Close>
+              <div className="flex items-center gap-1">
+                {headerActions}
+                <DialogPrimitive.Close asChild>
+                  <button
+                    className="flex size-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+                    aria-label="Close dialog"
+                  >
+                    <X />
+                  </button>
+                </DialogPrimitive.Close>
+              </div>
             </div>
 
             <div className={cn("flex-1 overflow-y-auto p-4", classNames?.content)}>{children}</div>

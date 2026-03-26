@@ -11,7 +11,7 @@ export function commandToAction(command: Command, onClose: () => void): Action {
     id: command.id,
     label: command.title,
     description: command.description || command.id,
-    icon: command.icon || <Terminal size={14} />,
+    icon: command.icon || <Terminal />,
     category: command.category || "Other",
     keybinding: command.keybinding ? keybindingToDisplay(command.keybinding) : undefined,
     action: () => {

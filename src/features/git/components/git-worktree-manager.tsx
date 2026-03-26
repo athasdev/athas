@@ -1,7 +1,7 @@
 import { Copy, GitBranch, GitCommit, GitFork, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useContextMenu } from "@/hooks/use-context-menu";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
@@ -154,7 +154,7 @@ const GitWorktreeManager = ({
         {
           id: "copy-worktree-path",
           label: "Copy Path",
-          icon: <Copy size={12} />,
+          icon: <Copy />,
           onClick: () => void handleCopyPath(contextMenu.data!.path),
         },
         ...(!contextMenu.data.isCurrent
@@ -168,7 +168,7 @@ const GitWorktreeManager = ({
               {
                 id: "remove-worktree",
                 label: "Remove",
-                icon: <Trash2 size={12} />,
+                icon: <Trash2 />,
                 className: "text-error hover:!bg-error/10 hover:!text-error",
                 onClick: () => void handleRemoveWorktree(contextMenu.data!.path),
               },
@@ -192,12 +192,12 @@ const GitWorktreeManager = ({
             <Tooltip content={isAddFormOpen ? "Hide add form" : "Add worktree"} side="bottom">
               <Button
                 onClick={() => setIsAddFormOpen((value) => !value)}
-                variant={isAddFormOpen ? "subtle" : "ghost"}
+                variant={isAddFormOpen ? "secondary" : "ghost"}
                 size="icon-sm"
-                active={isAddFormOpen}
+                data-active={isAddFormOpen}
                 aria-label={isAddFormOpen ? "Hide add form" : "Add worktree"}
               >
-                <Plus size={11} />
+                <Plus />
               </Button>
             </Tooltip>
             <Tooltip content="Prune worktrees" side="bottom">
@@ -208,7 +208,7 @@ const GitWorktreeManager = ({
                 size="icon-sm"
                 aria-label="Prune worktrees"
               >
-                <RefreshCw size={11} className={cn(isLoading && "animate-spin")} />
+                <RefreshCw className={cn(isLoading && "animate-spin")} />
               </Button>
             </Tooltip>
           </div>
@@ -218,8 +218,8 @@ const GitWorktreeManager = ({
           <div className="border-border/70 border-t bg-secondary-bg/35 px-2 py-2">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
-                <div className="ui-font font-medium text-text text-xs">Create worktree</div>
-                <div className="text-text-lighter text-[11px]">
+                <div className="ui-font ui-text-sm font-medium text-text">Create worktree</div>
+                <div className="ui-text-sm text-text-lighter">
                   Add another checkout for this repository.
                 </div>
               </div>
@@ -244,7 +244,7 @@ const GitWorktreeManager = ({
                   }
                 }}
               />
-              <label className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-xs text-text-lighter">
+              <label className="ui-text-sm flex items-center gap-2 rounded-lg px-1 py-0.5 text-text-lighter">
                 <Checkbox checked={createBranch} onChange={setCreateBranch} />
                 <span>Create a new branch for this worktree</span>
               </label>
@@ -261,7 +261,7 @@ const GitWorktreeManager = ({
                 <Button
                   onClick={() => void handleAddWorktree()}
                   disabled={isLoading || !path.trim() || (createBranch && !branch.trim())}
-                  variant="subtle"
+                  variant="secondary"
                   size="sm"
                   className="h-7 px-2"
                 >
@@ -275,11 +275,11 @@ const GitWorktreeManager = ({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {isLoading && worktrees.length === 0 ? (
-          <div className="flex h-full min-h-[160px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-secondary-bg/20 px-4 text-center text-text-lighter text-xs">
+          <div className="ui-text-sm flex h-full min-h-[160px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-secondary-bg/20 px-4 text-center text-text-lighter">
             Loading worktrees...
           </div>
         ) : worktrees.length === 0 ? (
-          <div className="flex h-full min-h-[160px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-secondary-bg/20 px-4 text-center text-text-lighter text-xs">
+          <div className="ui-text-sm flex h-full min-h-[160px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-secondary-bg/20 px-4 text-center text-text-lighter">
             No worktrees found
           </div>
         ) : (
@@ -305,31 +305,33 @@ const GitWorktreeManager = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="xs"
                         onClick={() => onSelectWorktree?.(worktree.path)}
-                        className="min-w-0 truncate text-left font-medium text-text text-xs hover:text-text"
+                        className="h-auto min-w-0 truncate px-0 py-0 font-medium text-text hover:bg-transparent hover:text-text"
                         title={worktree.path}
                       >
                         {worktreeName}
-                      </button>
+                      </Button>
                       {worktree.is_current && (
-                        <span className="shrink-0 rounded-full border border-border/70 bg-primary-bg px-1.5 py-0.5 text-[10px] text-text">
+                        <span className="ui-text-sm shrink-0 rounded-full border border-border/70 bg-primary-bg px-1.5 py-0.5 text-text">
                           Current
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-text-lighter">
+                    <div className="ui-text-sm mt-0.5 truncate text-text-lighter">
                       {relativePath === worktree.path ? worktree.path : relativePath}
                     </div>
 
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-text-lighter">
+                    <div className="ui-text-sm mt-1.5 flex flex-wrap items-center gap-1.5 text-text-lighter">
                       <div className="inline-flex items-center gap-1 rounded-md bg-primary-bg/70 px-1.5 py-1">
-                        <GitBranch size={10} />
+                        <GitBranch />
                         <span>{branchLabel}</span>
                       </div>
                       <div className="inline-flex items-center gap-1 rounded-md bg-primary-bg/70 px-1.5 py-1">
-                        <GitCommit size={10} />
+                        <GitCommit />
                         <span>{worktree.head.slice(0, 7)}</span>
                       </div>
                       {worktree.prunable_reason && (
@@ -358,7 +360,7 @@ const GitWorktreeManager = ({
                         className="shrink-0 text-text-lighter hover:text-red-300"
                         aria-label="Remove worktree"
                       >
-                        <Trash2 size={10} />
+                        <Trash2 />
                       </Button>
                     </Tooltip>
                   )}

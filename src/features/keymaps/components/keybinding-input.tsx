@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Button } from "@/ui/button";
 import Keybinding from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingRecorder } from "../hooks/use-keybinding-recorder";
@@ -74,17 +75,19 @@ export function KeybindingInput({
         )}
       </div>
       {isRecording && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={(e) => {
             e.stopPropagation();
             handleCancel();
           }}
-          className="shrink-0 text-[10px] text-text-lighter hover:text-text"
+          className="shrink-0 px-1 text-[10px] text-text-lighter hover:bg-transparent hover:text-text"
           aria-label="Cancel recording"
         >
           ESC
-        </button>
+        </Button>
       )}
     </div>
   );

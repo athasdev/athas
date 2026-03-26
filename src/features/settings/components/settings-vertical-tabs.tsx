@@ -11,6 +11,7 @@ import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
@@ -147,20 +148,14 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
     <div className="flex h-full flex-col">
       {/* Search Input */}
       <div className="p-3">
-        <div className="relative">
-          <Search
-            className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-            size={12}
-          />
-          <Input
-            type="text"
-            placeholder="Search settings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            leftIcon={Search}
-            className="w-full rounded-full border-border bg-secondary-bg/80 py-2 pr-3 focus:border-border focus:ring-accent/20"
-          />
-        </div>
+        <Input
+          type="text"
+          placeholder="Search settings..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          leftIcon={Search}
+          size="sm"
+        />
       </div>
 
       {/* Tabs */}
@@ -173,24 +168,26 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
 
             return (
               <div key={group.id} className="overflow-hidden rounded-xl">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => toggleGroup(group.id)}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left font-medium text-xs transition-colors",
+                    "ui-text-sm h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
                     hasActiveItem
                       ? "bg-accent/8 text-text"
                       : "text-text-lighter hover:bg-hover hover:text-text",
                   )}
                 >
-                  <Icon size={14} />
+                  <Icon />
                   <span className="flex-1">{group.label}</span>
                   {isExpanded ? (
-                    <ChevronDown size={12} className="shrink-0" />
+                    <ChevronDown className="shrink-0" />
                   ) : (
-                    <ChevronRight size={12} className="shrink-0" />
+                    <ChevronRight className="shrink-0" />
                   )}
-                </button>
+                </Button>
 
                 {isExpanded ? (
                   <div className="relative mt-1 space-y-1 pl-6">
@@ -199,19 +196,21 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
                       const isActive = activeTab === item.id;
 
                       return (
-                        <button
+                        <Button
                           key={item.id}
                           type="button"
+                          variant="ghost"
+                          size="xs"
                           onClick={() => onTabChange(item.id)}
                           className={cn(
-                            "flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors",
+                            "ui-text-sm h-auto w-full justify-start px-2.5 py-1.5 text-left",
                             isActive
                               ? "bg-accent/10 text-accent"
                               : "text-text-lighter hover:bg-hover hover:text-text",
                           )}
                         >
                           <span>{item.label}</span>
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -220,7 +219,9 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
             );
           })
         ) : (
-          <div className="p-2 text-center text-text-lighter text-xs">No matching settings</div>
+          <div className="ui-font ui-text-sm p-2 text-center text-text-lighter">
+            No matching settings
+          </div>
         )}
       </div>
     </div>

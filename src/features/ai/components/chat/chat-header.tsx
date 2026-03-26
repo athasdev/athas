@@ -2,6 +2,7 @@ import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import {
   PANE_CHIP_BASE,
@@ -125,14 +126,17 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
 
       <div className="flex shrink-0 items-center gap-1.5">
         <Tooltip content="Chat History" side="bottom">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
             ref={historyButtonRef}
             onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
             className={paneIconButtonClassName()}
             aria-label="Toggle chat history"
           >
-            <History size={14} />
-          </button>
+            <History />
+          </Button>
         </Tooltip>
 
         <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />

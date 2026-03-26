@@ -59,14 +59,14 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
     <div
       className={cn(
         "relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
-        isFullScreen && "fixed inset-x-0 z-[100]",
+        isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
         !isBottomPaneVisible && "hidden",
       )}
       style={
         isFullScreen
           ? {
-              top: `${titleBarHeight}px`,
-              bottom: `${footerHeight}px`,
+              top: `${titleBarHeight + 8}px`,
+              bottom: `${footerHeight + 8}px`,
             }
           : {
               height: `${height}px`,
@@ -112,6 +112,8 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
               onClose={() => {}}
               onDiagnosticClick={onDiagnosticClick}
               isEmbedded={true}
+              onFullScreen={() => setIsFullScreen(!isFullScreen)}
+              isFullScreen={isFullScreen}
             />
           </div>
         ) : bottomPaneActiveTab !== "terminal" && bottomPaneActiveTab !== "diagnostics" ? (

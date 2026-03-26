@@ -17,9 +17,9 @@ const badgeVariants = cva(
         pill: "rounded-full",
       },
       size: {
-        default: "px-2 py-0.5 text-[10px]",
-        sm: "px-2 py-0.5 text-xs",
-        compact: "px-1.5 py-0.5 text-[10px]",
+        default: "ui-text-sm px-2 py-0.5",
+        sm: "ui-text-sm px-2 py-0.5",
+        compact: "ui-text-sm px-1.5 py-0.5",
       },
     },
     defaultVariants: {

@@ -97,20 +97,14 @@ export const ToastContainer = () => {
           className="relative flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-primary-bg/95 px-3 py-2.5 shadow-xl backdrop-blur-sm"
         >
           <div className="flex items-start gap-2">
-            {item.type === "error" && (
-              <CircleX size={14} className="mt-0.5 shrink-0 text-red-400" />
-            )}
-            {item.type === "warning" && (
-              <CircleAlert size={14} className="mt-0.5 shrink-0 text-yellow-400" />
-            )}
-            {item.type === "success" && (
-              <CircleCheck size={14} className="mt-0.5 shrink-0 text-green-400" />
-            )}
+            {item.type === "error" && <CircleX className="mt-0.5 shrink-0 text-red-400" />}
+            {item.type === "warning" && <CircleAlert className="mt-0.5 shrink-0 text-yellow-400" />}
+            {item.type === "success" && <CircleCheck className="mt-0.5 shrink-0 text-green-400" />}
             {item.type === "info" && (
-              <CircleQuestionMark size={14} className="mt-0.5 shrink-0 text-blue-400" />
+              <CircleQuestionMark className="mt-0.5 shrink-0 text-blue-400" />
             )}
 
-            <p className="ui-font max-h-40 flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-xs text-text">
+            <p className="ui-font ui-text-sm max-h-40 flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-text">
               {item.message}
             </p>
 
@@ -118,7 +112,7 @@ export const ToastContainer = () => {
               onClick={() => toast.dismiss(item.id)}
               className="shrink-0 rounded p-0.5 transition-colors hover:bg-hover"
             >
-              <X size={12} className="text-text-lighter" />
+              <X className="text-text-lighter" />
             </button>
           </div>
 
@@ -129,7 +123,7 @@ export const ToastContainer = () => {
                   item.action?.onClick();
                   toast.dismiss(item.id);
                 }}
-                className="ui-font rounded bg-hover px-3 py-1 text-[10px] text-text uppercase tracking-wider transition-colors hover:bg-border"
+                className="ui-font ui-text-sm rounded bg-hover px-3 py-1 text-text uppercase tracking-wider transition-colors hover:bg-border"
               >
                 {item.action.label}
               </button>

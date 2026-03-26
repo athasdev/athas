@@ -1,5 +1,6 @@
 import { RotateCcw } from "lucide-react";
 import type React from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface SectionProps {
@@ -13,8 +14,8 @@ export default function Section({ title, description, children, className }: Sec
   return (
     <div className={cn("px-1 py-1", className)}>
       <div className="mb-3">
-        <h4 className="font-semibold text-sm text-text">{title}</h4>
-        {description && <p className="text-text-lighter text-xs">{description}</p>}
+        <h4 className="ui-font ui-text-md text-text">{title}</h4>
+        {description && <p className="ui-font ui-text-sm text-text-lighter">{description}</p>}
       </div>
       <div className="space-y-2.5">{children}</div>
     </div>
@@ -44,24 +45,23 @@ export function SettingRow({
     <div className={cn("flex items-center justify-between gap-4 px-1 py-2.5", className)}>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div className="font-medium text-text text-xs">{label}</div>
+          <div className="ui-font ui-text-sm text-text">{label}</div>
           {onReset && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="icon-xs"
               onClick={onReset}
               disabled={!canReset}
-              className={cn(
-                "inline-flex h-4.5 w-4.5 items-center justify-center rounded text-text-lighter transition-colors",
-                canReset ? "hover:bg-hover hover:text-text" : "cursor-default opacity-40",
-              )}
+              className={cn(canReset ? undefined : "cursor-default opacity-40")}
               aria-label={resetLabel || `Reset ${label}`}
               title={resetLabel || `Reset ${label}`}
             >
-              <RotateCcw size={10} />
-            </button>
+              <RotateCcw />
+            </Button>
           )}
         </div>
-        {description && <div className="text-text-lighter text-xs">{description}</div>}
+        {description && <div className="ui-font ui-text-sm text-text-lighter">{description}</div>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>

@@ -1,21 +1,12 @@
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
+import type { WindowOpenRequest } from "@/features/window/utils/window-open-request";
 
-const DEFAULT_WINDOW_OPTIONS = {
-  url: "/",
-  title: "",
-  width: 1200,
-  height: 800,
-  minWidth: 400,
-  minHeight: 400,
-  center: true,
-  decorations: true,
-  resizable: true,
-  shadow: true,
-  hiddenTitle: true,
-  titleBarStyle: "overlay" as const,
-};
+interface CreateAppWindowPayload {
+  request?: WindowOpenRequest | null;
+}
 
-export function createAppWindow() {
-  const label = `main-${Date.now()}`;
-  return new WebviewWindow(label, DEFAULT_WINDOW_OPTIONS);
+export async function createAppWindow(request?: WindowOpenRequest | null) {
+  return invoke<string>("create_app_window", {
+    request: request ?? null,
+  } satisfies CreateAppWindowPayload);
 }

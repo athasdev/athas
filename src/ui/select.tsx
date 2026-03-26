@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
 import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-import { buttonClassName } from "@/ui/button";
+import { buttonVariants, type ButtonVariant } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 export interface SelectOption {
@@ -21,6 +21,7 @@ export interface SelectProps {
   menuClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
+  variant?: Extract<ButtonVariant, "ghost" | "secondary" | "outline">;
   searchable?: boolean;
   openDirection?: "up" | "down" | "auto";
   leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
@@ -30,13 +31,13 @@ export interface SelectProps {
 }
 
 const sizeClasses = {
-  xs: "h-7 px-2.5 py-1 text-xs",
-  sm: "h-8 px-3 py-1.5 text-xs",
-  md: "h-9 px-3 py-1.5 text-sm",
+  xs: "h-7 px-2.5 py-1",
+  sm: "h-8 px-3 py-1.5",
+  md: "h-9 px-3 py-1.5",
 };
 
 const selectTriggerVariants = cva(
-  "ui-font inline-flex w-fit items-center justify-between gap-2 whitespace-nowrap font-medium text-text transition-all duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  "ui-font inline-flex w-fit items-center justify-between gap-2 whitespace-nowrap text-text transition-all duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       size: sizeClasses,
@@ -57,11 +58,11 @@ const selectContentVariants = cva(
 );
 
 const selectItemVariants = cva(
-  "ui-font flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs outline-none transition-colors",
+  "ui-font ui-text-sm flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text outline-none transition-colors",
 );
 
 const selectSearchInputVariants = cva(
-  "ui-font w-full rounded-lg bg-primary-bg/70 py-2 pr-3 pl-8 text-text text-xs placeholder-text-lighter focus:outline-none",
+  "ui-font ui-text-sm w-full rounded-lg bg-primary-bg/70 py-2 pr-3 pl-8 text-text placeholder-text-lighter focus:outline-none",
 );
 
 const iconSizes = {
@@ -105,7 +106,7 @@ function SelectSearchField({
   return (
     <div className="border-border/60 border-b px-1.5 py-1.5">
       <div className="relative">
-        <Search size={12} className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter" />
+        <Search className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter" />
         <input
           ref={inputRef}
           type="text"
@@ -123,7 +124,7 @@ function SelectSearchField({
 
 function SelectEmptyState() {
   return (
-    <div className="ui-font p-3 text-center text-text-lighter text-xs">No matching options</div>
+    <div className="ui-font ui-text-sm p-3 text-center text-text-lighter">No matching options</div>
   );
 }
 
@@ -136,6 +137,7 @@ export default function Select({
   menuClassName = "",
   disabled = false,
   size = "sm",
+  variant = "ghost",
   searchable = false,
   openDirection = "down",
   leftIcon,
@@ -163,12 +165,11 @@ export default function Select({
   const triggerIcon = renderTriggerIcon(leftIcon, size);
   const resolvedTriggerClassName = cn(
     selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
-    buttonClassName({
-      variant: "ghost",
+    buttonVariants({
+      variant,
       size,
-      className:
-        "rounded-md bg-transparent text-text-lighter hover:bg-hover hover:text-text focus:ring-1 focus:ring-accent/20",
     }),
+    "focus:ring-1 focus:ring-accent/20",
     className,
   );
 
@@ -242,7 +243,7 @@ export default function Select({
                         <span className="flex-1">{option.label}</span>
                       </SelectPrimitive.ItemText>
                       <SelectPrimitive.ItemIndicator className="ml-auto shrink-0 text-accent">
-                        <Check size={12} />
+                        <Check />
                       </SelectPrimitive.ItemIndicator>
                     </SelectPrimitive.Item>
                   ))}

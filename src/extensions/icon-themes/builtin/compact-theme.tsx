@@ -9,12 +9,12 @@ export const compactIconTheme: IconThemeDefinition = {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {
-        component: <Icon size={12} strokeWidth={2} />,
+        component: <Icon strokeWidth={2} />,
       };
     }
 
     return {
-      component: <File size={12} strokeWidth={2} />,
+      component: <File strokeWidth={2} />,
     };
   },
 };

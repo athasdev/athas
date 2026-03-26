@@ -1,3 +1,4 @@
+import { Button } from "@/ui/button";
 import type { ColumnFilter, DatabaseInfo, TableInfo } from "../../../models/common.types";
 
 interface InfoViewProps {
@@ -41,16 +42,18 @@ export default function InfoView({
           <div className="ui-font mb-2 text-text-lighter text-xs">objects</div>
           <div className="space-y-1">
             {tables.map((table) => (
-              <button
+              <Button
                 key={table.name}
                 onClick={() => onTableChange(table.name)}
-                className={`ui-font block w-full px-2 py-1 text-left text-xs transition-colors hover:bg-hover ${
+                variant="ghost"
+                size="sm"
+                className={`ui-font block h-auto w-full justify-start px-2 py-1 text-left text-xs hover:bg-hover ${
                   selectedTable === table.name ? "bg-selected" : ""
                 }`}
               >
                 {table.name}
                 {table.kind === "subscription" ? " [subscription]" : ""}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -61,14 +64,16 @@ export default function InfoView({
             <div className="ui-font mb-2 text-text-lighter text-xs">recent queries</div>
             <div className="max-h-32 space-y-1 overflow-y-auto">
               {sqlHistory.map((query, index) => (
-                <button
+                <Button
                   key={index}
                   onClick={() => onQuerySelect(query)}
-                  className="ui-font block w-full truncate px-2 py-1 text-left text-xs transition-colors hover:bg-hover"
+                  variant="ghost"
+                  size="sm"
+                  className="ui-font block h-auto w-full truncate justify-start px-2 py-1 text-left text-xs hover:bg-hover"
                   title={query}
                 >
                   {query}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

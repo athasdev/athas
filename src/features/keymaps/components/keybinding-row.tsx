@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import KeybindingDisplay from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
@@ -84,10 +85,12 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onCancel={() => setIsEditing(false)}
           />
         ) : (
-          <button
+          <Button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="flex h-7 w-full items-center justify-start rounded border border-border bg-secondary-bg px-2 text-xs hover:border-accent"
+            variant="outline"
+            size="sm"
+            className="flex h-7 w-full items-center justify-start px-2 text-xs hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
             {keybinding?.key ? (
@@ -95,7 +98,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             ) : (
               <span className="text-text-lighter">Not assigned</span>
             )}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -112,26 +115,30 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       {/* Actions */}
       <div className="flex items-center gap-1">
         {isUserOverride && (
-          <button
+          <Button
             type="button"
             onClick={handleReset}
+            variant="ghost"
+            size="xs"
             className="text-[10px] text-text-lighter hover:text-text"
             title="Reset to default"
             aria-label="Reset to default keybinding"
           >
             Reset
-          </button>
+          </Button>
         )}
         {keybinding && (
-          <button
+          <Button
             type="button"
             onClick={handleRemove}
+            variant="ghost"
+            size="xs"
             className="text-[10px] text-text-lighter hover:text-error"
             title="Remove keybinding"
             aria-label="Remove keybinding"
           >
             Remove
-          </button>
+          </Button>
         )}
       </div>
 

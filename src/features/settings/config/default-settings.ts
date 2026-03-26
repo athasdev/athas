@@ -34,11 +34,13 @@ export const defaultSettings: Settings = {
   // Theme
   theme: "athas-dark",
   iconTheme: "colorful-material",
+  syncSystemTheme: false,
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   titleBarProjectMode: "tabs",
+  openFoldersInNewWindow: false,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
   aiModelId: DEFAULT_AI_MODEL_ID,
@@ -50,6 +52,9 @@ export const defaultSettings: Settings = {
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
+  showGitHubPullRequests: true,
+  showGitHubIssues: true,
+  showGitHubActions: true,
   // Keyboard
   vimMode: false,
   vimRelativeLineNumbers: false,

@@ -50,7 +50,7 @@ export const FileListItem = ({
       )}
       {category === "recent" && (
         <span className="rounded px-1 py-0.5 font-medium text-[10px] text-text-lighter">
-          <ClockIcon size={12} />
+          <ClockIcon />
         </span>
       )}
     </CommandItem>

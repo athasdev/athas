@@ -411,7 +411,7 @@ export function WebViewer({
       <div ref={containerRef} className="relative flex-1">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary-bg">
-            <RefreshCw size={16} className="animate-spin text-text-lighter" />
+            <RefreshCw className="animate-spin text-text-lighter" />
           </div>
         )}
       </div>

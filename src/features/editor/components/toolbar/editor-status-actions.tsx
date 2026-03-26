@@ -1,71 +1,47 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { Check, Loader2, SlidersHorizontal, Square, Zap, ZapOff } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
+import {
+  getAllLanguages,
+  getLanguageDisplayName,
+  getLanguageIdFromPath,
+} from "@/features/editor/utils/language-id";
+import { hasTextContent, isEditorContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
-import { buttonClassName } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
+import { Button, buttonVariants } from "@/ui/button";
+import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
-const actionButtonClass = buttonClassName({
-  variant: "ghost",
-  size: "icon-xs",
-  className: "rounded text-text-lighter",
-});
+const actionButtonClass = cn(
+  buttonVariants({ variant: "ghost", size: "icon-xs" }),
+  "rounded text-text-lighter",
+);
 
 const statusChipClass =
   "ui-font inline-flex h-5 items-center rounded-md border border-transparent px-1.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
-const menuTriggerClass = buttonClassName({
-  variant: "ghost",
-  size: "icon-xs",
-  className: "rounded text-text-lighter",
-});
+const menuTriggerClass = cn(
+  buttonVariants({ variant: "ghost", size: "icon-xs" }),
+  "rounded text-text-lighter",
+);
 
 const menuItemClass =
   "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs text-text transition-colors hover:bg-hover";
 
 const menuItemDisabledClass = "cursor-not-allowed opacity-50 hover:bg-transparent";
-const inlineActionButtonClass = buttonClassName({
-  variant: "subtle",
-  size: "xs",
-  className: "rounded-md px-2 text-[10px] text-text-lighter",
-});
-
-function getLanguageDisplayName(languageId: string | null) {
+function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
-
-  const names: Record<string, string> = {
-    typescript: "TypeScript",
-    javascript: "JavaScript",
-    rust: "Rust",
-    python: "Python",
-    go: "Go",
-    java: "Java",
-    c: "C",
-    cpp: "C++",
-    csharp: "C#",
-    ruby: "Ruby",
-    php: "PHP",
-    html: "HTML",
-    css: "CSS",
-    json: "JSON",
-    yaml: "YAML",
-    toml: "TOML",
-    markdown: "Markdown",
-    bash: "Bash",
-  };
-
-  return names[languageId] || languageId;
+  return getLanguageDisplayName(languageId);
 }
 
 export function EditorStatusActions() {
@@ -77,35 +53,39 @@ export function EditorStatusActions() {
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [languageSearch, setLanguageSearch] = useState("");
   const [isCurrentFileLspAvailable, setIsCurrentFileLspAvailable] = useState(false);
   const [isRestartingCurrent, setIsRestartingCurrent] = useState(false);
   const [busyServerKey, setBusyServerKey] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewButtonRef = useRef<HTMLButtonElement>(null);
+  const languageButtonRef = useRef<HTMLButtonElement>(null);
+  const languageSearchRef = useRef<HTMLInputElement>(null);
 
   const getStatusConfig = (status: LspStatus) => {
     switch (status) {
       case "connected":
         return {
-          icon: <Zap size={11} />,
+          icon: <Zap />,
           color: "text-green-400",
           title: "Language Servers Active",
         };
       case "connecting":
         return {
-          icon: <Loader2 size={11} className="animate-spin" />,
+          icon: <Loader2 className="animate-spin" />,
           color: "text-yellow-400",
           title: "Connecting to Language Server...",
         };
       case "error":
         return {
-          icon: <ZapOff size={11} />,
+          icon: <ZapOff />,
           color: "text-red-400",
           title: `Language Server Error: ${lspStatus.lastError || "Unknown"}`,
         };
       default:
         return {
-          icon: <ZapOff size={11} />,
+          icon: <ZapOff />,
           color: "text-text-lighter opacity-50",
           title: "No active language servers",
         };
@@ -122,10 +102,14 @@ export function EditorStatusActions() {
   const currentServerEntry = activeBuffer?.path
     ? activeServerEntries.find((entry) => entry.filePath === activeBuffer.path)
     : undefined;
-  const currentFileLanguageId = activeBuffer?.path
-    ? extensionRegistry.getLanguageId(activeBuffer.path)
-    : null;
-  const currentFileDisplayName = getLanguageDisplayName(currentFileLanguageId);
+  const currentFileLanguageId =
+    activeBuffer && isEditorContent(activeBuffer) && activeBuffer.languageOverride
+      ? activeBuffer.languageOverride
+      : activeBuffer?.path
+        ? getLanguageIdFromPath(activeBuffer.path) ||
+          extensionRegistry.getLanguageId(activeBuffer.path)
+        : null;
+  const currentFileDisplayName = getLanguageDisplayNameOrNull(currentFileLanguageId);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,6 +177,48 @@ export function EditorStatusActions() {
       setIsRestartingCurrent(false);
     }
   };
+
+  const allLanguages = useMemo(() => getAllLanguages(), []);
+
+  const filteredLanguages = useMemo(() => {
+    if (!languageSearch) return allLanguages;
+    const query = languageSearch.toLowerCase();
+    return allLanguages.filter(
+      (lang) =>
+        lang.displayName.toLowerCase().includes(query) || lang.id.toLowerCase().includes(query),
+    );
+  }, [allLanguages, languageSearch]);
+
+  const handleLanguageChange = useCallback(
+    async (languageId: string) => {
+      if (!activeBuffer || !activeBufferId || !isEditorContent(activeBuffer)) return;
+      if (languageId === currentFileLanguageId) {
+        setIsLanguageOpen(false);
+        return;
+      }
+
+      useBufferStore.getState().actions.updateBufferLanguage(activeBufferId, languageId);
+
+      if (activeBuffer.path) {
+        await setSyntaxHighlightingFilePath(activeBuffer.path);
+      }
+
+      if (rootFolderPath && activeBuffer.path) {
+        try {
+          await lspClient.notifyDocumentClose(activeBuffer.path);
+          await lspClient.startForFile(activeBuffer.path, rootFolderPath);
+          const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
+          await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
+        } catch {
+          // LSP restart is best-effort
+        }
+      }
+
+      setIsLanguageOpen(false);
+      setLanguageSearch("");
+    },
+    [activeBuffer, activeBufferId, currentFileLanguageId, rootFolderPath, lspClient],
+  );
 
   const displayOptions = [
     {
@@ -282,22 +308,104 @@ export function EditorStatusActions() {
   return (
     <>
       <span className={statusChipClass}>
-        Ln {cursorPosition.line + 1}, Col {cursorPosition.column + 1}
+        {cursorPosition.line + 1}:{cursorPosition.column + 1}
       </span>
+
+      {activeBuffer && isEditorContent(activeBuffer) && (
+        <div className="relative flex items-center">
+          <Button
+            ref={languageButtonRef}
+            type="button"
+            onClick={() => {
+              setIsLanguageOpen((open) => !open);
+              setLanguageSearch("");
+            }}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              statusChipClass,
+              "cursor-pointer",
+              isLanguageOpen && "bg-hover text-text",
+            )}
+            title="Select language mode"
+            aria-label="Select language mode"
+            aria-expanded={isLanguageOpen}
+            aria-haspopup="listbox"
+          >
+            {currentFileDisplayName || "Plain Text"}
+          </Button>
+          <Dropdown
+            isOpen={isLanguageOpen}
+            anchorRef={languageButtonRef}
+            anchorSide="bottom"
+            anchorAlign="end"
+            onClose={() => {
+              setIsLanguageOpen(false);
+              setLanguageSearch("");
+            }}
+            className="w-[220px] overflow-hidden rounded-lg p-1.5"
+          >
+            <div className="px-1.5 pb-1.5">
+              <input
+                ref={languageSearchRef}
+                type="text"
+                value={languageSearch}
+                onChange={(e) => setLanguageSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsLanguageOpen(false);
+                    setLanguageSearch("");
+                  }
+                }}
+                placeholder="Search languages..."
+                className="ui-font w-full rounded-md border border-border/70 bg-primary-bg px-2 py-1 text-xs text-text outline-none placeholder:text-text-lighter/50 focus:border-accent/50"
+                autoFocus
+                aria-label="Search languages"
+              />
+            </div>
+            <div className="max-h-[200px] overflow-y-auto">
+              {filteredLanguages.map((lang) => (
+                <Button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => void handleLanguageChange(lang.id)}
+                  variant="ghost"
+                  size="sm"
+                  className={dropdownItemClassName(
+                    cn("justify-between", lang.id === currentFileLanguageId && "text-accent"),
+                  )}
+                  role="option"
+                  aria-selected={lang.id === currentFileLanguageId}
+                >
+                  <span className="truncate">{lang.displayName}</span>
+                  {lang.id === currentFileLanguageId && <Check className="shrink-0 text-accent" />}
+                </Button>
+              ))}
+              {filteredLanguages.length === 0 && (
+                <div className="px-2.5 py-2 text-center text-text-lighter text-xs">
+                  No languages found
+                </div>
+              )}
+            </div>
+          </Dropdown>
+        </div>
+      )}
 
       <VimStatusIndicator compact />
 
-      <div className="relative">
-        <button
+      <div className="relative flex items-center self-center">
+        <Button
           ref={buttonRef}
           type="button"
           onClick={() => setIsLspOpen((open) => !open)}
+          variant="ghost"
+          size="icon-xs"
           className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
           title={config.title}
           aria-label="Language server status"
         >
-          {config.icon}
-        </button>
+          <span className="flex size-full items-center justify-center">{config.icon}</span>
+        </Button>
         <Dropdown
           isOpen={isLspOpen}
           anchorRef={buttonRef}
@@ -320,26 +428,30 @@ export function EditorStatusActions() {
                       className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap size={10} className="shrink-0 text-green-400" />
+                        <Zap className="shrink-0 text-green-400" />
                         <span className="truncate text-text text-xs">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
+                        <Button
                           type="button"
                           onClick={() => void handleRestartServer(entry.key, entry.displayName)}
                           disabled={isBusy || isRestartingCurrent}
-                          className={inlineActionButtonClass}
+                          variant="secondary"
+                          size="xs"
+                          className="rounded-md px-2 text-[10px] text-text-lighter"
                         >
                           {isBusy ? "..." : "Restart"}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
                           onClick={() => void handleStopServer(entry.key, entry.displayName)}
                           disabled={isBusy || isRestartingCurrent}
-                          className={inlineActionButtonClass}
+                          variant="secondary"
+                          size="xs"
+                          className="rounded-md px-2 text-[10px] text-text-lighter"
                         >
-                          <Square size={9} />
-                        </button>
+                          <Square />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -347,31 +459,33 @@ export function EditorStatusActions() {
                 {!currentServerEntry && isCurrentFileLspAvailable && currentFileDisplayName && (
                   <div className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
                     <div className="flex min-w-0 items-center gap-2">
-                      <ZapOff size={10} className="shrink-0 opacity-60" />
+                      <ZapOff className="shrink-0 opacity-60" />
                       <span className="truncate text-text text-xs">{currentFileDisplayName}</span>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => void handleStartCurrent()}
                         disabled={isRestartingCurrent}
-                        className={inlineActionButtonClass}
+                        variant="secondary"
+                        size="xs"
+                        className="rounded-md px-2 text-[10px] text-text-lighter"
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
               </div>
             ) : lspStatus.status === "connecting" ? (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
-                <Loader2 size={12} className="animate-spin text-yellow-400" />
+                <Loader2 className="animate-spin text-yellow-400" />
                 <span className="text-xs">Connecting...</span>
               </div>
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">
                 <div className="flex items-center gap-2 text-red-400">
-                  <ZapOff size={12} />
+                  <ZapOff />
                   <span className="text-xs">Connection Error</span>
                 </div>
                 {lspStatus.lastError && (
@@ -382,7 +496,7 @@ export function EditorStatusActions() {
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
-                <ZapOff size={12} className="opacity-50" />
+                <ZapOff className="opacity-50" />
                 <span className="text-xs">No active language servers</span>
               </div>
             )}
@@ -390,76 +504,91 @@ export function EditorStatusActions() {
         </Dropdown>
       </div>
 
-      <button
-        ref={viewButtonRef}
-        type="button"
-        onClick={() => setIsViewMenuOpen((open) => !open)}
-        className={cn(menuTriggerClass, isViewMenuOpen && "border-border/60 bg-hover/80 text-text")}
-        title="Editor preferences"
-        aria-label="Editor preferences"
-      >
-        <SlidersHorizontal size={11} />
-      </button>
-      <Dropdown
-        isOpen={isViewMenuOpen}
-        anchorRef={viewButtonRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        onClose={() => setIsViewMenuOpen(false)}
-        className="w-[220px] overflow-hidden rounded-lg p-1.5"
-      >
-        <div className="space-y-0.5">
-          {displayOptions.slice(0, 2).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => !option.disabled && void option.onToggle()}
-              className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
-              disabled={option.disabled}
-            >
-              <span>{option.label}</span>
-              <span className="flex items-center gap-2">
-                {option.shortcut ? (
-                  <Keybinding keys={option.shortcut} className="shrink-0" />
-                ) : null}
-                <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check size={11} className="text-accent" /> : null}
+      <div className="relative flex items-center self-center">
+        <Button
+          ref={viewButtonRef}
+          type="button"
+          onClick={() => setIsViewMenuOpen((open) => !open)}
+          variant="ghost"
+          size="icon-xs"
+          className={cn(
+            menuTriggerClass,
+            isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
+          )}
+          title="Editor preferences"
+          aria-label="Editor preferences"
+        >
+          <span className="flex size-full items-center justify-center">
+            <SlidersHorizontal />
+          </span>
+        </Button>
+        <Dropdown
+          isOpen={isViewMenuOpen}
+          anchorRef={viewButtonRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          onClose={() => setIsViewMenuOpen(false)}
+          className="w-[220px] overflow-hidden rounded-lg p-1.5"
+        >
+          <div className="space-y-0.5">
+            {displayOptions.slice(0, 2).map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={() => !option.disabled && void option.onToggle()}
+                variant="ghost"
+                size="sm"
+                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                disabled={option.disabled}
+              >
+                <span>{option.label}</span>
+                <span className="flex items-center gap-2">
+                  {option.shortcut ? (
+                    <Keybinding keys={option.shortcut} className="shrink-0" />
+                  ) : null}
+                  <span className="flex size-4 items-center justify-center">
+                    {option.checked ? <Check className="text-accent" /> : null}
+                  </span>
                 </span>
-              </span>
-            </button>
-          ))}
-          <div className="my-1 border-t border-border/70" />
-          {displayOptions.slice(2, 6).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => !option.disabled && void option.onToggle()}
-              className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
-              disabled={option.disabled}
-            >
-              <span>{option.label}</span>
-              <span className="flex size-4 items-center justify-center">
-                {option.checked ? <Check size={11} className="text-accent" /> : null}
-              </span>
-            </button>
-          ))}
-          <div className="my-1 border-t border-border/70" />
-          {displayOptions.slice(6).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => !option.disabled && void option.onToggle()}
-              className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
-              disabled={option.disabled}
-            >
-              <span>{option.label}</span>
-              <span className="flex size-4 items-center justify-center">
-                {option.checked ? <Check size={11} className="text-accent" /> : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      </Dropdown>
+              </Button>
+            ))}
+            <div className="my-1 border-t border-border/70" />
+            {displayOptions.slice(2, 6).map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={() => !option.disabled && void option.onToggle()}
+                variant="ghost"
+                size="sm"
+                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                disabled={option.disabled}
+              >
+                <span>{option.label}</span>
+                <span className="flex size-4 items-center justify-center">
+                  {option.checked ? <Check className="text-accent" /> : null}
+                </span>
+              </Button>
+            ))}
+            <div className="my-1 border-t border-border/70" />
+            {displayOptions.slice(6).map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={() => !option.disabled && void option.onToggle()}
+                variant="ghost"
+                size="sm"
+                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                disabled={option.disabled}
+              >
+                <span>{option.label}</span>
+                <span className="flex size-4 items-center justify-center">
+                  {option.checked ? <Check className="text-accent" /> : null}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </Dropdown>
+      </div>
     </>
   );
 }

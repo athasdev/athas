@@ -9,7 +9,7 @@ import {
   SYSTEM_DEFAULT_PROFILE_ID,
   getAllTerminalProfiles,
 } from "@/features/terminal/utils/terminal-profiles";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "../settings-section";
@@ -136,6 +136,7 @@ export const TerminalSettings = () => {
             }
             className="w-56"
             size="sm"
+            variant="secondary"
           />
         </SettingRow>
 
@@ -160,6 +161,7 @@ export const TerminalSettings = () => {
             }
             className="w-56"
             size="sm"
+            variant="secondary"
             searchable
           />
         </SettingRow>
@@ -171,12 +173,12 @@ export const TerminalSettings = () => {
       >
         <div className="space-y-3 px-1">
           <div className="flex items-center justify-between">
-            <div className="text-text-lighter text-xs">
+            <div className="ui-font ui-text-sm text-text-lighter">
               Built-in profiles are generated from detected shells. Custom profiles appear in the
               terminal toolbar profile picker.
             </div>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={() =>
                 profileActions.addProfile({
@@ -186,13 +188,13 @@ export const TerminalSettings = () => {
                 })
               }
             >
-              <Plus size={12} className="mr-1" />
+              <Plus className="mr-1" />
               Add Profile
             </Button>
           </div>
 
           {profiles.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter text-xs">
+            <div className="ui-font ui-text-sm rounded-xl border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
               No custom terminal profiles yet.
             </div>
           ) : (
@@ -203,35 +205,37 @@ export const TerminalSettings = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="mb-1 font-medium text-text text-xs">{profile.name}</div>
-                    <div className="text-text-lighter text-xs">
+                    <div className="ui-font ui-text-sm mb-1 text-text">{profile.name}</div>
+                    <div className="ui-font ui-text-sm text-text-lighter">
                       Visible in the terminal profile picker.
                     </div>
                   </div>
                   <Button
-                    variant="ghost"
+                    variant="danger"
                     size="xs"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 />
                   </Button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className="font-medium text-text text-xs">Name</label>
+                    <label className="ui-font ui-text-sm text-text">Name</label>
                     <Input
                       value={profile.name}
                       onChange={(event) =>
-                        profileActions.updateProfile(profile.id, { name: event.target.value })
+                        profileActions.updateProfile(profile.id, {
+                          name: event.target.value,
+                        })
                       }
                       placeholder="My Profile"
                       size="sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="font-medium text-text text-xs">Shell</label>
+                    <label className="ui-font ui-text-sm text-text">Shell</label>
                     <Select
                       value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
                       options={shellOptions}
@@ -242,12 +246,13 @@ export const TerminalSettings = () => {
                       }
                       className="w-full"
                       size="sm"
+                      variant="secondary"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-medium text-text text-xs">Startup Directory</label>
+                  <label className="ui-font ui-text-sm text-text">Startup Directory</label>
                   <Input
                     value={profile.startupDirectory || ""}
                     onChange={(event) =>
@@ -261,7 +266,7 @@ export const TerminalSettings = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-medium text-text text-xs">Startup Commands</label>
+                  <label className="ui-font ui-text-sm text-text">Startup Commands</label>
                   <Textarea
                     value={(profile.startupCommands || []).join("\n")}
                     onChange={(event) =>
@@ -299,11 +304,12 @@ export const TerminalSettings = () => {
               onChange={(val) => updateSetting("terminalFontFamily", val)}
               className="w-64"
               size="sm"
+              variant="secondary"
               searchable
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT} side="left">
-              <Info className="h-4 w-4 cursor-help text-text-lighter transition-colors hover:text-text" />
+              <Info className="size-4 cursor-help text-text-lighter transition-colors hover:text-text" />
             </Tooltip>
           </div>
         </SettingRow>
@@ -403,6 +409,7 @@ export const TerminalSettings = () => {
             }
             className="w-32"
             size="sm"
+            variant="secondary"
           />
         </SettingRow>
 

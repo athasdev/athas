@@ -10,7 +10,9 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
+import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github";
 
@@ -22,73 +24,102 @@ interface CIStatusProps {
 export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  if (checks.length === 0) {
-    return null;
-  }
+  const summary = useMemo(() => {
+    if (checks.length === 0) return null;
 
-  const passedCount = checks.filter((c) => c.conclusion === "SUCCESS").length;
-  const failedCount = checks.filter(
-    (c) => c.conclusion === "FAILURE" || c.conclusion === "ERROR",
-  ).length;
-  const pendingCount = checks.filter(
-    (c) => c.status === "IN_PROGRESS" || c.status === "PENDING" || c.status === "QUEUED",
-  ).length;
+    const passedCount = checks.filter((c) => c.conclusion === "SUCCESS").length;
+    const failedCount = checks.filter(
+      (c) => c.conclusion === "FAILURE" || c.conclusion === "ERROR",
+    ).length;
+    const pendingCount = checks.filter(
+      (c) => c.status === "IN_PROGRESS" || c.status === "PENDING" || c.status === "QUEUED",
+    ).length;
 
-  const allPassed = passedCount === checks.length;
-  const hasFailed = failedCount > 0;
-  const hasPending = pendingCount > 0;
+    if (failedCount > 0) {
+      return {
+        icon: <XCircle className="text-red-500" />,
+        label: `${failedCount} failed`,
+        tone: "text-red-500",
+        badgeClassName: "border-red-500/20 bg-red-500/10 text-red-500",
+      };
+    }
 
-  const getStatusIcon = () => {
-    if (hasFailed) return <XCircle size={14} className="text-red-500" />;
-    if (hasPending) return <Loader2 size={14} className="animate-spin text-yellow-500" />;
-    if (allPassed) return <CheckCircle2 size={14} className="text-green-500" />;
-    return <CircleDot size={14} className="text-text-lighter" />;
-  };
+    if (pendingCount > 0) {
+      return {
+        icon: <Loader2 className="animate-spin text-yellow-500" />,
+        label: `${pendingCount} pending`,
+        tone: "text-yellow-500",
+        badgeClassName: "border-yellow-500/20 bg-yellow-500/10 text-yellow-500",
+      };
+    }
 
-  const getStatusText = () => {
-    if (hasFailed) return `${failedCount} failed`;
-    if (hasPending) return `${pendingCount} pending`;
-    return `${passedCount}/${checks.length} passed`;
-  };
+    if (passedCount === checks.length) {
+      return {
+        icon: <CheckCircle2 className="text-green-500" />,
+        label: `${passedCount} checks passed`,
+        tone: "text-green-500",
+        badgeClassName: "border-green-500/20 bg-green-500/10 text-green-500",
+      };
+    }
+
+    return {
+      icon: <CircleDot className="text-text-lighter" />,
+      label: `${passedCount}/${checks.length} passed`,
+      tone: "text-text-lighter",
+      badgeClassName: "",
+    };
+  }, [checks]);
+
+  if (!summary) return null;
 
   return (
-    <div className="relative">
-      <button
+    <div className="relative inline-flex shrink-0">
+      <Button
+        type="button"
+        variant="outline"
+        size="xs"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-hover"
+        className="border-border/70 bg-primary-bg/70 text-text"
       >
-        {getStatusIcon()}
-        <span
-          className={cn(
-            hasFailed ? "text-red-500" : hasPending ? "text-yellow-500" : "text-green-500",
-          )}
-        >
-          {getStatusText()}
-        </span>
+        {summary.icon}
+        <span className={cn("ui-font ui-text-sm", summary.tone)}>{summary.label}</span>
         {isExpanded ? (
-          <ChevronDown size={12} className="text-text-lighter" />
+          <ChevronDown className="text-text-lighter" />
         ) : (
-          <ChevronRight size={12} className="text-text-lighter" />
+          <ChevronRight className="text-text-lighter" />
         )}
-      </button>
+      </Button>
 
       {isExpanded && (
-        <div className="absolute top-full left-0 z-20 mt-1 min-w-[280px] rounded border border-border bg-primary-bg py-1">
+        <div className="absolute top-full left-0 z-20 mt-2 min-w-[320px] rounded-2xl border border-border/70 bg-secondary-bg/95 p-2 shadow-xl backdrop-blur-sm">
           {checks.map((check, idx) => (
-            <div key={idx} className="flex items-center gap-2 px-3 py-1.5">
+            <div
+              key={idx}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-hover/60"
+            >
               {check.conclusion === "SUCCESS" ? (
-                <CheckCircle2 size={12} className="text-green-500" />
+                <CheckCircle2 className="text-green-500" />
               ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-                <XCircle size={12} className="text-red-500" />
+                <XCircle className="text-red-500" />
               ) : (
-                <Loader2 size={12} className="animate-spin text-yellow-500" />
+                <Loader2 className="animate-spin text-yellow-500" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-text text-xs">{check.name ?? "Check"}</p>
+                <p className="ui-font ui-text-sm truncate text-text">{check.name ?? "Check"}</p>
                 {check.workflowName && (
-                  <p className="truncate text-[10px] text-text-lighter">{check.workflowName}</p>
+                  <p className="ui-font ui-text-sm truncate text-text-lighter">
+                    {check.workflowName}
+                  </p>
                 )}
               </div>
+              <Badge
+                variant="muted"
+                shape="pill"
+                size="compact"
+                className={cn("capitalize", summary.badgeClassName)}
+              >
+                {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
+              </Badge>
             </div>
           ))}
         </div>
@@ -152,10 +183,10 @@ export const MergeStatusBadge = memo(
     const Icon = status.icon;
 
     return (
-      <div className={cn("flex items-center gap-1.5 rounded px-2 py-1 text-xs", status.color)}>
-        <Icon size={12} />
+      <Badge shape="pill" size="compact" className={cn("gap-1", status.color)}>
+        <Icon />
         <span>{status.text}</span>
-      </div>
+      </Badge>
     );
   },
 );
@@ -171,16 +202,13 @@ export const ReviewRequestsList = memo(({ reviewRequests }: ReviewRequestsProps)
   if (reviewRequests.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5 text-text-lighter text-xs">
-      <User size={12} />
-      <span>Review:</span>
-      {reviewRequests.map((reviewer, idx) => (
-        <span key={idx} className="text-text">
-          @{reviewer.login}
-          {idx < reviewRequests.length - 1 && ","}
-        </span>
-      ))}
-    </div>
+    <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+      <User />
+      <span>Reviewers</span>
+      <span className="text-text">
+        {reviewRequests.map((reviewer) => `@${reviewer.login}`).join(", ")}
+      </span>
+    </span>
   );
 });
 
@@ -195,22 +223,24 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
   if (issues.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5 text-xs">
-      <Link2 size={12} className="text-text-lighter" />
-      <span className="text-text-lighter">Closes</span>
-      {issues.map((issue, idx) => (
-        <a
-          key={idx}
-          href={issue.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-accent hover:underline"
-        >
-          #{issue.number}
-          {idx < issues.length - 1 && ","}
-        </a>
-      ))}
-    </div>
+    <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+      <Link2 className="text-text-lighter" />
+      <span>Linked</span>
+      <span className="inline-flex items-center gap-1">
+        {issues.map((issue, idx) => (
+          <a
+            key={idx}
+            href={issue.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ui-font ui-text-sm text-accent hover:underline"
+          >
+            #{issue.number}
+            {idx < issues.length - 1 && ","}
+          </a>
+        ))}
+      </span>
+    </span>
   );
 });
 
@@ -227,9 +257,11 @@ export const LabelBadges = memo(({ labels }: LabelBadgesProps) => {
   return (
     <div className="flex flex-wrap items-center gap-1">
       {labels.map((label, idx) => (
-        <span
+        <Badge
           key={idx}
-          className="rounded-full px-2 py-0.5 font-medium text-[10px]"
+          shape="pill"
+          size="compact"
+          className="border"
           style={{
             backgroundColor: `#${label.color}20`,
             color: `#${label.color}`,
@@ -237,7 +269,7 @@ export const LabelBadges = memo(({ labels }: LabelBadgesProps) => {
           }}
         >
           {label.name}
-        </span>
+        </Badge>
       ))}
     </div>
   );
@@ -254,16 +286,13 @@ export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
   if (assignees.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5 text-text-lighter text-xs">
-      <User size={12} />
-      <span>Assigned:</span>
-      {assignees.map((assignee, idx) => (
-        <span key={idx} className="text-text">
-          @{assignee.login}
-          {idx < assignees.length - 1 && ","}
-        </span>
-      ))}
-    </div>
+    <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+      <User />
+      <span>Assigned</span>
+      <span className="text-text">
+        {assignees.map((assignee) => `@${assignee.login}`).join(", ")}
+      </span>
+    </span>
   );
 });
 

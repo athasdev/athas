@@ -1,3 +1,4 @@
+import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 
 const PAGE_SIZES = [
@@ -36,25 +37,29 @@ export default function PaginationControls({
         <span className="text-text-lighter text-xs">per page</span>
       </div>
       <div className="flex items-center gap-1">
-        <button
+        <Button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="px-2 py-1 text-text-lighter text-xs hover:text-text disabled:opacity-50"
+          variant="ghost"
+          size="xs"
+          className="text-text-lighter text-xs hover:text-text disabled:opacity-50"
           aria-label="Previous page"
         >
           Prev
-        </button>
+        </Button>
         <span className="px-2 text-xs">
           {currentPage} / {totalPages}
         </span>
-        <button
+        <Button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="px-2 py-1 text-text-lighter text-xs hover:text-text disabled:opacity-50"
+          variant="ghost"
+          size="xs"
+          className="text-text-lighter text-xs hover:text-text disabled:opacity-50"
           aria-label="Next page"
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

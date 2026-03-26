@@ -28,9 +28,9 @@ const inputVariants = cva(
         ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
       },
       size: {
-        xs: "h-6 text-xs",
-        sm: "h-7 text-xs",
-        md: "h-8 text-sm",
+        xs: "h-6 ui-text-sm",
+        sm: "h-7 ui-text-sm",
+        md: "h-8 ui-text-md",
       },
       hasLeftIcon: {
         true: "",

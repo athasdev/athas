@@ -47,7 +47,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "ai-quick-edit",
       label: "AI: Quick Edit Selection",
       description: "Edit selected text using AI inline",
-      icon: <Sparkles size={14} />,
+      icon: <Sparkles />,
       category: "AI",
       keybinding: ["⌘", "E"],
       action: () => {
@@ -66,7 +66,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "lsp-status",
       label: "LSP: Show Status",
       description: `Status: ${lspStatus.status} (${lspStatus.activeWorkspaces.length} workspaces)`,
-      icon: <Terminal size={14} />,
+      icon: <Terminal />,
       category: "LSP",
       action: () => {
         alert(
@@ -79,7 +79,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "lsp-restart",
       label: "LSP: Restart Server",
       description: "Restart the LSP server",
-      icon: <RefreshCw size={14} />,
+      icon: <RefreshCw />,
       category: "LSP",
       action: () => {
         updateLspStatus("connecting");
@@ -94,7 +94,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "cli-install",
       label: "CLI: Install Terminal Command",
       description: "Install 'athas' command for terminal",
-      icon: <Terminal size={14} />,
+      icon: <Terminal />,
       category: "CLI",
       action: async () => {
         try {

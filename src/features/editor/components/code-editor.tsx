@@ -78,6 +78,8 @@ const CodeEditor = ({
   const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
+  const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -93,7 +95,7 @@ const CodeEditor = ({
 
   // Focus editor when active buffer changes
   useEffect(() => {
-    if (!isActiveSurface) return;
+    if (!enableInteractiveServices) return;
     if (activeBufferId && editorRef.current) {
       // Find the textarea element within the editor
       const textarea = editorRef.current.querySelector("textarea");
@@ -104,7 +106,7 @@ const CodeEditor = ({
         }, 0);
       }
     }
-  }, [activeBufferId, isActiveSurface]);
+  }, [activeBufferId, enableInteractiveServices]);
 
   // Sync content and file info with editor instance store
   useEffect(() => {
@@ -130,7 +132,7 @@ const CodeEditor = ({
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
-    enabled: isActiveSurface,
+    enabled: enableInteractiveServices,
     filePath,
     value,
     cursorPosition,
@@ -140,14 +142,14 @@ const CodeEditor = ({
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isActiveSurface) return;
+    if (!enableInteractiveServices) return;
     hoverHandlers.handleHover(e);
     definitionLinkHandlers.handleMouseMove(e);
   };
 
   // Combine mouse leave handlers
   const handleMouseLeave = () => {
-    if (!isActiveSurface) return;
+    if (!enableInteractiveServices) return;
     hoverHandlers.handleMouseLeave();
     definitionLinkHandlers.handleMouseLeave();
   };
@@ -223,10 +225,14 @@ const CodeEditor = ({
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
-    if (!isActiveSurface) return;
-    // Clear existing timer
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
+    }
+
+    if (!enableInteractiveServices) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
     }
 
     // Clear matches immediately if no query
@@ -255,11 +261,18 @@ const CodeEditor = ({
         clearTimeout(searchTimerRef.current);
       }
     };
-  }, [isActiveSurface, searchQuery, searchOptions, value, setSearchMatches, setCurrentMatchIndex]);
+  }, [
+    enableInteractiveServices,
+    searchQuery,
+    searchOptions,
+    value,
+    setSearchMatches,
+    setCurrentMatchIndex,
+  ]);
 
   // Effect to handle search navigation - scroll to current match and move cursor
   useEffect(() => {
-    if (!isActiveSurface) return;
+    if (!enableInteractiveServices) return;
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (match && editorRef.current) {
@@ -285,7 +298,7 @@ const CodeEditor = ({
         }
       }
     }
-  }, [currentMatchIndex, isActiveSurface, searchMatches, value, zoomedFontSize]);
+  }, [currentMatchIndex, enableInteractiveServices, searchMatches, value, zoomedFontSize]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
@@ -299,7 +312,7 @@ const CodeEditor = ({
         {showToolbar && settings.coreFeatures.breadcrumbs && <Breadcrumb />}
 
         {/* Find Bar */}
-        {showToolbar && isActiveSurface && <FindBar />}
+        {showToolbar && enableInteractiveServices && <FindBar />}
 
         <div
           ref={editorRef}
@@ -313,10 +326,10 @@ const CodeEditor = ({
           }}
         >
           {/* Hover Tooltip */}
-          {isActiveSurface && <HoverTooltip />}
+          {enableInteractiveServices && <HoverTooltip />}
 
           {/* Completion Dropdown */}
-          {isActiveSurface && <CompletionDropdown />}
+          {enableInteractiveServices && <CompletionDropdown />}
 
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">
@@ -330,10 +343,13 @@ const CodeEditor = ({
               <Editor
                 bufferId={activeBufferId ?? undefined}
                 isActiveSurface={isActiveSurface}
+                isPreviewMode={isPreviewBuffer}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                onMouseEnter={isActiveSurface ? hoverHandlers.handleMouseEnter : undefined}
-                onClick={isActiveSurface ? goToDefinitionHandlers.handleClick : undefined}
+                onMouseEnter={
+                  enableInteractiveServices ? hoverHandlers.handleMouseEnter : undefined
+                }
+                onClick={enableInteractiveServices ? goToDefinitionHandlers.handleClick : undefined}
               />
             )}
           </div>
@@ -341,7 +357,7 @@ const CodeEditor = ({
       </div>
 
       {/* Debug overlay for scroll monitoring */}
-      {isActiveSurface && <ScrollDebugOverlay />}
+      {enableInteractiveServices && <ScrollDebugOverlay />}
     </>
   );
 };

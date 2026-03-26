@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useFontStore } from "@/features/settings/stores/font-store";
 import type { FontInfo } from "@/features/settings/stores/types/font";
 import Select from "@/ui/select";
+import { cn } from "@/utils/cn";
 
 // Bundled fonts that are always available
 const BUNDLED_FONTS: FontInfo[] = [
@@ -79,11 +80,17 @@ export const FontSelector = ({
   };
 
   if (isLoading) {
-    return <div className={`text-text-lighter text-xs ${className}`}>Loading fonts...</div>;
+    return (
+      <div className={cn("ui-font ui-text-sm text-text-lighter", className)}>Loading fonts...</div>
+    );
   }
 
   if (error) {
-    return <div className={`text-red-400 text-xs ${className}`}>Error loading fonts: {error}</div>;
+    return (
+      <div className={cn("ui-font ui-text-sm text-error", className)}>
+        Error loading fonts: {error}
+      </div>
+    );
   }
 
   return (
@@ -94,7 +101,8 @@ export const FontSelector = ({
       placeholder="Select font"
       className={className}
       size="xs"
-      searchable={true}
+      variant="secondary"
+      searchable
     />
   );
 };

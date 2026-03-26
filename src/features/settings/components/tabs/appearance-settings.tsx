@@ -12,7 +12,7 @@ import {
   UI_FONT_SIZE_MIN,
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
@@ -62,6 +62,24 @@ export const AppearanceSettings = () => {
 
     return [{ value: fallbackTheme.id, label: fallbackTheme.name }, ...themeOptions];
   }, [themeOptions, settings.theme]);
+
+  const lightThemeOptions = useMemo(
+    () =>
+      normalizedThemeOptions.filter((option) => {
+        const theme = themeRegistry.getTheme(option.value);
+        return theme ? !theme.isDark : true;
+      }),
+    [normalizedThemeOptions],
+  );
+
+  const darkThemeOptions = useMemo(
+    () =>
+      normalizedThemeOptions.filter((option) => {
+        const theme = themeRegistry.getTheme(option.value);
+        return theme ? !!theme.isDark : true;
+      }),
+    [normalizedThemeOptions],
+  );
 
   // Load icon themes from icon theme registry
   useEffect(() => {
@@ -148,13 +166,62 @@ export const AppearanceSettings = () => {
               onChange={(value) => updateSetting("theme", value)}
               className="w-40"
               size="xs"
+              variant="secondary"
               searchable
+              disabled={settings.syncSystemTheme}
             />
-            <Button onClick={handleUploadTheme} variant="ghost" size="xs" className="gap-1 px-2">
-              <Upload size={12} />
+            <Button onClick={handleUploadTheme} variant="secondary" size="xs" className="gap-1">
+              <Upload />
               Upload
             </Button>
           </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Sync With OS"
+          description="Automatically switch between your preferred light and dark themes"
+          onReset={() => updateSetting("syncSystemTheme", getDefaultSetting("syncSystemTheme"))}
+          canReset={settings.syncSystemTheme !== getDefaultSetting("syncSystemTheme")}
+        >
+          <Switch
+            checked={settings.syncSystemTheme}
+            onChange={(checked) => updateSetting("syncSystemTheme", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Preferred Light Theme"
+          description="Used when Sync With OS is enabled and the system appearance is light"
+          onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
+          canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
+        >
+          <Select
+            value={settings.autoThemeLight}
+            options={lightThemeOptions}
+            onChange={(value) => updateSetting("autoThemeLight", value)}
+            className="w-40"
+            size="xs"
+            variant="secondary"
+            searchable
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Preferred Dark Theme"
+          description="Used when Sync With OS is enabled and the system appearance is dark"
+          onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
+          canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
+        >
+          <Select
+            value={settings.autoThemeDark}
+            options={darkThemeOptions}
+            onChange={(value) => updateSetting("autoThemeDark", value)}
+            className="w-40"
+            size="xs"
+            variant="secondary"
+            searchable
+          />
         </SettingRow>
 
         <SettingRow
@@ -169,6 +236,7 @@ export const AppearanceSettings = () => {
             onChange={handleIconThemeChange}
             className="w-40"
             size="xs"
+            variant="secondary"
             searchable
           />
         </SettingRow>
@@ -198,30 +266,28 @@ export const AppearanceSettings = () => {
           <div className="flex items-center gap-1.5">
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="xs"
               onClick={handleDecreaseUiFontSize}
               disabled={!canDecreaseUiFontSize}
               aria-label="Decrease UI font size"
-              className="px-1.5"
             >
-              <Minus size="var(--app-ui-icon-size-sm)" />
+              <Minus />
             </Button>
 
-            <div className="ui-font min-w-[52px] text-center text-text text-xs tabular-nums">
+            <div className="ui-font ui-text-sm min-w-[52px] text-center text-text tabular-nums">
               {formatUiFontSize(settings.uiFontSize)}
             </div>
 
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="xs"
               onClick={handleIncreaseUiFontSize}
               disabled={!canIncreaseUiFontSize}
               aria-label="Increase UI font size"
-              className="px-1.5"
             >
-              <Plus size="var(--app-ui-icon-size-sm)" />
+              <Plus />
             </Button>
           </div>
         </SettingRow>
@@ -240,6 +306,48 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
             className="w-20"
             size="xs"
+            variant="secondary"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show GitHub Pull Requests"
+          description="Display the pull requests section in the GitHub sidebar"
+          onReset={() =>
+            updateSetting("showGitHubPullRequests", getDefaultSetting("showGitHubPullRequests"))
+          }
+          canReset={settings.showGitHubPullRequests !== getDefaultSetting("showGitHubPullRequests")}
+        >
+          <Switch
+            checked={settings.showGitHubPullRequests}
+            onChange={(checked) => updateSetting("showGitHubPullRequests", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show GitHub Issues"
+          description="Display the issues section in the GitHub sidebar"
+          onReset={() => updateSetting("showGitHubIssues", getDefaultSetting("showGitHubIssues"))}
+          canReset={settings.showGitHubIssues !== getDefaultSetting("showGitHubIssues")}
+        >
+          <Switch
+            checked={settings.showGitHubIssues}
+            onChange={(checked) => updateSetting("showGitHubIssues", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show GitHub Actions"
+          description="Display the actions section in the GitHub sidebar"
+          onReset={() => updateSetting("showGitHubActions", getDefaultSetting("showGitHubActions"))}
+          canReset={settings.showGitHubActions !== getDefaultSetting("showGitHubActions")}
+        >
+          <Switch
+            checked={settings.showGitHubActions}
+            onChange={(checked) => updateSetting("showGitHubActions", checked)}
+            size="sm"
           />
         </SettingRow>
 
@@ -289,6 +397,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
             className="w-24"
             size="xs"
+            variant="secondary"
           />
         </SettingRow>
 
@@ -301,6 +410,21 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.quickOpenPreview}
             onChange={(checked) => updateSetting("quickOpenPreview", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Open Projects In New Window"
+          description="When the current window already has a project, opening another folder uses a separate window"
+          onReset={() =>
+            updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
+          }
+          canReset={settings.openFoldersInNewWindow !== getDefaultSetting("openFoldersInNewWindow")}
+        >
+          <Switch
+            checked={settings.openFoldersInNewWindow}
+            onChange={(checked) => updateSetting("openFoldersInNewWindow", checked)}
             size="sm"
           />
         </SettingRow>

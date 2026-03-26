@@ -55,7 +55,7 @@ export default function Checkbox({
         className="peer sr-only"
       />
       <span className={checkboxVariants()}>
-        <Check size={11} strokeWidth={3} />
+        <Check strokeWidth={3} />
       </span>
     </label>
   );

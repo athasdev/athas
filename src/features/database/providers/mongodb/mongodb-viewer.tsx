@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
@@ -40,7 +40,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
       <div className="mx-2 mt-2 rounded-2xl bg-primary-bg/85 px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 rounded-full bg-secondary-bg/70 px-2.5 py-1">
-            <Database size={14} className="text-text-lighter" />
+            <Database className="text-text-lighter" />
             <span className="ui-font text-sm">{store.fileName}</span>
           </div>
           {store.selectedDatabase && (
@@ -57,7 +57,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             </>
           )}
           <div className="ml-auto flex items-center gap-1 text-text-lighter text-xs">
-            <Layers size={12} />
+            <Layers />
             <span>{store.collections.length} collections</span>
           </div>
         </div>
@@ -66,22 +66,24 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
       <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
         <div className="flex w-56 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
-            <Layers size={12} className="text-text-lighter" />
+            <Layers className="text-text-lighter" />
             <span className="ui-font text-text-lighter text-xs">Collections</span>
           </div>
           <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
             {store.collections.map((col) => (
-              <button
+              <Button
                 key={col.name}
                 onClick={() => actions.selectCollection(col.name)}
+                variant="ghost"
+                size="xs"
                 className={cn(
-                  "ui-font block w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-hover",
+                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-xs",
                   store.selectedCollection === col.name && "bg-selected",
                 )}
                 aria-label={`Select collection ${col.name}`}
               >
                 {col.name}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -102,23 +104,27 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               className="gap-1.5"
               aria-label="Apply filter"
             >
-              <Braces size={12} />
+              <Braces />
               Apply
             </Button>
-            <button
+            <Button
               onClick={() => setFilterInput("{}")}
-              className="rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Reset filter"
             >
               Reset
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => actions.refresh()}
-              className="rounded-full border border-transparent p-1.5 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full text-text-lighter"
               aria-label="Refresh"
             >
-              <RefreshCw size={12} />
-            </button>
+              <RefreshCw />
+            </Button>
           </div>
 
           {!store.isLoading && !store.selectedCollection && (
@@ -141,7 +147,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
               <div className="flex items-center gap-2 text-sm text-text-lighter">
-                <RefreshCw size={16} className="animate-spin" />
+                <RefreshCw className="animate-spin" />
                 Loading...
               </div>
             </div>
@@ -169,13 +175,15 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                     >
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <div className="truncate text-text-lighter text-xs">Document {i + 1}</div>
-                        <button
+                        <Button
                           onClick={() => actions.deleteDocument(id)}
-                          className="rounded-full border border-transparent p-1 text-red-400 opacity-0 transition-all hover:border-red-500/20 hover:bg-red-500/10 group-hover:opacity-100"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="rounded-full text-red-400 opacity-0 transition-all hover:bg-red-500/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
-                          <Trash2 size={12} />
-                        </button>
+                          <Trash2 />
+                        </Button>
                       </div>
                       <pre className="ui-font overflow-x-auto whitespace-pre-wrap rounded-xl bg-primary-bg/70 p-3 text-xs leading-5">
                         {JSON.stringify(doc, null, 2)}
@@ -204,38 +212,46 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 Page {store.currentPage} of {store.totalPages}
               </span>
               <div className="flex items-center gap-1">
-                <button
+                <Button
                   onClick={() => actions.setCurrentPage(1)}
                   disabled={store.currentPage === 1}
-                  className="rounded-full border border-transparent p-1.5 transition-colors hover:border-border/70 hover:bg-hover disabled:opacity-30"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-full"
                   aria-label="First page"
                 >
-                  <ChevronsLeft size={14} />
-                </button>
-                <button
+                  <ChevronsLeft />
+                </Button>
+                <Button
                   onClick={() => actions.setCurrentPage(store.currentPage - 1)}
                   disabled={store.currentPage === 1}
-                  className="rounded-full border border-transparent p-1.5 transition-colors hover:border-border/70 hover:bg-hover disabled:opacity-30"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-full"
                   aria-label="Previous page"
                 >
-                  <ChevronLeft size={14} />
-                </button>
-                <button
+                  <ChevronLeft />
+                </Button>
+                <Button
                   onClick={() => actions.setCurrentPage(store.currentPage + 1)}
                   disabled={store.currentPage === store.totalPages}
-                  className="rounded-full border border-transparent p-1.5 transition-colors hover:border-border/70 hover:bg-hover disabled:opacity-30"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-full"
                   aria-label="Next page"
                 >
-                  <ChevronRight size={14} />
-                </button>
-                <button
+                  <ChevronRight />
+                </Button>
+                <Button
                   onClick={() => actions.setCurrentPage(store.totalPages)}
                   disabled={store.currentPage === store.totalPages}
-                  className="rounded-full border border-transparent p-1.5 transition-colors hover:border-border/70 hover:bg-hover disabled:opacity-30"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-full"
                   aria-label="Last page"
                 >
-                  <ChevronsRight size={14} />
-                </button>
+                  <ChevronsRight />
+                </Button>
               </div>
             </div>
           )}

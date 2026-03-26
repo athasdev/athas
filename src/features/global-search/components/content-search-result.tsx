@@ -1,4 +1,5 @@
 import { File } from "lucide-react";
+import { Button } from "@/ui/button";
 import type { FileSearchResult, SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface ContentSearchResultProps {
@@ -32,16 +33,18 @@ const MatchLine = ({
   onHover?: () => void;
 }) => {
   return (
-    <button
+    <Button
       onClick={onClick}
       onMouseEnter={onHover}
-      className="flex w-full items-start gap-2 px-4 py-1 text-left font-mono text-[11px] hover:bg-hover"
+      variant="ghost"
+      size="sm"
+      className="ui-text-sm flex h-auto w-full items-start justify-start gap-2 px-4 py-1 text-left font-mono hover:bg-hover"
     >
       <span className="w-10 shrink-0 text-right text-text-lighter">{match.line_number}</span>
       <span className="flex-1 truncate text-text">
         {highlightMatch(match.line_content, match.column_start, match.column_end)}
       </span>
-    </button>
+    </Button>
   );
 };
 
@@ -58,17 +61,19 @@ export const ContentSearchResult = ({
   return (
     <div className="mb-2">
       {/* File header */}
-      <button
+      <Button
         onClick={() => onFileClick(result.file_path)}
         onMouseEnter={() => onFileHover?.(result.file_path)}
-        className="flex w-full items-center gap-2 px-2 py-1.5 hover:bg-hover"
+        variant="ghost"
+        size="sm"
+        className="flex h-auto w-full items-center justify-start gap-2 px-2 py-1.5 hover:bg-hover"
       >
-        <File size={12} className="shrink-0 text-text-lighter" />
-        <span className="truncate font-medium text-text text-xs">{displayPath}</span>
-        <span className="ml-auto shrink-0 text-[10px] text-text-lighter">
+        <File className="shrink-0 text-text-lighter" />
+        <span className="ui-text-sm truncate font-medium text-text">{displayPath}</span>
+        <span className="ui-text-sm ml-auto shrink-0 text-text-lighter">
           {result.total_matches} {result.total_matches === 1 ? "match" : "matches"}
         </span>
-      </button>
+      </Button>
 
       {/* Matched lines */}
       <div className="ml-2">
@@ -81,7 +86,7 @@ export const ContentSearchResult = ({
           />
         ))}
         {result.matches.length > 10 && (
-          <div className="px-4 py-1 text-[10px] text-text-lighter">
+          <div className="ui-text-sm px-4 py-1 text-text-lighter">
             ... and {result.matches.length - 10} more matches
           </div>
         )}

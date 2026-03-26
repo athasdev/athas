@@ -1,5 +1,16 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Edit, Folder, FolderOpen, Plus, Server, Trash2, X } from "lucide-react";
+import {
+  Edit,
+  Folder,
+  FolderOpen,
+  Plus,
+  Server,
+  SquareArrowOutUpRight,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -12,11 +23,13 @@ import {
 } from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { paneIconButtonClassName, paneTitleClassName } from "@/ui/pane";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 
 interface ProjectPickerDialogProps {
   isOpen: boolean;
@@ -36,6 +49,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const { openRecentFolder, removeFromRecents } = useRecentFoldersStore();
   const { handleOpenFolder } = useFileSystemStore();
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
   // Load connections
   const loadConnections = useCallback(async () => {
@@ -93,6 +107,22 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   const handleRecentFolderClick = async (folder: RecentFolder) => {
     onClose();
     await openRecentFolder(folder.path);
+  };
+
+  const handleRecentFolderNewWindowClick = async (folder: RecentFolder) => {
+    onClose();
+    await createAppWindow({
+      path: folder.path,
+      isDirectory: true,
+    });
+  };
+
+  const handleRemoteConnectionNewWindowClick = async (connection: RemoteConnection) => {
+    onClose();
+    await createAppWindow({
+      remoteConnectionId: connection.id,
+      remoteConnectionName: connection.name,
+    });
   };
 
   const handleConnect = async (connectionId: string, providedPassword?: string) => {
@@ -172,38 +202,71 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
           <div className="border-border border-b">
             <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
               <span className={paneTitleClassName("text-text-lighter")}>Recent</span>
-              <button
+              <Button
                 onClick={handleOpenFolderClick}
+                variant="ghost"
+                size="icon-sm"
                 className={paneIconButtonClassName()}
                 aria-label="Open folder"
               >
-                <Plus size={12} />
-              </button>
+                <Plus />
+              </Button>
             </div>
             {recentFolders.length > 0 ? (
               recentFolders.map((folder) => (
                 <div key={folder.path} className="group flex items-center hover:bg-hover">
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleRecentFolderClick(folder)}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left"
+                    className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent"
                   >
-                    <Folder size={14} className="shrink-0 text-text-lighter" />
-                    <span className="truncate text-text text-xs">{folder.name}</span>
-                    <span className="ml-auto truncate text-[10px] text-text-lighter">
+                    {(() => {
+                      const matchingTab = projectTabs.find((t) => t.path === folder.path);
+                      if (matchingTab?.customIcon) {
+                        return (
+                          <img
+                            src={convertFileSrc(matchingTab.customIcon)}
+                            alt=""
+                            className="shrink-0 rounded-sm object-contain"
+                            style={{
+                              width: "var(--app-ui-font-size)",
+                              height: "var(--app-ui-font-size)",
+                            }}
+                          />
+                        );
+                      }
+                      return <Folder className="shrink-0 text-text-lighter" />;
+                    })()}
+                    <span className="ui-text-sm truncate text-text">{folder.name}</span>
+                    <span className="ui-text-sm ml-auto truncate text-text-lighter">
                       {folder.path}
                     </span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    onClick={() => void handleRecentFolderNewWindowClick(folder)}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 opacity-0 group-hover:opacity-100"
+                    aria-label="Open in new window"
+                    title="Open in new window"
+                  >
+                    <SquareArrowOutUpRight />
+                  </Button>
+                  <Button
                     onClick={() => removeFromRecents(folder.path)}
-                    className="mr-2 shrink-0 rounded p-1 text-text-lighter opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="mr-2 shrink-0 opacity-0 group-hover:opacity-100"
                     aria-label="Remove from recents"
                   >
-                    <X size={12} />
-                  </button>
+                    <X />
+                  </Button>
                 </div>
               ))
             ) : (
-              <div className="px-3 py-3 text-center text-text-lighter text-xs">
+              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 No recent projects
               </div>
             )}
@@ -213,35 +276,40 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
           <div>
             <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
               <span className={paneTitleClassName("text-text-lighter")}>Remote</span>
-              <button
+              <Button
                 onClick={() => {
                   setEditingConnection(null);
                   setIsConnectionDialogOpen(true);
                 }}
+                variant="ghost"
+                size="icon-sm"
                 className={paneIconButtonClassName()}
                 aria-label="Add remote connection"
               >
-                <Plus size={12} />
-              </button>
+                <Plus />
+              </Button>
             </div>
             {connections.length > 0 ? (
               connections.map((connection) => (
                 <div key={connection.id} className="group flex items-center hover:bg-hover">
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleConnect(connection.id)}
                     className={cn(
-                      "flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left",
+                      "h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent",
                       "border-l-2 border-transparent hover:border-sky-500/35",
                       connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                     )}
                     disabled={!!connectingMap[connection.id]}
                   >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
-                      <Server size={12} />
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
+                      <Server />
                     </span>
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-text text-xs">{connection.name}</span>
-                      <span className="truncate text-[10px] text-text-lighter">
+                      <span className="ui-text-sm truncate text-text">{connection.name}</span>
+                      <span className="ui-text-sm truncate text-text-lighter">
                         {connectingMap[connection.id]
                           ? "Connecting…"
                           : statusMap[connection.id] === "error"
@@ -249,42 +317,54 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                             : `${connection.username}@${connection.host}`}
                       </span>
                     </div>
-                    <span className="text-[10px] text-text-lighter">
+                    <span className="ui-text-sm text-text-lighter">
                       {connection.type.toUpperCase()}
                     </span>
                     <span
                       className={cn(
-                        "ml-auto h-2 w-2 shrink-0 rounded-full",
+                        "ml-auto size-2 shrink-0 rounded-full",
                         connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
                       )}
                     />
                     <span className="sr-only">
                       {connection.isConnected ? "Connected" : "Disconnected"}
                     </span>
-                  </button>
+                  </Button>
                   <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
+                    <Button
+                      onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Open in new window"
+                      title="Open in new window"
+                    >
+                      <SquareArrowOutUpRight />
+                    </Button>
+                    <Button
                       onClick={() => {
                         setEditingConnection(connection);
                         setIsConnectionDialogOpen(true);
                       }}
-                      className="rounded p-1 text-text-lighter hover:text-text"
+                      variant="ghost"
+                      size="icon-xs"
                       aria-label="Edit connection"
                     >
-                      <Edit size={12} />
-                    </button>
-                    <button
+                      <Edit />
+                    </Button>
+                    <Button
                       onClick={() => handleDeleteConnection(connection.id)}
-                      className="rounded p-1 text-text-lighter hover:text-error"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="hover:text-error"
                       aria-label="Delete connection"
                     >
-                      <Trash2 size={12} />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="px-3 py-3 text-center text-text-lighter text-xs">
+              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 No remote connections
               </div>
             )}

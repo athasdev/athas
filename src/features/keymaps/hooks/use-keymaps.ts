@@ -11,11 +11,49 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useKeymapStore } from "../stores/store";
 import { evaluateWhenClause } from "../utils/context";
-import { eventToKey, matchKeybinding } from "../utils/matcher";
+import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
+import { parseKeybinding } from "../utils/parser";
 import type { ParsedKey } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
 
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
+const NATIVE_MENU_ACCELERATORS = [
+  "cmd+shift+n",
+  "cmd+o",
+  "cmd+s",
+  "cmd+shift+s",
+  "cmd+w",
+  "cmd+q",
+  "cmd+f",
+  "cmd+alt+f",
+  "cmd+shift+p",
+  "cmd+b",
+  "cmd+j",
+  "cmd+r",
+  "alt+m",
+  "cmd+p",
+  "cmd+g",
+  "cmd+alt+right",
+  "cmd+alt+left",
+  "cmd+m",
+  "alt+f9",
+  "alt+f10",
+  "cmd+alt+z",
+  "f11",
+  "cmd+ctrl+f",
+] as const;
+
+const parsedNativeMenuAccelerators = NATIVE_MENU_ACCELERATORS.map((shortcut) =>
+  parseKeybinding(shortcut),
+);
+
+function isNativeMenuAccelerator(event: KeyboardEvent) {
+  const eventKey = eventToKey(event);
+  return parsedNativeMenuAccelerators.some((shortcut) => {
+    if (shortcut.isChord) return false;
+    return keysMatch(eventKey, shortcut.parts[0]);
+  });
+}
 
 export function useKeymaps() {
   const contexts = useKeymapStore.use.contexts();
@@ -31,6 +69,12 @@ export function useKeymaps() {
 
       // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
       if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
+        return;
+      }
+
+      // When the native menu bar is active, let Tauri's menu accelerators be the only source
+      // of truth for overlapping shortcuts to avoid duplicate execution.
+      if (useSettingsStore.getState().settings.nativeMenuBar && isNativeMenuAccelerator(e)) {
         return;
       }
 

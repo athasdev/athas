@@ -1,5 +1,6 @@
 import { Archive, Clock, Download, Plus, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -116,18 +117,18 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
       >
         <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
-            <Archive size={16} className="text-text-lighter" />
+            <Archive className="text-text-lighter" />
             <h2 className="font-medium text-sm text-text">Stash Manager</h2>
           </div>
-          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
-            <X size={16} />
-          </button>
+          <Button onClick={onClose} variant="ghost" size="icon-sm" className="text-text-lighter">
+            <X />
+          </Button>
         </div>
 
         <div className="border-border border-b p-4">
           <div className="space-y-2">
             <div className="mb-2 flex items-center gap-2">
-              <Plus size={12} className="text-text-lighter" />
+              <Plus className="text-text-lighter" />
               <span className="font-medium text-text text-xs">Create New Stash</span>
             </div>
 
@@ -158,17 +159,15 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
               </label>
             </div>
 
-            <button
+            <Button
               onClick={handleCreateStash}
               disabled={isLoading}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "py-1.5 text-text text-xs transition-colors",
-                "hover:bg-hover disabled:opacity-50",
-              )}
+              variant="outline"
+              size="sm"
+              className="w-full"
             >
               {isLoading ? "Creating..." : "Create Stash"}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -200,54 +199,48 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         </div>
 
                         <div className="flex items-center gap-1 text-[9px] text-text-lighter">
-                          <Clock size={8} />
+                          <Clock />
                           {formatRelativeDate(stash.date)}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
                         onClick={() => handleApplyStash(stash.index)}
                         disabled={isActionLoading}
-                        className={cn(
-                          "flex items-center gap-1 rounded border border-border",
-                          "bg-primary-bg px-2 py-1 text-[9px] text-text",
-                          "transition-colors hover:bg-secondary-bg disabled:opacity-50",
-                        )}
+                        variant="outline"
+                        size="xs"
+                        className="gap-1 px-2 py-1 text-[9px]"
                         title="Apply stash (keep in stash list)"
                       >
-                        <Download size={8} />
+                        <Download />
                         Apply
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
                         onClick={() => handlePopStash(stash.index)}
                         disabled={isActionLoading}
-                        className={cn(
-                          "flex items-center gap-1 rounded border border-border",
-                          "bg-primary-bg px-2 py-1 text-[9px] text-text",
-                          "transition-colors hover:bg-secondary-bg disabled:opacity-50",
-                        )}
+                        variant="outline"
+                        size="xs"
+                        className="gap-1 px-2 py-1 text-[9px]"
                         title="Pop stash (apply and remove from stash list)"
                       >
-                        <Upload size={8} />
+                        <Upload />
                         Pop
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
                         onClick={() => handleDropStash(stash.index)}
                         disabled={isActionLoading}
-                        className={cn(
-                          "flex items-center gap-1 rounded border border-red-500",
-                          "bg-red-600 px-2 py-1 text-[9px] text-white",
-                          "transition-colors hover:bg-red-700 disabled:opacity-50",
-                        )}
+                        variant="danger"
+                        size="xs"
+                        className="gap-1 px-2 py-1 text-[9px]"
                         title="Drop stash (delete permanently)"
                       >
-                        <Trash2 size={8} />
+                        <Trash2 />
                         Drop
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 );

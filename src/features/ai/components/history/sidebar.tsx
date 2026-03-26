@@ -2,6 +2,7 @@ import { Check, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -84,7 +85,7 @@ export default function ChatHistoryDropdown({
               >
                 <div className="flex shrink-0 items-center">
                   {chat.id === currentChatId ? (
-                    <Check size={12} className="text-success" />
+                    <Check className="text-success" />
                   ) : (
                     <ProviderIcon
                       providerId={chat.agentId || "custom"}
@@ -94,16 +95,19 @@ export default function ChatHistoryDropdown({
                   )}
                 </div>
 
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     onSwitchToChat(chat.id);
                     onClose();
                   }}
-                  className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+                  className="h-auto min-w-0 flex-1 justify-start flex-col items-start gap-0.5 px-0 py-0 text-left hover:bg-transparent"
                 >
                   <span
                     className={cn(
-                      "truncate text-xs",
+                      "block w-full truncate text-left text-xs",
                       chat.id === currentChatId
                         ? "font-medium text-text"
                         : "text-text-lighter hover:text-text",
@@ -111,22 +115,25 @@ export default function ChatHistoryDropdown({
                   >
                     {chat.title}
                   </span>
-                  <span className="select-none text-[10px] text-text-lighter">
+                  <span className="block w-full select-none text-left text-[10px] text-text-lighter">
                     {getRelativeTime(chat.lastMessageAt)}
                   </span>
-                </button>
+                </Button>
 
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteChat(chat.id, e);
                   }}
-                  className="ml-auto flex size-5 shrink-0 items-center justify-center rounded text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
+                  className="ml-auto rounded text-text-lighter opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
                   title="Delete chat"
                   aria-label="Delete chat"
                 >
-                  <Trash2 size={12} />
-                </button>
+                  <Trash2 />
+                </Button>
               </div>
             ))}
           </div>

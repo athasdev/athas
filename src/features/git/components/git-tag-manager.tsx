@@ -1,6 +1,6 @@
 import { Calendar, GitCommit, Plus, Tag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { formatShortDate } from "@/utils/date";
@@ -97,7 +97,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
       <div className="ui-font flex max-h-[70vh] flex-col">
         <div className="border-border/70 border-b p-4">
           <div className="mb-3 flex items-center gap-2 text-text text-xs">
-            <Plus size={12} className="text-text-lighter" />
+            <Plus className="text-text-lighter" />
             <span className="font-medium">Create tag</span>
           </div>
 
@@ -154,7 +154,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-2">
-                        <Tag size={12} className="text-text-lighter" />
+                        <Tag className="text-text-lighter" />
                         <span className="font-medium text-text text-xs">{tag.name}</span>
                       </div>
 
@@ -164,11 +164,11 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
 
                       <div className="flex items-center gap-3 text-[10px] text-text-lighter">
                         <div className="flex items-center gap-1">
-                          <GitCommit size={10} />
+                          <GitCommit />
                           <span className="ui-font">{tag.commit.substring(0, 7)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Calendar size={10} />
+                          <Calendar />
                           {formatShortDate(tag.date)}
                         </div>
                       </div>
@@ -182,7 +182,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
                       className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
                       title="Delete tag"
                     >
-                      <Trash2 size={10} />
+                      <Trash2 />
                     </Button>
                   </div>
                 </div>

@@ -3,24 +3,30 @@ import {
   AlertCircle,
   Check,
   ChevronDown,
+  Copy,
   ExternalLink,
   FolderOpen,
   GitBranch,
   GitPullRequest,
   RefreshCw,
-  X,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { useSettingsStore } from "@/features/settings/store";
+import { useContextMenu } from "@/hooks/use-context-menu";
+import { Button, buttonVariants } from "@/ui/button";
+import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { useGitHubStore } from "../stores/github-store";
 import type { PRFilter, PullRequest } from "../types/github";
+import GitHubActionsView from "./github-actions-view";
+import GitHubIssuesView from "./github-issues-view";
 
 const filterLabels: Record<PRFilter, string> = {
   all: "All PRs",
@@ -28,116 +34,53 @@ const filterLabels: Record<PRFilter, string> = {
   "review-requests": "Review Requests",
 };
 
+const repoOptionButtonClass = cn(
+  buttonVariants({ variant: "ghost", size: "sm" }),
+  "ui-text-sm h-auto w-full justify-start rounded-lg px-2 py-1.5 text-left text-text-lighter",
+);
+
+type GitHubSidebarSection = "pull-requests" | "issues" | "actions";
+
 interface PRListItemProps {
   pr: PullRequest;
+  isActive: boolean;
   onSelect: () => void;
-  onOpenExternal: () => void;
-  onCheckout: () => void;
+  onContextMenu: (event: React.MouseEvent, pr: PullRequest) => void;
 }
 
-const PRListItem = memo(({ pr, onSelect, onOpenExternal, onCheckout }: PRListItemProps) => {
-  const createdAgo = getTimeAgo(pr.createdAt);
-  const updatedAgo = getTimeAgo(pr.updatedAt);
-  const stateLabel = pr.state === "MERGED" ? "Merged" : pr.state === "CLOSED" ? "Closed" : "Open";
-  const stateClass =
-    pr.state === "MERGED"
-      ? "bg-blue-500/15 text-blue-500"
-      : pr.state === "CLOSED"
-        ? "bg-red-500/15 text-red-500"
-        : "bg-green-500/15 text-green-500";
-
+const PRListItem = memo(({ pr, isActive, onSelect, onContextMenu }: PRListItemProps) => {
   return (
-    <div className="group rounded-xl border border-border/60 bg-primary-bg/80 p-3 transition-colors hover:bg-hover">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-              <span className="rounded-md border border-border bg-secondary-bg/70 px-1.5 py-0.5 font-mono text-[10px] text-text-lighter">
-                #{pr.number}
-              </span>
-              <span className={cn("rounded-md px-1.5 py-0.5 text-[10px]", stateClass)}>
-                {stateLabel}
-              </span>
-              {pr.isDraft && (
-                <span className="rounded-md bg-text-lighter/20 px-1.5 py-0.5 text-[10px] text-text-lighter">
-                  Draft
-                </span>
-              )}
-              {pr.reviewDecision && (
-                <span
-                  className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[10px]",
-                    pr.reviewDecision === "APPROVED"
-                      ? "bg-green-500/20 text-green-500"
-                      : pr.reviewDecision === "CHANGES_REQUESTED"
-                        ? "bg-red-500/20 text-red-500"
-                        : "bg-yellow-500/20 text-yellow-500",
-                  )}
-                >
-                  {pr.reviewDecision === "APPROVED"
-                    ? "Approved"
-                    : pr.reviewDecision === "CHANGES_REQUESTED"
-                      ? "Changes Requested"
-                      : "Review"}
-                </span>
-              )}
-            </div>
-
-            <button
-              onClick={onSelect}
-              className="block w-full text-left text-text text-xs leading-4 transition-colors hover:text-accent"
-            >
-              {pr.title}
-            </button>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1">
-            <Tooltip content="Checkout PR branch" side="bottom">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCheckout();
-                }}
-                className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border/60 hover:bg-selected hover:text-text"
-                aria-label="Checkout PR branch"
-              >
-                <GitBranch size={12} />
-              </button>
-            </Tooltip>
-            <Tooltip content="Open pull request on GitHub" side="bottom">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenExternal();
-                }}
-                className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border/60 hover:bg-selected hover:text-text"
-                aria-label="Open pull request in browser"
-              >
-                <ExternalLink size={12} />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-text-lighter">
-          <span className="font-medium text-text-light">@{pr.author.login}</span>
-          <span>created {createdAgo}</span>
-          <span>updated {updatedAgo}</span>
-          <span className="rounded bg-git-added/15 px-1.5 py-0.5 text-git-added">
-            +{pr.additions}
-          </span>
-          <span className="rounded bg-git-deleted/15 px-1.5 py-0.5 text-git-deleted">
-            -{pr.deletions}
-          </span>
-          <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/60 bg-secondary-bg/55 px-1.5 py-0.5">
-            <GitBranch size={10} />
-            <span className="truncate">
-              {pr.headRef} → {pr.baseRef}
-            </span>
+    <Button
+      onClick={onSelect}
+      onContextMenu={(event) => onContextMenu(event, pr)}
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left hover:bg-hover/70",
+        isActive && "bg-hover/80 text-text",
+      )}
+    >
+      <img
+        src={
+          pr.author.avatarUrl ||
+          `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=40`
+        }
+        alt={pr.author.login}
+        className="size-5 shrink-0 self-start rounded-full bg-secondary-bg"
+        loading="lazy"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="ui-text-sm truncate text-text leading-4">{pr.title}</div>
+        <div className="ui-text-sm mt-1 text-text-lighter">{`#${pr.number} by ${pr.author.login}`}</div>
+        <div className="mt-1">
+          <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 font-mono text-text-lighter">
+            <span className="min-w-0 truncate">{pr.baseRef}</span>
+            <span className="shrink-0 px-1">&larr;</span>
+            <span className="min-w-0 truncate">{pr.headRef}</span>
           </span>
         </div>
       </div>
-    </div>
+    </Button>
   );
 });
 
@@ -146,7 +89,7 @@ PRListItem.displayName = "PRListItem";
 const GitHubPRsView = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const { prs, isLoading, error, currentFilter, isAuthenticated } = useGitHubStore();
-  const { fetchPRs, setFilter, checkAuth, openPRInBrowser, checkoutPR, setActiveRepoPath } =
+  const { fetchPRs, setFilter, checkAuth, setActiveRepoPath, openPRInBrowser, checkoutPR } =
     useGitHubStore().actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRepoPaths = useRepositoryStore.use.workspaceRepoPaths();
@@ -159,20 +102,45 @@ const GitHubPRsView = memo(() => {
     clearManualRepository,
     refreshWorkspaceRepositories,
   } = useRepositoryStore.use.actions();
+  const buffers = useBufferStore.use.buffers();
+  const activeBufferId = useBufferStore.use.activeBufferId();
   const { openPRBuffer } = useBufferStore.use.actions();
+  const settings = useSettingsStore((state) => state.settings);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRepoMenuOpen, setIsRepoMenuOpen] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<GitHubSidebarSection>("pull-requests");
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const repoTriggerRef = useRef<HTMLButtonElement>(null);
+  const prContextMenu = useContextMenu<PullRequest>();
 
   const isRepoError = !!error && isNotGitRepositoryError(error);
+  const activePRNumber = useMemo(() => {
+    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    return activeBuffer?.type === "pullRequest" ? activeBuffer.prNumber : null;
+  }, [activeBufferId, buffers]);
+  const availableSections = useMemo(
+    () =>
+      [
+        settings.showGitHubPullRequests ? "pull-requests" : null,
+        settings.showGitHubIssues ? "issues" : null,
+        settings.showGitHubActions ? "actions" : null,
+      ].filter((section): section is GitHubSidebarSection => !!section),
+    [settings.showGitHubActions, settings.showGitHubIssues, settings.showGitHubPullRequests],
+  );
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (availableSections.length === 0) return;
+    if (!availableSections.includes(activeSection)) {
+      setActiveSection(availableSections[0]);
+    }
+  }, [activeSection, availableSections]);
 
   useEffect(() => {
     void syncWorkspaceRepositories(rootFolderPath ?? null);
@@ -237,88 +205,112 @@ const GitHubPRsView = memo(() => {
   );
 
   const handleSelectPR = useCallback(
-    (prNumber: number) => {
-      openPRBuffer(prNumber);
+    (pr: PullRequest) => {
+      openPRBuffer(pr.number, {
+        title: pr.title,
+        authorAvatarUrl:
+          pr.author.avatarUrl ||
+          `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+      });
     },
     [openPRBuffer],
   );
 
-  const handleOpenPR = useCallback(
-    (prNumber: number) => {
-      if (activeRepoPath) {
-        openPRInBrowser(activeRepoPath, prNumber);
-      }
+  const handlePRContextMenu = useCallback(
+    (event: React.MouseEvent, pr: PullRequest) => {
+      prContextMenu.open(event, pr);
     },
-    [activeRepoPath, openPRInBrowser],
+    [prContextMenu],
   );
 
-  const handleCheckoutPR = useCallback(
-    async (prNumber: number) => {
-      if (activeRepoPath) {
-        try {
-          await checkoutPR(activeRepoPath, prNumber);
-        } catch (err) {
-          console.error("Failed to checkout PR:", err);
-        }
-      }
-    },
-    [activeRepoPath, checkoutPR],
-  );
+  const selectedPR = prContextMenu.data;
 
-  const getWorkspaceRepoSubtitle = useCallback(
-    (path: string) => {
-      if (!rootFolderPath) return "Workspace repository";
-      if (path === rootFolderPath) return "Workspace root repository";
-      return "Workspace repository";
-    },
-    [rootFolderPath],
-  );
+  const prContextMenuItems: ContextMenuItem[] = selectedPR
+    ? [
+        {
+          id: "open-pr",
+          label: "Open PR",
+          icon: <GitPullRequest />,
+          onClick: () => {
+            handleSelectPR(selectedPR);
+          },
+        },
+        {
+          id: "open-on-github",
+          label: "Open on GitHub",
+          icon: <ExternalLink />,
+          onClick: () => {
+            if (activeRepoPath) {
+              void openPRInBrowser(activeRepoPath, selectedPR.number);
+            }
+          },
+        },
+        {
+          id: "checkout-branch",
+          label: "Checkout Branch",
+          icon: <GitBranch />,
+          onClick: () => {
+            if (activeRepoPath) {
+              void checkoutPR(activeRepoPath, selectedPR.number);
+            }
+          },
+        },
+        {
+          id: "copy-title",
+          label: "Copy Title",
+          icon: <Copy />,
+          onClick: () => {
+            void navigator.clipboard.writeText(selectedPR.title);
+          },
+        },
+      ]
+    : [];
 
   const renderRepoOption = (
     repoPath: string,
     label: string,
-    subtitle: string,
     isActive: boolean,
     onClick: () => void,
   ) => (
-    <button
+    <Button
       key={repoPath}
       onClick={onClick}
       className={cn(
-        "group flex w-full items-start gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-hover",
+        repoOptionButtonClass,
+        "group items-start gap-1.5",
         isActive ? "bg-hover text-text" : "text-text-lighter",
       )}
     >
       <Check
-        size={10}
         className={cn("mt-0.5 shrink-0", isActive ? "text-success opacity-100" : "opacity-0")}
       />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-text text-xs">{label}</div>
-        <div className="truncate text-[10px] text-text-lighter">{subtitle}</div>
-      </div>
-    </button>
+      <span className={cn("min-w-0 flex-1 truncate", isActive ? "text-text" : "text-text-lighter")}>
+        {label}
+      </span>
+    </Button>
   );
 
   if (!isAuthenticated) {
     return (
       <div className="flex h-full flex-col gap-2 p-2">
         <div className="flex items-center justify-between px-0.5 py-0.5">
-          <span className="font-medium text-text text-xs">Pull Requests</span>
+          <span className="ui-text-sm font-medium text-text">GitHub</span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
-          <AlertCircle size={24} className="mb-2 text-text-lighter" />
-          <p className="text-text text-xs">GitHub CLI not authenticated</p>
-          <p className="mt-1 text-[10px] text-text-lighter">
+          <AlertCircle className="mb-2 text-text-lighter" />
+          <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
+          <p className="ui-text-sm mt-1 text-text-lighter">
             Run <code className="rounded bg-hover px-1 py-0.5">gh auth login</code> in terminal
           </p>
-          <button
+          <Button
             onClick={() => void checkAuth()}
-            className="mt-2 text-accent text-xs hover:underline"
+            variant="ghost"
+            size="xs"
+            className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
             aria-label="Retry authentication check"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -326,266 +318,290 @@ const GitHubPRsView = memo(() => {
 
   return (
     <div className="ui-font flex h-full select-none flex-col gap-2 p-2">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">
-        <div>
-          <Tooltip content="Filter pull requests" side="bottom">
-            <button
-              ref={filterTriggerRef}
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={dropdownTriggerClassName()}
-            >
-              <GitPullRequest size={11} className="shrink-0" />
-              <span className="truncate">{filterLabels[currentFilter]}</span>
-              <ChevronDown size={8} />
-            </button>
-          </Tooltip>
-        </div>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <div>
-            <Tooltip content={activeRepoPath ?? "Select repository"} side="bottom">
-              <button
-                ref={repoTriggerRef}
-                onClick={() =>
-                  setIsRepoMenuOpen((value) => {
-                    const nextOpen = !value;
-                    if (nextOpen) {
-                      void refreshWorkspaceRepositories();
-                    }
-                    return nextOpen;
-                  })
-                }
-                className={dropdownTriggerClassName("max-w-44")}
-              >
-                <FolderOpen size={11} className="shrink-0" />
-                <span className="truncate">
-                  {activeRepoPath ? getFolderName(activeRepoPath) : "Select Repo"}
-                </span>
-                <ChevronDown size={8} />
-              </button>
-            </Tooltip>
-          </div>
-
-          <Tooltip content="Refresh pull requests" side="bottom">
-            <button
-              onClick={handleRefresh}
-              disabled={isLoading || !activeRepoPath}
-              className="rounded-lg border border-transparent p-1 text-text-lighter hover:border-border/60 hover:bg-hover hover:text-text disabled:opacity-50"
-              aria-label="Refresh pull requests"
-            >
-              <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            </button>
-          </Tooltip>
-        </div>
+      <div className="flex flex-wrap items-center gap-1 px-0.5 py-0.5">
+        {availableSections.map((section) => (
+          <Button
+            key={section}
+            type="button"
+            variant="ghost"
+            size="xs"
+            active={activeSection === section}
+            onClick={() => setActiveSection(section)}
+            className="rounded-md px-2"
+          >
+            {section === "pull-requests"
+              ? "Pull Requests"
+              : section === "issues"
+                ? "Issues"
+                : "Actions"}
+          </Button>
+        ))}
       </div>
 
-      <Dropdown
-        isOpen={isFilterOpen}
-        anchorRef={filterTriggerRef}
-        onClose={() => setIsFilterOpen(false)}
-        className="min-w-40"
-      >
-        {(Object.keys(filterLabels) as PRFilter[]).map((filter) => (
-          <button
-            key={filter}
-            onClick={() => handleFilterChange(filter)}
-            className={cn(
-              dropdownItemClassName(),
-              filter === currentFilter && "bg-selected text-accent",
-            )}
-          >
-            {filterLabels[filter]}
-          </button>
-        ))}
-      </Dropdown>
-
-      <Dropdown
-        isOpen={isRepoMenuOpen}
-        anchorRef={repoTriggerRef}
-        anchorAlign="end"
-        onClose={() => setIsRepoMenuOpen(false)}
-        className="flex w-[288px] flex-col overflow-hidden rounded-2xl p-0"
-      >
-        <div className="flex items-center justify-between bg-secondary-bg/75 px-3 py-2.5">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <FolderOpen size={12} className="shrink-0 text-text-lighter" />
-            <span className="truncate font-medium text-text text-xs">
-              {activeRepoPath ? getFolderName(activeRepoPath) : "Repositories"}
-            </span>
-            <span className="rounded-full bg-selected px-1.5 py-0.5 text-[9px] text-text-lighter">
-              {workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}
-            </span>
-          </div>
-          <button
-            onClick={() => setIsRepoMenuOpen(false)}
-            className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
-            aria-label="Close repository dropdown"
-          >
-            <X size={12} />
-          </button>
+      {availableSections.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center p-4 text-center">
+          <p className="ui-text-sm text-text-lighter">
+            Enable GitHub sidebar sections in Settings → Appearance.
+          </p>
         </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter uppercase tracking-wide">
-            <span>Repositories</span>
-            <span>{workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}</span>
-          </div>
-
-          <div className="space-y-1">
-            {workspaceRepoPaths.map((workspaceRepoPath) =>
-              renderRepoOption(
-                workspaceRepoPath,
-                getFolderName(workspaceRepoPath),
-                getWorkspaceRepoSubtitle(workspaceRepoPath),
-                activeRepoPath === workspaceRepoPath,
-                () => {
-                  selectRepository(workspaceRepoPath);
-                  setRepoSelectionError(null);
-                  setIsRepoMenuOpen(false);
-                },
-              ),
-            )}
-
-            {manualRepoPath &&
-              !workspaceRepoPaths.includes(manualRepoPath) &&
-              renderRepoOption(
-                manualRepoPath,
-                getFolderName(manualRepoPath),
-                "Manual selection",
-                activeRepoPath === manualRepoPath,
-                () => {
-                  selectRepository(manualRepoPath);
-                  setRepoSelectionError(null);
-                  setIsRepoMenuOpen(false);
-                },
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">
+            <div>
+              {activeSection === "pull-requests" ? (
+                <Tooltip content="Filter pull requests" side="bottom">
+                  <Button
+                    ref={filterTriggerRef}
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    variant="ghost"
+                    size="sm"
+                    className={dropdownTriggerClassName("ui-text-sm")}
+                  >
+                    <GitPullRequest className="shrink-0" />
+                    <span className="truncate">{filterLabels[currentFilter]}</span>
+                    <ChevronDown />
+                  </Button>
+                </Tooltip>
+              ) : (
+                <span className="ui-text-sm px-1 text-text">
+                  {activeSection === "issues" ? "Open Issues" : "Workflow Runs"}
+                </span>
               )}
+            </div>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <div>
+                <Tooltip content={activeRepoPath ?? "Select repository"} side="bottom">
+                  <Button
+                    ref={repoTriggerRef}
+                    onClick={() =>
+                      setIsRepoMenuOpen((value) => {
+                        const nextOpen = !value;
+                        if (nextOpen) {
+                          void refreshWorkspaceRepositories();
+                        }
+                        return nextOpen;
+                      })
+                    }
+                    variant="ghost"
+                    size="sm"
+                    className={dropdownTriggerClassName("ui-text-sm max-w-40")}
+                  >
+                    <FolderOpen className="shrink-0" />
+                    <span className="truncate">
+                      {activeRepoPath ? getFolderName(activeRepoPath) : "Select Repo"}
+                    </span>
+                    <ChevronDown />
+                  </Button>
+                </Tooltip>
+              </div>
+
+              {activeSection === "pull-requests" && (
+                <Tooltip content="Refresh pull requests" side="bottom">
+                  <Button
+                    onClick={handleRefresh}
+                    disabled={isLoading || !activeRepoPath}
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-text-lighter"
+                    aria-label="Refresh pull requests"
+                  >
+                    <RefreshCw className={isLoading ? "animate-spin" : ""} />
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
           </div>
 
-          {rootFolderPath && workspaceRepoPaths.length === 0 && !isResolvingWorkspaceRepo && (
-            <div className="px-2 py-2 text-[10px] text-text-lighter">
-              No repositories found in this workspace.
-            </div>
-          )}
-
-          {isResolvingWorkspaceRepo && (
-            <div className="flex items-center gap-1.5 px-2 py-2 text-[10px] text-text-lighter">
-              <RefreshCw size={10} className="animate-spin" />
-              Detecting workspace repositories...
-            </div>
-          )}
-
-          <div className="mt-1 border-border/60 border-t pt-2">
-            <button
-              onClick={() => void handleSelectRepository()}
-              disabled={isSelectingRepo}
-              className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-60"
-            >
-              <FolderOpen size={12} />
-              {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
-            </button>
-
-            {manualRepoPath && (
-              <button
-                onClick={() => void handleUseWorkspaceRoot()}
-                className="mt-1 w-full rounded-lg px-2 py-1 text-left text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+          <Dropdown
+            isOpen={isFilterOpen}
+            anchorRef={filterTriggerRef}
+            onClose={() => setIsFilterOpen(false)}
+            className="min-w-40"
+          >
+            {(Object.keys(filterLabels) as PRFilter[]).map((filter) => (
+              <Button
+                key={filter}
+                onClick={() => handleFilterChange(filter)}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  dropdownItemClassName("justify-start"),
+                  filter === currentFilter && "bg-selected text-accent",
+                )}
               >
-                Use workspace repositories
-              </button>
-            )}
+                {filterLabels[filter]}
+              </Button>
+            ))}
+          </Dropdown>
 
-            {repoSelectionError && (
-              <div className="mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-[10px] text-error/90">
-                {repoSelectionError}
+          <Dropdown
+            isOpen={isRepoMenuOpen}
+            anchorRef={repoTriggerRef}
+            anchorAlign="end"
+            onClose={() => setIsRepoMenuOpen(false)}
+            className="w-[240px]"
+          >
+            <div className="space-y-1">
+              {workspaceRepoPaths.map((workspaceRepoPath) =>
+                renderRepoOption(
+                  workspaceRepoPath,
+                  getFolderName(workspaceRepoPath),
+                  activeRepoPath === workspaceRepoPath,
+                  () => {
+                    selectRepository(workspaceRepoPath);
+                    setRepoSelectionError(null);
+                    setIsRepoMenuOpen(false);
+                  },
+                ),
+              )}
+
+              {manualRepoPath &&
+                !workspaceRepoPaths.includes(manualRepoPath) &&
+                renderRepoOption(
+                  manualRepoPath,
+                  getFolderName(manualRepoPath),
+                  activeRepoPath === manualRepoPath,
+                  () => {
+                    selectRepository(manualRepoPath);
+                    setRepoSelectionError(null);
+                    setIsRepoMenuOpen(false);
+                  },
+                )}
+
+              {rootFolderPath && workspaceRepoPaths.length === 0 && !isResolvingWorkspaceRepo && (
+                <div className="ui-text-sm px-2 py-1.5 text-text-lighter">
+                  No repositories found in this workspace.
+                </div>
+              )}
+
+              {isResolvingWorkspaceRepo && (
+                <div className="ui-text-sm flex items-center gap-1.5 px-2 py-1.5 text-text-lighter">
+                  <RefreshCw className="animate-spin" />
+                  Detecting workspace repositories...
+                </div>
+              )}
+
+              <div className="mt-1 border-border/60 border-t pt-2">
+                <Button
+                  onClick={() => void handleSelectRepository()}
+                  disabled={isSelectingRepo}
+                  variant="ghost"
+                  size="sm"
+                  className="ui-text-sm w-full justify-start rounded-lg px-2 text-left text-text-lighter"
+                >
+                  <FolderOpen />
+                  {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
+                </Button>
+
+                {manualRepoPath && (
+                  <Button
+                    onClick={() => void handleUseWorkspaceRoot()}
+                    variant="ghost"
+                    size="xs"
+                    className="ui-text-sm mt-1 h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-text-lighter"
+                  >
+                    Use workspace repositories
+                  </Button>
+                )}
+
+                {repoSelectionError && (
+                  <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
+                    {repoSelectionError}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Dropdown>
+
+          <div className="scrollbar-hidden flex-1 overflow-y-auto">
+            {!activeRepoPath ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="ui-font flex flex-col items-center text-center">
+                  <span className="ui-text-sm text-text-lighter">No repository selected</span>
+                  <Button
+                    onClick={() => void handleSelectRepository()}
+                    variant="ghost"
+                    size="xs"
+                    className="ui-text-sm mt-1.5 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+                  >
+                    Browse Repository
+                  </Button>
+                </div>
+              </div>
+            ) : activeSection === "issues" ? (
+              <GitHubIssuesView />
+            ) : activeSection === "actions" ? (
+              <GitHubActionsView />
+            ) : error ? (
+              <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
+                <AlertCircle className="mb-2 text-error" />
+                {isRepoError ? (
+                  <>
+                    <p className="ui-text-sm text-error">Repository is not a Git repository</p>
+                    <p className="ui-text-sm mt-1 text-text-lighter">
+                      Select another folder that contains a `.git` repository.
+                    </p>
+                    <Button
+                      onClick={() => void handleSelectRepository()}
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 rounded-lg"
+                    >
+                      Browse Repository
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="ui-text-sm text-error">{error}</p>
+                    <Button
+                      onClick={handleRefresh}
+                      variant="ghost"
+                      size="xs"
+                      className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+                    >
+                      Try again
+                    </Button>
+                  </>
+                )}
+                {repoSelectionError && (
+                  <p className="ui-text-sm mt-2 text-error/80">{repoSelectionError}</p>
+                )}
+              </div>
+            ) : isLoading && prs.length === 0 ? (
+              <div className="flex items-center justify-center p-4">
+                <RefreshCw className="animate-spin text-text-lighter" />
+              </div>
+            ) : prs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <GitPullRequest className="mb-2 text-text-lighter" />
+                <p className="ui-text-sm text-text-lighter">No pull requests</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {prs.map((pr) => (
+                  <PRListItem
+                    key={pr.number}
+                    pr={pr}
+                    isActive={activePRNumber === pr.number}
+                    onSelect={() => handleSelectPR(pr)}
+                    onContextMenu={handlePRContextMenu}
+                  />
+                ))}
               </div>
             )}
           </div>
-        </div>
-      </Dropdown>
-
-      {/* Content */}
-      <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        {!activeRepoPath ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="ui-font flex flex-col items-center text-center">
-              <span className="text-[0.78em] text-text-lighter">No repository selected</span>
-              <button
-                onClick={() => void handleSelectRepository()}
-                className="mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80"
-              >
-                Browse Repository
-              </button>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
-            <AlertCircle size={20} className="mb-2 text-error" />
-            {isRepoError ? (
-              <>
-                <p className="text-error text-xs">Repository is not a Git repository</p>
-                <p className="mt-1 text-[10px] text-text-lighter">
-                  Select another folder that contains a `.git` repository.
-                </p>
-                <button
-                  onClick={() => void handleSelectRepository()}
-                  className="mt-2 rounded-lg border border-border/60 bg-primary-bg px-3 py-1 text-text text-xs hover:bg-hover"
-                >
-                  Browse Repository
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-error text-xs">{error}</p>
-                <button
-                  onClick={handleRefresh}
-                  className="mt-2 text-accent text-xs hover:underline"
-                >
-                  Try again
-                </button>
-              </>
-            )}
-            {repoSelectionError && (
-              <p className="mt-2 text-[10px] text-error/80">{repoSelectionError}</p>
-            )}
-          </div>
-        ) : isLoading && prs.length === 0 ? (
-          <div className="flex items-center justify-center p-4">
-            <RefreshCw size={16} className="animate-spin text-text-lighter" />
-          </div>
-        ) : prs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-4 text-center">
-            <GitPullRequest size={20} className="mb-2 text-text-lighter" />
-            <p className="text-text-lighter text-xs">No pull requests</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {prs.map((pr) => (
-              <PRListItem
-                key={pr.number}
-                pr={pr}
-                onSelect={() => handleSelectPR(pr.number)}
-                onOpenExternal={() => handleOpenPR(pr.number)}
-                onCheckout={() => handleCheckoutPR(pr.number)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        </>
+      )}
+      <ContextMenu
+        isOpen={prContextMenu.isOpen}
+        position={prContextMenu.position}
+        items={prContextMenuItems}
+        onClose={prContextMenu.close}
+      />
     </div>
   );
 });
 
 GitHubPRsView.displayName = "GitHubPRsView";
-
-function getTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  return `${Math.floor(seconds / 604800)}w ago`;
-}
 
 export default GitHubPRsView;

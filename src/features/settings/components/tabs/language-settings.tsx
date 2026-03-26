@@ -55,6 +55,7 @@ export const LanguageSettings = () => {
             onChange={(value) => updateSetting("defaultLanguage", value)}
             className="w-28"
             size="xs"
+            variant="secondary"
           />
         </SettingRow>
 
@@ -113,6 +114,7 @@ export const LanguageSettings = () => {
             onChange={(value) => updateSetting("formatter", value)}
             className="w-24"
             size="xs"
+            variant="secondary"
           />
         </SettingRow>
       </Section>

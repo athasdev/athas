@@ -7,9 +7,29 @@ import {
   resolveRepositoryPath,
 } from "./git-repo-api";
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  return "";
+};
+
 const isNoDiffFoundError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) return false;
-  return error.message.includes("No changes found for file:");
+  return getErrorMessage(error).includes("No changes found for file:");
 };
 
 export const getFileDiff = async (

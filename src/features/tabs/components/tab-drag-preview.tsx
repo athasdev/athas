@@ -16,9 +16,9 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
     <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 text-xs opacity-95 shadow-sm">
       <span className="grid size-3 shrink-0 place-content-center">
         {buffer.path === "extensions://marketplace" ? (
-          <Package size={12} className="text-accent" />
+          <Package className="text-accent" />
         ) : buffer.type === "database" ? (
-          <Database size={12} className="text-text-lighter" />
+          <Database className="text-text-lighter" />
         ) : (
           <FileExplorerIcon
             fileName={buffer.name}
@@ -28,7 +28,7 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
           />
         )}
       </span>
-      {buffer.isPinned && <Pin size={8} className="shrink-0 text-accent" />}
+      {buffer.isPinned && <Pin className="shrink-0 text-accent" />}
       <span className="max-w-[200px] truncate text-text">
         {buffer.name}
         {buffer.type === "editor" && buffer.isDirty && (

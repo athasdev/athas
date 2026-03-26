@@ -205,6 +205,7 @@ export const EditorSettings = () => {
             }
             className="w-48"
             size="sm"
+            variant="secondary"
           />
         </SettingRow>
 

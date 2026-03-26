@@ -1,4 +1,5 @@
 import { Filter } from "lucide-react";
+import { Button } from "@/ui/button";
 import type { ColumnInfo } from "../models/common.types";
 
 interface SchemaViewProps {
@@ -17,8 +18,8 @@ export default function SchemaView({
   return (
     <div className="flex-1 overflow-auto">
       <div className="border-border border-b bg-secondary-bg p-3">
-        <div className="ui-font text-sm">{selectedTable}</div>
-        <div className="ui-font text-text-lighter text-xs">{tableMeta.length} columns</div>
+        <div className="ui-font ui-text-md">{selectedTable}</div>
+        <div className="ui-font ui-text-sm text-text-lighter">{tableMeta.length} columns</div>
       </div>
 
       <div className="divide-y divide-border">
@@ -29,26 +30,29 @@ export default function SchemaView({
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {getColumnIcon(column.type, column.primary_key)}
-              <div className="ui-font truncate text-sm">{column.name}</div>
-              <div className="ui-font text-text-lighter text-xs">{column.type}</div>
-              {column.primary_key && <div className="ui-font text-text-lighter text-xs">PK</div>}
-              {column.notnull && <div className="ui-font text-text-lighter text-xs">NN</div>}
+              <div className="ui-font ui-text-md truncate">{column.name}</div>
+              <div className="ui-font ui-text-sm text-text-lighter">{column.type}</div>
+              {column.primary_key && <div className="ui-font ui-text-sm text-text-lighter">PK</div>}
+              {column.notnull && <div className="ui-font ui-text-sm text-text-lighter">NN</div>}
               {column.default_value && (
                 <div
-                  className="ui-font truncate text-text-lighter text-xs"
+                  className="ui-font ui-text-sm truncate text-text-lighter"
                   title={`default: ${column.default_value}`}
                 >
                   def: {column.default_value}
                 </div>
               )}
             </div>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => onAddColumnFilter(column.name)}
-              className="ui-font px-2 py-1 text-text-lighter text-xs opacity-60 transition-colors hover:text-text hover:opacity-100"
+              className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
               title="Filter by this column"
             >
-              <Filter size={12} />
-            </button>
+              <Filter />
+            </Button>
           </div>
         ))}
       </div>

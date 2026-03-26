@@ -7,6 +7,7 @@ import { immer } from "zustand/middleware/immer";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
@@ -21,6 +22,7 @@ import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { toast } from "@/ui/toast";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
@@ -123,17 +125,23 @@ export const useFileSystemStore = createSelectors(
       // Actions
       handleOpenFolder: async () => {
         const selected = await openFolder();
+        if (!selected) return false;
+
+        const { settings } = useSettingsStore.getState();
+        const hasOpenWorkspace =
+          !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
+
+        if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+          await createAppWindow({
+            path: selected,
+            isDirectory: true,
+          });
+          return true;
+        }
 
         set((state) => {
           state.isFileTreeLoading = true;
         });
-
-        if (!selected) {
-          set((state) => {
-            state.isFileTreeLoading = false;
-          });
-          return false;
-        }
 
         // Add project to workspace tabs
         const projectName = selected.split("/").pop() || "Project";
@@ -415,6 +423,9 @@ export const useFileSystemStore = createSelectors(
           return;
         }
 
+        fileOpenBenchmark.ensureStarted(path, isPreview ? "preview" : "definite");
+        fileOpenBenchmark.mark(path, "file-select-handler");
+
         const { updateActivePath } = useSidebarStore.getState();
         updateActivePath(path);
 
@@ -424,6 +435,7 @@ export const useFileSystemStore = createSelectors(
         } = useBufferStore.getState();
         const existingBuffer = buffers.find((buffer) => buffer.path === path);
         if (existingBuffer) {
+          fileOpenBenchmark.finish(path, "existing-buffer");
           setActiveBuffer(existingBuffer.id);
 
           if (existingBuffer.isPreview && !isPreview) {
@@ -444,7 +456,13 @@ export const useFileSystemStore = createSelectors(
         }
 
         const requestId = ++latestFileOpenRequestId;
-        const isStaleRequest = () => requestId !== latestFileOpenRequestId;
+        const isStaleRequest = () => {
+          const stale = requestId !== latestFileOpenRequestId;
+          if (stale) {
+            fileOpenBenchmark.cancel(path, "stale-request");
+          }
+          return stale;
+        };
 
         let resolvedPath = path;
 
@@ -475,6 +493,7 @@ export const useFileSystemStore = createSelectors(
             console.error("Failed to resolve symlink:", error);
           }
         }
+        fileOpenBenchmark.mark(path, "symlink-resolved");
 
         if (isStaleRequest()) return;
         const fileName = getFilenameFromPath(path);
@@ -506,6 +525,7 @@ export const useFileSystemStore = createSelectors(
               true,
             );
           }
+          fileOpenBenchmark.finish(path, "diff-buffer-opened");
           return;
         }
 
@@ -514,9 +534,11 @@ export const useFileSystemStore = createSelectors(
         if (dbType) {
           if (isStaleRequest()) return;
           openBuffer(path, fileName, "", false, dbType, false, false);
+          fileOpenBenchmark.finish(path, "database-buffer-opened");
         } else if (isImageFile(resolvedPath)) {
           if (isStaleRequest()) return;
           openBuffer(path, fileName, "", true, undefined, false, false);
+          fileOpenBenchmark.finish(path, "image-buffer-opened");
         } else if (isPdfFile(resolvedPath)) {
           if (isStaleRequest()) return;
           openBuffer(
@@ -535,6 +557,7 @@ export const useFileSystemStore = createSelectors(
             isPreview,
             true,
           );
+          fileOpenBenchmark.finish(path, "pdf-buffer-opened");
         } else if (isBinaryFile(resolvedPath)) {
           if (isStaleRequest()) return;
           openBuffer(
@@ -554,6 +577,7 @@ export const useFileSystemStore = createSelectors(
             false,
             true,
           );
+          fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
@@ -577,6 +601,7 @@ export const useFileSystemStore = createSelectors(
 
               // Open external editor buffer
               openExternalEditorBuffer(resolvedPath, fileName, connectionId);
+              fileOpenBenchmark.finish(path, "external-editor-buffer-opened");
               return;
             } catch (error) {
               console.error("Failed to create external editor terminal:", error);
@@ -600,6 +625,7 @@ export const useFileSystemStore = createSelectors(
           } else {
             content = await readFileContent(resolvedPath);
           }
+          fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
           if (isStaleRequest()) return;
 
@@ -608,6 +634,7 @@ export const useFileSystemStore = createSelectors(
             const parsedDiff = parseRawDiffContent(content, path);
             const diffJson = JSON.stringify(parsedDiff);
             openBuffer(path, fileName, diffJson, false, undefined, true, false);
+            fileOpenBenchmark.finish(path, "diff-content-opened");
           } else {
             openBuffer(
               path,
@@ -624,6 +651,7 @@ export const useFileSystemStore = createSelectors(
               undefined,
               isPreview,
             );
+            fileOpenBenchmark.mark(path, "buffer-opened");
           }
 
           // Handle navigation to specific line/column
@@ -699,7 +727,12 @@ export const useFileSystemStore = createSelectors(
               const connectionId = match[1];
               const remotePath = match[2] || "/";
               const entries = await invoke<
-                Array<{ name: string; path: string; is_dir: boolean; size: number }>
+                Array<{
+                  name: string;
+                  path: string;
+                  is_dir: boolean;
+                  size: number;
+                }>
               >("ssh_read_directory", {
                 connectionId,
                 path: remotePath,
@@ -754,7 +787,12 @@ export const useFileSystemStore = createSelectors(
               const connectionId = match[1];
               const remotePath = match[2] || "/";
               const entries = await invoke<
-                Array<{ name: string; path: string; is_dir: boolean; size: number }>
+                Array<{
+                  name: string;
+                  path: string;
+                  is_dir: boolean;
+                  size: number;
+                }>
               >("ssh_read_directory", {
                 connectionId,
                 path: remotePath,
@@ -803,7 +841,13 @@ export const useFileSystemStore = createSelectors(
           }
         }
 
-        q.push({ path: rootPath, depth: 0, isRemote, connectionId, remotePath: remoteRoot });
+        q.push({
+          path: rootPath,
+          depth: 0,
+          isRemote,
+          connectionId,
+          remotePath: remoteRoot,
+        });
         let processed = 0;
 
         while (q.length && processed < maxDirs) {
@@ -834,11 +878,20 @@ export const useFileSystemStore = createSelectors(
                   return;
                 }
 
-                let entries: Array<{ name: string; path: string; is_dir: boolean }>;
+                let entries: Array<{
+                  name: string;
+                  path: string;
+                  is_dir: boolean;
+                }>;
                 if (item.isRemote && item.connectionId) {
                   const rp = item.remotePath || "/";
                   const res = await invoke<
-                    Array<{ name: string; path: string; is_dir: boolean; size: number }>
+                    Array<{
+                      name: string;
+                      path: string;
+                      is_dir: boolean;
+                      size: number;
+                    }>
                   >("ssh_read_directory", {
                     connectionId: item.connectionId,
                     path: rp,
@@ -850,7 +903,11 @@ export const useFileSystemStore = createSelectors(
                   }));
                 } else {
                   const res = await readDirectoryContents(item.path);
-                  entries = res.map((e) => ({ name: e.name, path: e.path, is_dir: e.isDir }));
+                  entries = res.map((e) => ({
+                    name: e.name,
+                    path: e.path,
+                    is_dir: e.isDir,
+                  }));
                 }
 
                 const children: FileEntry[] = sortFileEntries(

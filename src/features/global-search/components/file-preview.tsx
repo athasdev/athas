@@ -257,7 +257,7 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
   }, [content, normalizedTokens]);
 
   return (
-    <div className="flex items-start font-mono text-[11px] leading-[18px]">
+    <div className="ui-text-sm flex items-start font-mono leading-[18px]">
       <span className="sticky left-0 z-10 mr-3 inline-block w-8 shrink-0 select-none bg-primary-bg px-3 text-right text-text-lighter/50 tabular-nums">
         {lineNumber}
       </span>
@@ -289,7 +289,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
 
   if (!filePath) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+      <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
         Select a file to preview
       </div>
     );
@@ -297,7 +297,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+      <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
         Loading preview...
       </div>
     );
@@ -305,7 +305,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+      <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
         {error}
       </div>
     );
@@ -314,7 +314,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   if (isImage) {
     if (isImageLoading) {
       return (
-        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+        <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
           Loading image preview...
         </div>
       );
@@ -322,7 +322,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
 
     if (imageError) {
       return (
-        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+        <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
           {imageError}
         </div>
       );
@@ -330,7 +330,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
 
     if (!imageSrc) {
       return (
-        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+        <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
           Unable to preview image
         </div>
       );
@@ -351,15 +351,15 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   if (isBinary) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
-        <FileIcon size={20} className="text-text-lighter" />
-        <span className="ui-font text-text-lighter text-xs">{getBinaryFileLabel(filePath)}</span>
+        <FileIcon className="text-text-lighter" />
+        <span className="ui-font ui-text-sm text-text-lighter">{getBinaryFileLabel(filePath)}</span>
       </div>
     );
   }
 
   if (!content) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+      <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
         Empty file
       </div>
     );

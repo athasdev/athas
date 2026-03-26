@@ -31,11 +31,13 @@ export interface Settings {
   // Theme
   theme: Theme;
   iconTheme: string;
+  syncSystemTheme: boolean;
   autoThemeLight: Theme;
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   titleBarProjectMode: "tabs" | "window";
+  openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;
   aiModelId: string;
@@ -47,6 +49,9 @@ export interface Settings {
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
+  showGitHubPullRequests: boolean;
+  showGitHubIssues: boolean;
+  showGitHubActions: boolean;
   // Keyboard
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;

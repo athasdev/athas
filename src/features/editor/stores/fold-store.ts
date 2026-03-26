@@ -29,8 +29,13 @@ interface FoldState {
 }
 
 function detectFoldRegions(content: string): FoldRegion[] {
-  const lines = content.split("\n");
+  const lines = content.split(/\r?\n/);
   const regions: FoldRegion[] = [];
+  const stack: Array<{
+    startLine: number;
+    indentLevel: number;
+    hasChildLines: boolean;
+  }> = [];
 
   const getIndentLevel = (line: string): number => {
     const match = line.match(/^(\s*)/);
@@ -52,6 +57,8 @@ function detectFoldRegions(content: string): FoldRegion[] {
     return trimmed === "" || trimmed.startsWith("//") || trimmed.startsWith("#");
   };
 
+  let lastMeaningfulLine = -1;
+
   for (let i = 0; i < lines.length; i++) {
     const currentLine = lines[i];
 
@@ -59,32 +66,36 @@ function detectFoldRegions(content: string): FoldRegion[] {
 
     const currentIndent = getIndentLevel(currentLine);
 
-    let hasChildLines = false;
-    let endLine = i;
-
-    for (let j = i + 1; j < lines.length; j++) {
-      const nextLine = lines[j];
-
-      if (nextLine.trim() === "") {
-        endLine = j;
-        continue;
-      }
-
-      const nextIndent = getIndentLevel(nextLine);
-
-      if (nextIndent > currentIndent) {
-        hasChildLines = true;
-        endLine = j;
-      } else {
-        break;
+    while (stack.length > 0 && currentIndent <= stack[stack.length - 1].indentLevel) {
+      const region = stack.pop()!;
+      if (region.hasChildLines && lastMeaningfulLine > region.startLine) {
+        regions.push({
+          startLine: region.startLine,
+          endLine: lastMeaningfulLine,
+          indentLevel: region.indentLevel,
+        });
       }
     }
 
-    if (hasChildLines) {
+    if (stack.length > 0 && currentIndent > stack[stack.length - 1].indentLevel) {
+      stack[stack.length - 1].hasChildLines = true;
+    }
+
+    stack.push({
+      startLine: i,
+      indentLevel: currentIndent,
+      hasChildLines: false,
+    });
+    lastMeaningfulLine = i;
+  }
+
+  while (stack.length > 0) {
+    const region = stack.pop()!;
+    if (region.hasChildLines && lastMeaningfulLine > region.startLine) {
       regions.push({
-        startLine: i,
-        endLine,
-        indentLevel: currentIndent,
+        startLine: region.startLine,
+        endLine: lastMeaningfulLine,
+        indentLevel: region.indentLevel,
       });
     }
   }

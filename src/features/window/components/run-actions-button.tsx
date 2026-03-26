@@ -2,11 +2,13 @@ import { ChevronDown, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
-import Button, { buttonClassName } from "@/ui/button";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 
 type ActionDraft = {
@@ -26,6 +28,17 @@ export default function RunActionsButton() {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const allActions = useCustomActionsStore.use.actions();
+  const hasBlockingModalOpen = useUIState(
+    (state) =>
+      state.isQuickOpenVisible ||
+      state.isCommandPaletteVisible ||
+      state.isGlobalSearchVisible ||
+      state.isSettingsDialogVisible ||
+      state.isThemeSelectorVisible ||
+      state.isIconThemeSelectorVisible ||
+      state.isProjectPickerVisible ||
+      state.isDatabaseConnectionVisible,
+  );
   const { addAction, updateAction, deleteAction, getActionsForWorkspace } =
     useCustomActionsStore.getState().storeActions;
 
@@ -78,6 +91,11 @@ export default function RunActionsButton() {
     return () => window.clearTimeout(timeoutId);
   }, [isDialogOpen]);
 
+  useEffect(() => {
+    if (!isMenuOpen || !hasBlockingModalOpen) return;
+    setIsMenuOpen(false);
+  }, [hasBlockingModalOpen, isMenuOpen]);
+
   const handleSave = () => {
     const name = draft.name.trim();
     const command = draft.command.trim();
@@ -97,43 +115,38 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <div className="flex items-center gap-1">
+        <TabsList variant="segmented" data-active={isMenuOpen}>
           <Tooltip
             content={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             side="bottom"
           >
-            <button
+            <Button
               type="button"
               onClick={handlePrimaryRun}
-              className={buttonClassName({
-                variant: "subtle",
-                size: "xs",
-                className: "min-w-9 rounded-md px-2 text-text-lighter",
-              })}
+              variant="ghost"
+              size="sm"
+              className="h-full min-w-9 rounded-none border-0 px-2 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
               aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             >
-              <Play size={13} className="translate-x-[0.5px] fill-none" />
-            </button>
+              <Play className="translate-x-[0.5px] fill-none" />
+            </Button>
           </Tooltip>
 
           <Tooltip content="Run actions" side="bottom">
-            <button
+            <Button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              className={buttonClassName({
-                variant: "subtle",
-                size: "icon-sm",
-                className: "rounded-md text-text-lighter",
-              })}
-              data-active={isMenuOpen}
+              variant="ghost"
+              size="icon-xs"
+              className="h-full w-6 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label="Open run actions"
             >
-              <ChevronDown size={14} />
-            </button>
+              <ChevronDown />
+            </Button>
           </Tooltip>
-        </div>
+        </TabsList>
       </div>
 
       <Dropdown
@@ -143,28 +156,29 @@ export default function RunActionsButton() {
         onClose={closeMenu}
         className="w-[264px] rounded-xl p-1.5"
       >
-        <div className="px-2 pt-1 pb-2">
-          <div className="text-[11px] uppercase tracking-[0.14em] text-text-lighter/80">
-            Run Actions
-          </div>
-          <div className="mt-1 truncate text-text text-xs">{workspaceLabel}</div>
-        </div>
+        <div className="ui-text-sm truncate px-2 pt-1 pb-2 text-text-lighter">{workspaceLabel}</div>
 
         <div className="space-y-0.5">
           {actions.length > 0 ? (
             actions.map((action) => (
-              <div key={action.id} className={dropdownItemClassName("group")}>
-                <button
+              <div
+                key={action.id}
+                className={dropdownItemClassName("group justify-between gap-1.5")}
+              >
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
                   onClick={() => runAction(action.command, action.name)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent px-0 py-0 text-text hover:bg-transparent"
+                  style={{ fontSize: "var(--ui-text-sm)" }}
                 >
-                  <Play size={12} className="shrink-0 text-text-lighter" />
-                  <span className="truncate text-text text-xs">{action.name}</span>
-                </button>
+                  <Play className="shrink-0 text-text-lighter" />
+                  <span className="ui-text-sm truncate text-text">{action.name}</span>
+                </Button>
 
                 <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
+                  <Button
                     type="button"
                     onClick={() =>
                       openDialog({
@@ -173,32 +187,28 @@ export default function RunActionsButton() {
                         command: action.command,
                       })
                     }
-                    className={buttonClassName({
-                      variant: "ghost",
-                      size: "icon-sm",
-                      className: "rounded-md text-text-lighter",
-                    })}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="rounded-md text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
-                    <Pencil size={12} />
-                  </button>
-                  <button
+                    <Pencil />
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => deleteAction(action.id)}
-                    className={buttonClassName({
-                      variant: "ghost",
-                      size: "icon-sm",
-                      className: "rounded-md text-text-lighter hover:text-error",
-                    })}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="rounded-md text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
-                    <Trash2 size={12} />
-                  </button>
+                    <Trash2 />
+                  </Button>
                 </div>
               </div>
             ))
           ) : (
-            <div className="px-2 py-5 text-center text-text-lighter text-xs">
+            <div className="ui-text-sm px-2 py-5 text-center text-text-lighter">
               No run actions for this project yet.
             </div>
           )}
@@ -206,10 +216,15 @@ export default function RunActionsButton() {
 
         <div className="my-1 border-t border-border/70" />
 
-        <button type="button" onClick={() => openDialog()} className={dropdownItemClassName()}>
-          <Plus size={13} className="text-text-lighter" />
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => openDialog()}
+          className={dropdownItemClassName()}
+        >
+          <Plus className="text-text-lighter" />
           <span>Add Action</span>
-        </button>
+        </Button>
       </Dropdown>
 
       {isDialogOpen && (
@@ -234,7 +249,7 @@ export default function RunActionsButton() {
         >
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <label htmlFor="run-action-name" className="block text-text text-xs">
+              <label htmlFor="run-action-name" className="ui-text-sm block text-text">
                 Action Name
               </label>
               <Input
@@ -249,7 +264,7 @@ export default function RunActionsButton() {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="run-action-command" className="block text-text text-xs">
+              <label htmlFor="run-action-command" className="ui-text-sm block text-text">
                 Command
               </label>
               <Input

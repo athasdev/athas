@@ -35,11 +35,13 @@ const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
   return (
     <button
       role="menuitem"
-      className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors hover:bg-hover"
+      className="ui-font ui-text-sm flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover"
       onClick={onClick}
     >
       <span>{children}</span>
-      {shortcut && <span className="ml-8 text-text-lighter/90 text-xs">{shortcutOsSpecific}</span>}
+      {shortcut && (
+        <span className="ui-text-sm ml-8 text-text-lighter/90">{shortcutOsSpecific}</span>
+      )}
     </button>
   );
 };

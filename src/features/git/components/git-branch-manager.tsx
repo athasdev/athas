@@ -1,7 +1,8 @@
 import { Check, ChevronDown, GitBranch, Plus, Search, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { buttonClassName } from "@/ui/button";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { dropdownTriggerClassName } from "@/ui/dropdown";
@@ -34,6 +35,17 @@ const GitBranchManager = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const hasBlockingModalOpen = useUIState(
+    (state) =>
+      state.isQuickOpenVisible ||
+      state.isCommandPaletteVisible ||
+      state.isGlobalSearchVisible ||
+      state.isSettingsDialogVisible ||
+      state.isThemeSelectorVisible ||
+      state.isIconThemeSelectorVisible ||
+      state.isProjectPickerVisible ||
+      state.isDatabaseConnectionVisible,
+  );
   const { showToast } = useToast();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +110,11 @@ const GitBranchManager = ({
       window.requestAnimationFrame(() => createInputRef.current?.focus());
     }
   }, [isDropdownOpen, showSearch, showCreate]);
+
+  useEffect(() => {
+    if (!isDropdownOpen || !hasBlockingModalOpen) return;
+    setIsDropdownOpen(false);
+  }, [hasBlockingModalOpen, isDropdownOpen]);
 
   const handleBranchChange = async (branchName: string) => {
     if (!repoPath || !branchName || branchName === currentBranch) return;
@@ -209,22 +226,24 @@ const GitBranchManager = ({
 
   return (
     <>
-      <button
+      <Button
         ref={buttonRef}
         data-branch-manager-trigger="true"
         onClick={() => void handleToggleDropdown()}
         disabled={isLoading}
         type="button"
+        variant="ghost"
+        size="sm"
         className={
           compact
-            ? dropdownTriggerClassName("max-w-44")
-            : "ui-font flex min-w-0 items-center gap-1 rounded-full px-2 py-1 font-medium text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
+            ? dropdownTriggerClassName("ui-text-sm max-w-44")
+            : "ui-font ui-text-sm flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 font-medium text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
         }
       >
-        <GitBranch size={11} className="shrink-0" />
+        <GitBranch className="shrink-0" />
         <span className="truncate">{currentBranch}</span>
-        <ChevronDown size={8} />
-      </button>
+        <ChevronDown />
+      </Button>
 
       <Dropdown
         isOpen={isDropdownOpen}
@@ -240,11 +259,11 @@ const GitBranchManager = ({
       >
         <div className="flex items-center justify-between bg-secondary-bg/75 px-2.5 py-2">
           <div className="flex min-w-0 items-center gap-1.5">
-            <GitBranch size={12} className="shrink-0 text-text-lighter" />
-            <span className="truncate font-medium text-text text-xs">{currentBranch}</span>
+            <GitBranch className="shrink-0 text-text-lighter" />
+            <span className="ui-text-sm truncate font-medium text-text">{currentBranch}</span>
           </div>
           <div className="flex items-center gap-1">
-            <button
+            <Button
               onClick={() => {
                 setShowSearch((prev) => {
                   const next = !prev;
@@ -253,14 +272,16 @@ const GitBranchManager = ({
                   return next;
                 });
               }}
-              className={cn(paneIconButtonClassName("h-6 w-6"), showSearch && "bg-hover text-text")}
+              variant="ghost"
+              size="icon-sm"
+              className={cn(paneIconButtonClassName("size-6"), showSearch && "bg-hover text-text")}
               aria-label="Toggle branch search"
               title="Search branches"
               type="button"
             >
-              <Search size={11} />
-            </button>
-            <button
+              <Search />
+            </Button>
+            <Button
               onClick={() => {
                 setShowCreate((prev) => {
                   const next = !prev;
@@ -268,22 +289,26 @@ const GitBranchManager = ({
                   return next;
                 });
               }}
-              className={cn(paneIconButtonClassName("h-6 w-6"), showCreate && "bg-hover text-text")}
+              variant="ghost"
+              size="icon-sm"
+              className={cn(paneIconButtonClassName("size-6"), showCreate && "bg-hover text-text")}
               aria-label="Toggle create branch"
               title="Create branch"
               type="button"
             >
-              <Plus size={11} />
-            </button>
-            <button
+              <Plus />
+            </Button>
+            <Button
               onClick={() => setIsDropdownOpen(false)}
-              className={paneIconButtonClassName("h-6 w-6")}
+              variant="ghost"
+              size="icon-sm"
+              className={paneIconButtonClassName("size-6")}
               aria-label="Close branch dropdown"
               title="Close"
               type="button"
             >
-              <X size={11} />
-            </button>
+              <X />
+            </Button>
           </div>
         </div>
 
@@ -306,19 +331,17 @@ const GitBranchManager = ({
                 }}
                 disabled={isLoading}
               />
-              <button
+              <Button
                 onClick={() => void handleCreateBranch()}
                 disabled={!newBranchName.trim() || isLoading}
-                className={buttonClassName({
-                  variant: "default",
-                  size: "sm",
-                  className: "shrink-0 gap-1 rounded-lg",
-                })}
+                variant="default"
+                size="sm"
+                className="shrink-0 gap-1 rounded-lg"
                 type="button"
               >
-                <Plus size={10} />
+                <Plus />
                 Create
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -342,7 +365,7 @@ const GitBranchManager = ({
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter">
+          <div className="ui-text-sm mb-1 flex items-center justify-between px-1 text-text-lighter">
             <span>{showSearch && branchQuery ? "Matches" : "Branches"}</span>
             <span>
               {filteredBranches.length}
@@ -350,11 +373,11 @@ const GitBranchManager = ({
             </span>
           </div>
           {branches.length === 0 ? (
-            <div className="p-3 text-center text-text-lighter text-xs italic">
+            <div className="ui-text-sm p-3 text-center text-text-lighter italic">
               No branches found
             </div>
           ) : filteredBranches.length === 0 ? (
-            <div className="p-3 text-center text-text-lighter text-xs italic">
+            <div className="ui-text-sm p-3 text-center text-text-lighter italic">
               No branches match "{branchQuery}"
             </div>
           ) : (
@@ -364,43 +387,45 @@ const GitBranchManager = ({
                   key={branch}
                   className="group flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-hover"
                 >
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => void handleBranchChange(branch)}
                     disabled={isLoading || branch === currentBranch}
                     className={cn(
-                      "flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs disabled:opacity-50",
+                      "h-auto min-w-0 flex-1 justify-start gap-1.5 px-0 py-0 text-left disabled:opacity-50 hover:bg-transparent",
                       branch === currentBranch
                         ? "font-medium text-text"
                         : "text-text-lighter hover:text-text",
                     )}
-                    type="button"
                   >
-                    {branch === currentBranch && (
-                      <Check size={10} className="shrink-0 text-success" />
-                    )}
+                    {branch === currentBranch && <Check className="shrink-0 text-success" />}
                     {branch !== currentBranch && (
-                      <GitBranch size={10} className="shrink-0 text-text-lighter" />
+                      <GitBranch className="shrink-0 text-text-lighter" />
                     )}
-                    <span className="ui-font truncate">{branch}</span>
+                    <span className="ui-font ui-text-sm truncate">{branch}</span>
                     {branch === currentBranch && (
-                      <span className="ml-auto shrink-0 text-[9px] text-success">current</span>
+                      <span className="ui-text-sm ml-auto shrink-0 text-success">current</span>
                     )}
-                  </button>
+                  </Button>
                   {branch !== currentBranch && (
-                    <button
+                    <Button
                       onClick={() => void handleDeleteBranch(branch)}
                       disabled={isLoading}
+                      variant="ghost"
+                      size="icon-xs"
                       className={cn(
-                        "rounded p-1 text-git-deleted opacity-100 transition-opacity sm:opacity-0",
-                        "hover:bg-git-deleted/10 hover:opacity-80",
+                        "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
+                        "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
                         "disabled:opacity-50 sm:group-hover:opacity-100",
                       )}
                       title={`Delete ${branch}`}
                       aria-label={`Delete branch ${branch}`}
                       type="button"
                     >
-                      <Trash2 size={10} />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   )}
                 </div>
               ))}

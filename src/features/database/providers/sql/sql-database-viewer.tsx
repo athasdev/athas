@@ -229,7 +229,7 @@ export default function SqlDatabaseViewer({
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
               <div className="flex items-center gap-2 text-sm text-text-lighter">
-                <RefreshCw size={16} className="animate-spin" />
+                <RefreshCw className="animate-spin" />
                 Loading...
               </div>
             </div>

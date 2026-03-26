@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Download, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, dropStash, popStash } from "../../api/git-stash-api";
@@ -84,20 +85,20 @@ const GitStashPanel = ({
         )}
       >
         {showHeader && (
-          <button
+          <Button
             type="button"
-            className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+            variant="ghost"
+            size="sm"
+            className="sticky top-0 z-20 flex h-auto w-full shrink-0 justify-start gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
             onClick={onToggle}
           >
-            {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-            <span className="font-medium text-[0.9em] text-text">Stashes</span>
+            {isCollapsed ? <ChevronRight /> : <ChevronDown />}
+            <span className="ui-text-sm font-medium text-text">Stashes</span>
             <div className="flex-1" />
             {stashes.length > 0 && (
-              <span className="rounded-full bg-primary-bg px-1.5 text-[0.74em]">
-                {stashes.length}
-              </span>
+              <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{stashes.length}</span>
             )}
-          </button>
+          </Button>
         )}
 
         {!isCollapsed && (
@@ -108,7 +109,7 @@ const GitStashPanel = ({
             )}
           >
             {stashes.length === 0 ? (
-              <div className="px-2.5 py-1.5 text-[0.84em] text-text-lighter italic">No stashes</div>
+              <div className="ui-text-sm px-2.5 py-1.5 text-text-lighter italic">No stashes</div>
             ) : (
               stashes.map((stash) => (
                 <div
@@ -120,41 +121,47 @@ const GitStashPanel = ({
                     <div className="truncate text-inherit text-text" title={stash.message}>
                       {stash.message || "Stashed changes"}
                     </div>
-                    <div className="text-[0.84em] text-text-lighter">
+                    <div className="ui-text-sm text-text-lighter">
                       {formatRelativeDate(stash.date)}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                    <button
+                    <Button
                       type="button"
                       onClick={(e) => handleApplyStash(stash.index, e)}
                       disabled={actionLoading.has(stash.index)}
-                      className="rounded p-0.5 text-text-lighter hover:bg-secondary-bg hover:text-text disabled:opacity-50"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-text-lighter disabled:opacity-50"
                       title="Apply stash"
                       aria-label="Apply stash"
                     >
-                      <Download size={10} />
-                    </button>
-                    <button
+                      <Download />
+                    </Button>
+                    <Button
                       type="button"
                       onClick={(e) => handlePopStash(stash.index, e)}
                       disabled={actionLoading.has(stash.index)}
-                      className="rounded p-0.5 text-text-lighter hover:bg-secondary-bg hover:text-text disabled:opacity-50"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-text-lighter disabled:opacity-50"
                       title="Pop stash"
                       aria-label="Pop stash"
                     >
-                      <Upload size={10} />
-                    </button>
-                    <button
+                      <Upload />
+                    </Button>
+                    <Button
                       type="button"
                       onClick={(e) => handleDropStash(stash.index, e)}
                       disabled={actionLoading.has(stash.index)}
-                      className="rounded p-0.5 text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
                       title="Drop stash"
                       aria-label="Drop stash"
                     >
-                      <Trash2 size={10} />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </div>
                 </div>
               ))

@@ -34,6 +34,27 @@ describe("parseWindowOpenUrl", () => {
     });
   });
 
+  it("parses in-app query based window requests", () => {
+    const url = new URL("http://localhost/?target=open&type=directory&path=/Users/test/project");
+    const result = parseWindowOpenUrl(url);
+    expect(result).toEqual({
+      path: "/Users/test/project",
+      isDirectory: true,
+      line: undefined,
+    });
+  });
+
+  it("parses remote window requests", () => {
+    const url = new URL(
+      "http://localhost/?target=open&type=remote&connectionId=conn-1&name=My%20Server",
+    );
+    const result = parseWindowOpenUrl(url);
+    expect(result).toEqual({
+      remoteConnectionId: "conn-1",
+      remoteConnectionName: "My Server",
+    });
+  });
+
   it("returns null when path is missing", () => {
     const url = new URL("athas://open");
     expect(parseWindowOpenUrl(url)).toBeNull();

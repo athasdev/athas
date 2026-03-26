@@ -14,7 +14,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
 
@@ -174,7 +174,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             onClick={handleOpenExternal}
             title="Open in external viewer"
           >
-            <ExternalLink size={14} className="text-text" />
+            <ExternalLink className="text-text" />
           </Button>
           <div className="mx-1 h-4 w-px bg-border" />
           <div className="mx-1 h-4 w-px bg-border" />
@@ -213,7 +213,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             onLoadError={onDocumentLoadError}
             loading={
               <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-                <Loader2 className="animate-spin" size={24} />
+                <Loader2 className="animate-spin" />
                 <span>Loading PDF...</span>
               </div>
             }
@@ -261,7 +261,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
           </Document>
         ) : (
           <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-            <Loader2 className="animate-spin" size={24} />
+            <Loader2 className="animate-spin" />
             <span>Reading file...</span>
           </div>
         )}

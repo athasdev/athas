@@ -62,7 +62,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-sidebar",
       label: isSidebarVisible ? "View: Hide Sidebar" : "View: Show Sidebar",
       description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
-      icon: <PanelLeft size={14} />,
+      icon: <PanelLeft />,
       category: "View",
       keybinding: ["⌘", "B"],
       action: () => {
@@ -74,7 +74,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-bottom-pane",
       label: isBottomPaneVisible ? "View: Hide Bottom Pane" : "View: Show Bottom Pane",
       description: isBottomPaneVisible ? "Hide the bottom pane" : "Show the bottom pane",
-      icon: <PanelBottom size={14} />,
+      icon: <PanelBottom />,
       category: "View",
       action: () => {
         setIsBottomPaneVisible(!isBottomPaneVisible);
@@ -88,7 +88,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           ? "View: Hide Terminal"
           : "View: Show Terminal",
       description: "Toggle integrated terminal panel",
-      icon: <Terminal size={14} />,
+      icon: <Terminal />,
       category: "View",
       keybinding: ["⌘", "`"],
       action: () => {
@@ -109,7 +109,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           ? "View: Hide Diagnostics"
           : "View: Show Diagnostics",
       description: "Toggle diagnostics panel",
-      icon: <AlertCircle size={14} />,
+      icon: <AlertCircle />,
       category: "View",
       keybinding: ["⌘", "⇧", "J"],
       action: () => {
@@ -126,7 +126,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-ai-chat-view",
       label: settings.isAIChatVisible ? "View: Hide AI Chat" : "View: Show AI Chat",
       description: settings.isAIChatVisible ? "Hide AI chat panel" : "Show AI chat panel",
-      icon: <MessageSquare size={14} />,
+      icon: <MessageSquare />,
       category: "View",
       keybinding: ["⌘", "R"],
       action: () => {
@@ -138,7 +138,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-find-view",
       label: isFindVisible ? "View: Hide Find" : "View: Show Find",
       description: isFindVisible ? "Hide find in file" : "Show find in file",
-      icon: <Search size={14} />,
+      icon: <Search />,
       category: "View",
       keybinding: ["⌘", "F"],
       action: () => {
@@ -153,7 +153,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         settings.sidebarPosition === "left"
           ? "Move sidebar to right side"
           : "Move sidebar to left side",
-      icon: <ArrowLeftRight size={14} />,
+      icon: <ArrowLeftRight />,
       category: "View",
       keybinding: ["⌘", "⇧", "B"],
       action: () => {
@@ -169,7 +169,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: settings.nativeMenuBar
         ? "Use custom menu bar"
         : "Use native operating system menu bar",
-      icon: <Menu size={14} />,
+      icon: <Menu />,
       category: "View",
       action: async () => {
         const newValue = !settings.nativeMenuBar;
@@ -187,7 +187,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: settings.compactMenuBar
         ? "Show full menu bar"
         : "Use compact menu bar with hamburger icon",
-      icon: <Menu size={14} />,
+      icon: <Menu />,
       category: "View",
       action: () => {
         updateSetting("compactMenuBar", !settings.compactMenuBar);
@@ -198,7 +198,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-zoom-in",
       label: "Editor: Zoom In",
       description: "Increase editor zoom level",
-      icon: <ZoomIn size={14} />,
+      icon: <ZoomIn />,
       category: "View",
       keybinding: ["⌘", "+"],
       action: () => {
@@ -210,7 +210,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-zoom-out",
       label: "Editor: Zoom Out",
       description: "Decrease editor zoom level",
-      icon: <ZoomOut size={14} />,
+      icon: <ZoomOut />,
       category: "View",
       keybinding: ["⌘", "-"],
       action: () => {
@@ -222,7 +222,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-reset-zoom",
       label: "Editor: Reset Zoom",
       description: "Reset editor zoom to default level",
-      icon: <RotateCcw size={14} />,
+      icon: <RotateCcw />,
       category: "View",
       keybinding: ["⌘", "0"],
       action: () => {
@@ -234,7 +234,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-zoom-in",
       label: "Terminal: Zoom In",
       description: "Increase terminal zoom level",
-      icon: <ZoomIn size={14} />,
+      icon: <ZoomIn />,
       category: "Terminal",
       action: () => {
         zoomIn("terminal");
@@ -245,7 +245,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-zoom-out",
       label: "Terminal: Zoom Out",
       description: "Decrease terminal zoom level",
-      icon: <ZoomOut size={14} />,
+      icon: <ZoomOut />,
       category: "Terminal",
       action: () => {
         zoomOut("terminal");
@@ -256,7 +256,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-reset-zoom",
       label: "Terminal: Reset Zoom",
       description: "Reset terminal zoom to default level",
-      icon: <RotateCcw size={14} />,
+      icon: <RotateCcw />,
       category: "Terminal",
       action: () => {
         resetZoom("terminal");
@@ -267,7 +267,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "open-web-viewer",
       label: "View: Open Web Viewer",
       description: "Open a new web viewer tab",
-      icon: <Globe size={14} />,
+      icon: <Globe />,
       category: "View",
       action: () => {
         openWebViewerBuffer("about:blank");
@@ -278,7 +278,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "open-url",
       label: "View: Open URL...",
       description: "Open a URL in web viewer",
-      icon: <Globe size={14} />,
+      icon: <Globe />,
       category: "View",
       action: async () => {
         const url = prompt("Enter URL:", "https://");

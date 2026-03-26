@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
@@ -185,12 +185,18 @@ const ApiKeyModal = ({
         {/* Header */}
         <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
-            <Key size={16} className="text-text" />
+            <Key className="text-text" />
             <h3 className="ui-font text-sm text-text">{provider.name} API Key</h3>
           </div>
-          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
-            <X size={16} />
-          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            className="text-text-lighter hover:text-text"
+          >
+            <X />
+          </Button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
@@ -204,7 +210,7 @@ const ApiKeyModal = ({
               htmlFor="api-key-input"
               className="flex items-center gap-2 font-medium text-text text-xs"
             >
-              <Key size={12} />
+              <Key />
               API Key
             </label>
 
@@ -222,14 +228,14 @@ const ApiKeyModal = ({
             {/* Validation Status */}
             {validationStatus === "valid" && (
               <div className="flex items-center gap-2 text-green-500 text-xs">
-                <CheckCircle size={12} />
+                <CheckCircle />
                 API key validated successfully!
               </div>
             )}
 
             {validationStatus === "invalid" && (
               <div className="flex items-center gap-2 text-red-500 text-xs">
-                <AlertCircle size={12} />
+                <AlertCircle />
                 {errorMessage}
               </div>
             )}
@@ -251,7 +257,7 @@ const ApiKeyModal = ({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-blue-400 text-xs transition-colors hover:text-blue-300"
                 >
-                  <ExternalLink size={10} />
+                  <ExternalLink />
                   Open {provider.name} Dashboard
                 </a>
               </div>

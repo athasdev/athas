@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import type { ColumnFilter, ColumnInfo } from "../models/common.types";
@@ -23,14 +24,19 @@ export default function ColumnFilters({
   return (
     <div className="border-border border-b bg-secondary-bg px-3 py-2">
       <div className="mb-2 flex items-center justify-between">
-        <span className="ui-font text-text-lighter text-xs">{columnFilters.length} filters</span>
-        <button onClick={onClearAll} className="ui-font text-text-lighter text-xs hover:text-text">
+        <span className="ui-font ui-text-sm text-text-lighter">{columnFilters.length} filters</span>
+        <Button
+          onClick={onClearAll}
+          variant="ghost"
+          size="xs"
+          className="ui-text-sm text-text-lighter hover:text-text"
+        >
           clear
-        </button>
+        </Button>
       </div>
       <div className="space-y-1">
         {columnFilters.map((filter, index) => (
-          <div key={index} className="flex items-center gap-2 text-xs">
+          <div key={index} className="ui-text-sm flex items-center gap-2">
             <Select
               value={filter.column}
               options={tableMeta.map((col) => ({ value: col.name, label: col.name }))}
@@ -75,13 +81,15 @@ export default function ColumnFilters({
               />
             )}
 
-            <button
+            <Button
               onClick={() => onRemoveFilter(index)}
-              className="text-text-lighter transition-colors hover:text-red-500"
+              variant="ghost"
+              size="icon-xs"
+              className="text-text-lighter hover:text-red-500"
               title="Remove filter"
             >
-              <X size={12} />
-            </button>
+              <X />
+            </Button>
           </div>
         ))}
       </div>

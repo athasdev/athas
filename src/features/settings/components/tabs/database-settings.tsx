@@ -2,7 +2,8 @@ import { Database, Plus, Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import Button from "@/ui/button";
+import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import Section, { SettingRow } from "../settings-section";
 
 const formatDbType = (dbType: string) => {
@@ -46,11 +47,11 @@ export const DatabaseSettings = () => {
         >
           <Button
             onClick={() => setIsDatabaseConnectionVisible(true)}
-            variant="ghost"
+            variant="secondary"
             size="xs"
-            className="gap-1.5 px-2 py-1"
+            className="gap-1.5"
           >
-            <Plus size={12} />
+            <Plus />
             Connect
           </Button>
         </SettingRow>
@@ -61,9 +62,11 @@ export const DatabaseSettings = () => {
         description="SQLite files open directly and are not stored here. Saved entries are used for PostgreSQL, MySQL, MongoDB, and Redis."
       >
         {isLoadingSaved ? (
-          <div className="px-1 py-2 text-text-lighter text-xs">Loading saved connections...</div>
+          <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
+            Loading saved connections...
+          </div>
         ) : savedConnections.length === 0 ? (
-          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 text-text-lighter text-xs">
+          <div className="ui-font ui-text-sm rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 text-text-lighter">
             No saved database connections yet.
           </div>
         ) : (
@@ -75,24 +78,24 @@ export const DatabaseSettings = () => {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Database size={13} className="text-text-lighter" />
-                    <div className="truncate font-medium text-text text-xs">{connection.name}</div>
-                    <span className="rounded-full bg-primary-bg/70 px-2 py-0.5 text-[10px] text-text-lighter uppercase">
+                    <Database className="text-text-lighter" />
+                    <div className="ui-font ui-text-sm truncate text-text">{connection.name}</div>
+                    <Badge variant="default" shape="pill" size="compact" className="uppercase">
                       {formatDbType(connection.db_type)}
-                    </span>
+                    </Badge>
                   </div>
-                  <div className="mt-1 truncate text-text-lighter text-xs">
+                  <div className="ui-font ui-text-sm mt-1 truncate text-text-lighter">
                     {connection.host}:{connection.port}
                     {connection.database ? ` / ${connection.database}` : ""}
                   </div>
                 </div>
                 <Button
                   onClick={() => void deleteConnection(connection.id)}
-                  variant="ghost"
+                  variant="danger"
                   size="xs"
-                  className="gap-1.5 px-2 py-1 text-red-400 hover:text-red-300"
+                  className="gap-1.5"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 />
                   Remove
                 </Button>
               </div>

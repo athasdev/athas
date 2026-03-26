@@ -2,11 +2,10 @@ import { motion } from "framer-motion";
 import { PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import { cn } from "@/utils/cn";
 import type { ColumnInfo } from "../../../models/common.types";
 import { buildDatabaseRowValues } from "../utils/value-coercion";
 
@@ -77,12 +76,9 @@ export const CreateRowModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Add Row to {tableName}</h2>
-          <button
-            onClick={handleClose}
-            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
-          >
+          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
             <XIcon size="16" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -209,12 +205,9 @@ export const EditRowModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Edit Row in {tableName}</h2>
-          <button
-            onClick={handleClose}
-            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
-          >
+          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
             <XIcon size="16" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -342,12 +335,9 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Create New Table</h2>
-          <button
-            onClick={handleClose}
-            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
-          >
+          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
             <XIcon size="16" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -402,27 +392,28 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   NOT NULL
                 </label>
                 {columns.length > 1 && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => removeColumn(index)}
-                    className="rounded-full border border-transparent p-1 text-red-400 hover:border-border/70 hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="rounded-full text-red-400"
                   >
                     <XIcon size="14" />
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
-            <button
+            <Button
               type="button"
               onClick={addColumn}
-              className={cn(
-                "flex items-center gap-1 rounded-full border border-transparent px-2 py-1",
-                "ui-font text-sm text-text hover:bg-hover",
-              )}
+              variant="ghost"
+              size="sm"
+              className="rounded-full"
             >
               <PlusIcon size="12" />
               Add Column
-            </button>
+            </Button>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

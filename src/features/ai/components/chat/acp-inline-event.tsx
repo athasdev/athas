@@ -23,7 +23,6 @@ export function AcpInlineEvent({ event }: AcpInlineEventProps) {
     <div className="px-4 py-1.5">
       <div className="flex items-center gap-2 text-[11px] text-text-lighter">
         <Icon
-          size={12}
           className={cn(
             "shrink-0",
             event.state === "running" && "animate-spin text-text-lighter/70",

@@ -10,7 +10,7 @@ interface FileExplorerTreeItemProps {
   file: FileEntry;
   depth: number;
   isExpanded: boolean;
-  activePath?: string;
+  isActive: boolean;
   dragOverPath: string | null;
   isDragging: boolean;
   editingValue: string;
@@ -25,7 +25,7 @@ function FileExplorerTreeItemComponent({
   file,
   depth,
   isExpanded,
-  activePath,
+  isActive,
   dragOverPath,
   isDragging,
   editingValue,
@@ -109,7 +109,7 @@ function FileExplorerTreeItemComponent({
           "whitespace-nowrap border-none bg-transparent px-1.5 py-0.5 text-left text-text text-xs",
           "outline-none transition-colors duration-150",
           "rounded-md hover:bg-hover focus:outline-none",
-          activePath === file.path && "bg-selected",
+          isActive && "bg-selected",
           dragOverPath === file.path &&
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
@@ -141,4 +141,18 @@ function FileExplorerTreeItemComponent({
   );
 }
 
-export const FileExplorerTreeItem = memo(FileExplorerTreeItemComponent);
+export const FileExplorerTreeItem = memo(
+  FileExplorerTreeItemComponent,
+  (prev, next) =>
+    prev.file === next.file &&
+    prev.depth === next.depth &&
+    prev.isExpanded === next.isExpanded &&
+    prev.isActive === next.isActive &&
+    prev.dragOverPath === next.dragOverPath &&
+    prev.isDragging === next.isDragging &&
+    prev.editingValue === next.editingValue &&
+    prev.onEditingValueChange === next.onEditingValueChange &&
+    prev.onKeyDown === next.onKeyDown &&
+    prev.onBlur === next.onBlur &&
+    prev.getGitStatusClass === next.getGitStatusClass,
+);

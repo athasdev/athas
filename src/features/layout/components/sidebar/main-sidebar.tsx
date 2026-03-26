@@ -38,7 +38,7 @@ export const MainSidebar = memo(() => {
   const { settings } = useSettingsStore();
 
   return (
-    <div className="flex h-full min-h-0 flex-col p-2">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>

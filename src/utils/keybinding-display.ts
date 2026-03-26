@@ -19,7 +19,7 @@ function formatKey(key: string) {
 }
 
 export function keybindingToDisplay(binding: string): string[] {
-  const parsed = parseKeybinding(binding);
+  const parsed = parseKeybinding(binding.replace(/\bMod\b/g, "cmd"));
   const keys: string[] = [];
 
   for (const part of parsed.parts) {

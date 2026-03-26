@@ -76,9 +76,9 @@ const DiffHunkHeader = memo(
       >
         <div className="flex items-center gap-2">
           {isCollapsed ? (
-            <ChevronRight size={12} className="text-text-lighter" />
+            <ChevronRight className="text-text-lighter" />
           ) : (
-            <ChevronDown size={12} className="text-text-lighter" />
+            <ChevronDown className="text-text-lighter" />
           )}
 
           <span className="ui-font text-text-lighter">
@@ -109,7 +109,7 @@ const DiffHunkHeader = memo(
               title={isStaged ? "Unstage hunk" : "Stage hunk"}
               aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
             >
-              {isStaged ? <Minus size={10} /> : <Plus size={10} />}
+              {isStaged ? <Minus /> : <Plus />}
               <span className="text-[10px]">{isStaged ? "Unstage" : "Stage"}</span>
             </button>
           )}

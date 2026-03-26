@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { cn } from "@/utils/cn";
+import { Button } from "@/ui/button";
 
 interface NewTabMenuProps {
   onClose?: () => void;
@@ -16,17 +16,16 @@ export function NewTabMenu({ onClose }: NewTabMenuProps) {
   }, [showNewTabView, onClose]);
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-sm"
       onClick={handleClick}
-      className={cn(
-        "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent transition-colors",
-        "text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
-      )}
+      className="text-text-lighter hover:border-border/70 hover:text-text"
       title="New Tab (Cmd+T)"
       aria-label="New Tab"
     >
-      <Plus size={12} />
-    </button>
+      <Plus />
+    </Button>
   );
 }

@@ -11,23 +11,25 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { buttonClassName } from "@/ui/button";
+import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { Search } from "lucide-react";
 
-export const DROPDOWN_TRIGGER_BASE = buttonClassName({
-  variant: "subtle",
-  size: "xs",
-  className: "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
-});
+export const DROPDOWN_TRIGGER_BASE = cn(
+  buttonVariants({
+    variant: "secondary",
+    size: "xs",
+  }),
+  "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
+);
 
 const dropdownRootVariants = cva(
   "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
 );
 
 const dropdownItemVariants = cva(
-  "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors",
+  "ui-font ui-text-sm flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
   {
     variants: {
       disabled: {
@@ -46,7 +48,7 @@ const dropdownItemVariants = cva(
   },
 );
 
-const dropdownSectionLabelVariants = cva("ui-font px-2.5 py-1 text-[10px] text-text-lighter");
+const dropdownSectionLabelVariants = cva("ui-font ui-text-sm px-2.5 py-1 text-text-lighter");
 
 export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
 
@@ -174,7 +176,7 @@ export function MenuItemsList({
             {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
             <span className="flex-1">{item.label}</span>
             {item.keybinding && (
-              <span className="shrink-0 text-text-lighter text-xs">{item.keybinding}</span>
+              <span className="ui-text-sm shrink-0 text-text-lighter">{item.keybinding}</span>
             )}
           </button>
         );

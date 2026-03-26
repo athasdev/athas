@@ -13,6 +13,7 @@ import {
 } from "@/features/terminal/utils/terminal-profiles";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
@@ -593,6 +594,7 @@ const TerminalContainer = ({
   );
 
   const isVertical = tabLayout === "vertical";
+  const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
   const isSplitActive = terminals.find((t) => t.id === activeTerminalId)?.splitMode || false;
 
   return (
@@ -604,72 +606,87 @@ const TerminalContainer = ({
       {isVertical && (
         <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 bg-primary-bg px-1.5 py-1">
           <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-            <button
+            <Button
               type="button"
               onClick={handleSearchTerminal}
-              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+              variant="ghost"
+              size="icon-sm"
+              className="size-6 shrink-0 text-text-lighter"
               aria-label="Find in Terminal"
             >
-              <Search size={12} />
-            </button>
+              <Search />
+            </Button>
           </Tooltip>
           <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-            <button
+            <Button
               type="button"
               onClick={() => handleNewTerminal()}
-              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+              variant="ghost"
+              size="icon-sm"
+              className="size-6 shrink-0 text-text-lighter"
               aria-label="New Terminal"
             >
-              <Plus size={14} />
-            </button>
+              <Plus />
+            </Button>
           </Tooltip>
           <Tooltip
             content={isSplitActive ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
             side="bottom"
           >
-            <button
+            <Button
               type="button"
               onClick={handleSplitView}
+              variant="ghost"
+              size="icon-sm"
               className={cn(
-                "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border p-1",
-                isSplitActive
-                  ? "border-border/80 bg-primary-bg text-text"
-                  : "border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
+                "size-6 shrink-0",
+                isSplitActive ? "border-border/80 bg-primary-bg text-text" : "text-text-lighter",
               )}
               aria-label="Split Terminal"
             >
-              <SplitSquareHorizontal size={12} />
-            </button>
+              <SplitSquareHorizontal />
+            </Button>
           </Tooltip>
           {onFullScreen && (
             <Tooltip
               content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
               side="bottom"
             >
-              <button
+              <Button
                 type="button"
                 onClick={onFullScreen}
-                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover"
+                variant="ghost"
+                size="icon-sm"
+                className="size-6 shrink-0 text-text-lighter"
                 aria-label="Full Screen Terminal"
               >
-                {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-              </button>
+                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+              </Button>
             </Tooltip>
           )}
         </div>
       )}
 
       <div className={cn("min-h-0 flex-1", isVertical ? "flex flex-row" : "flex flex-col")}>
-        <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
+        {(!isVertical || tabSidebarPosition === "left") && (
+          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
+        )}
 
         <div
           className={cn(
             "flex min-h-0 min-w-0 flex-1 flex-col",
-            isVertical && "rounded-tl-lg border-border/60 border-t border-l",
+            isVertical &&
+              (tabSidebarPosition === "left"
+                ? "rounded-tl-lg border-border/60 border-t border-l"
+                : "rounded-tr-lg border-border/60 border-t border-r"),
           )}
         >
           {terminalSessions}
         </div>
+
+        {isVertical && tabSidebarPosition === "right" && (
+          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
+        )}
       </div>
     </div>
   );

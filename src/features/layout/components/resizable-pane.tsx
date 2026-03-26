@@ -8,7 +8,6 @@ import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
 const MIN_PANE_WIDTH = 50;
-const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
 
 interface ResizablePaneProps {
   children: React.ReactNode;
@@ -52,8 +51,7 @@ export function ResizablePane({
   const getMaxWidth = useCallback(() => {
     const windowWidth = getViewportWidth();
     const MIN_MAIN_CONTENT_WIDTH = 360; // Keep editor area readable on smaller windows
-    const isCompactAiOverlay = windowWidth < AI_CHAT_OVERLAY_BREAKPOINT;
-    const shouldAccountForAiChat = settings.isAIChatVisible && !isCompactAiOverlay;
+    const shouldAccountForAiChat = settings.isAIChatVisible;
 
     // Calculate available space accounting for both sidebars and minimum main content
     if (widthKey === "sidebarWidth" && shouldAccountForAiChat) {
@@ -211,8 +209,7 @@ export function ResizablePane({
       {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
       <div
         className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden",
-          hidden ? "py-0" : "py-2",
+          "flex min-h-0 flex-1 flex-col overflow-hidden py-0",
           !hidden && (position === "left" ? "pl-2" : "pr-2"),
         )}
       >

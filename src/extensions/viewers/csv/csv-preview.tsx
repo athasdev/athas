@@ -4,6 +4,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
+import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { TableView } from "@/ui/table-view";
 import { parseCsv } from "./csv-utils";
@@ -110,31 +111,37 @@ export function CsvPreview() {
             />
 
             {/* Header toggle */}
-            <button
+            <Button
               onClick={() => setHasHeader((v) => !v)}
-              className="flex h-6 items-center gap-1 rounded border border-border bg-secondary-bg px-2 text-text-lighter text-xs hover:bg-hover"
+              variant="outline"
+              size="xs"
+              className="h-6 gap-1 text-text-lighter"
               title="Toggle header row"
             >
-              <Rows size={12} /> {hasHeader ? "Header On" : "Header Off"}
-            </button>
+              <Rows /> {hasHeader ? "Header On" : "Header Off"}
+            </Button>
 
             {/* Copy CSV */}
-            <button
+            <Button
               onClick={handleCopyCsv}
-              className="flex h-6 items-center gap-1 rounded border border-border bg-secondary-bg px-2 text-text-lighter text-xs hover:bg-hover"
+              variant="outline"
+              size="xs"
+              className="h-6 gap-1 text-text-lighter"
               title="Copy as CSV"
             >
-              <Download size={12} /> CSV
-            </button>
+              <Download /> CSV
+            </Button>
 
             {/* Copy JSON */}
-            <button
+            <Button
               onClick={handleCopyJson}
-              className="flex h-6 items-center gap-1 rounded border border-border bg-secondary-bg px-2 text-text-lighter text-xs hover:bg-hover"
+              variant="outline"
+              size="xs"
+              className="h-6 gap-1 text-text-lighter"
               title="Copy as JSON"
             >
-              <FileJson size={12} /> JSON
-            </button>
+              <FileJson /> JSON
+            </Button>
           </div>
         }
       />

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { RefreshCwIcon, X } from "lucide-react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/store";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -89,21 +90,25 @@ export const CommandHeader = ({
     <div className="border-border border-b">
       <div className="flex items-center gap-3 px-4 py-3">
         {children}
-        <button
+        <Button
           aria-label="Close command palette"
           onClick={onClose}
-          className="rounded p-0.5 transition-colors hover:bg-hover"
+          variant="ghost"
+          size="icon-xs"
+          className="rounded"
         >
-          <X size={12} className="text-text-lighter" />
-        </button>
+          <X className="text-text-lighter" />
+        </Button>
         {showClearButton && (
-          <button
+          <Button
             aria-label="Clear persisted actions"
             onClick={clearActionsStack}
-            className="rounded p-0.5 transition-colors hover:bg-hover"
+            variant="ghost"
+            size="icon-xs"
+            className="rounded"
           >
-            <RefreshCwIcon size={10} className="text-text-lighter" />
-          </button>
+            <RefreshCwIcon className="text-text-lighter" />
+          </Button>
         )}
       </div>
     </div>
@@ -145,7 +150,7 @@ export const CommandInput = ({
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
     className={cn(
-      "flex-1 bg-transparent text-text text-xs placeholder-text-lighter outline-none",
+      "ui-text-sm flex-1 bg-transparent text-text placeholder-text-lighter outline-none",
       className,
     )}
   />
@@ -172,15 +177,17 @@ export const CommandItem = ({
   className,
   ...props
 }: CommandItemProps) => (
-  <button
+  <Button
     onClick={onClick}
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
     {...props}
+    variant="ghost"
+    size="sm"
     className={cn(commandItemVariants({ selected: isSelected }), className)}
   >
     {children}
-  </button>
+  </Button>
 );
 
 CommandItem.displayName = "CommandItem";
@@ -190,7 +197,7 @@ interface CommandEmptyProps {
 }
 
 export const CommandEmpty = ({ children }: CommandEmptyProps) => (
-  <div className="p-3 text-center text-text-lighter text-xs">{children}</div>
+  <div className="ui-text-sm p-3 text-center text-text-lighter">{children}</div>
 );
 
 export default Command;
