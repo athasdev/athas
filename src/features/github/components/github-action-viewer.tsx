@@ -69,7 +69,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   useEffect(() => {
     if (!details || !buffer || buffer.type !== "githubAction") return;
 
-    const nextName = details.displayTitle || details.name || details.workflowName || `Run #${runId}`;
+    const nextName =
+      details.displayTitle || details.name || details.workflowName || `Run #${runId}`;
     if (buffer.name === nextName && buffer.url === details.url) return;
 
     updateBuffer({
@@ -96,7 +97,12 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   }, [details?.url]);
 
   const runTitle = useMemo(
-    () => details?.displayTitle || details?.name || details?.workflowName || buffer?.name || `Run #${runId}`,
+    () =>
+      details?.displayTitle ||
+      details?.name ||
+      details?.workflowName ||
+      buffer?.name ||
+      `Run #${runId}`,
     [buffer?.name, details?.displayTitle, details?.name, details?.workflowName, runId],
   );
 
@@ -133,17 +139,32 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
 
           <div className="flex items-center gap-1">
             <Tooltip content="Refresh action run" side="bottom">
-              <Button onClick={() => void fetchWorkflowRun(true)} variant="ghost" size="icon-sm" aria-label="Refresh action run">
+              <Button
+                onClick={() => void fetchWorkflowRun(true)}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Refresh action run"
+              >
                 <RefreshCw className={isLoading ? "animate-spin" : ""} />
               </Button>
             </Tooltip>
             <Tooltip content="Open on GitHub" side="bottom">
-              <Button onClick={handleOpenInBrowser} variant="ghost" size="icon-sm" aria-label="Open action run on GitHub">
+              <Button
+                onClick={handleOpenInBrowser}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Open action run on GitHub"
+              >
                 <ExternalLink />
               </Button>
             </Tooltip>
             <Tooltip content="Copy run link" side="bottom">
-              <Button onClick={handleCopyRunLink} variant="ghost" size="icon-sm" aria-label="Copy run link">
+              <Button
+                onClick={handleCopyRunLink}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Copy run link"
+              >
                 <Copy />
               </Button>
             </Tooltip>
@@ -194,7 +215,10 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
 
             <div className="space-y-2">
               {details.jobs.map((job) => (
-                <div key={`${job.name}-${job.startedAt ?? ""}`} className="rounded-lg bg-secondary-bg/20 px-3 py-2">
+                <div
+                  key={`${job.name}-${job.startedAt ?? ""}`}
+                  className="rounded-lg bg-secondary-bg/20 px-3 py-2"
+                >
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="ui-text-sm text-text">{job.name}</span>
                     <span className="ui-text-sm text-text-lighter">
@@ -211,7 +235,10 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                           <Activity className="size-3.5" />
                           <span className="truncate">{step.name}</span>
                           <span className="truncate">
-                            {[step.status, step.conclusion].filter(Boolean).join(" · ").toLowerCase()}
+                            {[step.status, step.conclusion]
+                              .filter(Boolean)
+                              .join(" · ")
+                              .toLowerCase()}
                           </span>
                         </div>
                       ))}

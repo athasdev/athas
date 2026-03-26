@@ -1,12 +1,5 @@
 import { RefreshCw } from "lucide-react";
-import {
-  memo,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
@@ -14,7 +7,10 @@ import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import type { Commit, FilePatchState, FileStatusFilter, TabType } from "../types/pr-viewer";
-import { buildPRBufferPath, parseSelectedFilePathFromPRBufferPath } from "../utils/github-link-utils";
+import {
+  buildPRBufferPath,
+  parseSelectedFilePathFromPRBufferPath,
+} from "../utils/github-link-utils";
 import {
   buildDiffSectionIndex,
   copyToClipboard,
@@ -415,7 +411,12 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
               </div>
             </div>
             {detailsError && !isLoadingDetails ? (
-              <Button onClick={handleRefresh} variant="ghost" size="xs" className="text-text-lighter">
+              <Button
+                onClick={handleRefresh}
+                variant="ghost"
+                size="xs"
+                className="text-text-lighter"
+              >
                 Retry
               </Button>
             ) : (
@@ -446,9 +447,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const issueBaseUrl = pr.url.replace(/\/pull\/\d+$/, "");
   const metaItems = [
     pr.reviewDecision === "APPROVED" ? "Approved" : null,
-    pr.mergeStateStatus === "BEHIND"
-      ? "Behind base"
-      : null,
+    pr.mergeStateStatus === "BEHIND" ? "Behind base" : null,
     pr.isDraft ? "Draft" : null,
     pr.assignees?.length
       ? `Assigned ${pr.assignees.map((assignee) => assignee.login).join(", ")}`

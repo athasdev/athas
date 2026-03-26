@@ -119,7 +119,12 @@ const GitHubIssuesView = memo(() => {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <div className="ui-text-sm text-text">Issues</div>
-        <Button onClick={() => void fetchIssues(true)} variant="ghost" size="icon-xs" aria-label="Refresh issues">
+        <Button
+          onClick={() => void fetchIssues(true)}
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Refresh issues"
+        >
           <RefreshCw className={cn(isLoading && "animate-spin")} />
         </Button>
       </div>

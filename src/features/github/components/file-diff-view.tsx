@@ -72,9 +72,7 @@ export const FileDiffView = memo(
             <div className="min-w-0 flex-1">
               <div className="ui-text-sm truncate text-text">{file.path}</div>
               {file.oldPath && (
-                <div className="ui-text-sm truncate text-text-lighter">
-                  from {file.oldPath}
-                </div>
+                <div className="ui-text-sm truncate text-text-lighter">from {file.oldPath}</div>
               )}
             </div>
             <span className={cn("ui-text-sm shrink-0 capitalize", statusColors[file.status])}>
@@ -105,14 +103,10 @@ export const FileDiffView = memo(
               {isLoadingPatch ? (
                 <div className="flex items-center justify-center py-6">
                   <RefreshCw className="animate-spin text-text-lighter" />
-                  <span className="ml-2 ui-text-sm text-text-lighter">
-                    Loading file diff...
-                  </span>
+                  <span className="ml-2 ui-text-sm text-text-lighter">Loading file diff...</span>
                 </div>
               ) : patchError ? (
-                <div className="ui-text-sm px-3 py-4 text-center text-error">
-                  {patchError}
-                </div>
+                <div className="ui-text-sm px-3 py-4 text-center text-error">{patchError}</div>
               ) : fileLines.length === 0 ? (
                 <div className="ui-text-sm px-3 py-4 text-center text-text-lighter">
                   No diff hunks available for this file.

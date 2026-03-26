@@ -368,49 +368,49 @@ const GitHubPRsView = memo(() => {
                 </span>
               )}
             </div>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <div>
-            <Tooltip content={activeRepoPath ?? "Select repository"} side="bottom">
-              <Button
-                ref={repoTriggerRef}
-                onClick={() =>
-                  setIsRepoMenuOpen((value) => {
-                    const nextOpen = !value;
-                    if (nextOpen) {
-                      void refreshWorkspaceRepositories();
+            <div className="flex min-w-0 items-center gap-1.5">
+              <div>
+                <Tooltip content={activeRepoPath ?? "Select repository"} side="bottom">
+                  <Button
+                    ref={repoTriggerRef}
+                    onClick={() =>
+                      setIsRepoMenuOpen((value) => {
+                        const nextOpen = !value;
+                        if (nextOpen) {
+                          void refreshWorkspaceRepositories();
+                        }
+                        return nextOpen;
+                      })
                     }
-                    return nextOpen;
-                  })
-                }
-                variant="ghost"
-                size="sm"
-                className={dropdownTriggerClassName("ui-text-sm max-w-40")}
-              >
-                <FolderOpen className="shrink-0" />
-                <span className="truncate">
-                  {activeRepoPath ? getFolderName(activeRepoPath) : "Select Repo"}
-                </span>
-                <ChevronDown />
-              </Button>
-            </Tooltip>
-          </div>
+                    variant="ghost"
+                    size="sm"
+                    className={dropdownTriggerClassName("ui-text-sm max-w-40")}
+                  >
+                    <FolderOpen className="shrink-0" />
+                    <span className="truncate">
+                      {activeRepoPath ? getFolderName(activeRepoPath) : "Select Repo"}
+                    </span>
+                    <ChevronDown />
+                  </Button>
+                </Tooltip>
+              </div>
 
-          {activeSection === "pull-requests" && (
-            <Tooltip content="Refresh pull requests" side="bottom">
-              <Button
-                onClick={handleRefresh}
-                disabled={isLoading || !activeRepoPath}
-                variant="ghost"
-                size="icon-sm"
-                className="text-text-lighter"
-                aria-label="Refresh pull requests"
-              >
-                <RefreshCw className={isLoading ? "animate-spin" : ""} />
-              </Button>
-            </Tooltip>
-          )}
-        </div>
-      </div>
+              {activeSection === "pull-requests" && (
+                <Tooltip content="Refresh pull requests" side="bottom">
+                  <Button
+                    onClick={handleRefresh}
+                    disabled={isLoading || !activeRepoPath}
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-text-lighter"
+                    aria-label="Refresh pull requests"
+                  >
+                    <RefreshCw className={isLoading ? "animate-spin" : ""} />
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
+          </div>
 
           <Dropdown
             isOpen={isFilterOpen}
@@ -442,153 +442,153 @@ const GitHubPRsView = memo(() => {
             className="w-[240px]"
           >
             <div className="space-y-1">
-          {workspaceRepoPaths.map((workspaceRepoPath) =>
-            renderRepoOption(
-              workspaceRepoPath,
-              getFolderName(workspaceRepoPath),
-              activeRepoPath === workspaceRepoPath,
-              () => {
-                selectRepository(workspaceRepoPath);
-                setRepoSelectionError(null);
-                setIsRepoMenuOpen(false);
-              },
-            ),
-          )}
+              {workspaceRepoPaths.map((workspaceRepoPath) =>
+                renderRepoOption(
+                  workspaceRepoPath,
+                  getFolderName(workspaceRepoPath),
+                  activeRepoPath === workspaceRepoPath,
+                  () => {
+                    selectRepository(workspaceRepoPath);
+                    setRepoSelectionError(null);
+                    setIsRepoMenuOpen(false);
+                  },
+                ),
+              )}
 
-          {manualRepoPath &&
-            !workspaceRepoPaths.includes(manualRepoPath) &&
-            renderRepoOption(
-              manualRepoPath,
-              getFolderName(manualRepoPath),
-              activeRepoPath === manualRepoPath,
-              () => {
-                selectRepository(manualRepoPath);
-                setRepoSelectionError(null);
-                setIsRepoMenuOpen(false);
-              },
-            )}
+              {manualRepoPath &&
+                !workspaceRepoPaths.includes(manualRepoPath) &&
+                renderRepoOption(
+                  manualRepoPath,
+                  getFolderName(manualRepoPath),
+                  activeRepoPath === manualRepoPath,
+                  () => {
+                    selectRepository(manualRepoPath);
+                    setRepoSelectionError(null);
+                    setIsRepoMenuOpen(false);
+                  },
+                )}
 
-          {rootFolderPath && workspaceRepoPaths.length === 0 && !isResolvingWorkspaceRepo && (
-            <div className="ui-text-sm px-2 py-1.5 text-text-lighter">
-              No repositories found in this workspace.
-            </div>
-          )}
+              {rootFolderPath && workspaceRepoPaths.length === 0 && !isResolvingWorkspaceRepo && (
+                <div className="ui-text-sm px-2 py-1.5 text-text-lighter">
+                  No repositories found in this workspace.
+                </div>
+              )}
 
-          {isResolvingWorkspaceRepo && (
-            <div className="ui-text-sm flex items-center gap-1.5 px-2 py-1.5 text-text-lighter">
-              <RefreshCw className="animate-spin" />
-              Detecting workspace repositories...
-            </div>
-          )}
+              {isResolvingWorkspaceRepo && (
+                <div className="ui-text-sm flex items-center gap-1.5 px-2 py-1.5 text-text-lighter">
+                  <RefreshCw className="animate-spin" />
+                  Detecting workspace repositories...
+                </div>
+              )}
 
-          <div className="mt-1 border-border/60 border-t pt-2">
-            <Button
-              onClick={() => void handleSelectRepository()}
-              disabled={isSelectingRepo}
-              variant="ghost"
-              size="sm"
-              className="ui-text-sm w-full justify-start rounded-lg px-2 text-left text-text-lighter"
-            >
-              <FolderOpen />
-              {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
-            </Button>
+              <div className="mt-1 border-border/60 border-t pt-2">
+                <Button
+                  onClick={() => void handleSelectRepository()}
+                  disabled={isSelectingRepo}
+                  variant="ghost"
+                  size="sm"
+                  className="ui-text-sm w-full justify-start rounded-lg px-2 text-left text-text-lighter"
+                >
+                  <FolderOpen />
+                  {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
+                </Button>
 
-            {manualRepoPath && (
-              <Button
-                onClick={() => void handleUseWorkspaceRoot()}
-                variant="ghost"
-                size="xs"
-                className="ui-text-sm mt-1 h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-text-lighter"
-              >
-                Use workspace repositories
-              </Button>
-            )}
+                {manualRepoPath && (
+                  <Button
+                    onClick={() => void handleUseWorkspaceRoot()}
+                    variant="ghost"
+                    size="xs"
+                    className="ui-text-sm mt-1 h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-text-lighter"
+                  >
+                    Use workspace repositories
+                  </Button>
+                )}
 
-            {repoSelectionError && (
-              <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
-                {repoSelectionError}
+                {repoSelectionError && (
+                  <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
+                    {repoSelectionError}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
             </div>
           </Dropdown>
 
           <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        {!activeRepoPath ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="ui-font flex flex-col items-center text-center">
-              <span className="ui-text-sm text-text-lighter">No repository selected</span>
-              <Button
-                onClick={() => void handleSelectRepository()}
-                variant="ghost"
-                size="xs"
-                className="ui-text-sm mt-1.5 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-              >
-                Browse Repository
-              </Button>
-            </div>
-          </div>
-        ) : activeSection === "issues" ? (
-          <GitHubIssuesView />
-        ) : activeSection === "actions" ? (
-          <GitHubActionsView />
-        ) : error ? (
-          <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
-            <AlertCircle className="mb-2 text-error" />
-            {isRepoError ? (
-              <>
-                <p className="ui-text-sm text-error">Repository is not a Git repository</p>
-                <p className="ui-text-sm mt-1 text-text-lighter">
-                  Select another folder that contains a `.git` repository.
-                </p>
-                <Button
-                  onClick={() => void handleSelectRepository()}
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 rounded-lg"
-                >
-                  Browse Repository
-                </Button>
-              </>
+            {!activeRepoPath ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="ui-font flex flex-col items-center text-center">
+                  <span className="ui-text-sm text-text-lighter">No repository selected</span>
+                  <Button
+                    onClick={() => void handleSelectRepository()}
+                    variant="ghost"
+                    size="xs"
+                    className="ui-text-sm mt-1.5 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+                  >
+                    Browse Repository
+                  </Button>
+                </div>
+              </div>
+            ) : activeSection === "issues" ? (
+              <GitHubIssuesView />
+            ) : activeSection === "actions" ? (
+              <GitHubActionsView />
+            ) : error ? (
+              <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
+                <AlertCircle className="mb-2 text-error" />
+                {isRepoError ? (
+                  <>
+                    <p className="ui-text-sm text-error">Repository is not a Git repository</p>
+                    <p className="ui-text-sm mt-1 text-text-lighter">
+                      Select another folder that contains a `.git` repository.
+                    </p>
+                    <Button
+                      onClick={() => void handleSelectRepository()}
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 rounded-lg"
+                    >
+                      Browse Repository
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="ui-text-sm text-error">{error}</p>
+                    <Button
+                      onClick={handleRefresh}
+                      variant="ghost"
+                      size="xs"
+                      className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+                    >
+                      Try again
+                    </Button>
+                  </>
+                )}
+                {repoSelectionError && (
+                  <p className="ui-text-sm mt-2 text-error/80">{repoSelectionError}</p>
+                )}
+              </div>
+            ) : isLoading && prs.length === 0 ? (
+              <div className="flex items-center justify-center p-4">
+                <RefreshCw className="animate-spin text-text-lighter" />
+              </div>
+            ) : prs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <GitPullRequest className="mb-2 text-text-lighter" />
+                <p className="ui-text-sm text-text-lighter">No pull requests</p>
+              </div>
             ) : (
-              <>
-                <p className="ui-text-sm text-error">{error}</p>
-                <Button
-                  onClick={handleRefresh}
-                  variant="ghost"
-                  size="xs"
-                  className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-                >
-                  Try again
-                </Button>
-              </>
+              <div className="space-y-2">
+                {prs.map((pr) => (
+                  <PRListItem
+                    key={pr.number}
+                    pr={pr}
+                    isActive={activePRNumber === pr.number}
+                    onSelect={() => handleSelectPR(pr)}
+                    onContextMenu={handlePRContextMenu}
+                  />
+                ))}
+              </div>
             )}
-            {repoSelectionError && (
-              <p className="ui-text-sm mt-2 text-error/80">{repoSelectionError}</p>
-            )}
-          </div>
-        ) : isLoading && prs.length === 0 ? (
-          <div className="flex items-center justify-center p-4">
-            <RefreshCw className="animate-spin text-text-lighter" />
-          </div>
-        ) : prs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-4 text-center">
-            <GitPullRequest className="mb-2 text-text-lighter" />
-            <p className="ui-text-sm text-text-lighter">No pull requests</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {prs.map((pr) => (
-              <PRListItem
-                key={pr.number}
-                pr={pr}
-                isActive={activePRNumber === pr.number}
-                onSelect={() => handleSelectPR(pr)}
-                onContextMenu={handlePRContextMenu}
-              />
-            ))}
-          </div>
-        )}
           </div>
         </>
       )}

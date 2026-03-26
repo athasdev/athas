@@ -155,17 +155,32 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
 
           <div className="flex items-center gap-1">
             <Tooltip content="Refresh issue" side="bottom">
-              <Button onClick={() => void fetchIssue(true)} variant="ghost" size="icon-sm" aria-label="Refresh issue">
+              <Button
+                onClick={() => void fetchIssue(true)}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Refresh issue"
+              >
                 <RefreshCw className={isLoading ? "animate-spin" : ""} />
               </Button>
             </Tooltip>
             <Tooltip content="Open on GitHub" side="bottom">
-              <Button onClick={handleOpenInBrowser} variant="ghost" size="icon-sm" aria-label="Open issue on GitHub">
+              <Button
+                onClick={handleOpenInBrowser}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Open issue on GitHub"
+              >
                 <ExternalLink />
               </Button>
             </Tooltip>
             <Tooltip content="Copy issue link" side="bottom">
-              <Button onClick={handleCopyIssueLink} variant="ghost" size="icon-sm" aria-label="Copy issue link">
+              <Button
+                onClick={handleCopyIssueLink}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Copy issue link"
+              >
                 <Copy />
               </Button>
             </Tooltip>

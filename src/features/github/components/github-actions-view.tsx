@@ -125,7 +125,12 @@ const GitHubActionsView = memo(() => {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <div className="ui-text-sm text-text">Actions</div>
-        <Button onClick={() => void fetchRuns(true)} variant="ghost" size="icon-xs" aria-label="Refresh workflow runs">
+        <Button
+          onClick={() => void fetchRuns(true)}
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Refresh workflow runs"
+        >
           <RefreshCw className={cn(isLoading && "animate-spin")} />
         </Button>
       </div>
@@ -152,7 +157,8 @@ const GitHubActionsView = memo(() => {
                   openGitHubActionBuffer({
                     runId: run.databaseId,
                     repoPath: repoPath ?? undefined,
-                    title: run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`,
+                    title:
+                      run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`,
                     url: run.url,
                   })
                 }

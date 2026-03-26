@@ -95,19 +95,19 @@ function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
             ? `Issue #${buffer.issueNumber}`
             : buffer.type === "githubAction"
               ? `Workflow run #${buffer.runId}`
-          : buffer.type === "diff"
-            ? "Diff preview"
-            : buffer.type === "image"
-              ? "Image preview"
-              : buffer.type === "pdf"
-                ? "PDF preview"
-                : buffer.type === "binary"
-                  ? "Binary file preview"
-                  : buffer.type === "database"
-                    ? `${buffer.databaseType} viewer`
-                    : buffer.type === "externalEditor"
-                      ? "External editor session"
-                      : previewText || "No preview available";
+              : buffer.type === "diff"
+                ? "Diff preview"
+                : buffer.type === "image"
+                  ? "Image preview"
+                  : buffer.type === "pdf"
+                    ? "PDF preview"
+                    : buffer.type === "binary"
+                      ? "Binary file preview"
+                      : buffer.type === "database"
+                        ? `${buffer.databaseType} viewer`
+                        : buffer.type === "externalEditor"
+                          ? "External editor session"
+                          : previewText || "No preview available";
 
   const previewLines = summary.split("\n").slice(0, 12);
 
@@ -742,7 +742,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "githubAction":
           return (
-            <GitHubActionViewer runId={buffer.runId} repoPath={buffer.repoPath} bufferId={buffer.id} />
+            <GitHubActionViewer
+              runId={buffer.runId}
+              repoPath={buffer.repoPath}
+              bufferId={buffer.id}
+            />
           );
 
         case "image":

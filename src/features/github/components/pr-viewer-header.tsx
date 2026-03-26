@@ -90,22 +90,42 @@ export function PRViewerHeader({
               </Button>
             </Tooltip>
             <Tooltip content="Checkout PR branch" side="bottom">
-              <Button onClick={onCheckout} variant="ghost" size="icon-sm" aria-label="Checkout PR branch">
+              <Button
+                onClick={onCheckout}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Checkout PR branch"
+              >
                 <GitBranch />
               </Button>
             </Tooltip>
             <Tooltip content="Open on GitHub" side="bottom">
-              <Button onClick={onOpenInBrowser} variant="ghost" size="icon-sm" aria-label="Open pull request in browser">
+              <Button
+                onClick={onOpenInBrowser}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Open pull request in browser"
+              >
                 <ExternalLink />
               </Button>
             </Tooltip>
             <Tooltip content="Copy PR link" side="bottom">
-              <Button onClick={onCopyPRLink} variant="ghost" size="icon-sm" aria-label="Copy PR link">
+              <Button
+                onClick={onCopyPRLink}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Copy PR link"
+              >
                 <Copy />
               </Button>
             </Tooltip>
             <Tooltip content="Copy branch name" side="bottom">
-              <Button onClick={onCopyBranchName} variant="ghost" size="icon-sm" aria-label="Copy branch name">
+              <Button
+                onClick={onCopyBranchName}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Copy branch name"
+              >
                 <GitBranch />
               </Button>
             </Tooltip>
@@ -171,7 +191,9 @@ export function PRViewerHeader({
                 </span>
               </span>
             ) : (
-              <span className="text-text-light">{reviewSummary ? reviewSummary : "No reviewers"}</span>
+              <span className="text-text-light">
+                {reviewSummary ? reviewSummary : "No reviewers"}
+              </span>
             )}
           </OverviewField>
         </div>
