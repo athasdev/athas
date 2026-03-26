@@ -145,4 +145,36 @@ describe("chat ACP state helpers", () => {
       behavior: "orchestrator",
     });
   });
+
+  test("drops synthetic Pi session ids when no session file is available", () => {
+    expect(
+      normalizeChatAcpState({
+        preferredModeId: "normal",
+        currentModeId: "normal",
+        availableModes: [],
+        slashCommands: [],
+        runtimeState: {
+          agentId: "pi",
+          source: "pi-local",
+          sessionId: "pi:harness:harness",
+          sessionPath: null,
+          workspacePath: "/home/fsos/Developer/athas",
+          provider: "droid",
+          modelId: "gpt-5.4-mini",
+          thinkingLevel: "medium",
+          behavior: "orchestrator",
+        },
+      }).runtimeState,
+    ).toEqual({
+      agentId: "pi",
+      source: "pi-local",
+      sessionId: null,
+      sessionPath: null,
+      workspacePath: "/home/fsos/Developer/athas",
+      provider: "droid",
+      modelId: "gpt-5.4-mini",
+      thinkingLevel: "medium",
+      behavior: "orchestrator",
+    });
+  });
 });

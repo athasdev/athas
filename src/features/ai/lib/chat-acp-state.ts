@@ -10,9 +10,22 @@ const cloneSlashCommand = (command: SlashCommand): SlashCommand => ({
   input: command.input ? { ...command.input } : command.input,
 });
 
-const cloneRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => ({
-  ...state,
-});
+const normalizeRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => {
+  const normalizedState = { ...state };
+
+  if (
+    normalizedState.agentId === "pi" &&
+    normalizedState.source === "pi-local" &&
+    normalizedState.sessionId?.startsWith("pi:") &&
+    !normalizedState.sessionPath
+  ) {
+    normalizedState.sessionId = null;
+  }
+
+  return normalizedState;
+};
+
+const cloneRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => normalizeRuntimeState(state);
 
 export const normalizeChatAcpState = (state?: ChatAcpState | null): ChatAcpState => ({
   preferredModeId: state?.preferredModeId ?? null,

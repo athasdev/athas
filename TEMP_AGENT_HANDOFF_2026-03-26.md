@@ -736,10 +736,12 @@ Use something like this:
 At the time this handoff was prepared:
 
 - branch: `adding-pi-mono`
-- latest commit: `239ff9b1 Docs: note cold-start CLI open verification`
-- working tree includes a new uncommitted Pi RPC failure-path fix in:
-  - `src-tauri/src/features/ai/acp/bridge.rs`
+- latest commit: `5e8959ca Fix: surface dead Pi RPC prompt failures`
+- working tree includes a new uncommitted stale Pi runtime-state sanitizer in:
+  - `src/features/ai/lib/chat-acp-state.ts`
+  - `src/features/ai/lib/chat-acp-state.test.ts`
 - recent validator run succeeded with:
+  - `bun test src/features/ai/lib/chat-acp-state.test.ts`
   - `cargo test -p athas fail_response_waiters_notifies_all_pending_requests -- --nocapture`
   - `cargo test -p athas get_closed_error_returns_recorded_stream_failure -- --nocapture`
   - `cargo build -p athas`
@@ -752,6 +754,9 @@ At the time this handoff was prepared:
 - updated app bundle verified in a real Athas window on X display `:106`
 - empty state still shows `Open Harness` / `New Harness Session`
 - Harness opens via `Ctrl+R`
+- footer sparkles entry was re-verified on the watched `:106` VNC session and routes back into Harness instead of relying on a keyboard shortcut
+- same-profile warm restart on the clean watched profile restores the prior Harness session successfully
+- stale historical Pi chats with synthetic `pi:<route>` session ids and no session file are now sanitized on load so they do not carry a fake resumable session id forward
 - no-Pi failure-path verification:
   - with no `PI_CODING_AGENT_DIR` / models configured, submitting a Harness prompt no longer leaves the composer stuck in stop mode
   - the session now surfaces an in-app error card: `ACP agent process exited: exit status: 1`
