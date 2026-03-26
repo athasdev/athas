@@ -32,6 +32,9 @@ Additional follow-up completed after the above:
 - fresh Harness scope defaults were fixed so default Harness sessions come up on `Pi` while the legacy panel scope remains `custom`
 - project-loading actions were hardened so failed local folder/project loads always unwind `isFileTreeLoading` and `isSwitchingProject`
 - the file-system loading fix is covered by a focused regression test in `src/features/file-system/controllers/project-loading.test.ts`
+- cold-start CLI/file/folder open handling was hardened so startup path arguments are replayed through a dedicated `get_startup_open_requests` command instead of relying only on a delayed startup event
+- the frontend CLI-open hook now deduplicates startup requests while allowing retry if the first attempt fails
+- live Athas verification on the `:99` VNC display confirmed that launching `athas /home/fsos/Developer/athas` opens the `athas` project on cold start, and opening Harness from that project still brings up a fresh session with `Pi` selected
 - VNC/Xvfb live-app verification on this machine required `WEBKIT_DISABLE_DMABUF_RENDERER=1`; without it, Athas only exposed tiny placeholder windows under WebKit on the `:99` display
 
 This file remains useful as historical context for the larger Pi / Harness effort, but the toggle / entry-surface problem described below should be treated as resolved by the newer commits on this branch.
