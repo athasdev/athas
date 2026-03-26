@@ -698,7 +698,7 @@ Also important:
 
 Use something like this:
 
-> Read `TEMP_AGENT_HANDOFF_2026-03-26.md` first. Then inspect the current uncommitted WIP around `toggleAIChatVisible()`, footer AI chat entry, `main-layout.tsx`, and Harness buffer open/close semantics. The user says the current AI chat button / Harness toggle behavior is weird and not working. Do not assume the latest WIP is correct just because tests pass. First diagnose the conceptual conflict between legacy inline AI chat visibility and Harness tab semantics, then propose the cleanest fix.
+> Read `TEMP_AGENT_HANDOFF_2026-03-26.md` first. Then inspect the current Harness-only entry flow and the latest Harness UX trim in `chat-header.tsx`, `harness-session-rail.tsx`, `chat-messages.tsx`, and `chat-input-bar.tsx`. The old AI chat toggle conflict has already been resolved; focus on remaining Pi runtime validation or any follow-up UX polish instead of re-opening the legacy inline-panel model.
 
 ---
 
@@ -712,15 +712,22 @@ Use something like this:
 - Pi extension UI handling
 - synthetic Pi tool event generation
 - multiple rounds of validation
+- Harness-only toggle / entry contract
+- Harness redundancy cleanup:
+  - header reduced to title plus session actions
+  - sessions-first right rail with compact live status
+  - idle transcript filler removed
+  - composer queue badge flattened to total queued count
 
 ### Completed but should still be sanity-checked in-app
 
-- recent minimal Harness UI restyling
+- recent Harness redundancy cleanup on wide and narrow layouts
+- Pi response completion on a fresh clean profile after cold runtime bootstrap
 
 ### Current active problem / least trusted
 
-- AI chat button / toggle behavior
-- relationship between `toggleAIChatVisible()` and Harness open/close semantics
+- fresh-profile Pi runtime response completion under cold start
+- any remaining Harness visual polish after the redundancy trim
 
 ---
 
@@ -729,12 +736,35 @@ Use something like this:
 At the time this handoff was prepared:
 
 - branch: `adding-pi-mono`
-- latest commit: `b1f2a478 Add Harness session state and Pi runtime parity`
-- working tree includes modified / uncommitted files listed above
+- latest commit: `239ff9b1 Docs: note cold-start CLI open verification`
+- working tree includes a new uncommitted Harness redundancy cleanup across:
+  - `src/features/ai/components/chat/ai-chat.tsx`
+  - `src/features/ai/components/chat/chat-header.tsx`
+  - `src/features/ai/components/chat/chat-messages.tsx`
+  - `src/features/ai/components/chat/harness-session-rail.tsx`
+  - `src/features/ai/components/input/chat-input-bar.tsx`
 - recent validator run succeeded with:
   - `bun typecheck`
   - `bun test`
   - `bun check`
+
+### Live verification snapshot
+
+- updated app bundle verified in a real Athas window on X display `:106`
+- empty state still shows `Open Harness` / `New Harness Session`
+- Harness opens via `Ctrl+R`
+- wide-window Harness now shows:
+  - title-only header with history + compact actions
+  - sessions-first rail
+  - compact live-status block instead of dashboard cards
+  - no idle “Harness is ready” transcript card
+- prompt submission still works after the UI cleanup:
+  - the prompt was entered and submitted in-app
+  - session title updated from the first prompt
+  - transcript shows the user message
+  - composer entered the streaming / stop state
+- not fully proven in that fresh `:106` profile:
+  - Pi did not complete a visible assistant response within the wait window, so response completion should be re-checked on a warm/runtime-ready profile
 
 ---
 
