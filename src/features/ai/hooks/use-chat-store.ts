@@ -1,37 +1,16 @@
 import type { ChatAcpEventInput } from "../lib/acp-event-timeline";
 import { PANEL_CHAT_SCOPE_ID } from "../lib/chat-scope";
 import { getQueuedMessageCounts } from "../lib/message-queue";
+import { createDefaultChatScopeState } from "../store/scope-defaults";
 import { useAIChatStore } from "../store/store";
 import type { ChatMode, PastedImage } from "../store/types";
 import type { AcpPlanEntry, SessionMode, SlashCommand } from "../types/acp";
 import type { AgentType, ChatScopeId } from "../types/ai-chat";
 import type { ChatAcpPermissionRequest, ChatAcpToolEventData } from "../types/chat-ui";
 
-const createFallbackScopeState = () => ({
-  currentChatId: null,
-  selectedAgentId: "custom" as AgentType,
-  input: "",
-  pastedImages: [],
-  isTyping: false,
-  streamingMessageId: null,
-  selectedBufferIds: new Set<string>(),
-  selectedFilesPaths: new Set<string>(),
-  isContextDropdownOpen: false,
-  isSendAnimating: false,
-  messageQueue: [],
-  isProcessingQueue: false,
-  mode: "chat" as ChatMode,
-  isChatHistoryVisible: false,
-  availableSlashCommands: [] as SlashCommand[],
-  sessionModeState: {
-    currentModeId: null,
-    availableModes: [] as SessionMode[],
-  },
-});
-
 export function useChatState(scopeId: ChatScopeId = PANEL_CHAT_SCOPE_ID) {
   const scopeState = useAIChatStore(
-    (state) => state.chatScopes[scopeId] ?? createFallbackScopeState(),
+    (state) => state.chatScopes[scopeId] ?? createDefaultChatScopeState(scopeId),
   );
   const queueCounts = getQueuedMessageCounts(scopeState.messageQueue);
 

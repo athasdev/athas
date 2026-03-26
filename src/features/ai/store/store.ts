@@ -62,38 +62,18 @@ import {
   loadChatFromDb,
   saveChatToDb,
 } from "@/utils/chat-history-db";
+import { normalizePersistedAIChatState } from "./persist";
+import { createDefaultChatScopeState } from "./scope-defaults";
 import type { AIChatActions, AIChatState, ChatScopeState } from "./types";
 
 const DEFAULT_SCOPE_ID: ChatScopeId = PANEL_CHAT_SCOPE_ID;
-
-const createDefaultChatScopeState = (): ChatScopeState => ({
-  currentChatId: null,
-  selectedAgentId: "custom",
-  input: "",
-  pastedImages: [],
-  isTyping: false,
-  streamingMessageId: null,
-  selectedBufferIds: new Set<string>(),
-  selectedFilesPaths: new Set<string>(),
-  isContextDropdownOpen: false,
-  isSendAnimating: false,
-  messageQueue: [],
-  isProcessingQueue: false,
-  mode: "chat",
-  isChatHistoryVisible: false,
-  availableSlashCommands: [],
-  sessionModeState: {
-    currentModeId: null,
-    availableModes: [],
-  },
-});
 
 const ensureChatScopeState = (
   state: AIChatState,
   scopeId: ChatScopeId = DEFAULT_SCOPE_ID,
 ): ChatScopeState => {
   if (!state.chatScopes[scopeId]) {
-    state.chatScopes[scopeId] = createDefaultChatScopeState();
+    state.chatScopes[scopeId] = createDefaultChatScopeState(scopeId);
   }
 
   return state.chatScopes[scopeId];
@@ -102,7 +82,7 @@ const ensureChatScopeState = (
 const getChatScopeState = (
   state: AIChatState,
   scopeId: ChatScopeId = DEFAULT_SCOPE_ID,
-): ChatScopeState => state.chatScopes[scopeId] ?? createDefaultChatScopeState();
+): ChatScopeState => state.chatScopes[scopeId] ?? createDefaultChatScopeState(scopeId);
 
 const hydrateChatInStore = (state: AIChatState, nextChat: Chat) => {
   const chatIndex = state.chats.findIndex((chat) => chat.id === nextChat.id);
@@ -171,7 +151,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
       (set, get) => ({
         chats: [],
         chatScopes: {
-          [PANEL_CHAT_SCOPE_ID]: createDefaultChatScopeState(),
+          [PANEL_CHAT_SCOPE_ID]: createDefaultChatScopeState(PANEL_CHAT_SCOPE_ID),
         },
         outputStyle: "default",
 
@@ -1290,7 +1270,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             set((state) => {
               state.chats = [];
               state.chatScopes = {
-                [PANEL_CHAT_SCOPE_ID]: createDefaultChatScopeState(),
+                [PANEL_CHAT_SCOPE_ID]: createDefaultChatScopeState(PANEL_CHAT_SCOPE_ID),
               };
             });
             console.log("All chats cleared");
@@ -1344,12 +1324,13 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         }),
         merge: (persistedState, currentState) =>
           produce(currentState, (draft) => {
-            if (persistedState) {
-              draft.outputStyle = (persistedState as any).outputStyle || "default";
-              const persistedScopes = (persistedState as any).chatScopes || {};
+            const normalizedPersistedState = normalizePersistedAIChatState(persistedState);
+            if (normalizedPersistedState) {
+              draft.outputStyle = normalizedPersistedState.outputStyle || "default";
+              const persistedScopes = normalizedPersistedState.chatScopes || {};
               for (const [scopeId, persistedScope] of Object.entries(persistedScopes)) {
                 draft.chatScopes[scopeId] = {
-                  ...createDefaultChatScopeState(),
+                  ...createDefaultChatScopeState(scopeId as ChatScopeId),
                   ...(persistedScope as object),
                 };
               }
