@@ -27,6 +27,13 @@ Validation completed after this handoff was written:
   - `Ctrl+R` opened Harness as a tabbed workspace surface
   - `Ctrl+R` from the focused Harness tab closed it cleanly back to the non-Harness view
 
+Additional follow-up completed after the above:
+
+- fresh Harness scope defaults were fixed so default Harness sessions come up on `Pi` while the legacy panel scope remains `custom`
+- project-loading actions were hardened so failed local folder/project loads always unwind `isFileTreeLoading` and `isSwitchingProject`
+- the file-system loading fix is covered by a focused regression test in `src/features/file-system/controllers/project-loading.test.ts`
+- VNC/Xvfb live-app verification on this machine required `WEBKIT_DISABLE_DMABUF_RENDERER=1`; without it, Athas only exposed tiny placeholder windows under WebKit on the `:99` display
+
 This file remains useful as historical context for the larger Pi / Harness effort, but the toggle / entry-surface problem described below should be treated as resolved by the newer commits on this branch.
 
 ## Repository / Branch Context
