@@ -1,7 +1,15 @@
-import { AlertCircle, CheckCircle, Clock, ListTodo, MessageSquare, Wrench } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  ListTodo,
+  MessageSquare,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 import { forwardRef, memo, useMemo } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
-import { getAcpPlanEntryCounts, getRecentAcpToolEvents } from "@/features/ai/lib/chat-acp-activity";
+import { getAcpPlanEntryCounts } from "@/features/ai/lib/chat-acp-activity";
 import { filterChatsForScope, getDefaultChatTitle } from "@/features/ai/lib/chat-scope";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatScopeId } from "@/features/ai/types/ai-chat";
@@ -82,6 +90,32 @@ const getTimestampMs = (value: Date | string): number => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
+const getEventGroupLabel = (events: ChatAcpEvent[]): string => {
+  const toolEvents = events.filter((event) => event.kind === "tool");
+  const actionableToolEvents = toolEvents.filter(
+    (event) =>
+      event.tool?.input ||
+      event.tool?.output ||
+      event.tool?.error ||
+      !["tool output", "tool failure"].includes(event.label.toLowerCase()),
+  );
+  if (actionableToolEvents.length > 0) {
+    return actionableToolEvents.length === 1
+      ? "Tool call"
+      : `Tool calls (${actionableToolEvents.length})`;
+  }
+  if (events.some((event) => event.kind === "plan")) {
+    return "Plan update";
+  }
+  return "Session activity";
+};
+
+const isStructuredToolEvent = (event: ChatAcpEvent): boolean =>
+  event.kind === "tool" &&
+  Boolean(
+    event.tool?.input || event.tool?.output || event.tool?.error || event.tool?.locations?.length,
+  );
+
 export const ChatMessages = memo(
   forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
     { onApplyCode, acpEvents, surface = "panel", scopeId },
@@ -105,11 +139,7 @@ export const ChatMessages = memo(
       () => getAcpPlanEntryCounts(currentChat?.acpActivity),
       [currentChat],
     );
-    const recentToolEvents = useMemo(
-      () => getRecentAcpToolEvents(currentChat?.acpActivity),
-      [currentChat],
-    );
-    const hasPersistedAcpActivity = planEntries.length > 0 || recentToolEvents.length > 0;
+    const hasPersistedAcpActivity = planEntries.length > 0 || (acpEvents?.length ?? 0) > 0;
     const timelineItems = useMemo(() => {
       const messageItems = messages.map((message, messageIndex) => ({
         type: "message" as const,
@@ -132,6 +162,50 @@ export const ChatMessages = memo(
         return a.order - b.order;
       });
     }, [messages, acpEvents]);
+    const timelineRows = useMemo(() => {
+      const rows: Array<
+        | {
+            type: "message";
+            id: string;
+            message: (typeof messages)[number];
+            messageIndex: number;
+          }
+        | {
+            type: "event-group";
+            id: string;
+            events: ChatAcpEvent[];
+          }
+      > = [];
+      let pendingEvents: ChatAcpEvent[] = [];
+
+      const flushPendingEvents = () => {
+        if (pendingEvents.length === 0) return;
+        rows.push({
+          type: "event-group",
+          id: `event-group-${pendingEvents[0]!.id}-${pendingEvents[pendingEvents.length - 1]!.id}`,
+          events: pendingEvents,
+        });
+        pendingEvents = [];
+      };
+
+      for (const item of timelineItems) {
+        if (item.type === "event") {
+          pendingEvents.push(item.event);
+          continue;
+        }
+
+        flushPendingEvents();
+        rows.push({
+          type: "message",
+          id: item.id,
+          message: item.message,
+          messageIndex: item.messageIndex,
+        });
+      }
+
+      flushPendingEvents();
+      return rows;
+    }, [timelineItems]);
 
     // Get recent chats excluding the current one (title "New Chat" means it's empty/unused)
     const recentChats = useMemo(
@@ -151,7 +225,7 @@ export const ChatMessages = memo(
         if (surface === "harness") {
           return (
             <div className="flex h-full items-center justify-center p-6">
-              <div className="max-w-md rounded-3xl border border-border bg-primary-bg/90 px-6 py-5 text-center">
+              <div className="max-w-md rounded-xl border border-border bg-primary-bg/80 px-5 py-4 text-center">
                 <div className="font-medium text-sm text-text">Harness is ready</div>
                 <div className="mt-2 text-text-lighter text-xs">
                   Describe the task, mention project files with <code>@</code>, or use a slash
@@ -196,97 +270,45 @@ export const ChatMessages = memo(
 
     return (
       <>
-        {hasPersistedAcpActivity ? (
+        {planEntries.length > 0 ? (
           <div className="px-4 pt-3 pb-1">
-            <div className="mb-2 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
-              Session activity
-            </div>
-            <div className="space-y-2">
-              {planEntries.length > 0 ? (
-                <div className="rounded-2xl border border-border bg-secondary-bg/80 px-3 py-2.5">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
-                      <ListTodo size={11} />
-                      Plan
-                    </div>
-                    <div className="text-[10px] text-text-lighter">
-                      {planCounts.completed}/{planCounts.total} done
-                      {planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    {planEntries.map((entry, index) => (
-                      <div
-                        key={`${entry.content}-${index}`}
-                        className="flex items-start gap-2 rounded-xl border border-border/70 bg-primary-bg/70 px-2.5 py-2 text-xs"
-                      >
-                        <span
-                          className={cn(
-                            "mt-0.5 rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
-                            getPlanStatusTone(entry.status),
-                          )}
-                        >
-                          {entry.status.replace("_", " ")}
-                        </span>
-                        <span className="min-w-0 flex-1 text-text">{entry.content}</span>
-                      </div>
-                    ))}
-                  </div>
+            <div className="rounded-xl border border-border/80 bg-secondary-bg/30 px-3 py-2.5">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+                  <ListTodo size={11} />
+                  Active plan
                 </div>
-              ) : null}
-
-              {recentToolEvents.length > 0 ? (
-                <div className="rounded-2xl border border-border bg-secondary-bg/80 px-3 py-2.5">
-                  <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
-                    <Wrench size={11} />
-                    Tool activity
-                  </div>
-                  <div className="space-y-1.5">
-                    {recentToolEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className="rounded-xl border border-border/70 bg-primary-bg/70 px-2.5 py-2"
-                      >
-                        <ToolCallDisplay
-                          toolName={event.label}
-                          input={event.tool?.input}
-                          output={event.tool?.output}
-                          error={event.tool?.error}
-                          isStreaming={event.state === "running"}
-                          onOpenInEditor={(filePath) => handleFileSelect(filePath, false)}
-                        />
-                        {event.tool?.locations?.length ? (
-                          <div className="mt-2 flex flex-wrap gap-1 pl-3">
-                            {event.tool.locations.map((location) => (
-                              <button
-                                key={`${event.id}-${location.path}-${location.line ?? 0}`}
-                                onClick={() => handleFileSelect(location.path, false)}
-                                className="rounded-full border border-border bg-secondary-bg/80 px-2 py-1 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                                title={location.path}
-                              >
-                                {location.path.split("/").pop()}
-                                {location.line ? `:${location.line}` : ""}
-                              </button>
-                            ))}
-                          </div>
-                        ) : getVisibleEventDetail(event) ? (
-                          <div className="mt-1 pl-3 text-[11px] text-text-lighter">
-                            {getVisibleEventDetail(event)}
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
+                <div className="text-[10px] text-text-lighter">
+                  {planCounts.completed}/{planCounts.total} done
+                  {planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""}
                 </div>
-              ) : null}
+              </div>
+              <div className="space-y-1.5">
+                {planEntries.map((entry, index) => (
+                  <div
+                    key={`${entry.content}-${index}`}
+                    className="flex items-start gap-2 rounded-lg border border-border/70 bg-primary-bg/50 px-2.5 py-2 text-xs"
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                        getPlanStatusTone(entry.status),
+                      )}
+                    >
+                      {entry.status.replace("_", " ")}
+                    </span>
+                    <span className="min-w-0 flex-1 text-text">{entry.content}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ) : null}
 
-        {timelineItems.map((item) => {
-          if (item.type === "message") {
-            const message = item.message;
-            const index = item.messageIndex;
+        {timelineRows.map((row) => {
+          if (row.type === "message") {
+            const message = row.message;
+            const index = row.messageIndex;
             const prevMessage = index > 0 ? messages[index - 1] : null;
             const isToolOnlyMessage =
               message.role === "assistant" &&
@@ -311,7 +333,7 @@ export const ChatMessages = memo(
             );
 
             return (
-              <div key={item.id} className={messageClassName}>
+              <div key={row.id} className={messageClassName}>
                 <ChatMessage
                   message={message}
                   isLastMessage={index === messages.length - 1}
@@ -323,31 +345,85 @@ export const ChatMessages = memo(
             );
           }
 
-          const event = item.event;
-          const statusIcon = getEventStatusIcon(event.state);
-          const StatusIcon = statusIcon.Icon;
-          const detail = getVisibleEventDetail(event);
+          const events = row.events;
+          const groupLabel = getEventGroupLabel(events);
+          const hasStructuredToolEvent = events.some(isStructuredToolEvent);
 
           return (
-            <div key={item.id} className="px-4 py-1">
-              <div className="flex items-center gap-1 text-xs leading-tight">
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium text-text-lighter/80">{event.label}</span>
-                  {detail ? (
-                    <>
-                      <span className="opacity-40"> · </span>
-                      <span className="text-text-lighter/60">{detail}</span>
-                    </>
-                  ) : null}
-                </span>
-                <StatusIcon
-                  size={10}
-                  className={cn(
-                    "shrink-0",
-                    statusIcon.className,
-                    statusIcon.spin && "animate-spin",
-                  )}
-                />
+            <div key={row.id} className="px-4 py-2">
+              <div className="rounded-2xl border border-border/80 bg-secondary-bg/35 px-3 py-2.5">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+                    {hasStructuredToolEvent ? <Wrench size={11} /> : <Sparkles size={11} />}
+                    {groupLabel}
+                  </div>
+                  <div className="text-[10px] text-text-lighter">
+                    {events.length} event{events.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {events.map((event) => {
+                    const statusIcon = getEventStatusIcon(event.state);
+                    const StatusIcon = statusIcon.Icon;
+                    const detail = getVisibleEventDetail(event);
+
+                    if (isStructuredToolEvent(event)) {
+                      return (
+                        <div
+                          key={event.id}
+                          className="rounded-xl border border-border/70 bg-primary-bg/60 px-2.5 py-2"
+                        >
+                          <ToolCallDisplay
+                            toolName={event.label}
+                            input={event.tool?.input}
+                            output={event.tool?.output}
+                            error={event.tool?.error}
+                            isStreaming={event.state === "running"}
+                            onOpenInEditor={(filePath) => handleFileSelect(filePath, false)}
+                          />
+                          {event.tool?.locations?.length ? (
+                            <div className="mt-2 flex flex-wrap gap-1 pl-3">
+                              {event.tool.locations.map((location) => (
+                                <button
+                                  key={`${event.id}-${location.path}-${location.line ?? 0}`}
+                                  onClick={() => handleFileSelect(location.path, false)}
+                                  className="rounded-full border border-border/80 px-2 py-1 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                  title={location.path}
+                                >
+                                  {location.path.split("/").pop()}
+                                  {location.line ? `:${location.line}` : ""}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={event.id}
+                        className="flex items-center gap-2 rounded-xl border border-border/70 bg-primary-bg/60 px-2.5 py-2 text-xs"
+                      >
+                        <StatusIcon
+                          size={12}
+                          className={cn(
+                            "shrink-0",
+                            statusIcon.className,
+                            statusIcon.spin && "animate-spin",
+                          )}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium text-text">{event.label}</div>
+                          {detail ? (
+                            <div className="mt-0.5 line-clamp-2 text-text-lighter">{detail}</div>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );

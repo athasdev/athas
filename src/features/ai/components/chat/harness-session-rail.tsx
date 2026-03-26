@@ -78,16 +78,22 @@ export function HarnessSessionRail({
   onSelectSession,
   onCloseSession,
 }: HarnessSessionRailProps) {
-  const recentEvents = activeSession.acpEvents.slice(-6).reverse();
+  const recentEvents = activeSession.acpEvents.slice(-4).reverse();
   const planCounts = getAcpPlanEntryCounts({
     planEntries: activeSession.planEntries,
     events: [],
     permissions: [],
   });
+  const hasPlan = activeSession.planEntries.length > 0;
+  const planSummary = hasPlan
+    ? `${planCounts.completed}/${planCounts.total} done${
+        planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""
+      }`
+    : "No active plan";
 
   return (
-    <aside className="flex h-full w-[300px] shrink-0 flex-col gap-3 border-border/70 border-l bg-secondary-bg/55 p-3">
-      <section className="rounded-2xl border border-border bg-primary-bg/85 p-3">
+    <aside className="flex h-full w-full shrink-0 flex-col gap-3 p-3">
+      <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
         <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
           <div className="flex items-center gap-2">
             <Sparkles size={12} />
@@ -172,96 +178,78 @@ export function HarnessSessionRail({
         </div>
       </section>
 
-      {activeSession.planEntries.length > 0 ? (
-        <section className="rounded-2xl border border-border bg-primary-bg/85 p-3">
-          <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
-            <ListTodo size={12} />
-            <span>Plan</span>
-          </div>
-          <div className="mb-2 text-text-lighter text-xs">
-            {planCounts.completed}/{planCounts.total} done
-            {planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""}
-          </div>
-          <div className="space-y-1.5">
-            {activeSession.planEntries.slice(0, 4).map((entry, index) => (
-              <div
-                key={`${entry.content}-${index}`}
-                className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2 text-xs"
-              >
-                <div className="truncate font-medium text-text">{entry.content}</div>
-                <div className="mt-0.5 text-[10px] text-text-lighter uppercase tracking-wide">
-                  {entry.status.replace("_", " ")}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="rounded-2xl border border-border bg-primary-bg/85 p-3">
+      <section className="rounded-2xl border border-border/80 bg-primary-bg/70 p-3">
         <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
           <Boxes size={12} />
-          <span>Runtime</span>
+          <span>Current session</span>
         </div>
         <div className="space-y-2 text-xs">
-          <div>
-            <div className="text-text-lighter">Agent</div>
-            <div className="font-medium text-text">
-              {getAgentLabel(activeSession.currentAgentId)}
+          <div className="truncate font-medium text-sm text-text">{activeSession.title}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="text-text-lighter">Agent</div>
+              <div className="mt-1 font-medium text-text">
+                {getAgentLabel(activeSession.currentAgentId)}
+              </div>
+            </div>
+            <div>
+              <div className="text-text-lighter">Mode</div>
+              <div className="mt-1 font-medium text-text">{activeSession.activeModeLabel}</div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-text-lighter">Transport</div>
+              <div className="mt-1 font-medium text-text">{activeSession.providerLabel}</div>
             </div>
           </div>
-          <div>
-            <div className="text-text-lighter">Transport</div>
-            <div className="font-medium text-text">{activeSession.providerLabel}</div>
-          </div>
-          <div>
-            <div className="text-text-lighter">Mode</div>
-            <div className="font-medium text-text">{activeSession.activeModeLabel}</div>
+          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary-bg/50 px-2.5 py-2">
+            <span className="inline-flex items-center gap-1.5 text-text-lighter">
+              <ListTodo size={11} />
+              Plan
+            </span>
+            <span className={cn("font-medium", hasPlan ? "text-text" : "text-text-lighter")}>
+              {planSummary}
+            </span>
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-primary-bg/85 p-3">
+      <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
         <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
           <BookCopy size={12} />
-          <span>Context</span>
+          <span>Workspace snapshot</span>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <div className="text-text-lighter">Buffers</div>
             <div className="mt-1 font-medium text-text">{activeSession.selectedBufferCount}</div>
           </div>
-          <div className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <div className="text-text-lighter">Files</div>
             <div className="mt-1 font-medium text-text">{activeSession.selectedFileCount}</div>
           </div>
-          <div className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <div className="text-text-lighter">Queued</div>
             <div className="mt-1 font-medium text-text">{activeSession.queueCount}</div>
           </div>
-          <div className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <div className="text-text-lighter">Steering</div>
             <div className="mt-1 font-medium text-text">{activeSession.steeringQueueCount}</div>
           </div>
-          <div className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <div className="text-text-lighter">Follow-up</div>
             <div className="mt-1 font-medium text-text">{activeSession.followUpQueueCount}</div>
           </div>
-          <div className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <div className="text-text-lighter">Permissions</div>
             <div className="mt-1 font-medium text-text">{activeSession.pendingPermissionCount}</div>
           </div>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-primary-bg/85 p-3">
-        <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
-          <Slash size={12} />
-          <span>Controls</span>
-        </div>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
-            <span className="text-text-lighter">Slash commands</span>
+        <div className="mt-2 space-y-2 text-xs">
+          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
+            <span className="inline-flex items-center gap-1.5 text-text-lighter">
+              <Slash size={11} />
+              Slash commands
+            </span>
             <span
               className={cn(
                 "font-medium",
@@ -271,7 +259,7 @@ export function HarnessSessionRail({
               {activeSession.hasSlashCommands ? "Ready" : "Idle"}
             </span>
           </div>
-          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2">
+          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
             <span className="text-text-lighter">Awaiting approval</span>
             <span
               className={cn(
@@ -285,13 +273,13 @@ export function HarnessSessionRail({
         </div>
       </section>
 
-      <section className="min-h-0 flex-1 rounded-2xl border border-border bg-primary-bg/85 p-3">
+      <section className="min-h-0 flex-1 rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
         <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
           <Activity size={12} />
           <span>Recent activity</span>
         </div>
         {recentEvents.length === 0 ? (
-          <div className="flex h-full min-h-24 items-center justify-center rounded-xl border border-border/70 border-dashed bg-secondary-bg/40 px-4 text-center text-text-lighter text-xs">
+          <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-border/70 border-dashed bg-secondary-bg/25 px-4 text-center text-text-lighter text-xs">
             Harness activity will appear here as the session runs.
           </div>
         ) : (
@@ -299,7 +287,7 @@ export function HarnessSessionRail({
             {recentEvents.map((event) => (
               <div
                 key={event.id}
-                className="rounded-xl border border-border/70 bg-secondary-bg/70 px-2.5 py-2 text-xs"
+                className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2 text-xs"
               >
                 <div className="flex items-start gap-2">
                   <CircleDot

@@ -11,6 +11,7 @@ import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
+import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -669,35 +670,24 @@ const AIChatInputBar = memo(function AIChatInputBar({
       : surface === "harness"
         ? "Ask Harness to work on this project... (@ to mention files)"
         : "Message... (@ to mention files)"
-    : "Configure API key to enable AI chat...";
+    : "Configure API key to enable the AI assistant...";
 
   return (
     <div
       ref={aiChatContainerRef}
       className={cn(
         "ai-chat-container relative z-20 bg-transparent",
-        surface === "harness" ? "border-border/70 border-t px-4 py-4" : "px-3 pt-2 pb-3",
+        surface === "harness" ? "border-border/70 border-t py-2.5" : "px-3 pt-2 pb-3",
       )}
     >
       <div
         className={cn(
-          "border border-border bg-primary-bg/95 px-3 py-2.5 backdrop-blur-sm",
-          surface === "harness" ? "rounded-3xl shadow-none" : "rounded-[20px] shadow-sm",
+          "border border-border bg-primary-bg/95 backdrop-blur-sm",
+          surface === "harness"
+            ? "rounded-xl px-2.5 py-2.5"
+            : "rounded-[20px] px-3 py-2.5 shadow-sm",
         )}
       >
-        {surface === "harness" ? (
-          <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
-            <span>Task</span>
-            <span>
-              {isStreaming || chatState.queueCount > 0
-                ? "Enter steers · Ctrl/Cmd+Enter follows up"
-                : hasSlashCommands
-                  ? "Slash commands ready"
-                  : "Context aware"}
-            </span>
-          </div>
-        ) : null}
-
         {/* Pasted images preview */}
         {chatState.pastedImages.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
@@ -725,41 +715,50 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
         {/* Input area */}
         <div
-          ref={inputRef}
-          contentEditable={isInputEnabled}
-          onInput={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          data-placeholder={placeholder}
           className={cn(
-            "max-h-[140px] w-full resize-none overflow-y-auto border-none bg-transparent",
-            "px-2 py-1.5 text-text",
-            "focus:outline-none",
-            !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
-            // Custom styles for contentEditable placeholder
-            "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
-            surface === "harness" ? "min-h-[84px]" : "min-h-[64px]",
+            surface === "harness"
+              ? "rounded-lg border border-border/70 bg-secondary-bg/35 px-2 py-1.5"
+              : "",
           )}
-          style={
-            {
-              // Use dynamic font settings (slightly smaller than editor for UI consistency)
-              fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
-              fontSize: `${Math.max(fontSize - 2, 11)}px`,
-              // Ensure proper line height and text rendering
-              lineHeight: "1.4",
-              wordWrap: "break-word",
-              overflowWrap: "break-word",
-            } as React.CSSProperties
-          }
-          role="textbox"
-          aria-multiline="true"
-          aria-label="Message input"
-          tabIndex={isInputEnabled ? 0 : -1}
-        />
+        >
+          <div
+            ref={inputRef}
+            contentEditable={isInputEnabled}
+            onInput={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            data-placeholder={placeholder}
+            className={cn(
+              "max-h-[140px] w-full resize-none overflow-y-auto border-none bg-transparent",
+              "px-2 py-1.5 text-text",
+              "focus:outline-none",
+              !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
+              "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
+              surface === "harness" ? "min-h-[72px]" : "min-h-[64px]",
+            )}
+            style={
+              {
+                fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
+                fontSize: `${Math.max(fontSize - 2, 11)}px`,
+                lineHeight: "1.4",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+              } as React.CSSProperties
+            }
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Message input"
+            tabIndex={isInputEnabled ? 0 : -1}
+          />
+        </div>
 
-        {/* Bottom row: Context + Mode + Style + Model/Agent + Send */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div
+          className={cn(
+            "mt-2.5 flex flex-wrap gap-2 border-border/70 border-t pt-2.5",
+            surface === "harness" ? "items-center justify-between" : "items-center",
+          )}
+        >
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             <div ref={contextDropdownRef} className="min-w-0 flex-1">
               <ContextSelector
                 buffers={buffers}
@@ -777,22 +776,28 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {/* Queue indicator */}
             {chatState.queueCount > 0 && (
               <div
-                className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-blue-400 text-xs"
+                className="flex items-center gap-1 rounded-md border border-border bg-secondary-bg/60 px-2 py-1 text-text-lighter text-xs"
                 title={`Queued messages: ${chatState.steeringQueueCount} steering, ${chatState.followUpQueueCount} follow-up`}
               >
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
                 <span>S{chatState.steeringQueueCount}</span>
-                <span className="text-blue-300/70">/</span>
+                <span className="text-text-lighter/60">/</span>
                 <span>F{chatState.followUpQueueCount}</span>
               </div>
             )}
           </div>
 
-          <div className="ml-auto flex shrink-0 select-none items-center gap-1.5">
-            {/* Chat mode selector */}
+          <div className="ml-auto flex shrink-0 select-none flex-wrap items-center gap-1.5">
+            {surface === "harness" ? (
+              <UnifiedAgentSelector
+                scopeId={scopeId}
+                surface={surface}
+                variant="input"
+                onOpenSettings={() => {}}
+              />
+            ) : null}
+
             <ChatModeSelector surface={surface} scopeId={scopeId} />
 
-            {/* Slash command hint button */}
             {hasSlashCommands && (
               <button
                 onClick={() => {
@@ -817,12 +822,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
               disabled={isSendDisabled}
               onClick={isStreaming ? onStopStreaming : handleSendMessage}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
+                "flex items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
+                surface === "harness" ? "h-10 w-10" : "h-8 w-8",
                 isStreaming && !chatState.isSendAnimating && "button-morphing",
                 (hasInputText || hasImages) &&
                   isInputEnabled &&
-                  "border-blue-500/40 bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:ring-blue-500/50",
+                  "border-border bg-secondary-bg text-text hover:bg-hover hover:text-text",
                 isSendDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
               )}
               title={

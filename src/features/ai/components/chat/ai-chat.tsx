@@ -911,111 +911,130 @@ const AIChat = memo(function AIChat({
         </div>
       ) : (
         <>
-          <div className={cn("min-h-0 flex-1", surface === "harness" && "flex")}>
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
-                <ChatMessages
-                  ref={messagesEndRef}
-                  onApplyCode={onApplyCode}
-                  acpEvents={acpEvents}
-                  surface={surface}
-                  scopeId={resolvedScopeId}
-                />
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              surface === "harness" && "mx-auto flex w-full min-w-0 max-w-[1440px]",
+            )}
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div
+                className={cn(
+                  "scrollbar-hidden relative z-0 flex-1 overflow-y-auto",
+                  surface === "harness" && "px-3 pt-3 sm:px-4",
+                )}
+              >
+                <div
+                  className={cn(
+                    surface === "harness" &&
+                      "mx-auto flex min-h-full w-full max-w-[980px] flex-col",
+                  )}
+                >
+                  <ChatMessages
+                    ref={messagesEndRef}
+                    onApplyCode={onApplyCode}
+                    acpEvents={acpEvents}
+                    surface={surface}
+                    scopeId={resolvedScopeId}
+                  />
+                </div>
               </div>
 
               {currentPermission && (
                 <div
                   className={cn(
                     "bg-transparent pt-2 text-xs",
-                    surface === "harness" ? "px-4" : "px-3",
+                    surface === "harness" ? "px-3 sm:px-4" : "px-3",
                   )}
                 >
-                  <div className="flex flex-col gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
-                    <div className="flex items-center gap-2">
-                      <span className="text-text-lighter">permission:</span>
-                      <span
-                        className="min-w-0 flex-1 truncate text-text"
-                        title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
-                      >
-                        {currentPermission.description}
-                      </span>
-                    </div>
+                  <div className={cn(surface === "harness" && "mx-auto w-full max-w-[980px]")}>
+                    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-lighter">permission:</span>
+                        <span
+                          className="min-w-0 flex-1 truncate text-text"
+                          title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
+                        >
+                          {currentPermission.description}
+                        </span>
+                      </div>
 
-                    {currentPermission.permissionType === "input" ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={permissionValue}
-                          onChange={(event) => setPermissionValue(event.target.value)}
-                          placeholder={currentPermission.placeholder ?? "Enter value"}
-                          className="min-w-0 flex-1 rounded-full border border-border bg-secondary-bg/80 px-3 py-1 text-text outline-none"
-                        />
-                        <div className="flex shrink-0 items-center gap-1">
+                      {currentPermission.permissionType === "input" ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={permissionValue}
+                            onChange={(event) => setPermissionValue(event.target.value)}
+                            placeholder={currentPermission.placeholder ?? "Enter value"}
+                            className="min-w-0 flex-1 rounded-full border border-border bg-secondary-bg/80 px-3 py-1 text-text outline-none"
+                          />
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(false, true)}
+                              className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
+                            >
+                              cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(true, false, permissionValue)}
+                              className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
+                            >
+                              submit
+                            </button>
+                          </div>
+                        </div>
+                      ) : currentPermission.permissionType === "select" ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            aria-label={currentPermission.title ?? "Selection request"}
+                            value={permissionValue}
+                            onChange={(event) => setPermissionValue(event.target.value)}
+                            className="min-w-0 flex-1 rounded-full border border-border bg-secondary-bg/80 px-3 py-1 text-text outline-none"
+                          >
+                            {(currentPermission.options ?? []).map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(false, true)}
+                              className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
+                            >
+                              cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(true, false, permissionValue)}
+                              className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
+                            >
+                              choose
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex shrink-0 items-center justify-end gap-1">
                           <button
                             type="button"
-                            onClick={() => handlePermission(false, true)}
+                            onClick={() => handlePermission(false)}
                             className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
                           >
-                            cancel
+                            deny
                           </button>
                           <button
                             type="button"
-                            onClick={() => handlePermission(true, false, permissionValue)}
+                            onClick={() => handlePermission(true)}
                             className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
                           >
-                            submit
+                            allow
                           </button>
                         </div>
-                      </div>
-                    ) : currentPermission.permissionType === "select" ? (
-                      <div className="flex items-center gap-2">
-                        <select
-                          aria-label={currentPermission.title ?? "Selection request"}
-                          value={permissionValue}
-                          onChange={(event) => setPermissionValue(event.target.value)}
-                          className="min-w-0 flex-1 rounded-full border border-border bg-secondary-bg/80 px-3 py-1 text-text outline-none"
-                        >
-                          {(currentPermission.options ?? []).map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handlePermission(false, true)}
-                            className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
-                          >
-                            cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handlePermission(true, false, permissionValue)}
-                            className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
-                          >
-                            choose
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex shrink-0 items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handlePermission(false)}
-                          className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
-                        >
-                          deny
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handlePermission(true)}
-                          className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
-                        >
-                          allow
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1024,29 +1043,35 @@ const AIChat = memo(function AIChat({
                 <div
                   className={cn(
                     "bg-transparent pt-2 text-xs",
-                    surface === "harness" ? "px-4" : "px-3",
+                    surface === "harness" ? "px-3 sm:px-4" : "px-3",
                   )}
                 >
-                  <div className="rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 text-text-lighter">
-                    {stalePermissions.length} permission request
-                    {stalePermissions.length === 1 ? "" : "s"} expired when the ACP session reset.
-                    Re-run the prompt to request permission again.
+                  <div className={cn(surface === "harness" && "mx-auto w-full max-w-[980px]")}>
+                    <div className="rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 text-text-lighter">
+                      {stalePermissions.length} permission request
+                      {stalePermissions.length === 1 ? "" : "s"} expired when the ACP session reset.
+                      Re-run the prompt to request permission again.
+                    </div>
                   </div>
                 </div>
               ) : null}
 
-              <AIChatInputBar
-                buffers={buffers}
-                allProjectFiles={allProjectFiles}
-                surface={surface}
-                scopeId={resolvedScopeId}
-                onSendMessage={handleSendMessage}
-                onStopStreaming={stopStreaming}
-              />
+              <div className={cn(surface === "harness" && "px-3 sm:px-4")}>
+                <div className={cn(surface === "harness" && "mx-auto w-full max-w-[980px]")}>
+                  <AIChatInputBar
+                    buffers={buffers}
+                    allProjectFiles={allProjectFiles}
+                    surface={surface}
+                    scopeId={resolvedScopeId}
+                    onSendMessage={handleSendMessage}
+                    onStopStreaming={stopStreaming}
+                  />
+                </div>
+              </div>
             </div>
 
             {surface === "harness" ? (
-              <div className="hidden xl:flex">
+              <div className="hidden xl:flex xl:w-[320px] xl:shrink-0 xl:border-border/70 xl:border-l">
                 <HarnessSessionRail
                   sessions={harnessSessions}
                   activeSession={{
