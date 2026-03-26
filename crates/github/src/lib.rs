@@ -411,7 +411,16 @@ pub fn github_list_issues(app: AppHandle, repo_path: String) -> Result<Vec<Issue
    let json_fields = "number,title,state,author,updatedAt,url,labels";
 
    let output = gh_command(&app, Some(repo_dir))
-      .args(["issue", "list", "--state", "open", "--limit", "50", "--json", json_fields])
+      .args([
+         "issue",
+         "list",
+         "--state",
+         "open",
+         "--limit",
+         "50",
+         "--json",
+         json_fields,
+      ])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
 
@@ -432,8 +441,8 @@ pub fn github_list_workflow_runs(
    repo_path: String,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let repo_dir = Path::new(&repo_path);
-   let json_fields = "databaseId,displayTitle,name,workflowName,event,status,conclusion,\
-                      updatedAt,url,headBranch,headSha";
+   let json_fields = "databaseId,displayTitle,name,workflowName,event,status,conclusion,updatedAt,\
+                      url,headBranch,headSha";
 
    let output = gh_command(&app, Some(repo_dir))
       .args(["run", "list", "--limit", "50", "--json", json_fields])
@@ -446,8 +455,8 @@ pub fn github_list_workflow_runs(
    }
 
    let stdout = String::from_utf8_lossy(&output.stdout);
-   let runs: Vec<WorkflowRunListItem> = serde_json::from_str(&stdout)
-      .map_err(|e| format!("Failed to parse workflow runs: {}", e))?;
+   let runs: Vec<WorkflowRunListItem> =
+      serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse workflow runs: {}", e))?;
 
    Ok(runs)
 }
@@ -649,8 +658,8 @@ pub fn github_get_workflow_run_details(
 ) -> Result<WorkflowRunDetails, String> {
    let repo_dir = Path::new(&repo_path);
    let run_id_str = run_id.to_string();
-   let json_fields = "databaseId,name,displayTitle,workflowName,event,status,conclusion,\
-                      createdAt,updatedAt,url,headBranch,headSha,jobs";
+   let json_fields = "databaseId,name,displayTitle,workflowName,event,status,conclusion,createdAt,\
+                      updatedAt,url,headBranch,headSha,jobs";
 
    let output = gh_command(&app, Some(repo_dir))
       .args(["run", "view", &run_id_str, "--json", json_fields])

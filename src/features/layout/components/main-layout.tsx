@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandPalette from "@/features/command-palette/components/command-palette";
@@ -24,7 +24,6 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button } from "@/ui/button";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";

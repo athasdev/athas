@@ -477,21 +477,20 @@ function FileExplorerTreeComponent({
     [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openPathInTab, updateActivePath],
   );
 
-  const { contextMenu, setContextMenu, handleContextMenu, contextMenuElement } =
-    useFileExplorerContextMenu({
-      rootFolderPath,
-      onFileSelect,
-      onCreateNewFolderInDirectory,
-      onGenerateImage,
-      onRefreshDirectory,
-      onRenamePath,
-      onRevealInFinder,
-      onUploadFile,
-      onDuplicatePath,
-      onDeleteRequested: setDeleteCandidate,
-      onStartInlineEditing: startInlineEditing,
-      onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
-    });
+  const { setContextMenu, handleContextMenu, contextMenuElement } = useFileExplorerContextMenu({
+    rootFolderPath,
+    onFileSelect,
+    onCreateNewFolderInDirectory,
+    onGenerateImage,
+    onRefreshDirectory,
+    onRenamePath,
+    onRevealInFinder,
+    onUploadFile,
+    onDuplicatePath,
+    onDeleteRequested: setDeleteCandidate,
+    onStartInlineEditing: startInlineEditing,
+    onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
+  });
 
   useEventListener(
     "keydown",

@@ -2,7 +2,7 @@ import { Check, ChevronDown, GitBranch, Plus, Search, Trash2, X } from "lucide-r
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button, buttonVariants } from "@/ui/button";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { dropdownTriggerClassName } from "@/ui/dropdown";
