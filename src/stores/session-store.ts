@@ -45,6 +45,71 @@ interface SessionState {
   clearAllSessions: () => void;
 }
 
+interface PersistedSessionState {
+  sessions?: Record<string, ProjectSession>;
+}
+
+interface WrappedPersistedSessionState {
+  state?: PersistedSessionState;
+  version?: number;
+}
+
+const parsePersistedSessionState = (rawValue: string | null): PersistedSessionState | null => {
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as PersistedSessionState | WrappedPersistedSessionState;
+
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    if ("state" in parsed && parsed.state) {
+      return parsed.state;
+    }
+
+    return parsed as PersistedSessionState;
+  } catch {
+    return null;
+  }
+};
+
+export const getPersistedProjectSession = (projectPath: string): ProjectSession | null => {
+  try {
+    const persistedState = parsePersistedSessionState(
+      globalThis.localStorage?.getItem("athas-tab-sessions") ?? null,
+    );
+    return persistedState?.sessions?.[projectPath] ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export const getPersistedProjectSessionWithRetry = async (
+  projectPath: string,
+  options: {
+    attempts?: number;
+    delayMs?: number;
+  } = {},
+): Promise<ProjectSession | null> => {
+  const { attempts = 5, delayMs = 50 } = options;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const session = getPersistedProjectSession(projectPath);
+    if (session) {
+      return session;
+    }
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  return null;
+};
+
 const useSessionStoreBase = create<SessionState>()(
   persist(
     (set, get) => ({

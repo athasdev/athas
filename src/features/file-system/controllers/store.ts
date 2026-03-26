@@ -21,7 +21,7 @@ import { gitDiffCache } from "@/features/git/utils/diff-cache";
 import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/diff-parser";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
-import { useSessionStore } from "@/stores/session-store";
+import { getPersistedProjectSessionWithRetry, useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -137,13 +137,6 @@ export const useFileSystemStore = createSelectors(
             const projectName = selected.split("/").pop() || "Project";
             useWorkspaceTabsStore.getState().addProjectTab(selected, projectName);
 
-            const entries = await readDirectoryContents(selected);
-            const fileTree = sortFileEntries(entries);
-            const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
-
-            // Initialize tree UI state: expand root
-            useFileTreeStore.getState().setExpandedPaths(new Set([selected]));
-
             // Update project store
             const { setRootFolderPath, setProjectName } = useProjectStore.getState();
             setRootFolderPath(selected);
@@ -152,18 +145,8 @@ export const useFileSystemStore = createSelectors(
             // Add to recent folders
             useRecentFoldersStore.getState().addToRecents(selected);
 
-            // Start file watching
-            await useFileWatcherStore.getState().setProjectRoot(selected);
-
-            // Initialize git status
-            const gitStatus = await getGitStatus(selected);
-            useGitStore.getState().actions.setGitStatus(gitStatus);
-
-            // Clear git diff cache for new project
-            gitDiffCache.clear();
-
             set((state) => {
-              state.files = wrappedFileTree;
+              state.files = [];
               state.rootFolderPath = selected;
               state.filesVersion++;
               state.projectFilesCache = undefined;
@@ -171,6 +154,32 @@ export const useFileSystemStore = createSelectors(
 
             // Restore session tabs
             await get().restoreSession(selected);
+
+            const entries = await readDirectoryContents(selected);
+            const fileTree = sortFileEntries(entries);
+            const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
+
+            // Initialize tree UI state: expand root
+            useFileTreeStore.getState().setExpandedPaths(new Set([selected]));
+
+            set((state) => {
+              state.files = wrappedFileTree;
+              state.filesVersion++;
+            });
+
+            // Clear git diff cache for new project
+            gitDiffCache.clear();
+
+            void useFileWatcherStore
+              .getState()
+              .setProjectRoot(selected)
+              .catch((error) => console.error("Failed to set project root:", selected, error));
+
+            void getGitStatus(selected)
+              .then((gitStatus) => {
+                useGitStore.getState().actions.setGitStatus(gitStatus);
+              })
+              .catch((error) => console.error("Failed to initialize git status:", selected, error));
 
             return true;
           });
@@ -217,7 +226,9 @@ export const useFileSystemStore = createSelectors(
       },
 
       restoreSession: async (projectPath: string) => {
-        const session = useSessionStore.getState().getSession(projectPath);
+        const session =
+          useSessionStore.getState().getSession(projectPath) ??
+          (await getPersistedProjectSessionWithRetry(projectPath));
         if (session) {
           const { actions: bufferActions } = useBufferStore.getState();
 
@@ -1347,7 +1358,7 @@ export const useFileSystemStore = createSelectors(
             async () => {
               // Save current project's session before switching
               const currentRootPath = get().rootFolderPath;
-              if (currentRootPath) {
+              if (currentRootPath && currentRootPath !== tab.path) {
                 const { buffers, activeBufferId } = useBufferStore.getState();
                 useSessionStore
                   .getState()
@@ -1364,14 +1375,6 @@ export const useFileSystemStore = createSelectors(
                 );
               }
 
-              // Load new project's file tree
-              const entries = await readDirectoryContents(tab.path);
-              const fileTree = sortFileEntries(entries);
-              const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
-
-              // Initialize tree UI state: expand root
-              useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
-
               // Update project store
               const { setRootFolderPath, setProjectName, setActiveProjectId } =
                 useProjectStore.getState();
@@ -1382,18 +1385,8 @@ export const useFileSystemStore = createSelectors(
               // Update workspace tabs
               useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
 
-              // Start file watching
-              await useFileWatcherStore.getState().setProjectRoot(tab.path);
-
-              // Initialize git status
-              const gitStatus = await getGitStatus(tab.path);
-              useGitStore.getState().actions.setGitStatus(gitStatus);
-
-              // Clear git diff cache for new project
-              gitDiffCache.clear();
-
               set((state) => {
-                state.files = wrappedFileTree;
+                state.files = [];
                 state.rootFolderPath = tab.path;
                 state.filesVersion++;
                 state.projectFilesCache = undefined;
@@ -1401,6 +1394,34 @@ export const useFileSystemStore = createSelectors(
 
               // Restore session tabs for this project
               await get().restoreSession(tab.path);
+
+              const entries = await readDirectoryContents(tab.path);
+              const fileTree = sortFileEntries(entries);
+              const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
+
+              // Initialize tree UI state: expand root
+              useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
+
+              set((state) => {
+                state.files = wrappedFileTree;
+                state.filesVersion++;
+              });
+
+              // Clear git diff cache for new project
+              gitDiffCache.clear();
+
+              void useFileWatcherStore
+                .getState()
+                .setProjectRoot(tab.path)
+                .catch((error) => console.error("Failed to set project root:", tab.path, error));
+
+              void getGitStatus(tab.path)
+                .then((gitStatus) => {
+                  useGitStore.getState().actions.setGitStatus(gitStatus);
+                })
+                .catch((error) =>
+                  console.error("Failed to initialize git status:", tab.path, error),
+                );
 
               return true;
             },

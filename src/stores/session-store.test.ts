@@ -1,8 +1,32 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { useSessionStore } from "./session-store";
+import {
+  getPersistedProjectSession,
+  getPersistedProjectSessionWithRetry,
+  useSessionStore,
+} from "./session-store";
+
+const createMemoryStorage = () => {
+  const storage = new Map<string, string>();
+  return {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      storage.set(key, value);
+    },
+    removeItem: (key: string) => {
+      storage.delete(key);
+    },
+    clear: () => {
+      storage.clear();
+    },
+  };
+};
 
 describe("session-store", () => {
   beforeEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: createMemoryStorage(),
+      configurable: true,
+    });
     useSessionStore.getState().clearAllSessions();
     globalThis.localStorage?.removeItem("athas-tab-sessions");
   });
@@ -62,5 +86,76 @@ describe("session-store", () => {
       path: "/workspace/demo/README.md",
     });
     expect(session?.activeBufferPath).toBe("/workspace/demo/README.md");
+  });
+
+  test("reads a persisted wrapped session payload directly from localStorage", () => {
+    globalThis.localStorage?.setItem(
+      "athas-tab-sessions",
+      JSON.stringify({
+        state: {
+          sessions: {
+            "/workspace/demo": {
+              projectPath: "/workspace/demo",
+              activeBuffer: { kind: "agent", sessionId: "harness" },
+              activeBufferPath: null,
+              buffers: [
+                {
+                  kind: "agent",
+                  sessionId: "harness",
+                  name: "Harness",
+                  isPinned: false,
+                },
+              ],
+              terminals: [],
+              lastSaved: 123,
+            },
+          },
+        },
+        version: 2,
+      }),
+    );
+
+    expect(getPersistedProjectSession("/workspace/demo")).toMatchObject({
+      projectPath: "/workspace/demo",
+      activeBuffer: { kind: "agent", sessionId: "harness" },
+      buffers: [{ kind: "agent", sessionId: "harness", name: "Harness", isPinned: false }],
+    });
+  });
+
+  test("waits briefly for a persisted session to become readable", async () => {
+    setTimeout(() => {
+      globalThis.localStorage?.setItem(
+        "athas-tab-sessions",
+        JSON.stringify({
+          state: {
+            sessions: {
+              "/workspace/demo": {
+                projectPath: "/workspace/demo",
+                activeBuffer: { kind: "agent", sessionId: "harness" },
+                activeBufferPath: null,
+                buffers: [
+                  {
+                    kind: "agent",
+                    sessionId: "harness",
+                    name: "Harness",
+                    isPinned: false,
+                  },
+                ],
+                terminals: [],
+                lastSaved: 123,
+              },
+            },
+          },
+          version: 2,
+        }),
+      );
+    }, 10);
+
+    await expect(
+      getPersistedProjectSessionWithRetry("/workspace/demo", { attempts: 5, delayMs: 10 }),
+    ).resolves.toMatchObject({
+      projectPath: "/workspace/demo",
+      activeBuffer: { kind: "agent", sessionId: "harness" },
+    });
   });
 });

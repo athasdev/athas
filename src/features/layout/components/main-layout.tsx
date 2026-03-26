@@ -70,10 +70,14 @@ export function MainLayout() {
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject?.() ?? false;
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const activeProjectTab = useMemo(() => projectTabs.find((tab) => tab.isActive), [projectTabs]);
 
-  const hasRestoredWorkspace = useRef(false);
+  const shouldRestoreWorkspace = useRef(true);
   const { isDraggingOver } = useFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
@@ -174,20 +178,27 @@ export function MainLayout() {
 
   // Restore workspace on app startup
   useEffect(() => {
-    if (hasRestoredWorkspace.current) return;
+    if (!shouldRestoreWorkspace.current || !activeProjectTab) return;
+    if (rootFolderPath === activeProjectTab.path) {
+      shouldRestoreWorkspace.current = false;
+      return;
+    }
+    if (isSwitchingProject) return;
 
     const restoreWorkspace = async () => {
-      // Get the active project tab from persisted state
-      const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
-
-      if (activeTab && switchToProject && setIsSwitchingProject) {
-        hasRestoredWorkspace.current = true;
-
+      if (switchToProject && setIsSwitchingProject) {
         // Set flag BEFORE calling switchToProject to prevent tab bar from hiding
         setIsSwitchingProject(true);
 
         try {
-          await switchToProject(activeTab.id);
+          const restored = await switchToProject(activeProjectTab.id);
+          const currentRootPath = useFileSystemStore.getState().rootFolderPath;
+          if (restored || currentRootPath === activeProjectTab.path) {
+            shouldRestoreWorkspace.current = false;
+            return;
+          }
+
+          setIsSwitchingProject(false);
         } catch (error) {
           console.error("Failed to restore workspace:", error);
           // Make sure to clear the flag even if restoration fails
@@ -197,7 +208,13 @@ export function MainLayout() {
     };
 
     restoreWorkspace();
-  }, [switchToProject, setIsSwitchingProject]);
+  }, [
+    activeProjectTab,
+    isSwitchingProject,
+    rootFolderPath,
+    switchToProject,
+    setIsSwitchingProject,
+  ]);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
