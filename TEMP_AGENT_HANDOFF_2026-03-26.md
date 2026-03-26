@@ -36,6 +36,17 @@ Additional follow-up completed after the above:
 - the frontend CLI-open hook now deduplicates startup requests while allowing retry if the first attempt fails
 - live Athas verification on the `:99` VNC display confirmed that launching `athas /home/fsos/Developer/athas` opens the `athas` project on cold start, and opening Harness from that project still brings up a fresh session with `Pi` selected
 - VNC/Xvfb live-app verification on this machine required `WEBKIT_DISABLE_DMABUF_RENDERER=1`; without it, Athas only exposed tiny placeholder windows under WebKit on the `:99` display
+- stale Pi ACP runtime state is now normalized more aggressively so historical chats do not keep synthetic `pi:<route>` session ids without a real session file
+- dead Pi RPC prompt failures now surface as visible in-app errors instead of leaving Harness stuck in stop/streaming mode forever
+- Harness redundancy was trimmed further:
+  - empty state now shows `Open Harness` but no longer shows `New Harness Session`
+  - wide Harness rail marks the default session as `Main`
+  - restored idle Harness sessions now downgrade stale pending permissions and clear ghost streaming state instead of looking live forever
+  - footer sparkles button hit target was enlarged slightly and spaced a bit further from settings
+- watched-display validation on `:106` now visibly confirms the empty-state contract change in the real app:
+  - `Open Harness` is present
+  - `New Harness Session` is absent from the empty-state action list
+- synthetic X11/VNC input on `:106` remains unreliable for the small footer/control targets; screenshots are trustworthy, but automated click/key injection is not yet a reliable proof path on that stack
 
 This file remains useful as historical context for the larger Pi / Harness effort, but the toggle / entry-surface problem described below should be treated as resolved by the newer commits on this branch.
 
