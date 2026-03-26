@@ -164,13 +164,9 @@ fn main() {
 
          // Process CLI arguments (file/folder paths passed on launch)
          {
-            let cwd = std::env::current_dir().unwrap_or_default();
             let args: Vec<String> = std::env::args().skip(1).collect();
-            let open_requests: Vec<commands::development::cli_args::OpenRequest> = args
-               .iter()
-               .filter(|a| !a.starts_with('-'))
-               .filter_map(|a| commands::development::cli_args::parse_open_arg(a, &cwd))
-               .collect();
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let open_requests = commands::development::cli_args::collect_open_requests(&args, &cwd);
 
             if !open_requests.is_empty() {
                let app_handle = app.handle().clone();
@@ -465,6 +461,7 @@ fn main() {
          stop_claude_code,
          send_claude_input,
          get_claude_status,
+         get_startup_open_requests,
          // ACP agent commands (new)
          get_available_agents,
          start_acp_agent,
