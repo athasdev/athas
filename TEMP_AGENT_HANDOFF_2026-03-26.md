@@ -47,6 +47,17 @@ Additional follow-up completed after the above:
   - `Open Harness` is present
   - `New Harness Session` is absent from the empty-state action list
 - synthetic X11/VNC input on `:106` remains unreliable for the small footer/control targets; screenshots are trustworthy, but automated click/key injection is not yet a reliable proof path on that stack
+- startup workspace restore was hardened again:
+  - `MainLayout` startup restore now retries more safely instead of behaving like a fragile one-shot tied to the first partial attempt
+  - persisted project sessions now tolerate a brief local-storage timing race before `restoreSession()` gives up
+  - switching to the already-targeted project path no longer risks overwriting the saved Harness session with an empty session snapshot during startup retries
+- watched-display validation on `:106` is now re-proven on cleaned code when Athas is launched with real `HOME=/home/fsos` plus temp XDG dirs:
+  - the `athas` project restores successfully
+  - the default Harness buffer restores successfully
+  - the persisted `WATCHED` transcript is visible again on cold launch
+- important validation note:
+  - the earlier `forbidden path ... allow-read-dir` startup failure was caused by launching Tauri with `HOME=/tmp/...`, which changed Tauri's `$HOME/**` fs capability scope so `/home/fsos/Developer/athas` was no longer permitted
+  - that specific failure was a validation-environment bug, not the underlying product bug
 
 This file remains useful as historical context for the larger Pi / Harness effort, but the toggle / entry-surface problem described below should be treated as resolved by the newer commits on this branch.
 
