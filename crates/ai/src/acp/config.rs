@@ -91,7 +91,7 @@ impl AgentRegistry {
 
    pub fn list_all(&self) -> Vec<AgentConfig> {
       let mut agents: Vec<_> = self.agents.values().cloned().collect();
-      agents.sort_by(|left, right| left.name.cmp(&right.name));
+      agents.sort_by_key(|a| &a.name);
       agents
    }
 
