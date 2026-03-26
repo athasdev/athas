@@ -747,35 +747,29 @@ Use something like this:
 At the time this handoff was prepared:
 
 - branch: `adding-pi-mono`
-- latest commit: `5e8959ca Fix: surface dead Pi RPC prompt failures`
-- working tree includes a new uncommitted stale Pi runtime-state sanitizer in:
-  - `src/features/ai/lib/chat-acp-state.ts`
-  - `src/features/ai/lib/chat-acp-state.test.ts`
+- latest commit: `b9ef90c3 Docs: refresh Harness handoff snapshot`
+- working tree includes a new uncommitted Harness restore hydration fix in:
+  - `src/features/ai/store/store.ts`
+  - `src/features/ai/store/store.test.ts`
 - recent validator run succeeded with:
-  - `bun test src/features/ai/lib/chat-acp-state.test.ts`
-  - `cargo test -p athas fail_response_waiters_notifies_all_pending_requests -- --nocapture`
-  - `cargo test -p athas get_closed_error_returns_recorded_stream_failure -- --nocapture`
-  - `cargo build -p athas`
+  - `bun test`
   - `bun typecheck`
   - `bun check`
+  - `bun vite build`
   - `git diff --check`
 
 ### Live verification snapshot
 
-- updated app bundle verified in a real Athas window on X display `:106`
-- empty state still shows `Open Harness` / `New Harness Session`
-- Harness opens via `Ctrl+R`
-- footer sparkles entry was re-verified on the watched `:106` VNC session and routes back into Harness instead of relying on a keyboard shortcut
-- same-profile warm restart on the clean watched profile restores the prior Harness session successfully
-- stale historical Pi chats with synthetic `pi:<route>` session ids and no session file are now sanitized on load so they do not carry a fake resumable session id forward
-- no-Pi failure-path verification:
-  - with no `PI_CODING_AGENT_DIR` / models configured, submitting a Harness prompt no longer leaves the composer stuck in stop mode
-  - the session now surfaces an in-app error card: `ACP agent process exited: exit status: 1`
-  - session activity also records the agent error instead of silently hanging
-- Pi positive-path verification:
-  - with `PI_CODING_AGENT_DIR=/home/fsos/.pi/agent`, a real Harness prompt still runs successfully after this bridge change
-  - prompt: `Reply with exactly READY and nothing else.`
-  - visible assistant response: `READY`
+- watched profile evidence still shows a real restored default Harness chat in persisted state:
+  - `chat_history.db` contains `harness:harness:1774545585555` titled `Reply with exactly WATCHED and nothing else.`
+  - local storage still points `harness:harness.currentChatId` at that chat id with `selectedAgentId = "pi"`
+- new store regression test now covers the root cause:
+  - startup previously loaded chat metadata only and never hydrated the current restored chat
+  - `loadChatsFromDatabase()` now eagerly hydrates the current chat for each active scope after metadata load
+- watched VNC validation after this fix is currently blocked by X11/Tauri window mapping instability on `:106`:
+  - clean restarts on the watched profile are mapping an unmapped `10x10` shell window instead of the normal full UI
+  - this is preventing a fresh post-fix visual re-proof of the restored transcript on that display
+  - the product fix is covered by the persisted-profile evidence plus the new store regression test, but the watched restart path is not fully re-proven live yet because of the display/runtime blocker
 
 ---
 

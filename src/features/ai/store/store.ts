@@ -1212,6 +1212,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         loadChatsFromDatabase: async () => {
           try {
             const chatsMetadata = await loadAllChatsFromDb();
+            const currentChatIdsToHydrate = new Set<string>();
             set((state) => {
               state.chats = chatsMetadata as Chat[];
               for (const [scopeId, scopeState] of Object.entries(state.chatScopes)) {
@@ -1219,9 +1220,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                   state.chats,
                   state.chatScopes[scopeId]?.currentChatId ?? scopeState.currentChatId,
                 );
+                if (currentChat) {
+                  currentChatIdsToHydrate.add(currentChat.id);
+                }
                 applyWarmStartAcpScopeState(scopeState, currentChat);
               }
             });
+            await Promise.all(
+              [...currentChatIdsToHydrate].map((chatId) => get().loadChatMessages(chatId)),
+            );
             console.log(`Loaded ${chatsMetadata.length} chats from database`);
           } catch (error) {
             console.error("Failed to load chats from database:", error);
