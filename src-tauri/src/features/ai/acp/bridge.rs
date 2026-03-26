@@ -378,7 +378,10 @@ impl AcpWorker {
    }
 
    fn pi_agent_root() -> Option<PathBuf> {
-      dirs::home_dir().map(|home| home.join(".pi").join("agent"))
+      std::env::var_os("PI_CODING_AGENT_DIR")
+         .filter(|value| !value.is_empty())
+         .map(PathBuf::from)
+         .or_else(|| dirs::home_dir().map(|home| home.join(".pi").join("agent")))
    }
 
    fn resolve_workspace_path(workspace_path: Option<&str>) -> Option<PathBuf> {
@@ -2213,7 +2216,13 @@ impl AcpAgentBridge {
 mod tests {
    use super::{AcpWorker, PiWorkspaceSessionInfo};
    use serde_json::json;
-   use std::{fs, path::PathBuf};
+   use std::{
+      env, fs,
+      path::PathBuf,
+      sync::{LazyLock, Mutex},
+   };
+
+   static PI_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
    #[test]
    fn pi_session_dir_name_matches_workspace_key_format() {
@@ -2250,6 +2259,28 @@ mod tests {
             "message": "hello",
          })
       );
+   }
+
+   #[test]
+   fn pi_agent_root_prefers_explicit_agent_dir_env() {
+      let _guard = PI_ENV_LOCK.lock().unwrap();
+      let original = env::var_os("PI_CODING_AGENT_DIR");
+      unsafe {
+         env::set_var("PI_CODING_AGENT_DIR", "/tmp/custom-pi-agent");
+      }
+
+      let root = AcpWorker::pi_agent_root();
+
+      match original {
+         Some(value) => unsafe {
+            env::set_var("PI_CODING_AGENT_DIR", value);
+         },
+         None => unsafe {
+            env::remove_var("PI_CODING_AGENT_DIR");
+         },
+      }
+
+      assert_eq!(root, Some(PathBuf::from("/tmp/custom-pi-agent")));
    }
 
    #[test]
