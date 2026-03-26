@@ -15,7 +15,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { AGENT_OPTIONS, type AIChatProps, type Chat } from "../../types/ai-chat";
+import type { AIChatProps, Chat } from "../../types/ai-chat";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 const formatTokenCount = (count: number): string =>
@@ -117,17 +117,6 @@ export function ChatHeader({ surface = "panel", scopeId }: ChatHeaderProps) {
     () => chatState.chats.find((chat) => chat.id === chatState.currentChatId),
     [chatState.chats, chatState.currentChatId],
   );
-  const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
-  const currentAgentLabel =
-    AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name ?? "Custom API";
-  const currentModeLabel =
-    currentAgentId === "custom"
-      ? chatState.mode === "plan"
-        ? "Plan"
-        : "Chat"
-      : chatState.sessionModeState.availableModes.find(
-          (entry) => entry.id === chatState.sessionModeState.currentModeId,
-        )?.name || "Session";
   const lineageChats = useMemo(() => {
     if (!currentChat) {
       return [];
@@ -148,76 +137,25 @@ export function ChatHeader({ surface = "panel", scopeId }: ChatHeaderProps) {
 
   if (surface === "harness") {
     return (
-      <div className="relative z-[10020] border-border border-b bg-secondary-bg/40 px-3 py-2.5">
-        <div className="flex items-start gap-3">
+      <div className="relative z-[10020] border-border border-b bg-secondary-bg/35 px-3 py-2">
+        <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             {chatState.currentChatId ? (
-              <>
-                <EditableChatTitle
-                  title={currentChat ? currentChat.title : "New Session"}
-                  onUpdateTitle={(title) =>
-                    chatActions.updateChatTitle(chatState.currentChatId!, title)
-                  }
-                  variant="harness"
-                />
-                {currentChat ? (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-text-lighter">
-                    <span>Harness</span>
-                    <span className="text-text-lighter/60">·</span>
-                    <span>{currentAgentLabel}</span>
-                    <span className="text-text-lighter/60">·</span>
-                    <span>{currentModeLabel}</span>
-                    {contextTokenCount !== null ? (
-                      <>
-                        <span className="text-text-lighter/60">·</span>
-                        <span>{formatTokenCount(contextTokenCount)}</span>
-                      </>
-                    ) : null}
-                    {lineageChats.map((chat, index) => (
-                      <button
-                        key={chat.id}
-                        onClick={() => chatActions.switchToChat(chat.id)}
-                        className={cn(
-                          "rounded-md border border-border/70 px-2 py-0.5 hover:bg-hover",
-                          chat.id === currentChat.id && "bg-secondary-bg/70 text-text",
-                        )}
-                      >
-                        {index === 0 ? "Root" : chat.title}
-                      </button>
-                    ))}
-                    <span
-                      className={cn(
-                        "rounded-md border px-2 py-0.5",
-                        isAutoCompactionArmed
-                          ? "border-border/80"
-                          : "border-border/50 text-text-lighter",
-                      )}
-                    >
-                      Compact {compactionPolicyLabel}
-                    </span>
-                    {summaryCounts ? (
-                      <>
-                        {summaryCounts.compaction > 0 ? (
-                          <span className="rounded-md border border-border/80 px-2 py-0.5">
-                            C{summaryCounts.compaction}
-                          </span>
-                        ) : null}
-                        {summaryCounts.branch > 0 ? (
-                          <span className="rounded-md border border-border/80 px-2 py-0.5">
-                            B{summaryCounts.branch}
-                          </span>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Session"}
+                onUpdateTitle={(title) =>
+                  chatActions.updateChatTitle(chatState.currentChatId!, title)
+                }
+                variant="harness"
+              />
             ) : (
-              <span className="block px-2 py-1 font-medium text-base text-text">New Session</span>
+              <span className="block rounded-xl px-3 py-1.5 font-medium text-base text-text">
+                New Session
+              </span>
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1">
             <Tooltip content="Session History" side="bottom">
               <button
                 onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}

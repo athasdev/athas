@@ -27,6 +27,7 @@ import { getMostRecentClosedHarnessSession } from "@/features/ai/lib/harness-ses
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
 import type { AcpEvent, AcpToolLocation } from "@/features/ai/types/acp";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -47,6 +48,21 @@ const MAX_STREAM_RETRY_ATTEMPTS = 2;
 
 const isContextOverflowError = (error: string): boolean =>
   /(context|token).*(length|limit|window|maximum|too long)|max[_\s-]?tokens/i.test(error);
+
+const getLatestHarnessRailEvent = (events: ChatAcpEvent[]): ChatAcpEvent | null =>
+  [...events].reverse().find((event) => {
+    if (event.kind === "permission" || event.kind === "error" || event.kind === "tool") {
+      return true;
+    }
+
+    if (event.kind === "plan" || event.kind === "mode") {
+      return true;
+    }
+
+    return event.state === "running" || event.state === "error" || Boolean(event.detail);
+  }) ??
+  events[events.length - 1] ??
+  null;
 
 const normalizeToolLocations = (locations?: AcpToolLocation[] | null) =>
   locations?.map((location) => ({ path: location.path, line: location.line ?? null }));
@@ -759,19 +775,7 @@ const AIChat = memo(function AIChat({
     () => getMostRecentClosedHarnessSession(closedBuffersHistory) !== null,
     [closedBuffersHistory],
   );
-  const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
-  const activeModeLabel =
-    currentAgentId === "custom"
-      ? chatState.mode === "plan"
-        ? "Plan"
-        : "Chat"
-      : chatState.sessionModeState.availableModes.find(
-          (mode) => mode.id === chatState.sessionModeState.currentModeId,
-        )?.name || "Session";
-  const providerLabel =
-    currentAgentId === "custom"
-      ? [settings.aiProviderId, settings.aiModelId].filter(Boolean).join(" / ") || "Configured API"
-      : "ACP session";
+  const latestHarnessRailEvent = useMemo(() => getLatestHarnessRailEvent(acpEvents), [acpEvents]);
 
   const handlePermission = async (approved: boolean, cancelled = false, value?: string) => {
     if (!currentPermission) return;
@@ -1075,19 +1079,12 @@ const AIChat = memo(function AIChat({
                 <HarnessSessionRail
                   sessions={harnessSessions}
                   activeSession={{
-                    title: currentChat?.title ?? "New Session",
-                    currentAgentId,
-                    providerLabel,
-                    activeModeLabel,
-                    selectedBufferCount: chatState.selectedBufferIds.size,
-                    selectedFileCount: chatState.selectedFilesPaths.size,
-                    queueCount: chatState.queueCount,
-                    steeringQueueCount: chatState.steeringQueueCount,
-                    followUpQueueCount: chatState.followUpQueueCount,
+                    isRunning:
+                      (harnessSessionStatuses[currentSessionKey] ?? chatState.isTyping) ||
+                      chatState.queueCount > 0,
                     pendingPermissionCount: pendingPermissions.length,
-                    hasSlashCommands: chatState.availableSlashCommands.length > 0,
-                    acpEvents,
                     planEntries: currentChat?.acpActivity?.planEntries ?? [],
+                    latestEvent: latestHarnessRailEvent,
                   }}
                   onCreateSession={handleCreateHarnessSession}
                   canReopenClosedSession={hasClosedHarnessSession}

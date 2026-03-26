@@ -222,20 +222,6 @@ export const ChatMessages = memo(
 
     if (messages.length === 0 && !hasPersistedAcpActivity) {
       if (recentChats.length === 0) {
-        if (surface === "harness") {
-          return (
-            <div className="flex h-full items-center justify-center p-6">
-              <div className="max-w-md rounded-xl border border-border bg-primary-bg/80 px-5 py-4 text-center">
-                <div className="font-medium text-sm text-text">Harness is ready</div>
-                <div className="mt-2 text-text-lighter text-xs">
-                  Describe the task, mention project files with <code>@</code>, or use a slash
-                  command to start a new session.
-                </div>
-              </div>
-            </div>
-          );
-        }
-
         return null;
       }
 
@@ -272,11 +258,11 @@ export const ChatMessages = memo(
       <>
         {planEntries.length > 0 ? (
           <div className="px-4 pt-3 pb-1">
-            <div className="rounded-xl border border-border/80 bg-secondary-bg/30 px-3 py-2.5">
+            <div className="rounded-xl border border-border/70 bg-primary-bg/45 px-3 py-2.5">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+                <div className="inline-flex items-center gap-1.5 text-[11px] text-text-lighter">
                   <ListTodo size={11} />
-                  Active plan
+                  <span className="font-medium text-text">Plan</span>
                 </div>
                 <div className="text-[10px] text-text-lighter">
                   {planCounts.completed}/{planCounts.total} done
@@ -287,7 +273,7 @@ export const ChatMessages = memo(
                 {planEntries.map((entry, index) => (
                   <div
                     key={`${entry.content}-${index}`}
-                    className="flex items-start gap-2 rounded-lg border border-border/70 bg-primary-bg/50 px-2.5 py-2 text-xs"
+                    className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary-bg/35 px-2.5 py-1.5 text-xs"
                   >
                     <span
                       className={cn(

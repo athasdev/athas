@@ -776,12 +776,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {/* Queue indicator */}
             {chatState.queueCount > 0 && (
               <div
-                className="flex items-center gap-1 rounded-md border border-border bg-secondary-bg/60 px-2 py-1 text-text-lighter text-xs"
+                className="flex items-center gap-1 rounded-md border border-border/70 bg-primary-bg/50 px-2 py-1 text-text-lighter text-xs"
                 title={`Queued messages: ${chatState.steeringQueueCount} steering, ${chatState.followUpQueueCount} follow-up`}
               >
-                <span>S{chatState.steeringQueueCount}</span>
-                <span className="text-text-lighter/60">/</span>
-                <span>F{chatState.followUpQueueCount}</span>
+                <span className="font-medium text-text">{chatState.queueCount}</span>
+                <span>queued</span>
               </div>
             )}
           </div>
