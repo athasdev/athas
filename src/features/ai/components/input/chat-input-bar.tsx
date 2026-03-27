@@ -1,7 +1,10 @@
 import { AlertCircle, LoaderCircle, Send, Slash, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
-import { getHarnessComposerSeedCharacter } from "@/features/ai/lib/harness-composer-seed";
+import {
+  getHarnessComposerSeedCharacter,
+  shouldSeedHarnessComposerKeyEvent,
+} from "@/features/ai/lib/harness-composer-seed";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
@@ -319,8 +322,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     }
 
     const handleHarnessSeedKey = (event: KeyboardEvent) => {
-      const harnessRoot = aiChatContainerRef.current?.closest("[data-ai-chat-surface='harness']");
-      if (!harnessRoot || !(event.target instanceof Node) || !harnessRoot.contains(event.target)) {
+      const harnessRoot =
+        aiChatContainerRef.current?.closest("[data-ai-chat-surface='harness']") ?? null;
+      if (
+        !shouldSeedHarnessComposerKeyEvent({
+          harnessRoot,
+          target: event.target,
+          activeTarget: document.activeElement,
+        })
+      ) {
         return;
       }
 

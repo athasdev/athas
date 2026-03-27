@@ -1,7 +1,12 @@
 interface EditableTargetLike extends EventTarget {
   tagName?: string;
+  nodeName?: string;
   isContentEditable?: boolean;
   closest?: (selector: string) => unknown;
+}
+
+export interface HarnessSeedScopeLike {
+  contains?: (target: Node | null) => boolean;
 }
 
 export interface HarnessComposerSeedEvent {
@@ -12,6 +17,12 @@ export interface HarnessComposerSeedEvent {
   altKey: boolean;
   isComposing: boolean;
   target: EventTarget | null;
+}
+
+export interface HarnessComposerSeedContext {
+  harnessRoot: HarnessSeedScopeLike | null;
+  target: EventTarget | null;
+  activeTarget: EventTarget | null;
 }
 
 const isEditableEventTarget = (target: EventTarget | null): boolean => {
@@ -30,6 +41,45 @@ const isEditableEventTarget = (target: EventTarget | null): boolean => {
   }
 
   return Boolean(element.closest?.("[contenteditable='true'],input,textarea,select"));
+};
+
+const isWindowLevelTarget = (target: EventTarget | null): boolean => {
+  const element = target as EditableTargetLike | null;
+  const tagName = element?.tagName ?? element?.nodeName;
+  return ["BODY", "HTML", "#DOCUMENT"].includes(tagName?.toUpperCase() ?? "");
+};
+
+const isContainedByHarness = (
+  harnessRoot: HarnessSeedScopeLike | null,
+  target: EventTarget | null,
+): boolean => {
+  if (!harnessRoot?.contains) {
+    return false;
+  }
+
+  return harnessRoot.contains(target as Node | null);
+};
+
+export const shouldSeedHarnessComposerKeyEvent = ({
+  harnessRoot,
+  target,
+  activeTarget,
+}: HarnessComposerSeedContext): boolean => {
+  if (!harnessRoot || isEditableEventTarget(target)) {
+    return false;
+  }
+
+  if (isContainedByHarness(harnessRoot, target)) {
+    return true;
+  }
+
+  if (isContainedByHarness(harnessRoot, activeTarget) && !isEditableEventTarget(activeTarget)) {
+    return true;
+  }
+
+  return (
+    isWindowLevelTarget(target) && (activeTarget === null || isWindowLevelTarget(activeTarget))
+  );
 };
 
 export const getHarnessComposerSeedCharacter = ({
