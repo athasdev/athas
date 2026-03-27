@@ -96,6 +96,25 @@ Additional follow-up completed after the above:
   - `ai-chat`, `buffer-store`, `store`, and `getChatCompletionStream()` now use that runtime contract instead of calling ACP helpers directly
   - legacy ACP bridge behavior remains the default live implementation
   - `pi-native` is now an explicit unsupported runtime branch that fails loudly with `Pi native runtime is not wired into Athas yet.` instead of silently falling through the legacy ACP path
+- first real `pi-native` runtime slice is now implemented:
+  - Athas now depends directly on `@mariozechner/pi-coding-agent`
+  - a Node-based Pi native host now lives under `src-tauri/pi-native-host/index.mjs`
+  - a new Rust `PiNativeBridge` now launches that host, speaks a JSON-line request/response protocol, and forwards native Pi events back over the existing `acp-event` channel
+  - new Tauri commands now exist for native Pi session start / prompt / status / cancel / stop
+  - the frontend `pi-native` branch in `harness-runtime.ts` now uses a dedicated `PiNativeStreamHandler` instead of throwing immediately
+  - current native coverage is intentionally narrow:
+    - real session creation
+    - real prompt send / response streaming
+    - real status / cancel / stop
+  - current native gaps still remaining after this slice:
+    - no native permission flow yet
+    - no native session-mode / thinking / model mutation surface yet
+    - no migration or settings/package/extension UI yet
+    - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
+- local machine proof for the new native slice:
+  - running `node src-tauri/pi-native-host/index.mjs` directly and speaking the JSON-line protocol now creates a real Pi session under `~/.pi/agent/sessions/...`
+  - a smoke prompt of `Reply with exactly READY and nothing else.` returned a native `content_chunk` of `READY`, followed by `prompt_complete` and `session_complete`
+  - the emitted runtime state reflected the shared Pi session path and the active model/thinking state from the real local Pi environment
 - watched-display relaunch validation on `:106` with real `HOME=/home/fsos` now reflects that normalization:
   - the old lowercase plain-file `harness` tab no longer comes back after restart
   - the restored tab now comes back as a real sparkles `Harness` tab
