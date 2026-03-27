@@ -881,10 +881,10 @@ Use something like this:
 At the time this handoff was last refreshed:
 
 - branch: `adding-pi-mono`
-- latest committed native restore slice on origin: `d8153305 Feat: hydrate pi-native transcript on restore`
-- current working tree includes one uncommitted watched-window restore fix in:
-  - `src/features/ai/components/chat/ai-chat.tsx`
+- latest committed native restore slice on origin: `20826189 Feat: default Harness entry to pi-native for Pi`
+- current working tree is expected to be clean after the corresponding docs refresh commit
 - recent validator run succeeded with:
+  - `bun test src/features/ai/lib/harness-entry-backend.test.ts src/features/layout/components/footer/editor-footer-ai-entry.test.ts src/features/command-palette/constants/view-actions.test.tsx src/features/layout/components/empty-editor-state-actions.test.ts`
   - `bun test src-tauri/pi-native-host/session-transcript.test.js src/features/ai/lib/pi-native-restore.test.ts src/features/ai/lib/harness-runtime.test.ts`
   - `bun typecheck`
   - `cargo build -p athas`
@@ -903,6 +903,11 @@ At the time this handoff was last refreshed:
   - `reasoning-state.json` now reports `openai-codex / gpt-5.4 / medium`
   - `behavior-mode-state.json` no longer carries `currentBehavior`
 - the watched `:106` display has been unstable across restarts, but the latest root capture is non-black again and the full Athas window is present
+- VNC went down again once during account swapping because `x11vnc` died while `Xvfb :106` and `openbox` survived
+  - corrected behavior:
+    - restart only `x11vnc` on `:106`
+    - keep `x11vnc` bound to `127.0.0.1:5906`
+    - keep password auth at `athas`
 - watched-window native restore proof now exists on the real `:106` surface:
   - seeded a clean `pi-native` Harness tab restore state into the watched profile
   - cold-launched Athas on `:106`
@@ -925,6 +930,18 @@ At the time this handoff was last refreshed:
   - the effect no longer aborts the in-flight native restore attempt on rerender
   - it still prevents duplicate concurrent attempts with `nativeSessionRestoreAttemptRef`
   - the guard is cleared in `finally`, so future retries remain possible if a run actually fails
+- latest native entry slice:
+  - new helper `src/features/ai/lib/harness-entry-backend.ts` resolves default Harness entry backend from the default Harness scope agent
+  - default open surfaces now explicitly open the default Harness session as `pi-native`:
+    - footer toggle helper
+    - empty-state `Open Harness`
+    - command palette `View: Open Harness`
+  - `View: New Harness Session` is intentionally unchanged in this slice
+  - implementation avoids a bad store import cycle by resolving from scope defaults instead of pulling `useAIChatStore` into the entry helper
+  - watched-window limitation remains:
+    - the live Athas window on `:106` is healthy and visibly shows the native restored `READY` transcript
+    - synthetic close/reopen gestures on this Xvfb/WebKit stack still refused to land reliably during this slice
+    - so the new default-entry behavior is covered by code/tests/build, but not freshly re-proven by visible watched-window automation yet
 
 ---
 
