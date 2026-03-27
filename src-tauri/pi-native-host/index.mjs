@@ -5,6 +5,16 @@ import { createExtensionUiBridge } from "./extension-ui.mjs";
 import { applyBootstrapHistory } from "./session-bootstrap.mjs";
 import { listSessionsForWorkspace, resolveSessionPathForStart } from "./session-listing.mjs";
 import {
+  clearPiAuthCredential,
+  getPiSettingsSnapshot,
+  installPiPackage,
+  loginPiProvider,
+  logoutPiProvider,
+  removePiPackage,
+  setPiApiKeyCredential,
+  setPiScopedDefaults,
+} from "./pi-settings.mjs";
+import {
   getSessionModeState,
   listSlashCommandsForSession,
   setSessionMode,
@@ -12,6 +22,8 @@ import {
 import { loadSessionTranscript } from "./session-transcript.mjs";
 
 const sessions = new Map();
+const pendingSettingsPrompts = new Map();
+let nextSettingsPromptId = 1;
 
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -34,12 +46,27 @@ function emitEvent(event) {
   send({ type: "event", event });
 }
 
+function emitSettingsEvent(event) {
+  send({ type: "settings_event", event });
+}
+
 function encodeSessionDir(cwd) {
   return `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`;
 }
 
 function getSessionDir(agentDir, cwd) {
   return join(agentDir, "sessions", encodeSessionDir(cwd));
+}
+
+function resolveWorkspacePath(workspacePath) {
+  return typeof workspacePath === "string" && workspacePath.length > 0 ? workspacePath : null;
+}
+
+function createSettingsContext(params = {}) {
+  return {
+    cwd: resolveWorkspacePath(params.workspacePath),
+    agentDir: params.agentDir,
+  };
 }
 
 function createStatus(record) {
@@ -294,6 +321,23 @@ async function ensureRouteSession(routeKey, options = {}) {
   return record;
 }
 
+function requestSettingsPrompt({ providerId, kind, message, placeholder, allowEmpty }) {
+  const requestId = `pi-auth-${nextSettingsPromptId++}`;
+
+  return new Promise((resolve, reject) => {
+    pendingSettingsPrompts.set(requestId, { resolve, reject });
+    emitSettingsEvent({
+      type: "auth_prompt",
+      providerId,
+      requestId,
+      kind,
+      message,
+      placeholder,
+      allowEmpty: Boolean(allowEmpty),
+    });
+  });
+}
+
 async function handleRequest(id, method, params = {}) {
   switch (method) {
     case "startSession": {
@@ -370,6 +414,122 @@ async function handleRequest(id, method, params = {}) {
         throw new Error("No native Pi session is running for this route.");
       }
       return sendResponse(id, listSlashCommandsForSession(record.session));
+    }
+    case "getSettingsSnapshot": {
+      return sendResponse(id, await getPiSettingsSnapshot(createSettingsContext(params)));
+    }
+    case "setDefaults": {
+      return sendResponse(
+        id,
+        await setPiScopedDefaults({
+          ...createSettingsContext(params),
+          scope: params.scope,
+          defaultProvider: params.defaultProvider,
+          defaultModel: params.defaultModel,
+          defaultThinkingLevel: params.defaultThinkingLevel,
+        }),
+      );
+    }
+    case "setApiKeyCredential": {
+      await setPiApiKeyCredential({
+        agentDir: params.agentDir,
+        providerId: params.providerId,
+        key: params.key,
+      });
+      return sendResponse(id, await getPiSettingsSnapshot(createSettingsContext(params)));
+    }
+    case "clearAuthCredential": {
+      await clearPiAuthCredential({
+        agentDir: params.agentDir,
+        providerId: params.providerId,
+      });
+      return sendResponse(id, await getPiSettingsSnapshot(createSettingsContext(params)));
+    }
+    case "logoutProvider": {
+      await logoutPiProvider({
+        agentDir: params.agentDir,
+        providerId: params.providerId,
+      });
+      return sendResponse(id, await getPiSettingsSnapshot(createSettingsContext(params)));
+    }
+    case "loginProvider": {
+      emitSettingsEvent({
+        type: "auth_start",
+        providerId: params.providerId,
+      });
+      try {
+        await loginPiProvider({
+          agentDir: params.agentDir,
+          providerId: params.providerId,
+          onAuth(info) {
+            emitSettingsEvent({
+              type: "auth_open_url",
+              providerId: params.providerId,
+              url: info.url,
+              instructions: info.instructions ?? null,
+            });
+          },
+          onProgress(message) {
+            emitSettingsEvent({
+              type: "auth_progress",
+              providerId: params.providerId,
+              message,
+            });
+          },
+          requestPrompt(prompt) {
+            return requestSettingsPrompt({
+              providerId: params.providerId,
+              ...prompt,
+            });
+          },
+        });
+      } catch (error) {
+        emitSettingsEvent({
+          type: "auth_error",
+          providerId: params.providerId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+      emitSettingsEvent({
+        type: "auth_complete",
+        providerId: params.providerId,
+      });
+      return sendResponse(id, await getPiSettingsSnapshot(createSettingsContext(params)));
+    }
+    case "respondAuthPrompt": {
+      const pending = pendingSettingsPrompts.get(params.requestId);
+      if (!pending) {
+        throw new Error(`Unknown native Pi auth prompt: ${params.requestId}`);
+      }
+
+      pendingSettingsPrompts.delete(params.requestId);
+      if (params.cancelled) {
+        pending.reject(new Error("Pi auth prompt cancelled"));
+      } else {
+        pending.resolve(typeof params.value === "string" ? params.value : "");
+      }
+      return sendResponse(id, null);
+    }
+    case "installPackage": {
+      return sendResponse(
+        id,
+        await installPiPackage({
+          ...createSettingsContext(params),
+          scope: params.scope,
+          source: params.source,
+        }),
+      );
+    }
+    case "removePackage": {
+      return sendResponse(
+        id,
+        await removePiPackage({
+          ...createSettingsContext(params),
+          scope: params.scope,
+          source: params.source,
+        }),
+      );
     }
     case "getSessionTranscript": {
       return sendResponse(id, await loadSessionTranscript(params.sessionPath));
@@ -457,6 +617,10 @@ rl.on("line", async (line) => {
 });
 
 rl.on("close", () => {
+  for (const pending of pendingSettingsPrompts.values()) {
+    pending.reject(new Error("Pi native host closed"));
+  }
+  pendingSettingsPrompts.clear();
   for (const routeKey of sessions.keys()) {
     detachRoute(routeKey);
   }

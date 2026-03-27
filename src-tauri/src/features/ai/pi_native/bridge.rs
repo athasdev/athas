@@ -97,6 +97,112 @@ impl PiNativeBridge {
       serde_json::from_value(value).context("failed to decode pi-native slash commands")
    }
 
+   pub async fn get_settings_snapshot(&self, workspace_path: Option<String>) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+      });
+
+      self.send_request("getSettingsSnapshot", params).await
+   }
+
+   pub async fn set_defaults(
+      &self,
+      workspace_path: Option<String>,
+      scope: &str,
+      default_provider: Option<String>,
+      default_model: Option<String>,
+      default_thinking_level: Option<String>,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "scope": scope,
+         "defaultProvider": default_provider,
+         "defaultModel": default_model,
+         "defaultThinkingLevel": default_thinking_level,
+      });
+
+      self.send_request("setDefaults", params).await
+   }
+
+   pub async fn set_api_key_credential(
+      &self,
+      workspace_path: Option<String>,
+      provider_id: &str,
+      key: &str,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "providerId": provider_id,
+         "key": key,
+      });
+
+      self.send_request("setApiKeyCredential", params).await
+   }
+
+   pub async fn clear_auth_credential(
+      &self,
+      workspace_path: Option<String>,
+      provider_id: &str,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "providerId": provider_id,
+      });
+
+      self.send_request("clearAuthCredential", params).await
+   }
+
+   pub async fn login_provider(
+      &self,
+      workspace_path: Option<String>,
+      provider_id: &str,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "providerId": provider_id,
+      });
+
+      self.send_request("loginProvider", params).await
+   }
+
+   pub async fn logout_provider(
+      &self,
+      workspace_path: Option<String>,
+      provider_id: &str,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "providerId": provider_id,
+      });
+
+      self.send_request("logoutProvider", params).await
+   }
+
+   pub async fn respond_auth_prompt(
+      &self,
+      request_id: &str,
+      value: Option<String>,
+      cancelled: bool,
+   ) -> Result<()> {
+      self
+         .send_request(
+            "respondAuthPrompt",
+            json!({
+               "requestId": request_id,
+               "value": value,
+               "cancelled": cancelled,
+            }),
+         )
+         .await?;
+      Ok(())
+   }
+
    pub async fn get_session_transcript(
       &self,
       session_path: String,
@@ -132,6 +238,38 @@ impl PiNativeBridge {
          .send_request("cancelPrompt", json!({ "routeKey": route_key }))
          .await?;
       Ok(())
+   }
+
+   pub async fn install_package(
+      &self,
+      workspace_path: Option<String>,
+      scope: &str,
+      source: &str,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "scope": scope,
+         "source": source,
+      });
+
+      self.send_request("installPackage", params).await
+   }
+
+   pub async fn remove_package(
+      &self,
+      workspace_path: Option<String>,
+      scope: &str,
+      source: &str,
+   ) -> Result<Value> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+         "scope": scope,
+         "source": source,
+      });
+
+      self.send_request("removePackage", params).await
    }
 
    pub async fn respond_permission(
@@ -297,6 +435,13 @@ impl PiNativeBridge {
                            log::warn!("Failed to decode pi-native event: {}", error);
                         }
                      }
+                  }
+               }
+               Some("settings_event") => {
+                  if let Some(event_value) = payload.get("event").cloned()
+                     && let Err(error) = app_handle.emit("pi-native-settings-event", &event_value)
+                  {
+                     log::warn!("Failed to emit pi-native settings event: {}", error);
                   }
                }
                _ => {}
