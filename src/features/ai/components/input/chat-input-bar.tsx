@@ -1,9 +1,10 @@
-import { Send, Slash, Square, X } from "lucide-react";
+import { AlertCircle, LoaderCircle, Send, Slash, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
+import type { HarnessTrustState } from "@/features/ai/types/chat-ui";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -13,11 +14,41 @@ import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
+const getHarnessStatusTone = (status: HarnessTrustState) => {
+  switch (status.kind) {
+    case "running":
+      return {
+        dotClassName: "bg-blue-400",
+        textClassName: "text-blue-200",
+        Icon: LoaderCircle,
+      };
+    case "attention":
+      return {
+        dotClassName: "bg-yellow-400",
+        textClassName: "text-yellow-200",
+        Icon: AlertCircle,
+      };
+    case "error":
+      return {
+        dotClassName: "bg-red-400",
+        textClassName: "text-red-200",
+        Icon: AlertCircle,
+      };
+    default:
+      return {
+        dotClassName: "bg-text-lighter/35",
+        textClassName: "text-text-lighter",
+        Icon: null,
+      };
+  }
+};
+
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
   surface = "panel",
   scopeId,
+  harnessStatus,
   onSendMessage,
   onStopStreaming,
 }: AIChatInputBarProps) {
@@ -699,6 +730,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         ? "Ask Harness to work on this project... (@ to mention files)"
         : "Message... (@ to mention files)"
     : "Configure API key to enable the AI assistant...";
+  const harnessStatusTone = harnessStatus ? getHarnessStatusTone(harnessStatus) : null;
 
   return (
     <div
@@ -779,6 +811,40 @@ const AIChatInputBar = memo(function AIChatInputBar({
             tabIndex={isInputEnabled ? 0 : -1}
           />
         </div>
+
+        {surface === "harness" && harnessStatus ? (
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-border/70 border-t pt-2 text-[11px]">
+            <span className="text-text">{harnessStatus.agentLabel}</span>
+            <span className="text-text-lighter/55">/</span>
+            <span className="text-text-lighter">{harnessStatus.modeLabel}</span>
+            <span className="text-text-lighter/55">/</span>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 font-medium",
+                harnessStatusTone?.textClassName,
+              )}
+            >
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  harnessStatusTone?.dotClassName,
+                  harnessStatus.kind === "running" && "animate-pulse",
+                )}
+                aria-hidden="true"
+              />
+              {harnessStatusTone?.Icon ? (
+                <harnessStatusTone.Icon
+                  size={11}
+                  className={cn(harnessStatus.kind === "running" && "animate-spin")}
+                />
+              ) : null}
+              <span>{harnessStatus.stateLabel}</span>
+            </span>
+            {harnessStatus.detail ? (
+              <span className="truncate text-text-lighter">{harnessStatus.detail}</span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div
           className={cn(

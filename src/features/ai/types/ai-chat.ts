@@ -5,7 +5,11 @@ import type {
   SessionMode,
   SlashCommand,
 } from "@/features/ai/types/acp";
-import type { ChatAcpEvent, ChatAcpPermissionRequest } from "@/features/ai/types/chat-ui";
+import type {
+  ChatAcpEvent,
+  ChatAcpPermissionRequest,
+  HarnessTrustState,
+} from "@/features/ai/types/chat-ui";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
@@ -214,6 +218,7 @@ export interface AIChatInputBarProps {
   allProjectFiles: FileEntry[];
   surface?: AIChatSurface;
   scopeId?: ChatScopeId;
+  harnessStatus?: HarnessTrustState | null;
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

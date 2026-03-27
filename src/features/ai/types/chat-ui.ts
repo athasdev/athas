@@ -10,6 +10,17 @@ export interface ChatAcpToolEventData {
   error?: string;
 }
 
+export type HarnessTrustStateKind = "idle" | "running" | "attention" | "error";
+
+export interface HarnessTrustState {
+  kind: HarnessTrustStateKind;
+  agentLabel: string;
+  modeLabel: string;
+  stateLabel: string;
+  detail: string | null;
+  showRailStatus: boolean;
+}
+
 export interface ChatAcpEvent {
   id: string;
   kind: "thinking" | "tool" | "plan" | "mode" | "error" | "permission" | "status";

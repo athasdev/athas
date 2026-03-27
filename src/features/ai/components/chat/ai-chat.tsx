@@ -26,6 +26,7 @@ import {
 } from "@/features/ai/lib/chat-stream-retry";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { getMostRecentClosedHarnessSession } from "@/features/ai/lib/harness-session-lifecycle";
+import { getHarnessTrustState } from "@/features/ai/lib/harness-trust-state";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
 import type { AcpEvent, AcpToolLocation } from "@/features/ai/types/acp";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
@@ -167,6 +168,7 @@ const AIChat = memo(function AIChat({
   );
   const currentPermission = pendingPermissions[0];
   const [permissionValue, setPermissionValue] = useState("");
+  const currentAgentId = chatActions.getCurrentAgentId();
 
   useEffect(() => {
     if (!currentPermission) {
@@ -761,6 +763,33 @@ const AIChat = memo(function AIChat({
     [sendMessage],
   );
   const currentSessionKey = sessionKey ?? DEFAULT_HARNESS_SESSION_KEY;
+  const latestHarnessRailEvent = useMemo(() => getLatestHarnessRailEvent(acpEvents), [acpEvents]);
+  const harnessTrustState = useMemo(
+    () =>
+      getHarnessTrustState({
+        agentId: currentAgentId,
+        mode: chatState.mode,
+        isRunning:
+          (harnessSessionStatuses[currentSessionKey] ?? false) ||
+          chatState.isTyping ||
+          chatState.queueCount > 0,
+        queueCount: chatState.queueCount,
+        pendingPermissionCount: pendingPermissions.length,
+        stalePermissionCount: stalePermissions.length,
+        latestEvent: latestHarnessRailEvent,
+      }),
+    [
+      chatState.isTyping,
+      chatState.mode,
+      chatState.queueCount,
+      currentAgentId,
+      currentSessionKey,
+      harnessSessionStatuses,
+      latestHarnessRailEvent,
+      pendingPermissions.length,
+      stalePermissions.length,
+    ],
+  );
   const harnessSessions = useMemo(
     () =>
       buffers
@@ -771,15 +800,19 @@ const AIChat = memo(function AIChat({
           title: buffer.name,
           isActive: buffer.agentSessionId === currentSessionKey,
           isDefault: isDefaultHarnessSessionKey(buffer.agentSessionId!),
-          isRunning: harnessSessionStatuses[buffer.agentSessionId!] ?? false,
+          state:
+            buffer.agentSessionId === currentSessionKey
+              ? harnessTrustState.kind
+              : harnessSessionStatuses[buffer.agentSessionId!]
+                ? "running"
+                : "idle",
         })),
-    [buffers, currentSessionKey, harnessSessionStatuses],
+    [buffers, currentSessionKey, harnessSessionStatuses, harnessTrustState.kind],
   );
   const hasClosedHarnessSession = useMemo(
     () => getMostRecentClosedHarnessSession(closedBuffersHistory) !== null,
     [closedBuffersHistory],
   );
-  const latestHarnessRailEvent = useMemo(() => getLatestHarnessRailEvent(acpEvents), [acpEvents]);
 
   const handlePermission = async (approved: boolean, cancelled = false, value?: string) => {
     if (!currentPermission) return;
@@ -1114,6 +1147,7 @@ const AIChat = memo(function AIChat({
                     allProjectFiles={allProjectFiles}
                     surface={surface}
                     scopeId={resolvedScopeId}
+                    harnessStatus={surface === "harness" ? harnessTrustState : null}
                     onSendMessage={handleSendMessage}
                     onStopStreaming={stopStreaming}
                   />
@@ -1125,14 +1159,7 @@ const AIChat = memo(function AIChat({
               <div className="hidden xl:flex xl:w-[320px] xl:shrink-0 xl:border-border/70 xl:border-l">
                 <HarnessSessionRail
                   sessions={harnessSessions}
-                  activeSession={{
-                    isRunning:
-                      (harnessSessionStatuses[currentSessionKey] ?? chatState.isTyping) ||
-                      chatState.queueCount > 0,
-                    pendingPermissionCount: pendingPermissions.length,
-                    planEntries: currentChat?.acpActivity?.planEntries ?? [],
-                    latestEvent: latestHarnessRailEvent,
-                  }}
+                  activeSession={{ status: harnessTrustState }}
                   onCreateSession={handleCreateHarnessSession}
                   canReopenClosedSession={hasClosedHarnessSession}
                   onReopenClosedSession={handleReopenClosedHarnessSession}

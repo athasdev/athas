@@ -1,7 +1,5 @@
-import { Activity, CircleDot, History, ListTodo, Plus, Sparkles, X } from "lucide-react";
-import { getAcpPlanEntryCounts } from "@/features/ai/lib/chat-acp-activity";
-import type { AcpPlanEntry } from "@/features/ai/types/acp";
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import { AlertCircle, CircleDot, History, LoaderCircle, Plus, Sparkles, X } from "lucide-react";
+import type { HarnessTrustState, HarnessTrustStateKind } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
 
 interface HarnessRailSession {
@@ -10,14 +8,11 @@ interface HarnessRailSession {
   title: string;
   isActive: boolean;
   isDefault: boolean;
-  isRunning: boolean;
+  state: HarnessTrustStateKind;
 }
 
 interface HarnessRailActiveSession {
-  isRunning: boolean;
-  pendingPermissionCount: number;
-  planEntries: AcpPlanEntry[];
-  latestEvent: ChatAcpEvent | null;
+  status: HarnessTrustState;
 }
 
 interface HarnessSessionRailProps {
@@ -30,16 +25,41 @@ interface HarnessSessionRailProps {
   onCloseSession: (bufferId: string) => void;
 }
 
-function getEventTone(state: ChatAcpEvent["state"]): string {
+function getSessionDotTone(state: HarnessTrustStateKind): string {
   switch (state) {
     case "running":
-      return "text-blue-400";
-    case "success":
-      return "text-green-400";
+      return "bg-blue-400";
+    case "attention":
+      return "bg-yellow-400";
     case "error":
-      return "text-red-400";
+      return "bg-red-400";
     default:
-      return "text-text-lighter";
+      return "bg-text-lighter/35";
+  }
+}
+
+function getStatusTone(state: HarnessTrustStateKind): string {
+  switch (state) {
+    case "running":
+      return "border-blue-500/20 bg-blue-500/10 text-blue-200";
+    case "attention":
+      return "border-yellow-500/20 bg-yellow-500/10 text-yellow-200";
+    case "error":
+      return "border-red-500/20 bg-red-500/10 text-red-200";
+    default:
+      return "border-border/70 bg-secondary-bg/50 text-text-lighter";
+  }
+}
+
+function getStatusIcon(state: HarnessTrustStateKind) {
+  switch (state) {
+    case "running":
+      return LoaderCircle;
+    case "attention":
+    case "error":
+      return AlertCircle;
+    default:
+      return CircleDot;
   }
 }
 
@@ -52,21 +72,7 @@ export function HarnessSessionRail({
   onSelectSession,
   onCloseSession,
 }: HarnessSessionRailProps) {
-  const planCounts = getAcpPlanEntryCounts({
-    planEntries: activeSession.planEntries,
-    events: [],
-    permissions: [],
-  });
-  const hasPlan = activeSession.planEntries.length > 0;
-  const planSummary = hasPlan
-    ? `${planCounts.completed}/${planCounts.total} done${
-        planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""
-      }`
-    : "No active plan";
-  const permissionSummary =
-    activeSession.pendingPermissionCount > 0
-      ? `${activeSession.pendingPermissionCount} pending`
-      : "Clear";
+  const StatusIcon = getStatusIcon(activeSession.status.kind);
 
   return (
     <aside className="flex h-full w-full shrink-0 flex-col gap-2.5 p-3">
@@ -137,14 +143,12 @@ export function HarnessSessionRail({
                 ) : null}
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-1.5 py-0.5 font-medium text-[10px] uppercase tracking-wide",
-                    session.isRunning
-                      ? "bg-secondary-bg/90 text-text"
-                      : "bg-secondary-bg text-text-lighter",
+                    "size-2 shrink-0 rounded-full",
+                    getSessionDotTone(session.state),
+                    session.state === "running" && "animate-pulse",
                   )}
-                >
-                  {session.isRunning ? "Running" : "Idle"}
-                </span>
+                  aria-hidden="true"
+                />
               </button>
               <button
                 type="button"
@@ -160,68 +164,34 @@ export function HarnessSessionRail({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
-        <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
-          <Activity size={12} />
-          <span>Live status</span>
-        </div>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
-            <span className="text-text-lighter">Session</span>
-            <span
-              className={cn(
-                "font-medium",
-                activeSession.isRunning ? "text-text" : "text-text-lighter",
-              )}
-            >
-              {activeSession.isRunning ? "Running" : "Idle"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
-            <span className="text-text-lighter">Permissions</span>
-            <span
-              className={cn(
-                "font-medium",
-                activeSession.pendingPermissionCount > 0 ? "text-yellow-400" : "text-text-lighter",
-              )}
-            >
-              {permissionSummary}
-            </span>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary-bg/50 px-2.5 py-2">
-            <span className="inline-flex items-center gap-1.5 text-text-lighter">
-              <ListTodo size={11} />
-              Plan
-            </span>
-            <span className={cn("font-medium", hasPlan ? "text-text" : "text-text-lighter")}>
-              {planSummary}
-            </span>
-          </div>
-          {activeSession.latestEvent ? (
-            <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
-              <div className="mb-1 text-[10px] text-text-lighter uppercase tracking-wide">
-                Latest
-              </div>
-              <div className="flex items-start gap-2 text-xs">
-                <CircleDot
-                  size={10}
-                  className={cn("mt-0.5 shrink-0", getEventTone(activeSession.latestEvent.state))}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium text-text">
-                    {activeSession.latestEvent.label}
+      {activeSession.status.showRailStatus ? (
+        <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
+          <div
+            className={cn(
+              "rounded-xl border px-3 py-2.5 text-xs",
+              getStatusTone(activeSession.status.kind),
+            )}
+          >
+            <div className="flex items-start gap-2">
+              <StatusIcon
+                size={13}
+                className={cn(
+                  "mt-0.5 shrink-0",
+                  activeSession.status.kind === "running" && "animate-spin",
+                )}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{activeSession.status.stateLabel}</div>
+                {activeSession.status.detail ? (
+                  <div className="mt-1 text-[11px] text-current/80">
+                    {activeSession.status.detail}
                   </div>
-                  {activeSession.latestEvent.detail ? (
-                    <div className="mt-0.5 line-clamp-2 text-text-lighter">
-                      {activeSession.latestEvent.detail}
-                    </div>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
             </div>
-          ) : null}
-        </div>
-      </section>
+          </div>
+        </section>
+      ) : null}
     </aside>
   );
 }
