@@ -9,6 +9,29 @@ The main WIP concern described in this handoff has now been implemented on this 
 
 Completed after this handoff was written:
 
+- native Pi slash-command + permission handling is tightened again:
+  - `pi-native` prompt building now preserves slash commands as raw messages instead of prepending the Athas ACP context wrapper
+  - normal non-command prompts still keep the existing context-prefixed behavior
+  - the frontend native stream handler now forwards `permission_request` events to the existing Harness permission UI instead of silently dropping them
+  - the native stream inactivity timer now stays alive while a permission decision is pending, so runs do not get treated as idle/completed mid-dialog
+  - focused coverage now exists for:
+    - raw slash-command prompt building
+    - normal prompt context injection
+    - native `permission_request` event forwarding
+  - important root-cause sequence discovered during watched-app validation:
+    - the host/native bridge permission path was already working
+    - the watched app initially failed because Athas wrapped `/smoke-confirm` in the ACP context prompt, so Pi treated it like a normal chat instruction instead of a slash command
+    - after fixing that, the next blocker was the missing frontend `permission_request` handler branch in `PiNativeStreamHandler`
+  - local watched proof now exists on `:106` for the native permission UI:
+    - typing `/smoke-confirm` in the real Harness composer shows the real slash-command suggestion
+    - sending it now surfaces the inline permission row (`permission: Smoke confirm ...`) plus the composer trust strip state `Permission needed`
+    - responding `deny` in the watched UI now lands end to end in the watched SQLite mirror as a real `Permission response`
+  - proof boundary to keep honest:
+    - watched-app `permission_request` display is proven
+    - watched-app `deny` response is proven
+    - host-level `approve` response is proven
+    - a clean watched-app `allow` click is still flaky on the X11/VNC automation path and should not be overstated until re-proven on-screen
+
 - native Pi restore now rehydrates the full live session snapshot instead of only `sessionId/sessionPath/workspacePath`
   - the native host now exposes `getSessionSnapshot`
   - restore/open flows now pull native runtime state, slash commands, and session mode state into Athas on restore
