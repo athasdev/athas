@@ -86,6 +86,11 @@ Additional follow-up completed after the above:
 - project session restore is now hardened against legacy Harness tab payloads:
   - stale file-shaped session entries like `path = "agent://harness"` are normalized back into real agent sessions on both hydrated Zustand state and raw `localStorage` reads
   - this prevents old saved project sessions from reopening the default Harness tab as a plain editor buffer named `harness`
+- Harness persistence now carries runtime-backend identity as a first-class seam:
+  - agent buffer paths can now encode `legacy-acp-bridge` vs `pi-native`
+  - persisted project sessions now normalize old `agent://harness` payloads and new backend-aware `agent://<backend>/<sessionId>` payloads into the same agent-session shape
+  - restored agent tabs, active-buffer selection, and closed-session reopen logic now preserve backend identity instead of keying only on session id
+  - current runtime behavior still defaults to `legacy-acp-bridge`; this is a storage/restore seam for future `pi-native` cutover, not the cutover itself
 - watched-display relaunch validation on `:106` with real `HOME=/home/fsos` now reflects that normalization:
   - the old lowercase plain-file `harness` tab no longer comes back after restart
   - the restored tab now comes back as a real sparkles `Harness` tab
