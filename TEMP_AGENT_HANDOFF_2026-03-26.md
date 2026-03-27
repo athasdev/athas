@@ -60,6 +60,12 @@ Additional follow-up completed after the above:
   - low-signal ACP events like mode/thinking/status/permission no longer render as a block above the composer
   - tool calls, plan updates, and explicit agent errors remain visible
 - watched-display screenshot validation on `:106` now shows the restored Harness transcript without the old `Session activity` block crowding the chatbox
+- Harness trust/simplicity UI was tightened again:
+  - the composer now shows one compact always-visible status strip with agent, mode, and session state
+  - the right rail no longer shows an always-on live-status dashboard when the active session is idle and healthy
+  - session rows now use a small state dot instead of repeating `Running` / `Idle` pills on every row
+  - attention-needed states remain visible in both the composer and the rail
+- watched-display screenshot validation on `:106` now shows the new composer status strip in the real app (`Pi / Chat / Idle`) above the Harness controls
 - Pi/Harness prompt handling was hardened again:
   - malformed persisted ACP runtime strings are now sanitized on warm restore before the frontend tries to resume/send
   - Pi RPC launch args now include `--auto medium`, so Athas no longer drops that policy flag when starting Pi
