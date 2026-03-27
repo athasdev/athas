@@ -127,6 +127,11 @@ export interface AIChatActions {
 
   // Chat actions
   createNewChat: (agentId?: AgentType, scopeId?: ChatScopeId) => string;
+  createSeededChat: (
+    agentId: AgentType,
+    seed: Pick<Chat, "title" | "messages" | "acpState" | "acpActivity">,
+    scopeId?: ChatScopeId,
+  ) => string;
   ensureChatForAgent: (agentId: AgentType, scopeId?: ChatScopeId) => string;
   switchToChat: (chatId: string, scopeId?: ChatScopeId) => void;
   continueChatInPlace: (chatId: string, scopeId?: ChatScopeId) => void;

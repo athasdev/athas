@@ -381,6 +381,57 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }
           return newChat.id;
         },
+        createSeededChat: (agentId, seed, scopeId = DEFAULT_SCOPE_ID) => {
+          const state = get();
+          const previousChat = getChatById(
+            state.chats,
+            getChatScopeState(state, scopeId).currentChatId,
+          );
+          const chatId = createScopedChatId(scopeId);
+          const normalizedMessages = seed.messages.map(normalizeChatMessage);
+          const lastTimestamp =
+            normalizedMessages.length > 0
+              ? normalizedMessages[normalizedMessages.length - 1]?.timestamp
+              : null;
+          const newChat: Chat = {
+            id: chatId,
+            title: seed.title || getDefaultChatTitle(scopeId),
+            messages: normalizedMessages,
+            createdAt: new Date(),
+            lastMessageAt: lastTimestamp ? new Date(lastTimestamp) : new Date(),
+            agentId,
+            acpState: seed.acpState ?? null,
+            acpActivity: seed.acpActivity ?? null,
+            ...createRootChatLineage(chatId),
+            sessionName: null,
+          };
+
+          set((state) => {
+            const nextScopeState = ensureChatScopeState(state, scopeId);
+            state.chats.unshift(newChat);
+            nextScopeState.currentChatId = newChat.id;
+            nextScopeState.isChatHistoryVisible = false;
+            nextScopeState.input = "";
+            nextScopeState.isTyping = false;
+            nextScopeState.streamingMessageId = null;
+            applyWarmStartAcpScopeState(nextScopeState, newChat);
+          });
+
+          saveChatToDb(newChat).catch((err) =>
+            console.error("Failed to save seeded chat to database:", err),
+          );
+
+          if (isAcpAgent(previousChat?.agentId ?? agentId)) {
+            get().markPendingAcpPermissionsStale(scopeId);
+            void stopHarnessRuntime(
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            ).catch((error) => console.error("Failed to reset ACP route for seeded chat:", error));
+          }
+
+          return newChat.id;
+        },
         ensureChatForAgent: (agentId: AgentType, scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
           const scopedChats = filterChatsForScope(state.chats, scopeId);

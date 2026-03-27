@@ -170,3 +170,84 @@ describe("loadChatsFromDatabase", () => {
     );
   });
 });
+
+describe("createSeededChat", () => {
+  beforeEach(() => {
+    globalThis.localStorage?.clear();
+  });
+
+  test("persists seeded Pi chats with their hydrated transcript", async () => {
+    const saveChatToDb = mock(async () => {});
+
+    mock.module("@/utils/chat-history-db", () => ({
+      initChatDatabase: async () => {},
+      loadAllChatsFromDb: async () => [],
+      loadChatFromDb: async () => null,
+      saveChatToDb,
+      deleteChatFromDb: async () => {},
+    }));
+    mock.module("@/utils/ai-chat", () => ({
+      getProviderApiToken: async () => null,
+      isAcpAgent: (agentId: string) => agentId !== "custom",
+      removeProviderApiToken: async () => {},
+      storeProviderApiToken: async () => {},
+      validateProviderApiKey: async () => true,
+    }));
+
+    const { useAIChatStore } = await import("./store");
+    const scopeId = "harness:seeded" as const;
+    const timestamp = new Date("2026-03-28T00:30:00.000Z");
+
+    useAIChatStore.setState({
+      chats: [],
+      chatScopes: {
+        panel: createDefaultChatScopeState("panel"),
+        [scopeId]: createDefaultChatScopeState(scopeId),
+      },
+    });
+
+    const chatId = useAIChatStore.getState().createSeededChat(
+      "pi",
+      {
+        title: "Seeded Pi Session",
+        messages: [
+          {
+            id: "message-user",
+            lineageMessageId: "message-user",
+            content: "Reply with exactly READY and nothing else.",
+            role: "user",
+            timestamp,
+            kind: "default",
+          },
+          {
+            id: "message-assistant",
+            lineageMessageId: "message-assistant",
+            content: "READY",
+            role: "assistant",
+            timestamp: new Date("2026-03-28T00:31:00.000Z"),
+            kind: "default",
+          },
+        ],
+        acpState: null,
+        acpActivity: null,
+      },
+      scopeId,
+    );
+
+    expect(useAIChatStore.getState().getCurrentChat(scopeId)).toMatchObject({
+      id: chatId,
+      title: "Seeded Pi Session",
+      agentId: "pi",
+    });
+    expect(useAIChatStore.getState().getCurrentMessages(scopeId)).toHaveLength(2);
+    expect(saveChatToDb.mock.calls.length).toBeGreaterThan(0);
+    const seededSave = ((saveChatToDb.mock.calls as unknown as Array<[unknown]>).slice(-1)[0] ?? [
+      undefined,
+    ])[0];
+    expect(seededSave).toMatchObject({
+      id: chatId,
+      title: "Seeded Pi Session",
+      messages: [{ content: "Reply with exactly READY and nothing else." }, { content: "READY" }],
+    });
+  });
+});

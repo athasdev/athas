@@ -923,6 +923,9 @@ const AIChat = memo(function AIChat({
           "pi",
           session.path,
         );
+        const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
+        const seededRuntimeState = buildPiNativeRuntimeStateFromSession(session);
+        const seededTitle = derivePiNativeSessionTitle(session);
         const shouldReuseCurrentSession = shouldReuseCurrentHarnessSessionForPiNativeResume({
           sessionKey,
           chat: currentChat,
@@ -934,11 +937,31 @@ const AIChat = memo(function AIChat({
 
         openAgentBuffer(nextSessionKey, { backend: "pi-native" });
 
-        const targetChatId = targetChatStore.ensureChatForAgent("pi", targetScopeId);
-        targetChatStore.setAcpRuntimeState(
-          buildPiNativeRuntimeStateFromSession(session),
-          targetScopeId,
-        );
+        const targetChatId = shouldReuseCurrentSession
+          ? targetChatStore.ensureChatForAgent("pi", targetScopeId)
+          : targetChatStore.createSeededChat(
+              "pi",
+              {
+                title: seededTitle,
+                messages: transcriptMessages,
+                acpState: {
+                  preferredModeId: null,
+                  currentModeId: null,
+                  availableModes: [],
+                  slashCommands: [],
+                  runtimeState: seededRuntimeState,
+                },
+                acpActivity: null,
+              },
+              targetScopeId,
+            );
+
+        if (shouldReuseCurrentSession) {
+          targetChatStore.replaceChatMessages(targetChatId, transcriptMessages);
+          targetChatStore.updateChatTitle(targetChatId, seededTitle);
+        }
+
+        targetChatStore.setAcpRuntimeState(seededRuntimeState, targetScopeId);
         const snapshot = await getHarnessRuntimeSessionSnapshot("pi-native", "pi", targetScopeId);
         if (snapshot) {
           targetChatStore.setAcpRuntimeState(snapshot.runtimeState, targetScopeId);
@@ -949,11 +972,6 @@ const AIChat = memo(function AIChat({
             targetScopeId,
           );
         }
-        targetChatStore.replaceChatMessages(
-          targetChatId,
-          buildPiNativeChatMessagesFromTranscript(transcript),
-        );
-        targetChatStore.updateChatTitle(targetChatId, derivePiNativeSessionTitle(session));
       } catch (error) {
         console.error("Failed to open recent Pi native session:", error);
       }
