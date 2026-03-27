@@ -9,6 +9,30 @@ It is intentionally detailed and can be deleted later.
 
 Completed after the prior handoff refresh:
 
+- the AI chat shell is now visibly refactored toward a t3code-style hierarchy while staying Athas-native:
+  - new shared layout helper now distinguishes Harness vs panel shell widths in `src/features/ai/lib/chat-surface-layout.ts`
+  - Harness now uses:
+    - a slimmer metadata-first header
+    - a centered dominant timeline column
+    - composer-adjacent permission banners
+    - a larger rounded composer card that owns status + controls
+    - a lighter/demoted right rail instead of the old dashboard feel
+  - panel chat now reuses the same calmer message/composer language in a tighter footprint instead of feeling like a separate product
+  - supporting selectors (`agent`, `mode`, `context`) were visually tightened to match the new shell
+- watched-window visual proof now exists on `:106` for the redesigned Harness shell:
+  - opening Harness from the real watched app shows:
+    - lighter header chrome
+    - dominant centered transcript column
+    - stronger rounded composer card with inline runtime chips
+    - demoted session chrome
+  - the screenshot capture used for this proof is `/home/fsos/.local/state/athas-watched/manual-chat-shell.png`
+  - a second watched screenshot with typed composer content is `/home/fsos/.local/state/athas-watched/manual-chat-typed.png`
+- proof boundary to keep honest for this redesign slice:
+  - the new Harness visual hierarchy is proven on-screen in the watched app
+  - the redesign passes `bun test`, `bun typecheck`, `bun lint`, and `bun vite build`
+  - a fresh watched-app send/respond proof was not re-established in this exact redesign pass because X11/VNC click automation on the tiny send target remained flaky
+  - the earlier native prompt/response proofs still exist on this branch; this pass specifically re-proved the shell/layout, not a new runtime fix
+
 - Pi-native Harness session UX is now materially better in the real app:
   - the wide `Recent Pi Sessions` rail now has a real `Continue recent` action
   - the chat header now has a real `Fork session` action for the active Harness chat
