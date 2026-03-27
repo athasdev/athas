@@ -66,6 +66,11 @@ Additional follow-up completed after the above:
   - session rows now use a small state dot instead of repeating `Running` / `Idle` pills on every row
   - attention-needed states remain visible in both the composer and the rail
 - watched-display screenshot validation on `:106` now shows the new composer status strip in the real app (`Pi / Chat / Idle`) above the Harness controls
+- Harness input capture was hardened for the watched VNC path:
+  - printable keys from focused non-editor Harness controls now seed the composer instead of disappearing
+  - Harness tags its active surface so the composer only steals printable keys from within the real Harness subtree
+  - focused regression coverage now exists for the printable-key capture rules
+- watched-display validation on `:106` now visibly shows synthetic typing landing in the real Harness composer and a visible assistant response (`READY`) after send
 - Pi/Harness prompt handling was hardened again:
   - malformed persisted ACP runtime strings are now sanitized on warm restore before the frontend tries to resume/send
   - Pi RPC launch args now include `--auto medium`, so Athas no longer drops that policy flag when starting Pi
