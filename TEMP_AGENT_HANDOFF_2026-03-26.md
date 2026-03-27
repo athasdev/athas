@@ -780,10 +780,15 @@ Use something like this:
 
 - recent Harness redundancy cleanup on wide and narrow layouts
 - Pi response completion on a fresh clean profile after cold runtime bootstrap
+- watched-window Harness composer printable-key fallback on the clean `:106` session:
+  - printable keys now seed the composer even when WebKit reports a window-level target
+  - live proof sequence was captured in the watched window:
+    - empty clean composer
+    - visible typed prompt
+    - visible `READY` response
 
 ### Current active problem / least trusted
 
-- watched-window composer input on the `:106` VNC/Xvfb stack is still unreliable for deterministic automated prompt entry
 - fresh-profile Pi runtime response completion still needs a clean end-to-end live re-proof after the latest startup repair
 - any remaining Harness visual polish after the redundancy trim
 
@@ -818,7 +823,9 @@ At the time this handoff was prepared:
   - `behavior-mode-state.json` no longer carries `currentBehavior`
 - the watched `:106` display has been unstable across restarts, but the latest root capture is non-black again and the full Athas window is present
 - remaining live gap:
-  - automated prompt entry into the Harness composer on the watched VNC window is still flaky, so the startup-repair change is machine-proven through file normalization rather than a fresh fully automated chat send
+  - the clean watched `:106` window now accepts printable prompt input again
+  - prompt send and response were re-proven live with `Reply with exactly READY and nothing else.` → `READY`
+  - the remaining runtime re-proof gap is fresh-profile cold-start behavior, not watched-window Harness input
 
 ---
 
