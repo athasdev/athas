@@ -2,4 +2,6 @@ mod bridge;
 mod types;
 
 pub use bridge::PiNativeBridge;
-pub use types::{PiNativeSessionInfo, PiNativeTranscriptMessage};
+pub use types::{
+   PiNativeSessionInfo, PiNativeSessionModeState, PiNativeSlashCommand, PiNativeTranscriptMessage,
+};

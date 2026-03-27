@@ -2,7 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getChatPreferredAcpModeId } from "@/features/ai/lib/chat-acp-state";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import type {
+  AcpAgentStatus,
+  AcpEvent,
+  SessionModeState,
+  SlashCommand,
+} from "@/features/ai/types/acp";
 import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -196,6 +201,24 @@ export class PiNativeStreamHandler {
         useAIChatStore.getState().setAcpRuntimeState(event.runtimeState, this.scopeId);
         break;
 
+      case "session_mode_update":
+        useAIChatStore
+          .getState()
+          .setSessionModeState(
+            event.modeState.currentModeId,
+            event.modeState.availableModes,
+            this.scopeId,
+          );
+        break;
+
+      case "current_mode_update":
+        useAIChatStore.getState().setCurrentModeId(event.currentModeId, this.scopeId);
+        break;
+
+      case "slash_commands_update":
+        useAIChatStore.getState().setAvailableSlashCommands(event.commands, this.scopeId);
+        break;
+
       case "status_changed":
         if (!event.status.running) {
           useAIChatStore.getState().markPendingAcpPermissionsStale(this.scopeId);
@@ -352,8 +375,19 @@ export class PiNativeStreamHandler {
     return invoke("list_pi_native_sessions", { workspacePath });
   }
 
+  static async listCommands(scopeId: ChatScopeId = "panel"): Promise<SlashCommand[]> {
+    return invoke("list_pi_native_commands", { routeKey: scopeId });
+  }
+
   static async getSessionTranscript(sessionPath: string): Promise<PiNativeTranscriptMessage[]> {
     return invoke("get_pi_native_session_transcript", { sessionPath });
+  }
+
+  static async changeSessionMode(
+    modeId: string,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<SessionModeState> {
+    return invoke("change_pi_native_mode", { modeId, routeKey: scopeId });
   }
 
   static async stopSession(scopeId: ChatScopeId = "panel"): Promise<void> {

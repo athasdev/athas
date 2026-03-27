@@ -1,4 +1,4 @@
-import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import type { AcpAgentStatus, AcpEvent, SlashCommand } from "@/features/ai/types/acp";
 import type { AgentType, AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import type { Buffer } from "@/features/tabs/types/buffer";
@@ -147,6 +147,22 @@ export const listHarnessRuntimeSessions = async (
   return [];
 };
 
+export const listHarnessRuntimeSlashCommands = async (
+  backend: HarnessRuntimeBackend,
+  agentId: AgentType,
+  scopeId: ChatScopeId,
+): Promise<SlashCommand[]> => {
+  if (backend === "pi-native") {
+    if (agentId !== "pi") {
+      throw buildPiNativeNotWiredError();
+    }
+
+    return PiNativeStreamHandler.listCommands(scopeId);
+  }
+
+  return [];
+};
+
 export const getHarnessRuntimeSessionTranscript = async (
   backend: HarnessRuntimeBackend,
   agentId: AgentType,
@@ -217,7 +233,8 @@ export const changeHarnessRuntimeSessionMode = async (
 ): Promise<void> => {
   const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
   if (backend === "pi-native") {
-    throw buildPiNativeNotWiredError();
+    await PiNativeStreamHandler.changeSessionMode(modeId, scopeId);
+    return;
   }
 
   await AcpStreamHandler.changeSessionMode(modeId, scopeId);

@@ -22,3 +22,25 @@ pub struct PiNativeTranscriptMessage {
    pub content: String,
    pub timestamp: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PiNativeSlashCommand {
+   pub name: String,
+   pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PiNativeSessionMode {
+   pub id: String,
+   pub name: String,
+   pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PiNativeSessionModeState {
+   pub current_mode_id: Option<String>,
+   pub available_modes: Vec<PiNativeSessionMode>,
+}

@@ -4,6 +4,11 @@ import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agen
 import { createExtensionUiBridge } from "./extension-ui.mjs";
 import { applyBootstrapHistory } from "./session-bootstrap.mjs";
 import { listSessionsForWorkspace, resolveSessionPathForStart } from "./session-listing.mjs";
+import {
+  getSessionModeState,
+  listSlashCommandsForSession,
+  setSessionMode,
+} from "./session-runtime.mjs";
 import { loadSessionTranscript } from "./session-transcript.mjs";
 
 const sessions = new Map();
@@ -139,6 +144,20 @@ function publishSessionState(routeKey, record) {
     routeKey,
     status: createStatus(record),
   });
+  if (record?.session.sessionId) {
+    emitEvent({
+      type: "slash_commands_update",
+      routeKey,
+      sessionId: record.session.sessionId,
+      commands: listSlashCommandsForSession(record.session),
+    });
+    emitEvent({
+      type: "session_mode_update",
+      routeKey,
+      sessionId: record.session.sessionId,
+      modeState: getSessionModeState(record.session),
+    });
+  }
 }
 
 function detachRoute(routeKey) {
@@ -227,6 +246,7 @@ async function ensureRouteSession(routeKey, options = {}) {
 
   if (existing) {
     if (!sessionPath || existing.session.sessionFile === sessionPath) {
+      publishSessionState(routeKey, existing);
       return existing;
     }
     detachRoute(routeKey);
@@ -344,8 +364,25 @@ async function handleRequest(id, method, params = {}) {
       const sessions = await listSessionsForWorkspace(cwd, getSessionDir(params.agentDir, cwd));
       return sendResponse(id, sessions);
     }
+    case "listCommands": {
+      const record = sessions.get(params.routeKey);
+      if (!record) {
+        throw new Error("No native Pi session is running for this route.");
+      }
+      return sendResponse(id, listSlashCommandsForSession(record.session));
+    }
     case "getSessionTranscript": {
       return sendResponse(id, await loadSessionTranscript(params.sessionPath));
+    }
+    case "changeMode": {
+      const record = sessions.get(params.routeKey);
+      if (!record) {
+        throw new Error("No native Pi session is running for this route.");
+      }
+
+      setSessionMode(record.session, params.modeId);
+      publishSessionState(params.routeKey, record);
+      return sendResponse(id, getSessionModeState(record.session));
     }
     case "cancelPrompt": {
       const record = sessions.get(params.routeKey);

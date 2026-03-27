@@ -1,6 +1,6 @@
 use crate::features::ai::{
    AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeSessionInfo,
-   PiNativeTranscriptMessage,
+   PiNativeSessionModeState, PiNativeSlashCommand, PiNativeTranscriptMessage,
 };
 use std::sync::Arc;
 use tauri::State;
@@ -66,6 +66,18 @@ pub async fn list_pi_native_sessions(
 }
 
 #[tauri::command]
+pub async fn list_pi_native_commands(
+   bridge: State<'_, PiNativeBridgeState>,
+   route_key: Option<String>,
+) -> Result<Vec<PiNativeSlashCommand>, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .list_commands(route_key.as_deref().unwrap_or("panel"))
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_pi_native_session_transcript(
    bridge: State<'_, PiNativeBridgeState>,
    session_path: String,
@@ -73,6 +85,19 @@ pub async fn get_pi_native_session_transcript(
    let bridge = { bridge.lock().await.clone() };
    bridge
       .get_session_transcript(session_path)
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn change_pi_native_mode(
+   bridge: State<'_, PiNativeBridgeState>,
+   mode_id: String,
+   route_key: Option<String>,
+) -> Result<PiNativeSessionModeState, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .change_mode(route_key.as_deref().unwrap_or("panel"), &mode_id)
       .await
       .map_err(|e| e.to_string())
 }

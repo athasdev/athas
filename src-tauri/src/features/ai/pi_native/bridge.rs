@@ -1,6 +1,8 @@
 use crate::features::ai::acp::types::AcpEvent;
 use crate::features::ai::acp::{AcpAgentStatus, AcpBootstrapContext};
-use crate::features::ai::{PiNativeSessionInfo, PiNativeTranscriptMessage};
+use crate::features::ai::{
+   PiNativeSessionInfo, PiNativeSessionModeState, PiNativeSlashCommand, PiNativeTranscriptMessage,
+};
 use crate::features::runtime::{RuntimeManager, RuntimeType};
 use anyhow::{Context, Result, anyhow};
 use serde_json::{Value, json};
@@ -88,6 +90,13 @@ impl PiNativeBridge {
       serde_json::from_value(value).context("failed to decode pi-native sessions")
    }
 
+   pub async fn list_commands(&self, route_key: &str) -> Result<Vec<PiNativeSlashCommand>> {
+      let value = self
+         .send_request("listCommands", json!({ "routeKey": route_key }))
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native slash commands")
+   }
+
    pub async fn get_session_transcript(
       &self,
       session_path: String,
@@ -99,6 +108,23 @@ impl PiNativeBridge {
          )
          .await?;
       serde_json::from_value(value).context("failed to decode pi-native transcript")
+   }
+
+   pub async fn change_mode(
+      &self,
+      route_key: &str,
+      mode_id: &str,
+   ) -> Result<PiNativeSessionModeState> {
+      let value = self
+         .send_request(
+            "changeMode",
+            json!({
+               "routeKey": route_key,
+               "modeId": mode_id,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native session mode state")
    }
 
    pub async fn cancel_prompt(&self, route_key: &str) -> Result<()> {

@@ -12,7 +12,9 @@ const nativeStaticCalls = {
   cancelPrompt: [] as unknown[],
   getStatus: [] as unknown[],
   getSessionTranscript: [] as unknown[],
+  listCommands: [] as unknown[],
   listSessions: [] as unknown[],
+  changeSessionMode: [] as unknown[],
   respondToPermission: [] as unknown[],
   stopSession: [] as unknown[],
 };
@@ -154,6 +156,18 @@ class MockPiNativeStreamHandler {
     nativeStaticCalls.stopSession.push(scopeId);
   }
 
+  static async listCommands(scopeId: ChatScopeId = "panel") {
+    nativeStaticCalls.listCommands.push(scopeId);
+    return [
+      { name: "model", description: "Select model (opens selector UI)" },
+      { name: "skill:triage", description: "Debug production incidents" },
+    ];
+  }
+
+  static async changeSessionMode(modeId: string, scopeId: ChatScopeId = "panel") {
+    nativeStaticCalls.changeSessionMode.push({ modeId, scopeId });
+  }
+
   static async respondToPermission(
     requestId: string,
     approved: boolean,
@@ -186,7 +200,9 @@ describe("harness runtime", () => {
     nativeStaticCalls.cancelPrompt.length = 0;
     nativeStaticCalls.getStatus.length = 0;
     nativeStaticCalls.getSessionTranscript.length = 0;
+    nativeStaticCalls.listCommands.length = 0;
     nativeStaticCalls.listSessions.length = 0;
+    nativeStaticCalls.changeSessionMode.length = 0;
     nativeStaticCalls.respondToPermission.length = 0;
     nativeStaticCalls.stopSession.length = 0;
   });
@@ -293,7 +309,9 @@ describe("harness runtime", () => {
       createHarnessRuntimePromptSession,
       getHarnessRuntimeStatus,
       getHarnessRuntimeSessionTranscript,
+      listHarnessRuntimeSlashCommands,
       listHarnessRuntimeSessions,
+      changeHarnessRuntimeSessionMode,
       respondToHarnessPermission,
       stopHarnessRuntime,
     } = await import("./harness-runtime");
@@ -354,6 +372,19 @@ describe("harness runtime", () => {
     ]);
 
     await expect(
+      listHarnessRuntimeSlashCommands("pi-native", "pi", "harness:main"),
+    ).resolves.toEqual([
+      { name: "model", description: "Select model (opens selector UI)" },
+      { name: "skill:triage", description: "Debug production incidents" },
+    ]);
+
+    await expect(
+      changeHarnessRuntimeSessionMode("all", "harness:main", [
+        { isAgent: true, agentSessionId: "main", agentBackend: "pi-native" },
+      ]),
+    ).resolves.toBeUndefined();
+
+    await expect(
       cancelHarnessRuntimePrompt("harness:main", [
         { isAgent: true, agentSessionId: "main", agentBackend: "pi-native" },
       ]),
@@ -384,7 +415,11 @@ describe("harness runtime", () => {
     ]);
     expect(nativeStaticCalls.getStatus).toEqual(["harness:main"]);
     expect(nativeStaticCalls.getSessionTranscript).toEqual(["/tmp/session.jsonl"]);
+    expect(nativeStaticCalls.listCommands).toEqual(["harness:main"]);
     expect(nativeStaticCalls.listSessions).toEqual(["/tmp/project"]);
+    expect(nativeStaticCalls.changeSessionMode).toEqual([
+      { modeId: "all", scopeId: "harness:main" },
+    ]);
     expect(nativeStaticCalls.cancelPrompt).toEqual(["harness:main"]);
     expect(nativeStaticCalls.respondToPermission).toEqual([
       {
