@@ -7,9 +7,11 @@ describe("toggleHarnessFromAiChatToggle", () => {
     const openAgentBuffer = vi.fn();
     const closeBuffer = vi.fn();
 
-    toggleHarnessFromAiChatToggle(null, openAgentBuffer, closeBuffer, true);
+    toggleHarnessFromAiChatToggle(null, openAgentBuffer, closeBuffer, true, "pi-native");
 
-    expect(openAgentBuffer).toHaveBeenCalledWith(DEFAULT_HARNESS_SESSION_KEY);
+    expect(openAgentBuffer).toHaveBeenCalledWith(DEFAULT_HARNESS_SESSION_KEY, {
+      backend: "pi-native",
+    });
     expect(closeBuffer).not.toHaveBeenCalled();
   });
 
@@ -21,9 +23,13 @@ describe("toggleHarnessFromAiChatToggle", () => {
       { id: "buffer-file-1", isAgent: false },
       openAgentBuffer,
       closeBuffer,
+      undefined,
+      "pi-native",
     );
 
-    expect(openAgentBuffer).toHaveBeenCalledWith(DEFAULT_HARNESS_SESSION_KEY);
+    expect(openAgentBuffer).toHaveBeenCalledWith(DEFAULT_HARNESS_SESSION_KEY, {
+      backend: "pi-native",
+    });
     expect(closeBuffer).not.toHaveBeenCalled();
   });
 

@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import { getPreferredHarnessEntryBackend } from "@/features/ai/lib/harness-entry-backend";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -51,7 +53,9 @@ export function EmptyEditorState() {
   }, [openTerminalBuffer]);
 
   const handleOpenAgent = useCallback(() => {
-    openAgentBuffer();
+    openAgentBuffer(DEFAULT_HARNESS_SESSION_KEY, {
+      backend: getPreferredHarnessEntryBackend(),
+    });
   }, [openAgentBuffer]);
 
   const handleOpenWebViewer = useCallback(() => {

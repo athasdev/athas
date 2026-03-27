@@ -1,9 +1,24 @@
-import { describe, expect, test } from "bun:test";
-import { createViewActions } from "./view-actions";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
 
 describe("createViewActions", () => {
-  test("includes an Open Harness action that opens the harness tab and closes the palette", () => {
-    let openedHarness = false;
+  beforeEach(() => {
+    Object.assign(globalThis, {
+      window: {
+        __TAURI_INTERNALS__: {
+          invoke: async () => null,
+        },
+        __TAURI_OS_PLUGIN_INTERNALS__: {
+          platform: "linux",
+        },
+      },
+    });
+  });
+
+  test("includes an Open Harness action that opens the harness tab and closes the palette", async () => {
+    const { createViewActions } = await import("./view-actions");
+    let openedHarnessSessionId: string | undefined;
+    let openedHarnessBackend: string | undefined;
     let createdHarnessSession = false;
     let closedPalette = false;
 
@@ -29,8 +44,9 @@ describe("createViewActions", () => {
       createAgentBuffer: () => {
         createdHarnessSession = true;
       },
-      openAgentBuffer: () => {
-        openedHarness = true;
+      openAgentBuffer: (sessionId, options) => {
+        openedHarnessSessionId = sessionId;
+        openedHarnessBackend = options?.backend;
       },
       openWebViewerBuffer: () => {},
       onClose: () => {
@@ -43,12 +59,14 @@ describe("createViewActions", () => {
     expect(openHarnessAction).toBeDefined();
     expect(openHarnessAction?.label).toBe("View: Open Harness");
     openHarnessAction?.action();
-    expect(openedHarness).toBe(true);
+    expect(openedHarnessSessionId).toBe(DEFAULT_HARNESS_SESSION_KEY);
+    expect(openedHarnessBackend).toBe("pi-native");
     expect(createdHarnessSession).toBe(false);
     expect(closedPalette).toBe(true);
   });
 
-  test("includes a New Harness Session action that creates a session and closes the palette", () => {
+  test("includes a New Harness Session action that creates a session and closes the palette", async () => {
+    const { createViewActions } = await import("./view-actions");
     let openedHarness = false;
     let createdHarnessSession = false;
     let closedPalette = false;

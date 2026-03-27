@@ -13,6 +13,9 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import { getPreferredHarnessEntryBackend } from "@/features/ai/lib/harness-entry-backend";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useSettingsStore } from "@/features/settings/store";
 import type { Action } from "../models/action.types";
 
@@ -35,7 +38,12 @@ interface ViewActionsParams {
   zoomIn: (target: "editor" | "terminal") => void;
   zoomOut: (target: "editor" | "terminal") => void;
   resetZoom: (target: "editor" | "terminal") => void;
-  openAgentBuffer: () => void;
+  openAgentBuffer: (
+    sessionId?: string,
+    options?: {
+      backend?: HarnessRuntimeBackend;
+    },
+  ) => void;
   createAgentBuffer: () => void;
   openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
@@ -277,7 +285,9 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       icon: <Sparkles size={14} />,
       category: "View",
       action: () => {
-        openAgentBuffer();
+        openAgentBuffer(DEFAULT_HARNESS_SESSION_KEY, {
+          backend: getPreferredHarnessEntryBackend(),
+        });
         onClose();
       },
     },
