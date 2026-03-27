@@ -1,3 +1,4 @@
+use crate::features::ai::PiNativeSessionInfo;
 use crate::features::ai::acp::types::AcpEvent;
 use crate::features::ai::acp::{AcpAgentStatus, AcpBootstrapContext};
 use crate::features::runtime::{RuntimeManager, RuntimeType};
@@ -72,6 +73,19 @@ impl PiNativeBridge {
          .send_request("getStatus", json!({ "routeKey": route_key }))
          .await?;
       serde_json::from_value(value).context("failed to decode pi-native status")
+   }
+
+   pub async fn list_sessions(
+      &self,
+      workspace_path: Option<String>,
+   ) -> Result<Vec<PiNativeSessionInfo>> {
+      let params = json!({
+         "workspacePath": workspace_path,
+         "agentDir": self.get_agent_dir()?,
+      });
+
+      let value = self.send_request("listSessions", params).await?;
+      serde_json::from_value(value).context("failed to decode pi-native sessions")
    }
 
    pub async fn cancel_prompt(&self, route_key: &str) -> Result<()> {

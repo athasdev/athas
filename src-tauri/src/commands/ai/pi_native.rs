@@ -1,4 +1,6 @@
-use crate::features::ai::{AcpAgentStatus, AcpBootstrapContext, PiNativeBridge};
+use crate::features::ai::{
+   AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeSessionInfo,
+};
 use std::sync::Arc;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -46,6 +48,18 @@ pub async fn get_pi_native_status(
    let bridge = { bridge.lock().await.clone() };
    bridge
       .get_status(route_key.as_deref().unwrap_or("panel"))
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_pi_native_sessions(
+   bridge: State<'_, PiNativeBridgeState>,
+   workspace_path: Option<String>,
+) -> Result<Vec<PiNativeSessionInfo>, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .list_sessions(workspace_path)
       .await
       .map_err(|e| e.to_string())
 }

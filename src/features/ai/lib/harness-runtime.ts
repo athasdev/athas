@@ -3,7 +3,7 @@ import type { AgentType, AIChatSurface, ChatScopeId } from "@/features/ai/types/
 import type { AIMessage } from "@/features/ai/types/messages";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { AcpStreamHandler } from "@/utils/acp-handler";
-import { PiNativeStreamHandler } from "@/utils/pi-native-handler";
+import { type PiNativeSessionInfo, PiNativeStreamHandler } from "@/utils/pi-native-handler";
 import type { ContextInfo } from "@/utils/types";
 import {
   DEFAULT_HARNESS_RUNTIME_BACKEND,
@@ -44,6 +44,8 @@ interface HarnessRuntimePromptSessionOptions {
   agentId: AgentType;
   handlers: HarnessRuntimeHandlers;
 }
+
+export interface HarnessRuntimeSessionInfo extends PiNativeSessionInfo {}
 
 const getHarnessSessionKeyFromScopeId = (scopeId: ChatScopeId): string | null =>
   scopeId.startsWith(HARNESS_SCOPE_PREFIX) ? scopeId.slice(HARNESS_SCOPE_PREFIX.length) : null;
@@ -122,6 +124,22 @@ export const getHarnessRuntimeStatus = async (
   }
 
   return AcpStreamHandler.getStatus(scopeId);
+};
+
+export const listHarnessRuntimeSessions = async (
+  backend: HarnessRuntimeBackend,
+  agentId: AgentType,
+  workspacePath: string | null,
+): Promise<HarnessRuntimeSessionInfo[]> => {
+  if (backend === "pi-native") {
+    if (agentId !== "pi") {
+      throw buildPiNativeNotWiredError();
+    }
+
+    return PiNativeStreamHandler.listSessions(workspacePath);
+  }
+
+  return [];
 };
 
 export const stopHarnessRuntime = async (

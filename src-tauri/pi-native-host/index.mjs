@@ -2,6 +2,7 @@ import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agent";
 import { applyBootstrapHistory } from "./session-bootstrap.mjs";
+import { listSessionsForWorkspace } from "./session-listing.mjs";
 
 const sessions = new Map();
 
@@ -318,6 +319,11 @@ async function handleRequest(id, method, params = {}) {
     }
     case "getStatus": {
       return sendResponse(id, createStatus(sessions.get(params.routeKey)));
+    }
+    case "listSessions": {
+      const cwd = params.workspacePath ?? process.cwd();
+      const sessions = await listSessionsForWorkspace(cwd, getSessionDir(params.agentDir, cwd));
+      return sendResponse(id, sessions);
     }
     case "cancelPrompt": {
       const record = sessions.get(params.routeKey);

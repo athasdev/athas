@@ -118,9 +118,21 @@ Additional follow-up completed after the above:
   - local machine proof for this bootstrap slice:
     - starting the host with a bootstrap history and no prompt now creates a real session file immediately under `~/.pi/agent/sessions/...`
     - that session file now contains the imported bootstrap `user` and `assistant` messages before any new prompt turn is sent
+- native Pi session enumeration is now wired through the full stack:
+  - the Node host now exposes a `listSessions` request that uses `SessionManager.list(...)` against the real shared Pi session directory for the current workspace
+  - the Rust `PiNativeBridge` now decodes that response into a typed `PiNativeSessionInfo` list
+  - a new Tauri command now exposes those native session records to the frontend
+  - `harness-runtime.ts` now has a backend-aware `listHarnessRuntimeSessions(...)` seam for `pi-native`
+  - current scope is intentionally narrow:
+    - enumerate real Pi-owned sessions for a workspace
+    - do not invent fake restore/session-mode semantics yet
+  - local machine proof for this session-list slice:
+    - running `node src-tauri/pi-native-host/index.mjs` directly and sending `{"method":"listSessions", ...}` returned real Athas workspace sessions from `~/.pi/agent/sessions/--home-fsos-Developer-athas--/...`
+    - the returned payload included real session paths, ids, timestamps, titles, and first-message previews
 - current native gaps still remaining after this slice:
   - no native permission flow yet
   - no native session-mode / thinking / model mutation surface yet
+  - no native restore/resume selection wired to the new session listing yet
   - no migration or settings/package/extension UI yet
   - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
 - local machine proof for the new native slice:

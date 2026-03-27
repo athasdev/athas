@@ -11,6 +11,7 @@ const legacyStaticCalls = {
 const nativeStaticCalls = {
   cancelPrompt: [] as unknown[],
   getStatus: [] as unknown[],
+  listSessions: [] as unknown[],
   stopSession: [] as unknown[],
 };
 
@@ -112,6 +113,23 @@ class MockPiNativeStreamHandler {
     };
   }
 
+  static async listSessions(workspacePath: string | null) {
+    nativeStaticCalls.listSessions.push(workspacePath);
+    return [
+      {
+        path: "/tmp/session.jsonl",
+        id: "native-session-123",
+        cwd: workspacePath ?? "/tmp/project",
+        name: "Main Session",
+        parentSessionPath: null,
+        createdAt: "2026-03-27T09:00:00.000Z",
+        modifiedAt: "2026-03-27T09:30:00.000Z",
+        messageCount: 4,
+        firstMessage: "hello",
+      },
+    ];
+  }
+
   static async stopSession(scopeId: ChatScopeId = "panel") {
     nativeStaticCalls.stopSession.push(scopeId);
   }
@@ -131,6 +149,7 @@ describe("harness runtime", () => {
     nativeStartCalls.length = 0;
     nativeStaticCalls.cancelPrompt.length = 0;
     nativeStaticCalls.getStatus.length = 0;
+    nativeStaticCalls.listSessions.length = 0;
     nativeStaticCalls.stopSession.length = 0;
   });
 
@@ -235,6 +254,7 @@ describe("harness runtime", () => {
       cancelHarnessRuntimePrompt,
       createHarnessRuntimePromptSession,
       getHarnessRuntimeStatus,
+      listHarnessRuntimeSessions,
       stopHarnessRuntime,
     } = await import("./harness-runtime");
 
@@ -262,6 +282,20 @@ describe("harness runtime", () => {
       sessionId: "native-session-123",
     });
 
+    await expect(listHarnessRuntimeSessions("pi-native", "pi", "/tmp/project")).resolves.toEqual([
+      {
+        path: "/tmp/session.jsonl",
+        id: "native-session-123",
+        cwd: "/tmp/project",
+        name: "Main Session",
+        parentSessionPath: null,
+        createdAt: "2026-03-27T09:00:00.000Z",
+        modifiedAt: "2026-03-27T09:30:00.000Z",
+        messageCount: 4,
+        firstMessage: "hello",
+      },
+    ]);
+
     await expect(
       cancelHarnessRuntimePrompt("harness:main", [
         { isAgent: true, agentSessionId: "main", agentBackend: "pi-native" },
@@ -281,6 +315,7 @@ describe("harness runtime", () => {
       },
     ]);
     expect(nativeStaticCalls.getStatus).toEqual(["harness:main"]);
+    expect(nativeStaticCalls.listSessions).toEqual(["/tmp/project"]);
     expect(nativeStaticCalls.cancelPrompt).toEqual(["harness:main"]);
     expect(nativeStaticCalls.stopSession).toEqual(["harness:main"]);
   });

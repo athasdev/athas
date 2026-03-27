@@ -348,6 +348,10 @@ export class PiNativeStreamHandler {
     return invoke("get_pi_native_status", { routeKey: scopeId });
   }
 
+  static async listSessions(workspacePath: string | null): Promise<PiNativeSessionInfo[]> {
+    return invoke("list_pi_native_sessions", { workspacePath });
+  }
+
   static async stopSession(scopeId: ChatScopeId = "panel"): Promise<void> {
     PiNativeStreamHandler.activeHandlers.get(scopeId)?.forceStop();
     PiNativeStreamHandler.lastSessionPathByKey.delete(scopeId);
@@ -368,4 +372,16 @@ export class PiNativeStreamHandler {
     const defaultModeId = null;
     return getChatPreferredAcpModeId(currentChat, defaultModeId);
   }
+}
+
+export interface PiNativeSessionInfo {
+  path: string;
+  id: string;
+  cwd: string;
+  name: string | null;
+  parentSessionPath: string | null;
+  createdAt: string;
+  modifiedAt: string;
+  messageCount: number;
+  firstMessage: string;
 }
