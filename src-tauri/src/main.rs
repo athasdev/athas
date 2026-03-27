@@ -481,6 +481,9 @@ fn main() {
          get_pi_native_status,
          list_pi_native_sessions,
          list_pi_native_commands,
+         list_pi_native_models,
+         list_pi_native_thinking_levels,
+         get_pi_native_session_snapshot,
          get_pi_native_settings_snapshot,
          set_pi_native_scoped_defaults,
          set_pi_native_api_key_credential,
@@ -492,6 +495,8 @@ fn main() {
          remove_pi_native_package,
          get_pi_native_session_transcript,
          change_pi_native_mode,
+         set_pi_native_model,
+         set_pi_native_thinking_level,
          cancel_pi_native_prompt,
          respond_pi_native_permission,
          // Theme commands

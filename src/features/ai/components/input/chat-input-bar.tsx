@@ -16,6 +16,7 @@ import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
+import { PiNativeRuntimeControls } from "../selectors/pi-native-runtime-controls";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 const getHarnessStatusTone = (status: HarnessTrustState) => {
@@ -53,6 +54,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   surface = "panel",
   scopeId,
   harnessStatus,
+  runtimeBackend = "legacy-acp-bridge",
   onSendMessage,
   onStopStreaming,
 }: AIChatInputBarProps) {
@@ -69,6 +71,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const { fontSize, fontFamily } = useEditorSettingsStore();
   const chatState = useChatState(scopeId);
   const chatActions = useChatActions(scopeId);
+  const currentChat = chatState.chats.find((chat) => chat.id === chatState.currentChatId);
+  const currentRuntimeState = currentChat?.acpState?.runtimeState ?? null;
 
   // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
@@ -953,6 +957,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
             ) : null}
 
             <ChatModeSelector surface={surface} scopeId={scopeId} />
+
+            {surface === "harness" ? (
+              <PiNativeRuntimeControls
+                scopeId={scopeId}
+                agentId={currentAgentId}
+                runtimeBackend={runtimeBackend}
+                runtimeState={currentRuntimeState}
+                disabled={isStreaming}
+              />
+            ) : null}
 
             {hasSlashCommands && (
               <button

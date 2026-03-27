@@ -196,6 +196,11 @@ export interface AIChatActions {
   setAcpRuntimeState: (runtimeState: AcpRuntimeState | null, scopeId?: ChatScopeId) => void;
   setCurrentModeId: (modeId: string, scopeId?: ChatScopeId) => void;
   changeSessionMode: (modeId: string, scopeId?: ChatScopeId) => Promise<void>;
+  changeSessionModel: (
+    selection: { provider: string; modelId: string },
+    scopeId?: ChatScopeId,
+  ) => Promise<void>;
+  changeSessionThinkingLevel: (level: string, scopeId?: ChatScopeId) => Promise<void>;
   hydrateAcpStateFromCurrentChat: (scopeId?: ChatScopeId) => void;
   appendAcpActivityEvent: (event: ChatAcpEventInput, scopeId?: ChatScopeId) => void;
   completeAcpToolEvent: (

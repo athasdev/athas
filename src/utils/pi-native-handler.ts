@@ -5,6 +5,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type {
   AcpAgentStatus,
   AcpEvent,
+  AcpRuntimeState,
   SessionModeState,
   SlashCommand,
 } from "@/features/ai/types/acp";
@@ -376,7 +377,41 @@ export class PiNativeStreamHandler {
   }
 
   static async listCommands(scopeId: ChatScopeId = "panel"): Promise<SlashCommand[]> {
-    return invoke("list_pi_native_commands", { routeKey: scopeId });
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("list_pi_native_commands", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async listModels(scopeId: ChatScopeId = "panel"): Promise<PiNativeModelInfo[]> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("list_pi_native_models", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async listThinkingLevels(scopeId: ChatScopeId = "panel"): Promise<string[]> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("list_pi_native_thinking_levels", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async getSessionSnapshot(
+    scopeId: ChatScopeId = "panel",
+  ): Promise<PiNativeSessionSnapshot> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("get_pi_native_session_snapshot", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
   }
 
   static async getSessionTranscript(sessionPath: string): Promise<PiNativeTranscriptMessage[]> {
@@ -387,7 +422,40 @@ export class PiNativeStreamHandler {
     modeId: string,
     scopeId: ChatScopeId = "panel",
   ): Promise<SessionModeState> {
-    return invoke("change_pi_native_mode", { modeId, routeKey: scopeId });
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("change_pi_native_mode", {
+      modeId,
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async setModel(
+    selection: Pick<PiNativeModelInfo, "provider" | "modelId">,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<AcpRuntimeState> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("set_pi_native_model", {
+      provider: selection.provider,
+      modelId: selection.modelId,
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async setThinkingLevel(
+    level: string,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<AcpRuntimeState> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("set_pi_native_thinking_level", {
+      level,
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
   }
 
   static async stopSession(scopeId: ChatScopeId = "panel"): Promise<void> {
@@ -445,4 +513,17 @@ export interface PiNativeTranscriptMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+}
+
+export interface PiNativeModelInfo {
+  provider: string;
+  modelId: string;
+  name: string;
+  reasoning: boolean;
+}
+
+export interface PiNativeSessionSnapshot {
+  runtimeState: AcpRuntimeState;
+  slashCommands: SlashCommand[];
+  sessionModeState: SessionModeState;
 }

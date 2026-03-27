@@ -9,6 +9,20 @@ The main WIP concern described in this handoff has now been implemented on this 
 
 Completed after this handoff was written:
 
+- native Pi restore now rehydrates the full live session snapshot instead of only `sessionId/sessionPath/workspacePath`
+  - the native host now exposes `getSessionSnapshot`
+  - restore/open flows now pull native runtime state, slash commands, and session mode state into Athas on restore
+  - watched-window proof on `:106` now shows the native control row in the real Harness composer:
+    - mode: `One at a Time`
+    - model: `GPT-5.3 Codex`
+    - thinking: `medium`
+  - watched storage proof for the restored Harness chat now shows:
+    - `runtimeState.provider = "openai-codex"`
+    - `runtimeState.modelId = "gpt-5.3-codex"`
+    - `runtimeState.thinkingLevel = "medium"`
+    - `currentModeId = "one-at-a-time"`
+    - `slashCommands.length = 335`
+  - watched-window proof also still shows a fresh assistant reply (`SNAP`) after the snapshot-aware restore path
 - the old AI entry points now route to Harness-first behavior
 - native Harness restore was tightened again:
   - when `pi-native` Harness opens inside a real workspace with no current chat selected yet, `AIChat` now bootstraps/selects the blank Pi chat before running the existing native restore reconciliation

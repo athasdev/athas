@@ -1,6 +1,8 @@
+use crate::features::acp::types::AcpRuntimeState;
 use crate::features::ai::{
-   AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeSessionInfo,
-   PiNativeSessionModeState, PiNativeSlashCommand, PiNativeTranscriptMessage,
+   AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeModelInfo, PiNativeSessionInfo,
+   PiNativeSessionModeState, PiNativeSessionSnapshot, PiNativeSlashCommand,
+   PiNativeTranscriptMessage,
 };
 use serde_json::Value;
 use std::sync::Arc;
@@ -69,11 +71,71 @@ pub async fn list_pi_native_sessions(
 #[tauri::command]
 pub async fn list_pi_native_commands(
    bridge: State<'_, PiNativeBridgeState>,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
    route_key: Option<String>,
 ) -> Result<Vec<PiNativeSlashCommand>, String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .list_commands(route_key.as_deref().unwrap_or("panel"))
+      .list_commands(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_pi_native_models(
+   bridge: State<'_, PiNativeBridgeState>,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
+   route_key: Option<String>,
+) -> Result<Vec<PiNativeModelInfo>, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .list_models(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_pi_native_thinking_levels(
+   bridge: State<'_, PiNativeBridgeState>,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
+   route_key: Option<String>,
+) -> Result<Vec<String>, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .list_thinking_levels(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_pi_native_session_snapshot(
+   bridge: State<'_, PiNativeBridgeState>,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
+   route_key: Option<String>,
+) -> Result<PiNativeSessionSnapshot, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .get_session_snapshot(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+      )
       .await
       .map_err(|e| e.to_string())
 }
@@ -223,11 +285,60 @@ pub async fn get_pi_native_session_transcript(
 pub async fn change_pi_native_mode(
    bridge: State<'_, PiNativeBridgeState>,
    mode_id: String,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
    route_key: Option<String>,
 ) -> Result<PiNativeSessionModeState, String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .change_mode(route_key.as_deref().unwrap_or("panel"), &mode_id)
+      .change_mode(
+         route_key.as_deref().unwrap_or("panel"),
+         &mode_id,
+         workspace_path,
+         session_path,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_pi_native_model(
+   bridge: State<'_, PiNativeBridgeState>,
+   provider: String,
+   model_id: String,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
+   route_key: Option<String>,
+) -> Result<AcpRuntimeState, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .set_model(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+         &provider,
+         &model_id,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_pi_native_thinking_level(
+   bridge: State<'_, PiNativeBridgeState>,
+   level: String,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
+   route_key: Option<String>,
+) -> Result<AcpRuntimeState, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .set_thinking_level(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+         &level,
+      )
       .await
       .map_err(|e| e.to_string())
 }

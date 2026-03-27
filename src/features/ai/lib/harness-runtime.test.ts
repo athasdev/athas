@@ -11,11 +11,16 @@ const legacyStaticCalls = {
 const nativeStaticCalls = {
   cancelPrompt: [] as unknown[],
   getStatus: [] as unknown[],
+  getSessionSnapshot: [] as unknown[],
   getSessionTranscript: [] as unknown[],
   listCommands: [] as unknown[],
+  listModels: [] as unknown[],
   listSessions: [] as unknown[],
+  listThinkingLevels: [] as unknown[],
   changeSessionMode: [] as unknown[],
   respondToPermission: [] as unknown[],
+  setModel: [] as unknown[],
+  setThinkingLevel: [] as unknown[],
   stopSession: [] as unknown[],
 };
 
@@ -152,6 +157,34 @@ class MockPiNativeStreamHandler {
     ];
   }
 
+  static async getSessionSnapshot(scopeId: ChatScopeId = "panel") {
+    nativeStaticCalls.getSessionSnapshot.push(scopeId);
+    return {
+      runtimeState: {
+        agentId: "pi",
+        source: "pi-native",
+        sessionId: "native-session-123",
+        sessionPath: "/tmp/session.jsonl",
+        workspacePath: "/tmp/project",
+        provider: "openai-codex",
+        modelId: "gpt-5.4",
+        thinkingLevel: "medium",
+        behavior: null,
+      },
+      slashCommands: [
+        { name: "model", description: "Select model (opens selector UI)" },
+        { name: "skill:triage", description: "Debug production incidents" },
+      ],
+      sessionModeState: {
+        currentModeId: "one-at-a-time",
+        availableModes: [
+          { id: "one-at-a-time", name: "One at a Time" },
+          { id: "all", name: "All at Once" },
+        ],
+      },
+    };
+  }
+
   static async stopSession(scopeId: ChatScopeId = "panel") {
     nativeStaticCalls.stopSession.push(scopeId);
   }
@@ -164,8 +197,71 @@ class MockPiNativeStreamHandler {
     ];
   }
 
+  static async listModels(scopeId: ChatScopeId = "panel") {
+    nativeStaticCalls.listModels.push(scopeId);
+    return [
+      {
+        provider: "openai-codex",
+        modelId: "gpt-5.4",
+        name: "GPT-5.4",
+        reasoning: true,
+      },
+      {
+        provider: "openai-codex",
+        modelId: "gpt-5.4-mini",
+        name: "GPT-5.4 Mini",
+        reasoning: true,
+      },
+    ];
+  }
+
+  static async listThinkingLevels(scopeId: ChatScopeId = "panel") {
+    nativeStaticCalls.listThinkingLevels.push(scopeId);
+    return ["off", "minimal", "low", "medium", "high", "xhigh"];
+  }
+
   static async changeSessionMode(modeId: string, scopeId: ChatScopeId = "panel") {
     nativeStaticCalls.changeSessionMode.push({ modeId, scopeId });
+    return {
+      currentModeId: modeId,
+      availableModes: [
+        { id: "one-at-a-time", name: "One at a Time" },
+        { id: "all", name: "All at Once" },
+      ],
+    };
+  }
+
+  static async setModel(
+    selection: { provider: string; modelId: string },
+    scopeId: ChatScopeId = "panel",
+  ) {
+    nativeStaticCalls.setModel.push({ selection, scopeId });
+    return {
+      agentId: "pi",
+      source: "pi-native",
+      sessionId: "native-session-123",
+      sessionPath: "/tmp/session.jsonl",
+      workspacePath: "/tmp/project",
+      provider: selection.provider,
+      modelId: selection.modelId,
+      thinkingLevel: "medium",
+      behavior: null,
+    };
+  }
+
+  static async setThinkingLevel(level: string, scopeId: ChatScopeId = "panel") {
+    nativeStaticCalls.setThinkingLevel.push({ level, scopeId });
+    return {
+      agentId: "pi",
+      source: "pi-native",
+      sessionId: "native-session-123",
+      sessionPath: "/tmp/session.jsonl",
+      workspacePath: "/tmp/project",
+      provider: "openai-codex",
+      modelId: "gpt-5.4-mini",
+      thinkingLevel: level,
+      behavior: null,
+    };
   }
 
   static async respondToPermission(
@@ -199,11 +295,16 @@ describe("harness runtime", () => {
     nativeStartCalls.length = 0;
     nativeStaticCalls.cancelPrompt.length = 0;
     nativeStaticCalls.getStatus.length = 0;
+    nativeStaticCalls.getSessionSnapshot.length = 0;
     nativeStaticCalls.getSessionTranscript.length = 0;
     nativeStaticCalls.listCommands.length = 0;
+    nativeStaticCalls.listModels.length = 0;
     nativeStaticCalls.listSessions.length = 0;
+    nativeStaticCalls.listThinkingLevels.length = 0;
     nativeStaticCalls.changeSessionMode.length = 0;
     nativeStaticCalls.respondToPermission.length = 0;
+    nativeStaticCalls.setModel.length = 0;
+    nativeStaticCalls.setThinkingLevel.length = 0;
     nativeStaticCalls.stopSession.length = 0;
   });
 
@@ -309,10 +410,15 @@ describe("harness runtime", () => {
       createHarnessRuntimePromptSession,
       getHarnessRuntimeStatus,
       getHarnessRuntimeSessionTranscript,
+      getHarnessRuntimeSessionSnapshot,
+      listHarnessRuntimeModels,
       listHarnessRuntimeSlashCommands,
       listHarnessRuntimeSessions,
+      listHarnessRuntimeThinkingLevels,
       changeHarnessRuntimeSessionMode,
       respondToHarnessPermission,
+      setHarnessRuntimeModel,
+      setHarnessRuntimeThinkingLevel,
       stopHarnessRuntime,
     } = await import("./harness-runtime");
 
@@ -372,17 +478,76 @@ describe("harness runtime", () => {
     ]);
 
     await expect(
+      getHarnessRuntimeSessionSnapshot("pi-native", "pi", "harness:main"),
+    ).resolves.toMatchObject({
+      runtimeState: {
+        provider: "openai-codex",
+        modelId: "gpt-5.4",
+        thinkingLevel: "medium",
+      },
+      sessionModeState: {
+        currentModeId: "one-at-a-time",
+      },
+    });
+
+    await expect(
       listHarnessRuntimeSlashCommands("pi-native", "pi", "harness:main"),
     ).resolves.toEqual([
       { name: "model", description: "Select model (opens selector UI)" },
       { name: "skill:triage", description: "Debug production incidents" },
     ]);
 
+    await expect(listHarnessRuntimeModels("pi-native", "pi", "harness:main")).resolves.toEqual([
+      {
+        provider: "openai-codex",
+        modelId: "gpt-5.4",
+        name: "GPT-5.4",
+        reasoning: true,
+      },
+      {
+        provider: "openai-codex",
+        modelId: "gpt-5.4-mini",
+        name: "GPT-5.4 Mini",
+        reasoning: true,
+      },
+    ]);
+
+    await expect(
+      listHarnessRuntimeThinkingLevels("pi-native", "pi", "harness:main"),
+    ).resolves.toEqual(["off", "minimal", "low", "medium", "high", "xhigh"]);
+
     await expect(
       changeHarnessRuntimeSessionMode("all", "harness:main", [
         { isAgent: true, agentSessionId: "main", agentBackend: "pi-native" },
       ]),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({
+      currentModeId: "all",
+      availableModes: [
+        { id: "one-at-a-time", name: "One at a Time" },
+        { id: "all", name: "All at Once" },
+      ],
+    });
+
+    await expect(
+      setHarnessRuntimeModel(
+        { provider: "openai-codex", modelId: "gpt-5.4-mini" },
+        "harness:main",
+        [{ isAgent: true, agentSessionId: "main", agentBackend: "pi-native" }],
+      ),
+    ).resolves.toMatchObject({
+      source: "pi-native",
+      provider: "openai-codex",
+      modelId: "gpt-5.4-mini",
+    });
+
+    await expect(
+      setHarnessRuntimeThinkingLevel("high", "harness:main", [
+        { isAgent: true, agentSessionId: "main", agentBackend: "pi-native" },
+      ]),
+    ).resolves.toMatchObject({
+      source: "pi-native",
+      thinkingLevel: "high",
+    });
 
     await expect(
       cancelHarnessRuntimePrompt("harness:main", [
@@ -414,11 +579,23 @@ describe("harness runtime", () => {
       },
     ]);
     expect(nativeStaticCalls.getStatus).toEqual(["harness:main"]);
+    expect(nativeStaticCalls.getSessionSnapshot).toEqual(["harness:main"]);
     expect(nativeStaticCalls.getSessionTranscript).toEqual(["/tmp/session.jsonl"]);
     expect(nativeStaticCalls.listCommands).toEqual(["harness:main"]);
+    expect(nativeStaticCalls.listModels).toEqual(["harness:main"]);
     expect(nativeStaticCalls.listSessions).toEqual(["/tmp/project"]);
+    expect(nativeStaticCalls.listThinkingLevels).toEqual(["harness:main"]);
     expect(nativeStaticCalls.changeSessionMode).toEqual([
       { modeId: "all", scopeId: "harness:main" },
+    ]);
+    expect(nativeStaticCalls.setModel).toEqual([
+      {
+        selection: { provider: "openai-codex", modelId: "gpt-5.4-mini" },
+        scopeId: "harness:main",
+      },
+    ]);
+    expect(nativeStaticCalls.setThinkingLevel).toEqual([
+      { level: "high", scopeId: "harness:main" },
     ]);
     expect(nativeStaticCalls.cancelPrompt).toEqual(["harness:main"]);
     expect(nativeStaticCalls.respondToPermission).toEqual([

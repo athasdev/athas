@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  getAvailableThinkingLevels,
   getAvailableModelsForSession,
   getSessionModeState,
   listSlashCommandsForSession,
@@ -181,5 +182,14 @@ describe("pi-native session runtime helpers", () => {
         modelId: "missing",
       }),
     ).rejects.toThrow("Unknown pi-native model");
+
+    expect(getAvailableThinkingLevels()).toEqual([
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+    ]);
   });
 });

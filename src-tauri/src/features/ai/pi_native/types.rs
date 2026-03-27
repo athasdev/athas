@@ -1,3 +1,4 @@
+use crate::features::acp::types::AcpRuntimeState;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +33,15 @@ pub struct PiNativeSlashCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PiNativeModelInfo {
+   pub provider: String,
+   pub model_id: String,
+   pub name: String,
+   pub reasoning: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PiNativeSessionMode {
    pub id: String,
    pub name: String,
@@ -43,4 +53,12 @@ pub struct PiNativeSessionMode {
 pub struct PiNativeSessionModeState {
    pub current_mode_id: Option<String>,
    pub available_modes: Vec<PiNativeSessionMode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PiNativeSessionSnapshot {
+   pub runtime_state: AcpRuntimeState,
+   pub slash_commands: Vec<PiNativeSlashCommand>,
+   pub session_mode_state: PiNativeSessionModeState,
 }

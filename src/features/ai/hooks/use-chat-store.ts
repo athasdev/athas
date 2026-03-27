@@ -111,6 +111,10 @@ export function useChatActions(scopeId: ChatScopeId = PANEL_CHAT_SCOPE_ID) {
     getFilteredSlashCommands: () => useAIChatStore.getState().getFilteredSlashCommands(scopeId),
     changeSessionMode: (modeId: string) =>
       useAIChatStore.getState().changeSessionMode(modeId, scopeId),
+    changeSessionModel: (selection: { provider: string; modelId: string }) =>
+      useAIChatStore.getState().changeSessionModel(selection, scopeId),
+    changeSessionThinkingLevel: (level: string) =>
+      useAIChatStore.getState().changeSessionThinkingLevel(level, scopeId),
     setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) =>
       useAIChatStore.getState().setSessionModeState(currentModeId, availableModes, scopeId),
     setCurrentModeId: (modeId: string) =>

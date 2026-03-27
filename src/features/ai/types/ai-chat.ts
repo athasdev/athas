@@ -1,4 +1,5 @@
 import type React from "react";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import type {
   AcpPlanEntry,
   AcpRuntimeState,
@@ -219,6 +220,7 @@ export interface AIChatInputBarProps {
   surface?: AIChatSurface;
   scopeId?: ChatScopeId;
   harnessStatus?: HarnessTrustState | null;
+  runtimeBackend?: HarnessRuntimeBackend;
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

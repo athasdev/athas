@@ -33,6 +33,8 @@ const NATIVE_SESSION_MODES = [
   },
 ];
 
+export const NATIVE_THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
+
 export function listSlashCommandsForSession(session) {
   const commands = [];
   const seenNames = new Set();
@@ -115,6 +117,10 @@ export function getAvailableModelsForSession(session) {
     name: model.name,
     reasoning: Boolean(model.reasoning),
   }));
+}
+
+export function getAvailableThinkingLevels() {
+  return [...NATIVE_THINKING_LEVELS];
 }
 
 export async function setSessionModel(session, selection) {

@@ -1,10 +1,18 @@
-import type { AcpAgentStatus, AcpEvent, SlashCommand } from "@/features/ai/types/acp";
+import type {
+  AcpAgentStatus,
+  AcpEvent,
+  AcpRuntimeState,
+  SessionModeState,
+  SlashCommand,
+} from "@/features/ai/types/acp";
 import type { AgentType, AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { AcpStreamHandler } from "@/utils/acp-handler";
 import {
+  type PiNativeModelInfo,
   type PiNativeSessionInfo,
+  type PiNativeSessionSnapshot,
   PiNativeStreamHandler,
   type PiNativeTranscriptMessage,
 } from "@/utils/pi-native-handler";
@@ -51,6 +59,8 @@ interface HarnessRuntimePromptSessionOptions {
 
 export interface HarnessRuntimeSessionInfo extends PiNativeSessionInfo {}
 export interface HarnessRuntimeTranscriptMessage extends PiNativeTranscriptMessage {}
+export interface HarnessRuntimeModelInfo extends PiNativeModelInfo {}
+export interface HarnessRuntimeSessionSnapshot extends PiNativeSessionSnapshot {}
 
 const getHarnessSessionKeyFromScopeId = (scopeId: ChatScopeId): string | null =>
   scopeId.startsWith(HARNESS_SCOPE_PREFIX) ? scopeId.slice(HARNESS_SCOPE_PREFIX.length) : null;
@@ -163,6 +173,54 @@ export const listHarnessRuntimeSlashCommands = async (
   return [];
 };
 
+export const listHarnessRuntimeModels = async (
+  backend: HarnessRuntimeBackend,
+  agentId: AgentType,
+  scopeId: ChatScopeId,
+): Promise<HarnessRuntimeModelInfo[]> => {
+  if (backend === "pi-native") {
+    if (agentId !== "pi") {
+      throw buildPiNativeNotWiredError();
+    }
+
+    return PiNativeStreamHandler.listModels(scopeId);
+  }
+
+  return [];
+};
+
+export const listHarnessRuntimeThinkingLevels = async (
+  backend: HarnessRuntimeBackend,
+  agentId: AgentType,
+  scopeId: ChatScopeId,
+): Promise<string[]> => {
+  if (backend === "pi-native") {
+    if (agentId !== "pi") {
+      throw buildPiNativeNotWiredError();
+    }
+
+    return PiNativeStreamHandler.listThinkingLevels(scopeId);
+  }
+
+  return [];
+};
+
+export const getHarnessRuntimeSessionSnapshot = async (
+  backend: HarnessRuntimeBackend,
+  agentId: AgentType,
+  scopeId: ChatScopeId,
+): Promise<HarnessRuntimeSessionSnapshot | null> => {
+  if (backend === "pi-native") {
+    if (agentId !== "pi") {
+      throw buildPiNativeNotWiredError();
+    }
+
+    return PiNativeStreamHandler.getSessionSnapshot(scopeId);
+  }
+
+  return null;
+};
+
 export const getHarnessRuntimeSessionTranscript = async (
   backend: HarnessRuntimeBackend,
   agentId: AgentType,
@@ -230,12 +288,40 @@ export const changeHarnessRuntimeSessionMode = async (
   scopeId: ChatScopeId,
   buffers: HarnessRuntimeBuffer[],
   activeBuffer?: HarnessRuntimeBuffer | null,
-): Promise<void> => {
+): Promise<SessionModeState | null> => {
   const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
   if (backend === "pi-native") {
-    await PiNativeStreamHandler.changeSessionMode(modeId, scopeId);
-    return;
+    return PiNativeStreamHandler.changeSessionMode(modeId, scopeId);
   }
 
   await AcpStreamHandler.changeSessionMode(modeId, scopeId);
+  return null;
+};
+
+export const setHarnessRuntimeModel = async (
+  selection: Pick<HarnessRuntimeModelInfo, "provider" | "modelId">,
+  scopeId: ChatScopeId,
+  buffers: HarnessRuntimeBuffer[],
+  activeBuffer?: HarnessRuntimeBuffer | null,
+): Promise<AcpRuntimeState | null> => {
+  const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
+  if (backend === "pi-native") {
+    return PiNativeStreamHandler.setModel(selection, scopeId);
+  }
+
+  throw new Error("Runtime model changes are only supported for Pi Native.");
+};
+
+export const setHarnessRuntimeThinkingLevel = async (
+  level: string,
+  scopeId: ChatScopeId,
+  buffers: HarnessRuntimeBuffer[],
+  activeBuffer?: HarnessRuntimeBuffer | null,
+): Promise<AcpRuntimeState | null> => {
+  const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
+  if (backend === "pi-native") {
+    return PiNativeStreamHandler.setThinkingLevel(level, scopeId);
+  }
+
+  throw new Error("Runtime thinking changes are only supported for Pi Native.");
 };

@@ -44,6 +44,8 @@ import {
 } from "@/features/ai/lib/chat-summarizer";
 import {
   changeHarnessRuntimeSessionMode,
+  setHarnessRuntimeModel,
+  setHarnessRuntimeThinkingLevel,
   stopHarnessRuntime,
 } from "@/features/ai/lib/harness-runtime";
 import { getNextQueuedMessageIndex } from "@/features/ai/lib/message-queue";
@@ -1221,14 +1223,55 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         changeSessionMode: async (modeId, scopeId = DEFAULT_SCOPE_ID) => {
           try {
-            await changeHarnessRuntimeSessionMode(
+            const nextModeState = await changeHarnessRuntimeSessionMode(
               modeId,
               scopeId,
               useBufferStore.getState().buffers,
               getCurrentRuntimeBuffer(),
             );
+            if (nextModeState) {
+              get().setSessionModeState(
+                nextModeState.currentModeId,
+                nextModeState.availableModes,
+                scopeId,
+              );
+            }
           } catch (error) {
             console.error("Failed to change session mode:", error);
+          }
+        },
+
+        changeSessionModel: async (selection, scopeId = DEFAULT_SCOPE_ID) => {
+          try {
+            const runtimeState = await setHarnessRuntimeModel(
+              selection,
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            );
+            if (runtimeState) {
+              get().setAcpRuntimeState(runtimeState, scopeId);
+            }
+          } catch (error) {
+            console.error("Failed to change session model:", error);
+            throw error;
+          }
+        },
+
+        changeSessionThinkingLevel: async (level, scopeId = DEFAULT_SCOPE_ID) => {
+          try {
+            const runtimeState = await setHarnessRuntimeThinkingLevel(
+              level,
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            );
+            if (runtimeState) {
+              get().setAcpRuntimeState(runtimeState, scopeId);
+            }
+          } catch (error) {
+            console.error("Failed to change session thinking level:", error);
+            throw error;
           }
         },
 

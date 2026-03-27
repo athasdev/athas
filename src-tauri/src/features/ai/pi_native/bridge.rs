@@ -1,7 +1,9 @@
+use crate::features::acp::types::AcpRuntimeState;
 use crate::features::ai::acp::types::AcpEvent;
 use crate::features::ai::acp::{AcpAgentStatus, AcpBootstrapContext};
 use crate::features::ai::{
-   PiNativeSessionInfo, PiNativeSessionModeState, PiNativeSlashCommand, PiNativeTranscriptMessage,
+   PiNativeModelInfo, PiNativeSessionInfo, PiNativeSessionModeState, PiNativeSessionSnapshot,
+   PiNativeSlashCommand, PiNativeTranscriptMessage,
 };
 use crate::features::runtime::{RuntimeManager, RuntimeType};
 use anyhow::{Context, Result, anyhow};
@@ -90,11 +92,84 @@ impl PiNativeBridge {
       serde_json::from_value(value).context("failed to decode pi-native sessions")
    }
 
-   pub async fn list_commands(&self, route_key: &str) -> Result<Vec<PiNativeSlashCommand>> {
+   pub async fn list_commands(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+   ) -> Result<Vec<PiNativeSlashCommand>> {
       let value = self
-         .send_request("listCommands", json!({ "routeKey": route_key }))
+         .send_request(
+            "listCommands",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+            }),
+         )
          .await?;
       serde_json::from_value(value).context("failed to decode pi-native slash commands")
+   }
+
+   pub async fn list_models(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+   ) -> Result<Vec<PiNativeModelInfo>> {
+      let value = self
+         .send_request(
+            "listModels",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native models")
+   }
+
+   pub async fn list_thinking_levels(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+   ) -> Result<Vec<String>> {
+      let value = self
+         .send_request(
+            "listThinkingLevels",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native thinking levels")
+   }
+
+   pub async fn get_session_snapshot(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+   ) -> Result<PiNativeSessionSnapshot> {
+      let value = self
+         .send_request(
+            "getSessionSnapshot",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native session snapshot")
    }
 
    pub async fn get_settings_snapshot(&self, workspace_path: Option<String>) -> Result<Value> {
@@ -220,6 +295,8 @@ impl PiNativeBridge {
       &self,
       route_key: &str,
       mode_id: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
    ) -> Result<PiNativeSessionModeState> {
       let value = self
          .send_request(
@@ -227,10 +304,59 @@ impl PiNativeBridge {
             json!({
                "routeKey": route_key,
                "modeId": mode_id,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
             }),
          )
          .await?;
       serde_json::from_value(value).context("failed to decode pi-native session mode state")
+   }
+
+   pub async fn set_model(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+      provider: &str,
+      model_id: &str,
+   ) -> Result<AcpRuntimeState> {
+      let value = self
+         .send_request(
+            "setModel",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+               "provider": provider,
+               "modelId": model_id,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native runtime state")
+   }
+
+   pub async fn set_thinking_level(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+      level: &str,
+   ) -> Result<AcpRuntimeState> {
+      let value = self
+         .send_request(
+            "setThinkingLevel",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+               "level": level,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native runtime state")
    }
 
    pub async fn cancel_prompt(&self, route_key: &str) -> Result<()> {

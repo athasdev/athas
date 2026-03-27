@@ -15,9 +15,13 @@ import {
   setPiScopedDefaults,
 } from "./pi-settings.mjs";
 import {
+  getAvailableModelsForSession,
+  getAvailableThinkingLevels,
   getSessionModeState,
   listSlashCommandsForSession,
   setSessionMode,
+  setSessionModel,
+  setSessionThinkingLevel,
 } from "./session-runtime.mjs";
 import { loadSessionTranscript } from "./session-transcript.mjs";
 
@@ -91,6 +95,14 @@ function createRuntimeState(record) {
     modelId: model?.id ?? null,
     thinkingLevel: record?.session.thinkingLevel ?? null,
     behavior: null,
+  };
+}
+
+function createSessionSnapshot(record) {
+  return {
+    runtimeState: createRuntimeState(record),
+    slashCommands: listSlashCommandsForSession(record.session),
+    sessionModeState: getSessionModeState(record.session),
   };
 }
 
@@ -409,11 +421,36 @@ async function handleRequest(id, method, params = {}) {
       return sendResponse(id, sessions);
     }
     case "listCommands": {
-      const record = sessions.get(params.routeKey);
-      if (!record) {
-        throw new Error("No native Pi session is running for this route.");
-      }
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
       return sendResponse(id, listSlashCommandsForSession(record.session));
+    }
+    case "listModels": {
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
+      return sendResponse(id, getAvailableModelsForSession(record.session));
+    }
+    case "listThinkingLevels": {
+      await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
+      return sendResponse(id, getAvailableThinkingLevels());
+    }
+    case "getSessionSnapshot": {
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
+      return sendResponse(id, createSessionSnapshot(record));
     }
     case "getSettingsSnapshot": {
       return sendResponse(id, await getPiSettingsSnapshot(createSettingsContext(params)));
@@ -535,14 +572,40 @@ async function handleRequest(id, method, params = {}) {
       return sendResponse(id, await loadSessionTranscript(params.sessionPath));
     }
     case "changeMode": {
-      const record = sessions.get(params.routeKey);
-      if (!record) {
-        throw new Error("No native Pi session is running for this route.");
-      }
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
 
       setSessionMode(record.session, params.modeId);
       publishSessionState(params.routeKey, record);
       return sendResponse(id, getSessionModeState(record.session));
+    }
+    case "setModel": {
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
+
+      await setSessionModel(record.session, {
+        provider: params.provider,
+        modelId: params.modelId,
+      });
+      publishSessionState(params.routeKey, record);
+      return sendResponse(id, createRuntimeState(record));
+    }
+    case "setThinkingLevel": {
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
+
+      setSessionThinkingLevel(record.session, params.level);
+      publishSessionState(params.routeKey, record);
+      return sendResponse(id, createRuntimeState(record));
     }
     case "cancelPrompt": {
       const record = sessions.get(params.routeKey);

@@ -27,6 +27,7 @@ import {
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import {
   cancelHarnessRuntimePrompt,
+  getHarnessRuntimeSessionSnapshot,
   getHarnessRuntimeSessionTranscript,
   getHarnessRuntimeStatus,
   listHarnessRuntimeSessions,
@@ -938,6 +939,16 @@ const AIChat = memo(function AIChat({
           buildPiNativeRuntimeStateFromSession(session),
           targetScopeId,
         );
+        const snapshot = await getHarnessRuntimeSessionSnapshot("pi-native", "pi", targetScopeId);
+        if (snapshot) {
+          targetChatStore.setAcpRuntimeState(snapshot.runtimeState, targetScopeId);
+          targetChatStore.setAvailableSlashCommands(snapshot.slashCommands, targetScopeId);
+          targetChatStore.setSessionModeState(
+            snapshot.sessionModeState.currentModeId,
+            snapshot.sessionModeState.availableModes,
+            targetScopeId,
+          );
+        }
         targetChatStore.replaceChatMessages(
           targetChatId,
           buildPiNativeChatMessagesFromTranscript(transcript),
@@ -1194,6 +1205,11 @@ const AIChat = memo(function AIChat({
           currentAgentId,
           latestSession.path,
         );
+        const snapshot = await getHarnessRuntimeSessionSnapshot(
+          runtimeBackend,
+          currentAgentId,
+          resolvedScopeId,
+        );
         const hydratedCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
         if (
           !hydratedCurrentChat ||
@@ -1203,9 +1219,19 @@ const AIChat = memo(function AIChat({
           return;
         }
 
-        useAIChatStore
-          .getState()
-          .setAcpRuntimeState(buildPiNativeRuntimeStateFromSession(latestSession), resolvedScopeId);
+        if (snapshot) {
+          useAIChatStore.getState().setAcpRuntimeState(snapshot.runtimeState, resolvedScopeId);
+          useAIChatStore
+            .getState()
+            .setAvailableSlashCommands(snapshot.slashCommands, resolvedScopeId);
+          useAIChatStore
+            .getState()
+            .setSessionModeState(
+              snapshot.sessionModeState.currentModeId,
+              snapshot.sessionModeState.availableModes,
+              resolvedScopeId,
+            );
+        }
 
         const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
         if (transcriptMessages.length > 0) {
@@ -1404,6 +1430,7 @@ const AIChat = memo(function AIChat({
                     surface={surface}
                     scopeId={resolvedScopeId}
                     harnessStatus={surface === "harness" ? harnessTrustState : null}
+                    runtimeBackend={runtimeBackend}
                     onSendMessage={handleSendMessage}
                     onStopStreaming={stopStreaming}
                   />
