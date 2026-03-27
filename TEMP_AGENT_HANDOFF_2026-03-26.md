@@ -195,6 +195,32 @@ Additional follow-up completed after the above:
     - AI Settings displays the new `Pi Runtime` section with `Harness Backend`
     - wide Harness displays `Recent Pi Sessions`
     - selecting the top recent Pi session opened a second Harness tab with the restored `Reply with exactly READY and nothing else.` transcript and `READY` assistant response
+- native Pi runtime parity advanced again:
+  - the native host now mirrors Pi's slash-command surface for a live session:
+    - built-in slash commands
+    - registered extension commands
+    - prompt templates
+    - `skill:*` commands
+  - the native host now exposes a shared session-mode surface for Athas's existing single mode selector:
+    - `one-at-a-time`
+    - `all`
+  - native session-mode changes now update both Pi steering and follow-up queue modes together, which matches the current single-selector shape in Athas instead of inventing a second queue-mode UI
+  - the native host now emits ACP-shaped events for those capabilities on the live Pi-native path:
+    - `slash_commands_update`
+    - `session_mode_update`
+  - the frontend `PiNativeStreamHandler` now consumes those events and writes them into the existing Harness store/cache just like legacy ACP agents do
+  - `harness-runtime.ts` no longer throws for Pi-native session-mode changes:
+    - `changeHarnessRuntimeSessionMode(...)` now delegates to the native runtime
+    - a backend-aware `listHarnessRuntimeSlashCommands(...)` seam now exists for Pi-native
+  - focused native regression coverage now exists for:
+    - host-side slash-command composition
+    - host-side session-mode read/write
+    - frontend runtime delegation for native slash-command listing and session-mode changes
+- watched-display validation on `:106` for this latest slice is improved but still partial:
+  - the real mapped Athas window on `:106` is present again under the `1200x800` child window, not just the `10x10` wrapper
+  - a direct `Ctrl+R` send to the real child window now causes a large full-window screenshot diff, so the watched native entry path is no longer a no-op on that surface
+  - exact visible proof of the slash-command dropdown and session-mode selector on the watched VNC window is still not freshly re-proven in this pass
+  - do not overstate that last live-UI proof yet; the implemented code and repo verification are strong, but the watched UI still needs one cleaner native slash-command/mode demo pass
 
 This file remains useful as historical context for the larger Pi / Harness effort, but the toggle / entry-surface problem described below should be treated as resolved by the newer commits on this branch.
 
