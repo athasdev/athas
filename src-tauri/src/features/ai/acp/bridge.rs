@@ -2161,6 +2161,14 @@ pub struct AcpAgentBridge {
    terminal_manager: Arc<TerminalManager>,
 }
 
+pub(crate) fn ensure_pi_local_runtime_files_for_current_user() -> Result<()> {
+   let Some(agent_root) = AcpWorker::pi_agent_root() else {
+      return Ok(());
+   };
+
+   AcpWorker::repair_pi_local_runtime_files(&agent_root)
+}
+
 impl AcpAgentBridge {
    pub fn new(app_handle: AppHandle, terminal_manager: Arc<TerminalManager>) -> Self {
       let mut registry = AgentRegistry::new();

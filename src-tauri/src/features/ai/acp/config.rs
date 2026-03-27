@@ -1,4 +1,4 @@
-use super::types::AgentConfig;
+use super::{bridge::ensure_pi_local_runtime_files_for_current_user, types::AgentConfig};
 use std::{
    collections::HashMap,
    env, fs,
@@ -18,6 +18,10 @@ pub struct AgentRegistry {
 
 impl AgentRegistry {
    pub fn new() -> Self {
+      if let Err(error) = ensure_pi_local_runtime_files_for_current_user() {
+         log::warn!("Failed to repair Pi local runtime config during registry init: {error}");
+      }
+
       let mut agents = HashMap::new();
 
       // Claude Code - ACP adapter (Zed)
@@ -304,6 +308,13 @@ fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
    use super::AgentRegistry;
+   use serde_json::json;
+   use std::{
+      env, fs,
+      sync::{LazyLock, Mutex},
+   };
+
+   static PI_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
    #[test]
    fn registry_includes_pi_rpc_agent() {
@@ -320,5 +331,77 @@ mod tests {
             "medium".to_string(),
          ]
       );
+   }
+
+   #[test]
+   fn registry_new_repairs_pi_local_runtime_files() {
+      let _guard = PI_ENV_LOCK.lock().unwrap();
+      let temp_dir = tempfile::tempdir().unwrap();
+      let agent_root = temp_dir.path();
+      let original = env::var_os("PI_CODING_AGENT_DIR");
+
+      fs::write(
+         agent_root.join("settings.json"),
+         serde_json::to_string_pretty(&json!({
+            "defaultProvider": "droid",
+            "defaultModel": "gpt-5.4-mini",
+            "defaultThinkingLevel": "medium",
+         }))
+         .unwrap(),
+      )
+      .unwrap();
+      fs::write(
+         agent_root.join("reasoning-state.json"),
+         serde_json::to_string_pretty(&json!({
+            "effective": {
+               "provider": "droid",
+               "modelId": "gpt-5.4-mini",
+               "thinkingLevel": "medium",
+            }
+         }))
+         .unwrap(),
+      )
+      .unwrap();
+      fs::write(
+         agent_root.join("behavior-mode-state.json"),
+         serde_json::to_string_pretty(&json!({
+            "currentBehavior": "orchestrator",
+         }))
+         .unwrap(),
+      )
+      .unwrap();
+
+      unsafe {
+         env::set_var("PI_CODING_AGENT_DIR", agent_root);
+      }
+
+      let _registry = AgentRegistry::new();
+
+      match original {
+         Some(value) => unsafe {
+            env::set_var("PI_CODING_AGENT_DIR", value);
+         },
+         None => unsafe {
+            env::remove_var("PI_CODING_AGENT_DIR");
+         },
+      }
+
+      let settings = serde_json::from_str::<serde_json::Value>(
+         &fs::read_to_string(agent_root.join("settings.json")).unwrap(),
+      )
+      .unwrap();
+      assert_eq!(settings["defaultProvider"], json!("openai-codex"));
+      assert_eq!(settings["defaultModel"], json!("gpt-5.4"));
+      assert_eq!(settings["defaultThinkingLevel"], json!("medium"));
+
+      let reasoning = serde_json::from_str::<serde_json::Value>(
+         &fs::read_to_string(agent_root.join("reasoning-state.json")).unwrap(),
+      )
+      .unwrap();
+      assert_eq!(reasoning["effective"]["provider"], json!("openai-codex"));
+      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4"));
+      assert_eq!(reasoning["effective"]["thinkingLevel"], json!("medium"));
+
+      assert!(!agent_root.join("behavior-mode-state.json").exists());
    }
 }

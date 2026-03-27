@@ -765,7 +765,8 @@ Use something like this:
 
 ### Current active problem / least trusted
 
-- fresh-profile Pi runtime response completion under cold start
+- watched-window composer input on the `:106` VNC/Xvfb stack is still unreliable for deterministic automated prompt entry
+- fresh-profile Pi runtime response completion still needs a clean end-to-end live re-proof after the latest startup repair
 - any remaining Harness visual polish after the redundancy trim
 
 ---
@@ -775,29 +776,31 @@ Use something like this:
 At the time this handoff was prepared:
 
 - branch: `adding-pi-mono`
-- latest commit: `b9ef90c3 Docs: refresh Harness handoff snapshot`
-- working tree includes a new uncommitted Harness restore hydration fix in:
-  - `src/features/ai/store/store.ts`
-  - `src/features/ai/store/store.test.ts`
+- latest committed fix before current uncommitted work: `eb6c567d Fix: Repair Pi local runtime state`
+- working tree includes a new uncommitted startup-repair wiring update in:
+  - `src-tauri/src/features/ai/acp/bridge.rs`
+  - `src-tauri/src/features/ai/acp/config.rs`
 - recent validator run succeeded with:
-  - `bun test`
+  - `cargo test -p athas registry_new_repairs_pi_local_runtime_files -- --nocapture`
+  - `cargo test -p athas load_pi_runtime_state_repairs_and_reads_canonical_profile -- --nocapture`
+  - `cargo test -p athas registry_includes_pi_rpc_agent -- --nocapture`
+  - `cargo build -p athas`
   - `bun typecheck`
-  - `bun check`
-  - `bun vite build`
   - `git diff --check`
 
 ### Live verification snapshot
 
-- watched profile evidence still shows a real restored default Harness chat in persisted state:
-  - `chat_history.db` contains `harness:harness:1774545585555` titled `Reply with exactly WATCHED and nothing else.`
-  - local storage still points `harness:harness.currentChatId` at that chat id with `selectedAgentId = "pi"`
-- new store regression test now covers the root cause:
-  - startup previously loaded chat metadata only and never hydrated the current restored chat
-  - `loadChatsFromDatabase()` now eagerly hydrates the current chat for each active scope after metadata load
-- watched VNC validation after this fix is currently blocked by X11/Tauri window mapping instability on `:106`:
-  - clean restarts on the watched profile are mapping an unmapped `10x10` shell window instead of the normal full UI
-  - this is preventing a fresh post-fix visual re-proof of the restored transcript on that display
-  - the product fix is covered by the persisted-profile evidence plus the new store regression test, but the watched restart path is not fully re-proven live yet because of the display/runtime blocker
+- the watched `:106` VNC endpoint on port `5906` is currently healthy again with explicit password auth (`athas`)
+- the live Athas process now runs a fresh binary that postdates the earlier stale-process problem
+- the real `~/.pi/agent` files were verified on the machine after startup and now normalize immediately on app init:
+  - `settings.json` has both `default_provider` and `defaultProvider` = `openai-codex`
+  - `settings.json` has both `default_model` and `defaultModel` = `gpt-5.4`
+  - `settings.json` has both thinking fields = `medium`
+  - `reasoning-state.json` now reports `openai-codex / gpt-5.4 / medium`
+  - `behavior-mode-state.json` no longer carries `currentBehavior`
+- the watched `:106` display has been unstable across restarts, but the latest root capture is non-black again and the full Athas window is present
+- remaining live gap:
+  - automated prompt entry into the Harness composer on the watched VNC window is still flaky, so the startup-repair change is machine-proven through file normalization rather than a fresh fully automated chat send
 
 ---
 
