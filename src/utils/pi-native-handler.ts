@@ -13,7 +13,7 @@ import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/stores/project-store";
-import { buildContextPrompt } from "./context-builder";
+import { buildPiNativePromptMessage } from "./pi-native-prompt";
 import type { ContextInfo } from "./types";
 
 interface PiNativeHandlers {
@@ -26,6 +26,7 @@ interface PiNativeHandlers {
   onNewMessage?: () => void;
   onToolUse?: (toolName: string, toolInput?: unknown, toolId?: string) => void;
   onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
+  onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
   onImageChunk?: (data: string, mediaType: string) => void;
   onResourceChunk?: (uri: string, name: string | null) => void;
@@ -49,6 +50,7 @@ export class PiNativeStreamHandler {
   private lastActivityTime = Date.now();
   private hasObservedResponseActivity = false;
   private activeTools = new Map<string, string>();
+  private pendingPermissionRequestIds = new Set<string>();
   private sessionComplete = false;
   private pendingNewMessage = false;
   private cancelled = false;
@@ -124,8 +126,7 @@ export class PiNativeStreamHandler {
   }
 
   private buildMessage(userMessage: string, context: ContextInfo): string {
-    const contextPrompt = buildContextPrompt(context);
-    return [contextPrompt, userMessage].filter(Boolean).join("\n\n");
+    return buildPiNativePromptMessage(userMessage, context);
   }
 
   private async setupListeners(): Promise<void> {
@@ -189,6 +190,12 @@ export class PiNativeStreamHandler {
         break;
       }
 
+      case "permission_request":
+        this.hasObservedResponseActivity = true;
+        this.pendingPermissionRequestIds.add(event.requestId);
+        this.handlers.onPermissionRequest?.(event);
+        break;
+
       case "runtime_state_update":
         if (event.runtimeState.sessionId) {
           this.sessionId = event.runtimeState.sessionId;
@@ -221,6 +228,9 @@ export class PiNativeStreamHandler {
         break;
 
       case "status_changed":
+        if (!event.status.running) {
+          this.pendingPermissionRequestIds.clear();
+        }
         if (!event.status.running) {
           useAIChatStore.getState().markPendingAcpPermissionsStale(this.scopeId);
           useAIChatStore.getState().hydrateAcpStateFromCurrentChat(this.scopeId);
@@ -318,6 +328,11 @@ export class PiNativeStreamHandler {
       }
 
       const inactiveTime = Date.now() - this.lastActivityTime;
+      if (this.pendingPermissionRequestIds.size > 0) {
+        this.timeout = setTimeout(checkInactivity, 1000);
+        return;
+      }
+
       if (this.hasObservedResponseActivity && inactiveTime > 10000 && this.activeTools.size === 0) {
         this.cleanup();
         this.handlers.onComplete();
@@ -348,6 +363,7 @@ export class PiNativeStreamHandler {
     this.pendingNewMessage = false;
     this.hasObservedResponseActivity = false;
     this.activeTools.clear();
+    this.pendingPermissionRequestIds.clear();
 
     if (this.listeners.event) {
       this.listeners.event();
