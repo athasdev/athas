@@ -67,6 +67,11 @@ Additional follow-up completed after the above:
   - focused regressions now cover the two bad terminal-ordering cases:
     - `prompt_complete` before the last `content_chunk`
     - `error` before the last `content_chunk`
+- Pi local runtime repair is now implemented in the Rust ACP bridge:
+  - Athas repairs conflicting `~/.pi/agent` runtime files before loading Pi state
+  - canonical repaired profile is now `openai-codex / gpt-5.4 / medium`
+  - conflicting `droid / gpt-5.4-mini / orchestrator` local state is rewritten to that canonical profile
+  - `behavior-mode-state.json` has its explicit `currentBehavior` override cleared so Pi no longer comes back pinned to `orchestrator`
 - important validation note:
   - the earlier `forbidden path ... allow-read-dir` startup failure was caused by launching Tauri with `HOME=/tmp/...`, which changed Tauri's `$HOME/**` fs capability scope so `/home/fsos/Developer/athas` was no longer permitted
   - that specific failure was a validation-environment bug, not the underlying product bug
