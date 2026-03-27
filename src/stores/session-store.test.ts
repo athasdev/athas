@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
 import {
   getPersistedProjectSession,
   getPersistedProjectSessionWithRetry,
@@ -119,6 +120,86 @@ describe("session-store", () => {
       projectPath: "/workspace/demo",
       activeBuffer: { kind: "agent", sessionId: "harness" },
       buffers: [{ kind: "agent", sessionId: "harness", name: "Harness", isPinned: false }],
+    });
+  });
+
+  test("normalizes legacy file-shaped Harness buffers from hydrated session state", () => {
+    useSessionStore.setState({
+      sessions: {
+        "/workspace/demo": {
+          projectPath: "/workspace/demo",
+          activeBuffer: { kind: "file", path: "agent://harness" },
+          activeBufferPath: "agent://harness",
+          buffers: [
+            {
+              path: "agent://harness",
+              name: "harness",
+              isPinned: false,
+            },
+          ],
+          terminals: [],
+          lastSaved: 123,
+        },
+      },
+    });
+
+    expect(useSessionStore.getState().getSession("/workspace/demo")).toEqual({
+      projectPath: "/workspace/demo",
+      activeBuffer: { kind: "agent", sessionId: DEFAULT_HARNESS_SESSION_KEY },
+      activeBufferPath: null,
+      buffers: [
+        {
+          kind: "agent",
+          sessionId: DEFAULT_HARNESS_SESSION_KEY,
+          name: "harness",
+          isPinned: false,
+        },
+      ],
+      terminals: [],
+      lastSaved: 123,
+    });
+  });
+
+  test("normalizes persisted legacy agent:// Harness entries from localStorage", () => {
+    globalThis.localStorage?.setItem(
+      "athas-tab-sessions",
+      JSON.stringify({
+        state: {
+          sessions: {
+            "/workspace/demo": {
+              projectPath: "/workspace/demo",
+              activeBuffer: { kind: "file", path: "agent://harness" },
+              activeBufferPath: "agent://harness",
+              buffers: [
+                {
+                  path: "agent://harness",
+                  name: "harness",
+                  isPinned: false,
+                },
+              ],
+              terminals: [],
+              lastSaved: 123,
+            },
+          },
+        },
+        version: 2,
+      }),
+    );
+
+    expect(getPersistedProjectSession("/workspace/demo")).toEqual({
+      projectPath: "/workspace/demo",
+      activeBuffer: { kind: "agent", sessionId: DEFAULT_HARNESS_SESSION_KEY },
+      activeBufferPath: null,
+      buffers: [
+        {
+          kind: "agent",
+          sessionId: DEFAULT_HARNESS_SESSION_KEY,
+          name: "harness",
+          isPinned: false,
+        },
+      ],
+      terminals: [],
+      lastSaved: 123,
     });
   });
 

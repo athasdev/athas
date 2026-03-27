@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -54,6 +55,111 @@ interface WrappedPersistedSessionState {
   version?: number;
 }
 
+const getLegacyAgentSessionId = (path: string | null | undefined): string | null => {
+  if (!path?.startsWith("agent://")) {
+    return null;
+  }
+
+  const sessionId = path.slice("agent://".length).trim();
+  return sessionId || DEFAULT_HARNESS_SESSION_KEY;
+};
+
+const normalizePersistedBufferSession = (
+  buffer: PersistedBufferSession | BufferSession,
+): PersistedBufferSession => {
+  if ("kind" in buffer && buffer.kind === "agent") {
+    return buffer;
+  }
+
+  const legacyAgentSessionId = getLegacyAgentSessionId(buffer.path);
+  if (legacyAgentSessionId) {
+    return {
+      kind: "agent",
+      sessionId: legacyAgentSessionId,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+    };
+  }
+
+  return {
+    kind: "file",
+    path: buffer.path,
+    name: buffer.name,
+    isPinned: buffer.isPinned,
+  };
+};
+
+const normalizeActiveSessionBuffer = (
+  activeBuffer: ActiveSessionBuffer | null,
+  activeBufferPath: string | null,
+): { activeBuffer: ActiveSessionBuffer | null; activeBufferPath: string | null } => {
+  if (activeBuffer?.kind === "agent") {
+    return { activeBuffer, activeBufferPath: null };
+  }
+
+  if (activeBuffer?.kind === "file") {
+    const legacyAgentSessionId = getLegacyAgentSessionId(activeBuffer.path);
+    if (legacyAgentSessionId) {
+      return {
+        activeBuffer: { kind: "agent", sessionId: legacyAgentSessionId },
+        activeBufferPath: null,
+      };
+    }
+
+    return { activeBuffer, activeBufferPath: activeBuffer.path };
+  }
+
+  const legacyAgentSessionId = getLegacyAgentSessionId(activeBufferPath);
+  if (legacyAgentSessionId) {
+    return {
+      activeBuffer: { kind: "agent", sessionId: legacyAgentSessionId },
+      activeBufferPath: null,
+    };
+  }
+
+  return { activeBuffer, activeBufferPath };
+};
+
+const normalizeProjectSession = (
+  session: ProjectSession | null | undefined,
+): ProjectSession | null => {
+  if (!session) {
+    return null;
+  }
+
+  const normalizedBuffers = session.buffers.map((buffer) =>
+    normalizePersistedBufferSession(buffer),
+  );
+  const normalizedActiveBuffer = normalizeActiveSessionBuffer(
+    session.activeBuffer,
+    session.activeBufferPath,
+  );
+
+  return {
+    ...session,
+    buffers: normalizedBuffers,
+    activeBuffer: normalizedActiveBuffer.activeBuffer,
+    activeBufferPath: normalizedActiveBuffer.activeBufferPath,
+  };
+};
+
+const normalizePersistedSessionState = (
+  persistedState: PersistedSessionState | null,
+): PersistedSessionState | null => {
+  if (!persistedState) {
+    return null;
+  }
+
+  return {
+    sessions: Object.fromEntries(
+      Object.entries(persistedState.sessions ?? {}).flatMap(([projectPath, session]) => {
+        const normalizedSession = normalizeProjectSession(session);
+        return normalizedSession ? [[projectPath, normalizedSession]] : [];
+      }),
+    ),
+  };
+};
+
 const parsePersistedSessionState = (rawValue: string | null): PersistedSessionState | null => {
   if (!rawValue) {
     return null;
@@ -67,10 +173,10 @@ const parsePersistedSessionState = (rawValue: string | null): PersistedSessionSt
     }
 
     if ("state" in parsed && parsed.state) {
-      return parsed.state;
+      return normalizePersistedSessionState(parsed.state);
     }
 
-    return parsed as PersistedSessionState;
+    return normalizePersistedSessionState(parsed as PersistedSessionState);
   } catch {
     return null;
   }
@@ -116,14 +222,15 @@ const useSessionStoreBase = create<SessionState>()(
       sessions: {},
 
       saveSession: (projectPath, buffers, activeBuffer, terminals = []) => {
+        const normalizedActiveBuffer = normalizeActiveSessionBuffer(activeBuffer, null);
         set((state) => ({
           sessions: {
             ...state.sessions,
             [projectPath]: {
               projectPath,
-              activeBuffer,
-              activeBufferPath: activeBuffer?.kind === "file" ? activeBuffer.path : null,
-              buffers,
+              activeBuffer: normalizedActiveBuffer.activeBuffer,
+              activeBufferPath: normalizedActiveBuffer.activeBufferPath,
+              buffers: buffers.map((buffer) => normalizePersistedBufferSession(buffer)),
               terminals,
               lastSaved: Date.now(),
             },
@@ -132,7 +239,7 @@ const useSessionStoreBase = create<SessionState>()(
       },
 
       getSession: (projectPath) => {
-        return get().sessions[projectPath] || null;
+        return normalizeProjectSession(get().sessions[projectPath]);
       },
 
       clearSession: (projectPath) => {
