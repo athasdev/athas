@@ -15,14 +15,23 @@ interface HarnessRailActiveSession {
   status: HarnessTrustState;
 }
 
+interface HarnessRailRecentRuntimeSession {
+  path: string;
+  title: string;
+  detail: string;
+  isCurrent: boolean;
+}
+
 interface HarnessSessionRailProps {
   sessions: HarnessRailSession[];
   activeSession: HarnessRailActiveSession;
+  recentRuntimeSessions?: HarnessRailRecentRuntimeSession[];
   onCreateSession: () => void;
   canReopenClosedSession: boolean;
   onReopenClosedSession: () => void;
   onSelectSession: (sessionKey: string) => void;
   onCloseSession: (bufferId: string) => void;
+  onOpenRuntimeSession?: (sessionPath: string) => void;
 }
 
 function getSessionDotTone(state: HarnessTrustStateKind): string {
@@ -66,11 +75,13 @@ function getStatusIcon(state: HarnessTrustStateKind) {
 export function HarnessSessionRail({
   sessions,
   activeSession,
+  recentRuntimeSessions = [],
   onCreateSession,
   canReopenClosedSession,
   onReopenClosedSession,
   onSelectSession,
   onCloseSession,
+  onOpenRuntimeSession,
 }: HarnessSessionRailProps) {
   const StatusIcon = getStatusIcon(activeSession.status.kind);
 
@@ -163,6 +174,51 @@ export function HarnessSessionRail({
           ))}
         </div>
       </section>
+
+      {recentRuntimeSessions.length > 0 && onOpenRuntimeSession ? (
+        <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
+          <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
+            <History size={12} />
+            <span>Recent Pi Sessions</span>
+          </div>
+          <div className="space-y-2">
+            {recentRuntimeSessions.map((session) => (
+              <button
+                key={session.path}
+                type="button"
+                onClick={() => onOpenRuntimeSession(session.path)}
+                className={cn(
+                  "flex w-full items-start gap-2 rounded-xl border px-2.5 py-2 text-left text-xs transition-colors",
+                  session.isCurrent
+                    ? "border-border bg-secondary-bg/90"
+                    : "border-border/70 bg-secondary-bg/55 hover:bg-hover/60",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-1 size-2 shrink-0 rounded-full",
+                    session.isCurrent ? "bg-blue-400" : "bg-text-lighter/35",
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={cn(
+                      "block truncate",
+                      session.isCurrent ? "font-medium text-text" : "text-text-lighter",
+                    )}
+                  >
+                    {session.title}
+                  </span>
+                  <span className="mt-1 block truncate text-[11px] text-text-lighter/80">
+                    {session.detail}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {activeSession.status.showRailStatus ? (
         <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">

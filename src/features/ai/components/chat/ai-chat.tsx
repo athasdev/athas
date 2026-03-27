@@ -40,6 +40,7 @@ import {
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
   shouldReconcilePiNativeSession,
+  shouldReuseCurrentHarnessSessionForPiNativeResume,
 } from "@/features/ai/lib/pi-native-restore";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
 import type { AcpEvent, AcpToolLocation } from "@/features/ai/types/acp";
@@ -150,6 +151,9 @@ const AIChat = memo(function AIChat({
   const abortControllerRef = useRef<AbortController | null>(null);
   const nativeSessionRestoreAttemptRef = useRef<string | null>(null);
   const [harnessSessionStatuses, setHarnessSessionStatuses] = useState<Record<string, boolean>>({});
+  const [recentPiNativeSessions, setRecentPiNativeSessions] = useState<
+    Awaited<ReturnType<typeof listHarnessRuntimeSessions>>
+  >([]);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -187,6 +191,10 @@ const AIChat = memo(function AIChat({
     () => resolveHarnessRuntimeBackendForScope(resolvedScopeId, buffers, activeBuffer ?? null),
     [activeBuffer, buffers, resolvedScopeId],
   );
+  const currentPiNativeSessionPath =
+    currentChat?.acpState?.runtimeState?.source === "pi-native"
+      ? currentChat.acpState.runtimeState.sessionPath
+      : null;
 
   useEffect(() => {
     if (!currentPermission) {
@@ -836,6 +844,16 @@ const AIChat = memo(function AIChat({
         })),
     [buffers, currentSessionKey, harnessSessionStatuses, harnessTrustState.kind],
   );
+  const recentPiNativeRailSessions = useMemo(
+    () =>
+      recentPiNativeSessions.map((session) => ({
+        path: session.path,
+        title: derivePiNativeSessionTitle(session),
+        detail: session.messageCount === 1 ? "1 message" : `${session.messageCount} messages`,
+        isCurrent: session.path === currentPiNativeSessionPath,
+      })),
+    [currentPiNativeSessionPath, recentPiNativeSessions],
+  );
   const hasClosedHarnessSession = useMemo(
     () => getMostRecentClosedHarnessSession(closedBuffersHistory) !== null,
     [closedBuffersHistory],
@@ -869,14 +887,14 @@ const AIChat = memo(function AIChat({
   };
 
   const handleCreateHarnessSession = useCallback(() => {
-    createAgentBuffer();
-  }, [createAgentBuffer]);
+    createAgentBuffer({ backend: runtimeBackend });
+  }, [createAgentBuffer, runtimeBackend]);
 
   const handleSelectHarnessSession = useCallback(
     (nextSessionKey: string) => {
-      openAgentBuffer(nextSessionKey);
+      openAgentBuffer(nextSessionKey, { backend: runtimeBackend });
     },
-    [openAgentBuffer],
+    [openAgentBuffer, runtimeBackend],
   );
 
   const handleCloseHarnessSession = useCallback(
@@ -890,6 +908,47 @@ const AIChat = memo(function AIChat({
     void reopenClosedHarnessSession();
   }, [reopenClosedHarnessSession]);
 
+  const handleOpenRecentPiNativeSession = useCallback(
+    async (sessionPath: string) => {
+      const session = recentPiNativeSessions.find((entry) => entry.path === sessionPath);
+      if (!session) {
+        return;
+      }
+
+      try {
+        const transcript = await getHarnessRuntimeSessionTranscript(
+          "pi-native",
+          "pi",
+          session.path,
+        );
+        const shouldReuseCurrentSession = shouldReuseCurrentHarnessSessionForPiNativeResume({
+          sessionKey,
+          chat: currentChat,
+        });
+        const nextSessionKey =
+          shouldReuseCurrentSession && sessionKey ? sessionKey : createHarnessSessionKey();
+        const targetScopeId = createHarnessChatScopeId(nextSessionKey);
+        const targetChatStore = useAIChatStore.getState();
+
+        openAgentBuffer(nextSessionKey, { backend: "pi-native" });
+
+        const targetChatId = targetChatStore.ensureChatForAgent("pi", targetScopeId);
+        targetChatStore.setAcpRuntimeState(
+          buildPiNativeRuntimeStateFromSession(session),
+          targetScopeId,
+        );
+        targetChatStore.replaceChatMessages(
+          targetChatId,
+          buildPiNativeChatMessagesFromTranscript(transcript),
+        );
+        targetChatStore.updateChatTitle(targetChatId, derivePiNativeSessionTitle(session));
+      } catch (error) {
+        console.error("Failed to open recent Pi native session:", error);
+      }
+    },
+    [currentChat, openAgentBuffer, recentPiNativeSessions, sessionKey],
+  );
+
   const handleContinueChatFromHistory = useCallback(
     (chatId: string) => {
       chatActions.continueChatInPlace(chatId);
@@ -901,14 +960,14 @@ const AIChat = memo(function AIChat({
     async (chatId: string) => {
       if (surface === "harness") {
         const nextSessionKey = createHarnessSessionKey();
-        openAgentBuffer(nextSessionKey);
+        openAgentBuffer(nextSessionKey, { backend: runtimeBackend });
         await chatActions.forkChatFromChat(chatId, createHarnessChatScopeId(nextSessionKey));
         return;
       }
 
       await chatActions.forkChatFromChat(chatId, resolvedScopeId);
     },
-    [chatActions, openAgentBuffer, resolvedScopeId, surface],
+    [chatActions, openAgentBuffer, resolvedScopeId, runtimeBackend, surface],
   );
 
   useEffect(() => {
@@ -961,6 +1020,44 @@ const AIChat = memo(function AIChat({
       window.clearInterval(statusInterval);
     };
   }, [buffers, surface]);
+
+  useEffect(() => {
+    if (
+      surface !== "harness" ||
+      runtimeBackend !== "pi-native" ||
+      currentAgentId !== "pi" ||
+      !rootFolderPath
+    ) {
+      setRecentPiNativeSessions([]);
+      return;
+    }
+
+    let disposed = false;
+
+    void listHarnessRuntimeSessions("pi-native", "pi", rootFolderPath)
+      .then((sessions) => {
+        if (!disposed) {
+          setRecentPiNativeSessions(sessions.slice(0, 6));
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load recent Pi native sessions:", error);
+        if (!disposed) {
+          setRecentPiNativeSessions([]);
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [
+    currentAgentId,
+    currentChat?.lastMessageAt,
+    currentPiNativeSessionPath,
+    rootFolderPath,
+    runtimeBackend,
+    surface,
+  ]);
 
   useEffect(() => {
     if (surface !== "harness" || !currentChat) {
@@ -1295,11 +1392,13 @@ const AIChat = memo(function AIChat({
                 <HarnessSessionRail
                   sessions={harnessSessions}
                   activeSession={{ status: harnessTrustState }}
+                  recentRuntimeSessions={recentPiNativeRailSessions}
                   onCreateSession={handleCreateHarnessSession}
                   canReopenClosedSession={hasClosedHarnessSession}
                   onReopenClosedSession={handleReopenClosedHarnessSession}
                   onSelectSession={handleSelectHarnessSession}
                   onCloseSession={handleCloseHarnessSession}
+                  onOpenRuntimeSession={handleOpenRecentPiNativeSession}
                 />
               </div>
             ) : null}

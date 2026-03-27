@@ -175,6 +175,15 @@ Additional follow-up completed after the above:
 - important validation note:
   - the earlier `forbidden path ... allow-read-dir` startup failure was caused by launching Tauri with `HOME=/tmp/...`, which changed Tauri's `$HOME/**` fs capability scope so `/home/fsos/Developer/athas` was no longer permitted
   - that specific failure was a validation-environment bug, not the underlying product bug
+- Pi backend selection and native session browsing are now productized further:
+  - AI Settings now exposes a `Pi Runtime -> Harness Backend` dropdown that chooses `pi-native` vs `legacy-acp-bridge` for Pi Harness entry
+  - `toggleHarnessEntry`, empty-state `Open Harness`, command-palette `Open Harness`, and command-palette `New Harness Session` now respect that configured Pi backend instead of hardcoding `pi-native`
+  - wide Harness now shows a real `Recent Pi Sessions` rail section sourced from shared native Pi session files
+  - selecting a recent native Pi session from that rail opens a real Harness tab seeded with the chosen Pi session runtime state and visible transcript
+  - watched-display proof on `:106` now shows both of those surfaces in the real app:
+    - AI Settings displays the new `Pi Runtime` section with `Harness Backend`
+    - wide Harness displays `Recent Pi Sessions`
+    - selecting the top recent Pi session opened a second Harness tab with the restored `Reply with exactly READY and nothing else.` transcript and `READY` assistant response
 
 This file remains useful as historical context for the larger Pi / Harness effort, but the toggle / entry-surface problem described below should be treated as resolved by the newer commits on this branch.
 

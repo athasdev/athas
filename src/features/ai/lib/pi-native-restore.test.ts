@@ -6,6 +6,7 @@ import {
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
   shouldReconcilePiNativeSession,
+  shouldReuseCurrentHarnessSessionForPiNativeResume,
 } from "./pi-native-restore";
 
 const createChat = (overrides: Partial<Chat> = {}): Chat => ({
@@ -169,5 +170,60 @@ describe("pi-native restore", () => {
         kind: "default",
       },
     ]);
+  });
+
+  test("reuses the current Harness session when it is still blank and has no native session path", () => {
+    expect(
+      shouldReuseCurrentHarnessSessionForPiNativeResume({
+        sessionKey: "harness",
+        chat: createChat(),
+      }),
+    ).toBe(true);
+  });
+
+  test("does not reuse the current Harness session when it already targets a native session", () => {
+    expect(
+      shouldReuseCurrentHarnessSessionForPiNativeResume({
+        sessionKey: "harness",
+        chat: createChat({
+          acpState: {
+            preferredModeId: null,
+            currentModeId: null,
+            availableModes: [],
+            slashCommands: [],
+            runtimeState: {
+              agentId: "pi",
+              source: "pi-native",
+              sessionId: "native-session-123",
+              sessionPath: "/tmp/session.jsonl",
+              workspacePath: "/home/fsos/Developer/athas",
+              provider: null,
+              modelId: null,
+              thinkingLevel: null,
+              behavior: null,
+            },
+          },
+        }),
+      }),
+    ).toBe(false);
+  });
+
+  test("does not reuse the current Harness session when it already has conversation history", () => {
+    expect(
+      shouldReuseCurrentHarnessSessionForPiNativeResume({
+        sessionKey: "harness",
+        chat: createChat({
+          messages: [
+            {
+              id: "message-1",
+              lineageMessageId: "message-1",
+              content: "hello",
+              role: "user",
+              timestamp: new Date("2026-03-27T10:00:00.000Z"),
+            },
+          ],
+        }),
+      }),
+    ).toBe(false);
   });
 });

@@ -16,6 +16,11 @@ interface PiNativeSessionTitleSource {
   firstMessage: string;
 }
 
+interface ShouldReuseCurrentHarnessSessionForPiNativeResumeParams {
+  sessionKey: string | null | undefined;
+  chat: Pick<Chat, "messages" | "acpState"> | null | undefined;
+}
+
 const normalizeText = (value: string | null | undefined): string =>
   value?.replace(/\s+/g, " ").trim() ?? "";
 
@@ -31,6 +36,21 @@ export const shouldReconcilePiNativeSession = ({
   }
 
   if (!workspacePath || !chat || chat.messages.length > 0) {
+    return false;
+  }
+
+  return !chat.acpState?.runtimeState?.sessionPath;
+};
+
+export const shouldReuseCurrentHarnessSessionForPiNativeResume = ({
+  sessionKey,
+  chat,
+}: ShouldReuseCurrentHarnessSessionForPiNativeResumeParams): boolean => {
+  if (!sessionKey || !chat) {
+    return false;
+  }
+
+  if (chat.messages.length > 0) {
     return false;
   }
 
