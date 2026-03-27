@@ -8,6 +8,7 @@ import {
   type ChatCompactionPolicy,
   normalizeChatCompactionPolicy,
 } from "@/features/ai/lib/chat-compaction-policy";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { getProviderById } from "@/features/ai/types/providers";
 import { settingsSearchIndex } from "./config/search-index";
 import { cacheFontsForBootstrap, cacheThemeForBootstrap } from "./lib/appearance-bootstrap";
@@ -90,6 +91,7 @@ interface Settings {
   aiAutoCompactionKeepRecentTokens: number;
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
+  aiPiHarnessBackend: HarnessRuntimeBackend;
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
@@ -228,6 +230,7 @@ const defaultSettings: Settings = {
   aiAutoCompactionKeepRecentTokens: 20000,
   aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   aiDefaultSessionMode: "",
+  aiPiHarnessBackend: "pi-native",
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
@@ -565,6 +568,7 @@ export const useSettingsStore = create(
               actions.openAgentBuffer,
               actions.closeBuffer,
               nextValue,
+              get().settings.aiPiHarnessBackend,
             );
           });
         },
@@ -595,6 +599,7 @@ export const useSettingsStore = create(
               actions.openAgentBuffer,
               actions.closeBuffer,
               nextValue,
+              get().settings.aiPiHarnessBackend,
             );
           });
         },

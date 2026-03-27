@@ -166,7 +166,7 @@ interface BufferActions {
       backend?: HarnessRuntimeBackend;
     },
   ) => string;
-  createAgentBuffer: () => string;
+  createAgentBuffer: (options?: { backend?: HarnessRuntimeBackend }) => string;
   setAgentBufferTitle: (
     sessionId: string,
     title?: string | null,
@@ -916,8 +916,8 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
-        createAgentBuffer: (): string => {
-          return get().actions.openAgentBuffer(createHarnessSessionKey());
+        createAgentBuffer: (options?: { backend?: HarnessRuntimeBackend }): string => {
+          return get().actions.openAgentBuffer(createHarnessSessionKey(), options);
         },
 
         setAgentBufferTitle: (

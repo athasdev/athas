@@ -8,6 +8,7 @@ import {
   isAutoCompactionEnabled,
 } from "@/features/ai/lib/chat-compaction-policy";
 import { PANEL_CHAT_SCOPE_ID } from "@/features/ai/lib/chat-scope";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -263,6 +264,25 @@ export const AISettings = () => {
           </SettingRow>
         </Section>
       )}
+
+      <Section title="Pi Runtime">
+        <SettingRow
+          label="Harness Backend"
+          description="Choose whether Pi opens in the native runtime or the legacy ACP bridge"
+        >
+          <Dropdown
+            value={settings.aiPiHarnessBackend}
+            options={[
+              { value: "pi-native", label: "Pi Native" },
+              { value: "legacy-acp-bridge", label: "Legacy ACP Bridge" },
+            ]}
+            onChange={(value) =>
+              updateSetting("aiPiHarnessBackend", value as HarnessRuntimeBackend)
+            }
+            size="xs"
+          />
+        </SettingRow>
+      </Section>
 
       <Section title="Autocomplete">
         <SettingRow label="AI Completion" description="Enable AI autocomplete while typing">

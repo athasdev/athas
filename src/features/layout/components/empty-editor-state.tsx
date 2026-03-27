@@ -16,6 +16,7 @@ import { getPreferredHarnessEntryBackend } from "@/features/ai/lib/harness-entry
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ContextMenuItem } from "@/ui/context-menu";
@@ -36,6 +37,7 @@ interface ActionItem {
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
+  const settings = useSettingsStore((state) => state.settings);
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
 
   const customActions = useCustomActionsStore.use.actions();
@@ -54,9 +56,12 @@ export function EmptyEditorState() {
 
   const handleOpenAgent = useCallback(() => {
     openAgentBuffer(DEFAULT_HARNESS_SESSION_KEY, {
-      backend: getPreferredHarnessEntryBackend(),
+      backend: getPreferredHarnessEntryBackend(
+        DEFAULT_HARNESS_SESSION_KEY,
+        settings.aiPiHarnessBackend,
+      ),
     });
-  }, [openAgentBuffer]);
+  }, [openAgentBuffer, settings.aiPiHarnessBackend]);
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");

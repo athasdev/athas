@@ -119,6 +119,7 @@ const CommandPalette = () => {
         sidebarPosition: settings.sidebarPosition,
         nativeMenuBar: settings.nativeMenuBar,
         compactMenuBar: settings.compactMenuBar,
+        aiPiHarnessBackend: settings.aiPiHarnessBackend,
       },
       updateSetting: useSettingsStore.getState().updateSetting as (
         key: string,

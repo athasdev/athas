@@ -349,6 +349,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "How much recent context to preserve verbatim after compaction",
     keywords: ["ai", "compact", "compaction", "recent", "tokens", "history"],
   },
+  {
+    id: "ai-pi-harness-backend",
+    tab: "ai",
+    section: "Pi Runtime",
+    label: "Harness Backend",
+    description: "Choose whether Pi opens through the native runtime or the legacy ACP bridge",
+    keywords: ["pi", "harness", "backend", "native", "legacy", "acp", "runtime"],
+  },
 
   // Keyboard Settings
   {

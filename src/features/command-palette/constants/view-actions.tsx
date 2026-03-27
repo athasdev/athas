@@ -33,6 +33,7 @@ interface ViewActionsParams {
     sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
+    aiPiHarnessBackend: HarnessRuntimeBackend;
   };
   updateSetting: (key: string, value: any) => void | Promise<void>;
   zoomIn: (target: "editor" | "terminal") => void;
@@ -44,7 +45,7 @@ interface ViewActionsParams {
       backend?: HarnessRuntimeBackend;
     },
   ) => void;
-  createAgentBuffer: () => void;
+  createAgentBuffer: (options?: { backend?: HarnessRuntimeBackend }) => void;
   openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
 }
@@ -286,7 +287,10 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       category: "View",
       action: () => {
         openAgentBuffer(DEFAULT_HARNESS_SESSION_KEY, {
-          backend: getPreferredHarnessEntryBackend(),
+          backend: getPreferredHarnessEntryBackend(
+            DEFAULT_HARNESS_SESSION_KEY,
+            settings.aiPiHarnessBackend,
+          ),
         });
         onClose();
       },
@@ -298,7 +302,9 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       icon: <Sparkles size={14} />,
       category: "View",
       action: () => {
-        createAgentBuffer();
+        createAgentBuffer({
+          backend: getPreferredHarnessEntryBackend(undefined, settings.aiPiHarnessBackend),
+        });
         onClose();
       },
     },

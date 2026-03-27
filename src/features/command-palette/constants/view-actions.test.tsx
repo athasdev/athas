@@ -1,5 +1,13 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+
+mock.module("@/features/settings/store", () => ({
+  useSettingsStore: {
+    getState: () => ({
+      toggleHarnessEntry: () => {},
+    }),
+  },
+}));
 
 describe("createViewActions", () => {
   beforeEach(() => {
@@ -36,6 +44,7 @@ describe("createViewActions", () => {
         sidebarPosition: "left",
         nativeMenuBar: false,
         compactMenuBar: false,
+        aiPiHarnessBackend: "legacy-acp-bridge",
       },
       updateSetting: () => {},
       zoomIn: () => {},
@@ -60,15 +69,15 @@ describe("createViewActions", () => {
     expect(openHarnessAction?.label).toBe("View: Open Harness");
     openHarnessAction?.action();
     expect(openedHarnessSessionId).toBe(DEFAULT_HARNESS_SESSION_KEY);
-    expect(openedHarnessBackend).toBe("pi-native");
+    expect(openedHarnessBackend).toBe("legacy-acp-bridge");
     expect(createdHarnessSession).toBe(false);
     expect(closedPalette).toBe(true);
   });
 
-  test("includes a New Harness Session action that creates a session and closes the palette", async () => {
+  test("includes a New Harness Session action that creates a session with the preferred backend and closes the palette", async () => {
     const { createViewActions } = await import("./view-actions");
     let openedHarness = false;
-    let createdHarnessSession = false;
+    let createdHarnessSessionBackend: string | undefined;
     let closedPalette = false;
 
     const actions = createViewActions({
@@ -85,13 +94,14 @@ describe("createViewActions", () => {
         sidebarPosition: "left",
         nativeMenuBar: false,
         compactMenuBar: false,
+        aiPiHarnessBackend: "pi-native",
       },
       updateSetting: () => {},
       zoomIn: () => {},
       zoomOut: () => {},
       resetZoom: () => {},
-      createAgentBuffer: () => {
-        createdHarnessSession = true;
+      createAgentBuffer: (options?: { backend?: string }) => {
+        createdHarnessSessionBackend = options?.backend;
       },
       openAgentBuffer: () => {
         openedHarness = true;
@@ -107,7 +117,7 @@ describe("createViewActions", () => {
     expect(newHarnessSessionAction).toBeDefined();
     expect(newHarnessSessionAction?.label).toBe("View: New Harness Session");
     newHarnessSessionAction?.action();
-    expect(createdHarnessSession).toBe(true);
+    expect(createdHarnessSessionBackend).toBe("pi-native");
     expect(openedHarness).toBe(false);
     expect(closedPalette).toBe(true);
   });
