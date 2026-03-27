@@ -19,9 +19,13 @@ pub struct PiNativeSessionInfo {
 #[serde(rename_all = "camelCase")]
 pub struct PiNativeTranscriptMessage {
    pub id: String,
-   pub role: String,
-   pub content: String,
+   pub entry_type: String,
+   pub role: Option<String>,
+   pub content: Option<String>,
    pub timestamp: String,
+   pub provider: Option<String>,
+   pub model_id: Option<String>,
+   pub thinking_level: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

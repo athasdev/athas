@@ -12,6 +12,7 @@ Athas includes a built-in AI assistant for coding help through Harness.
 - **Chat Interface**: Conversational AI for coding questions
 - **Multiple Providers**: OpenAI, Anthropic, OpenRouter, Gemini, Grok, Ollama, and more
 - **Context Awareness**: AI can use files you reference
+- **Pi Native Restore**: Pi sessions reopen with their shared session identity plus restored model and thinking settings
 
 ## Getting Started
 
@@ -35,3 +36,7 @@ Configure AI settings in **Settings > AI**:
 - **Model**: Choose the specific model
 - **Temperature**: Control response creativity (0-2)
 - **Max Tokens**: Limit response length
+
+## Pi Native Sessions
+
+When you use Pi in Harness with the native runtime, Athas reads the same session files used by standalone Pi. Reopened sessions restore their conversation history, active model, and thinking level from the shared Pi session data instead of starting from an empty Athas-only chat state.

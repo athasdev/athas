@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Search } from "lucide-react";
-import type { FC, ReactNode, RefObject } from "react";
+import type { ForwardRefExoticComponent, ReactNode, RefAttributes, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
@@ -17,10 +17,12 @@ interface DropdownProps {
   size?: "xs" | "sm" | "md";
   searchable?: boolean;
   openDirection?: "up" | "down" | "auto";
-  CustomTrigger?: FC<{
-    ref: RefObject<HTMLButtonElement | null>;
-    onClick: () => void;
-  }>;
+  CustomTrigger?: ForwardRefExoticComponent<
+    {
+      onClick?: () => void;
+    } & RefAttributes<HTMLButtonElement>
+  >;
+  variant?: "default" | "ghost";
 }
 
 const Dropdown = ({
@@ -34,6 +36,7 @@ const Dropdown = ({
   searchable = false,
   openDirection = "down",
   CustomTrigger,
+  variant = "default",
 }: DropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -197,9 +200,11 @@ const Dropdown = ({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={cn(
-            "flex w-full items-center justify-between gap-1 rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-            "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
+            "flex w-full items-center justify-between gap-1 rounded-lg text-text transition-colors",
+            "focus:outline-none focus:ring-1 focus:ring-accent/50",
             disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
+            variant === "default" && "border border-border bg-secondary-bg",
+            variant === "ghost" && "border-transparent bg-transparent",
             sizeClasses[size],
           )}
         >

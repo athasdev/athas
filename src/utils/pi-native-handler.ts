@@ -526,9 +526,13 @@ export interface PiNativeSessionInfo {
 
 export interface PiNativeTranscriptMessage {
   id: string;
-  role: "user" | "assistant";
-  content: string;
+  entryType: "message" | "model_change" | "thinking_level_change";
+  role: "user" | "assistant" | null;
+  content: string | null;
   timestamp: string;
+  provider: string | null;
+  modelId: string | null;
+  thinkingLevel: string | null;
 }
 
 export interface PiNativeModelInfo {

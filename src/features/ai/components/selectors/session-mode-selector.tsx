@@ -1,5 +1,5 @@
 import { ChevronsUpDown } from "lucide-react";
-import { memo, useMemo } from "react";
+import { forwardRef, memo, useMemo } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import Dropdown from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -7,6 +7,21 @@ import { cn } from "@/utils/cn";
 interface SessionModeSelectorProps {
   className?: string;
 }
+
+const ModeTrigger = forwardRef<HTMLButtonElement, { onClick?: () => void; label: string }>(
+  ({ onClick, label }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-8 min-w-[96px] items-center justify-between gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 font-medium text-text text-xs transition-colors hover:bg-hover"
+    >
+      <span className="truncate">{label}</span>
+      <ChevronsUpDown size={12} className="shrink-0 text-text-lighter" />
+    </button>
+  ),
+);
+ModeTrigger.displayName = "SessionModeTrigger";
 
 export const SessionModeSelector = memo(function SessionModeSelector({
   className,
@@ -45,17 +60,9 @@ export const SessionModeSelector = memo(function SessionModeSelector({
         openDirection="up"
         className="min-w-[96px]"
         placeholder="Mode"
-        CustomTrigger={({ ref, onClick }) => (
-          <button
-            ref={ref}
-            type="button"
-            onClick={onClick}
-            className="inline-flex h-8 min-w-[96px] items-center justify-between gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 font-medium text-text text-xs transition-colors hover:bg-hover"
-          >
-            <span className="truncate">{currentModeLabel || "Mode"}</span>
-            <ChevronsUpDown size={12} className="shrink-0 text-text-lighter" />
-          </button>
-        )}
+        CustomTrigger={forwardRef<HTMLButtonElement, { onClick?: () => void }>((props, ref) => (
+          <ModeTrigger ref={ref} onClick={props.onClick} label={currentModeLabel || "Mode"} />
+        ))}
       />
     </div>
   );

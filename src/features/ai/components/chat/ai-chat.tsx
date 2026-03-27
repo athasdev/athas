@@ -926,7 +926,7 @@ const AIChat = memo(function AIChat({
           session.path,
         );
         const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
-        const seededRuntimeState = buildPiNativeRuntimeStateFromSession(session);
+        const seededRuntimeState = buildPiNativeRuntimeStateFromSession(session, transcript);
         const seededTitle = derivePiNativeSessionTitle(session);
         const shouldReuseCurrentSession = shouldReuseCurrentHarnessSessionForPiNativeResume({
           sessionKey,
@@ -1233,6 +1233,7 @@ const AIChat = memo(function AIChat({
           currentAgentId,
           latestSession.path,
         );
+        const seededRuntimeState = buildPiNativeRuntimeStateFromSession(latestSession, transcript);
         const snapshot = await getHarnessRuntimeSessionSnapshot(
           runtimeBackend,
           currentAgentId,
@@ -1259,6 +1260,8 @@ const AIChat = memo(function AIChat({
               snapshot.sessionModeState.availableModes,
               resolvedScopeId,
             );
+        } else {
+          useAIChatStore.getState().setAcpRuntimeState(seededRuntimeState, resolvedScopeId);
         }
 
         const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);

@@ -32,6 +32,29 @@ interface ShouldReuseCurrentHarnessSessionForPiNativeResumeParams {
 const normalizeText = (value: string | null | undefined): string =>
   value?.replace(/\s+/g, " ").trim() ?? "";
 
+const derivePiNativeRuntimeMetadataFromTranscript = (
+  transcript: HarnessRuntimeTranscriptMessage[] = [],
+) =>
+  transcript.reduce(
+    (metadata, entry) => {
+      if (entry.provider && entry.modelId) {
+        metadata.provider = entry.provider;
+        metadata.modelId = entry.modelId;
+      }
+
+      if (entry.thinkingLevel) {
+        metadata.thinkingLevel = entry.thinkingLevel;
+      }
+
+      return metadata;
+    },
+    {
+      provider: null as string | null,
+      modelId: null as string | null,
+      thinkingLevel: null as string | null,
+    },
+  );
+
 export const shouldEnsurePiNativeRestoreChat = ({
   surface,
   runtimeBackend,
@@ -104,26 +127,33 @@ export const derivePiNativeSessionTitle = ({
 
 export const buildPiNativeRuntimeStateFromSession = (
   session: HarnessRuntimeSessionInfo,
+  transcript: HarnessRuntimeTranscriptMessage[] = [],
 ): AcpRuntimeState => ({
+  ...derivePiNativeRuntimeMetadataFromTranscript(transcript),
   agentId: "pi",
   source: "pi-native",
   sessionId: session.id,
   sessionPath: session.path,
   workspacePath: session.cwd,
-  provider: null,
-  modelId: null,
-  thinkingLevel: null,
   behavior: null,
 });
 
 export const buildPiNativeChatMessagesFromTranscript = (
   transcript: HarnessRuntimeTranscriptMessage[],
 ): Message[] =>
-  transcript.map((message) => ({
-    id: message.id,
-    lineageMessageId: message.id,
-    content: message.content,
-    role: message.role,
-    timestamp: new Date(message.timestamp),
-    kind: "default",
-  }));
+  transcript.flatMap((message) => {
+    if (message.entryType !== "message" || !message.role || !message.content) {
+      return [];
+    }
+
+    return [
+      {
+        id: message.id,
+        lineageMessageId: message.id,
+        content: message.content,
+        role: message.role,
+        timestamp: new Date(message.timestamp),
+        kind: "default" as const,
+      },
+    ];
+  });

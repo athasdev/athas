@@ -465,15 +465,23 @@ describe("harness runtime", () => {
     ).resolves.toEqual([
       {
         id: "message-user",
+        entryType: "message",
         role: "user",
         content: "hello from pi",
         timestamp: "2026-03-27T09:00:00.000Z",
+        provider: null,
+        modelId: null,
+        thinkingLevel: null,
       },
       {
         id: "message-assistant",
+        entryType: "message",
         role: "assistant",
         content: "READY",
         timestamp: "2026-03-27T09:01:00.000Z",
+        provider: null,
+        modelId: null,
+        thinkingLevel: null,
       },
     ]);
 
