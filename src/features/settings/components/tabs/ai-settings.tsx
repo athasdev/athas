@@ -8,11 +8,11 @@ import {
   isAutoCompactionEnabled,
 } from "@/features/ai/lib/chat-compaction-policy";
 import { PANEL_CHAT_SCOPE_ID } from "@/features/ai/lib/chat-scope";
-import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { PiSettingsPanel } from "@/features/settings/components/tabs/pi-settings-panel";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import Button from "@/ui/button";
@@ -159,10 +159,6 @@ export const AISettings = () => {
     void loadAutocompleteModels();
   }, []);
 
-  const providersNeedingAuth = getAvailableProviders().filter(
-    (p) => p.requiresAuth && !p.requiresApiKey,
-  );
-
   const isOllamaSelected = settings.aiProviderId === "ollama";
   const isAutoCompactionActive = isAutoCompactionEnabled(settings.aiAutoCompactionPolicy);
 
@@ -227,22 +223,6 @@ export const AISettings = () => {
         </Section>
       )}
 
-      {providersNeedingAuth.length > 0 && (
-        <Section title="Authentication">
-          {providersNeedingAuth.map((provider) => (
-            <SettingRow
-              key={provider.id}
-              label={provider.name}
-              description="Requires OAuth authentication"
-            >
-              <div className="flex items-center gap-2 rounded border border-border bg-secondary-bg px-3 py-1.5">
-                <span className="text-text-lighter text-xs">Coming Soon</span>
-              </div>
-            </SettingRow>
-          ))}
-        </Section>
-      )}
-
       {availableModes.length > 0 && (
         <Section title="Agent Defaults">
           <SettingRow
@@ -265,24 +245,7 @@ export const AISettings = () => {
         </Section>
       )}
 
-      <Section title="Pi Runtime">
-        <SettingRow
-          label="Harness Backend"
-          description="Choose whether Pi opens in the native runtime or the legacy ACP bridge"
-        >
-          <Dropdown
-            value={settings.aiPiHarnessBackend}
-            options={[
-              { value: "pi-native", label: "Pi Native" },
-              { value: "legacy-acp-bridge", label: "Legacy ACP Bridge" },
-            ]}
-            onChange={(value) =>
-              updateSetting("aiPiHarnessBackend", value as HarnessRuntimeBackend)
-            }
-            size="xs"
-          />
-        </SettingRow>
-      </Section>
+      <PiSettingsPanel />
 
       <Section title="Autocomplete">
         <SettingRow label="AI Completion" description="Enable AI autocomplete while typing">
