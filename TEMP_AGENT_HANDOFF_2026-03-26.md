@@ -157,8 +157,19 @@ Additional follow-up completed after the above:
     - only for empty chats
     - only when the current Pi-native chat is still the same one being reconciled
     - only visible text transcript, not tool/thinking replay yet
+- native Pi permission flow is now wired through the full stack:
+  - the Node host now binds a real `uiContext` for extensions and translates `ctx.ui.confirm()`, `select()`, `input()`, and `editor()` into Athas `permission_request` events
+  - the Rust native bridge now forwards native permission responses back to the host via a new `respondPermission` request
+  - the frontend `pi-native` branch in `harness-runtime.ts` now delegates `respondToHarnessPermission(...)` to the native Tauri command instead of throwing `Pi native runtime is not wired into Athas yet.`
+  - local machine proof for this permission slice:
+    - a throwaway project-local Pi extension was loaded under a temp workspace
+    - sending `/smoke-confirm` through `node src-tauri/pi-native-host/index.mjs` emitted a real `permission_request`
+    - replying with `respondPermission` completed the prompt and emitted `prompt_complete`
+  - watched-app proof is still partial:
+    - the real Athas window on `:106` shows the typed `/smoke-confirm` command in Harness
+    - slash-command empty-state copy was still ACP-specific before the latest uncommitted fix
+    - the watched composer/send automation still did not produce a visible native permission dialog in that pass, so do not overstate live UI proof for native permission yet
 - current native gaps still remaining after this slice:
-  - no native permission flow yet
   - no native session-mode / thinking / model mutation surface yet
   - no frontend-native restore/resume selection UI beyond the latest-session reconciliation yet
   - no full tool/thinking parity when restoring native transcript from Pi session files yet
