@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { getDefaultChatTitle } from "@/features/ai/lib/chat-scope";
 import type { Chat } from "@/features/ai/types/ai-chat";
 import {
+  buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
   shouldReconcilePiNativeSession,
@@ -132,5 +133,41 @@ describe("pi-native restore", () => {
       thinkingLevel: null,
       behavior: null,
     });
+  });
+
+  test("builds Athas chat messages from a visible pi-native transcript", () => {
+    expect(
+      buildPiNativeChatMessagesFromTranscript([
+        {
+          id: "message-user",
+          role: "user",
+          content: "hello from pi",
+          timestamp: "2026-03-27T09:00:00.000Z",
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "READY",
+          timestamp: "2026-03-27T09:01:00.000Z",
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "message-user",
+        lineageMessageId: "message-user",
+        content: "hello from pi",
+        role: "user",
+        timestamp: new Date("2026-03-27T09:00:00.000Z"),
+        kind: "default",
+      },
+      {
+        id: "message-assistant",
+        lineageMessageId: "message-assistant",
+        content: "READY",
+        role: "assistant",
+        timestamp: new Date("2026-03-27T09:01:00.000Z"),
+        kind: "default",
+      },
+    ]);
   });
 });

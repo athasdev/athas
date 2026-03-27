@@ -707,6 +707,24 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           get().syncChatToDatabase(chatId);
         },
 
+        replaceChatMessages: (chatId, messages) => {
+          set((state) => {
+            const chat = state.chats.find((c) => c.id === chatId);
+            if (!chat) {
+              return;
+            }
+
+            const normalizedMessages = messages.map(normalizeChatMessage);
+            chat.messages = normalizedMessages;
+            const lastTimestamp =
+              normalizedMessages.length > 0
+                ? normalizedMessages[normalizedMessages.length - 1]?.timestamp
+                : null;
+            chat.lastMessageAt = lastTimestamp ? new Date(lastTimestamp) : new Date();
+          });
+          get().syncChatToDatabase(chatId);
+        },
+
         updateMessage: (chatId, messageId, updates) => {
           set((state) => {
             const chat = state.chats.find((c) => c.id === chatId);

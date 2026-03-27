@@ -1,6 +1,6 @@
 import type { AcpRuntimeState } from "@/features/ai/types/acp";
-import type { AgentType, AIChatSurface, Chat } from "@/features/ai/types/ai-chat";
-import type { HarnessRuntimeSessionInfo } from "./harness-runtime";
+import type { AgentType, AIChatSurface, Chat, Message } from "@/features/ai/types/ai-chat";
+import type { HarnessRuntimeSessionInfo, HarnessRuntimeTranscriptMessage } from "./harness-runtime";
 import type { HarnessRuntimeBackend } from "./harness-runtime-backend";
 
 interface ShouldReconcilePiNativeSessionParams {
@@ -69,3 +69,15 @@ export const buildPiNativeRuntimeStateFromSession = (
   thinkingLevel: null,
   behavior: null,
 });
+
+export const buildPiNativeChatMessagesFromTranscript = (
+  transcript: HarnessRuntimeTranscriptMessage[],
+): Message[] =>
+  transcript.map((message) => ({
+    id: message.id,
+    lineageMessageId: message.id,
+    content: message.content,
+    role: message.role,
+    timestamp: new Date(message.timestamp),
+    kind: "default",
+  }));

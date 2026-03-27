@@ -1,5 +1,6 @@
 use crate::features::ai::{
    AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeSessionInfo,
+   PiNativeTranscriptMessage,
 };
 use std::sync::Arc;
 use tauri::State;
@@ -60,6 +61,18 @@ pub async fn list_pi_native_sessions(
    let bridge = { bridge.lock().await.clone() };
    bridge
       .list_sessions(workspace_path)
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_pi_native_session_transcript(
+   bridge: State<'_, PiNativeBridgeState>,
+   session_path: String,
+) -> Result<Vec<PiNativeTranscriptMessage>, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .get_session_transcript(session_path)
       .await
       .map_err(|e| e.to_string())
 }

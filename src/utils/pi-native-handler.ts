@@ -352,6 +352,10 @@ export class PiNativeStreamHandler {
     return invoke("list_pi_native_sessions", { workspacePath });
   }
 
+  static async getSessionTranscript(sessionPath: string): Promise<PiNativeTranscriptMessage[]> {
+    return invoke("get_pi_native_session_transcript", { sessionPath });
+  }
+
   static async stopSession(scopeId: ChatScopeId = "panel"): Promise<void> {
     PiNativeStreamHandler.activeHandlers.get(scopeId)?.forceStop();
     PiNativeStreamHandler.lastSessionPathByKey.delete(scopeId);
@@ -384,4 +388,11 @@ export interface PiNativeSessionInfo {
   modifiedAt: string;
   messageCount: number;
   firstMessage: string;
+}
+
+export interface PiNativeTranscriptMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
 }

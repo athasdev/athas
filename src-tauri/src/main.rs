@@ -480,6 +480,7 @@ fn main() {
          send_pi_native_prompt,
          get_pi_native_status,
          list_pi_native_sessions,
+         get_pi_native_session_transcript,
          cancel_pi_native_prompt,
          // Theme commands
          get_system_theme,

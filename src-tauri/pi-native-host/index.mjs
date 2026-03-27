@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agent";
 import { applyBootstrapHistory } from "./session-bootstrap.mjs";
 import { listSessionsForWorkspace, resolveSessionPathForStart } from "./session-listing.mjs";
+import { loadSessionTranscript } from "./session-transcript.mjs";
 
 const sessions = new Map();
 
@@ -333,6 +334,9 @@ async function handleRequest(id, method, params = {}) {
       const cwd = params.workspacePath ?? process.cwd();
       const sessions = await listSessionsForWorkspace(cwd, getSessionDir(params.agentDir, cwd));
       return sendResponse(id, sessions);
+    }
+    case "getSessionTranscript": {
+      return sendResponse(id, await loadSessionTranscript(params.sessionPath));
     }
     case "cancelPrompt": {
       const record = sessions.get(params.routeKey);

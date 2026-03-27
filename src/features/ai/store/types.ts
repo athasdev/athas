@@ -140,6 +140,7 @@ export interface AIChatActions {
   deleteChat: (chatId: string, scopeId?: ChatScopeId) => void;
   updateChatTitle: (chatId: string, title: string) => void;
   addMessage: (chatId: string, message: Message) => void;
+  replaceChatMessages: (chatId: string, messages: Message[]) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
   regenerateResponse: (scopeId?: ChatScopeId) => string | null;
   setIsChatHistoryVisible: (isChatHistoryVisible: boolean, scopeId?: ChatScopeId) => void;

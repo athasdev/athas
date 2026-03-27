@@ -27,6 +27,7 @@ import {
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import {
   cancelHarnessRuntimePrompt,
+  getHarnessRuntimeSessionTranscript,
   getHarnessRuntimeStatus,
   listHarnessRuntimeSessions,
   resolveHarnessRuntimeBackendForScope,
@@ -35,6 +36,7 @@ import {
 import { getMostRecentClosedHarnessSession } from "@/features/ai/lib/harness-session-lifecycle";
 import { getHarnessTrustState } from "@/features/ai/lib/harness-trust-state";
 import {
+  buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
   shouldReconcilePiNativeSession,
@@ -1070,6 +1072,27 @@ const AIChat = memo(function AIChat({
         useAIChatStore
           .getState()
           .setAcpRuntimeState(buildPiNativeRuntimeStateFromSession(latestSession), resolvedScopeId);
+
+        const transcript = await getHarnessRuntimeSessionTranscript(
+          runtimeBackend,
+          currentAgentId,
+          latestSession.path,
+        );
+        if (cancelled) {
+          return;
+        }
+
+        const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
+        if (transcriptMessages.length > 0) {
+          const hydratedCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
+          if (
+            hydratedCurrentChat &&
+            hydratedCurrentChat.id === currentChatId &&
+            hydratedCurrentChat.messages.length === 0
+          ) {
+            useAIChatStore.getState().replaceChatMessages(currentChatId, transcriptMessages);
+          }
+        }
 
         if (liveCurrentChat.title === getDefaultChatTitle(surface)) {
           const nextTitle = derivePiNativeSessionTitle(latestSession);

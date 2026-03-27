@@ -1,6 +1,6 @@
-use crate::features::ai::PiNativeSessionInfo;
 use crate::features::ai::acp::types::AcpEvent;
 use crate::features::ai::acp::{AcpAgentStatus, AcpBootstrapContext};
+use crate::features::ai::{PiNativeSessionInfo, PiNativeTranscriptMessage};
 use crate::features::runtime::{RuntimeManager, RuntimeType};
 use anyhow::{Context, Result, anyhow};
 use serde_json::{Value, json};
@@ -86,6 +86,19 @@ impl PiNativeBridge {
 
       let value = self.send_request("listSessions", params).await?;
       serde_json::from_value(value).context("failed to decode pi-native sessions")
+   }
+
+   pub async fn get_session_transcript(
+      &self,
+      session_path: String,
+   ) -> Result<Vec<PiNativeTranscriptMessage>> {
+      let value = self
+         .send_request(
+            "getSessionTranscript",
+            json!({ "sessionPath": session_path }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode pi-native transcript")
    }
 
    pub async fn cancel_prompt(&self, route_key: &str) -> Result<()> {

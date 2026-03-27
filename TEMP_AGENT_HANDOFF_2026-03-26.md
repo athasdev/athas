@@ -147,13 +147,21 @@ Additional follow-up completed after the above:
     - native runtime state (`sessionId`, `sessionPath`, `workspacePath`, `source = pi-native`)
     - chat title when it is still the default `New Session`
   - important limitation:
-    - this does not yet hydrate the native transcript into Athas chat history
-    - it fixes native identity/restore targeting first, not full session-file-to-chat synchronization
+    - before the next slice below, this only fixed native identity/restore targeting first, not full session-file-to-chat synchronization
+- native Pi transcript hydration is now wired through the stack:
+  - the Node host now exposes `getSessionTranscript` and parses visible `user` / `assistant` text messages from real Pi JSONL session files
+  - the Rust `PiNativeBridge` and a new Tauri command now expose that transcript to the frontend
+  - `harness-runtime.ts` now has a backend-aware `getHarnessRuntimeSessionTranscript(...)` seam for `pi-native`
+  - empty `pi-native` Harness chats now hydrate their visible transcript from the latest reconciled native Pi session on open
+  - hydration stays intentionally strict:
+    - only for empty chats
+    - only when the current Pi-native chat is still the same one being reconciled
+    - only visible text transcript, not tool/thinking replay yet
 - current native gaps still remaining after this slice:
   - no native permission flow yet
   - no native session-mode / thinking / model mutation surface yet
   - no frontend-native restore/resume selection UI beyond the latest-session reconciliation yet
-  - no native transcript hydration from Pi session files into Athas chat state yet
+  - no full tool/thinking parity when restoring native transcript from Pi session files yet
   - no migration or settings/package/extension UI yet
   - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
 - local machine proof for the new native slice:
