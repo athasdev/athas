@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agent";
+import { applyBootstrapHistory } from "./session-bootstrap.mjs";
 
 const sessions = new Map();
 
@@ -239,6 +240,14 @@ async function ensureRouteSession(routeKey, options = {}) {
     lastAssistantText: "",
     lastAssistantThinking: "",
   };
+
+  if (
+    Array.isArray(options.bootstrap?.conversationHistory) &&
+    options.bootstrap.conversationHistory.length > 0
+  ) {
+    applyBootstrapHistory(session, options.bootstrap.conversationHistory);
+  }
+
   attachRoute(routeKey, record);
   sessions.set(routeKey, record);
   publishSessionState(routeKey, record);
@@ -252,6 +261,7 @@ async function handleRequest(id, method, params = {}) {
         cwd: params.workspacePath,
         agentDir: params.agentDir,
         sessionPath: params.sessionPath,
+        bootstrap: params.bootstrap,
       });
       return sendResponse(id, createStatus(record));
     }

@@ -106,11 +106,23 @@ Additional follow-up completed after the above:
     - real session creation
     - real prompt send / response streaming
     - real status / cancel / stop
-  - current native gaps still remaining after this slice:
-    - no native permission flow yet
-    - no native session-mode / thinking / model mutation surface yet
-    - no migration or settings/package/extension UI yet
-    - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
+- native bootstrap/import is now wired into the Pi host:
+  - `start_pi_native_session` now forwards bootstrap conversation history to the host instead of dropping it
+  - the host now imports bootstrap user/assistant history into a fresh real Pi session when the session has no prior conversation entries
+  - bootstrap history now lands in both places that matter:
+    - the persisted Pi JSONL session file
+    - the live agent message state used for the next turn
+  - important nuance discovered during implementation:
+    - `createAgentSession()` already seeds fresh sessions with model/thinking metadata entries
+    - the correct bootstrap guard is therefore `no conversation entries yet`, not `session has zero entries`
+  - local machine proof for this bootstrap slice:
+    - starting the host with a bootstrap history and no prompt now creates a real session file immediately under `~/.pi/agent/sessions/...`
+    - that session file now contains the imported bootstrap `user` and `assistant` messages before any new prompt turn is sent
+- current native gaps still remaining after this slice:
+  - no native permission flow yet
+  - no native session-mode / thinking / model mutation surface yet
+  - no migration or settings/package/extension UI yet
+  - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
 - local machine proof for the new native slice:
   - running `node src-tauri/pi-native-host/index.mjs` directly and speaking the JSON-line protocol now creates a real Pi session under `~/.pi/agent/sessions/...`
   - a smoke prompt of `Reply with exactly READY and nothing else.` returned a native `content_chunk` of `READY`, followed by `prompt_complete` and `session_complete`
