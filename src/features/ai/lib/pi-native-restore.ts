@@ -11,6 +11,14 @@ interface ShouldReconcilePiNativeSessionParams {
   chat: Pick<Chat, "messages" | "acpState"> | null | undefined;
 }
 
+interface ShouldEnsurePiNativeRestoreChatParams {
+  surface: AIChatSurface;
+  runtimeBackend: HarnessRuntimeBackend;
+  agentId: AgentType;
+  workspacePath: string | null;
+  chat: Pick<Chat, "messages" | "acpState"> | null | undefined;
+}
+
 interface PiNativeSessionTitleSource {
   name: string | null;
   firstMessage: string;
@@ -23,6 +31,24 @@ interface ShouldReuseCurrentHarnessSessionForPiNativeResumeParams {
 
 const normalizeText = (value: string | null | undefined): string =>
   value?.replace(/\s+/g, " ").trim() ?? "";
+
+export const shouldEnsurePiNativeRestoreChat = ({
+  surface,
+  runtimeBackend,
+  agentId,
+  workspacePath,
+  chat,
+}: ShouldEnsurePiNativeRestoreChatParams): boolean => {
+  if (surface !== "harness" || runtimeBackend !== "pi-native" || agentId !== "pi") {
+    return false;
+  }
+
+  if (!workspacePath) {
+    return false;
+  }
+
+  return !chat;
+};
 
 export const shouldReconcilePiNativeSession = ({
   surface,

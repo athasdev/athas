@@ -39,6 +39,7 @@ import {
   buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
+  shouldEnsurePiNativeRestoreChat,
   shouldReconcilePiNativeSession,
   shouldReuseCurrentHarnessSessionForPiNativeResume,
 } from "@/features/ai/lib/pi-native-restore";
@@ -1105,6 +1106,29 @@ const AIChat = memo(function AIChat({
       cancelled = true;
     };
   }, [activeBuffer, buffers, currentChat?.id, pendingPermissions.length, resolvedScopeId, surface]);
+
+  useEffect(() => {
+    if (
+      !shouldEnsurePiNativeRestoreChat({
+        surface,
+        runtimeBackend,
+        agentId: currentAgentId,
+        workspacePath: rootFolderPath ?? null,
+        chat: currentChat,
+      })
+    ) {
+      return;
+    }
+
+    chatActions.ensureChatForAgent("pi");
+  }, [
+    chatActions.ensureChatForAgent,
+    currentAgentId,
+    currentChat,
+    rootFolderPath,
+    runtimeBackend,
+    surface,
+  ]);
 
   useEffect(() => {
     if (!currentChat) {

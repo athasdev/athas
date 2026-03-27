@@ -5,6 +5,7 @@ import {
   buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
+  shouldEnsurePiNativeRestoreChat,
   shouldReconcilePiNativeSession,
   shouldReuseCurrentHarnessSessionForPiNativeResume,
 } from "./pi-native-restore";
@@ -27,6 +28,30 @@ const createChat = (overrides: Partial<Chat> = {}): Chat => ({
 });
 
 describe("pi-native restore", () => {
+  test("ensures a blank Harness Pi chat exists before native restore when the workspace is open", () => {
+    expect(
+      shouldEnsurePiNativeRestoreChat({
+        surface: "harness",
+        runtimeBackend: "pi-native",
+        agentId: "pi",
+        workspacePath: "/home/fsos/Developer/athas",
+        chat: null,
+      }),
+    ).toBe(true);
+  });
+
+  test("does not ensure a blank Harness Pi chat when the workspace path is missing", () => {
+    expect(
+      shouldEnsurePiNativeRestoreChat({
+        surface: "harness",
+        runtimeBackend: "pi-native",
+        agentId: "pi",
+        workspacePath: null,
+        chat: null,
+      }),
+    ).toBe(false);
+  });
+
   test("reconciles an empty Harness Pi chat with no native session path yet", () => {
     expect(
       shouldReconcilePiNativeSession({
