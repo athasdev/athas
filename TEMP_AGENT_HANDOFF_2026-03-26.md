@@ -83,6 +83,13 @@ Additional follow-up completed after the above:
   - canonical repaired profile is now `openai-codex / gpt-5.4 / medium`
   - conflicting `droid / gpt-5.4-mini / orchestrator` local state is rewritten to that canonical profile
   - `behavior-mode-state.json` has its explicit `currentBehavior` override cleared so Pi no longer comes back pinned to `orchestrator`
+- project session restore is now hardened against legacy Harness tab payloads:
+  - stale file-shaped session entries like `path = "agent://harness"` are normalized back into real agent sessions on both hydrated Zustand state and raw `localStorage` reads
+  - this prevents old saved project sessions from reopening the default Harness tab as a plain editor buffer named `harness`
+- watched-display relaunch validation on `:106` with real `HOME=/home/fsos` now reflects that normalization:
+  - the old lowercase plain-file `harness` tab no longer comes back after restart
+  - the restored tab now comes back as a real sparkles `Harness` tab
+  - a separate `Loading files...` / project-restore wrinkle is still present and should not be conflated with the legacy Harness-session normalization fix
 - important validation note:
   - the earlier `forbidden path ... allow-read-dir` startup failure was caused by launching Tauri with `HOME=/tmp/...`, which changed Tauri's `$HOME/**` fs capability scope so `/home/fsos/Developer/athas` was no longer permitted
   - that specific failure was a validation-environment bug, not the underlying product bug
