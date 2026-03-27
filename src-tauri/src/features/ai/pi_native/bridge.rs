@@ -108,6 +108,29 @@ impl PiNativeBridge {
       Ok(())
    }
 
+   pub async fn respond_permission(
+      &self,
+      route_key: &str,
+      request_id: &str,
+      approved: bool,
+      cancelled: bool,
+      value: Option<String>,
+   ) -> Result<()> {
+      self
+         .send_request(
+            "respondPermission",
+            json!({
+               "routeKey": route_key,
+               "requestId": request_id,
+               "approved": approved,
+               "cancelled": cancelled,
+               "value": value,
+            }),
+         )
+         .await?;
+      Ok(())
+   }
+
    pub async fn stop_session(&self, route_key: &str) -> Result<AcpAgentStatus> {
       let value = self
          .send_request("stopSession", json!({ "routeKey": route_key }))

@@ -13,6 +13,7 @@ const nativeStaticCalls = {
   getStatus: [] as unknown[],
   getSessionTranscript: [] as unknown[],
   listSessions: [] as unknown[],
+  respondToPermission: [] as unknown[],
   stopSession: [] as unknown[],
 };
 
@@ -152,6 +153,22 @@ class MockPiNativeStreamHandler {
   static async stopSession(scopeId: ChatScopeId = "panel") {
     nativeStaticCalls.stopSession.push(scopeId);
   }
+
+  static async respondToPermission(
+    requestId: string,
+    approved: boolean,
+    cancelled = false,
+    value?: string | null,
+    scopeId?: ChatScopeId,
+  ) {
+    nativeStaticCalls.respondToPermission.push({
+      requestId,
+      approved,
+      cancelled,
+      value,
+      scopeId,
+    });
+  }
 }
 
 mock.module("@/utils/pi-native-handler", () => ({
@@ -170,6 +187,7 @@ describe("harness runtime", () => {
     nativeStaticCalls.getStatus.length = 0;
     nativeStaticCalls.getSessionTranscript.length = 0;
     nativeStaticCalls.listSessions.length = 0;
+    nativeStaticCalls.respondToPermission.length = 0;
     nativeStaticCalls.stopSession.length = 0;
   });
 
@@ -276,6 +294,7 @@ describe("harness runtime", () => {
       getHarnessRuntimeStatus,
       getHarnessRuntimeSessionTranscript,
       listHarnessRuntimeSessions,
+      respondToHarnessPermission,
       stopHarnessRuntime,
     } = await import("./harness-runtime");
 
@@ -341,6 +360,17 @@ describe("harness runtime", () => {
     ).resolves.toBeUndefined();
 
     await expect(
+      respondToHarnessPermission(
+        "native-permission-1",
+        true,
+        false,
+        "harness:main",
+        [{ isAgent: true, agentSessionId: "main", agentBackend: "pi-native" }],
+        "Allow",
+      ),
+    ).resolves.toBeUndefined();
+
+    await expect(
       stopHarnessRuntime("harness:main", [
         { isAgent: true, agentSessionId: "main", agentBackend: "pi-native" },
       ]),
@@ -356,6 +386,15 @@ describe("harness runtime", () => {
     expect(nativeStaticCalls.getSessionTranscript).toEqual(["/tmp/session.jsonl"]);
     expect(nativeStaticCalls.listSessions).toEqual(["/tmp/project"]);
     expect(nativeStaticCalls.cancelPrompt).toEqual(["harness:main"]);
+    expect(nativeStaticCalls.respondToPermission).toEqual([
+      {
+        requestId: "native-permission-1",
+        approved: true,
+        cancelled: false,
+        value: "Allow",
+        scopeId: "harness:main",
+      },
+    ]);
     expect(nativeStaticCalls.stopSession).toEqual(["harness:main"]);
   });
 

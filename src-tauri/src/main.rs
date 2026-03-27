@@ -482,6 +482,7 @@ fn main() {
          list_pi_native_sessions,
          get_pi_native_session_transcript,
          cancel_pi_native_prompt,
+         respond_pi_native_permission,
          // Theme commands
          get_system_theme,
          load_toml_themes,

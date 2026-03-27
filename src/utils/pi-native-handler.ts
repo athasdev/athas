@@ -371,6 +371,22 @@ export class PiNativeStreamHandler {
     }
   }
 
+  static async respondToPermission(
+    requestId: string,
+    approved: boolean,
+    cancelled = false,
+    value?: string | null,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<void> {
+    await invoke("respond_pi_native_permission", {
+      requestId,
+      approved,
+      cancelled,
+      value: value ?? null,
+      routeKey: scopeId,
+    });
+  }
+
   static getPreferredModeId(scopeId: ChatScopeId): string | null {
     const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
     const defaultModeId = null;

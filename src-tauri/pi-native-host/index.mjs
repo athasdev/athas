@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agent";
+import { createExtensionUiBridge } from "./extension-ui.mjs";
 import { applyBootstrapHistory } from "./session-bootstrap.mjs";
 import { listSessionsForWorkspace, resolveSessionPathForStart } from "./session-listing.mjs";
 import { loadSessionTranscript } from "./session-transcript.mjs";
@@ -147,6 +148,7 @@ function detachRoute(routeKey) {
   }
 
   record.unsubscribe?.();
+  record.uiBridge?.clear();
   record.session.dispose();
   sessions.delete(routeKey);
 }
@@ -244,9 +246,16 @@ async function ensureRouteSession(routeKey, options = {}) {
     sessionManager,
   });
 
+  const uiBridge = createExtensionUiBridge({
+    routeKey,
+    emitEvent,
+  });
+  await session.bindExtensions({ uiContext: uiBridge.uiContext });
+
   const record = {
     cwd: requestedCwd,
     session,
+    uiBridge,
     unsubscribe: undefined,
     lastAssistantText: "",
     lastAssistantThinking: "",
@@ -343,6 +352,24 @@ async function handleRequest(id, method, params = {}) {
       if (record) {
         record.session.agent.abort();
       }
+      return sendResponse(id, null);
+    }
+    case "respondPermission": {
+      const record = sessions.get(params.routeKey);
+      if (!record) {
+        throw new Error("No native Pi session is running for this route.");
+      }
+
+      const handled = record.uiBridge.respond(params.requestId, {
+        approved: Boolean(params.approved),
+        cancelled: Boolean(params.cancelled),
+        value: typeof params.value === "string" ? params.value : null,
+      });
+
+      if (!handled) {
+        throw new Error(`Unknown native Pi permission request: ${params.requestId}`);
+      }
+
       return sendResponse(id, null);
     }
     case "stopSession": {

@@ -202,7 +202,8 @@ export const respondToHarnessPermission = async (
 ): Promise<void> => {
   const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
   if (backend === "pi-native") {
-    throw buildPiNativeNotWiredError();
+    await PiNativeStreamHandler.respondToPermission(requestId, approved, cancelled, value, scopeId);
+    return;
   }
 
   await AcpStreamHandler.respondToPermission(requestId, approved, cancelled, scopeId, value);

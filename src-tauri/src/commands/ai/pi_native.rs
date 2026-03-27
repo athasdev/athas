@@ -100,3 +100,25 @@ pub async fn cancel_pi_native_prompt(
       .await
       .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn respond_pi_native_permission(
+   bridge: State<'_, PiNativeBridgeState>,
+   request_id: String,
+   approved: bool,
+   cancelled: bool,
+   value: Option<String>,
+   route_key: Option<String>,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .respond_permission(
+         route_key.as_deref().unwrap_or("panel"),
+         &request_id,
+         approved,
+         cancelled,
+         value,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
