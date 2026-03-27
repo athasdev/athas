@@ -1,4 +1,4 @@
-import { GitBranch, History, Layers3 } from "lucide-react";
+import { Bot, GitBranch, History, Layers3 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import {
@@ -20,6 +20,27 @@ import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 const formatTokenCount = (count: number): string =>
   count >= 1000 ? `${Math.round(count / 100) / 10}k ctx` : `${count} ctx`;
+
+const getSurfaceAgentLabel = (chat: Chat | undefined): string => {
+  if (!chat) {
+    return "Pi";
+  }
+
+  switch (chat.agentId) {
+    case "claude-code":
+      return "Claude";
+    case "codex-cli":
+      return "Codex";
+    case "gemini-cli":
+      return "Gemini";
+    case "pi":
+      return "Pi";
+    case "custom":
+      return "API";
+    default:
+      return chat.agentId;
+  }
+};
 
 function EditableChatTitle({
   title,
@@ -80,7 +101,9 @@ function EditableChatTitle({
         onKeyDown={handleKeyDown}
         className={cn(
           "border border-border bg-secondary-bg/80 font-medium text-text outline-none focus:border-accent/40 focus:bg-hover",
-          variant === "harness" ? "rounded-xl px-3 py-1.5 text-sm" : "rounded-full px-2.5 py-1",
+          variant === "harness"
+            ? "rounded-2xl px-3 py-2 text-base"
+            : "rounded-full px-2.5 py-1 text-sm",
         )}
         style={{ minWidth: variant === "harness" ? "180px" : "100px", maxWidth: "280px" }}
       />
@@ -92,8 +115,8 @@ function EditableChatTitle({
       className={cn(
         "block max-w-full cursor-pointer truncate font-medium transition-colors hover:bg-hover",
         variant === "harness"
-          ? "rounded-xl px-3 py-1.5 text-base text-text"
-          : "rounded-full px-2 py-1",
+          ? "rounded-2xl px-3 py-1.5 text-lg text-text"
+          : "rounded-full px-2 py-1 text-sm",
       )}
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
@@ -135,34 +158,55 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
     : null;
   const compactionPolicyLabel = getChatCompactionPolicyShortLabel(settings.aiAutoCompactionPolicy);
   const isAutoCompactionArmed = isAutoCompactionEnabled(settings.aiAutoCompactionPolicy);
+  const currentAgentLabel = getSurfaceAgentLabel(currentChat);
 
   if (surface === "harness") {
     return (
-      <div className="relative z-[10020] border-border border-b bg-secondary-bg/35 px-3 py-2">
-        <div className="flex items-center gap-3">
+      <div className="relative z-[10020] border-border/70 border-b bg-primary-bg/92 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-[1480px] items-center gap-4 px-3 py-3 sm:px-4">
           <div className="min-w-0 flex-1">
-            {chatState.currentChatId ? (
-              <EditableChatTitle
-                title={currentChat ? currentChat.title : "New Session"}
-                onUpdateTitle={(title) =>
-                  chatActions.updateChatTitle(chatState.currentChatId!, title)
-                }
-                variant="harness"
-              />
-            ) : (
-              <span className="block rounded-xl px-3 py-1.5 font-medium text-base text-text">
-                New Session
+            <div className="mb-1 flex flex-wrap items-center gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
+              <span className="rounded-full border border-border/70 bg-secondary-bg/45 px-2 py-1 text-text">
+                Harness
               </span>
-            )}
+              <span className="inline-flex items-center gap-1.5">
+                <Bot size={11} />
+                {currentAgentLabel}
+              </span>
+              {contextTokenCount !== null ? (
+                <span className="rounded-full border border-border/70 bg-secondary-bg/30 px-2 py-1 normal-case tracking-normal">
+                  {formatTokenCount(contextTokenCount)}
+                </span>
+              ) : null}
+              <span className="rounded-full border border-border/70 bg-secondary-bg/30 px-2 py-1 normal-case tracking-normal">
+                Compact {compactionPolicyLabel}
+              </span>
+            </div>
+
+            <div className="flex min-w-0 items-center gap-3">
+              {chatState.currentChatId ? (
+                <EditableChatTitle
+                  title={currentChat ? currentChat.title : "New Session"}
+                  onUpdateTitle={(title) =>
+                    chatActions.updateChatTitle(chatState.currentChatId!, title)
+                  }
+                  variant="harness"
+                />
+              ) : (
+                <span className="block rounded-2xl px-3 py-1.5 font-medium text-lg text-text">
+                  New Session
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Tooltip content="Session History" side="bottom">
               <button
                 onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-lg border border-border bg-secondary-bg/70 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
-                  chatState.isChatHistoryVisible && "bg-secondary-bg text-text",
+                  "flex h-9 items-center justify-center rounded-2xl border border-border/70 bg-secondary-bg/45 px-3 text-text-lighter transition-colors hover:bg-hover hover:text-text",
+                  chatState.isChatHistoryVisible && "bg-secondary-bg/80 text-text",
                 )}
                 aria-label="Toggle session history"
               >
@@ -174,7 +218,7 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
               <Tooltip content="Fork session" side="bottom">
                 <button
                   onClick={() => onForkCurrentChat()}
-                  className="flex size-8 items-center justify-center rounded-lg border border-border bg-secondary-bg/70 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                  className="flex h-9 items-center justify-center rounded-2xl border border-border/70 bg-secondary-bg/45 px-3 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                   aria-label="Fork session"
                 >
                   <GitBranch size={14} />
@@ -187,7 +231,7 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
                 onClick={() => {
                   void chatActions.compactChat("manual");
                 }}
-                className="flex size-8 items-center justify-center rounded-lg border border-border bg-secondary-bg/70 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex h-9 items-center justify-center rounded-2xl border border-border/70 bg-secondary-bg/45 px-3 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 aria-label="Compact session context"
               >
                 <Layers3 size={14} />
@@ -200,97 +244,95 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
   }
 
   return (
-    <div className="relative z-[10020] flex items-center gap-2 border-border border-b bg-secondary-bg/70 px-3 py-2 backdrop-blur-sm">
-      <div className="min-w-0 flex-1">
-        {chatState.currentChatId ? (
-          <>
-            <EditableChatTitle
-              title={currentChat ? currentChat.title : "New Chat"}
-              onUpdateTitle={(title) =>
-                chatActions.updateChatTitle(chatState.currentChatId!, title)
-              }
-            />
-            {currentChat ? (
-              <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-text-lighter">
-                {lineageChats.map((chat, index) => (
-                  <button
-                    key={chat.id}
-                    onClick={() => chatActions.switchToChat(chat.id)}
-                    className={cn(
-                      "rounded-full border border-border bg-primary-bg/80 px-2 py-1 hover:bg-hover",
-                      chat.id === currentChat.id &&
-                        "border-blue-500/30 bg-blue-500/10 text-blue-300",
-                    )}
-                  >
-                    {index === 0 ? "Root" : chat.title}
-                  </button>
-                ))}
-                {summaryCounts ? (
-                  <>
-                    {contextTokenCount !== null ? (
-                      <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
-                        {formatTokenCount(contextTokenCount)}
-                      </span>
-                    ) : null}
-                    <span
+    <div className="relative z-[10020] border-border/70 border-b bg-secondary-bg/90 px-3 py-2.5 backdrop-blur-sm">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.14em]">
+            <span className="rounded-full border border-border/70 bg-primary-bg/85 px-2 py-1 text-text">
+              {currentAgentLabel}
+            </span>
+            {contextTokenCount !== null ? (
+              <span className="rounded-full border border-border/70 bg-primary-bg/70 px-2 py-1 normal-case tracking-normal">
+                {formatTokenCount(contextTokenCount)}
+              </span>
+            ) : null}
+            {summaryCounts?.branch ? (
+              <span className="rounded-full border border-border/70 bg-primary-bg/70 px-2 py-1 normal-case tracking-normal">
+                {summaryCounts.branch} branches
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "rounded-full border px-2 py-1 normal-case tracking-normal",
+                isAutoCompactionArmed
+                  ? "border-border/70 bg-primary-bg/70 text-text"
+                  : "border-border/60 bg-primary-bg/55 text-text-lighter",
+              )}
+            >
+              Compact {compactionPolicyLabel}
+            </span>
+          </div>
+
+          {chatState.currentChatId ? (
+            <>
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Chat"}
+                onUpdateTitle={(title) =>
+                  chatActions.updateChatTitle(chatState.currentChatId!, title)
+                }
+              />
+              {currentChat && lineageChats.length > 1 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-text-lighter">
+                  {lineageChats.map((chat, index) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => chatActions.switchToChat(chat.id)}
                       className={cn(
-                        "rounded-full border px-2 py-1",
-                        isAutoCompactionArmed
-                          ? "border-border bg-primary-bg/80"
-                          : "border-border/60 bg-primary-bg/60 text-text-lighter",
+                        "rounded-full border border-border/60 bg-primary-bg/60 px-2 py-1 transition-colors hover:bg-hover",
+                        chat.id === currentChat.id && "border-border/80 bg-primary-bg text-text",
                       )}
                     >
-                      Compact {compactionPolicyLabel}
-                    </span>
-                    {summaryCounts.compaction > 0 ? (
-                      <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
-                        C{summaryCounts.compaction}
-                      </span>
-                    ) : null}
-                    {summaryCounts.branch > 0 ? (
-                      <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
-                        B{summaryCounts.branch}
-                      </span>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <span className="font-medium text-text text-xs">New Chat</span>
-        )}
-      </div>
+                      {index === 0 ? "Root" : chat.title}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <span className="font-medium text-sm text-text">New Chat</span>
+          )}
+        </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <Tooltip content="Chat History" side="bottom">
-          <button
-            onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
-            className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-            aria-label="Toggle chat history"
-          >
-            <History size={14} />
-          </button>
-        </Tooltip>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Tooltip content="Chat History" side="bottom">
+            <button
+              onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
+              className="flex h-8 items-center justify-center rounded-2xl border border-border/70 bg-primary-bg/70 px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              aria-label="Toggle chat history"
+            >
+              <History size={14} />
+            </button>
+          </Tooltip>
 
-        <Tooltip content="Compact context" side="bottom">
-          <button
-            onClick={() => {
-              void chatActions.compactChat("manual");
-            }}
-            className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-            aria-label="Compact chat context"
-          >
-            <Layers3 size={14} />
-          </button>
-        </Tooltip>
+          <Tooltip content="Compact context" side="bottom">
+            <button
+              onClick={() => {
+                void chatActions.compactChat("manual");
+              }}
+              className="flex h-8 items-center justify-center rounded-2xl border border-border/70 bg-primary-bg/70 px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              aria-label="Compact chat context"
+            >
+              <Layers3 size={14} />
+            </button>
+          </Tooltip>
 
-        <UnifiedAgentSelector
-          scopeId={scopeId}
-          surface={surface}
-          variant="header"
-          onOpenSettings={() => openSettingsDialog("ai")}
-        />
+          <UnifiedAgentSelector
+            scopeId={scopeId}
+            surface={surface}
+            variant="header"
+            onOpenSettings={() => openSettingsDialog("ai")}
+          />
+        </div>
       </div>
     </div>
   );

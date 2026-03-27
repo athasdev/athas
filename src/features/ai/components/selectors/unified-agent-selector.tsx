@@ -393,7 +393,7 @@ export function UnifiedAgentSelector({
         <button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-8 items-center gap-1 rounded-full border border-border bg-primary-bg/80 pr-1.5 pl-2 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          className="flex h-8 items-center gap-1 rounded-2xl border border-border/70 bg-primary-bg/80 pr-2 pl-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
           aria-label="New chat"
         >
           <Plus size={14} />
@@ -403,7 +403,7 @@ export function UnifiedAgentSelector({
         <button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
+          className="ui-font flex h-9 items-center gap-1.5 rounded-2xl border border-border/70 bg-primary-bg/75 px-3 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">
@@ -425,7 +425,7 @@ export function UnifiedAgentSelector({
           <div
             ref={dropdownRef}
             onKeyDown={handleKeyDown}
-            className="fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
+            className="fixed z-[10030] flex flex-col overflow-hidden rounded-[24px] border border-border/70 bg-primary-bg/95 shadow-xl backdrop-blur-sm"
             style={{
               top: `${position.top}px`,
               left: `${position.left}px`,

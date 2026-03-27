@@ -99,9 +99,9 @@ export function HarnessSessionRail({
   const continueRecentSession = pickContinueRecentRuntimeSession(recentRuntimeSessions);
 
   return (
-    <aside className="flex h-full w-full shrink-0 flex-col gap-2.5 p-3">
-      <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
-        <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
+    <aside className="flex h-full w-full shrink-0 flex-col gap-3.5 bg-secondary-bg/18 px-3 py-4">
+      <section className="rounded-[24px] border border-border/70 bg-secondary-bg/35 p-3 backdrop-blur-sm">
+        <div className="mb-3 flex items-center justify-between gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
           <div className="flex items-center gap-2">
             <Sparkles size={12} />
             <span>Sessions</span>
@@ -111,7 +111,7 @@ export function HarnessSessionRail({
               <button
                 type="button"
                 onClick={onReopenClosedSession}
-                className="flex size-6 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-primary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 aria-label="Reopen the most recently closed Harness session"
                 title="Reopen the most recently closed Harness session"
               >
@@ -121,7 +121,7 @@ export function HarnessSessionRail({
             <button
               type="button"
               onClick={onCreateSession}
-              className="flex size-6 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-primary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
               aria-label="Create new Harness session"
               title="Create new Harness session"
             >
@@ -134,10 +134,10 @@ export function HarnessSessionRail({
             <div
               key={session.bufferId}
               className={cn(
-                "flex items-center gap-2 rounded-xl border px-2.5 py-2 text-xs transition-colors",
+                "flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs transition-colors",
                 session.isActive
-                  ? "border-border bg-secondary-bg/90"
-                  : "border-border/70 bg-secondary-bg/55",
+                  ? "border-border bg-primary-bg/85"
+                  : "border-border/60 bg-primary-bg/50",
               )}
             >
               <button
@@ -161,7 +161,7 @@ export function HarnessSessionRail({
                   {session.title}
                 </span>
                 {session.isDefault ? (
-                  <span className="shrink-0 rounded-full border border-border/80 bg-primary-bg/75 px-1.5 py-0.5 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
+                  <span className="shrink-0 rounded-full border border-border/70 bg-secondary-bg/55 px-1.5 py-0.5 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
                     Main
                   </span>
                 ) : null}
@@ -177,7 +177,7 @@ export function HarnessSessionRail({
               <button
                 type="button"
                 onClick={() => onCloseSession(session.bufferId)}
-                className="flex size-5 shrink-0 items-center justify-center rounded-full text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex size-6 shrink-0 items-center justify-center rounded-full text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 aria-label={`Close ${session.title}`}
                 title={`Close ${session.title}`}
               >
@@ -189,8 +189,8 @@ export function HarnessSessionRail({
       </section>
 
       {recentRuntimeSessions.length > 0 && onOpenRuntimeSession ? (
-        <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
-          <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
+        <section className="rounded-[24px] border border-border/70 bg-secondary-bg/35 p-3 backdrop-blur-sm">
+          <div className="mb-3 flex items-center justify-between gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
             <div className="flex items-center gap-2">
               <History size={12} />
               <span>Recent Pi Sessions</span>
@@ -199,7 +199,7 @@ export function HarnessSessionRail({
               <button
                 type="button"
                 onClick={() => onContinueRecentRuntimeSession(continueRecentSession.path)}
-                className="flex size-6 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-primary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 aria-label="Continue the latest Pi session"
                 title="Continue the latest Pi session"
               >
@@ -214,10 +214,10 @@ export function HarnessSessionRail({
                 type="button"
                 onClick={() => onOpenRuntimeSession(session.path)}
                 className={cn(
-                  "flex w-full items-start gap-2 rounded-xl border px-2.5 py-2 text-left text-xs transition-colors",
+                  "flex w-full items-start gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs transition-colors",
                   session.isCurrent
-                    ? "border-border bg-secondary-bg/90"
-                    : "border-border/70 bg-secondary-bg/55 hover:bg-hover/60",
+                    ? "border-border bg-primary-bg/85"
+                    : "border-border/60 bg-primary-bg/50 hover:bg-hover/60",
                 )}
               >
                 <span
@@ -247,10 +247,10 @@ export function HarnessSessionRail({
       ) : null}
 
       {activeSession.status.showRailStatus ? (
-        <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
+        <section className="rounded-[24px] border border-border/70 bg-secondary-bg/35 p-3 backdrop-blur-sm">
           <div
             className={cn(
-              "rounded-xl border px-3 py-2.5 text-xs",
+              "rounded-2xl border px-3 py-3 text-xs",
               getStatusTone(activeSession.status.kind),
             )}
           >

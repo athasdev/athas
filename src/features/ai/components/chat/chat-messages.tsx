@@ -212,26 +212,35 @@ export const ChatMessages = memo(
       }
 
       return (
-        <div className="flex h-full flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-primary-bg/90 p-3">
-            <div className="mb-2 flex items-center gap-1.5 text-text-lighter text-xs">
+        <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
+          <div className="w-full max-w-xl rounded-[28px] border border-border/70 bg-secondary-bg/45 p-5 shadow-sm backdrop-blur-sm">
+            <div className="mb-3 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-[0.16em]">
               <MessageSquare size={12} />
               <span>{surface === "harness" ? "Recent Sessions" : "Recent Chats"}</span>
             </div>
-            <div className="space-y-1">
+            <div className="mb-4">
+              <h3 className="font-medium text-base text-text">
+                {surface === "harness" ? "Pick up where you left off" : "Continue a conversation"}
+              </h3>
+              <p className="mt-1 text-sm text-text-lighter">
+                The conversation canvas is ready. Reopen a recent thread or start fresh.
+              </p>
+            </div>
+            <div className="space-y-2">
               {recentChats.map((chat) => (
                 <button
                   key={chat.id}
                   onClick={() => chatActions.switchToChat(chat.id)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-hover"
+                  className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-3 text-left transition-colors hover:bg-hover"
                 >
-                  <span className="min-w-0 flex-1 truncate text-text text-xs">{chat.title}</span>
-                  <span className="shrink-0 text-[10px] text-text-lighter">
-                    {getAgentLabel(chat.agentId)}
-                  </span>
-                  <span className="shrink-0 text-[10px] text-text-lighter">
-                    {getRelativeTime(chat.lastMessageAt)}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-sm text-text">{chat.title}</div>
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-text-lighter">
+                      <span>{getAgentLabel(chat.agentId)}</span>
+                      <span className="text-text-lighter/50">•</span>
+                      <span>{getRelativeTime(chat.lastMessageAt)}</span>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
@@ -243,27 +252,27 @@ export const ChatMessages = memo(
     return (
       <>
         {planEntries.length > 0 ? (
-          <div className="px-4 pt-3 pb-1">
-            <div className="rounded-xl border border-border/70 bg-primary-bg/45 px-3 py-2.5">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="inline-flex items-center gap-1.5 text-[11px] text-text-lighter">
+          <div className="px-3 pt-4 pb-2 sm:px-4">
+            <div className="rounded-[24px] border border-border/70 bg-secondary-bg/35 px-4 py-3 backdrop-blur-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="inline-flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-[0.16em]">
                   <ListTodo size={11} />
-                  <span className="font-medium text-text">Plan</span>
+                  <span>Plan</span>
                 </div>
-                <div className="text-[10px] text-text-lighter">
+                <div className="text-[11px] text-text-lighter">
                   {planCounts.completed}/{planCounts.total} done
                   {planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""}
                 </div>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {planEntries.map((entry, index) => (
                   <div
                     key={`${entry.content}-${index}`}
-                    className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary-bg/35 px-2.5 py-1.5 text-xs"
+                    className="flex items-start gap-2 rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-2 text-sm"
                   >
                     <span
                       className={cn(
-                        "mt-0.5 rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                        "mt-0.5 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide",
                         getPlanStatusTone(entry.status),
                       )}
                     >
@@ -298,9 +307,9 @@ export const ChatMessages = memo(
             const messageClassName = cn(
               isToolOnlyMessage
                 ? previousMessageIsToolOnly
-                  ? "px-4 py-1"
-                  : "px-4 pt-2 pb-1"
-                : "px-4 py-2",
+                  ? "px-3 py-1 sm:px-4"
+                  : "px-3 pt-2 pb-1 sm:px-4"
+                : "px-3 py-2.5 sm:px-4",
               isPlanMessage && "pt-2",
             );
 
@@ -322,14 +331,14 @@ export const ChatMessages = memo(
           const hasStructuredToolEvent = events.some(isStructuredToolEvent);
 
           return (
-            <div key={row.id} className="px-4 py-2">
-              <div className="rounded-2xl border border-border/80 bg-secondary-bg/35 px-3 py-2.5">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
+            <div key={row.id} className="px-3 py-2 sm:px-4">
+              <div className="rounded-[24px] border border-border/70 bg-secondary-bg/30 px-3.5 py-3 backdrop-blur-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
                     {hasStructuredToolEvent ? <Wrench size={11} /> : <Sparkles size={11} />}
                     {groupLabel}
                   </div>
-                  <div className="text-[10px] text-text-lighter">
+                  <div className="text-[11px] text-text-lighter">
                     {events.length} event{events.length === 1 ? "" : "s"}
                   </div>
                 </div>
@@ -344,7 +353,7 @@ export const ChatMessages = memo(
                       return (
                         <div
                           key={event.id}
-                          className="rounded-xl border border-border/70 bg-primary-bg/60 px-2.5 py-2"
+                          className="rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-2.5"
                         >
                           <ToolCallDisplay
                             toolName={event.label}
@@ -360,7 +369,7 @@ export const ChatMessages = memo(
                                 <button
                                   key={`${event.id}-${location.path}-${location.line ?? 0}`}
                                   onClick={() => handleFileSelect(location.path, false)}
-                                  className="rounded-full border border-border/80 px-2 py-1 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                  className="rounded-full border border-border/70 px-2 py-1 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
                                   title={location.path}
                                 >
                                   {location.path.split("/").pop()}
@@ -376,7 +385,7 @@ export const ChatMessages = memo(
                     return (
                       <div
                         key={event.id}
-                        className="flex items-center gap-2 rounded-xl border border-border/70 bg-primary-bg/60 px-2.5 py-2 text-xs"
+                        className="flex items-center gap-2 rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-2 text-xs"
                       >
                         <StatusIcon
                           size={12}

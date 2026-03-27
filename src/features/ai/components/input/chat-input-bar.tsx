@@ -804,24 +804,64 @@ const AIChatInputBar = memo(function AIChatInputBar({
       ref={aiChatContainerRef}
       className={cn(
         "ai-chat-container relative z-20 bg-transparent",
-        surface === "harness" ? "border-border/70 border-t py-2.5" : "px-3 pt-2 pb-3",
+        surface === "harness" ? "py-3" : "px-3 pt-2 pb-3",
       )}
     >
       <div
         className={cn(
-          "border border-border bg-primary-bg/95 backdrop-blur-sm",
+          "border border-border/80 backdrop-blur-sm",
           surface === "harness"
-            ? "rounded-xl px-2.5 py-2.5"
-            : "rounded-[20px] px-3 py-2.5 shadow-sm",
+            ? "rounded-[26px] bg-secondary-bg/92 px-3 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
+            : "rounded-[24px] bg-secondary-bg/95 px-3 py-3 shadow-sm",
         )}
       >
+        {surface === "harness" && harnessStatus ? (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-border/70 border-b px-1 pb-3 text-[11px]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-border/70 bg-primary-bg/80 px-2.5 py-1 font-medium text-text">
+                {harnessStatus.agentLabel}
+              </span>
+              <span className="rounded-full border border-border/70 bg-primary-bg/70 px-2.5 py-1 text-text-lighter">
+                {harnessStatus.modeLabel}
+              </span>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-primary-bg/70 px-2.5 py-1 font-medium",
+                  harnessStatusTone?.textClassName,
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    harnessStatusTone?.dotClassName,
+                    harnessStatus.kind === "running" && "animate-pulse",
+                  )}
+                  aria-hidden="true"
+                />
+                {harnessStatusTone?.Icon ? (
+                  <harnessStatusTone.Icon
+                    size={11}
+                    className={cn(harnessStatus.kind === "running" && "animate-spin")}
+                  />
+                ) : null}
+                <span>{harnessStatus.stateLabel}</span>
+              </span>
+            </div>
+            {harnessStatus.detail ? (
+              <span className="min-w-0 flex-1 truncate text-right text-text-lighter">
+                {harnessStatus.detail}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Pasted images preview */}
         {chatState.pastedImages.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap gap-2">
             {chatState.pastedImages.map((image) => (
               <div
                 key={image.id}
-                className="group relative overflow-hidden rounded-lg border border-border bg-secondary-bg"
+                className="group relative overflow-hidden rounded-2xl border border-border/70 bg-primary-bg/70"
               >
                 <img
                   src={image.dataUrl}
@@ -844,7 +884,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         <div
           className={cn(
             surface === "harness"
-              ? "rounded-lg border border-border/70 bg-secondary-bg/35 px-2 py-1.5"
+              ? "rounded-[22px] border border-border/70 bg-primary-bg/55 px-3 py-2.5"
               : "",
           )}
         >
@@ -857,11 +897,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
             data-placeholder={placeholder}
             className={cn(
               "max-h-[140px] w-full resize-none overflow-y-auto border-none bg-transparent",
-              "px-2 py-1.5 text-text",
+              "px-1 py-1.5 text-text",
               "focus:outline-none",
               !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
               "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
-              surface === "harness" ? "min-h-[72px]" : "min-h-[64px]",
+              surface === "harness" ? "min-h-[96px]" : "min-h-[72px]",
             )}
             style={
               {
@@ -879,47 +919,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
           />
         </div>
 
-        {surface === "harness" && harnessStatus ? (
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-border/70 border-t pt-2 text-[11px]">
-            <span className="text-text">{harnessStatus.agentLabel}</span>
-            <span className="text-text-lighter/55">/</span>
-            <span className="text-text-lighter">{harnessStatus.modeLabel}</span>
-            <span className="text-text-lighter/55">/</span>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 font-medium",
-                harnessStatusTone?.textClassName,
-              )}
-            >
-              <span
-                className={cn(
-                  "size-2 rounded-full",
-                  harnessStatusTone?.dotClassName,
-                  harnessStatus.kind === "running" && "animate-pulse",
-                )}
-                aria-hidden="true"
-              />
-              {harnessStatusTone?.Icon ? (
-                <harnessStatusTone.Icon
-                  size={11}
-                  className={cn(harnessStatus.kind === "running" && "animate-spin")}
-                />
-              ) : null}
-              <span>{harnessStatus.stateLabel}</span>
-            </span>
-            {harnessStatus.detail ? (
-              <span className="truncate text-text-lighter">{harnessStatus.detail}</span>
-            ) : null}
-          </div>
-        ) : null}
-
         <div
           className={cn(
-            "mt-2.5 flex flex-wrap gap-2 border-border/70 border-t pt-2.5",
-            surface === "harness" ? "items-center justify-between" : "items-center",
+            "mt-3 flex flex-wrap gap-2 border-border/70 border-t pt-3",
+            surface === "harness" ? "items-end justify-between" : "items-center",
           )}
         >
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <div ref={contextDropdownRef} className="min-w-0 flex-1">
               <ContextSelector
                 buffers={buffers}
@@ -937,7 +943,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {/* Queue indicator */}
             {chatState.queueCount > 0 && (
               <div
-                className="flex items-center gap-1 rounded-md border border-border/70 bg-primary-bg/50 px-2 py-1 text-text-lighter text-xs"
+                className="flex items-center gap-1 rounded-full border border-border/70 bg-primary-bg/70 px-2.5 py-1 text-text-lighter text-xs"
                 title={`Queued messages: ${chatState.steeringQueueCount} steering, ${chatState.followUpQueueCount} follow-up`}
               >
                 <span className="font-medium text-text">{chatState.queueCount}</span>
@@ -946,7 +952,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             )}
           </div>
 
-          <div className="ml-auto flex shrink-0 select-none flex-wrap items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 select-none flex-wrap items-center gap-2">
             {surface === "harness" ? (
               <UnifiedAgentSelector
                 scopeId={scopeId}
@@ -980,7 +986,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-primary-bg/75 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 title="Show slash commands"
               >
                 <Slash size={12} />
@@ -994,7 +1000,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               className={cn(
                 "flex items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
-                surface === "harness" ? "h-10 w-10" : "h-8 w-8",
+                surface === "harness" ? "h-11 w-11 bg-primary-bg/85" : "h-9 w-9",
                 isStreaming && !chatState.isSendAnimating && "button-morphing",
                 (hasInputText || hasImages) &&
                   isInputEnabled &&

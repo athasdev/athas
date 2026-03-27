@@ -303,7 +303,7 @@ export function ContextSelector({
         <button
           onClick={onToggleOpen}
           className={cn(
-            "flex h-8 w-8 select-none items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-1",
+            "flex h-9 w-9 select-none items-center justify-center rounded-full border border-border/70 bg-primary-bg/75 p-1",
             "text-text-lighter text-xs transition-colors",
             "hover:bg-hover hover:text-text focus:outline-none",
           )}
@@ -321,7 +321,7 @@ export function ContextSelector({
           <div
             ref={popoverRef}
             className={cn(
-              "scrollbar-hidden fixed z-[10040] overflow-y-auto rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
+              "scrollbar-hidden fixed z-[10040] overflow-y-auto rounded-[24px] border border-border/70 bg-primary-bg/95 shadow-lg backdrop-blur-sm",
               "select-none",
             )}
             style={{
@@ -439,7 +439,7 @@ export function ContextSelector({
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}
-            className="group flex shrink-0 select-none items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-1 text-xs"
+            className="group flex shrink-0 select-none items-center gap-1 rounded-full border border-border/70 bg-primary-bg/75 px-2.5 py-1 text-xs"
           >
             {item.type === "buffer" ? (
               item.isSQLite ? (

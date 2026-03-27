@@ -162,7 +162,7 @@ export const ChatModeSelector = memo(function ChatModeSelector({
           }
         }}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-2.5 text-xs transition-colors",
+          "inline-flex h-9 items-center gap-1.5 rounded-2xl border border-border/70 bg-primary-bg/75 px-3 text-xs transition-colors",
           isSelectorDisabled
             ? "cursor-not-allowed text-text-lighter/70"
             : "text-text hover:bg-hover",
@@ -189,7 +189,7 @@ export const ChatModeSelector = memo(function ChatModeSelector({
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[10040] overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm"
+            className="fixed z-[10040] overflow-hidden rounded-[24px] border border-border/70 bg-primary-bg/95 shadow-lg backdrop-blur-sm"
             style={{
               top: `${position.top}px`,
               left: `${position.left}px`,
@@ -199,7 +199,7 @@ export const ChatModeSelector = memo(function ChatModeSelector({
             role="listbox"
             aria-label="Chat mode options"
           >
-            <div className="border-border/70 border-b bg-secondary-bg/75 px-3 py-2 text-[10px] text-text-lighter uppercase tracking-wide">
+            <div className="border-border/70 border-b bg-secondary-bg/75 px-3 py-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
               Response Mode
             </div>
             <div className="p-1.5">

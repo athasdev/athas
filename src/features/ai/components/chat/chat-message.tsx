@@ -135,13 +135,15 @@ export const ChatMessage = memo(function ChatMessage({
   if (message.role === "user") {
     return (
       <div className="w-full">
-        <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
-          <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
-          <div className="-translate-y-1/2 absolute top-1/2 right-1.5 flex items-center gap-1 opacity-40 transition-all hover:opacity-100">
+        <div className="relative max-w-[min(92%,780px)] rounded-[24px] border border-border/70 bg-secondary-bg/55 px-4 py-3 shadow-sm backdrop-blur-sm">
+          <div className="whitespace-pre-wrap break-words pr-10 text-[13px] text-text leading-relaxed">
+            {message.content}
+          </div>
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <Tooltip content="Fork from this checkpoint" side="top">
               <button
                 onClick={() => void handleForkCheckpoint(message.id)}
-                className="flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter hover:bg-hover"
+                className="flex size-6 items-center justify-center rounded-full border border-border/70 bg-primary-bg/90 p-0.5 text-text-lighter hover:bg-hover"
                 title="Fork from checkpoint"
                 aria-label="Fork from this checkpoint"
               >
@@ -151,7 +153,7 @@ export const ChatMessage = memo(function ChatMessage({
             <Tooltip content="Trim this chat to this point" side="top">
               <button
                 onClick={() => handleRestoreCheckpoint(message.id)}
-                className="flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter hover:bg-hover"
+                className="flex size-6 items-center justify-center rounded-full border border-border/70 bg-primary-bg/90 p-0.5 text-text-lighter hover:bg-hover"
                 title="Restore checkpoint"
                 aria-label="Restore to this checkpoint"
               >
@@ -169,14 +171,14 @@ export const ChatMessage = memo(function ChatMessage({
     const branchSummaryMeta = message.summaryMeta?.type === "branch" ? message.summaryMeta : null;
 
     return (
-      <div className="rounded-2xl border border-border bg-secondary-bg/80 px-3 py-2.5">
-        <div className="mb-2 flex items-center gap-2 text-[10px] text-text-lighter uppercase tracking-[0.12em]">
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+      <div className="rounded-[24px] border border-border/70 bg-secondary-bg/40 px-4 py-3 backdrop-blur-sm">
+        <div className="mb-3 flex items-center gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-primary-bg/80 px-2 py-1">
             {isCompaction ? <Layers3 size={10} /> : <GitBranch size={10} />}
             {isCompaction ? "Compaction Summary" : "Branch Summary"}
           </span>
           {message.summaryMeta?.type === "compaction" ? (
-            <span className="rounded-full border border-border bg-primary-bg/80 px-2 py-1">
+            <span className="rounded-full border border-border/70 bg-primary-bg/80 px-2 py-1 normal-case tracking-normal">
               {message.summaryMeta.trigger} · {message.summaryMeta.tokensBefore}
             </span>
           ) : null}
@@ -187,7 +189,7 @@ export const ChatMessage = memo(function ChatMessage({
                   chatActions.switchToChat(branchSummaryMeta.sourceChatId);
                 }
               }}
-              className="rounded-full border border-border bg-primary-bg/80 px-2 py-1 normal-case tracking-normal hover:bg-hover"
+              className="rounded-full border border-border/70 bg-primary-bg/80 px-2 py-1 normal-case tracking-normal hover:bg-hover"
             >
               {branchSummaryMeta.sourceChatTitle}
             </button>
@@ -287,7 +289,7 @@ export const ChatMessage = memo(function ChatMessage({
 
       {message.content && (
         <>
-          <div className="pr-1 leading-relaxed">
+          <div className="pr-8 text-[13px] leading-7">
             {hasPlanBlock(message.content) ? (
               <PlanBlockDisplay
                 plan={parsePlan(message.content)!}
@@ -299,13 +301,13 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </div>
 
-          <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="absolute top-0 right-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             {isLastMessage &&
               (hasError(message.content) ? (
                 <Tooltip content="Retry" side="top">
                   <button
                     onClick={handleRetryMessage}
-                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    className="rounded-full border border-border/70 bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Retry"
                     aria-label="Retry failed message"
                   >
@@ -316,7 +318,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <Tooltip content="Regenerate" side="top">
                   <button
                     onClick={handleRetryMessage}
-                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    className="rounded-full border border-border/70 bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Regenerate"
                     aria-label="Regenerate response"
                   >
@@ -326,7 +328,7 @@ export const ChatMessage = memo(function ChatMessage({
               ))}
             <button
               onClick={() => handleCopyMessage(message.content, message.id)}
-              className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+              className="rounded-full border border-border/70 bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
               title="Copy message"
               aria-label="Copy message"
             >
