@@ -116,6 +116,8 @@ impl PiRpcSession {
          let mut last_stop_reason: Option<String> = None;
          let mut last_error_message: Option<String> = None;
          let mut synthetic_tool_counter = 0_u64;
+         let mut emitted_assistant_text_in_turn = false;
+         let mut emitted_assistant_thinking_in_turn = false;
          let stream_close_error = loop {
             let line = match lines.next_line().await {
                Ok(Some(line)) => line,
@@ -175,6 +177,8 @@ impl PiRpcSession {
                      &mut last_stop_reason,
                      &mut last_error_message,
                      &mut synthetic_tool_counter,
+                     &mut emitted_assistant_text_in_turn,
+                     &mut emitted_assistant_thinking_in_turn,
                      &value,
                   )
                   .await;
@@ -794,6 +798,102 @@ impl AcpWorker {
       }
    }
 
+   fn emit_pi_message_text_content(
+      app_handle: &AppHandle,
+      route_key: &str,
+      session_id: &str,
+      message: &serde_json::Value,
+   ) -> bool {
+      let Some(content_blocks) = message.get("content").and_then(serde_json::Value::as_array)
+      else {
+         return false;
+      };
+
+      let mut emitted = false;
+      for block in content_blocks {
+         let Some(block_type) = block.get("type").and_then(serde_json::Value::as_str) else {
+            continue;
+         };
+         if block_type != "text" {
+            continue;
+         }
+
+         let Some(text) = block.get("text").and_then(serde_json::Value::as_str) else {
+            continue;
+         };
+         if text.is_empty() {
+            continue;
+         }
+
+         let _ = app_handle.emit(
+            "acp-event",
+            AcpEvent::ContentChunk {
+               route_key: route_key.to_string(),
+               session_id: session_id.to_string(),
+               content: super::types::AcpContentBlock::Text {
+                  text: text.to_string(),
+               },
+               is_complete: false,
+            },
+         );
+         emitted = true;
+      }
+
+      emitted
+   }
+
+   fn emit_pi_message_thinking_content(
+      app_handle: &AppHandle,
+      route_key: &str,
+      session_id: &str,
+      message: &serde_json::Value,
+      synthetic_tool_counter: &mut u64,
+   ) -> bool {
+      let Some(content_blocks) = message.get("content").and_then(serde_json::Value::as_array)
+      else {
+         return false;
+      };
+
+      let mut emitted = false;
+      for block in content_blocks {
+         let Some(block_type) = block.get("type").and_then(serde_json::Value::as_str) else {
+            continue;
+         };
+         if block_type != "thinking" {
+            continue;
+         }
+
+         let Some(thinking) = block.get("thinking").and_then(serde_json::Value::as_str) else {
+            continue;
+         };
+         if thinking.is_empty() {
+            continue;
+         }
+
+         let _ = app_handle.emit(
+            "acp-event",
+            AcpEvent::ThoughtChunk {
+               route_key: route_key.to_string(),
+               session_id: session_id.to_string(),
+               content: super::types::AcpContentBlock::Text {
+                  text: thinking.to_string(),
+               },
+               is_complete: false,
+            },
+         );
+         Self::emit_pi_thought_tool_events(
+            app_handle,
+            route_key,
+            session_id,
+            thinking,
+            synthetic_tool_counter,
+         );
+         emitted = true;
+      }
+
+      emitted
+   }
+
    async fn handle_pi_extension_ui_request(
       app_handle: &AppHandle,
       route_key: &str,
@@ -931,6 +1031,8 @@ impl AcpWorker {
       last_stop_reason: &mut Option<String>,
       last_error_message: &mut Option<String>,
       synthetic_tool_counter: &mut u64,
+      emitted_assistant_text_in_turn: &mut bool,
+      emitted_assistant_thinking_in_turn: &mut bool,
       value: &serde_json::Value,
    ) {
       let Some(event_type) = value.get("type").and_then(serde_json::Value::as_str) else {
@@ -938,6 +1040,17 @@ impl AcpWorker {
       };
 
       match event_type {
+         "message_start" => {
+            let role = value
+               .get("message")
+               .and_then(|message| message.get("role"))
+               .and_then(serde_json::Value::as_str)
+               .unwrap_or_default();
+            if role == "assistant" {
+               *emitted_assistant_text_in_turn = false;
+               *emitted_assistant_thinking_in_turn = false;
+            }
+         }
          "message_update" => {
             let Some(assistant_event) = value.get("assistantMessageEvent") else {
                return;
@@ -955,6 +1068,7 @@ impl AcpWorker {
                      .get("delta")
                      .and_then(serde_json::Value::as_str)
                   {
+                     *emitted_assistant_text_in_turn = true;
                      let _ = app_handle.emit(
                         "acp-event",
                         AcpEvent::ContentChunk {
@@ -973,6 +1087,7 @@ impl AcpWorker {
                      .get("delta")
                      .and_then(serde_json::Value::as_str)
                   {
+                     *emitted_assistant_thinking_in_turn = true;
                      let _ = app_handle.emit(
                         "acp-event",
                         AcpEvent::ThoughtChunk {
@@ -991,6 +1106,7 @@ impl AcpWorker {
                      .get("content")
                      .and_then(serde_json::Value::as_str)
                   {
+                     *emitted_assistant_thinking_in_turn = true;
                      Self::emit_pi_thought_tool_events(
                         app_handle,
                         route_key,
@@ -1012,6 +1128,19 @@ impl AcpWorker {
                .and_then(serde_json::Value::as_str)
                .unwrap_or_default();
             if role == "assistant" {
+               if !*emitted_assistant_text_in_turn {
+                  *emitted_assistant_text_in_turn =
+                     Self::emit_pi_message_text_content(app_handle, route_key, session_id, message);
+               }
+               if !*emitted_assistant_thinking_in_turn {
+                  *emitted_assistant_thinking_in_turn = Self::emit_pi_message_thinking_content(
+                     app_handle,
+                     route_key,
+                     session_id,
+                     message,
+                     synthetic_tool_counter,
+                  );
+               }
                *last_stop_reason = message
                   .get("stopReason")
                   .and_then(serde_json::Value::as_str)
