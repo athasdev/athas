@@ -6,7 +6,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use commands::*;
-use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
+use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher, PiNativeBridge};
 use log::{debug, info};
 use lsp::LspManager;
 use ssh::{
@@ -135,6 +135,9 @@ fn main() {
             terminal_manager,
          )));
          app.manage(acp_bridge);
+
+         let pi_native_bridge = Arc::new(Mutex::new(PiNativeBridge::new(app.handle().clone())));
+         app.manage(pi_native_bridge);
 
          // Set up LSP manager
          app.manage(LspManager::new(app.handle().clone()));
@@ -471,6 +474,12 @@ fn main() {
          respond_acp_permission,
          set_acp_session_mode,
          cancel_acp_prompt,
+         // Pi native commands
+         start_pi_native_session,
+         stop_pi_native_session,
+         send_pi_native_prompt,
+         get_pi_native_status,
+         cancel_pi_native_prompt,
          // Theme commands
          get_system_theme,
          load_toml_themes,

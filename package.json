@@ -31,6 +31,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
+    "@mariozechner/pi-coding-agent": "0.55.3",
     "@tanstack/react-virtual": "^3.13.12",
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-clipboard-manager": "~2.3.2",

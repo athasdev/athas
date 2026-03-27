@@ -3,6 +3,7 @@ import type { AgentType, AIChatSurface, ChatScopeId } from "@/features/ai/types/
 import type { AIMessage } from "@/features/ai/types/messages";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { AcpStreamHandler } from "@/utils/acp-handler";
+import { PiNativeStreamHandler } from "@/utils/pi-native-handler";
 import type { ContextInfo } from "@/utils/types";
 import {
   DEFAULT_HARNESS_RUNTIME_BACKEND,
@@ -96,11 +97,15 @@ export const createHarnessRuntimePromptSession = ({
   handlers,
 }: HarnessRuntimePromptSessionOptions): HarnessRuntimePromptSession => {
   if (backend === "pi-native") {
-    return {
-      start: async () => {
-        throw buildPiNativeNotWiredError();
-      },
-    };
+    if (agentId !== "pi") {
+      return {
+        start: async () => {
+          throw buildPiNativeNotWiredError();
+        },
+      };
+    }
+
+    return new PiNativeStreamHandler(handlers);
   }
 
   return new AcpStreamHandler(agentId, handlers);
@@ -113,7 +118,7 @@ export const getHarnessRuntimeStatus = async (
 ): Promise<AcpAgentStatus> => {
   const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
   if (backend === "pi-native") {
-    throw buildPiNativeNotWiredError();
+    return PiNativeStreamHandler.getStatus(scopeId);
   }
 
   return AcpStreamHandler.getStatus(scopeId);
@@ -126,7 +131,8 @@ export const stopHarnessRuntime = async (
 ): Promise<void> => {
   const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
   if (backend === "pi-native") {
-    throw buildPiNativeNotWiredError();
+    await PiNativeStreamHandler.stopSession(scopeId);
+    return;
   }
 
   await AcpStreamHandler.stopAgent(scopeId);
@@ -139,7 +145,8 @@ export const cancelHarnessRuntimePrompt = async (
 ): Promise<void> => {
   const backend = resolveHarnessRuntimeBackendForScope(scopeId, buffers, activeBuffer);
   if (backend === "pi-native") {
-    throw buildPiNativeNotWiredError();
+    await PiNativeStreamHandler.cancelPrompt(scopeId);
+    return;
   }
 
   await AcpStreamHandler.cancelPrompt(scopeId);
