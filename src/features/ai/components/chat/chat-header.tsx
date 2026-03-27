@@ -1,4 +1,4 @@
-import { History, Layers3 } from "lucide-react";
+import { GitBranch, History, Layers3 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import {
@@ -106,9 +106,10 @@ function EditableChatTitle({
 interface ChatHeaderProps {
   surface?: AIChatProps["surface"];
   scopeId?: AIChatProps["scopeId"];
+  onForkCurrentChat?: () => void;
 }
 
-export function ChatHeader({ surface = "panel", scopeId }: ChatHeaderProps) {
+export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: ChatHeaderProps) {
   const chatState = useChatState(scopeId);
   const chatActions = useChatActions(scopeId);
   const { settings } = useSettingsStore();
@@ -168,6 +169,18 @@ export function ChatHeader({ surface = "panel", scopeId }: ChatHeaderProps) {
                 <History size={14} />
               </button>
             </Tooltip>
+
+            {chatState.currentChatId && onForkCurrentChat ? (
+              <Tooltip content="Fork session" side="bottom">
+                <button
+                  onClick={() => onForkCurrentChat()}
+                  className="flex size-8 items-center justify-center rounded-lg border border-border bg-secondary-bg/70 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                  aria-label="Fork session"
+                >
+                  <GitBranch size={14} />
+                </button>
+              </Tooltip>
+            ) : null}
 
             <Tooltip content="Compact context" side="bottom">
               <button

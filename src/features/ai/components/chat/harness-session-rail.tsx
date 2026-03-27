@@ -1,4 +1,14 @@
-import { AlertCircle, CircleDot, History, LoaderCircle, Plus, Sparkles, X } from "lucide-react";
+import {
+  AlertCircle,
+  CircleDot,
+  CornerDownRight,
+  History,
+  LoaderCircle,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { pickContinueRecentRuntimeSession } from "@/features/ai/lib/harness-session-actions";
 import type { HarnessTrustState, HarnessTrustStateKind } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
 
@@ -32,6 +42,7 @@ interface HarnessSessionRailProps {
   onSelectSession: (sessionKey: string) => void;
   onCloseSession: (bufferId: string) => void;
   onOpenRuntimeSession?: (sessionPath: string) => void;
+  onContinueRecentRuntimeSession?: (sessionPath: string) => void;
 }
 
 function getSessionDotTone(state: HarnessTrustStateKind): string {
@@ -82,8 +93,10 @@ export function HarnessSessionRail({
   onSelectSession,
   onCloseSession,
   onOpenRuntimeSession,
+  onContinueRecentRuntimeSession,
 }: HarnessSessionRailProps) {
   const StatusIcon = getStatusIcon(activeSession.status.kind);
+  const continueRecentSession = pickContinueRecentRuntimeSession(recentRuntimeSessions);
 
   return (
     <aside className="flex h-full w-full shrink-0 flex-col gap-2.5 p-3">
@@ -177,9 +190,22 @@ export function HarnessSessionRail({
 
       {recentRuntimeSessions.length > 0 && onOpenRuntimeSession ? (
         <section className="rounded-xl border border-border/80 bg-primary-bg/55 p-2.5">
-          <div className="mb-2 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
-            <History size={12} />
-            <span>Recent Pi Sessions</span>
+          <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-text-lighter uppercase tracking-wide">
+            <div className="flex items-center gap-2">
+              <History size={12} />
+              <span>Recent Pi Sessions</span>
+            </div>
+            {continueRecentSession && onContinueRecentRuntimeSession ? (
+              <button
+                type="button"
+                onClick={() => onContinueRecentRuntimeSession(continueRecentSession.path)}
+                className="flex size-6 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                aria-label="Continue the latest Pi session"
+                title="Continue the latest Pi session"
+              >
+                <CornerDownRight size={12} />
+              </button>
+            ) : null}
           </div>
           <div className="space-y-2">
             {recentRuntimeSessions.map((session) => (

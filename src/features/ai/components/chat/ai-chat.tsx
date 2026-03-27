@@ -982,6 +982,14 @@ const AIChat = memo(function AIChat({
     [chatActions, openAgentBuffer, resolvedScopeId, runtimeBackend, surface],
   );
 
+  const handleForkCurrentHarnessChat = useCallback(() => {
+    if (!currentChat) {
+      return;
+    }
+
+    void handleForkChatFromHistory(currentChat.id);
+  }, [currentChat, handleForkChatFromHistory]);
+
   useEffect(() => {
     if (surface !== "harness") {
       return;
@@ -1265,7 +1273,11 @@ const AIChat = memo(function AIChat({
         className,
       )}
     >
-      <ChatHeader surface={surface} scopeId={resolvedScopeId} />
+      <ChatHeader
+        surface={surface}
+        scopeId={resolvedScopeId}
+        onForkCurrentChat={surface === "harness" ? handleForkCurrentHarnessChat : undefined}
+      />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -1450,6 +1462,7 @@ const AIChat = memo(function AIChat({
                   onSelectSession={handleSelectHarnessSession}
                   onCloseSession={handleCloseHarnessSession}
                   onOpenRuntimeSession={handleOpenRecentPiNativeSession}
+                  onContinueRecentRuntimeSession={handleOpenRecentPiNativeSession}
                 />
               </div>
             ) : null}
