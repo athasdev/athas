@@ -5,6 +5,49 @@ It is intentionally detailed and can be deleted later.
 
 ## Status Update: 2026-03-26
 
+## Status Update: 2026-03-28
+
+Completed after the prior handoff refresh:
+
+- Pi-native Harness session UX is now materially better in the real app:
+  - the wide `Recent Pi Sessions` rail now has a real `Continue recent` action
+  - the chat header now has a real `Fork session` action for the active Harness chat
+  - the new session helper in `src/features/ai/lib/harness-session-actions.ts` picks the first recent native session that is not the current one
+- a real race in the recent-session restore path was discovered during watched-app validation and fixed:
+  - symptom:
+    - opening a recent Pi-native session could create a new Harness session with the correct `sessionPath`
+    - the same chat would still persist as `New Session` with `0` messages
+  - root cause:
+    - `ensureChatForAgent()` / `createNewChat()` could async-persist an empty chat after `handleOpenRecentPiNativeSession()` had already hydrated title/messages/runtime state
+    - that late empty save clobbered the hydrated session back to blank state
+  - fix:
+    - the AI store now has `createSeededChat(...)`, which persists a fully hydrated chat in one pass instead of creating an empty shell and backfilling it later
+    - `AIChat` now uses `createSeededChat(...)` when opening a different recent Pi-native session instead of relying on the old empty-chat creation path
+  - focused regression coverage now exists in `src/features/ai/store/store.test.ts`
+- watched-window proof on `:106` now exists for all three session-UX actions:
+  - recent-session row open:
+    - after resizing the watched Athas window to `1380x900`, clicking the top recent Pi session row restored the real transcript titled `Reply with exactly READY and nothing else.`
+    - the watched SQLite mirror for chat `harness:harness:1774632982873` showed `8` messages plus the real native `sessionPath`
+  - `Continue recent` button:
+    - real watched click at root coordinate `1396,320` opened the next-most-recent Pi session in a fresh Harness tab
+    - the watched SQLite mirror created chat `harness:session-1774633105272-odlt21:1774633105273` with `2` messages and the expected native `sessionPath`
+  - `Fork session` button:
+    - real watched click at root coordinate `1378,146` created a third Harness tab from the active chat
+    - the watched SQLite mirror created chat `harness:session-1774633154923-bndrk9:1774633154924` with:
+      - `parent_chat_id = harness:session-1774633105272-odlt21:1774633105273`
+      - `root_chat_id = harness:session-1774633105272-odlt21:1774633105273`
+      - `lineage_depth = 1`
+- important watched-stack nuance for future sessions:
+  - the right rail is hidden below the `xl` breakpoint
+  - the local watched helper currently restores Athas at `1200x800`, which hides the rail
+  - watched proof for the recent-session rail therefore requires resizing the live Athas window to `1380x900` first
+- current proof boundary after this slice:
+  - opening a recent Pi-native session from the rail is proven in the real watched app
+  - `Continue recent` is proven in the real watched app
+  - `Fork session` is proven in the real watched app
+  - these flows now persist correct transcript/title/runtime or lineage data in the watched SQLite mirror
+  - the local `.pi/` smoke extension remains untracked test scaffolding and should stay out of commits
+
 The main WIP concern described in this handoff has now been implemented on this branch.
 
 Completed after this handoff was written:
