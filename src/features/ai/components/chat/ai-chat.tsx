@@ -1040,7 +1040,6 @@ const AIChat = memo(function AIChat({
     }
 
     nativeSessionRestoreAttemptRef.current = restoreAttemptKey;
-    let cancelled = false;
 
     const reconcileNativeSession = async () => {
       try {
@@ -1049,7 +1048,7 @@ const AIChat = memo(function AIChat({
           currentAgentId,
           rootFolderPath ?? null,
         );
-        if (cancelled || sessions.length === 0) {
+        if (sessions.length === 0) {
           return;
         }
 
@@ -1069,47 +1068,45 @@ const AIChat = memo(function AIChat({
           return;
         }
 
-        useAIChatStore
-          .getState()
-          .setAcpRuntimeState(buildPiNativeRuntimeStateFromSession(latestSession), resolvedScopeId);
-
         const transcript = await getHarnessRuntimeSessionTranscript(
           runtimeBackend,
           currentAgentId,
           latestSession.path,
         );
-        if (cancelled) {
+        const hydratedCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
+        if (
+          !hydratedCurrentChat ||
+          hydratedCurrentChat.id !== currentChatId ||
+          hydratedCurrentChat.messages.length > 0
+        ) {
           return;
         }
 
+        useAIChatStore
+          .getState()
+          .setAcpRuntimeState(buildPiNativeRuntimeStateFromSession(latestSession), resolvedScopeId);
+
         const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
         if (transcriptMessages.length > 0) {
-          const hydratedCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
-          if (
-            hydratedCurrentChat &&
-            hydratedCurrentChat.id === currentChatId &&
-            hydratedCurrentChat.messages.length === 0
-          ) {
-            useAIChatStore.getState().replaceChatMessages(currentChatId, transcriptMessages);
-          }
+          useAIChatStore.getState().replaceChatMessages(currentChatId, transcriptMessages);
         }
 
-        if (liveCurrentChat.title === getDefaultChatTitle(surface)) {
+        if (hydratedCurrentChat.title === getDefaultChatTitle(surface)) {
           const nextTitle = derivePiNativeSessionTitle(latestSession);
-          if (nextTitle !== liveCurrentChat.title) {
+          if (nextTitle !== hydratedCurrentChat.title) {
             useAIChatStore.getState().updateChatTitle(currentChatId, nextTitle);
           }
         }
       } catch (error) {
         console.error("Failed to reconcile pi-native Harness session", error);
+      } finally {
+        if (nativeSessionRestoreAttemptRef.current === restoreAttemptKey) {
+          nativeSessionRestoreAttemptRef.current = null;
+        }
       }
     };
 
     void reconcileNativeSession();
-
-    return () => {
-      cancelled = true;
-    };
   }, [currentAgentId, currentChat, resolvedScopeId, rootFolderPath, runtimeBackend, surface]);
 
   return (

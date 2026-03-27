@@ -878,19 +878,18 @@ Use something like this:
 
 ## Current Status Command Snapshot
 
-At the time this handoff was prepared:
+At the time this handoff was last refreshed:
 
 - branch: `adding-pi-mono`
-- latest committed fix before current uncommitted work: `eb6c567d Fix: Repair Pi local runtime state`
-- working tree includes a new uncommitted startup-repair wiring update in:
-  - `src-tauri/src/features/ai/acp/bridge.rs`
-  - `src-tauri/src/features/ai/acp/config.rs`
+- latest committed native restore slice on origin: `d8153305 Feat: hydrate pi-native transcript on restore`
+- current working tree includes one uncommitted watched-window restore fix in:
+  - `src/features/ai/components/chat/ai-chat.tsx`
 - recent validator run succeeded with:
-  - `cargo test -p athas registry_new_repairs_pi_local_runtime_files -- --nocapture`
-  - `cargo test -p athas load_pi_runtime_state_repairs_and_reads_canonical_profile -- --nocapture`
-  - `cargo test -p athas registry_includes_pi_rpc_agent -- --nocapture`
-  - `cargo build -p athas`
+  - `bun test src-tauri/pi-native-host/session-transcript.test.js src/features/ai/lib/pi-native-restore.test.ts src/features/ai/lib/harness-runtime.test.ts`
   - `bun typecheck`
+  - `cargo build -p athas`
+  - `cargo fmt --all --check`
+  - `bun vite build`
   - `git diff --check`
 
 ### Live verification snapshot
@@ -904,10 +903,28 @@ At the time this handoff was prepared:
   - `reasoning-state.json` now reports `openai-codex / gpt-5.4 / medium`
   - `behavior-mode-state.json` no longer carries `currentBehavior`
 - the watched `:106` display has been unstable across restarts, but the latest root capture is non-black again and the full Athas window is present
-- remaining live gap:
-  - the clean watched `:106` window now accepts printable prompt input again
-  - prompt send and response were re-proven live with `Reply with exactly READY and nothing else.` → `READY`
-  - the remaining runtime re-proof gap is fresh-profile cold-start behavior, not watched-window Harness input
+- watched-window native restore proof now exists on the real `:106` surface:
+  - seeded a clean `pi-native` Harness tab restore state into the watched profile
+  - cold-launched Athas on `:106`
+  - verified the restored Harness tab now hydrates from the real Pi session file instead of staying `New Session`
+  - visible watched-window result:
+    - title: `Reply with exactly READY and nothing else.`
+    - transcript:
+      - user: `Reply with exactly READY and nothing else.`
+      - assistant: `READY`
+  - DB proof matched the UI:
+    - chat `harness:harness:1774583312206` received 2 messages
+    - `acp_state.runtimeState.source = "pi-native"`
+    - `sessionId = 623a3e64-8fc2-490b-a869-e93789ee866b`
+    - session path points at `/home/fsos/.pi/agent/sessions/--home-fsos-Developer-athas--/2026-03-27T09-18-29-566Z_623a3e64-8fc2-490b-a869-e93789ee866b.jsonl`
+- root cause of the restore bug:
+  - the native restore effect in `ai-chat.tsx` was cancelling its own in-flight async work during harmless rerenders
+  - `listSessions()` would complete, but effect cleanup set `cancelled = true` before transcript fetch and hydration could finish
+  - the duplicate-attempt guard then blocked the rerun, leaving the chat stuck as `New Session`
+- corrected behavior:
+  - the effect no longer aborts the in-flight native restore attempt on rerender
+  - it still prevents duplicate concurrent attempts with `nativeSessionRestoreAttemptRef`
+  - the guard is cleared in `finally`, so future retries remain possible if a run actually fails
 
 ---
 
