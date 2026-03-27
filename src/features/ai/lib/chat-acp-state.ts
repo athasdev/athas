@@ -1,6 +1,15 @@
 import type { AcpRuntimeState, SessionMode, SlashCommand } from "@/features/ai/types/acp";
 import type { Chat, ChatAcpState } from "@/features/ai/types/ai-chat";
 
+const normalizeOptionalString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
 const cloneSessionMode = (mode: SessionMode): SessionMode => ({
   ...mode,
 });
@@ -11,7 +20,17 @@ const cloneSlashCommand = (command: SlashCommand): SlashCommand => ({
 });
 
 const normalizeRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => {
-  const normalizedState = { ...state };
+  const normalizedState: AcpRuntimeState = {
+    ...state,
+    source: normalizeOptionalString(state.source),
+    sessionId: normalizeOptionalString(state.sessionId),
+    sessionPath: normalizeOptionalString(state.sessionPath),
+    workspacePath: normalizeOptionalString(state.workspacePath),
+    provider: normalizeOptionalString(state.provider),
+    modelId: normalizeOptionalString(state.modelId),
+    thinkingLevel: normalizeOptionalString(state.thinkingLevel),
+    behavior: normalizeOptionalString(state.behavior),
+  };
 
   if (
     normalizedState.agentId === "pi" &&
@@ -28,8 +47,10 @@ const normalizeRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => {
 const cloneRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => normalizeRuntimeState(state);
 
 export const normalizeChatAcpState = (state?: ChatAcpState | null): ChatAcpState => ({
-  preferredModeId: state?.preferredModeId ?? null,
-  currentModeId: state?.currentModeId ?? state?.preferredModeId ?? null,
+  preferredModeId: normalizeOptionalString(state?.preferredModeId),
+  currentModeId:
+    normalizeOptionalString(state?.currentModeId) ??
+    normalizeOptionalString(state?.preferredModeId),
   availableModes: (state?.availableModes ?? []).map(cloneSessionMode),
   slashCommands: (state?.slashCommands ?? []).map(cloneSlashCommand),
   runtimeState: state?.runtimeState ? cloneRuntimeState(state.runtimeState) : null,
@@ -45,13 +66,12 @@ export const getChatPreferredAcpModeId = (
   chat: Pick<Chat, "acpState"> | null | undefined,
   defaultModeId: string | null,
 ): string | null => {
-  const preferredModeId = chat?.acpState?.preferredModeId?.trim();
+  const preferredModeId = normalizeOptionalString(chat?.acpState?.preferredModeId);
   if (preferredModeId) {
     return preferredModeId;
   }
 
-  const normalizedDefaultModeId = defaultModeId?.trim();
-  return normalizedDefaultModeId || null;
+  return normalizeOptionalString(defaultModeId);
 };
 
 export const getChatWarmStartAcpState = (

@@ -76,7 +76,7 @@ impl AgentRegistry {
          "pi".to_string(),
          AgentConfig::new("pi", "Pi", "pi")
             .with_description("Pi Coding Agent")
-            .with_args(vec!["--mode", "rpc"]),
+            .with_args(vec!["--mode", "rpc", "--auto", "medium"]),
       );
 
       Self {
@@ -311,6 +311,14 @@ mod tests {
       let pi = registry.get("pi").expect("pi agent should be registered");
 
       assert_eq!(pi.binary_name, "pi");
-      assert_eq!(pi.args, vec!["--mode".to_string(), "rpc".to_string()]);
+      assert_eq!(
+         pi.args,
+         vec![
+            "--mode".to_string(),
+            "rpc".to_string(),
+            "--auto".to_string(),
+            "medium".to_string(),
+         ]
+      );
    }
 }

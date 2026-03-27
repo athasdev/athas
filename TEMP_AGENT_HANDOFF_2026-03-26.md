@@ -60,6 +60,13 @@ Additional follow-up completed after the above:
   - low-signal ACP events like mode/thinking/status/permission no longer render as a block above the composer
   - tool calls, plan updates, and explicit agent errors remain visible
 - watched-display screenshot validation on `:106` now shows the restored Harness transcript without the old `Session activity` block crowding the chatbox
+- Pi/Harness prompt handling was hardened again:
+  - malformed persisted ACP runtime strings are now sanitized on warm restore before the frontend tries to resume/send
+  - Pi RPC launch args now include `--auto medium`, so Athas no longer drops that policy flag when starting Pi
+  - ACP terminal events now settle on a short frontend grace window, which prevents `prompt_complete` / `error` from finalizing the assistant placeholder before trailing Pi content chunks land
+  - focused regressions now cover the two bad terminal-ordering cases:
+    - `prompt_complete` before the last `content_chunk`
+    - `error` before the last `content_chunk`
 - important validation note:
   - the earlier `forbidden path ... allow-read-dir` startup failure was caused by launching Tauri with `HOME=/tmp/...`, which changed Tauri's `$HOME/**` fs capability scope so `/home/fsos/Developer/athas` was no longer permitted
   - that specific failure was a validation-environment bug, not the underlying product bug

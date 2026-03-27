@@ -38,8 +38,10 @@ interface AcpBootstrapContext {
 export class AcpStreamHandler {
   private static activeHandlers = new Map<ChatScopeId, AcpStreamHandler>();
   private static lastSessionIdByKey = new Map<string, string>();
+  private static readonly TERMINAL_SETTLE_DELAY_MS = 100;
   private listeners: AcpListeners = {};
   private timeout?: NodeJS.Timeout;
+  private terminalSettleTimeout?: NodeJS.Timeout;
   private lastActivityTime = Date.now();
   private hasObservedResponseActivity = false;
   private activeTools = new Map<string, string>();
@@ -145,12 +147,17 @@ export class AcpStreamHandler {
     return useProjectStore.getState().rootFolderPath ?? null;
   }
 
-  private normalizeResumeSessionId(sessionId: string | null | undefined): string | null {
-    if (!sessionId || sessionId.startsWith("pi:")) {
+  private normalizeResumeSessionId(sessionId: unknown): string | null {
+    if (typeof sessionId !== "string") {
       return null;
     }
 
-    return sessionId;
+    const normalizedSessionId = sessionId.trim();
+    if (!normalizedSessionId || normalizedSessionId.startsWith("pi:")) {
+      return null;
+    }
+
+    return normalizedSessionId;
   }
 
   private getPreferredSessionModeId(): string | null {
@@ -308,8 +315,8 @@ export class AcpStreamHandler {
       return;
     }
 
-    // Treat all other stop reasons as completion in case no session_complete arrives
-    this.handleSessionComplete();
+    // Give trailing content chunks a brief chance to arrive before finalizing.
+    this.scheduleTerminalCompletion();
   }
 
   private handleSessionModeUpdate(event: Extract<AcpEvent, { type: "session_mode_update" }>): void {
@@ -456,11 +463,49 @@ export class AcpStreamHandler {
     this.handlers.onComplete();
   }
 
+  private scheduleTerminalCompletion(): void {
+    if (this.sessionComplete || this.cancelled) {
+      return;
+    }
+
+    if (this.terminalSettleTimeout) {
+      clearTimeout(this.terminalSettleTimeout);
+    }
+
+    this.terminalSettleTimeout = setTimeout(() => {
+      this.terminalSettleTimeout = undefined;
+      if (this.sessionComplete || this.cancelled) {
+        return;
+      }
+      this.handleSessionComplete();
+    }, AcpStreamHandler.TERMINAL_SETTLE_DELAY_MS);
+  }
+
+  private scheduleTerminalError(error: string, canReconnect?: boolean): void {
+    if (this.sessionComplete || this.cancelled) {
+      return;
+    }
+
+    if (this.terminalSettleTimeout) {
+      clearTimeout(this.terminalSettleTimeout);
+    }
+
+    this.terminalSettleTimeout = setTimeout(() => {
+      this.terminalSettleTimeout = undefined;
+      if (this.sessionComplete || this.cancelled) {
+        return;
+      }
+
+      this.pendingNewMessage = false;
+      this.cleanup();
+      this.handlers.onError(error, canReconnect);
+    }, AcpStreamHandler.TERMINAL_SETTLE_DELAY_MS);
+  }
+
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {
     console.error("ACP error:", event.error);
-    this.pendingNewMessage = false;
-    this.cleanup();
-    this.handlers.onError(event.error);
+    // Give trailing content chunks a brief chance to arrive before surfacing the error.
+    this.scheduleTerminalError(event.error);
   }
 
   private setupTimeout(): void {
@@ -502,6 +547,10 @@ export class AcpStreamHandler {
     if (this.timeout) {
       clearTimeout(this.timeout);
       this.timeout = undefined;
+    }
+    if (this.terminalSettleTimeout) {
+      clearTimeout(this.terminalSettleTimeout);
+      this.terminalSettleTimeout = undefined;
     }
     this.pendingNewMessage = false;
     this.hasObservedResponseActivity = false;

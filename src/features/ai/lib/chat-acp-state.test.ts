@@ -177,4 +177,42 @@ describe("chat ACP state helpers", () => {
       behavior: "orchestrator",
     });
   });
+
+  test("sanitizes malformed persisted ACP strings before warm restore", () => {
+    expect(
+      normalizeChatAcpState({
+        preferredModeId: "  ",
+        currentModeId: 42 as never,
+        availableModes: [],
+        slashCommands: [],
+        runtimeState: {
+          agentId: "pi",
+          source: "pi-local",
+          sessionId: { value: "bad" } as never,
+          sessionPath: "   " as never,
+          workspacePath: "/home/fsos/Developer/athas",
+          provider: null,
+          modelId: "gpt-5.4-mini",
+          thinkingLevel: undefined as never,
+          behavior: "orchestrator",
+        },
+      }),
+    ).toEqual({
+      preferredModeId: null,
+      currentModeId: null,
+      availableModes: [],
+      slashCommands: [],
+      runtimeState: {
+        agentId: "pi",
+        source: "pi-local",
+        sessionId: null,
+        sessionPath: null,
+        workspacePath: "/home/fsos/Developer/athas",
+        provider: null,
+        modelId: "gpt-5.4-mini",
+        thinkingLevel: null,
+        behavior: "orchestrator",
+      },
+    });
+  });
 });
