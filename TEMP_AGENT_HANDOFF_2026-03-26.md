@@ -91,6 +91,11 @@ Additional follow-up completed after the above:
   - persisted project sessions now normalize old `agent://harness` payloads and new backend-aware `agent://<backend>/<sessionId>` payloads into the same agent-session shape
   - restored agent tabs, active-buffer selection, and closed-session reopen logic now preserve backend identity instead of keying only on session id
   - current runtime behavior still defaults to `legacy-acp-bridge`; this is a storage/restore seam for future `pi-native` cutover, not the cutover itself
+- Harness runtime calls now flow through a dedicated frontend backend contract:
+  - `src/features/ai/lib/harness-runtime.ts` resolves backend identity from the active Harness scope/buffer and centralizes prompt start, status, stop, cancel, permission response, and session-mode changes
+  - `ai-chat`, `buffer-store`, `store`, and `getChatCompletionStream()` now use that runtime contract instead of calling ACP helpers directly
+  - legacy ACP bridge behavior remains the default live implementation
+  - `pi-native` is now an explicit unsupported runtime branch that fails loudly with `Pi native runtime is not wired into Athas yet.` instead of silently falling through the legacy ACP path
 - watched-display relaunch validation on `:106` with real `HOME=/home/fsos` now reflects that normalization:
   - the old lowercase plain-file `harness` tab no longer comes back after restart
   - the restored tab now comes back as a real sparkles `Harness` tab

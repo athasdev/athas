@@ -603,6 +603,10 @@ export class AcpStreamHandler {
     return invoke("get_acp_status", { routeKey: scopeId });
   }
 
+  static async changeSessionMode(modeId: string, scopeId: ChatScopeId = "panel"): Promise<void> {
+    await invoke("set_acp_session_mode", { modeId, routeKey: scopeId });
+  }
+
   // Static method to stop the current agent
   static async stopAgent(scopeId: ChatScopeId = "panel"): Promise<void> {
     AcpStreamHandler.activeHandlers.get(scopeId)?.forceStop();

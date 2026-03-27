@@ -1,4 +1,6 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { createHarnessRuntimePromptSession } from "@/features/ai/lib/harness-runtime";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpEvent } from "@/features/ai/types/acp";
@@ -10,7 +12,6 @@ import {
 } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { AcpStreamHandler } from "./acp-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
 import { getProvider } from "./providers";
 import { processStreamingResponse } from "./stream-utils";
@@ -53,24 +54,29 @@ export const getChatCompletionStream = async (
   onResourceChunk?: (uri: string, name: string | null) => void,
   surface: AIChatSurface = "panel",
   acpResumeKey: ChatScopeId = "panel",
+  runtimeBackend: HarnessRuntimeBackend = "legacy-acp-bridge",
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
     if (isAcpAgent(agentId)) {
-      const handler = new AcpStreamHandler(agentId, {
-        surface,
-        scopeId: acpResumeKey,
-        resumeKey: acpResumeKey,
-        onChunk,
-        onComplete,
-        onError,
-        onNewMessage,
-        onToolUse,
-        onToolComplete,
-        onPermissionRequest,
-        onEvent: onAcpEvent,
-        onImageChunk,
-        onResourceChunk,
+      const handler = createHarnessRuntimePromptSession({
+        backend: runtimeBackend,
+        agentId,
+        handlers: {
+          surface,
+          scopeId: acpResumeKey,
+          resumeKey: acpResumeKey,
+          onChunk,
+          onComplete,
+          onError,
+          onNewMessage,
+          onToolUse,
+          onToolComplete,
+          onPermissionRequest,
+          onEvent: onAcpEvent,
+          onImageChunk,
+          onResourceChunk,
+        },
       });
       await handler.start(userMessage, context, conversationHistory);
       return;

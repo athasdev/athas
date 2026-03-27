@@ -25,6 +25,12 @@ import {
   shouldAutoRetryStreamError,
 } from "@/features/ai/lib/chat-stream-retry";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import {
+  cancelHarnessRuntimePrompt,
+  getHarnessRuntimeStatus,
+  resolveHarnessRuntimeBackendForScope,
+  respondToHarnessPermission,
+} from "@/features/ai/lib/harness-runtime";
 import { getMostRecentClosedHarnessSession } from "@/features/ai/lib/harness-session-lifecycle";
 import { getHarnessTrustState } from "@/features/ai/lib/harness-trust-state";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
@@ -35,7 +41,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProjectStore } from "@/stores/project-store";
-import { AcpStreamHandler } from "@/utils/acp-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
 import { cn } from "@/utils/cn";
 import type { ContextInfo } from "@/utils/types";
@@ -169,6 +174,10 @@ const AIChat = memo(function AIChat({
   const currentPermission = pendingPermissions[0];
   const [permissionValue, setPermissionValue] = useState("");
   const currentAgentId = chatActions.getCurrentAgentId();
+  const runtimeBackend = useMemo(
+    () => resolveHarnessRuntimeBackendForScope(resolvedScopeId, buffers, activeBuffer ?? null),
+    [activeBuffer, buffers, resolvedScopeId],
+  );
 
   useEffect(() => {
     if (!currentPermission) {
@@ -251,11 +260,19 @@ const AIChat = memo(function AIChat({
     const currentAgentId = chatActions.getCurrentAgentId();
     if (isAcpAgent(currentAgentId)) {
       try {
-        await AcpStreamHandler.cancelPrompt(resolvedScopeId);
+        await cancelHarnessRuntimePrompt(resolvedScopeId, buffers, activeBuffer ?? null);
         if (pendingPermissions.length > 0) {
           await Promise.all(
             pendingPermissions.map((item) =>
-              AcpStreamHandler.respondToPermission(item.requestId, false, true, resolvedScopeId),
+              respondToHarnessPermission(
+                item.requestId,
+                false,
+                true,
+                resolvedScopeId,
+                buffers,
+                undefined,
+                activeBuffer ?? null,
+              ),
             ),
           );
           chatActions.markPendingAcpPermissionsStale();
@@ -703,6 +720,7 @@ const AIChat = memo(function AIChat({
           },
           surface,
           acpResumeKey,
+          runtimeBackend,
         );
       await startCompletion();
     } catch (error) {
@@ -823,12 +841,14 @@ const AIChat = memo(function AIChat({
         detail: cancelled ? "cancel" : approved ? "allow" : "deny",
         state: approved ? "success" : "info",
       });
-      await AcpStreamHandler.respondToPermission(
+      await respondToHarnessPermission(
         currentPermission.requestId,
         approved,
         cancelled,
         resolvedScopeId,
+        buffers,
         value,
+        activeBuffer ?? null,
       );
       chatActions.resolveAcpPermissionRequest(
         currentPermission.requestId,
@@ -902,8 +922,9 @@ const AIChat = memo(function AIChat({
       const nextStatuses = await Promise.all(
         harnessSessionKeys.map(async (harnessSessionKey) => {
           try {
-            const status = await AcpStreamHandler.getStatus(
+            const status = await getHarnessRuntimeStatus(
               createHarnessChatScopeId(harnessSessionKey),
+              buffers,
             );
             return [harnessSessionKey, status.running] as const;
           } catch (error) {
@@ -941,7 +962,11 @@ const AIChat = memo(function AIChat({
 
     const reconcileRestoredHarnessState = async () => {
       try {
-        const status = await AcpStreamHandler.getStatus(resolvedScopeId);
+        const status = await getHarnessRuntimeStatus(
+          resolvedScopeId,
+          buffers,
+          activeBuffer ?? null,
+        );
         if (cancelled) {
           return;
         }
@@ -973,7 +998,7 @@ const AIChat = memo(function AIChat({
     return () => {
       cancelled = true;
     };
-  }, [currentChat?.id, pendingPermissions.length, resolvedScopeId, surface]);
+  }, [activeBuffer, buffers, currentChat?.id, pendingPermissions.length, resolvedScopeId, surface]);
 
   return (
     <div

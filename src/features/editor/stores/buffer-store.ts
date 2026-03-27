@@ -9,6 +9,7 @@ import {
   getDefaultHarnessBufferTitle,
   getHarnessBufferTitle,
 } from "@/features/ai/lib/chat-scope";
+import { getHarnessRuntimeStatus, stopHarnessRuntime } from "@/features/ai/lib/harness-runtime";
 import {
   buildHarnessAgentBufferPath,
   DEFAULT_HARNESS_RUNTIME_BACKEND,
@@ -242,9 +243,7 @@ export const stopHarnessBufferSession = async (
 ): Promise<void> => {
   if (!buffer.isAgent) return;
   if (getHarnessBufferBackend(buffer) !== DEFAULT_HARNESS_RUNTIME_BACKEND) return;
-
-  const { AcpStreamHandler } = await import("@/utils/acp-handler");
-  await AcpStreamHandler.stopAgent(createHarnessChatScopeId(getHarnessSessionId(buffer)));
+  await stopHarnessRuntime(createHarnessChatScopeId(getHarnessSessionId(buffer)), [buffer]);
 };
 
 export const isHarnessBufferRunning = async (
@@ -252,10 +251,9 @@ export const isHarnessBufferRunning = async (
 ): Promise<boolean> => {
   if (!buffer.isAgent) return false;
   if (getHarnessBufferBackend(buffer) !== DEFAULT_HARNESS_RUNTIME_BACKEND) return false;
-
-  const { AcpStreamHandler } = await import("@/utils/acp-handler");
-  const status = await AcpStreamHandler.getStatus(
+  const status = await getHarnessRuntimeStatus(
     createHarnessChatScopeId(getHarnessSessionId(buffer)),
+    [buffer],
   );
 
   return status.running;

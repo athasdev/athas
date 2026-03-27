@@ -42,12 +42,16 @@ import {
   generateCompactionSummary,
   getConfiguredSummaryModel,
 } from "@/features/ai/lib/chat-summarizer";
+import {
+  changeHarnessRuntimeSessionMode,
+  stopHarnessRuntime,
+} from "@/features/ai/lib/harness-runtime";
 import { getNextQueuedMessageIndex } from "@/features/ai/lib/message-queue";
 import type { AgentType, Chat, ChatScopeId, CompactionTrigger } from "@/features/ai/types/ai-chat";
 import { AI_PROVIDERS } from "@/features/ai/types/providers";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useSettingsStore } from "@/features/settings/store";
-import { AcpStreamHandler } from "@/utils/acp-handler";
 import {
   getProviderApiToken,
   isAcpAgent,
@@ -102,6 +106,8 @@ const hydrateChatInStore = (state: AIChatState, nextChat: Chat) => {
 
 const getChatById = (chats: Chat[], chatId: string | null): Chat | undefined =>
   chats.find((chat) => chat.id === chatId);
+
+const getCurrentRuntimeBuffer = () => useBufferStore.getState().actions.getActiveBuffer();
 
 const applyWarmStartAcpScopeState = (scopeState: ChatScopeState, chat?: Chat) => {
   if (chat && isAcpAgent(chat.agentId)) {
@@ -365,9 +371,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           );
           if (isAcpAgent(previousChat?.agentId ?? chatAgentId)) {
             get().markPendingAcpPermissionsStale(scopeId);
-            void AcpStreamHandler.stopAgent(scopeId).catch((error) =>
-              console.error("Failed to reset ACP route for new chat:", error),
-            );
+            void stopHarnessRuntime(
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            ).catch((error) => console.error("Failed to reset ACP route for new chat:", error));
           }
           return newChat.id;
         },
@@ -416,9 +424,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             void get().summarizeBranchTransition(sourceChatId, chatId);
             if (isAcpAgent(sourceChat?.agentId ?? targetChat?.agentId ?? "custom")) {
               get().markPendingAcpPermissionsStale(scopeId);
-              void AcpStreamHandler.stopAgent(scopeId).catch((error) =>
-                console.error("Failed to reset ACP route on chat switch:", error),
-              );
+              void stopHarnessRuntime(
+                scopeId,
+                useBufferStore.getState().buffers,
+                getCurrentRuntimeBuffer(),
+              ).catch((error) => console.error("Failed to reset ACP route on chat switch:", error));
             }
           }
           set((state) => {
@@ -496,7 +506,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             await saveChatToDb(forkedChat);
             if (isAcpAgent(forkedChat.agentId)) {
               get().markPendingAcpPermissionsStale(targetScopeId);
-              await AcpStreamHandler.stopAgent(targetScopeId);
+              await stopHarnessRuntime(
+                targetScopeId,
+                useBufferStore.getState().buffers,
+                getCurrentRuntimeBuffer(),
+              );
             }
 
             return forkedChat.id;
@@ -561,7 +575,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             await get().syncChatToDatabase(currentChatId);
             if (isAcpAgent(chat.agentId)) {
               get().markPendingAcpPermissionsStale(scopeId);
-              await AcpStreamHandler.stopAgent(scopeId);
+              await stopHarnessRuntime(
+                scopeId,
+                useBufferStore.getState().buffers,
+                getCurrentRuntimeBuffer(),
+              );
             }
             return true;
           } catch (error) {
@@ -1185,8 +1203,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         changeSessionMode: async (modeId, scopeId = DEFAULT_SCOPE_ID) => {
           try {
-            const { invoke } = await import("@tauri-apps/api/core");
-            await invoke("set_acp_session_mode", { modeId, routeKey: scopeId });
+            await changeHarnessRuntimeSessionMode(
+              modeId,
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            );
           } catch (error) {
             console.error("Failed to change session mode:", error);
           }

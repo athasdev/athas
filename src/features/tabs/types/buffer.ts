@@ -23,4 +23,5 @@ export interface Buffer {
   terminalInitialCommand?: string; // Command to run on terminal start
   isAgent?: boolean; // AI agent tab
   agentSessionId?: string; // Agent session ID
+  agentBackend?: "legacy-acp-bridge" | "pi-native";
 }
