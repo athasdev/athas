@@ -160,7 +160,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
             <>
               <div className="font-medium text-text">No slash commands available yet</div>
               <div className="mt-0.5 text-[10px] opacity-75">
-                Start an ACP session to load commands for this agent.
+                Slash commands appear when the active runtime exposes them for this agent.
               </div>
             </>
           )}
