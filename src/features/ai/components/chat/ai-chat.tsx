@@ -977,6 +977,7 @@ const AIChat = memo(function AIChat({
 
   return (
     <div
+      data-ai-chat-surface={surface}
       className={cn(
         "ui-font flex h-full flex-col text-text text-xs",
         surface === "harness" ? "bg-primary-bg" : "bg-secondary-bg",

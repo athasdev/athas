@@ -1,6 +1,7 @@
 import { AlertCircle, LoaderCircle, Send, Slash, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
+import { getHarnessComposerSeedCharacter } from "@/features/ai/lib/harness-composer-seed";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
@@ -170,6 +171,30 @@ const AIChatInputBar = memo(function AIChatInputBar({
     return text;
   }, []);
 
+  const syncDraftInput = useCallback(
+    (nextInput: string, { focusComposer = false }: { focusComposer?: boolean } = {}) => {
+      chatActions.setInput(nextInput);
+      lastSyncedInputRef.current = nextInput;
+      setHasInputText(nextInput.trim().length > 0);
+
+      if (focusComposer && inputRef.current) {
+        inputRef.current.textContent = nextInput;
+
+        const selection = window.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(inputRef.current);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        inputRef.current.focus();
+      }
+    },
+    [chatActions],
+  );
+
   const getMentionDropdownPosition = useCallback(() => {
     if (!inputRef.current) {
       return { top: 0, left: 0 };
@@ -258,14 +283,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
       // Only sync if store input differs from what's in the DOM and it's an external change
       if (storeInput !== currentContent && storeInput !== lastSyncedInputRef.current) {
         isUpdatingContentRef.current = true;
+        setHasInputText(storeInput.trim().length > 0);
         lastSyncedInputRef.current = storeInput;
 
-        // Update contentEditable content
-        if (storeInput === "") {
-          inputRef.current.innerHTML = "";
-        } else {
-          inputRef.current.textContent = storeInput;
-        }
+        inputRef.current.innerHTML = storeInput === "" ? "" : storeInput;
 
         // Position cursor at the end
         setTimeout(() => {
@@ -291,6 +312,42 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // Note: We don't subscribe to continuous changes to avoid re-renders
     // The checkAndSync on mount handles initial sync and chat switching
   }, [chatState.input, getPlainTextFromDiv]);
+
+  useEffect(() => {
+    if (surface !== "harness" || !isInputEnabled) {
+      return;
+    }
+
+    const handleHarnessSeedKey = (event: KeyboardEvent) => {
+      const harnessRoot = aiChatContainerRef.current?.closest("[data-ai-chat-surface='harness']");
+      if (!harnessRoot || !(event.target instanceof Node) || !harnessRoot.contains(event.target)) {
+        return;
+      }
+
+      const seedCharacter = getHarnessComposerSeedCharacter({
+        key: event.key,
+        defaultPrevented: event.defaultPrevented,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        isComposing: event.isComposing,
+        target: event.target,
+      });
+
+      if (!seedCharacter) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const currentDraft = getPlainTextFromDiv();
+      syncDraftInput(`${currentDraft}${seedCharacter}`, { focusComposer: true });
+    };
+
+    document.addEventListener("keydown", handleHarnessSeedKey, true);
+    return () => document.removeEventListener("keydown", handleHarnessSeedKey, true);
+  }, [getPlainTextFromDiv, isInputEnabled, surface, syncDraftInput]);
 
   // Click outside handler for context dropdown
   useEffect(() => {
@@ -450,10 +507,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
     // Only update if content actually changed
     if (plainTextFromDiv !== currentInput) {
-      chatActions.setInput(plainTextFromDiv);
-
-      // Update local state for button enabled/disabled
-      setHasInputText(plainTextFromDiv.trim().length > 0);
+      syncDraftInput(plainTextFromDiv);
 
       // Detect slash commands at start of input (robust against leading whitespace/newlines)
       const normalizedInput = plainTextFromDiv.trimStart();
@@ -682,8 +736,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return null;
 
-    chatActions.setInput("");
-    setHasInputText(false);
+    syncDraftInput("");
     chatActions.clearPastedImages();
     if (inputRef.current) {
       inputRef.current.innerHTML = "";
