@@ -135,10 +135,25 @@ Additional follow-up completed after the above:
   - local machine proof for this resume slice:
     - after listing Athas workspace sessions, a host-level `startSession` request with no `sessionPath` resumed the latest real session id `623a3e64-8fc2-490b-a869-e93789ee866b`
     - the emitted native runtime state pointed at the same latest JSONL path returned by `listSessions`
+- frontend Harness open/restore now consumes that native session truth in a narrow way:
+  - `AIChat` now reconciles an empty `pi-native` Harness Pi chat with the latest real Pi workspace session metadata on open
+  - the guard is intentionally strict:
+    - Harness surface only
+    - `pi-native` backend only
+    - Pi agent only
+    - known workspace path only
+    - current chat must still be empty and must not already have a `sessionPath`
+  - the reconciliation currently hydrates:
+    - native runtime state (`sessionId`, `sessionPath`, `workspacePath`, `source = pi-native`)
+    - chat title when it is still the default `New Session`
+  - important limitation:
+    - this does not yet hydrate the native transcript into Athas chat history
+    - it fixes native identity/restore targeting first, not full session-file-to-chat synchronization
 - current native gaps still remaining after this slice:
   - no native permission flow yet
   - no native session-mode / thinking / model mutation surface yet
-  - no frontend-native restore/resume selection UI wired to the new session listing yet
+  - no frontend-native restore/resume selection UI beyond the latest-session reconciliation yet
+  - no native transcript hydration from Pi session files into Athas chat state yet
   - no migration or settings/package/extension UI yet
   - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
 - local machine proof for the new native slice:

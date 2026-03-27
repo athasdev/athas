@@ -28,11 +28,17 @@ import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import {
   cancelHarnessRuntimePrompt,
   getHarnessRuntimeStatus,
+  listHarnessRuntimeSessions,
   resolveHarnessRuntimeBackendForScope,
   respondToHarnessPermission,
 } from "@/features/ai/lib/harness-runtime";
 import { getMostRecentClosedHarnessSession } from "@/features/ai/lib/harness-session-lifecycle";
 import { getHarnessTrustState } from "@/features/ai/lib/harness-trust-state";
+import {
+  buildPiNativeRuntimeStateFromSession,
+  derivePiNativeSessionTitle,
+  shouldReconcilePiNativeSession,
+} from "@/features/ai/lib/pi-native-restore";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
 import type { AcpEvent, AcpToolLocation } from "@/features/ai/types/acp";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
@@ -140,6 +146,7 @@ const AIChat = memo(function AIChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const nativeSessionRestoreAttemptRef = useRef<string | null>(null);
   const [harnessSessionStatuses, setHarnessSessionStatuses] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -999,6 +1006,88 @@ const AIChat = memo(function AIChat({
       cancelled = true;
     };
   }, [activeBuffer, buffers, currentChat?.id, pendingPermissions.length, resolvedScopeId, surface]);
+
+  useEffect(() => {
+    if (!currentChat) {
+      return;
+    }
+
+    if (
+      !shouldReconcilePiNativeSession({
+        surface,
+        runtimeBackend,
+        agentId: currentAgentId,
+        workspacePath: rootFolderPath ?? null,
+        chat: currentChat,
+      })
+    ) {
+      return;
+    }
+
+    const currentChatId = currentChat.id;
+    const restoreAttemptKey = [
+      resolvedScopeId,
+      currentChatId,
+      runtimeBackend,
+      currentAgentId,
+      rootFolderPath ?? "",
+    ].join(":");
+
+    if (nativeSessionRestoreAttemptRef.current === restoreAttemptKey) {
+      return;
+    }
+
+    nativeSessionRestoreAttemptRef.current = restoreAttemptKey;
+    let cancelled = false;
+
+    const reconcileNativeSession = async () => {
+      try {
+        const sessions = await listHarnessRuntimeSessions(
+          runtimeBackend,
+          currentAgentId,
+          rootFolderPath ?? null,
+        );
+        if (cancelled || sessions.length === 0) {
+          return;
+        }
+
+        const latestSession = sessions[0];
+        const liveCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
+        if (
+          !liveCurrentChat ||
+          liveCurrentChat.id !== currentChatId ||
+          !shouldReconcilePiNativeSession({
+            surface,
+            runtimeBackend,
+            agentId: currentAgentId,
+            workspacePath: rootFolderPath ?? null,
+            chat: liveCurrentChat,
+          })
+        ) {
+          return;
+        }
+
+        useAIChatStore
+          .getState()
+          .setAcpRuntimeState(buildPiNativeRuntimeStateFromSession(latestSession), resolvedScopeId);
+
+        if (liveCurrentChat.title === getDefaultChatTitle(surface)) {
+          const nextTitle = derivePiNativeSessionTitle(latestSession);
+          if (nextTitle !== liveCurrentChat.title) {
+            useAIChatStore.getState().updateChatTitle(currentChatId, nextTitle);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to reconcile pi-native Harness session", error);
+      }
+    };
+
+    void reconcileNativeSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentAgentId, currentChat, resolvedScopeId, rootFolderPath, runtimeBackend, surface]);
 
   return (
     <div
