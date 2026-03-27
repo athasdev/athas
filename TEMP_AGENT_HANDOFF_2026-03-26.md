@@ -927,8 +927,8 @@ Use something like this:
 At the time this handoff was last refreshed:
 
 - branch: `adding-pi-mono`
-- latest committed native restore slice on origin: `20826189 Feat: default Harness entry to pi-native for Pi`
-- current working tree is expected to be clean after the corresponding docs refresh commit
+- latest committed native runtime slice on origin before this working tree: `e4e0acb6 Docs: refresh pi-native runtime parity handoff`
+- current working tree now contains an uncommitted Pi AI-settings milestone in progress
 - recent validator run succeeded with:
   - `bun test src/features/ai/lib/harness-entry-backend.test.ts src/features/layout/components/footer/editor-footer-ai-entry.test.ts src/features/command-palette/constants/view-actions.test.tsx src/features/layout/components/empty-editor-state-actions.test.ts`
   - `bun test src-tauri/pi-native-host/session-transcript.test.js src/features/ai/lib/pi-native-restore.test.ts src/features/ai/lib/harness-runtime.test.ts`
@@ -988,6 +988,89 @@ At the time this handoff was last refreshed:
     - the live Athas window on `:106` is healthy and visibly shows the native restored `READY` transcript
     - synthetic close/reopen gestures on this Xvfb/WebKit stack still refused to land reliably during this slice
     - so the new default-entry behavior is covered by code/tests/build, but not freshly re-proven by visible watched-window automation yet
+
+### Current working-tree slice: Pi AI settings parity
+
+- new native host helper:
+  - `src-tauri/pi-native-host/pi-settings.mjs`
+  - reads shared Pi defaults/auth/packages/resources/files from the real `agentDir` + project `.pi`
+  - supports scoped default updates, API-key set/clear, OAuth logout, OAuth login callback bridging, and package install/remove
+- new host tests:
+  - `src-tauri/pi-native-host/pi-settings.test.js`
+  - verifies:
+    - global + project defaults snapshot
+    - discovered project prompt resources
+    - scoped default writes without clobbering unrelated settings
+    - clearing inherited defaults removes keys instead of writing `null`
+    - API-key set/clear through shared `auth.json`
+- host request surface added in `src-tauri/pi-native-host/index.mjs`:
+  - `getSettingsSnapshot`
+  - `setDefaults`
+  - `setApiKeyCredential`
+  - `clearAuthCredential`
+  - `loginProvider`
+  - `logoutProvider`
+  - `respondAuthPrompt`
+  - `installPackage`
+  - `removePackage`
+  - plus a separate `settings_event` stream for auth prompts/progress/browser-open events
+- Rust bridge/commands added:
+  - `src-tauri/src/features/ai/pi_native/bridge.rs`
+  - `src-tauri/src/commands/ai/pi_native.rs`
+  - `src-tauri/src/main.rs`
+  - settings events emit on `pi-native-settings-event`
+- frontend AI settings additions:
+  - `src/features/settings/lib/pi-settings.ts`
+    - typed invoke wrappers and settings-event types
+  - `src/features/settings/components/tabs/pi-settings-panel.tsx`
+    - full Pi settings surface inside the AI tab:
+      - runtime backend selector with native vs legacy health
+      - global/project scope switch
+      - Pi default provider/model/thinking controls
+      - provider auth actions:
+        - OAuth sign-in / logout
+        - API-key save / clear
+      - package install/remove
+      - discovered resource list
+      - open-real-file buttons for shared Pi files
+  - `src/features/settings/components/tabs/ai-settings.tsx`
+    - now mounts the dedicated Pi settings panel instead of the earlier placeholder auth + tiny runtime dropdown
+  - `src/features/settings/config/search-index.ts`
+    - search entries added for Pi auth/defaults/packages/advanced files
+
+### Fresh verification for the working tree
+
+- repo checks run successfully on this slice:
+  - `bun test src-tauri/pi-native-host/pi-settings.test.js src-tauri/pi-native-host/session-runtime.test.js`
+  - `bun typecheck`
+  - `bun check src/features/settings/components/tabs/ai-settings.tsx src/features/settings/components/tabs/pi-settings-panel.tsx src/features/settings/lib/pi-settings.ts src/features/settings/config/search-index.ts src-tauri/pi-native-host/pi-settings.mjs src-tauri/pi-native-host/pi-settings.test.js src-tauri/pi-native-host/index.mjs src-tauri/src/features/ai/pi_native/bridge.rs src-tauri/src/commands/ai/pi_native.rs src-tauri/src/main.rs`
+  - `cargo build -p athas`
+  - `cargo fmt --all --check`
+  - `bun vite build`
+  - `git diff --check`
+- real shared-state proof against this machine:
+  - `bun -e 'import { getPiSettingsSnapshot } ...'` was run against:
+    - `agentDir = /home/fsos/.pi/agent`
+    - `cwd = /home/fsos/Developer/athas`
+  - observed live snapshot:
+    - effective defaults: `openai-codex / gpt-5.4 / medium`
+    - package counts: `global = 1`, `project = 0`
+    - discovered resources: `319`
+    - stored auth present for `openai-codex` with `authStatus = oauth`
+    - real-file targets surfaced:
+      - `/home/fsos/.pi/agent/settings.json`
+      - `/home/fsos/.pi/agent/auth.json`
+      - `/home/fsos/.pi/agent/models.json` (missing on this machine)
+      - `/home/fsos/Developer/athas/.pi/settings.json` (missing on this project)
+
+### Current blocker / unproven piece
+
+- fresh watched-window proof for the new AI settings surface is blocked by the renderer again
+- `x11vnc` is healthy and `bun tauri dev` can be started on `:106`, but the display regressed to:
+  - only the tiny `10x10` `athas` shell window
+  - black `1-bit` root screenshots
+- so the new AI-tab Pi settings UI is verified by code/tests/build and by a real shared `.pi` snapshot on this machine, but not freshly re-proven on the visible VNC surface in this turn
+- the running PTY dev session used for the latest renderer check is exec session `57079`
 
 ---
 
