@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import {
+  type HarnessRuntimeBackend,
+  normalizeHarnessRuntimeBackend,
+  parseHarnessAgentBufferPath,
+} from "@/features/ai/lib/harness-runtime-backend";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -14,6 +18,7 @@ interface BufferSession {
 export interface AgentBufferSession {
   kind: "agent";
   sessionId: string;
+  backend: HarnessRuntimeBackend;
   name: string;
   isPinned: boolean;
 }
@@ -22,7 +27,7 @@ export type PersistedBufferSession = BufferSession | AgentBufferSession;
 
 export type ActiveSessionBuffer =
   | { kind: "file"; path: string }
-  | { kind: "agent"; sessionId: string };
+  | { kind: "agent"; sessionId: string; backend: HarnessRuntimeBackend };
 
 interface ProjectSession {
   projectPath: string;
@@ -55,27 +60,25 @@ interface WrappedPersistedSessionState {
   version?: number;
 }
 
-const getLegacyAgentSessionId = (path: string | null | undefined): string | null => {
-  if (!path?.startsWith("agent://")) {
-    return null;
-  }
-
-  const sessionId = path.slice("agent://".length).trim();
-  return sessionId || DEFAULT_HARNESS_SESSION_KEY;
-};
+const getPersistedAgentBufferIdentity = (path: string | null | undefined) =>
+  parseHarnessAgentBufferPath(path);
 
 const normalizePersistedBufferSession = (
   buffer: PersistedBufferSession | BufferSession,
 ): PersistedBufferSession => {
   if ("kind" in buffer && buffer.kind === "agent") {
-    return buffer;
+    return {
+      ...buffer,
+      backend: normalizeHarnessRuntimeBackend(buffer.backend),
+    };
   }
 
-  const legacyAgentSessionId = getLegacyAgentSessionId(buffer.path);
-  if (legacyAgentSessionId) {
+  const persistedAgentBuffer = getPersistedAgentBufferIdentity(buffer.path);
+  if (persistedAgentBuffer) {
     return {
       kind: "agent",
-      sessionId: legacyAgentSessionId,
+      sessionId: persistedAgentBuffer.sessionId,
+      backend: persistedAgentBuffer.backend,
       name: buffer.name,
       isPinned: buffer.isPinned,
     };
@@ -94,14 +97,24 @@ const normalizeActiveSessionBuffer = (
   activeBufferPath: string | null,
 ): { activeBuffer: ActiveSessionBuffer | null; activeBufferPath: string | null } => {
   if (activeBuffer?.kind === "agent") {
-    return { activeBuffer, activeBufferPath: null };
+    return {
+      activeBuffer: {
+        ...activeBuffer,
+        backend: normalizeHarnessRuntimeBackend(activeBuffer.backend),
+      },
+      activeBufferPath: null,
+    };
   }
 
   if (activeBuffer?.kind === "file") {
-    const legacyAgentSessionId = getLegacyAgentSessionId(activeBuffer.path);
-    if (legacyAgentSessionId) {
+    const persistedAgentBuffer = getPersistedAgentBufferIdentity(activeBuffer.path);
+    if (persistedAgentBuffer) {
       return {
-        activeBuffer: { kind: "agent", sessionId: legacyAgentSessionId },
+        activeBuffer: {
+          kind: "agent",
+          sessionId: persistedAgentBuffer.sessionId,
+          backend: persistedAgentBuffer.backend,
+        },
         activeBufferPath: null,
       };
     }
@@ -109,10 +122,14 @@ const normalizeActiveSessionBuffer = (
     return { activeBuffer, activeBufferPath: activeBuffer.path };
   }
 
-  const legacyAgentSessionId = getLegacyAgentSessionId(activeBufferPath);
-  if (legacyAgentSessionId) {
+  const persistedAgentBuffer = getPersistedAgentBufferIdentity(activeBufferPath);
+  if (persistedAgentBuffer) {
     return {
-      activeBuffer: { kind: "agent", sessionId: legacyAgentSessionId },
+      activeBuffer: {
+        kind: "agent",
+        sessionId: persistedAgentBuffer.sessionId,
+        backend: persistedAgentBuffer.backend,
+      },
       activeBufferPath: null,
     };
   }

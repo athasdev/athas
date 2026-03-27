@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import { DEFAULT_HARNESS_RUNTIME_BACKEND } from "@/features/ai/lib/harness-runtime-backend";
 import {
   buildHarnessTransitionPromptMessage,
   createClosedBufferHistoryEntry,
@@ -15,6 +16,7 @@ describe("harness session lifecycle helpers", () => {
         isPinned: true,
         isAgent: true,
         agentSessionId: "session-123",
+        agentBackend: "pi-native",
         isVirtual: true,
         isDiff: false,
         isImage: false,
@@ -31,6 +33,7 @@ describe("harness session lifecycle helpers", () => {
     ).toEqual({
       kind: "agent",
       sessionId: "session-123",
+      backend: "pi-native",
       name: "Harness Session",
       isPinned: true,
     });
@@ -42,6 +45,7 @@ describe("harness session lifecycle helpers", () => {
         isPinned: false,
         isAgent: false,
         agentSessionId: undefined,
+        agentBackend: undefined,
         isVirtual: false,
         isDiff: false,
         isImage: false,
@@ -71,6 +75,7 @@ describe("harness session lifecycle helpers", () => {
         isPinned: false,
         isAgent: true,
         agentSessionId: undefined,
+        agentBackend: undefined,
         isVirtual: true,
         isDiff: false,
         isImage: false,
@@ -87,6 +92,7 @@ describe("harness session lifecycle helpers", () => {
     ).toEqual({
       kind: "agent",
       sessionId: DEFAULT_HARNESS_SESSION_KEY,
+      backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
       name: "Harness",
       isPinned: false,
     });
@@ -104,6 +110,7 @@ describe("harness session lifecycle helpers", () => {
         {
           kind: "agent",
           sessionId: "session-456",
+          backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
           name: "Review Session",
           isPinned: false,
         },
@@ -111,6 +118,7 @@ describe("harness session lifecycle helpers", () => {
     ).toEqual({
       kind: "agent",
       sessionId: "session-456",
+      backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
       name: "Review Session",
       isPinned: false,
     });

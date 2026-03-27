@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import { DEFAULT_HARNESS_RUNTIME_BACKEND } from "@/features/ai/lib/harness-runtime-backend";
 import {
   getPersistedProjectSession,
   getPersistedProjectSessionWithRetry,
@@ -45,11 +46,12 @@ describe("session-store", () => {
         {
           kind: "agent",
           sessionId: "session-123",
+          backend: "pi-native",
           name: "Harness Session",
           isPinned: true,
         },
       ],
-      { kind: "agent", sessionId: "session-123" },
+      { kind: "agent", sessionId: "session-123", backend: "pi-native" },
     );
 
     const session = useSessionStore.getState().getSession("/workspace/demo");
@@ -59,10 +61,15 @@ describe("session-store", () => {
     expect(session?.buffers[1]).toEqual({
       kind: "agent",
       sessionId: "session-123",
+      backend: "pi-native",
       name: "Harness Session",
       isPinned: true,
     });
-    expect(session?.activeBuffer).toEqual({ kind: "agent", sessionId: "session-123" });
+    expect(session?.activeBuffer).toEqual({
+      kind: "agent",
+      sessionId: "session-123",
+      backend: "pi-native",
+    });
     expect(session?.activeBufferPath).toBeNull();
   });
 
@@ -97,12 +104,17 @@ describe("session-store", () => {
           sessions: {
             "/workspace/demo": {
               projectPath: "/workspace/demo",
-              activeBuffer: { kind: "agent", sessionId: "harness" },
+              activeBuffer: {
+                kind: "agent",
+                sessionId: "harness",
+                backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+              },
               activeBufferPath: null,
               buffers: [
                 {
                   kind: "agent",
                   sessionId: "harness",
+                  backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
                   name: "Harness",
                   isPinned: false,
                 },
@@ -118,8 +130,20 @@ describe("session-store", () => {
 
     expect(getPersistedProjectSession("/workspace/demo")).toMatchObject({
       projectPath: "/workspace/demo",
-      activeBuffer: { kind: "agent", sessionId: "harness" },
-      buffers: [{ kind: "agent", sessionId: "harness", name: "Harness", isPinned: false }],
+      activeBuffer: {
+        kind: "agent",
+        sessionId: "harness",
+        backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+      },
+      buffers: [
+        {
+          kind: "agent",
+          sessionId: "harness",
+          backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+          name: "Harness",
+          isPinned: false,
+        },
+      ],
     });
   });
 
@@ -145,12 +169,17 @@ describe("session-store", () => {
 
     expect(useSessionStore.getState().getSession("/workspace/demo")).toEqual({
       projectPath: "/workspace/demo",
-      activeBuffer: { kind: "agent", sessionId: DEFAULT_HARNESS_SESSION_KEY },
+      activeBuffer: {
+        kind: "agent",
+        sessionId: DEFAULT_HARNESS_SESSION_KEY,
+        backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+      },
       activeBufferPath: null,
       buffers: [
         {
           kind: "agent",
           sessionId: DEFAULT_HARNESS_SESSION_KEY,
+          backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
           name: "harness",
           isPinned: false,
         },
@@ -188,12 +217,17 @@ describe("session-store", () => {
 
     expect(getPersistedProjectSession("/workspace/demo")).toEqual({
       projectPath: "/workspace/demo",
-      activeBuffer: { kind: "agent", sessionId: DEFAULT_HARNESS_SESSION_KEY },
+      activeBuffer: {
+        kind: "agent",
+        sessionId: DEFAULT_HARNESS_SESSION_KEY,
+        backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+      },
       activeBufferPath: null,
       buffers: [
         {
           kind: "agent",
           sessionId: DEFAULT_HARNESS_SESSION_KEY,
+          backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
           name: "harness",
           isPinned: false,
         },
@@ -212,12 +246,17 @@ describe("session-store", () => {
             sessions: {
               "/workspace/demo": {
                 projectPath: "/workspace/demo",
-                activeBuffer: { kind: "agent", sessionId: "harness" },
+                activeBuffer: {
+                  kind: "agent",
+                  sessionId: "harness",
+                  backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+                },
                 activeBufferPath: null,
                 buffers: [
                   {
                     kind: "agent",
                     sessionId: "harness",
+                    backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
                     name: "Harness",
                     isPinned: false,
                   },
@@ -236,7 +275,59 @@ describe("session-store", () => {
       getPersistedProjectSessionWithRetry("/workspace/demo", { attempts: 5, delayMs: 10 }),
     ).resolves.toMatchObject({
       projectPath: "/workspace/demo",
-      activeBuffer: { kind: "agent", sessionId: "harness" },
+      activeBuffer: {
+        kind: "agent",
+        sessionId: "harness",
+        backend: DEFAULT_HARNESS_RUNTIME_BACKEND,
+      },
+    });
+  });
+
+  test("normalizes backend-aware agent paths from persisted localStorage", () => {
+    globalThis.localStorage?.setItem(
+      "athas-tab-sessions",
+      JSON.stringify({
+        state: {
+          sessions: {
+            "/workspace/demo": {
+              projectPath: "/workspace/demo",
+              activeBuffer: { kind: "file", path: "agent://pi-native/session-123" },
+              activeBufferPath: "agent://pi-native/session-123",
+              buffers: [
+                {
+                  path: "agent://pi-native/session-123",
+                  name: "Pi Native",
+                  isPinned: true,
+                },
+              ],
+              terminals: [],
+              lastSaved: 123,
+            },
+          },
+        },
+        version: 2,
+      }),
+    );
+
+    expect(getPersistedProjectSession("/workspace/demo")).toEqual({
+      projectPath: "/workspace/demo",
+      activeBuffer: {
+        kind: "agent",
+        sessionId: "session-123",
+        backend: "pi-native",
+      },
+      activeBufferPath: null,
+      buffers: [
+        {
+          kind: "agent",
+          sessionId: "session-123",
+          backend: "pi-native",
+          name: "Pi Native",
+          isPinned: true,
+        },
+      ],
+      terminals: [],
+      lastSaved: 123,
     });
   });
 });

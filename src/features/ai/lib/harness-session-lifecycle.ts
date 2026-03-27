@@ -1,4 +1,8 @@
 import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import {
+  DEFAULT_HARNESS_RUNTIME_BACKEND,
+  type HarnessRuntimeBackend,
+} from "@/features/ai/lib/harness-runtime-backend";
 import type { Buffer } from "@/features/editor/stores/buffer-store";
 
 type ClosedBufferHistorySource = Pick<
@@ -8,6 +12,7 @@ type ClosedBufferHistorySource = Pick<
   | "isPinned"
   | "isAgent"
   | "agentSessionId"
+  | "agentBackend"
   | "isVirtual"
   | "isDiff"
   | "isImage"
@@ -32,6 +37,7 @@ export type ClosedBufferHistoryEntry =
   | {
       kind: "agent";
       sessionId: string;
+      backend: HarnessRuntimeBackend;
       name: string;
       isPinned: boolean;
     };
@@ -43,6 +49,7 @@ export const createClosedBufferHistoryEntry = (
     return {
       kind: "agent",
       sessionId: buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY,
+      backend: buffer.agentBackend ?? DEFAULT_HARNESS_RUNTIME_BACKEND,
       name: buffer.name,
       isPinned: buffer.isPinned,
     };

@@ -10,6 +10,12 @@ import {
   getHarnessBufferTitle,
 } from "@/features/ai/lib/chat-scope";
 import {
+  buildHarnessAgentBufferPath,
+  DEFAULT_HARNESS_RUNTIME_BACKEND,
+  type HarnessRuntimeBackend,
+  normalizeHarnessRuntimeBackend,
+} from "@/features/ai/lib/harness-runtime-backend";
+import {
   type ClosedBufferHistoryEntry,
   createClosedBufferHistoryEntry,
   getMostRecentClosedHarnessSession,
@@ -101,6 +107,7 @@ export interface Buffer {
   // For agent tab buffers
   isAgent?: boolean;
   agentSessionId?: string;
+  agentBackend?: HarnessRuntimeBackend;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -152,9 +159,18 @@ interface BufferActions {
     command?: string;
     workingDirectory?: string;
   }) => string;
-  openAgentBuffer: (sessionId?: string) => string;
+  openAgentBuffer: (
+    sessionId?: string,
+    options?: {
+      backend?: HarnessRuntimeBackend;
+    },
+  ) => string;
   createAgentBuffer: () => string;
-  setAgentBufferTitle: (sessionId: string, title?: string | null) => void;
+  setAgentBufferTitle: (
+    sessionId: string,
+    title?: string | null,
+    backend?: HarnessRuntimeBackend,
+  ) => void;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -207,19 +223,35 @@ const SAVE_SESSION_DEBOUNCE_MS = 300;
 const getHarnessSessionId = (buffer: Pick<Buffer, "agentSessionId">): string =>
   buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY;
 
+const getHarnessBufferBackend = (buffer: Pick<Buffer, "agentBackend">): HarnessRuntimeBackend =>
+  normalizeHarnessRuntimeBackend(buffer.agentBackend);
+
+const isMatchingHarnessAgentBuffer = (
+  buffer: Pick<Buffer, "isAgent" | "agentSessionId" | "agentBackend">,
+  sessionId: string,
+  backend: HarnessRuntimeBackend,
+): boolean =>
+  Boolean(
+    buffer.isAgent &&
+      (buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY) === sessionId &&
+      getHarnessBufferBackend(buffer) === backend,
+  );
+
 export const stopHarnessBufferSession = async (
-  buffer: Pick<Buffer, "isAgent" | "agentSessionId">,
+  buffer: Pick<Buffer, "isAgent" | "agentSessionId" | "agentBackend">,
 ): Promise<void> => {
   if (!buffer.isAgent) return;
+  if (getHarnessBufferBackend(buffer) !== DEFAULT_HARNESS_RUNTIME_BACKEND) return;
 
   const { AcpStreamHandler } = await import("@/utils/acp-handler");
   await AcpStreamHandler.stopAgent(createHarnessChatScopeId(getHarnessSessionId(buffer)));
 };
 
 export const isHarnessBufferRunning = async (
-  buffer: Pick<Buffer, "isAgent" | "agentSessionId">,
+  buffer: Pick<Buffer, "isAgent" | "agentSessionId" | "agentBackend">,
 ): Promise<boolean> => {
   if (!buffer.isAgent) return false;
+  if (getHarnessBufferBackend(buffer) !== DEFAULT_HARNESS_RUNTIME_BACKEND) return false;
 
   const { AcpStreamHandler } = await import("@/utils/acp-handler");
   const status = await AcpStreamHandler.getStatus(
@@ -265,6 +297,7 @@ export const serializeProjectSessionBuffers = (buffers: Buffer[]): PersistedBuff
         ? {
             kind: "agent" as const,
             sessionId: buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY,
+            backend: getHarnessBufferBackend(buffer),
             name: buffer.name,
             isPinned: buffer.isPinned,
           }
@@ -288,6 +321,7 @@ export const serializeActiveProjectBuffer = (
     return {
       kind: "agent",
       sessionId: activeBuffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY,
+      backend: getHarnessBufferBackend(activeBuffer),
     };
   }
 
@@ -811,11 +845,19 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
-        openAgentBuffer: (sessionId = DEFAULT_HARNESS_SESSION_KEY): string => {
+        openAgentBuffer: (
+          sessionId = DEFAULT_HARNESS_SESSION_KEY,
+          options?: {
+            backend?: HarnessRuntimeBackend;
+          },
+        ): string => {
           const { buffers, maxOpenTabs } = get();
 
           const agentSessionId = sessionId;
-          const existing = buffers.find((b) => b.isAgent && b.agentSessionId === agentSessionId);
+          const agentBackend = normalizeHarnessRuntimeBackend(options?.backend);
+          const existing = buffers.find((buffer) =>
+            isMatchingHarnessAgentBuffer(buffer, agentSessionId, agentBackend),
+          );
           if (existing) {
             set((state) => {
               state.activeBufferId = existing.id;
@@ -828,7 +870,7 @@ export const useBufferStore = createSelectors(
             return existing.id;
           }
 
-          const path = `agent://${agentSessionId}`;
+          const path = buildHarnessAgentBufferPath(agentSessionId, agentBackend);
           const displayName = getDefaultHarnessBufferTitle(agentSessionId);
 
           // Handle max tabs limit
@@ -862,6 +904,7 @@ export const useBufferStore = createSelectors(
             isBinary: false,
             isAgent: true,
             agentSessionId,
+            agentBackend,
             isActive: true,
             tokens: [],
           };
@@ -879,10 +922,14 @@ export const useBufferStore = createSelectors(
           return get().actions.openAgentBuffer(createHarnessSessionKey());
         },
 
-        setAgentBufferTitle: (sessionId: string, title?: string | null) => {
+        setAgentBufferTitle: (
+          sessionId: string,
+          title?: string | null,
+          backend = DEFAULT_HARNESS_RUNTIME_BACKEND,
+        ) => {
           set((state) => {
-            const buffer = state.buffers.find(
-              (entry) => entry.isAgent && entry.agentSessionId === sessionId,
+            const buffer = state.buffers.find((entry) =>
+              isMatchingHarnessAgentBuffer(entry, sessionId, backend),
             );
             if (!buffer) return;
 
@@ -1481,7 +1528,9 @@ export const useBufferStore = createSelectors(
           });
 
           if (closedBuffer.kind === "agent") {
-            const bufferId = get().actions.openAgentBuffer(closedBuffer.sessionId);
+            const bufferId = get().actions.openAgentBuffer(closedBuffer.sessionId, {
+              backend: closedBuffer.backend,
+            });
             const reopenedBuffer = get().buffers.find((buffer) => buffer.id === bufferId);
             if (reopenedBuffer && reopenedBuffer.isPinned !== closedBuffer.isPinned) {
               get().actions.handleTabPin(reopenedBuffer.id);
@@ -1525,12 +1574,15 @@ export const useBufferStore = createSelectors(
                 !(
                   entry.kind === "agent" &&
                   entry.sessionId === closedHarnessSession.sessionId &&
+                  entry.backend === closedHarnessSession.backend &&
                   entry.name === closedHarnessSession.name
                 ),
             );
           });
 
-          const bufferId = get().actions.openAgentBuffer(closedHarnessSession.sessionId);
+          const bufferId = get().actions.openAgentBuffer(closedHarnessSession.sessionId, {
+            backend: closedHarnessSession.backend,
+          });
           const reopenedBuffer = get().buffers.find((buffer) => buffer.id === bufferId);
           if (reopenedBuffer && reopenedBuffer.isPinned !== closedHarnessSession.isPinned) {
             get().actions.handleTabPin(reopenedBuffer.id);

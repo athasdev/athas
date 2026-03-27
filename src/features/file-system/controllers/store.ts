@@ -235,7 +235,9 @@ export const useFileSystemStore = createSelectors(
           // Restore buffers
           for (const buffer of session.buffers) {
             if (buffer.kind === "agent") {
-              const bufferId = bufferActions.openAgentBuffer(buffer.sessionId);
+              const bufferId = bufferActions.openAgentBuffer(buffer.sessionId, {
+                backend: buffer.backend,
+              });
               if (buffer.isPinned) {
                 const openedBuffer = useBufferStore
                   .getState()
@@ -261,9 +263,14 @@ export const useFileSystemStore = createSelectors(
 
           // Restore active buffer
           if (session.activeBuffer?.kind === "agent") {
-            const { sessionId } = session.activeBuffer;
+            const { sessionId, backend } = session.activeBuffer;
             const { buffers } = useBufferStore.getState();
-            const activeBuffer = buffers.find((b) => b.isAgent && b.agentSessionId === sessionId);
+            const activeBuffer = buffers.find(
+              (buffer) =>
+                buffer.isAgent &&
+                (buffer.agentSessionId ?? "harness") === sessionId &&
+                (buffer.agentBackend ?? "legacy-acp-bridge") === backend,
+            );
             if (activeBuffer) {
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
