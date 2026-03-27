@@ -10,6 +10,16 @@ The main WIP concern described in this handoff has now been implemented on this 
 Completed after this handoff was written:
 
 - the old AI entry points now route to Harness-first behavior
+- native Harness restore was tightened again:
+  - when `pi-native` Harness opens inside a real workspace with no current chat selected yet, `AIChat` now bootstraps/selects the blank Pi chat before running the existing native restore reconciliation
+  - this fixes the watched-app case where Harness opened on `Pi / Chat / Idle` but stayed stuck at `New Session` because the restore effect never ran without a `currentChat`
+- fresh watched-window proof on `:106` now exists on the real `/home/fsos/Developer/athas` workspace again:
+  - cold watched startup restores the `athas` workspace tab locally
+  - opening Harness now restores the real Pi-native session transcript with title `Reply with exactly READY and nothing else.`
+  - sending a new prompt from the watched composer also works end to end again:
+    - user: `Reply with exactly OK and nothing else.`
+    - assistant: `OK`
+  - the watched SQLite chat mirror advanced from `2` restored messages to `4` total messages during the live send
 - `Cmd+R` / `Ctrl+R`, footer entry, menu copy, and command-palette copy now use Harness semantics
 - opening from a non-Harness surface targets the default Harness tab
 - toggling from a focused Harness tab closes that active Harness tab
