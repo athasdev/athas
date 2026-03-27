@@ -129,10 +129,16 @@ Additional follow-up completed after the above:
   - local machine proof for this session-list slice:
     - running `node src-tauri/pi-native-host/index.mjs` directly and sending `{"method":"listSessions", ...}` returned real Athas workspace sessions from `~/.pi/agent/sessions/--home-fsos-Developer-athas--/...`
     - the returned payload included real session paths, ids, timestamps, titles, and first-message previews
+- native host startup now mirrors the older Pi workspace-resume behavior:
+  - when `startSession` gets no explicit `sessionPath` and no bootstrap history, it now reuses the most recently modified real Pi session for that workspace instead of always starting fresh
+  - when bootstrap history is present, that auto-resume path is skipped so imported history still lands in a new native session
+  - local machine proof for this resume slice:
+    - after listing Athas workspace sessions, a host-level `startSession` request with no `sessionPath` resumed the latest real session id `623a3e64-8fc2-490b-a869-e93789ee866b`
+    - the emitted native runtime state pointed at the same latest JSONL path returned by `listSessions`
 - current native gaps still remaining after this slice:
   - no native permission flow yet
   - no native session-mode / thinking / model mutation surface yet
-  - no native restore/resume selection wired to the new session listing yet
+  - no frontend-native restore/resume selection UI wired to the new session listing yet
   - no migration or settings/package/extension UI yet
   - packaging currently bundles the host script resource, but the implementation has only been machine-proven in the local dev/runtime environment so far
 - local machine proof for the new native slice:

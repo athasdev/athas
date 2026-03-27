@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agent";
 import { applyBootstrapHistory } from "./session-bootstrap.mjs";
-import { listSessionsForWorkspace } from "./session-listing.mjs";
+import { listSessionsForWorkspace, resolveSessionPathForStart } from "./session-listing.mjs";
 
 const sessions = new Map();
 
@@ -212,9 +212,18 @@ async function ensureRouteSession(routeKey, options = {}) {
   const existing = sessions.get(routeKey);
   const requestedPath = options.sessionPath ?? null;
   const requestedCwd = options.cwd ?? existing?.cwd ?? process.cwd();
+  const availableSessions = await listSessionsForWorkspace(
+    requestedCwd,
+    getSessionDir(options.agentDir, requestedCwd),
+  );
+  const sessionPath = resolveSessionPathForStart({
+    requestedPath,
+    bootstrapConversationHistory: options.bootstrap?.conversationHistory ?? [],
+    sessions: availableSessions,
+  });
 
   if (existing) {
-    if (!requestedPath || existing.session.sessionFile === requestedPath) {
+    if (!sessionPath || existing.session.sessionFile === sessionPath) {
       return existing;
     }
     detachRoute(routeKey);
@@ -224,8 +233,8 @@ async function ensureRouteSession(routeKey, options = {}) {
     requestedCwd,
     getSessionDir(options.agentDir, requestedCwd),
   );
-  if (requestedPath) {
-    sessionManager.setSessionFile(requestedPath);
+  if (sessionPath) {
+    sessionManager.setSessionFile(sessionPath);
   }
 
   const { session } = await createAgentSession({

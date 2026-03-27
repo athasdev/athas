@@ -24,6 +24,22 @@ export function sortAndSerializeSessions(sessions) {
     .map(serializeSessionInfo);
 }
 
+export function resolveSessionPathForStart({
+  requestedPath,
+  bootstrapConversationHistory,
+  sessions,
+}) {
+  if (requestedPath) {
+    return requestedPath;
+  }
+
+  if (Array.isArray(bootstrapConversationHistory) && bootstrapConversationHistory.length > 0) {
+    return null;
+  }
+
+  return sessions[0]?.path ?? null;
+}
+
 export async function listSessionsForWorkspace(cwd, sessionDir) {
   const sessions = await SessionManager.list(cwd, sessionDir);
   return sortAndSerializeSessions(sessions);
