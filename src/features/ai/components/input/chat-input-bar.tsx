@@ -67,6 +67,34 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const hasImages = chatState.pastedImages.length > 0;
   const isSendDisabled = isStreaming ? false : (!hasInputText && !hasImages) || !isInputEnabled;
 
+  useEffect(() => {
+    if (surface !== "harness" || !isInputEnabled || !inputRef.current) {
+      return;
+    }
+
+    const focusComposer = () => {
+      if (!inputRef.current?.isConnected) {
+        return;
+      }
+
+      inputRef.current.focus();
+
+      const selection = window.getSelection();
+      if (!selection) {
+        return;
+      }
+
+      const range = document.createRange();
+      range.selectNodeContents(inputRef.current);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    const timer = window.setTimeout(focusComposer, 0);
+    return () => window.clearTimeout(timer);
+  }, [surface, isInputEnabled, chatState.currentChatId]);
+
   // Highly optimized function to get plain text from contentEditable div
   const getPlainTextFromDiv = useCallback(() => {
     if (!inputRef.current) return "";
