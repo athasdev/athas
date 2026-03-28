@@ -41,6 +41,46 @@ describe("chat ACP state helpers", () => {
     });
   });
 
+  test("clears native Pi session identity on forks while preserving runtime defaults", () => {
+    expect(
+      createForkedChatAcpState({
+        acpState: {
+          preferredModeId: "one-at-a-time",
+          currentModeId: "one-at-a-time",
+          availableModes: [{ id: "one-at-a-time", name: "One at a Time" }],
+          slashCommands: [{ name: "tree", description: "Navigate session tree" }],
+          runtimeState: {
+            agentId: "pi",
+            source: "pi-native",
+            sessionId: "native-session-123",
+            sessionPath: "/tmp/session.jsonl",
+            workspacePath: "/home/fsos/Developer/athas",
+            provider: "openai-codex",
+            modelId: "gpt-5.3-codex",
+            thinkingLevel: "medium",
+            behavior: null,
+          },
+        },
+      }),
+    ).toEqual({
+      preferredModeId: "one-at-a-time",
+      currentModeId: "one-at-a-time",
+      availableModes: [{ id: "one-at-a-time", name: "One at a Time" }],
+      slashCommands: [{ name: "tree", description: "Navigate session tree" }],
+      runtimeState: {
+        agentId: "pi",
+        source: "pi-native",
+        sessionId: null,
+        sessionPath: null,
+        workspacePath: "/home/fsos/Developer/athas",
+        provider: "openai-codex",
+        modelId: "gpt-5.3-codex",
+        thinkingLevel: "medium",
+        behavior: null,
+      },
+    });
+  });
+
   test("falls back to the global default mode when chat has no preferred ACP mode", () => {
     expect(getChatPreferredAcpModeId({ acpState: null }, "build")).toBe("build");
   });

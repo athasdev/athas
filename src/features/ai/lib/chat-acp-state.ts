@@ -46,6 +46,29 @@ const normalizeRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => {
 
 const cloneRuntimeState = (state: AcpRuntimeState): AcpRuntimeState => normalizeRuntimeState(state);
 
+const createForkedRuntimeState = (
+  runtimeState: AcpRuntimeState | null | undefined,
+): AcpRuntimeState | null => {
+  if (!runtimeState) {
+    return null;
+  }
+
+  const clonedRuntimeState = cloneRuntimeState(runtimeState);
+  if (
+    clonedRuntimeState.agentId === "pi" &&
+    clonedRuntimeState.source === "pi-native" &&
+    (clonedRuntimeState.sessionId || clonedRuntimeState.sessionPath)
+  ) {
+    return {
+      ...clonedRuntimeState,
+      sessionId: null,
+      sessionPath: null,
+    };
+  }
+
+  return clonedRuntimeState;
+};
+
 export const normalizeChatAcpState = (state?: ChatAcpState | null): ChatAcpState => ({
   preferredModeId: normalizeOptionalString(state?.preferredModeId),
   currentModeId:
@@ -59,8 +82,19 @@ export const normalizeChatAcpState = (state?: ChatAcpState | null): ChatAcpState
 export const cloneChatAcpState = (state?: ChatAcpState | null): ChatAcpState | null =>
   state ? normalizeChatAcpState(state) : null;
 
-export const createForkedChatAcpState = (sourceChat: Pick<Chat, "acpState">): ChatAcpState | null =>
-  cloneChatAcpState(sourceChat.acpState);
+export const createForkedChatAcpState = (
+  sourceChat: Pick<Chat, "acpState">,
+): ChatAcpState | null => {
+  const clonedState = cloneChatAcpState(sourceChat.acpState);
+  if (!clonedState) {
+    return null;
+  }
+
+  return {
+    ...clonedState,
+    runtimeState: createForkedRuntimeState(clonedState.runtimeState),
+  };
+};
 
 export const getChatPreferredAcpModeId = (
   chat: Pick<Chat, "acpState"> | null | undefined,
