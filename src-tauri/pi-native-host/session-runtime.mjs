@@ -123,6 +123,10 @@ export function getAvailableThinkingLevels() {
   return [...NATIVE_THINKING_LEVELS];
 }
 
+export async function reloadSessionResources(session) {
+  await session.reload();
+}
+
 export async function setSessionModel(session, selection) {
   const model = session.modelRegistry.find(selection.provider, selection.modelId);
   if (!model) {

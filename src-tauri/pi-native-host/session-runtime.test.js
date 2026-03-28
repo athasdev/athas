@@ -4,6 +4,7 @@ import {
   getAvailableModelsForSession,
   getSessionModeState,
   listSlashCommandsForSession,
+  reloadSessionResources,
   setSessionMode,
   setSessionModel,
   setSessionThinkingLevel,
@@ -191,5 +192,18 @@ describe("pi-native session runtime helpers", () => {
       "high",
       "xhigh",
     ]);
+  });
+
+  test("reloads session resources through the native session API", async () => {
+    let reloadCalls = 0;
+    const session = {
+      async reload() {
+        reloadCalls += 1;
+      },
+    };
+
+    await reloadSessionResources(session);
+
+    expect(reloadCalls).toBe(1);
   });
 });

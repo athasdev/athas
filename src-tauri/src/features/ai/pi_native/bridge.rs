@@ -172,6 +172,26 @@ impl PiNativeBridge {
       serde_json::from_value(value).context("failed to decode pi-native session snapshot")
    }
 
+   pub async fn reload_session_resources(
+      &self,
+      route_key: &str,
+      workspace_path: Option<String>,
+      session_path: Option<String>,
+   ) -> Result<PiNativeSessionSnapshot> {
+      let value = self
+         .send_request(
+            "reloadSessionResources",
+            json!({
+               "routeKey": route_key,
+               "workspacePath": workspace_path,
+               "sessionPath": session_path,
+               "agentDir": self.get_agent_dir()?,
+            }),
+         )
+         .await?;
+      serde_json::from_value(value).context("failed to decode reloaded pi-native session snapshot")
+   }
+
    pub async fn get_settings_snapshot(&self, workspace_path: Option<String>) -> Result<Value> {
       let params = json!({
          "workspacePath": workspace_path,

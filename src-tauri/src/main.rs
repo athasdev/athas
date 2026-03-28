@@ -484,6 +484,7 @@ fn main() {
          list_pi_native_models,
          list_pi_native_thinking_levels,
          get_pi_native_session_snapshot,
+         reload_pi_native_session_resources,
          get_pi_native_settings_snapshot,
          set_pi_native_scoped_defaults,
          set_pi_native_api_key_credential,

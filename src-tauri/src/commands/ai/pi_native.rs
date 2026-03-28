@@ -141,6 +141,24 @@ pub async fn get_pi_native_session_snapshot(
 }
 
 #[tauri::command]
+pub async fn reload_pi_native_session_resources(
+   bridge: State<'_, PiNativeBridgeState>,
+   workspace_path: Option<String>,
+   session_path: Option<String>,
+   route_key: Option<String>,
+) -> Result<PiNativeSessionSnapshot, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .reload_session_resources(
+         route_key.as_deref().unwrap_or("panel"),
+         workspace_path,
+         session_path,
+      )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_pi_native_settings_snapshot(
    bridge: State<'_, PiNativeBridgeState>,
    workspace_path: Option<String>,

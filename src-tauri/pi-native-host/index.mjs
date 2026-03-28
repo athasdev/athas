@@ -19,6 +19,7 @@ import {
   getAvailableThinkingLevels,
   getSessionModeState,
   listSlashCommandsForSession,
+  reloadSessionResources,
   setSessionMode,
   setSessionModel,
   setSessionThinkingLevel,
@@ -450,6 +451,17 @@ async function handleRequest(id, method, params = {}) {
         agentDir: params.agentDir,
         sessionPath: params.sessionPath,
       });
+      return sendResponse(id, createSessionSnapshot(record));
+    }
+    case "reloadSessionResources": {
+      const record = await ensureRouteSession(params.routeKey, {
+        cwd: params.workspacePath,
+        agentDir: params.agentDir,
+        sessionPath: params.sessionPath,
+      });
+
+      await reloadSessionResources(record.session);
+      publishSessionState(params.routeKey, record);
       return sendResponse(id, createSessionSnapshot(record));
     }
     case "getSettingsSnapshot": {
