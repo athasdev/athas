@@ -1,6 +1,11 @@
 import { nanoid } from "nanoid";
-import { DEFAULT_SPLIT_RATIO } from "../constants/pane";
+import { AUTO_REBALANCE_PRIMARY_SIZE, DEFAULT_SPLIT_RATIO, MIN_PANE_SIZE } from "../constants/pane";
 import type { PaneGroup, PaneNode, PaneSplit, SplitDirection, SplitPlacement } from "../types/pane";
+
+interface SplitSizeRepair {
+  splitId: string;
+  sizes: [number, number];
+}
 
 export function createPaneGroup(
   bufferIds: string[] = [],
@@ -126,6 +131,45 @@ export function splitPane(
   }
 
   return root;
+}
+
+export function normalizePanePairSizes(sizes: [number, number]): [number, number] {
+  const pairTotal = sizes[0] + sizes[1];
+  if (pairTotal <= 0) {
+    return sizes;
+  }
+
+  const minimumSize = (pairTotal * MIN_PANE_SIZE) / 100;
+  const primarySize = (pairTotal * AUTO_REBALANCE_PRIMARY_SIZE) / 100;
+  const secondarySize = pairTotal - primarySize;
+
+  if (sizes[0] < minimumSize) {
+    return [primarySize, secondarySize];
+  }
+
+  if (sizes[1] < minimumSize) {
+    return [secondarySize, primarySize];
+  }
+
+  return sizes;
+}
+
+export function getCollapsedSplitRepairs(root: PaneNode): SplitSizeRepair[] {
+  if (root.type === "group") {
+    return [];
+  }
+
+  const repairs = [
+    ...getCollapsedSplitRepairs(root.children[0]),
+    ...getCollapsedSplitRepairs(root.children[1]),
+  ];
+  const normalizedSizes = normalizePanePairSizes(root.sizes);
+
+  if (normalizedSizes[0] !== root.sizes[0] || normalizedSizes[1] !== root.sizes[1]) {
+    repairs.push({ splitId: root.id, sizes: normalizedSizes });
+  }
+
+  return repairs;
 }
 
 export function closePane(root: PaneNode, paneId: string): PaneNode | null {

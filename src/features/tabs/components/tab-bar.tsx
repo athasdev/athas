@@ -25,6 +25,7 @@ import TabDragPreview from "./tab-drag-preview";
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
+  isActivePane?: boolean;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -37,7 +38,7 @@ interface TabPosition {
   center: number;
 }
 
-const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
+const TabBar = ({ paneId, onTabClick: externalTabClick, isActivePane = true }: TabBarProps) => {
   // Get everything from stores
   const allBuffers = useBufferStore.use.buffers();
   const globalActiveBufferId = useBufferStore.use.activeBufferId();
@@ -142,9 +143,9 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   }, [jumpListActions]);
 
   const handleSplitActivePane = useCallback(() => {
-    if (!paneId || !activeBufferId) return;
-    splitPane(paneId, "horizontal", activeBufferId);
-  }, [activeBufferId, paneId, splitPane]);
+    if (!paneId) return;
+    splitPane(paneId, "horizontal");
+  }, [paneId, splitPane]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -727,18 +728,15 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  // Hide tab bar when no buffers are open
-  if (buffers.length === 0) {
-    return null;
-  }
-
   const { isDragging, draggedIndex, dropTargetIndex, currentPosition } = dragState;
 
   return (
     <>
       <div
         ref={tabBarRef}
-        className={`relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        className={`relative flex shrink-0 items-center gap-0.5 overflow-hidden bg-primary-bg px-1 py-1 border-b border-border/30 transition-opacity duration-200 ${
+          !isActivePane ? "opacity-60" : ""
+        } ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
         role="tablist"
         aria-label="Open files"
         onWheel={handleWheel}
@@ -746,7 +744,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         onDragLeave={handleTabBarDragLeave}
         onDrop={handleTabBarDrop}
       >
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="hidden @sm:flex shrink-0 items-center gap-0.5">
           <Tooltip content="Go Back (Ctrl+-)" side="bottom">
             <Button
               type="button"
@@ -788,6 +786,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
                 displayName={displayNames.get(buffer.id) || buffer.name}
                 index={index}
                 isActive={isActive}
+                isPaneActive={isActivePane}
                 isDraggedTab={isDraggedTab}
                 showDropIndicatorBefore={showDropIndicatorBefore}
                 tabRef={(el) => {
@@ -816,37 +815,40 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 pl-0.5">
-          {paneId && activeBufferId && (
-            <Tooltip content="Split Editor" side="bottom">
-              <Button
-                type="button"
-                onClick={handleSplitActivePane}
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
-                aria-label="Split editor"
+          <div className="hidden @sm:flex items-center gap-1">
+            {paneId && (
+              <Tooltip content="Split Pane" side="bottom">
+                <Button
+                  type="button"
+                  onClick={handleSplitActivePane}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 rounded-lg text-text-lighter"
+                  id="split-editor-button"
+                  aria-label="Split pane"
+                >
+                  <SplitSquareHorizontal />
+                </Button>
+              </Tooltip>
+            )}
+            {paneId && (
+              <Tooltip
+                content={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
+                side="bottom"
               >
-                <SplitSquareHorizontal />
-              </Button>
-            </Tooltip>
-          )}
-          {paneId && (
-            <Tooltip
-              content={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
-              side="bottom"
-            >
-              <Button
-                type="button"
-                onClick={handleTogglePaneFullscreen}
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
-                aria-label="Toggle editor full screen"
-              >
-                {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
-              </Button>
-            </Tooltip>
-          )}
+                <Button
+                  type="button"
+                  onClick={handleTogglePaneFullscreen}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 rounded-lg text-text-lighter"
+                  aria-label="Toggle editor full screen"
+                >
+                  {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+                </Button>
+              </Tooltip>
+            )}
+          </div>
           <div className="flex shrink-0 items-center">
             <NewTabMenu />
           </div>

@@ -22,6 +22,7 @@ interface TabBarItemProps {
   displayName: string;
   index: number;
   isActive: boolean;
+  isPaneActive: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
   tabRef: (el: HTMLDivElement | null) => void;
@@ -39,6 +40,7 @@ const TabBarItem = memo(function TabBarItem({
   buffer,
   displayName,
   isActive,
+  isPaneActive,
   isDraggedTab,
   showDropIndicatorBefore,
   tabRef,
@@ -83,7 +85,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        className={isActive ? "bg-hover/80" : undefined}
+        className={isActive ? (isPaneActive ? "bg-hover/80" : "bg-hover/30") : undefined}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -178,7 +180,7 @@ const TabBarItem = memo(function TabBarItem({
         <span
           className={cn(
             "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
-            isActive ? "text-text" : "text-text-lighter",
+            isActive && isPaneActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}
           title={buffer.path}

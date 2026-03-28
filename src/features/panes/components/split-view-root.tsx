@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo } from "react";
 import { IS_MAC } from "@/utils/platform";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneNode, PaneSplit } from "../types/pane";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import {
+  getAllPaneGroups,
+  getCollapsedSplitRepairs,
+  normalizePanePairSizes,
+} from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
 
@@ -117,6 +121,27 @@ function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
     [flatEntries, updatePaneSizes],
   );
 
+  const handleFlatResizeEnd = useCallback(
+    (index: number, sizes: [number, number]) => {
+      if (!flatEntries) return;
+
+      const repairedSizes = normalizePanePairSizes(sizes);
+      const newSizes = flatEntries.map((entry) => entry.size);
+      newSizes[index] = repairedSizes[0];
+      newSizes[index + 1] = repairedSizes[1];
+
+      const updatedEntries = flatEntries.map((entry, entryIndex) => ({
+        ...entry,
+        size: newSizes[entryIndex],
+      }));
+
+      writeFlatSizesToTree(updatedEntries, (splitId, splitSizes) => {
+        updatePaneSizes(splitId, splitSizes);
+      });
+    },
+    [flatEntries, updatePaneSizes],
+  );
+
   if (node.type === "group") {
     return <PaneContainer pane={node} />;
   }
@@ -125,7 +150,7 @@ function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
 
   // If only 2 entries (no flattening benefit), still use the flat approach for consistency
   const totalSize = flatEntries.reduce((sum, e) => sum + e.size, 0);
-  const handleWidth = 4; // w-1 = 4px
+  const handleWidth = 1; // w-px = 1px
   const handleCount = flatEntries.length - 1;
 
   return (
@@ -156,6 +181,7 @@ function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
                 index={i}
                 entries={flatEntries}
                 onResize={handleFlatResize}
+                onResizeEnd={handleFlatResizeEnd}
               />
             )}
           </div>
@@ -170,9 +196,16 @@ interface FlatResizeHandleProps {
   index: number;
   entries: FlatEntry[];
   onResize: (index: number, sizes: [number, number]) => void;
+  onResizeEnd: (index: number, sizes: [number, number]) => void;
 }
 
-function FlatResizeHandle({ direction, index, entries, onResize }: FlatResizeHandleProps) {
+function FlatResizeHandle({
+  direction,
+  index,
+  entries,
+  onResize,
+  onResizeEnd,
+}: FlatResizeHandleProps) {
   const handleResize = useCallback(
     (sizes: [number, number]) => {
       onResize(index, sizes);
@@ -180,17 +213,30 @@ function FlatResizeHandle({ direction, index, entries, onResize }: FlatResizeHan
     [index, onResize],
   );
 
+  const handleResizeEnd = useCallback(
+    (sizes: [number, number]) => {
+      onResizeEnd(index, sizes);
+    },
+    [index, onResizeEnd],
+  );
+
   const initialSizes: [number, number] = [entries[index].size, entries[index + 1].size];
 
   return (
-    <PaneResizeHandle direction={direction} onResize={handleResize} initialSizes={initialSizes} />
+    <PaneResizeHandle
+      direction={direction}
+      onResize={handleResize}
+      onResizeEnd={handleResizeEnd}
+      initialSizes={initialSizes}
+    />
   );
 }
 
 export function SplitViewRoot() {
   const root = usePaneStore.use.root();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { exitPaneFullscreen } = usePaneStore.use.actions();
+  const { exitPaneFullscreen, updatePaneSizes } = usePaneStore.use.actions();
+  const collapsedSplitRepairs = useMemo(() => getCollapsedSplitRepairs(root), [root]);
   const fullscreenPane = useMemo(
     () =>
       fullscreenPaneId
@@ -204,6 +250,14 @@ export function SplitViewRoot() {
       exitPaneFullscreen();
     }
   }, [exitPaneFullscreen, fullscreenPane, fullscreenPaneId]);
+
+  useEffect(() => {
+    if (collapsedSplitRepairs.length === 0) return;
+
+    collapsedSplitRepairs.forEach(({ splitId, sizes }) => {
+      updatePaneSizes(splitId, sizes);
+    });
+  }, [collapsedSplitRepairs, updatePaneSizes]);
 
   const titleBarHeight = IS_MAC ? 44 : 28;
   const footerHeight = 32;
