@@ -44,3 +44,5 @@ When you use Pi in Harness with the native runtime, Athas reads the same session
 Forking a Pi-native conversation keeps the restored model and thinking defaults, but starts a new native branch instead of continuing the same underlying Pi session file.
 
 When you switch between restored Pi-native chats in the same Harness scope, Athas now rebinds the native route to the selected shared Pi session instead of accidentally continuing whichever Pi session was already live on that route.
+
+When Pi reports that a restored session was branched from another Pi session, Athas now mirrors that parent-child relationship in its chat lineage instead of treating every restored Pi session as a disconnected root chat.

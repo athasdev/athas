@@ -4,8 +4,10 @@ import type { Chat } from "@/features/ai/types/ai-chat";
 import {
   buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
+  buildPiNativeSessionLineage,
   derivePiNativeSessionTitle,
   findOpenHarnessPiNativeSessionKey,
+  findPiNativeParentChatForSession,
   shouldEnsurePiNativeRestoreChat,
   shouldReconcilePiNativeSession,
   shouldReuseCurrentHarnessSessionForPiNativeResume,
@@ -393,5 +395,86 @@ describe("pi-native restore", () => {
         ],
       }),
     ).toBeNull();
+  });
+
+  test("finds the Athas parent chat for a pi-native child session by parent session path", () => {
+    expect(
+      findPiNativeParentChatForSession({
+        session: {
+          parentSessionPath: "/tmp/parent.jsonl",
+        },
+        chats: [
+          createChat({
+            id: "legacy-chat",
+            acpState: {
+              preferredModeId: null,
+              currentModeId: null,
+              availableModes: [],
+              slashCommands: [],
+              runtimeState: {
+                agentId: "pi",
+                source: "legacy-acp-bridge",
+                sessionId: "legacy-session-1",
+                sessionPath: "/tmp/parent.jsonl",
+                workspacePath: "/home/fsos/Developer/athas",
+                provider: null,
+                modelId: null,
+                thinkingLevel: null,
+                behavior: null,
+              },
+            },
+          }),
+          createChat({
+            id: "parent-chat",
+            title: "Parent Session",
+            rootChatId: "root-chat",
+            lineageDepth: 1,
+            sessionName: "Parent Session",
+            acpState: {
+              preferredModeId: null,
+              currentModeId: null,
+              availableModes: [],
+              slashCommands: [],
+              runtimeState: {
+                agentId: "pi",
+                source: "pi-native",
+                sessionId: "native-session-parent",
+                sessionPath: "/tmp/parent.jsonl",
+                workspacePath: "/home/fsos/Developer/athas",
+                provider: "openai-codex",
+                modelId: "gpt-5.4",
+                thinkingLevel: "medium",
+                behavior: null,
+              },
+            },
+          }),
+        ],
+      }),
+    ).toMatchObject({
+      id: "parent-chat",
+      rootChatId: "root-chat",
+      lineageDepth: 1,
+    });
+  });
+
+  test("builds forked lineage for a pi-native session when its parent chat is known", () => {
+    expect(
+      buildPiNativeSessionLineage({
+        sessionTitle: "Child Session",
+        parentChat: {
+          id: "parent-chat",
+          title: "Parent Session",
+          rootChatId: "root-chat",
+          lineageDepth: 1,
+          sessionName: "Parent Session",
+        },
+      }),
+    ).toEqual({
+      parentChatId: "parent-chat",
+      rootChatId: "root-chat",
+      branchPointMessageId: null,
+      lineageDepth: 2,
+      sessionName: "Child Session",
+    });
   });
 });

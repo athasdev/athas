@@ -402,8 +402,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             agentId,
             acpState: seed.acpState ?? null,
             acpActivity: seed.acpActivity ?? null,
-            ...createRootChatLineage(chatId),
-            sessionName: null,
+            ...(seed.lineage ?? createRootChatLineage(chatId)),
           };
 
           set((state) => {
@@ -744,6 +743,22 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             if (chat) {
               chat.title = title;
             }
+          });
+          get().syncChatToDatabase(chatId);
+        },
+
+        setChatLineage: (chatId, lineage) => {
+          set((state) => {
+            const chat = state.chats.find((entry) => entry.id === chatId);
+            if (!chat) {
+              return;
+            }
+
+            chat.parentChatId = lineage.parentChatId;
+            chat.rootChatId = lineage.rootChatId;
+            chat.branchPointMessageId = lineage.branchPointMessageId;
+            chat.lineageDepth = lineage.lineageDepth;
+            chat.sessionName = lineage.sessionName;
           });
           get().syncChatToDatabase(chatId);
         },

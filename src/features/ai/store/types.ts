@@ -18,6 +18,10 @@ import type { ProviderModel } from "@/utils/providers/provider-interface";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
+export type ChatLineageState = Pick<
+  Chat,
+  "parentChatId" | "rootChatId" | "branchPointMessageId" | "lineageDepth" | "sessionName"
+>;
 
 interface ScopedSessionModeState {
   currentModeId: string | null;
@@ -129,7 +133,9 @@ export interface AIChatActions {
   createNewChat: (agentId?: AgentType, scopeId?: ChatScopeId) => string;
   createSeededChat: (
     agentId: AgentType,
-    seed: Pick<Chat, "title" | "messages" | "acpState" | "acpActivity">,
+    seed: Pick<Chat, "title" | "messages" | "acpState" | "acpActivity"> & {
+      lineage?: ChatLineageState | null;
+    },
     scopeId?: ChatScopeId,
   ) => string;
   ensureChatForAgent: (agentId: AgentType, scopeId?: ChatScopeId) => string;
@@ -144,6 +150,7 @@ export interface AIChatActions {
   summarizeBranchTransition: (sourceChatId: string, targetChatId: string) => Promise<boolean>;
   deleteChat: (chatId: string, scopeId?: ChatScopeId) => void;
   updateChatTitle: (chatId: string, title: string) => void;
+  setChatLineage: (chatId: string, lineage: ChatLineageState) => void;
   addMessage: (chatId: string, message: Message) => void;
   replaceChatMessages: (chatId: string, messages: Message[]) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;

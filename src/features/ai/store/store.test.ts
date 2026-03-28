@@ -250,4 +250,60 @@ describe("createSeededChat", () => {
       messages: [{ content: "Reply with exactly READY and nothing else." }, { content: "READY" }],
     });
   });
+
+  test("persists seeded lineage when restoring a native child session", async () => {
+    const saveChatToDb = mock(async () => {});
+
+    mock.module("@/utils/chat-history-db", () => ({
+      initChatDatabase: async () => {},
+      loadAllChatsFromDb: async () => [],
+      loadChatFromDb: async () => null,
+      saveChatToDb,
+      deleteChatFromDb: async () => {},
+    }));
+    mock.module("@/utils/ai-chat", () => ({
+      getProviderApiToken: async () => null,
+      isAcpAgent: (agentId: string) => agentId !== "custom",
+      removeProviderApiToken: async () => {},
+      storeProviderApiToken: async () => {},
+      validateProviderApiKey: async () => true,
+    }));
+
+    const { useAIChatStore } = await import("./store");
+    const scopeId = "harness:seeded-lineage" as const;
+
+    useAIChatStore.setState({
+      chats: [],
+      chatScopes: {
+        panel: createDefaultChatScopeState("panel"),
+        [scopeId]: createDefaultChatScopeState(scopeId),
+      },
+    });
+
+    const chatId = useAIChatStore.getState().createSeededChat(
+      "pi",
+      {
+        title: "Child Pi Session",
+        messages: [],
+        acpState: null,
+        acpActivity: null,
+        lineage: {
+          parentChatId: "parent-chat",
+          rootChatId: "root-chat",
+          branchPointMessageId: null,
+          lineageDepth: 2,
+          sessionName: "Child Pi Session",
+        },
+      },
+      scopeId,
+    );
+
+    expect(useAIChatStore.getState().getCurrentChat(scopeId)).toMatchObject({
+      id: chatId,
+      parentChatId: "parent-chat",
+      rootChatId: "root-chat",
+      lineageDepth: 2,
+      sessionName: "Child Pi Session",
+    });
+  });
 });

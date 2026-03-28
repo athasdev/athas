@@ -1,3 +1,5 @@
+import { createForkedChatLineage } from "@/features/ai/lib/chat-lineage";
+import type { ChatLineageState } from "@/features/ai/store/types";
 import type { AcpRuntimeState } from "@/features/ai/types/acp";
 import type { AgentType, AIChatSurface, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { HarnessRuntimeSessionInfo, HarnessRuntimeTranscriptMessage } from "./harness-runtime";
@@ -35,6 +37,13 @@ interface FindOpenHarnessPiNativeSessionKeyParams {
     sessionKey: string | null | undefined;
     chat: Pick<Chat, "acpState"> | null | undefined;
   }>;
+}
+
+interface FindPiNativeParentChatParams {
+  session: Pick<HarnessRuntimeSessionInfo, "parentSessionPath">;
+  chats: Array<
+    Pick<Chat, "id" | "title" | "rootChatId" | "lineageDepth" | "sessionName" | "acpState">
+  >;
 }
 
 const normalizeText = (value: string | null | undefined): string =>
@@ -133,6 +142,28 @@ export const findOpenHarnessPiNativeSessionKey = ({
   return null;
 };
 
+export const findPiNativeParentChatForSession = ({
+  session,
+  chats,
+}: FindPiNativeParentChatParams): Pick<
+  Chat,
+  "id" | "title" | "rootChatId" | "lineageDepth" | "sessionName"
+> | null => {
+  const parentSessionPath = normalizeText(session.parentSessionPath);
+  if (!parentSessionPath) {
+    return null;
+  }
+
+  for (const chat of chats) {
+    const runtimeState = chat.acpState?.runtimeState;
+    if (runtimeState?.source === "pi-native" && runtimeState.sessionPath === parentSessionPath) {
+      return chat;
+    }
+  }
+
+  return null;
+};
+
 export const derivePiNativeSessionTitle = ({
   name,
   firstMessage,
@@ -150,6 +181,23 @@ export const derivePiNativeSessionTitle = ({
   return normalizedFirstMessage.length > 52
     ? `${normalizedFirstMessage.slice(0, 52)}...`
     : normalizedFirstMessage;
+};
+
+export const buildPiNativeSessionLineage = ({
+  sessionTitle,
+  parentChat,
+}: {
+  sessionTitle: string;
+  parentChat: Pick<Chat, "id" | "title" | "rootChatId" | "lineageDepth" | "sessionName"> | null;
+}): ChatLineageState | null => {
+  if (!parentChat) {
+    return null;
+  }
+
+  return {
+    ...createForkedChatLineage(parentChat, null),
+    sessionName: sessionTitle,
+  };
 };
 
 export const buildPiNativeRuntimeStateFromSession = (

@@ -40,8 +40,10 @@ import { getHarnessTrustState } from "@/features/ai/lib/harness-trust-state";
 import {
   buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
+  buildPiNativeSessionLineage,
   derivePiNativeSessionTitle,
   findOpenHarnessPiNativeSessionKey,
+  findPiNativeParentChatForSession,
   shouldEnsurePiNativeRestoreChat,
   shouldReconcilePiNativeSession,
   shouldReuseCurrentHarnessSessionForPiNativeResume,
@@ -953,6 +955,14 @@ const AIChat = memo(function AIChat({
           shouldReuseCurrentSession && sessionKey ? sessionKey : createHarnessSessionKey();
         const targetScopeId = createHarnessChatScopeId(nextSessionKey);
         const targetChatStore = useAIChatStore.getState();
+        const parentChat = findPiNativeParentChatForSession({
+          session,
+          chats: targetChatStore.chats,
+        });
+        const seededLineage = buildPiNativeSessionLineage({
+          sessionTitle: seededTitle,
+          parentChat,
+        });
 
         openAgentBuffer(nextSessionKey, { backend: "pi-native" });
 
@@ -971,6 +981,7 @@ const AIChat = memo(function AIChat({
                   runtimeState: seededRuntimeState,
                 },
                 acpActivity: null,
+                lineage: seededLineage,
               },
               targetScopeId,
             );
@@ -978,6 +989,9 @@ const AIChat = memo(function AIChat({
         if (shouldReuseCurrentSession) {
           targetChatStore.replaceChatMessages(targetChatId, transcriptMessages);
           targetChatStore.updateChatTitle(targetChatId, seededTitle);
+          if (seededLineage) {
+            targetChatStore.setChatLineage(targetChatId, seededLineage);
+          }
         }
 
         targetChatStore.setAcpRuntimeState(seededRuntimeState, targetScopeId);
