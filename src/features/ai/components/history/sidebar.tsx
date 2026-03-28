@@ -1,34 +1,18 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  GitBranch,
-  Layers3,
-  Play,
-  Split,
-  Trash2,
-  X,
-} from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown, ChevronRight, Layers3, Play, Search, Split, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getChatSummaryCounts } from "@/features/ai/lib/chat-context";
 import { buildChatHistoryTree } from "@/features/ai/lib/chat-history-tree";
-import { getChatLineageLabel, getChatLineagePath } from "@/features/ai/lib/chat-lineage";
+import { getChatLineagePath } from "@/features/ai/lib/chat-lineage";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import { AGENT_OPTIONS, type ChatHistoryModalProps } from "@/features/ai/types/ai-chat";
-import Command, {
-  CommandEmpty,
-  CommandHeader,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/ui/command";
 import { cn } from "@/utils/cn";
 
-// Get short agent label for badge
 const getAgentLabel = (agentId: string | undefined): string => {
   if (!agentId) return "API";
   const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
   if (!agent) return "API";
-  // Return short labels
   switch (agentId) {
     case "claude-code":
       return "Claude";
@@ -42,28 +26,6 @@ const getAgentLabel = (agentId: string | undefined): string => {
       return "API";
     default:
       return agent.name.split(" ")[0];
-  }
-};
-
-// Get badge color based on agent
-const getAgentColor = (agentId: string | undefined): string => {
-  switch (agentId) {
-    case "claude-code":
-      return "bg-orange-500/20 text-orange-400 border-orange-500/30";
-    case "gemini-cli":
-      return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-    case "codex-cli":
-      return "bg-green-500/20 text-green-400 border-green-500/30";
-    case "kimi-cli":
-      return "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
-    case "opencode":
-      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-    case "qwen-code":
-      return "bg-pink-500/20 text-pink-400 border-pink-500/30";
-    case "pi":
-      return "bg-violet-500/20 text-violet-400 border-violet-500/30";
-    default:
-      return "bg-purple-500/20 text-purple-400 border-purple-500/30";
   }
 };
 
@@ -95,7 +57,7 @@ export default function ChatHistorySidebar({
     () => buildChatHistoryTree(chats, searchQuery, collapsedChatIds, currentChatId),
     [chats, collapsedChatIds, currentChatId, searchQuery],
   );
-  const chatTitleMap = new Map(chats.map((chat) => [chat.id, chat.title]));
+
   const activeLineagePath = useMemo(
     () => new Set(getChatLineagePath(chats, currentChatId)),
     [chats, currentChatId],
@@ -136,7 +98,6 @@ export default function ChatHistorySidebar({
               onClose();
               return;
             }
-
             setDecisionChatId((current) => (current === selectedChat.id ? null : selectedChat.id));
           }
           break;
@@ -152,9 +113,7 @@ export default function ChatHistorySidebar({
   }, [searchQuery]);
 
   useEffect(() => {
-    if (activeLineagePath.size === 0) {
-      return;
-    }
+    if (activeLineagePath.size === 0) return;
 
     setCollapsedChatIds((current) => {
       const next = new Set(current);
@@ -169,186 +128,229 @@ export default function ChatHistorySidebar({
     if (resultsRef.current && treeItems.length > 0) {
       const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement;
       if (selectedElement) {
-        selectedElement.scrollIntoView({
-          block: "nearest",
-          behavior: "smooth",
-        });
+        selectedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
     }
   }, [selectedIndex, treeItems.length]);
 
   return (
-    <Command isVisible={isOpen} onClose={onClose}>
-      <CommandHeader onClose={onClose}>
-        <CommandInput
-          ref={inputRef}
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search chat history..."
-        />
-      </CommandHeader>
+    <AnimatePresence>
+      {isOpen && (
+        <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+          <DialogPrimitive.Portal>
+            <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24">
+              <DialogPrimitive.Overlay asChild>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+                />
+              </DialogPrimitive.Overlay>
 
-      <CommandList ref={resultsRef}>
-        {treeItems.length === 0 ? (
-          <CommandEmpty>No chat history</CommandEmpty>
-        ) : (
-          treeItems.map(
-            (
-              {
-                chat,
-                depth,
-                hasChildren,
-                childCount,
-                descendantCount,
-                isCollapsed,
-                isCurrent,
-                isOnActivePath,
-              },
-              index,
-            ) => {
-              const summaryCounts = getChatSummaryCounts(chat);
-
-              return (
-                <CommandItem
-                  key={chat.id}
-                  onClick={() => {
-                    if (chat.id === currentChatId) {
-                      onContinueToChat(chat.id);
-                      onClose();
-                      return;
-                    }
-
-                    setDecisionChatId((current) => (current === chat.id ? null : chat.id));
-                  }}
-                  isSelected={index === selectedIndex}
-                  className={cn(
-                    "group px-3 py-1.5",
-                    isCurrent && "bg-blue-500/10",
-                    !isCurrent && isOnActivePath && "bg-blue-500/5",
-                  )}
+              <DialogPrimitive.Content asChild>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97, y: 10 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative flex max-h-[75vh] w-full max-w-[600px] flex-col overflow-hidden rounded-2xl border border-border/50 bg-primary-bg/95 shadow-2xl focus:outline-none"
                 >
-                  <div className="min-w-0 flex-1" style={{ paddingLeft: `${depth * 14}px` }}>
-                    <div className="flex items-center gap-1.5">
-                      {hasChildren ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCollapsedChatIds((current) => {
-                              const next = new Set(current);
-                              if (next.has(chat.id)) {
-                                next.delete(chat.id);
-                              } else {
-                                next.add(chat.id);
-                              }
-                              return next;
-                            });
-                          }}
-                          className="flex size-4 shrink-0 items-center justify-center rounded text-text-lighter hover:bg-hover hover:text-text"
-                          aria-label={isCollapsed ? "Expand branch" : "Collapse branch"}
-                        >
-                          {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                        </button>
-                      ) : (
-                        <span className="block w-4 shrink-0" />
-                      )}
-                      <span className="truncate text-xs">{chat.title}</span>
-                      <span
-                        className={`shrink-0 rounded border px-1 py-0.5 text-[9px] leading-none ${getAgentColor(chat.agentId)}`}
-                      >
-                        {getAgentLabel(chat.agentId)}
-                      </span>
-                      <span className="shrink-0 rounded border border-border px-1 py-0.5 text-[9px] text-text-lighter leading-none">
-                        {getChatLineageLabel(chat)}
-                      </span>
-                      {chat.lineageDepth > 0 ? (
-                        <span className="shrink-0 rounded border border-border px-1 py-0.5 text-[9px] text-text-lighter leading-none">
-                          d{chat.lineageDepth}
-                        </span>
-                      ) : null}
-                      {hasChildren ? (
-                        <span className="shrink-0 rounded border border-border px-1 py-0.5 text-[9px] text-text-lighter leading-none">
-                          {childCount}/{descendantCount}
-                        </span>
-                      ) : null}
-                      {summaryCounts.compaction > 0 ? (
-                        <span className="shrink-0 rounded border border-border px-1 py-0.5 text-[9px] text-text-lighter leading-none">
-                          <span className="inline-flex items-center gap-1">
-                            <Layers3 size={9} />C{summaryCounts.compaction}
-                          </span>
-                        </span>
-                      ) : null}
-                      {summaryCounts.branch > 0 ? (
-                        <span className="shrink-0 rounded border border-border px-1 py-0.5 text-[9px] text-text-lighter leading-none">
-                          <span className="inline-flex items-center gap-1">
-                            <GitBranch size={9} />B{summaryCounts.branch}
-                          </span>
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="select-none text-[10px] text-text-lighter">
-                      {getRelativeTime(chat.lastMessageAt)}
-                    </div>
-                    {chat.parentChatId ? (
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-text-lighter">
-                        <GitBranch size={10} />
-                        <span className="truncate">
-                          From {chatTitleMap.get(chat.parentChatId) ?? "previous session"}
-                        </span>
-                      </div>
-                    ) : null}
-                    {decisionChatId === chat.id ? (
-                      <div className="mt-2 flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onContinueToChat(chat.id);
-                            onClose();
-                          }}
-                          className="flex items-center gap-1 rounded border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] text-blue-300 hover:bg-blue-500/15"
-                        >
-                          <Play size={10} />
-                          Continue here
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await onForkChat(chat.id);
-                            onClose();
-                          }}
-                          className="flex items-center gap-1 rounded border border-border bg-secondary-bg px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
-                        >
-                          <Split size={10} />
-                          Fork new session
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDecisionChatId(null);
-                          }}
-                          className="flex items-center gap-1 rounded border border-border bg-secondary-bg px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
-                        >
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ) : null}
+                  <div className="flex items-center gap-3 border-b border-border/30 px-5 py-4">
+                    <Search className="h-4 w-4 text-text-lighter" />
+                    <input
+                      ref={inputRef}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Find past sessions..."
+                      className="flex-1 bg-transparent text-sm text-text placeholder-text-lighter outline-none"
+                    />
+                    <button
+                      onClick={onClose}
+                      className="rounded-full p-1 text-text-lighter hover:bg-hover hover:text-text transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteChat(chat.id, e);
-                    }}
-                    className="ml-2 flex size-5 shrink-0 items-center justify-center rounded text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
-                    title="Delete chat"
-                    aria-label="Delete chat"
+
+                  <div
+                    ref={resultsRef}
+                    className="custom-scrollbar-thin flex-1 overflow-y-auto p-2"
                   >
-                    <Trash2 size={12} />
-                  </button>
-                </CommandItem>
-              );
-            },
-          )
-        )}
-      </CommandList>
-    </Command>
+                    {treeItems.length === 0 ? (
+                      <div className="py-12 text-center text-sm text-text-lighter">
+                        No sessions found
+                      </div>
+                    ) : (
+                      treeItems.map(
+                        (
+                          {
+                            chat,
+                            depth,
+                            hasChildren,
+                            descendantCount,
+                            isCollapsed,
+                            isCurrent,
+                          },
+                          index,
+                        ) => {
+                          const summaryCounts = getChatSummaryCounts(chat);
+                          const isSelected = index === selectedIndex;
+                          const isDecision = decisionChatId === chat.id;
+
+                          return (
+                            <div
+                              key={chat.id}
+                              onClick={() => {
+                                if (chat.id === currentChatId) {
+                                  onContinueToChat(chat.id);
+                                  onClose();
+                                  return;
+                                }
+                                setDecisionChatId((current) =>
+                                  current === chat.id ? null : chat.id,
+                                );
+                                setSelectedIndex(index);
+                              }}
+                              className={cn(
+                                "group relative mb-0.5 flex cursor-pointer flex-col gap-1 rounded-xl px-4 py-3 transition-colors",
+                                isSelected ? "bg-hover/80" : "hover:bg-hover/40",
+                                isCurrent && "bg-accent/5 hover:bg-accent/10",
+                              )}
+                            >
+                              {isCurrent && (
+                                <div className="absolute left-0 top-1/2 h-8 -translate-y-1/2 w-1 rounded-r-full bg-accent/60" />
+                              )}
+
+                              <div
+                                className="flex items-start gap-2"
+                                style={{ paddingLeft: `${depth * 16}px` }}
+                              >
+                                {hasChildren ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCollapsedChatIds((current) => {
+                                        const next = new Set(current);
+                                        if (next.has(chat.id)) next.delete(chat.id);
+                                        else next.add(chat.id);
+                                        return next;
+                                      });
+                                    }}
+                                    className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-text-lighter hover:bg-hover hover:text-text transition-colors"
+                                  >
+                                    {isCollapsed ? (
+                                      <ChevronRight size={14} />
+                                    ) : (
+                                      <ChevronDown size={14} />
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="block w-4 shrink-0" />
+                                )}
+
+                                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "truncate text-[13px] font-medium transition-colors",
+                                        isCurrent ? "text-accent" : "text-text",
+                                      )}
+                                    >
+                                      {chat.title}
+                                    </span>
+                                    <span className="shrink-0 text-[10px] text-text-lighter whitespace-nowrap">
+                                      {getRelativeTime(chat.lastMessageAt)}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-lighter">
+                                    <span className="flex items-center gap-1.5 opacity-80">
+                                      <span>{getAgentLabel(chat.agentId)}</span>
+                                    </span>
+
+                                    {chat.lineageDepth > 0 && (
+                                      <>
+                                        <span className="opacity-30">&bull;</span>
+                                        <span className="opacity-80">
+                                          Depth {chat.lineageDepth}
+                                        </span>
+                                      </>
+                                    )}
+
+                                    {hasChildren && (
+                                      <>
+                                        <span className="opacity-30">&bull;</span>
+                                        <span className="opacity-80">
+                                          {descendantCount} variants
+                                        </span>
+                                      </>
+                                    )}
+
+                                    {summaryCounts.compaction > 0 && (
+                                      <>
+                                        <span className="opacity-30">&bull;</span>
+                                        <span className="flex items-center gap-1 opacity-80">
+                                          <Layers3 size={10} /> {summaryCounts.compaction}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteChat(chat.id, e);
+                                  }}
+                                  className="ml-2 flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+
+                              {isDecision && (
+                                <div
+                                  className="mt-2 flex items-center gap-2"
+                                  style={{ paddingLeft: `${depth * 16 + 24}px` }}
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onContinueToChat(chat.id);
+                                      onClose();
+                                    }}
+                                    className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors"
+                                  >
+                                    <Play size={12} fill="currentColor" />
+                                    Continue Session
+                                  </button>
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await onForkChat(chat.id);
+                                      onClose();
+                                    }}
+                                    className="flex items-center gap-1.5 rounded-lg bg-secondary-bg px-3 py-1.5 text-xs font-medium text-text-lighter hover:bg-hover hover:text-text transition-colors"
+                                  >
+                                    <Split size={12} />
+                                    Fork from here
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        },
+                      )
+                    )}
+                  </div>
+                </motion.div>
+              </DialogPrimitive.Content>
+            </div>
+          </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
+      )}
+    </AnimatePresence>
   );
 }
