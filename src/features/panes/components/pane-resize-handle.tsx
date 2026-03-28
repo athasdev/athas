@@ -25,6 +25,12 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
     [isHorizontal, initialSizes],
   );
 
+  const handleDoubleClick = useCallback(() => {
+    const pairTotal = initialSizes[0] + initialSizes[1];
+    const evenSize = pairTotal / 2;
+    onResize([evenSize, evenSize]);
+  }, [initialSizes, onResize]);
+
   useEffect(() => {
     if (!isDragging) return;
 
@@ -87,6 +93,7 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       aria-valuemin={MIN_PANE_SIZE}
       aria-valuemax={100 - MIN_PANE_SIZE}
       tabIndex={0}
+      onDoubleClick={handleDoubleClick}
     >
       <div
         className={`bg-border transition-colors ${
