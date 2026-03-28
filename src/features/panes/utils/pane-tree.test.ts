@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getAdjacentPane, getCollapsedSplitRepairs, normalizePanePairSizes, splitPane } from "./pane-tree";
+import {
+  getAdjacentPane,
+  getCollapsedSplitRepairs,
+  normalizePanePairSizes,
+  splitPane,
+} from "./pane-tree";
 import type { PaneGroup, PaneNode } from "../types/pane";
 
 function createNamedPane(id: string): PaneGroup {

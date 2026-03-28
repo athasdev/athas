@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo } from "react";
 import { IS_MAC } from "@/utils/platform";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneNode, PaneSplit } from "../types/pane";
-import { getAllPaneGroups, getCollapsedSplitRepairs, normalizePanePairSizes } from "../utils/pane-tree";
+import {
+  getAllPaneGroups,
+  getCollapsedSplitRepairs,
+  normalizePanePairSizes,
+} from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
 
