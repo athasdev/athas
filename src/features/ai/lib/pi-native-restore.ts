@@ -1,4 +1,5 @@
 import { createForkedChatLineage } from "@/features/ai/lib/chat-lineage";
+import { createHarnessChatScopeId } from "@/features/ai/lib/chat-scope";
 import type { ChatLineageState } from "@/features/ai/store/types";
 import type { AcpRuntimeState } from "@/features/ai/types/acp";
 import type { AgentType, AIChatSurface, Chat, Message } from "@/features/ai/types/ai-chat";
@@ -6,6 +7,7 @@ import type { HarnessRuntimeSessionInfo, HarnessRuntimeTranscriptMessage } from 
 import type { HarnessRuntimeBackend } from "./harness-runtime-backend";
 
 interface ShouldReconcilePiNativeSessionParams {
+  scopeId: string;
   surface: AIChatSurface;
   runtimeBackend: HarnessRuntimeBackend;
   agentId: AgentType;
@@ -91,6 +93,7 @@ export const shouldEnsurePiNativeRestoreChat = ({
 };
 
 export const shouldReconcilePiNativeSession = ({
+  scopeId,
   surface,
   runtimeBackend,
   agentId,
@@ -98,6 +101,10 @@ export const shouldReconcilePiNativeSession = ({
   chat,
 }: ShouldReconcilePiNativeSessionParams): boolean => {
   if (surface !== "harness" || runtimeBackend !== "pi-native" || agentId !== "pi") {
+    return false;
+  }
+
+  if (scopeId !== createHarnessChatScopeId()) {
     return false;
   }
 

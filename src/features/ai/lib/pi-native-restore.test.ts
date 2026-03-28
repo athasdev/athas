@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getDefaultChatTitle } from "@/features/ai/lib/chat-scope";
+import { createHarnessChatScopeId, getDefaultChatTitle } from "@/features/ai/lib/chat-scope";
 import type { Chat } from "@/features/ai/types/ai-chat";
 import {
   buildPiNativeChatMessagesFromTranscript,
@@ -58,6 +58,7 @@ describe("pi-native restore", () => {
   test("reconciles an empty Harness Pi chat with no native session path yet", () => {
     expect(
       shouldReconcilePiNativeSession({
+        scopeId: createHarnessChatScopeId(),
         surface: "harness",
         runtimeBackend: "pi-native",
         agentId: "pi",
@@ -67,9 +68,25 @@ describe("pi-native restore", () => {
     ).toBe(true);
   });
 
+  test("does not reconcile a newly-created non-default Harness session automatically", () => {
+    expect(
+      shouldReconcilePiNativeSession({
+        scopeId: createHarnessChatScopeId("session-explicit-new"),
+        surface: "harness",
+        runtimeBackend: "pi-native",
+        agentId: "pi",
+        workspacePath: "/home/fsos/Developer/athas",
+        chat: createChat({
+          id: "harness:session-explicit-new:1",
+        }),
+      }),
+    ).toBe(false);
+  });
+
   test("does not reconcile when the current chat already points at a native session path", () => {
     expect(
       shouldReconcilePiNativeSession({
+        scopeId: createHarnessChatScopeId(),
         surface: "harness",
         runtimeBackend: "pi-native",
         agentId: "pi",
@@ -100,6 +117,7 @@ describe("pi-native restore", () => {
   test("does not reconcile when the chat already has messages", () => {
     expect(
       shouldReconcilePiNativeSession({
+        scopeId: createHarnessChatScopeId(),
         surface: "harness",
         runtimeBackend: "pi-native",
         agentId: "pi",

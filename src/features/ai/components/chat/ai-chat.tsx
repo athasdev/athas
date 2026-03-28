@@ -1207,6 +1207,7 @@ const AIChat = memo(function AIChat({
 
     if (
       !shouldReconcilePiNativeSession({
+        scopeId: resolvedScopeId,
         surface,
         runtimeBackend,
         agentId: currentAgentId,
@@ -1249,6 +1250,7 @@ const AIChat = memo(function AIChat({
           !liveCurrentChat ||
           liveCurrentChat.id !== currentChatId ||
           !shouldReconcilePiNativeSession({
+            scopeId: resolvedScopeId,
             surface,
             runtimeBackend,
             agentId: currentAgentId,
