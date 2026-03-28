@@ -334,7 +334,7 @@ mod tests {
    }
 
    #[test]
-   fn registry_new_repairs_pi_local_runtime_files() {
+   fn registry_new_repairs_pi_local_runtime_files_without_overwriting_defaults() {
       let _guard = PI_ENV_LOCK.lock().unwrap();
       let temp_dir = tempfile::tempdir().unwrap();
       let agent_root = temp_dir.path();
@@ -390,16 +390,19 @@ mod tests {
          &fs::read_to_string(agent_root.join("settings.json")).unwrap(),
       )
       .unwrap();
-      assert_eq!(settings["defaultProvider"], json!("openai-codex"));
-      assert_eq!(settings["defaultModel"], json!("gpt-5.4"));
+      assert_eq!(settings["defaultProvider"], json!("droid"));
+      assert_eq!(settings["default_provider"], json!("droid"));
+      assert_eq!(settings["defaultModel"], json!("gpt-5.4-mini"));
+      assert_eq!(settings["default_model"], json!("gpt-5.4-mini"));
       assert_eq!(settings["defaultThinkingLevel"], json!("medium"));
+      assert_eq!(settings["default_thinking_level"], json!("medium"));
 
       let reasoning = serde_json::from_str::<serde_json::Value>(
          &fs::read_to_string(agent_root.join("reasoning-state.json")).unwrap(),
       )
       .unwrap();
-      assert_eq!(reasoning["effective"]["provider"], json!("openai-codex"));
-      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4"));
+      assert_eq!(reasoning["effective"]["provider"], json!("droid"));
+      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4-mini"));
       assert_eq!(reasoning["effective"]["thinkingLevel"], json!("medium"));
 
       assert!(!agent_root.join("behavior-mode-state.json").exists());

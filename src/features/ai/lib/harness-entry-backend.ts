@@ -16,3 +16,15 @@ export const getPreferredHarnessEntryBackend = (
   const agentId = getDefaultAgentIdForScope(scopeId);
   return getPreferredHarnessBackendForAgent(agentId, preferredPiBackend);
 };
+
+export const resolveRestoredHarnessBufferBackend = (
+  sessionId: string,
+  persistedBackend: HarnessRuntimeBackend,
+  preferredPiBackend: HarnessRuntimeBackend = "pi-native",
+): HarnessRuntimeBackend => {
+  if (sessionId !== DEFAULT_HARNESS_SESSION_KEY) {
+    return persistedBackend;
+  }
+
+  return getPreferredHarnessEntryBackend(sessionId, preferredPiBackend);
+};

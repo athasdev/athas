@@ -467,7 +467,9 @@ const initializeSettings = async () => {
   }
 };
 
-initializeSettings();
+const settingsInitializationPromise = initializeSettings();
+
+export const waitForSettingsInitialization = () => settingsInitializationPromise;
 
 export const useSettingsStore = create(
   immer(

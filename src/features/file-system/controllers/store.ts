@@ -4,6 +4,7 @@ import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { resolveRestoredHarnessBufferBackend } from "@/features/ai/lib/harness-entry-backend";
 import { buildHarnessTransitionPromptMessage } from "@/features/ai/lib/harness-session-lifecycle";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import {
@@ -19,7 +20,7 @@ import { useGitBlameStore } from "@/features/git/stores/blame-store";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { gitDiffCache } from "@/features/git/utils/diff-cache";
 import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/diff-parser";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore, waitForSettingsInitialization } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { getPersistedProjectSessionWithRetry, useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -230,13 +231,20 @@ export const useFileSystemStore = createSelectors(
           useSessionStore.getState().getSession(projectPath) ??
           (await getPersistedProjectSessionWithRetry(projectPath));
         if (session) {
+          await waitForSettingsInitialization();
           const { actions: bufferActions } = useBufferStore.getState();
+          const preferredPiBackend = useSettingsStore.getState().settings.aiPiHarnessBackend;
 
           // Restore buffers
           for (const buffer of session.buffers) {
             if (buffer.kind === "agent") {
+              const restoredBackend = resolveRestoredHarnessBufferBackend(
+                buffer.sessionId,
+                buffer.backend,
+                preferredPiBackend,
+              );
               const bufferId = bufferActions.openAgentBuffer(buffer.sessionId, {
-                backend: buffer.backend,
+                backend: restoredBackend,
               });
               if (buffer.isPinned) {
                 const openedBuffer = useBufferStore
@@ -264,12 +272,17 @@ export const useFileSystemStore = createSelectors(
           // Restore active buffer
           if (session.activeBuffer?.kind === "agent") {
             const { sessionId, backend } = session.activeBuffer;
+            const restoredBackend = resolveRestoredHarnessBufferBackend(
+              sessionId,
+              backend,
+              preferredPiBackend,
+            );
             const { buffers } = useBufferStore.getState();
             const activeBuffer = buffers.find(
               (buffer) =>
                 buffer.isAgent &&
                 (buffer.agentSessionId ?? "harness") === sessionId &&
-                (buffer.agentBackend ?? "legacy-acp-bridge") === backend,
+                (buffer.agentBackend ?? "legacy-acp-bridge") === restoredBackend,
             );
             if (activeBuffer) {
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);

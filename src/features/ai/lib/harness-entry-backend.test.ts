@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   getPreferredHarnessBackendForAgent,
   getPreferredHarnessEntryBackend,
+  resolveRestoredHarnessBufferBackend,
 } from "./harness-entry-backend";
 
 describe("harness entry backend", () => {
@@ -26,5 +27,17 @@ describe("harness entry backend", () => {
     expect(getPreferredHarnessEntryBackend(undefined, "legacy-acp-bridge")).toBe(
       "legacy-acp-bridge",
     );
+  });
+
+  test("restores the default Harness buffer using the current preferred Pi backend", () => {
+    expect(resolveRestoredHarnessBufferBackend("harness", "pi-native", "legacy-acp-bridge")).toBe(
+      "legacy-acp-bridge",
+    );
+  });
+
+  test("keeps explicit Harness session backends stable when restoring", () => {
+    expect(
+      resolveRestoredHarnessBufferBackend("session-123", "pi-native", "legacy-acp-bridge"),
+    ).toBe("pi-native");
   });
 });

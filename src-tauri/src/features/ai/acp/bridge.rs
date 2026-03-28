@@ -35,10 +35,6 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 const DEFAULT_ACP_ROUTE_KEY: &str = "panel";
-const PI_CANONICAL_PROVIDER: &str = "openai-codex";
-const PI_CANONICAL_MODEL_ID: &str = "gpt-5.4";
-const PI_CANONICAL_THINKING_LEVEL: &str = "medium";
-
 #[derive(Clone)]
 struct AcpRouteWorkerHandle {
    command_tx: mpsc::Sender<AcpCommand>,
@@ -493,33 +489,44 @@ impl AcpWorker {
       Ok(())
    }
 
+   fn sync_json_string_alias(
+      object: &mut serde_json::Map<String, serde_json::Value>,
+      primary_key: &str,
+      legacy_key: &str,
+   ) -> bool {
+      let resolved = object
+         .get(primary_key)
+         .and_then(serde_json::Value::as_str)
+         .map(ToString::to_string)
+         .or_else(|| {
+            object
+               .get(legacy_key)
+               .and_then(serde_json::Value::as_str)
+               .map(ToString::to_string)
+         });
+
+      let Some(value) = resolved else {
+         return false;
+      };
+
+      object.insert(
+         primary_key.to_string(),
+         serde_json::Value::String(value.clone()),
+      );
+      object.insert(legacy_key.to_string(), serde_json::Value::String(value));
+      true
+   }
+
    fn repair_pi_settings_json(agent_root: &Path) -> Result<()> {
       let path = agent_root.join("settings.json");
       let mut settings = Self::read_json_object(&path);
 
-      settings.insert(
-         "default_provider".to_string(),
-         serde_json::Value::String(PI_CANONICAL_PROVIDER.to_string()),
-      );
-      settings.insert(
-         "defaultProvider".to_string(),
-         serde_json::Value::String(PI_CANONICAL_PROVIDER.to_string()),
-      );
-      settings.insert(
-         "default_model".to_string(),
-         serde_json::Value::String(PI_CANONICAL_MODEL_ID.to_string()),
-      );
-      settings.insert(
-         "defaultModel".to_string(),
-         serde_json::Value::String(PI_CANONICAL_MODEL_ID.to_string()),
-      );
-      settings.insert(
-         "default_thinking_level".to_string(),
-         serde_json::Value::String(PI_CANONICAL_THINKING_LEVEL.to_string()),
-      );
-      settings.insert(
-         "defaultThinkingLevel".to_string(),
-         serde_json::Value::String(PI_CANONICAL_THINKING_LEVEL.to_string()),
+      Self::sync_json_string_alias(&mut settings, "defaultProvider", "default_provider");
+      Self::sync_json_string_alias(&mut settings, "defaultModel", "default_model");
+      Self::sync_json_string_alias(
+         &mut settings,
+         "defaultThinkingLevel",
+         "default_thinking_level",
       );
 
       Self::write_json_file(&path, &serde_json::Value::Object(settings))
@@ -528,25 +535,55 @@ impl AcpWorker {
    fn repair_pi_reasoning_state_json(agent_root: &Path) -> Result<()> {
       let path = agent_root.join("reasoning-state.json");
       let mut reasoning = Self::read_json_object(&path);
+      let settings = Self::read_json_file(&agent_root.join("settings.json"))
+         .and_then(|value| value.as_object().cloned())
+         .unwrap_or_default();
+      let provider = Self::read_json_string(
+         &serde_json::Value::Object(settings.clone()),
+         &["defaultProvider", "default_provider"],
+      );
+      let model_id = Self::read_json_string(
+         &serde_json::Value::Object(settings.clone()),
+         &["defaultModel", "default_model"],
+      );
+      let thinking_level = Self::read_json_string(
+         &serde_json::Value::Object(settings),
+         &["defaultThinkingLevel", "default_thinking_level"],
+      );
 
-      let requested = json!({
-         "provider": PI_CANONICAL_PROVIDER,
-         "modelId": PI_CANONICAL_MODEL_ID,
-         "family": PI_CANONICAL_MODEL_ID,
-         "thinkingLevel": PI_CANONICAL_THINKING_LEVEL,
-      });
+      let requested = match (
+         provider.as_ref(),
+         model_id.as_ref(),
+         thinking_level.as_ref(),
+      ) {
+         (Some(provider), Some(model_id), Some(thinking_level)) => json!({
+            "provider": provider,
+            "modelId": model_id,
+            "family": model_id,
+            "thinkingLevel": thinking_level,
+         }),
+         _ => serde_json::Value::Object(
+            reasoning
+               .get("requested")
+               .and_then(serde_json::Value::as_object)
+               .cloned()
+               .unwrap_or_default(),
+         ),
+      };
       let effective = requested.clone();
 
       reasoning.insert("requested".to_string(), requested);
       reasoning.insert("effective".to_string(), effective);
-      reasoning.insert(
-         "display".to_string(),
-         json!({
-            "label": format!("{}/{}", PI_CANONICAL_MODEL_ID, PI_CANONICAL_THINKING_LEVEL),
-            "mode": "raw-family",
-            "rawPinned": true,
-         }),
-      );
+      if let (Some(model_id), Some(thinking_level)) = (model_id.as_ref(), thinking_level.as_ref()) {
+         reasoning.insert(
+            "display".to_string(),
+            json!({
+               "label": format!("{}/{}", model_id, thinking_level),
+               "mode": "raw-family",
+               "rawPinned": true,
+            }),
+         );
+      }
       reasoning.insert(
          "normalization".to_string(),
          json!({
@@ -749,12 +786,18 @@ impl AcpWorker {
 
          if let Some(reasoning) = Self::read_json_file(&agent_root.join("reasoning-state.json")) {
             if let Some(effective) = reasoning.get("effective") {
-               runtime_state.provider = Self::read_json_string(effective, &["provider"])
-                  .or_else(|| runtime_state.provider.clone());
-               runtime_state.model_id = Self::read_json_string(effective, &["modelId"])
-                  .or_else(|| runtime_state.model_id.clone());
-               runtime_state.thinking_level = Self::read_json_string(effective, &["thinkingLevel"])
-                  .or_else(|| runtime_state.thinking_level.clone());
+               runtime_state.provider = runtime_state
+                  .provider
+                  .clone()
+                  .or_else(|| Self::read_json_string(effective, &["provider"]));
+               runtime_state.model_id = runtime_state
+                  .model_id
+                  .clone()
+                  .or_else(|| Self::read_json_string(effective, &["modelId"]));
+               runtime_state.thinking_level = runtime_state
+                  .thinking_level
+                  .clone()
+                  .or_else(|| Self::read_json_string(effective, &["thinkingLevel"]));
             }
          }
 
@@ -2648,7 +2691,7 @@ mod tests {
    }
 
    #[test]
-   fn repair_pi_local_runtime_files_rewrites_conflicting_state() {
+   fn repair_pi_local_runtime_files_syncs_legacy_aliases_without_overwriting_defaults() {
       let temp_dir = tempfile::tempdir().unwrap();
       let agent_root = temp_dir.path();
 
@@ -2706,22 +2749,22 @@ mod tests {
       AcpWorker::repair_pi_local_runtime_files(agent_root).unwrap();
 
       let settings = AcpWorker::read_json_file(&agent_root.join("settings.json")).unwrap();
-      assert_eq!(settings["default_provider"], json!("openai-codex"));
-      assert_eq!(settings["defaultProvider"], json!("openai-codex"));
-      assert_eq!(settings["default_model"], json!("gpt-5.4"));
-      assert_eq!(settings["defaultModel"], json!("gpt-5.4"));
+      assert_eq!(settings["default_provider"], json!("droid"));
+      assert_eq!(settings["defaultProvider"], json!("droid"));
+      assert_eq!(settings["default_model"], json!("gpt-5.4-mini"));
+      assert_eq!(settings["defaultModel"], json!("gpt-5.4-mini"));
       assert_eq!(settings["default_thinking_level"], json!("medium"));
       assert_eq!(settings["defaultThinkingLevel"], json!("medium"));
       assert_eq!(settings["shell_path"], json!("/bin/bash"));
 
       let reasoning = AcpWorker::read_json_file(&agent_root.join("reasoning-state.json")).unwrap();
-      assert_eq!(reasoning["requested"]["provider"], json!("openai-codex"));
-      assert_eq!(reasoning["requested"]["modelId"], json!("gpt-5.4"));
+      assert_eq!(reasoning["requested"]["provider"], json!("droid"));
+      assert_eq!(reasoning["requested"]["modelId"], json!("gpt-5.4-mini"));
       assert_eq!(reasoning["requested"]["thinkingLevel"], json!("medium"));
-      assert_eq!(reasoning["effective"]["provider"], json!("openai-codex"));
-      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4"));
+      assert_eq!(reasoning["effective"]["provider"], json!("droid"));
+      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4-mini"));
       assert_eq!(reasoning["effective"]["thinkingLevel"], json!("medium"));
-      assert_eq!(reasoning["display"]["label"], json!("gpt-5.4/medium"));
+      assert_eq!(reasoning["display"]["label"], json!("gpt-5.4-mini/medium"));
 
       let behavior =
          AcpWorker::read_json_file(&agent_root.join("behavior-mode-state.json")).unwrap();
@@ -2729,27 +2772,25 @@ mod tests {
    }
 
    #[test]
-   fn repair_pi_local_runtime_files_creates_missing_runtime_files() {
+   fn repair_pi_local_runtime_files_creates_safe_empty_runtime_files() {
       let temp_dir = tempfile::tempdir().unwrap();
       let agent_root = temp_dir.path();
 
       AcpWorker::repair_pi_local_runtime_files(agent_root).unwrap();
 
       let settings = AcpWorker::read_json_file(&agent_root.join("settings.json")).unwrap();
-      assert_eq!(settings["defaultProvider"], json!("openai-codex"));
-      assert_eq!(settings["defaultModel"], json!("gpt-5.4"));
-      assert_eq!(settings["defaultThinkingLevel"], json!("medium"));
+      assert!(settings.as_object().unwrap().is_empty());
 
       let reasoning = AcpWorker::read_json_file(&agent_root.join("reasoning-state.json")).unwrap();
-      assert_eq!(reasoning["effective"]["provider"], json!("openai-codex"));
-      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4"));
-      assert_eq!(reasoning["effective"]["thinkingLevel"], json!("medium"));
+      assert_eq!(reasoning["requested"], json!({}));
+      assert_eq!(reasoning["effective"], json!({}));
+      assert_eq!(reasoning["normalization"]["kind"], json!("none"));
 
       assert!(!agent_root.join("behavior-mode-state.json").exists());
    }
 
    #[test]
-   fn load_pi_runtime_state_repairs_and_reads_canonical_profile() {
+   fn load_pi_runtime_state_prefers_settings_over_stale_reasoning_state() {
       let _guard = PI_ENV_LOCK.lock().unwrap();
       let temp_dir = tempfile::tempdir().unwrap();
       let agent_root = temp_dir.path();
@@ -2801,8 +2842,8 @@ mod tests {
          },
       }
 
-      assert_eq!(runtime_state.provider.as_deref(), Some("openai-codex"));
-      assert_eq!(runtime_state.model_id.as_deref(), Some("gpt-5.4"));
+      assert_eq!(runtime_state.provider.as_deref(), Some("droid"));
+      assert_eq!(runtime_state.model_id.as_deref(), Some("gpt-5.4-mini"));
       assert_eq!(runtime_state.thinking_level.as_deref(), Some("medium"));
       assert_eq!(runtime_state.behavior, None);
    }
