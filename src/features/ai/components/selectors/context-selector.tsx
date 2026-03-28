@@ -192,28 +192,6 @@ export function ContextSelector({
     return scoredItems.map(({ item }) => item);
   }, [allFiles, buffers, searchTerm, selectedBufferIds, selectedFilesPaths]);
 
-  // Get selected items for display
-  const selectedItems = useMemo(() => {
-    const bufferItems = buffers
-      .filter((buffer) => selectedBufferIds.has(buffer.id))
-      .map((buffer) => ({
-        type: "buffer" as const,
-        id: buffer.id,
-        name: buffer.name,
-        isSQLite: buffer.isSQLite,
-        isDirty: buffer.isDirty,
-      }));
-
-    const fileItems = Array.from(selectedFilesPaths).map((filePath) => ({
-      type: "file" as const,
-      id: filePath,
-      name: filePath.split("/").pop() || "Unknown",
-      path: filePath,
-    }));
-
-    return [...bufferItems, ...fileItems];
-  }, [buffers, selectedBufferIds, selectedFilesPaths]);
-
   const closePopover = useCallback(() => {
     if (isOpen) {
       onToggleOpen();
@@ -303,8 +281,8 @@ export function ContextSelector({
         <button
           onClick={onToggleOpen}
           className={cn(
-            "flex h-9 w-9 select-none items-center justify-center rounded-full border border-border/70 bg-primary-bg/75 p-1",
-            "text-text-lighter text-xs transition-colors",
+            "flex h-8 w-8 select-none items-center justify-center rounded-full border border-transparent bg-transparent",
+            "text-text-lighter transition-colors",
             "hover:bg-hover hover:text-text focus:outline-none",
           )}
           title="Add context files"
@@ -433,55 +411,6 @@ export function ContextSelector({
           </div>,
           document.body,
         )}
-
-      {/* Selected items as compact badges with horizontal scrolling */}
-      <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-        {selectedItems.map((item) => (
-          <div
-            key={`selected-${item.type}-${item.id}`}
-            className="group flex shrink-0 select-none items-center gap-1 rounded-full border border-border/70 bg-primary-bg/75 px-2.5 py-1 text-xs"
-          >
-            {item.type === "buffer" ? (
-              item.isSQLite ? (
-                <Database size={8} className="text-text-lighter" />
-              ) : (
-                <FileText size={8} className="text-text-lighter" />
-              )
-            ) : (
-              <FileText size={8} className="text-blue-500" />
-            )}
-            <span
-              className={cn(
-                "max-w-20 truncate",
-                item.type === "buffer" ? "text-text" : "text-blue-400",
-              )}
-            >
-              {item.name}
-            </span>
-            {item.type === "buffer" && item.isDirty && (
-              <span className="text-[8px] text-yellow-500" title="Unsaved changes">
-                ●
-              </span>
-            )}
-            <button
-              onClick={() => {
-                if (item.type === "buffer") {
-                  onToggleBuffer(item.id);
-                } else {
-                  onToggleFile(item.id);
-                }
-              }}
-              className="rounded-full p-0.5 text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 focus:opacity-100 focus:outline-none focus:ring-1 focus:ring-red-400/50 group-hover:opacity-100"
-              aria-label={`Remove ${item.name} from context`}
-              tabIndex={0}
-            >
-              <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" />
-              </svg>
-            </button>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

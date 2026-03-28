@@ -403,7 +403,7 @@ export function UnifiedAgentSelector({
         <button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="ui-font flex h-9 items-center gap-1.5 rounded-2xl border border-border/70 bg-primary-bg/75 px-3 text-xs transition-colors hover:bg-hover"
+          className="ui-font flex h-8 items-center gap-1.5 rounded-xl border border-transparent px-2.5 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">

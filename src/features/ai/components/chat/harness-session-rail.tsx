@@ -5,7 +5,6 @@ import {
   History,
   LoaderCircle,
   Plus,
-  Sparkles,
   X,
 } from "lucide-react";
 import { pickContinueRecentRuntimeSession } from "@/features/ai/lib/harness-session-actions";
@@ -48,26 +47,26 @@ interface HarnessSessionRailProps {
 function getSessionDotTone(state: HarnessTrustStateKind): string {
   switch (state) {
     case "running":
-      return "bg-blue-400";
+      return "text-blue-400";
     case "attention":
-      return "bg-yellow-400";
+      return "text-yellow-400";
     case "error":
-      return "bg-red-400";
+      return "text-red-400";
     default:
-      return "bg-text-lighter/35";
+      return "text-transparent";
   }
 }
 
 function getStatusTone(state: HarnessTrustStateKind): string {
   switch (state) {
     case "running":
-      return "border-blue-500/20 bg-blue-500/10 text-blue-200";
+      return "text-blue-300";
     case "attention":
-      return "border-yellow-500/20 bg-yellow-500/10 text-yellow-200";
+      return "text-yellow-300";
     case "error":
-      return "border-red-500/20 bg-red-500/10 text-red-200";
+      return "text-red-300";
     default:
-      return "border-border/70 bg-secondary-bg/50 text-text-lighter";
+      return "text-text-lighter";
   }
 }
 
@@ -99,19 +98,18 @@ export function HarnessSessionRail({
   const continueRecentSession = pickContinueRecentRuntimeSession(recentRuntimeSessions);
 
   return (
-    <aside className="flex h-full w-full shrink-0 flex-col gap-3.5 bg-secondary-bg/18 px-3 py-4">
-      <section className="rounded-[24px] border border-border/70 bg-secondary-bg/35 p-3 backdrop-blur-sm">
-        <div className="mb-3 flex items-center justify-between gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
+    <aside className="flex h-full w-full shrink-0 flex-col gap-4 bg-transparent px-2 py-4">
+      <section className="px-2">
+        <div className="mb-2 flex items-center justify-between gap-2 font-medium text-[11px] text-text-lighter uppercase tracking-[0.16em] opacity-40">
           <div className="flex items-center gap-2">
-            <Sparkles size={12} />
             <span>Sessions</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {canReopenClosedSession ? (
               <button
                 type="button"
                 onClick={onReopenClosedSession}
-                className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-primary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex items-center justify-center text-text-lighter transition-colors hover:text-text"
                 aria-label="Reopen the most recently closed Harness session"
                 title="Reopen the most recently closed Harness session"
               >
@@ -121,7 +119,7 @@ export function HarnessSessionRail({
             <button
               type="button"
               onClick={onCreateSession}
-              className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-primary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              className="flex items-center justify-center text-text-lighter transition-colors hover:text-text"
               aria-label="Create new Harness session"
               title="Create new Harness session"
             >
@@ -131,43 +129,28 @@ export function HarnessSessionRail({
         </div>
         <div className="space-y-2">
           {sessions.map((session) => (
-            <div
-              key={session.bufferId}
-              className={cn(
-                "flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs transition-colors",
-                session.isActive
-                  ? "border-border bg-primary-bg/85"
-                  : "border-border/60 bg-primary-bg/50",
-              )}
-            >
+            <div key={session.bufferId} className="group flex items-center gap-2 py-1.5 text-sm">
               <button
                 type="button"
                 onClick={() => onSelectSession(session.sessionKey)}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
-                <CircleDot
-                  size={10}
-                  className={cn(
-                    "shrink-0",
-                    session.isActive ? "text-text" : "text-text-lighter/70",
-                  )}
-                />
                 <span
                   className={cn(
-                    "truncate",
-                    session.isActive ? "font-medium text-text" : "text-text-lighter",
+                    "truncate transition-colors",
+                    session.isActive
+                      ? "font-medium text-text"
+                      : "text-text-lighter/60 hover:text-text-lighter",
                   )}
                 >
                   {session.title}
                 </span>
                 {session.isDefault ? (
-                  <span className="shrink-0 rounded-full border border-border/70 bg-secondary-bg/55 px-1.5 py-0.5 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
-                    Main
-                  </span>
+                  <span className="shrink-0 text-[10px] text-text-lighter/40">Main</span>
                 ) : null}
                 <span
                   className={cn(
-                    "size-2 shrink-0 rounded-full",
+                    "size-1.5 shrink-0 rounded-full bg-current",
                     getSessionDotTone(session.state),
                     session.state === "running" && "animate-pulse",
                   )}
@@ -177,11 +160,11 @@ export function HarnessSessionRail({
               <button
                 type="button"
                 onClick={() => onCloseSession(session.bufferId)}
-                className="flex size-6 shrink-0 items-center justify-center rounded-full text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex size-5 shrink-0 items-center justify-center text-text-lighter/0 transition-colors hover:text-text group-hover:text-text-lighter"
                 aria-label={`Close ${session.title}`}
                 title={`Close ${session.title}`}
               >
-                <X size={10} />
+                <X size={12} />
               </button>
             </div>
           ))}
@@ -189,17 +172,16 @@ export function HarnessSessionRail({
       </section>
 
       {recentRuntimeSessions.length > 0 && onOpenRuntimeSession ? (
-        <section className="rounded-[24px] border border-border/70 bg-secondary-bg/35 p-3 backdrop-blur-sm">
-          <div className="mb-3 flex items-center justify-between gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
+        <section className="mt-6 px-2">
+          <div className="mb-2 flex items-center justify-between gap-2 font-medium text-[11px] text-text-lighter uppercase tracking-[0.16em] opacity-40">
             <div className="flex items-center gap-2">
-              <History size={12} />
-              <span>Recent Pi Sessions</span>
+              <span>Recent Pi</span>
             </div>
             {continueRecentSession && onContinueRecentRuntimeSession ? (
               <button
                 type="button"
                 onClick={() => onContinueRecentRuntimeSession(continueRecentSession.path)}
-                className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-primary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex items-center justify-center text-text-lighter transition-colors hover:text-text"
                 aria-label="Continue the latest Pi session"
                 title="Continue the latest Pi session"
               >
@@ -207,36 +189,26 @@ export function HarnessSessionRail({
               </button>
             ) : null}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {recentRuntimeSessions.map((session) => (
               <button
                 key={session.path}
                 type="button"
                 onClick={() => onOpenRuntimeSession(session.path)}
-                className={cn(
-                  "flex w-full items-start gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs transition-colors",
-                  session.isCurrent
-                    ? "border-border bg-primary-bg/85"
-                    : "border-border/60 bg-primary-bg/50 hover:bg-hover/60",
-                )}
+                className="group flex w-full items-start gap-2 py-1 text-left text-sm transition-colors"
               >
-                <span
-                  className={cn(
-                    "mt-1 size-2 shrink-0 rounded-full",
-                    session.isCurrent ? "bg-blue-400" : "bg-text-lighter/35",
-                  )}
-                  aria-hidden="true"
-                />
                 <span className="min-w-0 flex-1">
                   <span
                     className={cn(
-                      "block truncate",
-                      session.isCurrent ? "font-medium text-text" : "text-text-lighter",
+                      "block truncate transition-colors",
+                      session.isCurrent
+                        ? "font-medium text-text"
+                        : "text-text-lighter/60 group-hover:text-text-lighter",
                     )}
                   >
                     {session.title}
                   </span>
-                  <span className="mt-1 block truncate text-[11px] text-text-lighter/80">
+                  <span className="mt-0.5 block truncate text-[11px] text-text-lighter/40 group-hover:text-text-lighter/60">
                     {session.detail}
                   </span>
                 </span>
@@ -247,27 +219,20 @@ export function HarnessSessionRail({
       ) : null}
 
       {activeSession.status.showRailStatus ? (
-        <section className="rounded-[24px] border border-border/70 bg-secondary-bg/35 p-3 backdrop-blur-sm">
-          <div
-            className={cn(
-              "rounded-2xl border px-3 py-3 text-xs",
-              getStatusTone(activeSession.status.kind),
-            )}
-          >
+        <section className="mt-auto px-2">
+          <div className={cn("px-2 text-xs opacity-80", getStatusTone(activeSession.status.kind))}>
             <div className="flex items-start gap-2">
               <StatusIcon
-                size={13}
+                size={12}
                 className={cn(
-                  "mt-0.5 shrink-0",
+                  "mt-[3px] shrink-0",
                   activeSession.status.kind === "running" && "animate-spin",
                 )}
               />
               <div className="min-w-0 flex-1">
-                <div className="font-medium">{activeSession.status.stateLabel}</div>
+                <div className="font-medium text-text">{activeSession.status.stateLabel}</div>
                 {activeSession.status.detail ? (
-                  <div className="mt-1 text-[11px] text-current/80">
-                    {activeSession.status.detail}
-                  </div>
+                  <div className="mt-0.5 text-current/70">{activeSession.status.detail}</div>
                 ) : null}
               </div>
             </div>

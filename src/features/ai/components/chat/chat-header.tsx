@@ -1,4 +1,4 @@
-import { Bot, GitBranch, History, Layers3 } from "lucide-react";
+import { GitBranch, History, Layers3 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import {
@@ -102,10 +102,10 @@ function EditableChatTitle({
         className={cn(
           "border border-border bg-secondary-bg/80 font-medium text-text outline-none focus:border-accent/40 focus:bg-hover",
           variant === "harness"
-            ? "rounded-2xl px-3 py-2 text-base"
+            ? "rounded-xl px-2.5 py-1.5 font-medium text-sm"
             : "rounded-full px-2.5 py-1 text-sm",
         )}
-        style={{ minWidth: variant === "harness" ? "180px" : "100px", maxWidth: "280px" }}
+        style={{ minWidth: variant === "harness" ? "140px" : "100px", maxWidth: "280px" }}
       />
     );
   }
@@ -113,10 +113,10 @@ function EditableChatTitle({
   return (
     <span
       className={cn(
-        "block max-w-full cursor-pointer truncate font-medium transition-colors hover:bg-hover",
+        "block max-w-full cursor-pointer truncate font-medium transition-colors hover:text-text",
         variant === "harness"
-          ? "rounded-2xl px-3 py-1.5 text-lg text-text"
-          : "rounded-full px-2 py-1 text-sm",
+          ? "px-1 font-medium text-[13px] text-text-lighter"
+          : "rounded-full bg-hover px-2 py-1 text-sm hover:bg-hover/80",
       )}
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
@@ -162,55 +162,33 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
 
   if (surface === "harness") {
     return (
-      <div className="relative z-[10020] border-border/70 border-b bg-primary-bg/92 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-[1480px] items-center gap-4 px-3 py-3 sm:px-4">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex flex-wrap items-center gap-2 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
-              <span className="rounded-full border border-border/70 bg-secondary-bg/45 px-2 py-1 text-text">
-                Harness
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Bot size={11} />
-                {currentAgentLabel}
-              </span>
-              {contextTokenCount !== null ? (
-                <span className="rounded-full border border-border/70 bg-secondary-bg/30 px-2 py-1 normal-case tracking-normal">
-                  {formatTokenCount(contextTokenCount)}
-                </span>
-              ) : null}
-              <span className="rounded-full border border-border/70 bg-secondary-bg/30 px-2 py-1 normal-case tracking-normal">
-                Compact {compactionPolicyLabel}
-              </span>
-            </div>
-
-            <div className="flex min-w-0 items-center gap-3">
-              {chatState.currentChatId ? (
-                <EditableChatTitle
-                  title={currentChat ? currentChat.title : "New Session"}
-                  onUpdateTitle={(title) =>
-                    chatActions.updateChatTitle(chatState.currentChatId!, title)
-                  }
-                  variant="harness"
-                />
-              ) : (
-                <span className="block rounded-2xl px-3 py-1.5 font-medium text-lg text-text">
-                  New Session
-                </span>
-              )}
-            </div>
+      <div className="relative z-[10020] bg-transparent pt-6 pb-2">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-3 opacity-50 transition-opacity hover:opacity-100 sm:px-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3 text-text-lighter">
+            {chatState.currentChatId ? (
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Session"}
+                onUpdateTitle={(title) =>
+                  chatActions.updateChatTitle(chatState.currentChatId!, title)
+                }
+                variant="harness"
+              />
+            ) : (
+              <span className="font-medium text-[13px] text-text">New Session</span>
+            )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1">
             <Tooltip content="Session History" side="bottom">
               <button
                 onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
                 className={cn(
-                  "flex h-9 items-center justify-center rounded-2xl border border-border/70 bg-secondary-bg/45 px-3 text-text-lighter transition-colors hover:bg-hover hover:text-text",
-                  chatState.isChatHistoryVisible && "bg-secondary-bg/80 text-text",
+                  "flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text",
+                  chatState.isChatHistoryVisible && "text-text",
                 )}
                 aria-label="Toggle session history"
               >
-                <History size={14} />
+                <History size={13} />
               </button>
             </Tooltip>
 
@@ -218,10 +196,10 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
               <Tooltip content="Fork session" side="bottom">
                 <button
                   onClick={() => onForkCurrentChat()}
-                  className="flex h-9 items-center justify-center rounded-2xl border border-border/70 bg-secondary-bg/45 px-3 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                  className="flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text"
                   aria-label="Fork session"
                 >
-                  <GitBranch size={14} />
+                  <GitBranch size={13} />
                 </button>
               </Tooltip>
             ) : null}
@@ -231,10 +209,10 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
                 onClick={() => {
                   void chatActions.compactChat("manual");
                 }}
-                className="flex h-9 items-center justify-center rounded-2xl border border-border/70 bg-secondary-bg/45 px-3 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text"
                 aria-label="Compact session context"
               >
-                <Layers3 size={14} />
+                <Layers3 size={13} />
               </button>
             </Tooltip>
           </div>

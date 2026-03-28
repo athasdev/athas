@@ -162,10 +162,10 @@ export const ChatModeSelector = memo(function ChatModeSelector({
           }
         }}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-2xl border border-border/70 bg-primary-bg/75 px-3 text-xs transition-colors",
+          "inline-flex h-8 items-center gap-1.5 rounded-xl border border-transparent px-2.5 text-xs transition-colors",
           isSelectorDisabled
-            ? "cursor-not-allowed text-text-lighter/70"
-            : "text-text hover:bg-hover",
+            ? "cursor-not-allowed opacity-50"
+            : "text-text-lighter hover:bg-hover hover:text-text",
           className,
         )}
         aria-expanded={isOpen}

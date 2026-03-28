@@ -847,7 +847,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             surface === "harness" ? "" : "flex-wrap",
           )}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
             <div ref={contextDropdownRef} className="shrink-0">
               <ContextSelector
                 buffers={buffers}
@@ -862,42 +862,38 @@ const AIChatInputBar = memo(function AIChatInputBar({
               />
             </div>
 
+            {surface === "harness" ? (
+              <>
+                <UnifiedAgentSelector
+                  scopeId={scopeId}
+                  surface={surface}
+                  variant="input"
+                  onOpenSettings={() => {}}
+                />
+                <SessionModeSelector scopeId={scopeId} disabled={isStreaming} />
+                <PiNativeRuntimeControls
+                  scopeId={scopeId}
+                  agentId={currentAgentId}
+                  runtimeBackend={runtimeBackend}
+                  runtimeState={currentRuntimeState}
+                  disabled={isStreaming}
+                />
+              </>
+            ) : null}
+
             {/* Queue indicator */}
             {chatState.queueCount > 0 && (
               <div
-                className="flex items-center gap-1 rounded-full bg-primary-bg/40 px-2 py-0.5 text-text-lighter text-xs"
+                className="ml-1 flex flex-shrink-0 items-center gap-1.5 px-1 pb-[1px] text-[11px] text-text-lighter/60"
                 title={`Queued messages: ${chatState.steeringQueueCount} steering, ${chatState.followUpQueueCount} follow-up`}
               >
-                <span className="font-semibold text-text">{chatState.queueCount}</span>
-                <span className="opacity-80">queued</span>
+                <div className="h-3 w-px bg-border/40" />
+                <span className="font-medium">{chatState.queueCount} queued</span>
               </div>
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            {surface === "harness" ? (
-              <UnifiedAgentSelector
-                scopeId={scopeId}
-                surface={surface}
-                variant="input"
-                onOpenSettings={() => {}}
-              />
-            ) : null}
-
-            {surface === "harness" ? (
-              <SessionModeSelector scopeId={scopeId} disabled={isStreaming} />
-            ) : null}
-
-            {surface === "harness" ? (
-              <PiNativeRuntimeControls
-                scopeId={scopeId}
-                agentId={currentAgentId}
-                runtimeBackend={runtimeBackend}
-                runtimeState={currentRuntimeState}
-                disabled={isStreaming}
-              />
-            ) : null}
-
+          <div className="flex shrink-0 items-center pl-2">
             <Button
               type="submit"
               disabled={isSendDisabled}

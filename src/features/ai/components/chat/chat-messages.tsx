@@ -77,14 +77,16 @@ const getVisibleEventDetail = (event: ChatAcpEvent): string | null => {
   return event.detail;
 };
 
-const getPlanStatusTone = (status: "pending" | "in_progress" | "completed"): string => {
+import { Circle, CircleDot } from "lucide-react";
+
+const getPlanStatusTone = (status: "pending" | "in_progress" | "completed") => {
   switch (status) {
     case "completed":
-      return "border-green-500/20 bg-green-500/10 text-green-300";
+      return { Icon: CheckCircle, className: "text-green-500/80" };
     case "in_progress":
-      return "border-blue-500/20 bg-blue-500/10 text-blue-300";
+      return { Icon: CircleDot, className: "text-blue-400" };
     default:
-      return "border-border bg-primary-bg/80 text-text-lighter";
+      return { Icon: Circle, className: "text-text-lighter/40" };
   }
 };
 
@@ -212,32 +214,33 @@ export const ChatMessages = memo(
       }
 
       return (
-        <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
-          <div className="w-full max-w-xl rounded-[28px] border border-border/70 bg-secondary-bg/45 p-5 shadow-sm backdrop-blur-sm">
-            <div className="mb-3 flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-[0.16em]">
+        <div className="flex min-h-full flex-col items-center justify-center px-4 py-16 opacity-80">
+          <div className="mb-8 w-full max-w-lg text-center">
+            <h3 className="font-semibold text-lg text-text">
+              {surface === "harness" ? "What are we building?" : "Start a conversation"}
+            </h3>
+            <p className="mt-2 text-sm text-text-lighter/80">
+              The conversation canvas is ready. Use @ to reference files.
+            </p>
+          </div>
+
+          <div className="w-full max-w-lg">
+            <div className="mb-4 flex items-center justify-center gap-2 font-medium text-[11px] text-text-lighter uppercase tracking-[0.16em]">
               <MessageSquare size={12} />
               <span>{surface === "harness" ? "Recent Sessions" : "Recent Chats"}</span>
             </div>
-            <div className="mb-4">
-              <h3 className="font-medium text-base text-text">
-                {surface === "harness" ? "Pick up where you left off" : "Continue a conversation"}
-              </h3>
-              <p className="mt-1 text-sm text-text-lighter">
-                The conversation canvas is ready. Reopen a recent thread or start fresh.
-              </p>
-            </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               {recentChats.map((chat) => (
                 <button
                   key={chat.id}
                   onClick={() => chatActions.switchToChat(chat.id)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-3 text-left transition-colors hover:bg-hover"
+                  className="flex w-full items-center gap-4 rounded-2xl bg-primary-bg/20 px-4 py-3 text-left transition-colors hover:bg-secondary-bg"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-sm text-text">{chat.title}</div>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-text-lighter">
+                    <div className="truncate font-medium text-[13px] text-text">{chat.title}</div>
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-text-lighter/60">
                       <span>{getAgentLabel(chat.agentId)}</span>
-                      <span className="text-text-lighter/50">•</span>
+                      <span>•</span>
                       <span>{getRelativeTime(chat.lastMessageAt)}</span>
                     </div>
                   </div>
@@ -252,36 +255,39 @@ export const ChatMessages = memo(
     return (
       <>
         {planEntries.length > 0 ? (
-          <div className="px-3 pt-4 pb-2 sm:px-4">
-            <div className="rounded-[24px] border border-border/70 bg-secondary-bg/35 px-4 py-3 backdrop-blur-sm">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="inline-flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-[0.16em]">
+          <div className="px-3 pt-3 pb-1 sm:px-4">
+            <div className="py-1">
+              <div className="mb-2 flex items-center justify-between gap-3 opacity-70">
+                <div className="inline-flex items-center gap-1.5 font-medium text-[11px] uppercase tracking-[0.16em]">
                   <ListTodo size={11} />
                   <span>Plan</span>
                 </div>
-                <div className="text-[11px] text-text-lighter">
+                <div className="text-[11px]">
                   {planCounts.completed}/{planCounts.total} done
                   {planCounts.inProgress > 0 ? ` · ${planCounts.inProgress} active` : ""}
                 </div>
               </div>
-              <div className="space-y-2">
-                {planEntries.map((entry, index) => (
+              {planEntries.map((entry, index) => {
+                const tone = getPlanStatusTone(entry.status);
+                return (
                   <div
                     key={`${entry.content}-${index}`}
-                    className="flex items-start gap-2 rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-2 text-sm"
+                    className="flex items-start gap-2 text-[13px]"
                   >
+                    <tone.Icon size={12} className={cn("mt-0.5 shrink-0", tone.className)} />
                     <span
                       className={cn(
-                        "mt-0.5 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide",
-                        getPlanStatusTone(entry.status),
+                        "min-w-0 flex-1",
+                        entry.status === "completed"
+                          ? "text-text-lighter/60 line-through"
+                          : "text-text",
                       )}
                     >
-                      {entry.status.replace("_", " ")}
+                      {entry.content}
                     </span>
-                    <span className="min-w-0 flex-1 text-text">{entry.content}</span>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -331,19 +337,16 @@ export const ChatMessages = memo(
           const hasStructuredToolEvent = events.some(isStructuredToolEvent);
 
           return (
-            <div key={row.id} className="px-3 py-2 sm:px-4">
-              <div className="rounded-[24px] border border-border/70 bg-secondary-bg/30 px-3.5 py-3 backdrop-blur-sm">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.16em]">
-                    {hasStructuredToolEvent ? <Wrench size={11} /> : <Sparkles size={11} />}
-                    {groupLabel}
-                  </div>
-                  <div className="text-[11px] text-text-lighter">
-                    {events.length} event{events.length === 1 ? "" : "s"}
+            <div key={row.id} className="px-3 py-1.5 sm:px-4">
+              <div className="flex flex-col gap-1 opacity-70 transition-opacity hover:opacity-100">
+                <div className="mb-1 flex items-center gap-2 text-text-lighter/60">
+                  <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em]">
+                    {hasStructuredToolEvent ? <Wrench size={10} /> : <Sparkles size={10} />}
+                    <span className="font-medium">{groupLabel}</span>
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5 pl-0.5">
                   {events.map((event) => {
                     const statusIcon = getEventStatusIcon(event.state);
                     const StatusIcon = statusIcon.Icon;
@@ -351,10 +354,7 @@ export const ChatMessages = memo(
 
                     if (isStructuredToolEvent(event)) {
                       return (
-                        <div
-                          key={event.id}
-                          className="rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-2.5"
-                        >
+                        <div key={event.id} className="py-1 text-sm text-text-lighter">
                           <ToolCallDisplay
                             toolName={event.label}
                             input={event.tool?.input}
@@ -364,12 +364,12 @@ export const ChatMessages = memo(
                             onOpenInEditor={(filePath) => handleFileSelect(filePath, false)}
                           />
                           {event.tool?.locations?.length ? (
-                            <div className="mt-2 flex flex-wrap gap-1 pl-3">
+                            <div className="mt-1 flex flex-wrap gap-1 pl-2">
                               {event.tool.locations.map((location) => (
                                 <button
                                   key={`${event.id}-${location.path}-${location.line ?? 0}`}
                                   onClick={() => handleFileSelect(location.path, false)}
-                                  className="rounded-full border border-border/70 px-2 py-1 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                  className="rounded px-1 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover"
                                   title={location.path}
                                 >
                                   {location.path.split("/").pop()}
@@ -385,21 +385,19 @@ export const ChatMessages = memo(
                     return (
                       <div
                         key={event.id}
-                        className="flex items-center gap-2 rounded-2xl border border-border/60 bg-primary-bg/55 px-3 py-2 text-xs"
+                        className="flex items-start gap-2 py-0.5 text-[12px] text-text-lighter"
                       >
                         <StatusIcon
                           size={12}
                           className={cn(
-                            "shrink-0",
+                            "mt-0.5 shrink-0",
                             statusIcon.className,
                             statusIcon.spin && "animate-spin",
                           )}
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium text-text">{event.label}</div>
-                          {detail ? (
-                            <div className="mt-0.5 line-clamp-2 text-text-lighter">{detail}</div>
-                          ) : null}
+                          <span className="font-medium text-text">{event.label}</span>
+                          {detail ? <span className="ml-1 opacity-80">{detail}</span> : null}
                         </div>
                       </div>
                     );

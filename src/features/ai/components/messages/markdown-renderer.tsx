@@ -364,25 +364,23 @@ function ErrorBlock({ errorData }: { errorData: string }) {
       .trim() || "";
 
   return (
-    <div className="error-block">
-      <div className="error-header">
-        <span className="error-title">
-          {title}
-          {code ? ` (${code})` : ""}
-        </span>
+    <div className="my-2 border-red-500/20 border-l py-0.5 pl-3 text-sm opacity-90">
+      <div className="font-medium text-red-400">
+        {title}
+        {code ? <span className="ml-1.5 font-normal opacity-60">({code})</span> : null}
       </div>
-      <div className="error-message">{message}</div>
+      <div className="mt-0.5 text-[13px] text-red-300/80 leading-relaxed">{message}</div>
       {details && (
         <div className="mt-1.5">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-red-400 text-xs transition-colors hover:text-red-300"
+            className="flex items-center gap-1 text-[11px] text-red-400/50 uppercase tracking-wide transition-colors hover:text-red-400/90"
           >
             {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {isExpanded ? "Hide" : "Show"} details
+            {isExpanded ? "Hide details" : "Show details"}
           </button>
           {isExpanded && (
-            <pre className="editor-font mt-1.5 overflow-x-auto rounded bg-red-950/20 p-2 text-red-300 text-xs">
+            <pre className="editor-font mt-2 max-h-48 overflow-x-auto whitespace-pre-wrap pl-1 text-[11px] text-red-400/60">
               {(() => {
                 try {
                   const parsed = JSON.parse(details);
