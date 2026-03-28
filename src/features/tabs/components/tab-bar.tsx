@@ -142,9 +142,9 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   }, [jumpListActions]);
 
   const handleSplitActivePane = useCallback(() => {
-    if (!paneId || !activeBufferId) return;
-    splitPane(paneId, "horizontal", activeBufferId);
-  }, [activeBufferId, paneId, splitPane]);
+    if (!paneId) return;
+    splitPane(paneId, "horizontal");
+  }, [paneId, splitPane]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -816,15 +816,15 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 pl-0.5">
-          {paneId && activeBufferId && (
-            <Tooltip content="Split Editor" side="bottom">
+          {paneId && (
+            <Tooltip content="Split Pane" side="bottom">
               <Button
                 type="button"
                 onClick={handleSplitActivePane}
                 variant="ghost"
                 size="icon-sm"
                 className="shrink-0 rounded-lg text-text-lighter"
-                aria-label="Split editor"
+                aria-label="Split pane"
               >
                 <SplitSquareHorizontal />
               </Button>

@@ -16,8 +16,8 @@ export function usePaneKeyboard() {
       if (e.key === "\\" && !e.shiftKey) {
         e.preventDefault();
         const activePane = paneStore.actions.getActivePane();
-        if (activePane?.activeBufferId) {
-          paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
+        if (activePane) {
+          paneStore.actions.splitPane(activePane.id, "horizontal");
         }
         return;
       }
@@ -26,8 +26,8 @@ export function usePaneKeyboard() {
       if (e.key === "\\" && e.shiftKey) {
         e.preventDefault();
         const activePane = paneStore.actions.getActivePane();
-        if (activePane?.activeBufferId) {
-          paneStore.actions.splitPane(activePane.id, "vertical", activePane.activeBufferId);
+        if (activePane) {
+          paneStore.actions.splitPane(activePane.id, "vertical");
         }
         return;
       }
