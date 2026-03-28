@@ -318,9 +318,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     <div
       ref={containerRef}
       data-pane-container
-      className={`relative flex h-full w-full flex-col overflow-hidden bg-primary-bg ${
-        isActivePane ? "ring-1 ring-accent/30" : ""
-      } ${isDragOver ? "ring-2 ring-accent" : ""}`}
+      data-pane-id={pane.id}
+      className={`@container relative flex h-full w-full flex-col overflow-hidden bg-primary-bg transition-all duration-200 ${
+        isActivePane ? "ring-1 ring-border/40 ring-inset z-10" : "z-0"
+      } ${isDragOver ? "ring-2 ring-accent ring-inset z-20" : ""}`}
       onClick={handlePaneClick}
       onMouseUp={handleMouseUp}
       onDragOver={handleDragOver}
@@ -328,7 +329,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       onDrop={handleDrop}
     >
       {isDragOver && <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />}
-      {paneBuffers.length > 0 && <TabBar paneId={pane.id} onTabClick={handleTabClick} />}
+      <TabBar paneId={pane.id} onTabClick={handleTabClick} isActivePane={isActivePane} />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {!activeBuffer && <EmptyEditorState />}
 
