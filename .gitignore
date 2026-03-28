@@ -80,3 +80,7 @@ benchmark_*.md
 
 # local codex settings
 src-tauri/.claude/settings.local.json
+
+# local AI test scaffolding
+/.pi/
+/.tmp/
