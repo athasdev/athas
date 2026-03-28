@@ -1,5 +1,5 @@
-import { GitBranch, History, Layers3 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { GitBranch, History, Layers3, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import {
   getChatCompactionPolicyShortLabel,
@@ -11,6 +11,8 @@ import {
   getEffectiveChatMessages,
 } from "@/features/ai/lib/chat-context";
 import { getChatLineagePath } from "@/features/ai/lib/chat-lineage";
+import { createNewHarnessSession } from "@/features/ai/lib/harness-session-actions";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
@@ -136,7 +138,13 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
   const chatState = useChatState(scopeId);
   const chatActions = useChatActions(scopeId);
   const { settings } = useSettingsStore();
+  const { createAgentBuffer } = useBufferStore.use.actions();
   const { openSettingsDialog } = useUIState();
+
+  const handleNewHarnessSession = useCallback(() => {
+    createNewHarnessSession(createAgentBuffer, settings.aiPiHarnessBackend);
+  }, [createAgentBuffer, settings.aiPiHarnessBackend]);
+
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === chatState.currentChatId),
     [chatState.chats, chatState.currentChatId],
@@ -179,6 +187,16 @@ export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: Ch
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
+            <Tooltip content="New Session" side="bottom">
+              <button
+                onClick={handleNewHarnessSession}
+                className="flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text"
+                aria-label="New session"
+              >
+                <Plus size={13} />
+              </button>
+            </Tooltip>
+
             <Tooltip content="Session History" side="bottom">
               <button
                 onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
