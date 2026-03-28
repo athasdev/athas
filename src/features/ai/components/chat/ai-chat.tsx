@@ -150,8 +150,7 @@ const AIChat = memo(function AIChat({
   const chatState = useChatState(resolvedScopeId);
   const chatActions = useChatActions(resolvedScopeId);
   const closedBuffersHistory = useBufferStore.use.closedBuffersHistory();
-  const { closeBuffer, openAgentBuffer, reopenClosedHarnessSession } =
-    useBufferStore.use.actions();
+  const { closeBuffer, openAgentBuffer, reopenClosedHarnessSession } = useBufferStore.use.actions();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
