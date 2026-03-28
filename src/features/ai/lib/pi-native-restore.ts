@@ -29,6 +29,14 @@ interface ShouldReuseCurrentHarnessSessionForPiNativeResumeParams {
   chat: Pick<Chat, "messages" | "acpState"> | null | undefined;
 }
 
+interface FindOpenHarnessPiNativeSessionKeyParams {
+  sessionPath: string;
+  sessions: Array<{
+    sessionKey: string | null | undefined;
+    chat: Pick<Chat, "acpState"> | null | undefined;
+  }>;
+}
+
 const normalizeText = (value: string | null | undefined): string =>
   value?.replace(/\s+/g, " ").trim() ?? "";
 
@@ -104,6 +112,25 @@ export const shouldReuseCurrentHarnessSessionForPiNativeResume = ({
   }
 
   return !chat.acpState?.runtimeState?.sessionPath;
+};
+
+export const findOpenHarnessPiNativeSessionKey = ({
+  sessionPath,
+  sessions,
+}: FindOpenHarnessPiNativeSessionKeyParams): string | null => {
+  for (const session of sessions) {
+    const candidateSessionKey = normalizeText(session.sessionKey);
+    const runtimeState = session.chat?.acpState?.runtimeState;
+    if (
+      candidateSessionKey &&
+      runtimeState?.source === "pi-native" &&
+      runtimeState.sessionPath === sessionPath
+    ) {
+      return candidateSessionKey;
+    }
+  }
+
+  return null;
 };
 
 export const derivePiNativeSessionTitle = ({

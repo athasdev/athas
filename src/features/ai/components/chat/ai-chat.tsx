@@ -41,6 +41,7 @@ import {
   buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
+  findOpenHarnessPiNativeSessionKey,
   shouldEnsurePiNativeRestoreChat,
   shouldReconcilePiNativeSession,
   shouldReuseCurrentHarnessSessionForPiNativeResume,
@@ -920,6 +921,22 @@ const AIChat = memo(function AIChat({
       }
 
       try {
+        const openHarnessSessionKey = findOpenHarnessPiNativeSessionKey({
+          sessionPath: session.path,
+          sessions: buffers
+            .filter((buffer) => buffer.isAgent && buffer.agentSessionId)
+            .map((buffer) => ({
+              sessionKey: buffer.agentSessionId,
+              chat: useAIChatStore
+                .getState()
+                .getCurrentChat(createHarnessChatScopeId(buffer.agentSessionId!)),
+            })),
+        });
+        if (openHarnessSessionKey) {
+          openAgentBuffer(openHarnessSessionKey, { backend: "pi-native" });
+          return;
+        }
+
         const transcript = await getHarnessRuntimeSessionTranscript(
           "pi-native",
           "pi",
@@ -978,7 +995,7 @@ const AIChat = memo(function AIChat({
         console.error("Failed to open recent Pi native session:", error);
       }
     },
-    [currentChat, openAgentBuffer, recentPiNativeSessions, sessionKey],
+    [buffers, currentChat, openAgentBuffer, recentPiNativeSessions, sessionKey],
   );
 
   const handleContinueChatFromHistory = useCallback(

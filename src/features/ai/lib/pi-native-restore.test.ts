@@ -5,6 +5,7 @@ import {
   buildPiNativeChatMessagesFromTranscript,
   buildPiNativeRuntimeStateFromSession,
   derivePiNativeSessionTitle,
+  findOpenHarnessPiNativeSessionKey,
   shouldEnsurePiNativeRestoreChat,
   shouldReconcilePiNativeSession,
   shouldReuseCurrentHarnessSessionForPiNativeResume,
@@ -302,5 +303,95 @@ describe("pi-native restore", () => {
         }),
       }),
     ).toBe(false);
+  });
+
+  test("finds an already-open Harness tab for the same pi-native session path", () => {
+    expect(
+      findOpenHarnessPiNativeSessionKey({
+        sessionPath: "/tmp/session.jsonl",
+        sessions: [
+          {
+            sessionKey: "harness",
+            chat: createChat(),
+          },
+          {
+            sessionKey: "forked",
+            chat: createChat({
+              acpState: {
+                preferredModeId: null,
+                currentModeId: null,
+                availableModes: [],
+                slashCommands: [],
+                runtimeState: {
+                  agentId: "pi",
+                  source: "pi-native",
+                  sessionId: "native-session-123",
+                  sessionPath: "/tmp/session.jsonl",
+                  workspacePath: "/home/fsos/Developer/athas",
+                  provider: "openai-codex",
+                  modelId: "gpt-5.3-codex",
+                  thinkingLevel: "medium",
+                  behavior: null,
+                },
+              },
+            }),
+          },
+        ],
+      }),
+    ).toBe("forked");
+  });
+
+  test("ignores non-native or path-mismatched Harness sessions when opening recent pi-native sessions", () => {
+    expect(
+      findOpenHarnessPiNativeSessionKey({
+        sessionPath: "/tmp/session.jsonl",
+        sessions: [
+          {
+            sessionKey: "legacy",
+            chat: createChat({
+              acpState: {
+                preferredModeId: null,
+                currentModeId: null,
+                availableModes: [],
+                slashCommands: [],
+                runtimeState: {
+                  agentId: "pi",
+                  source: "legacy-acp-bridge",
+                  sessionId: "legacy-session-1",
+                  sessionPath: "/tmp/session.jsonl",
+                  workspacePath: "/home/fsos/Developer/athas",
+                  provider: null,
+                  modelId: null,
+                  thinkingLevel: null,
+                  behavior: null,
+                },
+              },
+            }),
+          },
+          {
+            sessionKey: "other-native",
+            chat: createChat({
+              acpState: {
+                preferredModeId: null,
+                currentModeId: null,
+                availableModes: [],
+                slashCommands: [],
+                runtimeState: {
+                  agentId: "pi",
+                  source: "pi-native",
+                  sessionId: "native-session-456",
+                  sessionPath: "/tmp/other.jsonl",
+                  workspacePath: "/home/fsos/Developer/athas",
+                  provider: null,
+                  modelId: null,
+                  thinkingLevel: null,
+                  behavior: null,
+                },
+              },
+            }),
+          },
+        ],
+      }),
+    ).toBeNull();
   });
 });
