@@ -52,3 +52,7 @@ When Pi reports that a restored session was branched from another Pi session, At
 Settings in **Settings > AI** read the same shared Pi state used by standalone Pi. Athas refreshes that snapshot when the panel opens, when the app regains focus, and when you use the manual refresh button.
 
 When you install or remove Pi packages from Athas, active Pi-native sessions in the current workspace now reload their commands, skills, prompts, and themes without needing you to close and reopen Harness first.
+
+The default Harness tab now reopens with whichever Pi backend you currently selected in **Settings > AI**, so switching between **Pi Native** and **Legacy ACP Bridge** survives app restore cleanly.
+
+When you use the legacy ACP fallback with Pi, Athas now respects the same shared Pi provider, model, and thinking defaults that standalone Pi uses instead of rewriting them to a separate built-in profile.
