@@ -109,7 +109,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             Toggle AI Chat
           </MenuItem>
           <MenuItem separator />
-          <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Pane</MenuItem>
           <MenuItem separator />
           <MenuItem
             shortcut="Alt+M"
