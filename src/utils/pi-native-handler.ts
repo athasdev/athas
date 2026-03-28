@@ -40,6 +40,11 @@ interface PiNativeBootstrapContext {
   conversationHistory: AIMessage[];
 }
 
+interface PiNativeDesiredSessionIdentity {
+  sessionId: string | null;
+  sessionPath: string | null;
+}
+
 export class PiNativeStreamHandler {
   private static activeHandlers = new Map<ChatScopeId, PiNativeStreamHandler>();
   private static lastSessionPathByKey = new Map<string, string>();
@@ -69,9 +74,9 @@ export class PiNativeStreamHandler {
     conversationHistory?: AIMessage[],
   ): Promise<void> {
     try {
-      PiNativeStreamHandler.activeHandlers.set(this.scopeId, this);
       await this.setupListeners();
       await this.ensureSessionRunning(conversationHistory);
+      PiNativeStreamHandler.activeHandlers.set(this.scopeId, this);
       const fullMessage = this.buildMessage(userMessage, context);
       await invoke("send_pi_native_prompt", { prompt: fullMessage, routeKey: this.resumeKey });
       this.setupTimeout();
@@ -86,19 +91,24 @@ export class PiNativeStreamHandler {
     const status = await invoke<AcpAgentStatus>("get_pi_native_status", {
       routeKey: this.resumeKey,
     });
-    if (status.running && status.sessionId) {
-      this.sessionId = status.sessionId;
-      return;
-    }
-
-    const sessionPath = this.getDesiredSessionPath();
+    const desiredSession = this.getDesiredSessionIdentity();
     const bootstrap: PiNativeBootstrapContext | null =
-      !sessionPath && conversationHistory && conversationHistory.length > 0
+      !desiredSession.sessionPath && conversationHistory && conversationHistory.length > 0
         ? { conversationHistory }
         : null;
+
+    if (status.running && status.sessionId) {
+      if (this.shouldReuseRunningSession(status, desiredSession, bootstrap)) {
+        this.sessionId = status.sessionId;
+        return;
+      }
+
+      await this.stopRouteSession();
+    }
+
     const startStatus = await invoke<AcpAgentStatus>("start_pi_native_session", {
       workspacePath: this.getWorkspacePath(),
-      sessionPath,
+      sessionPath: desiredSession.sessionPath,
       bootstrap,
       routeKey: this.resumeKey,
     });
@@ -110,15 +120,53 @@ export class PiNativeStreamHandler {
     this.sessionId = startStatus.sessionId ?? null;
   }
 
-  private getDesiredSessionPath(): string | null {
+  private getDesiredSessionIdentity(): PiNativeDesiredSessionIdentity {
     const currentChat = useAIChatStore.getState().getCurrentChat(this.scopeId);
-    const runtimePath = currentChat?.acpState?.runtimeState?.sessionPath;
+    const runtimeState = currentChat?.acpState?.runtimeState;
+    const runtimePath = runtimeState?.sessionPath;
     if (runtimePath) {
       PiNativeStreamHandler.lastSessionPathByKey.set(this.resumeKey, runtimePath);
-      return runtimePath;
+      return {
+        sessionId: runtimeState?.sessionId ?? null,
+        sessionPath: runtimePath,
+      };
     }
 
-    return PiNativeStreamHandler.lastSessionPathByKey.get(this.resumeKey) ?? null;
+    return {
+      sessionId: runtimeState?.sessionId ?? null,
+      sessionPath: null,
+    };
+  }
+
+  private shouldReuseRunningSession(
+    status: AcpAgentStatus,
+    desiredSession: PiNativeDesiredSessionIdentity,
+    bootstrap: PiNativeBootstrapContext | null,
+  ): boolean {
+    if (!status.running || !status.sessionId) {
+      return false;
+    }
+
+    if (bootstrap) {
+      return false;
+    }
+
+    if (desiredSession.sessionId && desiredSession.sessionId !== status.sessionId) {
+      return false;
+    }
+
+    const cachedSessionPath =
+      PiNativeStreamHandler.lastSessionPathByKey.get(this.resumeKey) ?? null;
+    if (desiredSession.sessionPath && cachedSessionPath !== desiredSession.sessionPath) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private async stopRouteSession(): Promise<void> {
+    PiNativeStreamHandler.lastSessionPathByKey.delete(this.resumeKey);
+    await invoke("stop_pi_native_session", { routeKey: this.resumeKey });
   }
 
   private getWorkspacePath(): string | null {
