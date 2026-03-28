@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import {
   MAX_OTHER_FILES_NO_QUERY,
@@ -24,7 +25,7 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
     // Get open buffer paths (excluding active buffer) - Use Set for O(1) lookups
     const openBufferPaths = new Set(
       buffers
-        .filter((buffer) => buffer.id !== activeBufferId && !buffer.isVirtual)
+        .filter((buffer) => buffer.id !== activeBufferId && !isVirtualContent(buffer))
         .map((buffer) => buffer.path),
     );
 

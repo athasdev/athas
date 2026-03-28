@@ -1,4 +1,4 @@
-use crate::lsp::{LspManager, types::LspResult};
+use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
    GotoDefinitionResponse, Hover, Location, NumberOrString, Position, Range,
@@ -219,7 +219,7 @@ pub async fn lsp_get_code_actions(
       .await
       .map_err(|e| {
          log::error!("Failed to get code actions: {}", e);
-         crate::lsp::types::LspError::from(e)
+         LspError::from(e)
       })?;
 
    let result = actions
@@ -269,7 +269,7 @@ pub async fn lsp_apply_code_action(
 ) -> LspResult<LspApplyCodeActionResult> {
    let action = serde_json::from_value::<CodeActionOrCommand>(action_payload).map_err(|e| {
       log::error!("Invalid code action payload: {}", e);
-      crate::lsp::types::LspError {
+      LspError {
          message: "Invalid code action payload".to_string(),
       }
    })?;
@@ -279,7 +279,7 @@ pub async fn lsp_apply_code_action(
       .await
       .map_err(|e| {
          log::error!("Failed to apply code action: {}", e);
-         crate::lsp::types::LspError::from(e)
+         LspError::from(e)
       })?;
 
    Ok(LspApplyCodeActionResult { applied, reason })

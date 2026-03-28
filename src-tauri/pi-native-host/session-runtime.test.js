@@ -105,7 +105,8 @@ describe("pi-native session runtime helpers", () => {
         {
           id: "all",
           name: "All at Once",
-          description: "Deliver queued steering and follow-up messages without waiting between them.",
+          description:
+            "Deliver queued steering and follow-up messages without waiting between them.",
         },
       ],
     });

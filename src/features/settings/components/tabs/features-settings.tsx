@@ -1,5 +1,5 @@
 import { useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import { createCoreFeaturesList } from "../../config/features";
 import type { CoreFeature } from "../../types/feature";
@@ -8,7 +8,9 @@ export const FeaturesSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
 
   // Create core features list
-  const coreFeaturesList = createCoreFeaturesList(settings.coreFeatures);
+  const coreFeaturesList = createCoreFeaturesList(settings.coreFeatures).filter(
+    (feature: CoreFeature) => feature.id !== "git",
+  );
 
   // Handle core feature toggle
   const handleCoreFeatureToggle = (featureId: string, enabled: boolean) => {

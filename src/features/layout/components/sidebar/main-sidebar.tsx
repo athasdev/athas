@@ -1,11 +1,11 @@
 import { memo } from "react";
-import { FileTree } from "@/features/file-explorer/components/file-tree";
+import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import GitView from "@/features/git/components/view";
+import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
-import { useSidebarStore } from "@/stores/sidebar-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 
 export const MainSidebar = memo(() => {
@@ -29,6 +29,7 @@ export const MainSidebar = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const files = useFileSystemStore.use.files();
   const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
 
   // sidebar store
   const activePath = useSidebarStore.use.activePath?.();
@@ -37,7 +38,7 @@ export const MainSidebar = memo(() => {
   const { settings } = useSettingsStore();
 
   return (
-    <div className="flex h-full min-h-0 flex-col p-2">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
@@ -55,15 +56,11 @@ export const MainSidebar = memo(() => {
           </div>
         )}
 
-        <div className={cn("h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}>
-          {isFileTreeLoading ? (
-            <div className="flex h-full flex-1 items-center justify-center p-4">
-              <div className="rounded-lg border border-border/60 bg-secondary-bg px-3 py-2 text-text-lighter text-xs">
-                Loading files...
-              </div>
-            </div>
-          ) : (
-            <FileTree
+        <div
+          className={cn("relative h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}
+        >
+          {(!isFileTreeLoading || isSwitchingProject) && (
+            <FileExplorerTree
               files={files}
               activePath={activePath}
               updateActivePath={updateActivePath}
@@ -80,6 +77,14 @@ export const MainSidebar = memo(() => {
               onFileMove={handleFileMove}
               onDuplicatePath={handleDuplicatePath}
             />
+          )}
+
+          {isFileTreeLoading && !isSwitchingProject && (
+            <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-3">
+              <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 text-text-lighter text-xs shadow-lg backdrop-blur-sm">
+                Loading files...
+              </div>
+            </div>
           )}
         </div>
       </div>

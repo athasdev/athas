@@ -190,7 +190,8 @@ export class PiNativeStreamHandler {
   }
 
   private handleEvent(event: AcpEvent): void {
-    if (this.cancelled || event.routeKey !== this.resumeKey) {
+    const routeKey = "routeKey" in event ? event.routeKey : undefined;
+    if (this.cancelled || (routeKey && routeKey !== this.resumeKey)) {
       return;
     }
 

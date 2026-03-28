@@ -1,8 +1,10 @@
-import { Code, Database, Plus, Table } from "lucide-react";
+import { Code, Database, Plus, Radio, Table } from "lucide-react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import type { TableInfo } from "../sqlite-types";
 
 interface TableSidebarProps {
-  tables: { name: string }[];
+  tables: TableInfo[];
   selectedTable: string | null;
   onSelectTable: (name: string) => void;
   onTableContextMenu: (e: React.MouseEvent, name: string) => void;
@@ -20,39 +22,76 @@ export default function TableSidebar({
   sqlHistory,
   onSelectHistory,
 }: TableSidebarProps) {
+  const tableObjects = tables.filter((table) => (table.kind ?? "table") === "table");
+  const subscriptionObjects = tables.filter((table) => table.kind === "subscription");
+
   return (
     <div className="flex w-64 flex-col overflow-hidden rounded-2xl bg-primary-bg/75">
       <div className="group p-3 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-text-lighter text-xs">
-            <Database size={12} />
-            Tables ({tables.length})
+            <Database />
+            Objects ({tables.length})
           </div>
-          <button
+          <Button
             onClick={onCreateTable}
-            className="rounded-full border border-transparent px-1.5 py-1 opacity-0 transition-colors hover:border-border/70 hover:bg-hover group-hover:opacity-100"
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full opacity-0 group-hover:opacity-100"
             aria-label="Create table"
           >
-            <Plus size={10} className="text-text-lighter hover:text-text" />
-          </button>
+            <Plus className="text-text-lighter hover:text-text" />
+          </Button>
         </div>
       </div>
       <div className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
-        {tables.map((t) => (
-          <button
-            key={t.name}
-            onClick={() => onSelectTable(t.name)}
-            onContextMenu={(e) => onTableContextMenu(e, t.name)}
-            className={cn(
-              "flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-hover",
-              selectedTable === t.name && "bg-selected text-text",
-            )}
-            aria-label={`Select table ${t.name}`}
-          >
-            <Table size={12} className="shrink-0" />
-            <span className="truncate">{t.name}</span>
-          </button>
-        ))}
+        {tableObjects.length > 0 && (
+          <>
+            <div className="px-2.5 py-1 text-text-lighter text-[11px] uppercase tracking-wide">
+              Tables
+            </div>
+            {tableObjects.map((t) => (
+              <Button
+                key={t.name}
+                onClick={() => onSelectTable(t.name)}
+                onContextMenu={(e) => onTableContextMenu(e, t.name)}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "flex h-auto w-full items-center justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
+                  selectedTable === t.name && "bg-selected text-text",
+                )}
+                aria-label={`Select table ${t.name}`}
+              >
+                <Table className="shrink-0" />
+                <span className="truncate">{t.name}</span>
+              </Button>
+            ))}
+          </>
+        )}
+        {subscriptionObjects.length > 0 && (
+          <>
+            <div className="mt-2 px-2.5 py-1 text-text-lighter text-[11px] uppercase tracking-wide">
+              Subscriptions
+            </div>
+            {subscriptionObjects.map((t) => (
+              <Button
+                key={t.name}
+                onClick={() => onSelectTable(t.name)}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "flex h-auto w-full items-center justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
+                  selectedTable === t.name && "bg-selected text-text",
+                )}
+                aria-label={`Select subscription ${t.name}`}
+              >
+                <Radio className="shrink-0" />
+                <span className="truncate">{t.name}</span>
+              </Button>
+            ))}
+          </>
+        )}
       </div>
       {sqlHistory.length > 0 && (
         <div className="mx-2 mb-2 rounded-xl bg-secondary-bg/50">
@@ -61,16 +100,18 @@ export default function TableSidebar({
           </div>
           <div className="max-h-32 overflow-y-auto pb-1">
             {sqlHistory.map((q, i) => (
-              <button
+              <Button
                 key={i}
                 onClick={() => onSelectHistory(q)}
-                className="mx-1 block w-[calc(100%-0.5rem)] truncate rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover"
+                variant="ghost"
+                size="sm"
+                className="mx-1 block h-auto w-[calc(100%-0.5rem)] truncate rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover"
                 title={q}
                 aria-label={`Run query: ${q}`}
               >
-                <Code size={10} className="mr-1.5 inline" />
+                <Code className="mr-1.5 inline" />
                 {q.length > 25 ? `${q.slice(0, 25)}...` : q}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

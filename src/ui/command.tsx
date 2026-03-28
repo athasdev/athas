@@ -1,7 +1,10 @@
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
 import { RefreshCwIcon, X } from "lucide-react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/store";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -11,37 +14,58 @@ interface CommandProps {
   onClose?: () => void;
 }
 
+const commandContentVariants = cva(
+  "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl focus:outline-none",
+);
+
+const commandItemVariants = cva(
+  "mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
+  {
+    variants: {
+      selected: {
+        true: "bg-selected text-text",
+        false: "bg-transparent text-text hover:bg-hover",
+      },
+    },
+    defaultVariants: {
+      selected: false,
+    },
+  },
+);
+
 const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
   return (
     <AnimatePresence>
       {isVisible && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
-          {/* Backdrop - click to close */}
-          <motion.button
-            type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 z-0 cursor-default bg-black/20"
-            onClick={onClose}
-            aria-label="Close command palette"
-            tabIndex={-1}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -8 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className={cn(
-              "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden",
-              "rounded-xl border border-border bg-primary-bg shadow-2xl",
-              className,
-            )}
-          >
-            {children}
-          </motion.div>
-        </div>
+        <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
+          <DialogPrimitive.Portal>
+            <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
+              <DialogPrimitive.Overlay asChild>
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute inset-0 z-0 cursor-default bg-black/20"
+                  aria-label="Close command palette"
+                  tabIndex={-1}
+                />
+              </DialogPrimitive.Overlay>
+              <DialogPrimitive.Content asChild aria-label="Command palette">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className={cn(commandContentVariants(), className)}
+                >
+                  {children}
+                </motion.div>
+              </DialogPrimitive.Content>
+            </div>
+          </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
       )}
     </AnimatePresence>
   );
@@ -66,21 +90,25 @@ export const CommandHeader = ({
     <div className="border-border border-b">
       <div className="flex items-center gap-3 px-4 py-3">
         {children}
-        <button
+        <Button
           aria-label="Close command palette"
           onClick={onClose}
-          className="rounded p-0.5 transition-colors hover:bg-hover"
+          variant="ghost"
+          size="icon-xs"
+          className="rounded"
         >
-          <X size={12} className="text-text-lighter" />
-        </button>
+          <X className="text-text-lighter" />
+        </Button>
         {showClearButton && (
-          <button
+          <Button
             aria-label="Clear persisted actions"
             onClick={clearActionsStack}
-            className="rounded p-0.5 transition-colors hover:bg-hover"
+            variant="ghost"
+            size="icon-xs"
+            className="rounded"
           >
-            <RefreshCwIcon size={10} className="text-text-lighter" />
-          </button>
+            <RefreshCwIcon className="text-text-lighter" />
+          </Button>
         )}
       </div>
     </div>
@@ -122,7 +150,7 @@ export const CommandInput = ({
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
     className={cn(
-      "flex-1 bg-transparent text-text text-xs placeholder-text-lighter outline-none",
+      "ui-text-sm flex-1 bg-transparent text-text placeholder-text-lighter outline-none",
       className,
     )}
   />
@@ -149,19 +177,17 @@ export const CommandItem = ({
   className,
   ...props
 }: CommandItemProps) => (
-  <button
+  <Button
     onClick={onClick}
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
     {...props}
-    className={cn(
-      "mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
-      isSelected ? "bg-selected text-text" : "bg-transparent text-text hover:bg-hover",
-      className,
-    )}
+    variant="ghost"
+    size="sm"
+    className={cn(commandItemVariants({ selected: isSelected }), className)}
   >
     {children}
-  </button>
+  </Button>
 );
 
 CommandItem.displayName = "CommandItem";
@@ -171,7 +197,7 @@ interface CommandEmptyProps {
 }
 
 export const CommandEmpty = ({ children }: CommandEmptyProps) => (
-  <div className="p-3 text-center text-text-lighter text-xs">{children}</div>
+  <div className="ui-text-sm p-3 text-center text-text-lighter">{children}</div>
 );
 
 export default Command;

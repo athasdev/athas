@@ -5,9 +5,6 @@
  * 2. Builds tree-sitter WASM parsers from source into public/tree-sitter/parsers/{lang}/parser.wasm
  *    using tree-sitter-cli and individual grammar packages
  */
-
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { $ } from "bun";
 
 // ─── LSP Dependencies ───────────────────────────────────────────────
@@ -17,28 +14,30 @@ const BUNDLED_EXTENSIONS_DIR = "src/extensions/bundled";
 async function installBundledLspDependencies() {
   console.log("Installing bundled extension LSP dependencies...");
 
-  const bundledDir = join(process.cwd(), BUNDLED_EXTENSIONS_DIR);
+  const bundledDir = `${process.cwd()}/${BUNDLED_EXTENSIONS_DIR}`;
 
-  if (!existsSync(bundledDir)) {
+  if (!(await Bun.file(bundledDir).exists())) {
     console.log("No bundled extensions directory found, skipping.");
     return;
   }
 
-  const entries = readdirSync(bundledDir, { withFileTypes: true });
+  const directories = (await $`find ${bundledDir} -mindepth 1 -maxdepth 1 -type d`.text())
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
-  for (const ext of entries) {
-    if (!ext.isDirectory()) continue;
+  for (const extDir of directories) {
+    const extName = extDir.split("/").pop() || extDir;
+    const lspDir = `${extDir}/lsp`;
+    const packageJson = `${lspDir}/package.json`;
 
-    const lspDir = join(bundledDir, ext.name, "lsp");
-    const packageJson = join(lspDir, "package.json");
-
-    if (existsSync(packageJson)) {
-      console.log(`  Installing LSP for ${ext.name}...`);
+    if (await Bun.file(packageJson).exists()) {
+      console.log(`  Installing LSP for ${extName}...`);
       try {
         await $`cd ${lspDir} && bun install`.quiet();
-        console.log(`  Installed ${ext.name} LSP dependencies`);
+        console.log(`  Installed ${extName} LSP dependencies`);
       } catch (error) {
-        console.error(`  Failed to install ${ext.name} LSP:`, error);
+        console.error(`  Failed to install ${extName} LSP:`, error);
       }
     }
   }
@@ -48,7 +47,7 @@ async function installBundledLspDependencies() {
 
 // ─── Tree-sitter Parsers ────────────────────────────────────────────
 
-const PARSERS_DIR = join(process.cwd(), "public/tree-sitter/parsers");
+const PARSERS_DIR = `${process.cwd()}/public/tree-sitter/parsers`;
 
 interface ParserSource {
   package: string;
@@ -72,7 +71,10 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
   json: { package: "tree-sitter-json" },
   kotlin: { package: "tree-sitter-kotlin" },
   lua: { package: "tree-sitter-lua" },
-  markdown: { package: "@tree-sitter-grammars/tree-sitter-markdown", subdir: "tree-sitter-markdown" },
+  markdown: {
+    package: "@tree-sitter-grammars/tree-sitter-markdown",
+    subdir: "tree-sitter-markdown",
+  },
   objc: { package: "tree-sitter-objc" },
   ocaml: { package: "tree-sitter-ocaml", subdir: "grammars/ocaml" },
   php: { package: "tree-sitter-php", subdir: "php" },
@@ -95,15 +97,15 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
 };
 
 async function buildParserWasm(lang: string, source: ParserSource): Promise<boolean> {
-  const packageDir = join(process.cwd(), "node_modules", source.package);
-  if (!existsSync(packageDir)) {
+  const packageDir = `${process.cwd()}/node_modules/${source.package}`;
+  if (!(await Bun.file(packageDir).exists())) {
     console.warn(`  Warning: ${source.package} not found in node_modules`);
     return false;
   }
-  const destDir = join(PARSERS_DIR, lang);
-  mkdirSync(destDir, { recursive: true });
-  const outFile = join(destDir, "parser.wasm");
-  const buildDir = source.subdir ? join(packageDir, source.subdir) : packageDir;
+  const destDir = `${PARSERS_DIR}/${lang}`;
+  await $`mkdir -p ${destDir}`.quiet();
+  const outFile = `${destDir}/parser.wasm`;
+  const buildDir = source.subdir ? `${packageDir}/${source.subdir}` : packageDir;
   console.log(`  Building ${lang}...`);
   try {
     await $`npx tree-sitter build --wasm -o ${outFile} ${buildDir}`.quiet();
@@ -111,16 +113,16 @@ async function buildParserWasm(lang: string, source: ParserSource): Promise<bool
     console.warn(`  Warning: Failed to build ${lang} parser:`, error);
     return false;
   }
-  if (!existsSync(outFile)) return false;
+  if (!(await Bun.file(outFile).exists())) return false;
   // Copy highlights.scm if not already tracked (we have hand-edited versions)
-  const highlightsDest = join(destDir, "highlights.scm");
-  if (!existsSync(highlightsDest)) {
+  const highlightsDest = `${destDir}/highlights.scm`;
+  if (!(await Bun.file(highlightsDest).exists())) {
     const candidates = [
-      join(packageDir, "queries", "highlights.scm"),
-      ...(source.subdir ? [join(buildDir, "queries", "highlights.scm")] : []),
+      `${packageDir}/queries/highlights.scm`,
+      ...(source.subdir ? [`${buildDir}/queries/highlights.scm`] : []),
     ];
     for (const candidate of candidates) {
-      if (existsSync(candidate)) {
+      if (await Bun.file(candidate).exists()) {
         await Bun.write(highlightsDest, Bun.file(candidate));
         break;
       }
@@ -132,20 +134,20 @@ async function buildParserWasm(lang: string, source: ParserSource): Promise<bool
 async function setupTreeSitterParsers() {
   console.log("Setting up tree-sitter parsers...");
 
-  mkdirSync(PARSERS_DIR, { recursive: true });
+  await $`mkdir -p ${PARSERS_DIR}`.quiet();
 
   let built = 0;
   let skipped = 0;
   let failed = 0;
 
   for (const [lang, source] of Object.entries(BUNDLED_PARSERS)) {
-    const destDir = join(PARSERS_DIR, lang);
-    const destFile = join(destDir, "parser.wasm");
+    const destDir = `${PARSERS_DIR}/${lang}`;
+    const destFile = `${destDir}/parser.wasm`;
 
-    mkdirSync(destDir, { recursive: true });
+    await $`mkdir -p ${destDir}`.quiet();
 
     // Skip if parser.wasm already exists
-    if (existsSync(destFile)) {
+    if (await Bun.file(destFile).exists()) {
       skipped++;
       continue;
     }

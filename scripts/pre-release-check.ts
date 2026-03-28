@@ -1,7 +1,5 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
 
 // Parse CLI flags
 const args = process.argv.slice(2);
@@ -47,6 +45,33 @@ function info(message: string) {
   log(`  ${message}`, "dim");
 }
 
+function parseStableVersion(
+  version: string,
+): { major: number; minor: number; patch: number } | null {
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    major: parseInt(match[1]),
+    minor: parseInt(match[2]),
+    patch: parseInt(match[3]),
+  };
+}
+
+function parsePrerelease(version: string): { channel: string; number: number } | null {
+  const match = version.match(/-(alpha|beta|rc)\.(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    channel: match[1],
+    number: parseInt(match[2]),
+  };
+}
+
 interface CheckResult {
   name: string;
   passed: boolean;
@@ -85,12 +110,15 @@ async function runCheck(
 
 function getDirSize(dirPath: string): number {
   let size = 0;
-  if (!existsSync(dirPath)) return 0;
+  if (!Bun.file(dirPath).size && !(dirPath === process.cwd())) {
+    // Keep missing directories as zero-sized.
+    // Bun.file().size is 0 for missing files, so directory probing still relies on find below.
+  }
 
   const files = Bun.spawnSync(["find", dirPath, "-type", "f"]).stdout.toString().trim().split("\n");
   for (const file of files) {
-    if (file && existsSync(file)) {
-      size += statSync(file).size;
+    if (file) {
+      size += Bun.file(file).size;
     }
   }
   return size;
@@ -111,23 +139,43 @@ async function main() {
   }
 
   // Get current version from package.json
-  const pkgPath = join(process.cwd(), "package.json");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+  const pkgPath = `${process.cwd()}/package.json`;
+  const pkg = JSON.parse(await Bun.file(pkgPath).text());
   const currentVersion = pkg.version;
 
   // Get version from tauri.conf.json
-  const tauriConfigPath = join(process.cwd(), "src-tauri/tauri.conf.json");
-  const tauriConfig = JSON.parse(readFileSync(tauriConfigPath, "utf-8"));
+  const tauriConfigPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
+  const tauriConfig = JSON.parse(await Bun.file(tauriConfigPath).text());
   const tauriVersion = tauriConfig.version;
+  const cargoTomlPath = `${process.cwd()}/src-tauri/Cargo.toml`;
+  const cargoToml = await Bun.file(cargoTomlPath).text();
+  const cargoVersionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+  const cargoVersion = cargoVersionMatch?.[1];
 
   header("Version Info");
   log(`  Current version: v${currentVersion}`, "blue");
 
-  // Calculate next versions
-  const [major, minor, patch] = currentVersion.split(".").map(Number);
+  const stableVersion = parseStableVersion(currentVersion);
+  if (!stableVersion) {
+    throw new Error(`Invalid version in package.json: ${currentVersion}`);
+  }
+
+  const prerelease = parsePrerelease(currentVersion);
+  const { major, minor, patch } = stableVersion;
   log(`  Next patch:      v${major}.${minor}.${patch + 1}`, "dim");
   log(`  Next minor:      v${major}.${minor + 1}.0`, "dim");
   log(`  Next major:      v${major + 1}.0.0`, "dim");
+  if (prerelease) {
+    log(
+      `  Continue ${prerelease.channel}: v${major}.${minor}.${patch}-${prerelease.channel}.${prerelease.number + 1}`,
+      "dim",
+    );
+    log(`  Promote to rc:   v${major}.${minor}.${patch}-rc.1`, "dim");
+    log(`  Finalize patch:  v${major}.${minor}.${patch}`, "dim");
+  } else {
+    log(`  Next beta:       v${major}.${minor}.${patch + 1}-beta.1`, "dim");
+    log(`  Next rc:         v${major}.${minor}.${patch + 1}-rc.1`, "dim");
+  }
 
   header("Git Checks");
 
@@ -149,9 +197,34 @@ async function main() {
     return { passed: true };
   });
 
+  await runCheck("Origin remote targets athasdev/athas", async () => {
+    const remoteUrl = (await $`git remote get-url origin`.text()).trim();
+    const isExpectedRemote =
+      remoteUrl.includes("github.com/athasdev/athas") ||
+      remoteUrl.includes("github.com:athasdev/athas");
+
+    if (!isExpectedRemote) {
+      return {
+        passed: true,
+        warning: true,
+        message: `origin is '${remoteUrl}'`,
+      };
+    }
+
+    return { passed: true };
+  });
+
   // Check: Up to date with remote
   await runCheck("Up to date with remote", async () => {
-    await $`git fetch origin master`.quiet();
+    const fetchResult = await $`git fetch origin master`.quiet().nothrow();
+    if (fetchResult.exitCode !== 0) {
+      return {
+        passed: true,
+        warning: true,
+        message: "Could not fetch origin/master in current environment",
+      };
+    }
+
     const status = await $`git status -uno`.text();
     if (status.includes("Your branch is behind")) {
       return { passed: false, message: "Branch is behind origin/master" };
@@ -164,12 +237,19 @@ async function main() {
 
   header("Version Consistency");
 
-  // Check: Version consistency between package.json and tauri.conf.json
-  await runCheck("package.json matches tauri.conf.json", async () => {
-    if (currentVersion !== tauriVersion) {
+  // Check: Version consistency between versioned app files
+  await runCheck("Version files stay in sync", async () => {
+    if (!cargoVersion) {
       return {
         passed: false,
-        message: `package.json (${currentVersion}) != tauri.conf.json (${tauriVersion})`,
+        message: "Could not find version in src-tauri/Cargo.toml",
+      };
+    }
+
+    if (currentVersion !== tauriVersion || currentVersion !== cargoVersion) {
+      return {
+        passed: false,
+        message: `package.json (${currentVersion}), tauri.conf.json (${tauriVersion}), Cargo.toml (${cargoVersion})`,
       };
     }
     return { passed: true };
@@ -179,21 +259,51 @@ async function main() {
 
   // Check: Tree-sitter parsers are present
   await runCheck("Tree-sitter parsers", async () => {
-    const parsersDir = join(process.cwd(), "public/tree-sitter/parsers");
+    const parsersDir = `${process.cwd()}/public/tree-sitter/parsers`;
     const expectedLangs = [
-      "bash", "c", "c_sharp", "cpp", "css", "dart", "elisp", "elixir",
-      "go", "html", "java", "javascript", "json", "kotlin", "lua",
-      "markdown", "objc", "ocaml", "php", "python", "rescript", "ruby",
-      "rust", "scala", "solidity", "sql", "swift", "systemrdl", "tlaplus",
-      "toml", "tsx", "typescript", "vue", "yaml", "zig",
+      "bash",
+      "c",
+      "c_sharp",
+      "cpp",
+      "css",
+      "dart",
+      "elisp",
+      "elixir",
+      "go",
+      "html",
+      "java",
+      "javascript",
+      "json",
+      "kotlin",
+      "lua",
+      "markdown",
+      "objc",
+      "ocaml",
+      "php",
+      "python",
+      "rescript",
+      "ruby",
+      "rust",
+      "scala",
+      "solidity",
+      "sql",
+      "swift",
+      "systemrdl",
+      "tlaplus",
+      "toml",
+      "tsx",
+      "typescript",
+      "vue",
+      "yaml",
+      "zig",
     ];
 
     const missing: string[] = [];
     for (const lang of expectedLangs) {
-      const wasmPath = join(parsersDir, lang, "parser.wasm");
-      const queryPath = join(parsersDir, lang, "highlights.scm");
-      if (!existsSync(wasmPath)) missing.push(`${lang}/parser.wasm`);
-      if (!existsSync(queryPath)) missing.push(`${lang}/highlights.scm`);
+      const wasmPath = `${parsersDir}/${lang}/parser.wasm`;
+      const queryPath = `${parsersDir}/${lang}/highlights.scm`;
+      if (!(await Bun.file(wasmPath).exists())) missing.push(`${lang}/parser.wasm`);
+      if (!(await Bun.file(queryPath).exists())) missing.push(`${lang}/highlights.scm`);
     }
 
     if (missing.length > 0) {
@@ -216,19 +326,27 @@ async function main() {
     return { passed: true };
   });
 
-  // Check: Biome lint
-  await runCheck("Biome lint check", async () => {
-    const result = await $`bun check`.quiet().nothrow();
+  // Check: Vite+ lint and format
+  await runCheck("Vite+ check", async () => {
+    const result = await $`bunx vp check`.quiet().nothrow();
     if (result.exitCode !== 0) {
-      return { passed: false, message: "Lint errors found" };
+      return { passed: false, message: "Format, lint, or type errors found" };
     }
     return { passed: true };
   });
 
-  // Check: Vite build (full mode only)
+  await runCheck("Vite+ test suite", async () => {
+    const result = await $`bunx vp test run`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Tests failed" };
+    }
+    return { passed: true };
+  });
+
+  // Check: Vite+ build (full mode only)
   if (fullMode) {
-    await runCheck("Vite build", async () => {
-      const result = await $`bun vite build`.quiet().nothrow();
+    await runCheck("Vite+ build", async () => {
+      const result = await $`bunx vp build`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Frontend build failed" };
       }
@@ -237,7 +355,7 @@ async function main() {
 
     // Check: Bundle size
     await runCheck("Bundle size < 5MB", async () => {
-      const distPath = join(process.cwd(), "dist");
+      const distPath = `${process.cwd()}/dist`;
       const size = getDirSize(distPath);
       const sizeStr = formatBytes(size);
       const maxSize = 5 * 1024 * 1024; // 5MB
@@ -268,6 +386,14 @@ async function main() {
     const result = await $`cargo check --workspace`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Compilation errors found" };
+    }
+    return { passed: true };
+  });
+
+  await runCheck("Cargo check (release)", async () => {
+    const result = await $`cargo check --release -p athas`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Release-profile compilation errors found" };
     }
     return { passed: true };
   });
@@ -345,11 +471,40 @@ async function main() {
     return { passed: true };
   });
 
+  header("Release Readiness");
+
+  await runCheck("GitHub release workflow exists", async () => {
+    const workflowPath = `${process.cwd()}/.github/workflows`;
+    const workflowDirCheck = await $`test -d ${workflowPath}`.nothrow();
+    if (workflowDirCheck.exitCode !== 0) {
+      return { passed: false, message: "Missing .github/workflows directory" };
+    }
+
+    const releaseWorkflow = `${workflowPath}/release.yml`;
+    const releaseAltWorkflow = `${workflowPath}/release.yaml`;
+    const hasReleaseWorkflow =
+      (await Bun.file(releaseWorkflow).exists()) || (await Bun.file(releaseAltWorkflow).exists());
+
+    if (!hasReleaseWorkflow) {
+      return { passed: true, warning: true, message: "No release workflow file found" };
+    }
+
+    return { passed: true };
+  });
+
   header("Changes Since Last Release");
 
   // Get commits since last tag
   try {
-    const lastTag = (await $`git describe --tags --abbrev=0`.text()).trim();
+    const lastTag = (await $`git tag --sort=-v:refname --list "v*"`.text())
+      .split("\n")
+      .map((tag) => tag.trim())
+      .find(Boolean);
+
+    if (!lastTag) {
+      throw new Error("No version tags found");
+    }
+
     const commits = await $`git log ${lastTag}..HEAD --oneline`.text();
     const commitList = commits.trim().split("\n").filter(Boolean);
 
@@ -384,7 +539,10 @@ async function main() {
     log("  Ready to release. Run one of:", "cyan");
     log("    bun release:patch  # Bug fixes", "dim");
     log("    bun release:minor  # New features", "dim");
-    log("    bun release:major  # Breaking changes\n", "dim");
+    log("    bun release:major  # Breaking changes", "dim");
+    log("    bun release:alpha  # Early preview build", "dim");
+    log("    bun release:beta   # Next patch prerelease", "dim");
+    log("    bun release:rc     # Release candidate for current patch\n", "dim");
     process.exit(0);
   } else {
     log(`\n  ${passed} passed, ${warned} warnings, ${failed} failed\n`, "red");

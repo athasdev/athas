@@ -3,7 +3,10 @@ import type {
   LanguageExtension,
   Token,
 } from "@/features/editor/extensions/types";
-import { convertToEditorTokens, tokenizeCode } from "@/features/editor/lib/wasm-parser";
+import {
+  convertToEditorTokens,
+  tokenizeCode,
+} from "@/features/editor/lib/wasm-parser/wasm-parser-api";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 
 // CDN base URL for downloading WASM parsers and highlight queries

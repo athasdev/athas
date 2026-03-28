@@ -2,68 +2,61 @@
  * Yank operator (y)
  */
 
+import { useVimStore } from "@/features/vim/stores/vim-store";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 
 /**
- * Vim clipboard for yanked content
+ * Vim clipboard for yanked content (legacy interface kept for compatibility)
  */
 interface VimClipboard {
   content: string;
   linewise: boolean;
 }
 
-let vimClipboard: VimClipboard = {
-  content: "",
-  linewise: false,
-};
-
 /**
- * Yank operator - copies text to vim clipboard
+ * Yank operator - copies text to vim registers
  */
 export const yankOperator: Operator = {
   name: "yank",
-  repeatable: false, // Yanking doesn't need to be repeated with dot
+  repeatable: false,
   entersInsertMode: false,
 
   execute: (range: VimRange, context: EditorContext): void => {
     const { content, lines } = context;
 
-    // Handle linewise yank
     if (range.linewise) {
       const startLine = Math.min(range.start.line, range.end.line);
       const endLine = Math.max(range.start.line, range.end.line);
       const yankedLines = lines.slice(startLine, endLine + 1);
-      vimClipboard = {
-        content: yankedLines.join("\n"),
-        linewise: true,
-      };
+      const yankedContent = yankedLines.join("\n");
+
+      useVimStore.getState().actions.writeToRegister(yankedContent, true, false);
       return;
     }
 
-    // Handle character-wise yank
     const startOffset = Math.min(range.start.offset, range.end.offset);
     const endOffset = Math.max(range.start.offset, range.end.offset);
-
-    // For inclusive ranges, include the end character
     const actualEndOffset = range.inclusive ? endOffset + 1 : endOffset;
+    const yankedContent = content.slice(startOffset, actualEndOffset);
 
-    vimClipboard = {
-      content: content.slice(startOffset, actualEndOffset),
-      linewise: false,
-    };
+    useVimStore.getState().actions.writeToRegister(yankedContent, false, false);
   },
 };
 
 /**
- * Get the current vim clipboard content
+ * Get the current vim clipboard content (reads from register system)
  */
 export const getVimClipboard = (): VimClipboard => {
-  return { ...vimClipboard };
+  const entry = useVimStore.getState().registers.get("");
+  if (entry) {
+    return { content: entry.content, linewise: entry.linewise };
+  }
+  return { content: "", linewise: false };
 };
 
 /**
- * Set the vim clipboard content (useful for paste operations)
+ * Set the vim clipboard content (writes to register system)
  */
 export const setVimClipboard = (clipboard: VimClipboard): void => {
-  vimClipboard = clipboard;
+  useVimStore.getState().actions.writeToRegister(clipboard.content, clipboard.linewise, true);
 };

@@ -48,6 +48,7 @@ interface SettingsActionsParams {
   updateSetting: (key: string, value: any) => void | Promise<void>;
   handleFileSelect: ((path: string, isDir: boolean) => void) | undefined;
   getAppDataDir: () => Promise<string>;
+  openWhatsNew?: () => void;
   onClose: () => void;
 }
 

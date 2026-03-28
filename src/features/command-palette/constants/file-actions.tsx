@@ -22,7 +22,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-save-as",
       label: "File: Save As",
       description: "Save current file with a new name",
-      icon: <FilePlus size={14} />,
+      icon: <FilePlus />,
       category: "File",
       keybinding: ["⌘", "⇧", "S"],
       action: () => {

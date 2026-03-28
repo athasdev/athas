@@ -26,8 +26,15 @@ export const AI_AGENTS: AIAgent[] = [
   {
     id: "claude-code",
     name: "Claude Code",
-    binaryName: "claude",
-    description: "Anthropic's Claude Code CLI agent",
+    binaryName: "claude-code-acp",
+    description: "Anthropic's Claude Code ACP adapter",
+    installed: false,
+  },
+  {
+    id: "codex-cli",
+    name: "Codex CLI",
+    binaryName: "codex-acp",
+    description: "OpenAI Codex agent via ACP adapter",
     installed: false,
   },
   {
@@ -38,10 +45,24 @@ export const AI_AGENTS: AIAgent[] = [
     installed: false,
   },
   {
-    id: "codex-cli",
-    name: "Codex CLI",
-    binaryName: "codex-acp",
-    description: "OpenAI Codex agent via ACP adapter",
+    id: "kimi-cli",
+    name: "Kimi CLI",
+    binaryName: "kimi",
+    description: "Moonshot Kimi CLI agent",
+    installed: false,
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    binaryName: "opencode",
+    description: "SST OpenCode agent",
+    installed: false,
+  },
+  {
+    id: "qwen-code",
+    name: "Qwen Code",
+    binaryName: "qwen",
+    description: "Alibaba Qwen Code agent",
     installed: false,
   },
   {

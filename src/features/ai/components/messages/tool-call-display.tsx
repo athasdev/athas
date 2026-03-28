@@ -1,5 +1,13 @@
-import { AlertCircle, CheckCircle, ChevronRight, Clock, ExternalLink } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  ExternalLink,
+  TerminalSquare,
+} from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface ToolCallDisplayProps {
@@ -29,6 +37,7 @@ export default function ToolCallDisplay({
       : status === "running"
         ? "text-text-lighter/55"
         : "text-text-lighter/65";
+  const statusLabel = status === "failed" ? "Failed" : status === "running" ? "Running" : "Done";
 
   // Format input parameters for display
   const formatInput = (input: any): string => {
@@ -145,50 +154,68 @@ export default function ToolCallDisplay({
   };
 
   return (
-    <div className="py-0.5 leading-tight">
-      <div className="flex items-center gap-1">
-        <button
+    <div className="rounded-xl border border-border/55 bg-primary-bg/55 px-2.5 py-2 leading-tight">
+      <div className="flex items-center gap-1.5">
+        <div className="flex size-5 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-secondary-bg/60">
+          <TerminalSquare className="text-text-lighter/75" />
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="group flex min-w-0 flex-1 items-center gap-1 text-left text-xs"
+          className="group h-auto min-w-0 flex-1 justify-start gap-1 px-0 py-0 text-left hover:bg-transparent"
         >
-          <span className="font-medium text-text-lighter/80">{toolName}</span>
-          <span className="opacity-40">·</span>
-          <span className="truncate text-text-lighter/60">{formatInput(input)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate font-medium text-text">{toolName}</span>
+              <span
+                className={cn(
+                  "rounded-full border px-1.5 py-0.5 text-[10px]",
+                  status === "failed" && "border-red-500/25 bg-red-500/10 text-red-300",
+                  status === "running" &&
+                    "border-border/60 bg-secondary-bg/70 text-text-lighter/80",
+                  status === "completed" && "border-green-500/20 bg-green-500/10 text-green-300",
+                )}
+              >
+                {statusLabel}
+              </span>
+            </div>
+            <div className="mt-0.5 truncate text-text-lighter/65">{formatInput(input)}</div>
+          </div>
           <ChevronRight
-            size={9}
             className={cn(
-              "ml-auto opacity-30 transition-transform duration-200 group-hover:opacity-50",
+              "opacity-30 transition-transform duration-200 group-hover:opacity-50",
               isExpanded && "rotate-90",
             )}
           />
-        </button>
+        </Button>
         {toolName === "Read" && hasInput && input?.file_path && !isStreaming && !error && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={() => onOpenInEditor?.(input.file_path)}
-            className="rounded-full p-1 text-text-lighter/60 transition-all hover:bg-hover hover:text-text-lighter/90"
+            className="rounded-full text-text-lighter/60 hover:text-text-lighter/90"
             title="Open in editor"
             aria-label="Open file in editor"
           >
-            <ExternalLink size={10} />
-          </button>
+            <ExternalLink />
+          </Button>
         )}
         {status === "running" ? (
-          <Clock size={10} className={cn("shrink-0 animate-spin", statusClass)} />
+          <Clock className={cn("shrink-0 animate-spin", statusClass)} />
         ) : null}
-        {status === "completed" ? (
-          <CheckCircle size={10} className={cn("shrink-0", statusClass)} />
-        ) : null}
-        {status === "failed" ? (
-          <AlertCircle size={10} className={cn("shrink-0", statusClass)} />
-        ) : null}
+        {status === "completed" ? <CheckCircle className={cn("shrink-0", statusClass)} /> : null}
+        {status === "failed" ? <AlertCircle className={cn("shrink-0", statusClass)} /> : null}
       </div>
 
       {isExpanded && (
-        <div className="mt-1 space-y-1 pl-3 text-[11px] text-text-lighter/60">
+        <div className="mt-2 space-y-2 border-border/40 border-t pt-2 text-[11px] text-text-lighter/60">
           {/* Input section */}
           <div>
-            <div className="mb-0.5 font-medium opacity-55">Input</div>
-            <pre className="editor-font max-h-48 overflow-x-auto whitespace-pre-wrap text-[11px]">
+            <div className="mb-1 font-medium opacity-55">Input</div>
+            <pre className="editor-font max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/55 p-2 whitespace-pre-wrap text-[11px]">
               {hasInput ? JSON.stringify(input, null, 2) : "No parameters"}
             </pre>
           </div>
@@ -196,8 +223,8 @@ export default function ToolCallDisplay({
           {/* Output section */}
           {output && (
             <div>
-              <div className="mb-0.5 font-medium opacity-55">Output</div>
-              <pre className="editor-font max-h-48 overflow-x-auto whitespace-pre-wrap text-[11px]">
+              <div className="mb-1 font-medium opacity-55">Output</div>
+              <pre className="editor-font max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/55 p-2 whitespace-pre-wrap text-[11px]">
                 {formatOutput(output)}
               </pre>
             </div>
@@ -206,8 +233,8 @@ export default function ToolCallDisplay({
           {/* Error section */}
           {error && (
             <div>
-              <div className="mb-0.5 font-medium text-red-400 opacity-80">Error</div>
-              <pre className="editor-font max-h-48 overflow-x-auto whitespace-pre-wrap text-[11px] text-red-400">
+              <div className="mb-1 font-medium text-red-400 opacity-80">Error</div>
+              <pre className="editor-font max-h-48 overflow-x-auto rounded-lg border border-red-500/20 bg-red-500/5 p-2 whitespace-pre-wrap text-[11px] text-red-300">
                 {error}
               </pre>
             </div>

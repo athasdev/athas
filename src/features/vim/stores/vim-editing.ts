@@ -2,14 +2,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useEditorStateStore } from "@/stores/editor-cursor-store";
-
-interface VimClipboard {
-  content: string;
-  type: "line" | "char";
-}
-
-let vimClipboard: VimClipboard = { content: "", type: "char" };
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useVimStore } from "@/features/vim/stores/vim-store";
 
 export interface VimEditingCommands {
   deleteLine: () => void;
@@ -36,12 +30,6 @@ export const createVimEditing = (): VimEditingCommands => {
     useEditorStateStore.getState().actions.setCursorPosition(position);
   const getLines = () => useEditorViewStore.getState().lines;
   const getContent = () => useEditorViewStore.getState().actions.getContent();
-
-  // Get active buffer info
-  const _getActiveBuffer = () => {
-    const { buffers, activeBufferId } = useBufferStore.getState();
-    return buffers.find((b) => b.id === activeBufferId);
-  };
 
   // Update buffer content
   const updateContent = (newContent: string) => {
@@ -97,16 +85,14 @@ export const createVimEditing = (): VimEditingCommands => {
       const lines = getLines();
 
       if (lines.length <= 1) {
-        // If only one line, just clear it
-        vimClipboard = { content: `${lines[0]}\n`, type: "line" };
+        useVimStore.getState().actions.writeToRegister(`${lines[0]}\n`, true, true);
         updateContent("");
         setCursorPosition({ line: 0, column: 0, offset: 0 });
         updateTextareaCursor({ line: 0, column: 0, offset: 0 });
         return;
       }
 
-      // Save deleted line to clipboard
-      vimClipboard = { content: `${lines[currentPos.line]}\n`, type: "line" };
+      useVimStore.getState().actions.writeToRegister(`${lines[currentPos.line]}\n`, true, true);
 
       // Remove the line
       const newLines = lines.filter((_, index) => index !== currentPos.line);
@@ -127,25 +113,23 @@ export const createVimEditing = (): VimEditingCommands => {
       const currentPos = getCursorPosition();
       const lines = getLines();
 
-      // Copy current line to clipboard
-      vimClipboard = { content: `${lines[currentPos.line]}\n`, type: "line" };
+      useVimStore.getState().actions.writeToRegister(`${lines[currentPos.line]}\n`, true, false);
     },
 
     paste: () => {
-      if (!vimClipboard.content) return;
+      const reg = useVimStore.getState().actions.readFromRegister();
+      if (!reg?.content) return;
 
       saveUndoState();
 
       const currentPos = getCursorPosition();
       const lines = getLines();
 
-      if (vimClipboard.type === "line") {
-        // Paste as new line below current line
+      if (reg.linewise) {
         const newLines = [...lines];
-        newLines.splice(currentPos.line + 1, 0, vimClipboard.content.replace(/\n$/, ""));
+        newLines.splice(currentPos.line + 1, 0, reg.content.replace(/\n$/, ""));
         const newContent = newLines.join("\n");
 
-        // Move cursor to beginning of pasted line
         const newLine = currentPos.line + 1;
         const newOffset = calculateOffsetFromPosition(newLine, 0, newLines);
 
@@ -154,17 +138,15 @@ export const createVimEditing = (): VimEditingCommands => {
         setCursorPosition(newPosition);
         updateTextareaCursor(newPosition);
       } else {
-        // Paste as character content at cursor
         const currentContent = getContent();
         const newContent =
           currentContent.slice(0, currentPos.offset) +
-          vimClipboard.content +
+          reg.content +
           currentContent.slice(currentPos.offset);
 
         updateContent(newContent);
 
-        // Move cursor to end of pasted content
-        const newOffset = currentPos.offset + vimClipboard.content.length;
+        const newOffset = currentPos.offset + reg.content.length;
         const newLines = newContent.split("\n");
         let line = 0;
         let offset = 0;
@@ -182,19 +164,18 @@ export const createVimEditing = (): VimEditingCommands => {
     },
 
     pasteAbove: () => {
-      if (!vimClipboard.content || vimClipboard.type !== "line") return;
+      const reg = useVimStore.getState().actions.readFromRegister();
+      if (!reg?.content || !reg.linewise) return;
 
       saveUndoState();
 
       const currentPos = getCursorPosition();
       const lines = getLines();
 
-      // Paste as new line above current line
       const newLines = [...lines];
-      newLines.splice(currentPos.line, 0, vimClipboard.content.replace(/\n$/, ""));
+      newLines.splice(currentPos.line, 0, reg.content.replace(/\n$/, ""));
       const newContent = newLines.join("\n");
 
-      // Move cursor to beginning of pasted line
       const newOffset = calculateOffsetFromPosition(currentPos.line, 0, newLines);
 
       updateContent(newContent);
@@ -276,13 +257,12 @@ export const createVimEditing = (): VimEditingCommands => {
 
       if (currentPos.offset < currentContent.length) {
         const deletedChar = currentContent[currentPos.offset];
-        vimClipboard = { content: deletedChar, type: "char" };
+        useVimStore.getState().actions.writeToRegister(deletedChar, false, true);
 
         const newContent =
           currentContent.slice(0, currentPos.offset) + currentContent.slice(currentPos.offset + 1);
 
         updateContent(newContent);
-        // Cursor position stays the same
         updateTextareaCursor(currentPos);
       }
     },
@@ -295,7 +275,7 @@ export const createVimEditing = (): VimEditingCommands => {
 
       if (currentPos.offset > 0) {
         const deletedChar = currentContent[currentPos.offset - 1];
-        vimClipboard = { content: deletedChar, type: "char" };
+        useVimStore.getState().actions.writeToRegister(deletedChar, false, true);
 
         const newContent =
           currentContent.slice(0, currentPos.offset - 1) + currentContent.slice(currentPos.offset);
@@ -340,7 +320,7 @@ export const createVimEditing = (): VimEditingCommands => {
 
       if (currentPos.offset < currentContent.length) {
         const deletedChar = currentContent[currentPos.offset];
-        vimClipboard = { content: deletedChar, type: "char" };
+        useVimStore.getState().actions.writeToRegister(deletedChar, false, true);
 
         // Delete character and enter insert mode
         const newContent =
@@ -434,9 +414,8 @@ export const createVimEditing = (): VimEditingCommands => {
       const start = Math.min(startOffset, endOffset);
       const end = Math.max(startOffset, endOffset);
 
-      // Save deleted content to clipboard
       const deletedContent = currentContent.slice(start, end);
-      vimClipboard = { content: deletedContent, type: "char" };
+      useVimStore.getState().actions.writeToRegister(deletedContent, false, true);
 
       // Delete the selection
       const newContent = currentContent.slice(0, start) + currentContent.slice(end);
@@ -463,9 +442,8 @@ export const createVimEditing = (): VimEditingCommands => {
       const start = Math.min(startOffset, endOffset);
       const end = Math.max(startOffset, endOffset);
 
-      // Copy selected content to clipboard
       const selectedContent = currentContent.slice(start, end);
-      vimClipboard = { content: selectedContent, type: "char" };
+      useVimStore.getState().actions.writeToRegister(selectedContent, false, false);
     },
   };
 };

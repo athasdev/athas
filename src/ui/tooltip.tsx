@@ -1,116 +1,50 @@
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { cva } from "class-variance-authority";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import Keybinding from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
-import { calculateTooltipPosition } from "@/utils/fit-viewport";
 
 interface TooltipProps {
   content: string;
   children: React.ReactNode;
   side?: "top" | "bottom" | "left" | "right";
+  shortcut?: string;
   className?: string;
 }
 
-export default function Tooltip({ content, children, side = "top", className }: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
+const tooltipContentVariants = cva(
+  "ui-text-sm pointer-events-none z-[99999] whitespace-nowrap rounded-lg border border-border/70 bg-secondary-bg/95 px-2.5 py-1.5 text-text shadow-lg backdrop-blur-sm animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+);
 
-  const updatePosition = () => {
-    if (!triggerRef.current || !tooltipRef.current) return;
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-    const { x, y } = calculateTooltipPosition(triggerRect, tooltipRect, side);
-
-    setPosition({ x, y });
-  };
-
-  const showTooltip = () => {
-    setIsVisible(true);
-  };
-
-  const hideTooltip = () => {
-    setIsVisible(false);
-  };
-
-  useEffect(() => {
-    if (isVisible) {
-      updatePosition();
-
-      const handleMouseMove = (e: MouseEvent) => {
-        if (!triggerRef.current) return;
-
-        const rect = triggerRef.current.getBoundingClientRect();
-        const isOverTrigger =
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom;
-
-        if (!isOverTrigger) {
-          hideTooltip();
-        }
-      };
-
-      const handleResize = () => {
-        hideTooltip();
-      };
-
-      const handleScroll = () => {
-        hideTooltip();
-      };
-
-      const handlePointerDown = () => {
-        hideTooltip();
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("pointerdown", handlePointerDown, true);
-      window.addEventListener("resize", handleResize);
-      window.addEventListener("scroll", handleScroll, true);
-
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("pointerdown", handlePointerDown, true);
-        window.removeEventListener("resize", handleResize);
-        window.removeEventListener("scroll", handleScroll, true);
-      };
-    }
-  }, [isVisible]);
-
+export default function Tooltip({
+  content,
+  children,
+  side = "top",
+  shortcut,
+  className,
+}: TooltipProps) {
   return (
-    <>
-      <div
-        ref={triggerRef}
-        className="inline-block"
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-        onMouseDown={hideTooltip}
-        onClick={hideTooltip}
-      >
-        {children}
-      </div>
-      {isVisible &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={tooltipRef}
+    <TooltipPrimitive.Provider delayDuration={150} skipDelayDuration={100} disableHoverableContent>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>
+          <span className="inline-block">{children}</span>
+        </TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            side={side}
+            sideOffset={6}
+            collisionPadding={8}
             className={cn(
-              "pointer-events-none fixed z-[99999] whitespace-nowrap rounded-lg border border-border bg-secondary-bg px-2.5 py-1.5 text-text text-xs shadow-lg",
+              tooltipContentVariants(),
+              shortcut && "flex items-center gap-2",
               className,
             )}
-            style={{
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
           >
             {content}
-          </div>,
-          document.body,
-        )}
-    </>
+            {shortcut && <Keybinding binding={shortcut} />}
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 }

@@ -1,6 +1,5 @@
 import { type RefObject, useCallback } from "react";
-import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
-import { toast } from "@/stores/toast-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { useLspStore } from "../lsp/lsp-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
@@ -94,18 +93,11 @@ export function useEditorKeyDown({
       const isAltGraph = isAltGraphPressed(e);
       const hasBlockedModifier =
         e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph);
-      const hasTextSelection = Boolean(
-        selection && selection.start.offset !== selection.end.offset,
-      );
       const isInlineEditShortcut =
         (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "i";
 
       if (isInlineEditShortcut) {
         e.preventDefault();
-        if (!hasTextSelection) {
-          toast.warning("Select non-empty code before inline edit.");
-          return;
-        }
         inlineEditToolbarActions.show();
         return;
       }

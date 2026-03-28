@@ -1,6 +1,6 @@
 import { produce } from "immer";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import {
   addAcpPermissionRequest,
@@ -1464,6 +1464,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
       {
         name: "athas-ai-chat-settings-v7",
         version: 3,
+        storage: createJSONStorage(() => globalThis.localStorage),
         partialize: (state) => ({
           outputStyle: state.outputStyle,
           chatScopes: Object.fromEntries(

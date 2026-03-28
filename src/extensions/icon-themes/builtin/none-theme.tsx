@@ -9,12 +9,12 @@ export const noneIconTheme: IconThemeDefinition = {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {
-        component: <Icon size={14} />,
+        component: <Icon />,
       };
     }
 
     return {
-      component: <File size={14} />,
+      component: <File />,
     };
   },
 };

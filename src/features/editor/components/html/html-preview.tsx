@@ -1,28 +1,32 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 
 export function HtmlPreview() {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId);
 
-  // If this is a preview buffer, find the source buffer
-  const sourceBuffer = activeBuffer?.sourceFilePath
-    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath)
-    : activeBuffer;
+  // If this is a preview buffer, find the source buffer (which has text content)
+  const sourceBuffer =
+    activeBuffer?.type === "htmlPreview"
+      ? (buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer)
+      : activeBuffer;
+
+  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
+  const sourcePath = sourceBuffer?.path;
 
   const [iframeContent, setIframeContent] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Memoize the asset URL for the directory
   const assetBaseUrl = useMemo(() => {
-    if (!sourceBuffer?.path) return "";
+    if (!sourcePath) return "";
 
     // Get directory path
-    const lastSlashIndex = sourceBuffer.path.lastIndexOf("/");
-    const dirPath =
-      lastSlashIndex !== -1 ? sourceBuffer.path.substring(0, lastSlashIndex) : sourceBuffer.path;
+    const lastSlashIndex = sourcePath.lastIndexOf("/");
+    const dirPath = lastSlashIndex !== -1 ? sourcePath.substring(0, lastSlashIndex) : sourcePath;
 
     // Convert to Tauri asset URL
     // convertFileSrc handles the protocol logic (e.g. asset:// or http://asset.localhost)
@@ -30,12 +34,12 @@ export function HtmlPreview() {
 
     // Ensure it ends with slash for correct base resolution
     return url.endsWith("/") ? url : `${url}/`;
-  }, [sourceBuffer?.path]);
+  }, [sourcePath]);
 
   useEffect(() => {
-    if (!sourceBuffer) return;
+    if (!sourceContent) return;
 
-    let content = sourceBuffer.content;
+    let content = sourceContent;
 
     // Inject <base> tag to allow relative links (CSS/JS/Images) to work
     if (assetBaseUrl) {
@@ -55,7 +59,7 @@ export function HtmlPreview() {
     // Add script to handle errors and console logs if needed in future
     // For now keeping it simple with just content rendering
     setIframeContent(content);
-  }, [sourceBuffer?.content, assetBaseUrl]);
+  }, [sourceContent, assetBaseUrl]);
 
   if (!sourceBuffer) {
     return (

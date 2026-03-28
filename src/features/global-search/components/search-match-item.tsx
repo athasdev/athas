@@ -1,6 +1,7 @@
-import { memo } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { type CSSProperties, memo } from "react";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
+import { Button } from "@/ui/button";
 
 interface SearchMatchItemProps {
   filePath: string;
@@ -8,8 +9,9 @@ interface SearchMatchItemProps {
   match: SearchMatch;
   index: number;
   isSelected: boolean;
-  onClick: () => void;
-  onHover?: () => void;
+  onSelect: (filePath: string, lineNumber: number) => void;
+  onPreview?: (filePath: string) => void;
+  style?: CSSProperties;
 }
 
 const highlightMatch = (text: string, start: number, end: number) => {
@@ -27,43 +29,56 @@ const highlightMatch = (text: string, start: number, end: number) => {
 };
 
 export const SearchMatchItem = memo(
-  ({ filePath, displayPath, match, index, isSelected, onClick, onHover }: SearchMatchItemProps) => {
+  ({
+    filePath,
+    displayPath,
+    match,
+    index,
+    isSelected,
+    onSelect,
+    onPreview,
+    style,
+  }: SearchMatchItemProps) => {
     const fileName = filePath.split("/").pop() || "";
     const dirPath = displayPath.substring(0, displayPath.lastIndexOf("/"));
 
     return (
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
         data-item-index={index}
-        onClick={onClick}
-        onMouseEnter={onHover}
-        className={`flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-hover ${isSelected ? "bg-hover" : ""}`}
+        onClick={() => onSelect(filePath, match.line_number)}
+        onMouseEnter={onPreview ? () => onPreview(filePath) : undefined}
+        className={`h-auto w-full justify-start items-start gap-3 px-3 py-1 text-left ${isSelected ? "bg-hover" : ""}`}
+        style={style}
       >
         {/* File icon, name and path */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <FileIcon
+          <FileExplorerIcon
             fileName={fileName}
             isDir={false}
             size={12}
             className="shrink-0 text-text-lighter"
           />
-          <span className="shrink-0 text-[11px] text-text">{fileName}</span>
+          <span className="ui-text-sm shrink-0 text-text">{fileName}</span>
           {dirPath && (
-            <span className="truncate text-[11px] text-text-lighter opacity-60">{dirPath}</span>
+            <span className="ui-text-sm truncate text-text-lighter opacity-60">{dirPath}</span>
           )}
         </div>
 
         {/* Line number */}
-        <span className="w-12 shrink-0 text-right text-[11px] text-text-lighter">
+        <span className="ui-text-sm w-12 shrink-0 text-right text-text-lighter">
           :{match.line_number}
         </span>
 
         {/* Match content */}
-        <div className="min-w-0 flex-[2] font-mono text-[11px] text-text">
+        <div className="ui-text-sm min-w-0 flex-[2] font-mono text-text">
           <div className="truncate">
             {highlightMatch(match.line_content, match.column_start, match.column_end)}
           </div>
         </div>
-      </button>
+      </Button>
     );
   },
 );

@@ -180,14 +180,12 @@ export function EmptyEditorState() {
     ];
   }, [emptyStateActionsById, emptyStateIconsById]);
 
-  const actions: ActionItem[] = [
-    ...EMPTY_EDITOR_PRIMARY_ACTIONS.map((action) => ({
-      id: action.id,
-      label: action.label,
-      icon: emptyStateIconsById[action.id],
-      action: emptyStateActionsById[action.id],
-    })),
-  ];
+  const actions: ActionItem[] = EMPTY_EDITOR_PRIMARY_ACTIONS.map((action) => ({
+    id: action.id,
+    label: action.label,
+    icon: emptyStateIconsById[action.id],
+    action: emptyStateActionsById[action.id],
+  }));
 
   return (
     <div

@@ -17,9 +17,12 @@ import { useHover } from "@/features/editor/lsp/use-hover";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
+import { logger } from "../utils/logger";
 import type { Position } from "../types/editor";
 
 interface UseLspIntegrationOptions {
+  enabled?: boolean;
   filePath: string | undefined;
   value: string;
   cursorPosition: Position;
@@ -40,6 +43,7 @@ const isFileSupported = (filePath: string | undefined): boolean => {
  * Hook that manages all LSP integration for the editor
  */
 export const useLspIntegration = ({
+  enabled = true,
   filePath,
   value,
   cursorPosition,
@@ -87,10 +91,11 @@ export const useLspIntegration = ({
 
   // Set up LSP completion handlers
   useEffect(() => {
+    if (!enabled) return;
     lspActions.setCompletionHandlers(lspClient.getCompletions.bind(lspClient), (fp: string) =>
       isFileSupported(fp),
     );
-  }, [lspClient, lspActions]);
+  }, [enabled, lspClient, lspActions]);
 
   // Set up hover functionality
   const hoverHandlers = useHover({
@@ -122,6 +127,7 @@ export const useLspIntegration = ({
 
   // Handle document lifecycle (open/close)
   useEffect(() => {
+    if (!enabled) return;
     if (!filePath || !isLspSupported) return;
 
     // Derive workspace path from file path if rootFolderPath is not set
@@ -136,7 +142,7 @@ export const useLspIntegration = ({
     // Start LSP server for this file and then notify about document open
     const initLsp = async () => {
       try {
-        console.log("LSP: Starting LSP for file", filePath, "in workspace", workspacePath);
+        logger.debug("LspIntegration", `Starting LSP for ${filePath} in ${workspacePath}`);
         // Reset document version for this file
         // Rust sends version 1 on document open, so we start at 1
         // First change will increment to 2
@@ -147,7 +153,7 @@ export const useLspIntegration = ({
         await lspClient.notifyDocumentOpen(filePath, value);
         // Mark document as opened so changes can be sent
         openedDocumentsRef.current.add(filePath);
-        console.log("LSP: LSP started and document opened for", filePath);
+        logger.debug("LspIntegration", `LSP started and document opened for ${filePath}`);
       } catch (error) {
         console.error("LSP initialization error:", error);
       }
@@ -165,10 +171,11 @@ export const useLspIntegration = ({
       documentVersionsRef.current.delete(filePath);
       openedDocumentsRef.current.delete(filePath);
     };
-  }, [filePath, isLspSupported, lspClient, rootFolderPath]);
+  }, [enabled, filePath, isLspSupported, lspClient, rootFolderPath, value]);
 
   // Handle document content changes
   useEffect(() => {
+    if (!enabled) return;
     if (!filePath || !isLspSupported) return;
 
     // Only send changes after document is opened to avoid race condition
@@ -184,10 +191,11 @@ export const useLspIntegration = ({
     lspClient.notifyDocumentChange(filePath, value, newVersion).catch((error) => {
       console.error("LSP document change error:", error);
     });
-  }, [value, filePath, isLspSupported, lspClient]);
+  }, [enabled, value, filePath, isLspSupported, lspClient]);
 
   // Handle completion triggers - only when user types (not on cursor movement)
   useEffect(() => {
+    if (!enabled) return;
     // Safety: reset stuck isApplyingCompletion flag
     // This can happen if a previous completion application didn't complete properly
     if (isApplyingCompletion && lastInputTimestamp > 0) {
@@ -212,7 +220,7 @@ export const useLspIntegration = ({
     completionTimerRef.current = setTimeout(() => {
       // Get latest value at trigger time (not from effect deps)
       const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
-      if (!buffer) return;
+      if (!buffer || !hasTextContent(buffer)) return;
 
       // Store the cursor offset and file path where completion was triggered
       completionTriggerOffsetRef.current = cursorPosition.offset;
@@ -232,13 +240,14 @@ export const useLspIntegration = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cursorPosition and isApplyingCompletion are read at render time, not as triggers
-  }, [lastInputTimestamp, filePath, lspActions, isLspSupported, editorRef]);
+  }, [enabled, lastInputTimestamp, filePath, lspActions, isLspSupported, editorRef]);
 
   // Hide completions when cursor moves via navigation (not typing)
   // Navigation = cursor moves but lastInputTimestamp doesn't change
   const prevInputTimestampRef = useRef<number>(0);
 
   useEffect(() => {
+    if (!enabled) return;
     const { isLspCompletionVisible } = useEditorUIStore.getState();
 
     // Only check if completions are visible
@@ -258,7 +267,7 @@ export const useLspIntegration = ({
     // Hide completions
     useEditorUIStore.getState().actions.setIsLspCompletionVisible(false);
     completionTriggerOffsetRef.current = null;
-  }, [cursorPosition.offset, lastInputTimestamp]);
+  }, [enabled, cursorPosition.offset, lastInputTimestamp]);
 
   return {
     lspClient,

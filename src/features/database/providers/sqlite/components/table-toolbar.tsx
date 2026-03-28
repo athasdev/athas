@@ -1,10 +1,32 @@
-import { Code, Copy, Database, Download, Info, Settings, Table, Type } from "lucide-react";
+import {
+  Code,
+  Copy,
+  Database,
+  Download,
+  Info,
+  Plus,
+  RefreshCw,
+  Settings,
+  Table,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  Type,
+} from "lucide-react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { DatabaseInfo, ViewMode } from "../types";
+import type {
+  DatabaseInfo,
+  DatabaseObjectKind,
+  PostgresSubscriptionInfo,
+  ViewMode,
+} from "../sqlite-types";
 
 interface TableToolbarProps {
   fileName: string;
   dbInfo: DatabaseInfo | null;
+  selectedObjectKind?: DatabaseObjectKind;
+  subscriptionInfo?: PostgresSubscriptionInfo | null;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   isCustomQuery: boolean;
@@ -14,6 +36,10 @@ interface TableToolbarProps {
   hasData: boolean;
   exportAsCSV: () => void;
   copyAsJSON: () => void;
+  onCreateSubscription?: () => void;
+  onToggleSubscription?: () => void;
+  onRefreshSubscription?: () => void;
+  onDropSubscription?: () => void;
 }
 
 const VIEW_TABS: { mode: ViewMode; icon: typeof Table; label: string }[] = [
@@ -25,6 +51,8 @@ const VIEW_TABS: { mode: ViewMode; icon: typeof Table; label: string }[] = [
 export default function TableToolbar({
   fileName,
   dbInfo,
+  selectedObjectKind = "table",
+  subscriptionInfo,
   viewMode,
   setViewMode,
   isCustomQuery,
@@ -34,13 +62,19 @@ export default function TableToolbar({
   hasData,
   exportAsCSV,
   copyAsJSON,
+  onCreateSubscription,
+  onToggleSubscription,
+  onRefreshSubscription,
+  onDropSubscription,
 }: TableToolbarProps) {
+  const isSubscription = selectedObjectKind === "subscription";
+
   return (
     <div className="mx-2 mt-2 rounded-2xl bg-primary-bg/85 px-3 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 rounded-full bg-secondary-bg/70 px-2.5 py-1">
-            <Database size={14} className="text-text-lighter" />
+            <Database className="text-text-lighter" />
             <span className="text-sm">{fileName}</span>
             {dbInfo && (
               <span className="text-text-lighter text-xs">
@@ -50,63 +84,119 @@ export default function TableToolbar({
           </div>
           <div className="flex items-center gap-1 rounded-full bg-secondary-bg/60 p-0.5">
             {VIEW_TABS.map(({ mode, icon: Icon, label }) => (
-              <button
+              <Button
                 key={mode}
                 onClick={() => setViewMode(mode)}
+                variant={viewMode === mode ? "secondary" : "ghost"}
+                size="xs"
                 className={cn(
-                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition-colors",
-                  viewMode === mode
-                    ? "bg-selected text-text"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
+                  "rounded-full px-2.5 py-1 text-xs",
+                  viewMode === mode ? "text-text" : "text-text-lighter",
                 )}
                 aria-label={`Switch to ${label} view`}
               >
-                <Icon size={12} />
+                <Icon />
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {viewMode === "data" && !isCustomQuery && (
-            <button
+          {viewMode === "data" && !isCustomQuery && !isSubscription && (
+            <Button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
-              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Toggle column types"
             >
-              <Type size={12} />
+              <Type />
               Types
-            </button>
+            </Button>
           )}
           {viewMode === "data" && (
-            <button
+            <Button
               onClick={() => setIsCustomQuery(true)}
-              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
             >
-              <Code size={12} />
+              <Code />
               SQL
-            </button>
+            </Button>
+          )}
+          {onCreateSubscription && (
+            <Button
+              onClick={onCreateSubscription}
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
+              aria-label="Create subscription"
+            >
+              <Plus />
+              Subscription
+            </Button>
+          )}
+          {isSubscription && subscriptionInfo && onToggleSubscription && (
+            <Button
+              onClick={onToggleSubscription}
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
+              aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
+            >
+              {subscriptionInfo.enabled ? <ToggleRight /> : <ToggleLeft />}
+              {subscriptionInfo.enabled ? "Disable" : "Enable"}
+            </Button>
+          )}
+          {isSubscription && onRefreshSubscription && (
+            <Button
+              onClick={onRefreshSubscription}
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
+              aria-label="Refresh subscription"
+            >
+              <RefreshCw />
+              Refresh
+            </Button>
+          )}
+          {isSubscription && onDropSubscription && (
+            <Button
+              onClick={onDropSubscription}
+              variant="ghost"
+              size="xs"
+              className="rounded-full px-2 py-1 text-text-lighter"
+              aria-label="Drop subscription"
+            >
+              <Trash2 />
+              Drop
+            </Button>
           )}
           {hasData && (
             <>
-              <button
+              <Button
                 onClick={exportAsCSV}
-                className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+                variant="ghost"
+                size="xs"
+                className="rounded-full px-2 py-1 text-text-lighter"
                 aria-label="Export as CSV"
               >
-                <Download size={12} />
+                <Download />
                 Export
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={copyAsJSON}
-                className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+                variant="ghost"
+                size="xs"
+                className="rounded-full px-2 py-1 text-text-lighter"
                 aria-label="Copy as JSON"
               >
-                <Copy size={12} />
+                <Copy />
                 JSON
-              </button>
+              </Button>
             </>
           )}
         </div>

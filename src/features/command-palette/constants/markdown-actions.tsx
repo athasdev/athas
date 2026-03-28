@@ -1,16 +1,16 @@
 import { Eye } from "lucide-react";
-import type { Buffer } from "@/features/editor/stores/buffer-store";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 import type { Action } from "../models/action.types";
 
 interface MarkdownActionsParams {
   isMarkdownFile: boolean;
-  activeBuffer: Buffer | null;
+  activeBuffer: PaneContent | null;
   openBuffer: (
     path: string,
     name: string,
     content: string,
     isImage?: boolean,
-    isSQLite?: boolean,
+    databaseType?: any,
     isDiff?: boolean,
     isVirtual?: boolean,
     diffData?: any,
@@ -34,7 +34,7 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
       id: "markdown-preview",
       label: "Markdown: Preview Markdown",
       description: "Open markdown preview in a new tab",
-      icon: <Eye size={14} />,
+      icon: <Eye />,
       category: "Markdown",
       action: () => {
         // Create a virtual path for the preview
@@ -42,12 +42,13 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
         const previewName = `${activeBuffer.name} (Preview)`;
 
         // Open a new buffer for the preview
+        const content = activeBuffer.type === "editor" ? activeBuffer.content : "";
         openBuffer(
           previewPath,
           previewName,
-          activeBuffer.content,
+          content,
           false, // isImage
-          false, // isSQLite
+          undefined, // databaseType
           false, // isDiff
           true, // isVirtual
           undefined, // diffData

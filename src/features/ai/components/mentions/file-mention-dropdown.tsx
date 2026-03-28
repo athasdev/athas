@@ -4,11 +4,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
-import { useProjectStore } from "@/stores/project-store";
+import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
+import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
+import { useProjectStore } from "@/features/window/stores/project-store";
+import { Button } from "@/ui/button";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
@@ -16,176 +19,87 @@ interface FileMentionDropdownProps {
   onSelect: (file: FileEntry) => void;
 }
 
-// Function to check if a file should be ignored (same as quick open)
-const shouldIgnoreFile = (filePath: string): boolean => {
-  const fileName = filePath.split("/").pop() || "";
-  const fullPath = filePath.toLowerCase();
-
-  return IGNORED_PATTERNS.some((pattern) => {
-    if (pattern.includes("*")) {
-      // Handle glob patterns like *.log
-      const regex = new RegExp(pattern.replace(/\*/g, ".*"));
-      return regex.test(fileName.toLowerCase()) || regex.test(fullPath);
-    } else {
-      // Handle exact matches
-      return (
-        fileName.toLowerCase() === pattern.toLowerCase() ||
-        fullPath.includes(`/${pattern.toLowerCase()}/`) ||
-        fullPath.endsWith(`/${pattern.toLowerCase()}`)
-      );
-    }
-  });
-};
-
-// Fuzzy search scoring function (same as quick open)
-const fuzzyScore = (text: string, query: string): number => {
-  if (!query) return 0;
-
-  const textLower = text.toLowerCase();
-  const queryLower = query.toLowerCase();
-
-  // Exact match gets highest score
-  if (textLower === queryLower) return 1000;
-
-  // Starts with query gets high score
-  if (textLower.startsWith(queryLower)) return 800;
-
-  // Contains query as substring gets medium score
-  if (textLower.includes(queryLower)) return 600;
-
-  // Fuzzy matching - check if all query characters exist in order
-  let textIndex = 0;
-  let queryIndex = 0;
-  let score = 0;
-  let consecutiveMatches = 0;
-
-  while (textIndex < textLower.length && queryIndex < queryLower.length) {
-    if (textLower[textIndex] === queryLower[queryIndex]) {
-      score += 10;
-      consecutiveMatches++;
-      // Bonus for consecutive matches
-      if (consecutiveMatches > 1) {
-        score += consecutiveMatches * 2;
-      }
-      queryIndex++;
-    } else {
-      consecutiveMatches = 0;
-    }
-    textIndex++;
-  }
-
-  // If we matched all query characters, it's a valid fuzzy match
-  if (queryIndex === queryLower.length) {
-    // Bonus for shorter text (more precise match)
-    score += Math.max(0, 100 - textLower.length);
-    return score;
-  }
-
-  return 0; // No match
-};
+const MAX_RESULTS = 20;
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   onSelect,
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [allProjectFiles, setAllProjectFiles] = useState<
-    Array<{ name: string; path: string; isDir: boolean }>
-  >([]);
 
-  // Get rootFolderPath from project store and file system store
   const { rootFolderPath } = useProjectStore();
   const { getAllProjectFiles } = useFileSystemStore();
-
-  // Get state from store
   const { mentionState, hideMention } = useAIChatStore();
   const { position, selectedIndex } = mentionState;
 
-  // Load all project files on mount (same as quick open)
+  // Pre-filtered file list, refreshed when dropdown mounts
+  const [fileItems, setFileItems] = useState<Array<{ name: string; path: string }>>([]);
+
   useEffect(() => {
     getAllProjectFiles().then((allFiles) => {
-      const formattedFiles = allFiles.map((file) => ({
-        name: file.name,
-        path: file.path,
-        isDir: file.isDir,
-      }));
-      setAllProjectFiles(formattedFiles);
+      const filtered: Array<{ name: string; path: string }> = [];
+      for (const file of allFiles) {
+        if (!file.isDir && !shouldIgnoreFile(file.path)) {
+          filtered.push({ name: file.name, path: file.path });
+        }
+      }
+      setFileItems(filtered);
     });
   }, [getAllProjectFiles]);
 
-  // Initialize search term from mention state
   useEffect(() => {
     setSearchTerm(mentionState.search || "");
   }, [mentionState.search]);
 
-  // Get filtered files using fuzzy search (same logic as Quick Open)
   const filteredFiles = useMemo(() => {
-    const availableFiles = allProjectFiles.filter(
-      (file) => !file.isDir && !shouldIgnoreFile(file.path),
-    );
-
     if (!searchTerm.trim()) {
-      // No search query - show alphabetical list
-      return availableFiles.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20);
+      return fileItems.slice(0, MAX_RESULTS).sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // With search query - use fuzzy search
-    const scoredFiles = availableFiles
-      .map((file) => {
-        // Score both filename and full path, take the higher score
-        const nameScore = fuzzyScore(file.name, searchTerm);
-        const pathScore = fuzzyScore(file.path, searchTerm);
-        const score = Math.max(nameScore, pathScore);
+    const scored: Array<{ file: { name: string; path: string }; score: number }> = [];
+    for (const file of fileItems) {
+      const score = Math.max(fuzzyScore(file.name, searchTerm), fuzzyScore(file.path, searchTerm));
+      if (score > 0) {
+        scored.push({ file, score });
+      }
+    }
 
-        return { file, score };
-      })
-      .filter(({ score }) => score > 0) // Only include files with positive scores
-      .sort((a, b) => {
-        // First sort by score (highest first)
-        if (b.score !== a.score) return b.score - a.score;
-        // Then sort alphabetically
-        return a.file.name.localeCompare(b.file.name);
-      })
-      .slice(0, 20); // Limit to 20 results
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.file.name.localeCompare(b.file.name);
+    });
 
-    return scoredFiles.map(({ file }) => file);
-  }, [allProjectFiles, searchTerm]);
+    return scored.slice(0, MAX_RESULTS).map(({ file }) => file);
+  }, [fileItems, searchTerm]);
 
-  const handleFileClick = (file: { name: string; path: string; isDir: boolean }) => {
-    // Convert to FileEntry format and select
+  const handleFileClick = (file: { name: string; path: string }) => {
     const fileEntry: FileEntry = {
       name: file.name,
       path: file.path,
-      isDir: file.isDir,
+      isDir: false,
       children: undefined,
     };
     onSelect(fileEntry);
   };
 
-  // Scroll selected item into view
   useEffect(() => {
     const itemsContainer = dropdownRef.current?.querySelector(".items-container");
     const selectedItem = itemsContainer?.children[selectedIndex] as HTMLElement;
     if (selectedItem) {
-      selectedItem.scrollIntoView({
-        block: "nearest",
-        inline: "nearest",
-      });
+      selectedItem.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [selectedIndex]);
 
-  // Adjust position using proper positioning logic like breadcrumb
   const adjustedPosition = useMemo(() => {
     const dropdownWidth = Math.min(360, window.innerWidth - 16);
     const dropdownHeight = Math.min(
-      filteredFiles.length * 26 + 60, // Reduced height per item from 32 to 26
+      filteredFiles.length * 26 + 60,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
     );
     const padding = 8;
 
     let { top, left } = position;
 
-    // Ensure dropdown doesn't go off the right edge of the screen
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
     }
@@ -193,7 +107,6 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       left = padding;
     }
 
-    // Prefer below input; if there isn't enough room, open above.
     if (top + dropdownHeight > window.innerHeight - padding) {
       top = Math.max(padding, top - dropdownHeight - 12);
     }
@@ -208,7 +121,6 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     };
   }, [position.top, position.left, filteredFiles.length]);
 
-  // Handle keyboard navigation and outside clicks
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -242,9 +154,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-md border border-border bg-secondary-bg shadow-lg"
+      className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
       style={{
-        zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
@@ -254,60 +165,55 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       role="listbox"
       aria-label="File suggestions"
     >
-      {/* Search input */}
-      <div className="sticky top-0 z-10 border-border border-b bg-secondary-bg p-2">
-        <div className="relative">
-          <Search
-            size={12}
-            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 transform text-text-lighter"
-          />
-          <input
-            type="text"
-            placeholder="Search files..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded border border-border bg-primary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50"
-            aria-label="Search files"
-          />
-        </div>
+      <div className="bg-secondary-bg px-2 py-2">
+        <Input
+          type="text"
+          placeholder="Search files..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          variant="ghost"
+          leftIcon={Search}
+          className="w-full"
+          aria-label="Search files"
+        />
       </div>
 
-      {/* Files list */}
-      <div className="items-container py-1" role="listbox" aria-label="File list">
-        {filteredFiles.length === 0 ? (
-          <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
-            {searchTerm ? "No matching files found" : "No files available"}
-          </div>
-        ) : (
-          filteredFiles.map((file, index) => (
-            <button
-              key={file.path}
-              onClick={() => handleFileClick(file)}
-              className={cn(
-                "ui-font flex w-full items-center gap-2 px-3 py-1 text-left text-xs transition-colors",
-                "focus:outline-none focus:ring-1 focus:ring-accent/50",
-                index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
-              )}
-              role="option"
-              aria-selected={index === selectedIndex}
-              tabIndex={index === selectedIndex ? 0 : -1}
-            >
-              <FileIcon
-                fileName={file.name}
-                isDir={false}
-                isExpanded={false}
-                size={10}
-                className="shrink-0 text-text-lighter"
-              />
-              <div className="min-w-0 flex-1 truncate">
-                <span className="text-text">{file.name}</span>
-                <span className="ml-2 text-[10px] text-text-lighter opacity-60">
-                  {getDirectoryPath(file.path, rootFolderPath) || "root"}
-                </span>
-              </div>
-            </button>
-          ))
-        )}
+      <div
+        className="items-container min-h-0 flex-1 overflow-y-auto p-1.5"
+        role="listbox"
+        aria-label="File list"
+      >
+        {filteredFiles.map((file, index) => (
+          <Button
+            key={file.path}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => handleFileClick(file)}
+            className={cn(
+              "h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
+              "focus:outline-none focus:ring-1 focus:ring-accent/50",
+              index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
+            )}
+            role="option"
+            aria-selected={index === selectedIndex}
+            tabIndex={index === selectedIndex ? 0 : -1}
+          >
+            <FileExplorerIcon
+              fileName={file.name}
+              isDir={false}
+              isExpanded={false}
+              size={10}
+              className="shrink-0 text-text-lighter"
+            />
+            <div className="min-w-0 flex-1 truncate">
+              <span className="text-text">{file.name}</span>
+              <span className="ml-2 text-[10px] text-text-lighter opacity-60">
+                {getDirectoryPath(file.path, rootFolderPath) || "root"}
+              </span>
+            </div>
+          </Button>
+        ))}
       </div>
     </motion.div>,
     document.body,

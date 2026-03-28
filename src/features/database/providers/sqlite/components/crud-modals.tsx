@@ -2,10 +2,12 @@ import { motion } from "framer-motion";
 import { PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
+import Select from "@/ui/select";
 import type { ColumnInfo } from "../../../models/common.types";
+import { buildDatabaseRowValues } from "../utils/value-coercion";
 
 interface CreateRowModalProps {
   isOpen: boolean;
@@ -46,26 +48,7 @@ export const CreateRowModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Convert string values to appropriate types
-    const convertedValues: Record<string, any> = {};
-    for (const [key, value] of Object.entries(values)) {
-      const column = columns.find((col) => col.name === key);
-      if (!value || value === "") {
-        convertedValues[key] = null;
-      } else if (column?.type.toLowerCase().includes("int")) {
-        convertedValues[key] = parseInt(value, 10);
-      } else if (
-        column?.type.toLowerCase().includes("real") ||
-        column?.type.toLowerCase().includes("float")
-      ) {
-        convertedValues[key] = parseFloat(value);
-      } else {
-        convertedValues[key] = value;
-      }
-    }
-
-    onSubmit(convertedValues);
+    onSubmit(buildDatabaseRowValues(values, columns));
     setValues({});
     onClose();
   };
@@ -93,12 +76,9 @@ export const CreateRowModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Add Row to {tableName}</h2>
-          <button
-            onClick={handleClose}
-            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
-          >
+          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
             <XIcon size="16" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -193,26 +173,7 @@ export const EditRowModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Convert string values to appropriate types
-    const convertedValues: Record<string, any> = {};
-    for (const [key, value] of Object.entries(values)) {
-      const column = columns.find((col) => col.name === key);
-      if (!value || value === "") {
-        convertedValues[key] = null;
-      } else if (column?.type.toLowerCase().includes("int")) {
-        convertedValues[key] = parseInt(value, 10);
-      } else if (
-        column?.type.toLowerCase().includes("real") ||
-        column?.type.toLowerCase().includes("float")
-      ) {
-        convertedValues[key] = parseFloat(value);
-      } else {
-        convertedValues[key] = value;
-      }
-    }
-
-    onSubmit(convertedValues);
+    onSubmit(buildDatabaseRowValues(values, columns));
     onClose();
   };
 
@@ -244,12 +205,9 @@ export const EditRowModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Edit Row in {tableName}</h2>
-          <button
-            onClick={handleClose}
-            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
-          >
+          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
             <XIcon size="16" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -377,12 +335,9 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Create New Table</h2>
-          <button
-            onClick={handleClose}
-            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
-          >
+          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
             <XIcon size="16" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -412,47 +367,53 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   className="flex-1"
                   required
                 />
-                <select
+                <Select
                   value={column.type}
-                  onChange={(e) => updateColumn(index, "type", e.target.value)}
-                  className="ui-font rounded-lg border border-border bg-input px-2 py-1 text-sm text-text"
+                  onChange={(value) => updateColumn(index, "type", value)}
+                  options={[
+                    { value: "TEXT", label: "TEXT" },
+                    { value: "INTEGER", label: "INTEGER" },
+                    { value: "REAL", label: "REAL" },
+                    { value: "BLOB", label: "BLOB" },
+                  ]}
+                  size="md"
+                  className="bg-input"
+                />
+                <label
+                  htmlFor={`column-not-null-${index}`}
+                  className="ui-font flex items-center gap-1 text-text text-xs"
                 >
-                  <option value="TEXT">TEXT</option>
-                  <option value="INTEGER">INTEGER</option>
-                  <option value="REAL">REAL</option>
-                  <option value="BLOB">BLOB</option>
-                </select>
-                <label className="ui-font flex items-center gap-1 text-text text-xs">
-                  <input
-                    type="checkbox"
+                  <Checkbox
+                    id={`column-not-null-${index}`}
                     checked={column.notnull}
-                    onChange={(e) => updateColumn(index, "notnull", e.target.checked)}
-                    className="rounded"
+                    onChange={(checked) => updateColumn(index, "notnull", checked)}
+                    ariaLabel={`Set ${column.name || `column ${index + 1}`} as not null`}
                   />
                   NOT NULL
                 </label>
                 {columns.length > 1 && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => removeColumn(index)}
-                    className="rounded-full border border-transparent p-1 text-red-400 hover:border-border/70 hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="rounded-full text-red-400"
                   >
                     <XIcon size="14" />
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
-            <button
+            <Button
               type="button"
               onClick={addColumn}
-              className={cn(
-                "flex items-center gap-1 rounded-full border border-transparent px-2 py-1",
-                "ui-font text-sm text-text hover:bg-hover",
-              )}
+              variant="ghost"
+              size="sm"
+              className="rounded-full"
             >
               <PlusIcon size="12" />
               Add Column
-            </button>
+            </Button>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

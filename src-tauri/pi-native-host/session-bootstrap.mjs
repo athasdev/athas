@@ -76,7 +76,9 @@ export function applyBootstrapHistory(session, history) {
     return false;
   }
 
-  const hasThinkingLevelEntry = existingEntries.some((entry) => entry.type === "thinking_level_change");
+  const hasThinkingLevelEntry = existingEntries.some(
+    (entry) => entry.type === "thinking_level_change",
+  );
   if (!hasThinkingLevelEntry) {
     session.sessionManager.appendThinkingLevelChange(session.thinkingLevel);
   }

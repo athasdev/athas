@@ -1,31 +1,31 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
-import type { ViewportRange } from "./use-viewport-lines";
 
 interface UseBufferSwitchOptions {
+  enabled?: boolean;
   bufferId: string | null;
   content: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   forceUpdateViewport: (scrollTop: number, totalLines: number) => void;
   totalLines: number;
   resetTokenizer: () => void;
-  tokenize: (text: string, viewportRange?: ViewportRange) => Promise<void>;
 }
 
 export function useBufferSwitch({
+  enabled = true,
   bufferId,
   content,
   textareaRef,
   forceUpdateViewport,
   totalLines,
   resetTokenizer,
-  tokenize,
 }: UseBufferSwitchOptions) {
   const prevBufferIdRef = useRef<string | null>(null);
   const switchGuardRef = useRef(0);
 
   useLayoutEffect(() => {
+    if (!enabled) return;
     if (!bufferId) return;
 
     const isSwitch = prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId;
@@ -67,10 +67,10 @@ export function useBufferSwitch({
     // 5. Recalculate viewport range
     forceUpdateViewport(restored.scrollTop, totalLines);
 
-    // 6. Reset and re-trigger tokenization
+    // 6. Reset token state. Tokenization is triggered by the editor effect
+    // once viewport state is ready, avoiding duplicate work on buffer open.
     resetTokenizer();
-    void tokenize(content);
-  }, [bufferId, content, textareaRef, forceUpdateViewport, totalLines, resetTokenizer, tokenize]);
+  }, [enabled, bufferId, content, textareaRef, forceUpdateViewport, totalLines, resetTokenizer]);
 
   return { switchGuardRef };
 }

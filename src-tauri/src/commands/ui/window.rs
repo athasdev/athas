@@ -1,94 +1,113 @@
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
-#[cfg(target_os = "macos")]
-use tauri::TitleBarStyle;
-use tauri::{
-   Emitter, Manager, UserAttentionType, WebviewBuilder, WebviewUrl, WebviewWindowBuilder, command,
-};
+use tauri::{AppHandle, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command};
 
-#[command]
-pub async fn create_remote_window(
-   app: tauri::AppHandle,
-   connection_id: String,
-   connection_name: String,
-) -> Result<(), String> {
-   let window_label = format!("remote-{connection_id}");
+// Counter for generating unique web viewer labels
+static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
+static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-   // Check if window already exists
-   if let Some(existing_window) = app.get_webview_window(&window_label) {
-      // Window exists, just focus it and return
-      let _ = existing_window.set_focus();
-      return Ok(());
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateAppWindowRequest {
+   pub path: Option<String>,
+   pub is_directory: Option<bool>,
+   pub line: Option<u32>,
+   pub remote_connection_id: Option<String>,
+   pub remote_connection_name: Option<String>,
+}
+
+fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
+   let Some(request) = request else {
+      return "/".to_string();
+   };
+
+   let has_payload = request.path.is_some() || request.remote_connection_id.is_some();
+   if !has_payload {
+      return "/".to_string();
    }
 
-   let url = format!("index.html?remote={connection_id}");
-   #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
-   let mut window_builder =
-      WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App(url.into()));
+   let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+   serializer.append_pair("target", "open");
 
-   #[cfg(target_os = "macos")]
-   {
-      window_builder = window_builder
-         .hidden_title(true)
-         .title_bar_style(TitleBarStyle::Overlay);
+   if let Some(connection_id) = &request.remote_connection_id {
+      serializer.append_pair("type", "remote");
+      serializer.append_pair("connectionId", connection_id);
+
+      if let Some(connection_name) = &request.remote_connection_name {
+         serializer.append_pair("name", connection_name);
+      }
+   } else if let Some(path) = &request.path {
+      serializer.append_pair(
+         "type",
+         if request.is_directory.unwrap_or(false) {
+            "directory"
+         } else {
+            "file"
+         },
+      );
+      serializer.append_pair("path", path);
+
+      if let Some(line) = request.line {
+         serializer.append_pair("line", &line.to_string());
+      }
    }
 
-   let window = window_builder
-      .transparent(true)
-      .inner_size(1200.0, 800.0)
-      .min_inner_size(800.0, 600.0)
-      .center()
-      .build()
-      .map_err(|e| format!("Failed to create window: {e}"))?;
+   format!("/?{}", serializer.finish())
+}
 
-   let _ = window.request_user_attention(Some(UserAttentionType::Informational));
-
+pub fn configure_app_window(window: &WebviewWindow) {
    #[cfg(target_os = "macos")]
    {
       use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
 
-      let window_for_vibrancy = window.clone();
-      window
-         .run_on_main_thread(move || {
-            let _ = apply_vibrancy(
-               &window_for_vibrancy,
-               NSVisualEffectMaterial::HudWindow,
-               None,
-               Some(12.0),
-            );
-         })
-         .expect("Failed to run vibrancy on main thread");
+      apply_vibrancy(window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
+         .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
    }
 
-   let window_clone = window.clone();
-   let connection_id_clone = connection_id.clone();
-   let connection_name_clone = connection_name.clone();
+   #[cfg(target_os = "windows")]
+   {
+      let _ = window.set_decorations(true);
+   }
 
-   let _ = window.emit(
-      "remote-connection-info",
-      serde_json::json!({
-          "connectionId": connection_id,
-          "connectionName": connection_name,
-          "isRemoteWindow": true
-      }),
-   );
-
-   std::thread::spawn(move || {
-      std::thread::sleep(std::time::Duration::from_millis(1000));
-      let _ = window_clone.emit(
-         "remote-connection-info",
-         serde_json::json!({
-             "connectionId": connection_id_clone,
-             "connectionName": connection_name_clone,
-             "isRemoteWindow": true
-         }),
-      );
-   });
-
-   Ok(())
+   #[cfg(target_os = "linux")]
+   {
+      let _ = window.set_decorations(false);
+   }
 }
 
-// Counter for generating unique web viewer labels
-static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
+pub fn create_app_window_internal(
+   app: &AppHandle,
+   request: Option<CreateAppWindowRequest>,
+) -> Result<String, String> {
+   let label = format!(
+      "main-{}",
+      APP_WINDOW_COUNTER.fetch_add(1, Ordering::SeqCst) + 1
+   );
+   let url = build_window_open_url(request.as_ref());
+
+   let window = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
+      .title("")
+      .inner_size(1200.0, 800.0)
+      .min_inner_size(400.0, 400.0)
+      .center()
+      .decorations(true)
+      .resizable(true)
+      .shadow(true)
+      .build()
+      .map_err(|e| format!("Failed to create app window: {e}"))?;
+
+   configure_app_window(&window);
+
+   Ok(label)
+}
+
+#[command]
+pub async fn create_app_window(
+   app: tauri::AppHandle,
+   request: Option<CreateAppWindowRequest>,
+) -> Result<String, String> {
+   create_app_window_internal(&app, request)
+}
 
 /// Keyboard shortcut interceptor for web viewer
 /// Captures app-level shortcuts and stores them for polling
@@ -150,20 +169,7 @@ pub async fn create_embedded_webview(
    let counter = WEB_VIEWER_COUNTER.fetch_add(1, Ordering::SeqCst);
    let webview_label = format!("web-viewer-{counter}");
 
-   // Parse and validate URL with localhost-aware protocol handling
-   let parsed_url = if url.starts_with("http://") || url.starts_with("https://") {
-      url.clone()
-   } else if url == "about:blank" {
-      "about:blank".to_string()
-   } else {
-      // Default to HTTP for localhost, HTTPS for everything else
-      let normalized = url.to_lowercase();
-      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
-         format!("http://{url}")
-      } else {
-         format!("https://{url}")
-      }
-   };
+   let parsed_url = normalize_webview_url(&url)?;
 
    // Get the main window
    let main_webview_window = app
@@ -223,18 +229,7 @@ pub async fn navigate_embedded_webview(
    url: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
-      // Parse URL with localhost-aware protocol handling
-      let parsed_url = if url.starts_with("http://") || url.starts_with("https://") {
-         url
-      } else {
-         // Default to HTTP for localhost, HTTPS for everything else
-         let normalized = url.to_lowercase();
-         if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
-            format!("http://{url}")
-         } else {
-            format!("https://{url}")
-         }
-      };
+      let parsed_url = normalize_webview_url(&url)?;
 
       webview
          .navigate(
@@ -258,6 +253,10 @@ pub async fn resize_embedded_webview(
    width: f64,
    height: f64,
 ) -> Result<(), String> {
+   if width <= 0.0 || height <= 0.0 {
+      return Ok(());
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       webview
          .set_position(tauri::LogicalPosition::new(x, y))
@@ -299,13 +298,47 @@ pub async fn open_webview_devtools(
    webview_label: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
-      #[cfg(debug_assertions)]
-      webview.open_devtools();
-      #[cfg(not(debug_assertions))]
-      let _ = &webview;
-      Ok(())
+      #[cfg(any(debug_assertions, feature = "devtools"))]
+      {
+         webview.open_devtools();
+         Ok(())
+      }
+
+      #[cfg(not(any(debug_assertions, feature = "devtools")))]
+      {
+         let _ = webview;
+         return Err("Webview devtools are unavailable in release builds".to_string());
+      }
    } else {
       Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+fn normalize_webview_url(url: &str) -> Result<String, String> {
+   let trimmed = url.trim();
+   if trimmed.is_empty() {
+      return Err("URL cannot be empty".to_string());
+   }
+
+   if trimmed == "about:blank" {
+      return Ok(trimmed.to_string());
+   }
+
+   let candidate = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+      trimmed.to_string()
+   } else {
+      let normalized = trimmed.to_lowercase();
+      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
+         format!("http://{trimmed}")
+      } else {
+         format!("https://{trimmed}")
+      }
+   };
+
+   let parsed = url::Url::parse(&candidate).map_err(|e| format!("Invalid URL: {e}"))?;
+   match parsed.scheme() {
+      "http" | "https" => Ok(candidate),
+      _ => Err("Only http and https URLs are allowed".to_string()),
    }
 }
 

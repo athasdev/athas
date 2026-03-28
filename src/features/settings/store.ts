@@ -51,7 +51,7 @@ const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
 const clampNumber = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-interface Settings {
+export interface Settings {
   // General
   autoSave: boolean;
   sidebarPosition: "left" | "right";
@@ -68,18 +68,25 @@ interface Settings {
   terminalFontSize: number;
   terminalLineHeight: number;
   terminalLetterSpacing: number;
+  terminalScrollback: number;
   terminalCursorStyle: "block" | "underline" | "bar";
   terminalCursorBlink: boolean;
+  terminalCursorWidth: number;
+  terminalDefaultShellId: string;
+  terminalDefaultProfileId: string;
   // UI
   uiFontFamily: string;
   uiFontSize: number;
   // Theme
   theme: Theme;
   iconTheme: string;
+  syncSystemTheme: boolean;
   autoThemeLight: Theme;
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
+  titleBarProjectMode: "tabs" | "window";
+  openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;
   aiModelId: string;
@@ -95,6 +102,9 @@ interface Settings {
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
+  showGitHubPullRequests: boolean;
+  showGitHubIssues: boolean;
+  showGitHubActions: boolean;
   // Keyboard
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
@@ -125,10 +135,24 @@ interface Settings {
     | "snippet"
     | "database";
   maxOpenTabs: number;
+  horizontalTabScroll: boolean;
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
   gitChangesFolderView: boolean;
+  confirmBeforeDiscard: boolean;
+  autoRefreshGitStatus: boolean;
+  showUntrackedFiles: boolean;
+  showStagedFirst: boolean;
+  gitDefaultDiffView: "unified" | "split";
+  openDiffOnClick: boolean;
+  showGitStatusInFileTree: boolean;
+  compactGitStatusBadges: boolean;
+  collapseEmptyGitSections: boolean;
+  rememberLastGitPanelMode: boolean;
+  gitLastPanelMode: "changes" | "stash" | "history" | "worktrees";
+  enableInlineGitBlame: boolean;
+  enableGitGutter: boolean;
 }
 
 type SettingsWithLegacyAutoCompaction = Settings & {
@@ -207,18 +231,25 @@ const defaultSettings: Settings = {
   terminalFontSize: 14,
   terminalLineHeight: 1.2,
   terminalLetterSpacing: 0,
+  terminalScrollback: 10000,
   terminalCursorStyle: "block",
   terminalCursorBlink: true,
+  terminalCursorWidth: 2,
+  terminalDefaultShellId: "",
+  terminalDefaultProfileId: "",
   // UI
   uiFontFamily: "Geist Variable",
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
+  syncSystemTheme: false,
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
+  titleBarProjectMode: "tabs",
+  openFoldersInNewWindow: false,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
   aiModelId: DEFAULT_AI_MODEL_ID,
@@ -234,6 +265,9 @@ const defaultSettings: Settings = {
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
+  showGitHubPullRequests: true,
+  showGitHubIssues: true,
+  showGitHubActions: true,
   // Keyboard
   vimMode: false,
   vimRelativeLineNumbers: false,
@@ -267,11 +301,28 @@ const defaultSettings: Settings = {
   // Other
   extensionsActiveTab: "all",
   maxOpenTabs: 10,
+  horizontalTabScroll: false,
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
   gitChangesFolderView: true,
+  confirmBeforeDiscard: true,
+  autoRefreshGitStatus: true,
+  showUntrackedFiles: true,
+  showStagedFirst: true,
+  gitDefaultDiffView: "unified",
+  openDiffOnClick: true,
+  showGitStatusInFileTree: true,
+  compactGitStatusBadges: false,
+  collapseEmptyGitSections: false,
+  rememberLastGitPanelMode: false,
+  gitLastPanelMode: "changes",
+  enableInlineGitBlame: true,
+  enableGitGutter: true,
 };
+
+export const getDefaultSetting = <K extends keyof Settings>(key: K): Settings[K] =>
+  defaultSettings[key];
 
 const AI_CHAT_TOGGLE_COOLDOWN_MS = 120;
 
@@ -470,6 +521,7 @@ const initializeSettings = async () => {
 const settingsInitializationPromise = initializeSettings();
 
 export const waitForSettingsInitialization = () => settingsInitializationPromise;
+export const initializeSettingsStore = waitForSettingsInitialization;
 
 export const useSettingsStore = create(
   immer(

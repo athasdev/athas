@@ -1,0 +1,97 @@
+/* Hide native scrollbar completely */
+.file-tree-container,
+.file-tree-container * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.file-tree-container::-webkit-scrollbar,
+.file-tree-container *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Enable proper mouse wheel scrolling with horizontal overflow */
+.file-tree-container {
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  height: 100% !important;
+  position: relative !important;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: auto !important;
+  scroll-behavior: auto !important;
+  pointer-events: auto !important;
+}
+
+/* Apply UI font family to file tree */
+.file-tree-container {
+  font-family: var(--app-font-family);
+}
+
+/* Cover gap above sticky headers to prevent content bleeding through (only when stuck) */
+/* Removed JS-managed .is-stuck marker; pure CSS sticky remains */
+
+/* Ensure file tree content wrapper stretches to full scrollable area */
+.file-tree-container > div:not(.file-tree-empty-state) {
+  width: max-content !important;
+  min-width: 100% !important;
+}
+
+/* File tree item containers need to stretch full width */
+.file-tree-item {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+/* All file tree items have same background behavior - ensure full width coverage */
+.file-tree-container .file-tree-item button {
+  background-color: transparent !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  display: flex !important;
+  justify-content: flex-start !important;
+}
+
+.file-tree-container .file-tree-item button:hover {
+  background-color: var(--color-hover) !important;
+}
+
+.file-tree-container .file-tree-item button.bg-selected {
+  background-color: var(--color-selected) !important;
+}
+
+.file-tree-item {
+  position: relative;
+  --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
+  --tree-guide-start: 24px;
+  --tree-guide-step: 20px;
+}
+
+.file-tree-row {
+  position: relative;
+  isolation: isolate;
+}
+
+.file-tree-item::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: var(--tree-guide-start);
+  width: calc(var(--tree-depth) * var(--tree-guide-step));
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--tree-guide-color) 0 1px,
+    transparent 1px var(--tree-guide-step)
+  );
+  opacity: 0.9;
+}
+
+.file-tree-item[data-depth="0"]::before {
+  display: none;
+}

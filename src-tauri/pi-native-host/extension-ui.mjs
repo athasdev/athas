@@ -44,10 +44,10 @@ const buildPermissionEvent = (routeKey, requestId, method, payload) => {
   const title = payload.title ?? "Pi request";
   const detail =
     method === "confirm"
-      ? payload.message ?? ""
+      ? (payload.message ?? "")
       : method === "editor"
-        ? payload.prefill ?? ""
-        : payload.placeholder ?? "";
+        ? (payload.prefill ?? "")
+        : (payload.placeholder ?? "");
 
   return {
     type: "permission_request",

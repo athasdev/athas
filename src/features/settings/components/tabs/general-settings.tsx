@@ -4,8 +4,8 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
-import Button from "@/ui/button";
-import Section, { SettingRow } from "@/ui/section";
+import { Button } from "@/ui/button";
+import Section, { SettingRow } from "../settings-section";
 
 export const GeneralSettings = () => {
   const {
@@ -100,7 +100,7 @@ export const GeneralSettings = () => {
       const report = `Environment\n\n- App: Athas ${version}\n- OS: ${plat} ${ver}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
       await writeText(report);
       const { openUrl } = await import("@tauri-apps/plugin-opener");
-      await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+      await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
       showToast({ message: "Report template copied", type: "success" });
     } catch (err) {
       console.error("Failed to prepare bug report:", err);
@@ -112,7 +112,7 @@ export const GeneralSettings = () => {
     <div className="space-y-4">
       <Section title="About">
         <SettingRow label="Version" description="Current application version">
-          <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
+          <span className="ui-font ui-text-sm text-text-lighter">{appVersion || "..."}</span>
         </SettingRow>
         <SettingRow
           label="Check for Updates"
@@ -132,9 +132,8 @@ export const GeneralSettings = () => {
             <Button
               onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
-              variant="ghost"
+              variant="secondary"
               size="xs"
-              className="px-2 py-1"
             >
               {checking ? "Checking..." : "Check"}
             </Button>
@@ -142,9 +141,8 @@ export const GeneralSettings = () => {
               <Button
                 onClick={downloadAndInstall}
                 disabled={downloading || installing}
-                variant="ghost"
+                variant="secondary"
                 size="xs"
-                className="px-2 py-1"
               >
                 {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
               </Button>
@@ -164,13 +162,13 @@ export const GeneralSettings = () => {
           </div>
         )}
 
-        {error && <div className="mt-2 px-3 text-error text-xs">{error}</div>}
+        {error && <div className="ui-font ui-text-sm mt-2 px-3 text-error">{error}</div>}
 
         <SettingRow
           label="Report a Bug"
           description="Copy environment details and open the bug report page"
         >
-          <Button onClick={handleReportBug} variant="ghost" size="xs" className="px-2 py-1">
+          <Button onClick={handleReportBug} variant="secondary" size="xs">
             Open
           </Button>
         </SettingRow>
@@ -192,9 +190,8 @@ export const GeneralSettings = () => {
               <Button
                 onClick={handleUninstallCli}
                 disabled={cliInstalling}
-                variant="ghost"
+                variant="secondary"
                 size="xs"
-                className="px-2 py-1"
               >
                 {cliInstalling ? "Uninstalling..." : "Uninstall"}
               </Button>
@@ -203,18 +200,16 @@ export const GeneralSettings = () => {
                 <Button
                   onClick={handleInstallCli}
                   disabled={cliInstalling || cliChecking}
-                  variant="ghost"
+                  variant="secondary"
                   size="xs"
-                  className="px-2 py-1"
                 >
                   {cliInstalling ? "Installing..." : "Install"}
                 </Button>
                 <Button
                   onClick={handleCopyInstallCommand}
                   disabled={cliChecking}
-                  variant="ghost"
+                  variant="secondary"
                   size="xs"
-                  className="px-2 py-1"
                   title="Copy install command to clipboard"
                 >
                   Copy

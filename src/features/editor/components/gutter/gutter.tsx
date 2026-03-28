@@ -5,6 +5,7 @@ import { DiagnosticIndicators } from "./diagnostic-indicators";
 import { FoldIndicators } from "./fold-indicators";
 import { GitIndicators } from "./git-indicators";
 import { LineNumbers } from "./line-numbers";
+import { FlowLineNumbers } from "./flow-line-numbers";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;
@@ -23,6 +24,9 @@ interface GutterProps {
   onLineClick?: (lineNumber: number) => void;
   onGitIndicatorClick?: (lineNumber: number, type: "added" | "modified" | "deleted") => void;
   foldMapping?: LineMapping;
+  wordWrap?: boolean;
+  lines?: string[];
+  contentWidth?: number;
 }
 
 const BUFFER_LINES = 20;
@@ -40,6 +44,9 @@ function GutterComponent({
   onLineClick,
   onGitIndicatorClick,
   foldMapping,
+  wordWrap = false,
+  lines,
+  contentWidth,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -56,6 +63,9 @@ function GutterComponent({
 
   const totalWidth = calculateTotalGutterWidth(totalLines);
   const totalContentHeight = totalLines * lineHeight + GUTTER_PADDING * 2;
+
+  // When word wrap is on, use flow-based gutter that syncs scrollTop directly
+  const useFlowGutter = wordWrap && !!lines && !!contentWidth && contentWidth > 0;
 
   useEffect(() => {
     if (!virtualize) {
@@ -102,19 +112,20 @@ function GutterComponent({
 
     const syncScroll = () => {
       const scrollTop = textarea.scrollTop;
-      const textareaScrollHeight = textarea.scrollHeight;
 
-      // Scale gutter scroll to match textarea's actual content height
-      // This compensates for browser rendering lines at slightly different heights
-      // than our calculated lineHeight
-      const scrollRatio = textareaScrollHeight > 0 ? totalContentHeight / textareaScrollHeight : 1;
-      const adjustedScrollTop = scrollTop * scrollRatio;
-
-      scrollTopRef.current = adjustedScrollTop;
+      if (useFlowGutter) {
+        // Flow gutter: sync scrollTop directly — heights match the textarea
+        scrollTopRef.current = scrollTop;
+      } else {
+        // Absolute gutter: scale to compensate for height differences
+        const textareaScrollHeight = textarea.scrollHeight;
+        const scrollRatio =
+          textareaScrollHeight > 0 ? totalContentHeight / textareaScrollHeight : 1;
+        scrollTopRef.current = scrollTop * scrollRatio;
+      }
 
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
-          // Apply transform in RAF to sync with main editor layers
           content.style.transform = `translateY(-${scrollTopRef.current}px)`;
           updateViewport(scrollTopRef.current);
           rafId = null;
@@ -122,7 +133,6 @@ function GutterComponent({
       }
     };
 
-    // Forward wheel events from gutter to textarea for consistent scrolling
     const forwardWheel = (e: WheelEvent) => {
       e.preventDefault();
       textarea.scrollTop += e.deltaY;
@@ -149,7 +159,7 @@ function GutterComponent({
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [textareaRef, totalLines, lineHeight, virtualize, totalContentHeight]);
+  }, [textareaRef, totalLines, lineHeight, virtualize, totalContentHeight, useFlowGutter]);
 
   const computedViewport = useMemo(() => {
     if (!virtualize) {
@@ -173,6 +183,10 @@ function GutterComponent({
     };
   }, [viewportRange, containerHeight, lineHeight, totalLines, virtualize]);
 
+  const textWidth = contentWidth
+    ? contentWidth - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT - EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT
+    : 0;
+
   return (
     <div
       ref={containerRef}
@@ -188,47 +202,61 @@ function GutterComponent({
         ref={contentRef}
         className="relative flex"
         style={{
-          height: `${totalContentHeight}px`,
+          height: useFlowGutter ? undefined : `${totalContentHeight}px`,
           willChange: "transform",
         }}
       >
-        <GitIndicators
-          lineHeight={lineHeight}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          onIndicatorClick={onGitIndicatorClick}
-          startLine={computedViewport.startLine}
-          endLine={computedViewport.endLine}
-        />
+        {useFlowGutter ? (
+          <FlowLineNumbers
+            lines={lines!}
+            lineHeight={lineHeight}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            textWidth={textWidth}
+            onLineClick={onLineClick}
+            foldMapping={foldMapping}
+          />
+        ) : (
+          <>
+            <GitIndicators
+              lineHeight={lineHeight}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              onIndicatorClick={onGitIndicatorClick}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+            />
 
-        <DiagnosticIndicators
-          filePath={filePath}
-          lineHeight={lineHeight}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          startLine={computedViewport.startLine}
-          endLine={computedViewport.endLine}
-        />
+            <DiagnosticIndicators
+              filePath={filePath}
+              lineHeight={lineHeight}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+            />
 
-        <LineNumbers
-          totalLines={totalLines}
-          lineHeight={lineHeight}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          onLineClick={onLineClick}
-          foldMapping={foldMapping}
-          startLine={computedViewport.startLine}
-          endLine={computedViewport.endLine}
-        />
+            <FoldIndicators
+              filePath={filePath}
+              lineHeight={lineHeight}
+              fontSize={fontSize}
+              foldMapping={foldMapping}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+            />
 
-        <FoldIndicators
-          filePath={filePath}
-          lineHeight={lineHeight}
-          fontSize={fontSize}
-          foldMapping={foldMapping}
-          startLine={computedViewport.startLine}
-          endLine={computedViewport.endLine}
-        />
+            <LineNumbers
+              totalLines={totalLines}
+              lineHeight={lineHeight}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              onLineClick={onLineClick}
+              foldMapping={foldMapping}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+            />
+          </>
+        )}
       </div>
     </div>
   );
@@ -244,6 +272,9 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.lineHeight === next.lineHeight &&
     prev.virtualize === next.virtualize &&
     prev.filePath === next.filePath &&
-    prev.foldMapping === next.foldMapping
+    prev.foldMapping === next.foldMapping &&
+    prev.wordWrap === next.wordWrap &&
+    prev.lines === next.lines &&
+    prev.contentWidth === next.contentWidth
   );
 });

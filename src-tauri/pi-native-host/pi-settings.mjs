@@ -104,7 +104,8 @@ function syncLegacyDefaultAliases(settings) {
 
 function writeScopedSettingsFile({ cwd, agentDir, scope, updater }) {
   const targetScope = normalizeScope(scope);
-  const path = targetScope === "project" ? getProjectSettingsPath(cwd) : join(agentDir, "settings.json");
+  const path =
+    targetScope === "project" ? getProjectSettingsPath(cwd) : join(agentDir, "settings.json");
   const current = readJsonFile(path);
   const next = syncLegacyDefaultAliases(updater(structuredClone(current)));
   writeJsonFile(path, next);
@@ -140,7 +141,8 @@ function summarizeCredential(credential) {
   if (credential.type === "oauth") {
     return {
       type: "oauth",
-      expiresAt: typeof credential.expires === "number" ? new Date(credential.expires).toISOString() : null,
+      expiresAt:
+        typeof credential.expires === "number" ? new Date(credential.expires).toISOString() : null,
     };
   }
 
@@ -157,7 +159,8 @@ function summarizeCredential(credential) {
 
 function createProviderState(providerId, modelRegistry) {
   const authStorage = modelRegistry.authStorage;
-  const oauthProvider = authStorage.getOAuthProviders().find((provider) => provider.id === providerId) ?? null;
+  const oauthProvider =
+    authStorage.getOAuthProviders().find((provider) => provider.id === providerId) ?? null;
   const storedCredential = authStorage.get(providerId);
   const envCredential = getEnvApiKey(providerId);
   const allModels = modelRegistry
@@ -169,9 +172,11 @@ function createProviderState(providerId, modelRegistry) {
       name: model.name,
       reasoning: Boolean(model.reasoning),
       available: Boolean(modelRegistry.find(model.provider, model.id)),
-      configured: Boolean(modelRegistry.getAvailable().find((candidate) => {
-        return candidate.provider === model.provider && candidate.id === model.id;
-      })),
+      configured: Boolean(
+        modelRegistry.getAvailable().find((candidate) => {
+          return candidate.provider === model.provider && candidate.id === model.id;
+        }),
+      ),
     }));
 
   return {
@@ -236,7 +241,10 @@ function collectPackageEntries(settingsManager, packageManager) {
       scope,
       installedPath:
         typeof serialized.source === "string"
-          ? packageManager.getInstalledPath(serialized.source, scope === "global" ? "user" : "project") ?? null
+          ? (packageManager.getInstalledPath(
+              serialized.source,
+              scope === "global" ? "user" : "project",
+            ) ?? null)
           : null,
     };
   };
@@ -447,13 +455,7 @@ export async function logoutPiProvider({ agentDir, providerId }) {
   authStorage.logout(providerId);
 }
 
-export async function loginPiProvider({
-  agentDir,
-  providerId,
-  onAuth,
-  onProgress,
-  requestPrompt,
-}) {
+export async function loginPiProvider({ agentDir, providerId, onAuth, onProgress, requestPrompt }) {
   const authStorage = getAuthStorage(agentDir);
   await authStorage.login(providerId, {
     onAuth,

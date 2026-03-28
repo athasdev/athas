@@ -9,8 +9,9 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { createReplaceAction, getAction } from "../actions";
-import { getOperator } from "../operators";
+import { getAction } from "../actions/action-registry";
+import { createReplaceAction } from "../actions/replace-action";
+import { getOperator } from "../operators/operator-registry";
 import { getEffectiveCount, parseVimCommand } from "./command-parser";
 import { getMotion } from "./motion-registry";
 import { getTextObject } from "./text-objects";
@@ -132,6 +133,13 @@ export const executeVimCommand = (keys: string[]): boolean => {
     if (command.motion) {
       const motion = getMotion(command.motion);
       if (!motion) return false;
+
+      // Push to jump list for large-jump motions
+      const jumpMotions = new Set(["gg", "G", "%", "{", "}"]);
+      if (jumpMotions.has(command.motion)) {
+        const vimStore = useVimStore.getState();
+        vimStore.actions.pushJump(context.cursor.line, context.cursor.column);
+      }
 
       const motionCountArg = command.count === undefined ? undefined : command.count;
       const range = motion.calculate(context.cursor, context.lines, motionCountArg, {

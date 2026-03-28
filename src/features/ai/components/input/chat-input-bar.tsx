@@ -656,7 +656,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             range.collapse(true);
             selection.removeAllRanges();
             selection.addRange(range);
-          } catch (_e) {
+          } catch {
             // Fallback - position at end of input
             range.selectNodeContents(inputRef.current);
             range.collapse(false);

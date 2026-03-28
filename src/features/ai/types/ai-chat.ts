@@ -12,7 +12,7 @@ import type {
   HarnessTrustState,
 } from "@/features/ai/types/chat-ui";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { Buffer } from "@/features/editor/stores/buffer-store";
 
 export interface ToolCall {
   id?: string;

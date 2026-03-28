@@ -24,7 +24,7 @@ if git status --porcelain | grep -E '\.tsx?$' > /dev/null; then
     check_exit=$?
 
     if [ $check_exit -ne 0 ]; then
-        echo "'bun check' failing; try 'bun format' to fix formatting issues" >&2
+        echo "'bun check' failing; try 'bun fix' for auto-fixes and 'bun format' for formatting only" >&2
         exit 2
     fi
 fi

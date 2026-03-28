@@ -1,6 +1,59 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test, vi } from "bun:test";
 import { normalizePersistedAIChatState } from "./persist";
 import { createDefaultChatScopeState, getDefaultAgentIdForScope } from "./scope-defaults";
+
+const registerStoreTestBaseMocks = () => {
+  mock.module("@/features/editor/stores/buffer-store", () => ({
+    useBufferStore: {
+      getState: () => ({
+        buffers: [],
+        actions: {
+          getActiveBuffer: () => null,
+        },
+      }),
+    },
+  }));
+
+  mock.module("@/features/settings/store", () => ({
+    useSettingsStore: {
+      getState: () => ({
+        settings: {
+          aiDefaultSessionMode: "one",
+          aiAutoCompactionKeepRecentTokens: 20_000,
+          aiAutoCompactionReserveTokens: 16_384,
+        },
+      }),
+    },
+    waitForSettingsInitialization: () => Promise.resolve(),
+    initializeSettingsStore: () => Promise.resolve(),
+  }));
+
+  mock.module("@/features/window/stores/project-store", () => ({
+    useProjectStore: {
+      getState: () => ({
+        rootFolderPath: "/home/fsos/Developer/athas",
+      }),
+    },
+  }));
+
+  mock.module("@/stores/project-store", () => ({
+    useProjectStore: {
+      getState: () => ({
+        rootFolderPath: "/home/fsos/Developer/athas",
+      }),
+    },
+  }));
+
+  mock.module("@/features/window/stores/workspace-tabs-store", () => ({
+    useWorkspaceTabsStore: {
+      getState: () => ({
+        projectTabs: [],
+      }),
+    },
+  }));
+};
+
+registerStoreTestBaseMocks();
 
 describe("normalizePersistedAIChatState", () => {
   test("unwraps Zustand persist payloads stored as { state, version }", () => {
@@ -68,6 +121,8 @@ describe("scope defaults", () => {
 describe("loadChatsFromDatabase", () => {
   beforeEach(() => {
     globalThis.localStorage?.clear();
+    (vi as typeof vi & { resetModules: () => void }).resetModules();
+    registerStoreTestBaseMocks();
   });
 
   test("hydrates the current restored Harness chat after loading metadata", async () => {
@@ -174,6 +229,8 @@ describe("loadChatsFromDatabase", () => {
 describe("createSeededChat", () => {
   beforeEach(() => {
     globalThis.localStorage?.clear();
+    (vi as typeof vi & { resetModules: () => void }).resetModules();
+    registerStoreTestBaseMocks();
   });
 
   test("persists seeded Pi chats with their hydrated transcript", async () => {

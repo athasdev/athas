@@ -7,6 +7,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface SlashCommandDropdownProps {
@@ -124,11 +125,14 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       {filteredCommands.length > 0 ? (
         <div className="items-container py-1" role="listbox" aria-label="Command list">
           {filteredCommands.map((command, index) => (
-            <button
+            <Button
               key={command.name}
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => onSelect(command)}
               className={cn(
-                "ui-font flex w-full items-start gap-2 px-3 py-2 text-left text-xs transition-colors",
+                "h-auto w-full justify-start items-start gap-2 px-3 py-2 text-left",
                 "focus:outline-none focus:ring-1 focus:ring-accent/50",
                 index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}
@@ -136,7 +140,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
             >
-              <Command size={12} className="mt-0.5 shrink-0 text-text-lighter" />
+              <Command className="mt-0.5 shrink-0 text-text-lighter" />
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-text">/{command.name}</div>
                 <div className="truncate text-[10px] text-text-lighter">{command.description}</div>
@@ -146,7 +150,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
                   </div>
                 )}
               </div>
-            </button>
+            </Button>
           ))}
         </div>
       ) : (

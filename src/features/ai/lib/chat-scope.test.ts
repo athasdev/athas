@@ -14,7 +14,9 @@ import {
 
 describe("chat scope helpers", () => {
   test("creates harness-scoped ids with a prefix", () => {
-    expect(createScopedChatId(createHarnessChatScopeId("abc"))).toStartWith("harness:abc:");
+    expect(createScopedChatId(createHarnessChatScopeId("abc")).startsWith("harness:abc:")).toBe(
+      true,
+    );
   });
 
   test("filters panel and harness chats independently", () => {
@@ -39,8 +41,8 @@ describe("chat scope helpers", () => {
     const first = createHarnessSessionKey();
     const second = createHarnessSessionKey();
 
-    expect(first).toStartWith("session-");
-    expect(second).toStartWith("session-");
+    expect(first.startsWith("session-")).toBe(true);
+    expect(second.startsWith("session-")).toBe(true);
     expect(first).not.toBe(second);
   });
 

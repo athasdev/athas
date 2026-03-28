@@ -1,5 +1,6 @@
 import { Image } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import type { ImageFormat } from "../models/image-operation.types";
@@ -130,19 +131,12 @@ export function ImageFormatDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <button
-            onClick={onClose}
-            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
-          >
+          <Button onClick={onClose} variant="outline" size="sm">
             Cancel
-          </button>
-          <button
-            onClick={handleConvert}
-            disabled={isEstimating}
-            className="rounded bg-accent px-3 py-1.5 text-white text-xs transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={handleConvert} disabled={isEstimating} variant="primary" size="sm">
             Convert
-          </button>
+          </Button>
         </>
       }
     >
@@ -159,12 +153,14 @@ export function ImageFormatDialog({
           <div className="font-semibold text-text text-xs">Quality Setting</div>
           <div className="flex flex-col gap-1">
             {config.options.map((option) => (
-              <button
+              <Button
                 key={option.quality}
                 type="button"
                 onClick={() => setSelectedQuality(option.quality)}
+                variant="ghost"
+                size="sm"
                 className={cn(
-                  "flex items-center justify-between rounded border px-3 py-2 text-left text-xs transition-colors",
+                  "flex h-auto items-center justify-between rounded border px-3 py-2 text-left text-xs",
                   selectedQuality === option.quality
                     ? "border-accent bg-accent/10 text-text"
                     : "border-border bg-primary-bg text-text hover:bg-hover",
@@ -177,7 +173,7 @@ export function ImageFormatDialog({
                   )}
                 </span>
                 <span className="text-text-lighter">{Math.round(option.quality * 100)}%</span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>

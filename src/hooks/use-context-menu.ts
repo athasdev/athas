@@ -26,10 +26,17 @@ export const useContextMenu = <T = unknown>() => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Use the click position directly for better accuracy
     setState({
       isOpen: true,
       position: { x: e.clientX, y: e.clientY },
+      data: data || null,
+    });
+  }, []);
+
+  const openAt = useCallback((position: { x: number; y: number }, data?: T) => {
+    setState({
+      isOpen: true,
+      position,
       data: data || null,
     });
   }, []);
@@ -48,6 +55,7 @@ export const useContextMenu = <T = unknown>() => {
   return {
     ...state,
     open,
+    openAt,
     close,
   };
 };

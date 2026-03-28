@@ -1,4 +1,5 @@
 import type { SettingSearchRecord } from "../types/search";
+import { IS_MAC } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // General Settings
@@ -171,7 +172,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   // File Tree Settings
   {
     id: "file-tree-hidden-file-patterns",
-    tab: "advanced",
+    tab: "file-explorer",
     section: "File Explorer Filters",
     label: "Hidden File Patterns",
     description: "Files matching these glob patterns will be hidden from the file tree",
@@ -179,7 +180,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "file-tree-hidden-directory-patterns",
-    tab: "advanced",
+    tab: "file-explorer",
     section: "File Explorer Filters",
     label: "Hidden Directory Patterns",
     description: "Directories matching these glob patterns will be hidden from the file tree",
@@ -187,11 +188,131 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "git-folder-based-changes",
-    tab: "advanced",
+    tab: "git",
     section: "Git View",
     label: "Folder-Based Changes",
     description: "Show Git changes in a folder tree, similar to File Explorer",
     keywords: ["git", "changes", "folder", "tree", "files", "explorer", "sidebar"],
+  },
+  {
+    id: "git-confirm-before-discard",
+    tab: "git",
+    section: "Integration",
+    label: "Confirm Before Discard",
+    description: "Show a confirmation before discarding Git changes",
+    keywords: ["git", "discard", "confirm", "danger", "revert"],
+  },
+  {
+    id: "git-auto-refresh-status",
+    tab: "git",
+    section: "Integration",
+    label: "Auto Refresh Git Status",
+    description: "Refresh Git status automatically after relevant file and Git events",
+    keywords: ["git", "refresh", "auto", "status", "save"],
+  },
+  {
+    id: "git-show-untracked-files",
+    tab: "git",
+    section: "Git View",
+    label: "Show Untracked Files",
+    description: "Display untracked files in the Git view",
+    keywords: ["git", "untracked", "files", "status"],
+  },
+  {
+    id: "git-show-staged-first",
+    tab: "git",
+    section: "Git View",
+    label: "Show Staged First",
+    description: "Render staged changes before unstaged changes",
+    keywords: ["git", "staged", "order", "changes"],
+  },
+  {
+    id: "git-default-diff-view",
+    tab: "git",
+    section: "Git View",
+    label: "Default Diff View",
+    description: "Choose unified or split as the default diff layout",
+    keywords: ["git", "diff", "split", "unified", "layout"],
+  },
+  {
+    id: "git-open-diff-on-click",
+    tab: "git",
+    section: "Git View",
+    label: "Open Diff On Click",
+    description: "Open a diff directly when clicking a changed file",
+    keywords: ["git", "diff", "click", "open", "file"],
+  },
+  {
+    id: "git-show-status-in-file-tree",
+    tab: "git",
+    section: "File Tree",
+    label: "Show Git Status In File Tree",
+    description: "Display Git decorations in the file explorer",
+    keywords: ["git", "file tree", "file explorer", "decorations", "status"],
+  },
+  {
+    id: "git-compact-status-badges",
+    tab: "git",
+    section: "Git View",
+    label: "Compact Git Status Badges",
+    description: "Use denser diff stats and staged indicators in the Git panel",
+    keywords: ["git", "compact", "badges", "status", "dense"],
+  },
+  {
+    id: "layout-show-github-pull-requests",
+    tab: "appearance",
+    section: "Layout",
+    label: "Show GitHub Pull Requests",
+    description: "Display the pull requests section in the GitHub sidebar",
+    keywords: ["github", "sidebar", "pull requests", "prs", "visibility"],
+  },
+  {
+    id: "layout-show-github-issues",
+    tab: "appearance",
+    section: "Layout",
+    label: "Show GitHub Issues",
+    description: "Display the issues section in the GitHub sidebar",
+    keywords: ["github", "sidebar", "issues", "visibility"],
+  },
+  {
+    id: "layout-show-github-actions",
+    tab: "appearance",
+    section: "Layout",
+    label: "Show GitHub Actions",
+    description: "Display the actions section in the GitHub sidebar",
+    keywords: ["github", "sidebar", "actions", "workflow runs", "visibility"],
+  },
+  {
+    id: "git-collapse-empty-sections",
+    tab: "git",
+    section: "Git View",
+    label: "Collapse Empty Sections",
+    description: "Hide empty sections in the Git panel",
+    keywords: ["git", "collapse", "empty", "sections", "staged"],
+  },
+  {
+    id: "git-remember-last-panel-mode",
+    tab: "git",
+    section: "Git View",
+    label: "Remember Last Git Panel Mode",
+    description: "Restore the last open stash or history panel section",
+    keywords: ["git", "remember", "panel", "stash", "history"],
+  },
+  {
+    id: "git-enable-inline-blame",
+    tab: "git",
+    section: "Editor",
+    label: "Enable Inline Blame",
+    description: "Show inline Git blame metadata in the editor",
+    keywords: ["git", "blame", "inline", "editor"],
+  },
+  {
+    id: "git-enable-gutter",
+    tab: "git",
+    section: "Editor",
+    label: "Enable Git Gutter",
+    description: "Show Git gutter indicators in the editor",
+    keywords: ["git", "gutter", "editor", "modified", "added", "deleted"],
   },
 
   // Appearance Settings
@@ -202,6 +323,31 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Color Theme",
     description: "Choose your preferred color theme",
     keywords: ["theme", "color", "appearance", "dark", "light"],
+  },
+  {
+    id: "appearance-sync-system-theme",
+    tab: "appearance",
+    section: "Theme",
+    label: "Sync With OS",
+    description:
+      "Follow the operating system appearance and switch light or dark themes automatically",
+    keywords: ["theme", "system", "os", "auto", "light", "dark", "appearance", "sync"],
+  },
+  {
+    id: "appearance-auto-theme-light",
+    tab: "appearance",
+    section: "Theme",
+    label: "Preferred Light Theme",
+    description: "Theme to use while the operating system is in light appearance",
+    keywords: ["theme", "light", "system", "os", "auto", "appearance"],
+  },
+  {
+    id: "appearance-auto-theme-dark",
+    tab: "appearance",
+    section: "Theme",
+    label: "Preferred Dark Theme",
+    description: "Theme to use while the operating system is in dark appearance",
+    keywords: ["theme", "dark", "system", "os", "auto", "appearance"],
   },
   {
     id: "appearance-icon-theme",
@@ -235,14 +381,18 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Choose where to position the sidebar",
     keywords: ["sidebar", "position", "left", "right", "layout"],
   },
-  {
-    id: "appearance-native-menu-bar",
-    tab: "appearance",
-    section: "Layout",
-    label: "Native Menu Bar",
-    description: "Use the native menu bar or a custom UI menu bar",
-    keywords: ["menu", "bar", "native", "ui"],
-  },
+  ...(IS_MAC
+    ? [
+        {
+          id: "appearance-native-menu-bar",
+          tab: "appearance",
+          section: "Layout",
+          label: "Native Menu Bar",
+          description: "Use the native menu bar or a custom UI menu bar",
+          keywords: ["menu", "bar", "native", "ui"],
+        } satisfies SettingSearchRecord,
+      ]
+    : []),
   {
     id: "appearance-compact-menu-bar",
     tab: "appearance",
@@ -258,6 +408,43 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Quick Open Preview",
     description: "Show right-side file preview in quick open and global search",
     keywords: ["quick", "open", "preview", "file", "global", "search"],
+  },
+
+  // Database Settings
+  {
+    id: "databases-new-connection",
+    tab: "databases",
+    section: "Connections",
+    label: "New Connection",
+    description:
+      "Open the database connection dialog to connect to SQLite, PostgreSQL, MySQL, MongoDB, or Redis",
+    keywords: [
+      "database",
+      "connection",
+      "sqlite",
+      "postgres",
+      "mysql",
+      "mongodb",
+      "redis",
+      "connect",
+    ],
+  },
+  {
+    id: "databases-saved-connections",
+    tab: "databases",
+    section: "Connections",
+    label: "Saved Connections",
+    description: "Manage saved network database connections",
+    keywords: [
+      "database",
+      "saved",
+      "connections",
+      "postgres",
+      "mysql",
+      "mongodb",
+      "redis",
+      "remove",
+    ],
   },
 
   // AI Settings
@@ -581,8 +768,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   // Features Settings
   {
     id: "features-git",
-    tab: "features",
-    section: "Features",
+    tab: "git",
+    section: "Integration",
     label: "Git Integration",
     description: "Source control management with Git repositories",
     keywords: ["git", "source", "control", "version"],
@@ -670,6 +857,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["terminal", "letter", "spacing", "characters"],
   },
   {
+    id: "terminal-scrollback",
+    tab: "terminal",
+    section: "Typography",
+    label: "Terminal Scrollback",
+    description: "How many terminal history lines to retain",
+    keywords: ["terminal", "scrollback", "history", "buffer", "lines"],
+  },
+  {
     id: "terminal-cursor-style",
     tab: "terminal",
     section: "Cursor",
@@ -684,6 +879,23 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Terminal Cursor Blink",
     description: "Whether the terminal cursor should blink",
     keywords: ["terminal", "cursor", "blink", "blinking"],
+  },
+  {
+    id: "terminal-cursor-width",
+    tab: "terminal",
+    section: "Cursor",
+    label: "Terminal Cursor Width",
+    description: "Thickness of the terminal cursor",
+    keywords: ["terminal", "cursor", "width", "thickness", "bar"],
+  },
+
+  {
+    id: "editor-horizontal-tab-scroll",
+    tab: "editor",
+    section: "Tabs",
+    label: "Buffer Carousel",
+    description: "Show open buffers as a horizontally scrollable carousel in the main view",
+    keywords: ["tabs", "buffers", "carousel", "scroll", "horizontal", "trackpad", "main view"],
   },
 
   // Extensions Settings

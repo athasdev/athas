@@ -75,6 +75,18 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+.ui-text-sm {
+  font-size: var(--ui-text-sm);
+}
+
+.ui-text-md {
+  font-size: var(--ui-text-md);
+}
+
+.ui-text-lg {
+  font-size: var(--ui-text-lg);
+}
+
 @keyframes dropIndicatorPulse {
   0% {
     opacity: 0.7;

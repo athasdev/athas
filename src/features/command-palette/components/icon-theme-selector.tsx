@@ -10,6 +10,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
+import Badge from "@/ui/badge";
 
 interface IconThemeInfo {
   id: string;
@@ -48,7 +49,7 @@ const IconThemeSelector = ({
           id: theme.id,
           name: theme.name,
           description: theme.description,
-          icon: <Palette size={14} />,
+          icon: <Palette />,
         }),
       );
       setThemes(themeInfos);
@@ -195,16 +196,14 @@ const IconThemeSelector = ({
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
               >
-                <div className="shrink-0 text-text-lighter">
-                  {theme.icon || <Palette size={14} />}
-                </div>
+                <div className="shrink-0 text-text-lighter">{theme.icon || <Palette />}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>
                     {isCurrent && !isPreviewing && (
-                      <span className="rounded bg-accent/10 px-1 py-0.5 font-medium text-[10px] text-accent">
+                      <Badge variant="accent" className="px-1 py-0.5">
                         current
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>

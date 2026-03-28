@@ -7,7 +7,7 @@ import {
   Package,
   Search,
 } from "lucide-react";
-import type { SettingsTab } from "@/stores/ui-state/types";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
@@ -34,7 +34,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-files",
       label: "View: Show Files",
       description: "Switch to files explorer view",
-      icon: <FolderOpen size={14} />,
+      icon: <FolderOpen />,
       category: "Navigation",
       action: () => {
         setIsSidebarVisible(true);
@@ -46,7 +46,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-git",
       label: "View: Show Git",
       description: "Switch to Git view",
-      icon: <GitBranch size={14} />,
+      icon: <GitBranch />,
       category: "Navigation",
       action: () => {
         setIsSidebarVisible(true);
@@ -58,7 +58,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-github-prs",
       label: "View: Show Pull Requests",
       description: "Switch to GitHub Pull Requests view",
-      icon: <GitPullRequest size={14} />,
+      icon: <GitPullRequest />,
       category: "Navigation",
       action: () => {
         setIsSidebarVisible(true);
@@ -70,7 +70,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "search-global",
       label: "Search: Global Search",
       description: "Search across files in workspace",
-      icon: <Search size={14} />,
+      icon: <Search />,
       category: "Navigation",
       keybinding: ["⌘", "⇧", "F"],
       action: () => {
@@ -82,7 +82,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-extensions",
       label: "View: Show Extensions",
       description: "Open extensions in settings",
-      icon: <Package size={14} />,
+      icon: <Package />,
       category: "Navigation",
       action: () => {
         onClose();
@@ -93,7 +93,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "go-to-line",
       label: "Go: Go to Line",
       description: "Jump to a specific line number",
-      icon: <Hash size={14} />,
+      icon: <Hash />,
       category: "Navigation",
       keybinding: ["⌘", "G"],
       action: () => {
@@ -105,7 +105,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "quick-open",
       label: "Go: Quick Open",
       description: "Jump to any file with fuzzy search",
-      icon: <FileText size={14} />,
+      icon: <FileText />,
       category: "Navigation",
       keybinding: ["⌘", "P"],
       action: () => {

@@ -88,10 +88,7 @@ describe("pi-native session bootstrap", () => {
   test("still imports history when the session already has model metadata but no messages", () => {
     const appended = [];
     const replaced = [];
-    const existingEntries = [
-      { type: "model_change" },
-      { type: "thinking_level_change" },
-    ];
+    const existingEntries = [{ type: "model_change" }, { type: "thinking_level_change" }];
     const session = {
       model: {
         api: "openai-codex-responses",

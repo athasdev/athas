@@ -1,9 +1,13 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { message } from "@tauri-apps/plugin-dialog";
 import { memo, useEffect, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { connectionStore } from "@/utils/connection-store";
+import { toast } from "@/ui/toast";
+import {
+  connectRemoteConnection,
+  disconnectRemoteConnection,
+  loadRemoteConnections,
+} from "@/features/remote/services/remote-connection-actions";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import ConnectionDialog from "./connection-dialog";
 import ConnectionList from "./connection-list";
 import PasswordPromptDialog from "./password-prompt-dialog";
@@ -30,8 +34,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         await connectionStore.migrateFromLocalStorage();
 
         // Then load all connections from Tauri Store
-        const storedConnections = await connectionStore.getAllConnections();
-        setConnections(storedConnections.map((conn: any) => ({ ...conn, isConnected: false })));
+        setConnections(await loadRemoteConnections());
       } catch (error) {
         console.error("Error loading remote connections:", error);
       }
@@ -46,15 +49,13 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
 
     const setupDisconnectListener = async () => {
       try {
-        unlisten = await listen<{ connectionId: string }>(
-          "remote-connection-disconnected",
+        unlisten = await listen<{ connectionId: string; connected: boolean }>(
+          "ssh_connection_status",
           async (event) => {
-            console.log("Received remote disconnection event:", event.payload);
-
-            // Update connection status in store
-            await connectionStore.updateConnectionStatus(event.payload.connectionId, false);
-
-            // Refresh local state
+            await connectionStore.updateConnectionStatus(
+              event.payload.connectionId,
+              event.payload.connected,
+            );
             await refreshConnections();
           },
         );
@@ -75,8 +76,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   // Update the local state and reload connections
   const refreshConnections = async () => {
     try {
-      const storedConnections = await connectionStore.getAllConnections();
-      setConnections(storedConnections);
+      setConnections(await loadRemoteConnections());
     } catch (error) {
       console.error("Error refreshing connections:", error);
     }
@@ -115,73 +115,32 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
 
     try {
       if (connection.isConnected) {
-        // Disconnect
-        await invoke("ssh_disconnect", { connectionId });
-
-        // Update connection status in store
-        await connectionStore.updateConnectionStatus(connectionId, false);
-
-        // Refresh local state
+        await disconnectRemoteConnection(connection);
         await refreshConnections();
       } else {
         if (connectingMap[connectionId]) return;
         setConnectingMap((prev) => ({ ...prev, [connectionId]: true }));
-        // Connect - the backend will try SSH config, SSH agent, and default keys first
-        // Only if all automatic auth methods fail will we prompt for password
-        await invoke("ssh_connect", {
-          connectionId,
-          host: connection.host,
-          port: connection.port,
-          username: connection.username,
-          password: providedPassword || connection.password || null,
-          keyPath: connection.keyPath || null,
-          useSftp: connection.type === "sftp",
-        });
-
-        // Update connection status in store
-        await connectionStore.updateConnectionStatus(connectionId, true, new Date().toISOString());
-
-        // Refresh local state
+        await connectRemoteConnection(connection, providedPassword);
         await refreshConnections();
-
-        // Open the remote project in the file tree
-        const { handleOpenRemoteProject } = useFileSystemStore.getState();
-        if (handleOpenRemoteProject) {
-          await handleOpenRemoteProject(connectionId, connection.name);
-        }
-        setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
       }
     } catch (error) {
       console.error("Connection error:", error);
-      const errorStr = String(error);
+      const friendlyError = getFriendlyRemoteError(error);
 
-      // Check if this is an authentication failure that could be resolved with password
-      const isAuthFailure =
-        errorStr.includes("No valid authentication method") ||
-        errorStr.includes("Authentication failed");
-
-      // If auth failed and no password was provided yet, prompt for password
-      if (isAuthFailure && !providedPassword && !connection.password) {
+      if (isRemoteAuthFailure(error) && !providedPassword && !connection.password) {
         setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
         setPasswordPromptConnection(connection);
         return;
       }
 
-      // For password prompt attempts, re-throw so the dialog can handle it
       if (providedPassword) {
         setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
-        throw error;
+        throw new Error(friendlyError);
       }
 
-      // Show error dialog for other failures
-      try {
-        await message(errorStr, {
-          title: "Connection Error",
-          kind: "error",
-        });
-      } catch {
-        console.error("Connection failed:", error);
-      }
+      toast.error(friendlyError);
+      setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
+    } finally {
       setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
     }
   };

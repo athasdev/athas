@@ -9,10 +9,10 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAppStore } from "@/stores/app-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";
@@ -31,6 +31,8 @@ interface CodeEditorProps {
   className?: string;
   paneId?: string;
   bufferId?: string;
+  isActiveSurface?: boolean;
+  showToolbar?: boolean;
 }
 
 export interface CodeEditorRef {
@@ -45,7 +47,12 @@ interface GoToLineEventDetail {
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 
-const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
+const CodeEditor = ({
+  className,
+  bufferId: propBufferId,
+  isActiveSurface = true,
+  showToolbar = true,
+}: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
@@ -56,36 +63,39 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
   const activeBufferId = propBufferId ?? globalActiveBufferId;
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { handleContentChange } = useAppStore.use.actions();
+  const { handleContentChange } = useEditorAppStore.use.actions();
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
-  const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const { settings } = useSettingsStore();
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
 
   // Extract values from active buffer or use defaults
-  const value = activeBuffer?.content || "";
+  const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
+  const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer;
 
-  const showMarkdownPreview = activeBuffer?.isMarkdownPreview || false;
-  const showHtmlPreview = activeBuffer?.isHtmlPreview || false;
-  const showCsvPreview = activeBuffer?.isCsvPreview || false;
+  const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
+  const showHtmlPreview = activeBuffer?.type === "htmlPreview";
+  const showCsvPreview = activeBuffer?.type === "csvPreview";
 
   // Initialize refs in store
   useEffect(() => {
+    if (!isActiveSurface) return;
     setRefs({
       editorRef,
     });
-  }, [setRefs]);
+  }, [isActiveSurface, setRefs]);
 
   // Focus editor when active buffer changes
   useEffect(() => {
+    if (!enableInteractiveServices) return;
     if (activeBufferId && editorRef.current) {
       // Find the textarea element within the editor
       const textarea = editorRef.current.querySelector("textarea");
@@ -96,29 +106,33 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         }, 0);
       }
     }
-  }, [activeBufferId]);
+  }, [activeBufferId, enableInteractiveServices]);
 
   // Sync content and file info with editor instance store
   useEffect(() => {
+    if (!isActiveSurface) return;
     setContent(value, onChange);
-  }, [value, onChange, setContent]);
+  }, [isActiveSurface, value, onChange, setContent]);
 
   useEffect(() => {
+    if (!isActiveSurface) return;
     setFileInfo(filePath);
-  }, [filePath, setFileInfo]);
+  }, [filePath, isActiveSurface, setFileInfo]);
 
   // Editor view store automatically syncs with active buffer
 
   // Set disabled state
   useEffect(() => {
+    if (!isActiveSurface) return;
     setDisabled(false);
-  }, [setDisabled]);
+  }, [isActiveSurface, setDisabled]);
 
   // Get cursor position for LSP integration
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
+    enabled: enableInteractiveServices,
     filePath,
     value,
     cursorPosition,
@@ -128,12 +142,14 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!enableInteractiveServices) return;
     hoverHandlers.handleHover(e);
     definitionLinkHandlers.handleMouseMove(e);
   };
 
   // Combine mouse leave handlers
   const handleMouseLeave = () => {
+    if (!enableInteractiveServices) return;
     hoverHandlers.handleMouseLeave();
     definitionLinkHandlers.handleMouseLeave();
   };
@@ -143,6 +159,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
 
   // Handle go-to-line events (from search results, diagnostics, vim, etc.)
   useEffect(() => {
+    if (!isActiveSurface) return;
     const goToLine = (lineNumber: number) => {
       if (!editorRef.current) return false;
 
@@ -204,13 +221,18 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     return () => {
       window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
     };
-  }, [filePath]);
+  }, [filePath, isActiveSurface]);
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
-    // Clear existing timer
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
+    }
+
+    if (!enableInteractiveServices) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
     }
 
     // Clear matches immediately if no query
@@ -239,10 +261,18 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         clearTimeout(searchTimerRef.current);
       }
     };
-  }, [searchQuery, searchOptions, value, setSearchMatches, setCurrentMatchIndex]);
+  }, [
+    enableInteractiveServices,
+    searchQuery,
+    searchOptions,
+    value,
+    setSearchMatches,
+    setCurrentMatchIndex,
+  ]);
 
   // Effect to handle search navigation - scroll to current match and move cursor
   useEffect(() => {
+    if (!enableInteractiveServices) return;
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (match && editorRef.current) {
@@ -268,9 +298,9 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         }
       }
     }
-  }, [currentMatchIndex, searchMatches, value, zoomedFontSize]);
+  }, [currentMatchIndex, enableInteractiveServices, searchMatches, value, zoomedFontSize]);
 
-  if (!activeBuffer || isFileTreeLoading) {
+  if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
   }
 
@@ -279,10 +309,10 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
-        {settings.coreFeatures.breadcrumbs && <Breadcrumb />}
+        {showToolbar && settings.coreFeatures.breadcrumbs && <Breadcrumb />}
 
         {/* Find Bar */}
-        <FindBar />
+        {showToolbar && enableInteractiveServices && <FindBar />}
 
         <div
           ref={editorRef}
@@ -296,10 +326,10 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
           }}
         >
           {/* Hover Tooltip */}
-          <HoverTooltip />
+          {enableInteractiveServices && <HoverTooltip />}
 
           {/* Completion Dropdown */}
-          <CompletionDropdown />
+          {enableInteractiveServices && <CompletionDropdown />}
 
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">
@@ -311,10 +341,15 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
               <CsvPreview />
             ) : (
               <Editor
+                bufferId={activeBufferId ?? undefined}
+                isActiveSurface={isActiveSurface}
+                isPreviewMode={isPreviewBuffer}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                onMouseEnter={hoverHandlers.handleMouseEnter}
-                onClick={goToDefinitionHandlers.handleClick}
+                onMouseEnter={
+                  enableInteractiveServices ? hoverHandlers.handleMouseEnter : undefined
+                }
+                onClick={enableInteractiveServices ? goToDefinitionHandlers.handleClick : undefined}
               />
             )}
           </div>
@@ -322,7 +357,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       </div>
 
       {/* Debug overlay for scroll monitoring */}
-      <ScrollDebugOverlay />
+      {enableInteractiveServices && <ScrollDebugOverlay />}
     </>
   );
 };

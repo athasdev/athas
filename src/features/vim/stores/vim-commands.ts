@@ -1,5 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "./vim-store";
 
 export interface VimCommand {
@@ -8,13 +10,6 @@ export interface VimCommand {
   description: string;
   execute: (args?: string[]) => Promise<void> | void;
 }
-
-// Helper to get current buffer path for file operations
-const _getCurrentBufferPath = (): string | null => {
-  const { buffers, activeBufferId } = useBufferStore.getState();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-  return activeBuffer?.path || null;
-};
 
 // Save current file
 const writeCommand: VimCommand = {
@@ -201,6 +196,55 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
   // Handle numeric commands (go to line)
   if (/^\d+$/.test(trimmedInput)) {
     await gotoCommand.execute([trimmedInput]);
+    return true;
+  }
+
+  // Handle substitution commands: :s/pattern/replacement/flags or :%s/pattern/replacement/flags
+  // Also supports form without trailing slash: :s/pattern/replacement
+  const subsMatch =
+    trimmedInput.match(/^(%?)s\/((?:[^/\\]|\\.)*)\/(((?:[^/\\]|\\.)*))\/([gi]*)$/) ||
+    trimmedInput.match(/^(%?)s\/((?:[^/\\]|\\.)*)\/(((?:[^/\\]|\\.)*))$/);
+  if (subsMatch) {
+    const [, range, pattern, replacement, , flags = ""] = subsMatch;
+    const isWholeFile = range === "%";
+    const isGlobalOnLine = flags.includes("g");
+    const isCaseInsensitive = flags.includes("i");
+
+    const lines = useEditorViewStore.getState().lines;
+    const cursorState = useEditorStateStore.getState();
+    const bufferState = useBufferStore.getState();
+    const { activeBufferId } = bufferState;
+
+    if (!activeBufferId || lines.length === 0) {
+      return false;
+    }
+
+    // Unescape forward slashes in pattern and replacement
+    const unescapedPattern = pattern.replace(/\\\//g, "/");
+    const unescapedReplacement = replacement.replace(/\\\//g, "/");
+
+    const regexFlags = (isCaseInsensitive ? "i" : "") + (isGlobalOnLine ? "g" : "");
+    const regex = new RegExp(unescapedPattern, regexFlags);
+
+    const newLines = [...lines];
+    if (isWholeFile) {
+      for (let i = 0; i < newLines.length; i++) {
+        newLines[i] = newLines[i].replace(regex, unescapedReplacement);
+      }
+    } else {
+      const currentLine = cursorState.cursorPosition.line;
+      newLines[currentLine] = newLines[currentLine].replace(regex, unescapedReplacement);
+    }
+
+    const newContent = newLines.join("\n");
+    bufferState.actions.updateBufferContent(activeBufferId, newContent);
+
+    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.value = newContent;
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
     return true;
   }
 

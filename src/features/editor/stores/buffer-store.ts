@@ -26,6 +26,7 @@ import { detectLanguageFromFileName } from "@/features/editor/utils/language-det
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
+import type { DatabaseType } from "@/features/database/models/provider.types";
 import type { MultiFileDiff } from "@/features/git/types/diff";
 import type { GitDiff } from "@/features/git/types/git";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
@@ -67,6 +68,7 @@ const removeBufferFromPanes = (bufferId: string) => {
 
 export interface Buffer {
   id: string;
+  type: any;
   path: string;
   name: string;
   content: string;
@@ -88,6 +90,7 @@ export interface Buffer {
   isBinary: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
+  languageOverride?: string;
   // For diff buffers, store the parsed diff data (single or multi-file)
   diffData?: GitDiff | MultiFileDiff;
   // For markdown preview buffers, store the source file path
@@ -98,17 +101,27 @@ export interface Buffer {
   webViewerUrl?: string;
   webViewerTitle?: string;
   webViewerFavicon?: string;
+  url?: string;
+  title?: string;
+  favicon?: string;
   // For PR buffers, store the PR number
   prNumber?: number;
+  authorAvatarUrl?: string;
+  issueNumber?: number;
+  runId?: number;
+  repoPath?: string;
   // For terminal tab buffers
   isTerminal?: boolean;
   terminalSessionId?: string;
   terminalInitialCommand?: string;
   terminalWorkingDirectory?: string;
+  sessionId?: string;
   // For agent tab buffers
   isAgent?: boolean;
   agentSessionId?: string;
   agentBackend?: HarnessRuntimeBackend;
+  databaseType?: DatabaseType;
+  connectionId?: string;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -153,8 +166,30 @@ interface BufferActions {
   ) => string;
   convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
+  openDatabaseBuffer: (
+    path: string,
+    name: string,
+    databaseType: DatabaseType,
+    connectionId?: string,
+  ) => string;
   openWebViewerBuffer: (url: string) => string;
-  openPRBuffer: (prNumber: number) => string;
+  openPRBuffer: (
+    prNumber: number,
+    options?: { title?: string; authorAvatarUrl?: string },
+  ) => string;
+  openGitHubIssueBuffer: (options: {
+    issueNumber: number;
+    repoPath?: string;
+    title?: string;
+    url?: string;
+    authorAvatarUrl?: string;
+  }) => string;
+  openGitHubActionBuffer: (options: {
+    runId: number;
+    repoPath?: string;
+    title?: string;
+    url?: string;
+  }) => string;
   openTerminalBuffer: (options?: {
     name?: string;
     command?: string;
@@ -194,6 +229,7 @@ interface BufferActions {
   ) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
   updateBufferPath: (bufferId: string, newPath: string) => void;
+  updateBufferLanguage: (bufferId: string, languageId: string) => void;
   updateBuffer: (updatedBuffer: Buffer) => void;
   handleTabClick: (bufferId: string) => void;
   handleTabClose: (bufferId: string) => void;
@@ -234,8 +270,8 @@ const isMatchingHarnessAgentBuffer = (
 ): boolean =>
   Boolean(
     buffer.isAgent &&
-      (buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY) === sessionId &&
-      getHarnessBufferBackend(buffer) === backend,
+    (buffer.agentSessionId ?? DEFAULT_HARNESS_SESSION_KEY) === sessionId &&
+    getHarnessBufferBackend(buffer) === backend,
   );
 
 export const stopHarnessBufferSession = async (
@@ -444,6 +480,23 @@ export const useBufferStore = createSelectors(
 
           const newBuffer: Buffer = {
             id: generateBufferId(path),
+            type: isDiff
+              ? "diff"
+              : isMarkdownPreview
+                ? "markdownPreview"
+                : isHtmlPreview
+                  ? "htmlPreview"
+                  : isCsvPreview
+                    ? "csvPreview"
+                    : isImage
+                      ? "image"
+                      : isPdf
+                        ? "pdf"
+                        : isBinary
+                          ? "binary"
+                          : isSQLite
+                            ? "database"
+                            : "editor",
             path,
             name,
             content,
@@ -467,6 +520,7 @@ export const useBufferStore = createSelectors(
             language: detectLanguageFromFileName(name),
             diffData,
             sourceFilePath,
+            databaseType: isSQLite ? "sqlite" : undefined,
             tokens: [],
           };
 
@@ -607,6 +661,7 @@ export const useBufferStore = createSelectors(
 
           const newBuffer: Buffer = {
             id: generateBufferId(path),
+            type: "externalEditor",
             path,
             name,
             content: "", // External editor buffers don't have content
@@ -627,6 +682,7 @@ export const useBufferStore = createSelectors(
             isPdf: false,
             isBinary: false,
             isActive: true,
+            sessionId: terminalConnectionId,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
             tokens: [],
@@ -643,6 +699,80 @@ export const useBufferStore = createSelectors(
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
 
+          return newBuffer.id;
+        },
+
+        openDatabaseBuffer: (
+          path: string,
+          name: string,
+          databaseType: DatabaseType,
+          connectionId?: string,
+        ): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          const existing = buffers.find(
+            (buffer) =>
+              buffer.type === "database" &&
+              buffer.path === path &&
+              buffer.databaseType === databaseType &&
+              buffer.connectionId === connectionId,
+          );
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((buffer) => ({
+                ...buffer,
+                isActive: buffer.id === existing.id,
+              }));
+            });
+            syncBufferToPane(existing.id);
+            return existing.id;
+          }
+
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((buffer) => !buffer.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((buffer) => !buffer.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((buffer) => buffer.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            type: "database",
+            path,
+            name,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false,
+            isImage: false,
+            isSQLite: databaseType === "sqlite",
+            isDiff: false,
+            isMarkdownPreview: false,
+            isHtmlPreview: false,
+            isCsvPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: false,
+            isPdf: false,
+            isBinary: false,
+            isActive: true,
+            databaseType,
+            connectionId,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [
+              ...newBuffers.map((buffer) => ({ ...buffer, isActive: false })),
+              newBuffer,
+            ];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          syncBufferToPane(newBuffer.id);
           return newBuffer.id;
         },
 
@@ -687,6 +817,7 @@ export const useBufferStore = createSelectors(
 
           const newBuffer: Buffer = {
             id: generateBufferId(path),
+            type: "webViewer",
             path,
             name: displayName,
             content: "",
@@ -708,6 +839,8 @@ export const useBufferStore = createSelectors(
             isBinary: false,
             isActive: true,
             webViewerUrl: url,
+            url,
+            title: displayName,
             tokens: [],
           };
 
@@ -721,10 +854,13 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
-        openPRBuffer: (prNumber: number): string => {
+        openPRBuffer: (
+          prNumber: number,
+          options?: { title?: string; authorAvatarUrl?: string },
+        ): string => {
           const { buffers, maxOpenTabs } = get();
           const path = `pr://${prNumber}`;
-          const displayName = `PR #${prNumber}`;
+          const displayName = options?.title || `PR #${prNumber}`;
 
           // Check if already open
           const existing = buffers.find((b) => b.isPullRequest && b.prNumber === prNumber);
@@ -750,6 +886,7 @@ export const useBufferStore = createSelectors(
 
           const newBuffer: Buffer = {
             id: generateBufferId(path),
+            type: "pullRequest",
             path,
             name: displayName,
             content: "",
@@ -770,12 +907,160 @@ export const useBufferStore = createSelectors(
             isPdf: false,
             isBinary: false,
             prNumber,
+            authorAvatarUrl: options?.authorAvatarUrl,
             isActive: true,
             tokens: [],
           };
 
           set((state) => {
             state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          syncBufferToPane(newBuffer.id);
+          return newBuffer.id;
+        },
+
+        openGitHubIssueBuffer: ({ issueNumber, repoPath, title, url, authorAvatarUrl }): string => {
+          const { buffers, maxOpenTabs } = get();
+          const path = repoPath
+            ? `github-issue://${repoPath}#${issueNumber}`
+            : `github-issue://${issueNumber}`;
+          const displayName = title || `Issue #${issueNumber}`;
+
+          const existing = buffers.find(
+            (buffer) =>
+              buffer.type === "githubIssue" &&
+              buffer.issueNumber === issueNumber &&
+              buffer.repoPath === repoPath,
+          );
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((buffer) => ({
+                ...buffer,
+                isActive: buffer.id === existing.id,
+              }));
+            });
+            syncBufferToPane(existing.id);
+            return existing.id;
+          }
+
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((buffer) => !buffer.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((buffer) => !buffer.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((buffer) => buffer.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            type: "githubIssue",
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isHtmlPreview: false,
+            isCsvPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: false,
+            isPdf: false,
+            isBinary: false,
+            issueNumber,
+            repoPath,
+            url,
+            authorAvatarUrl,
+            isActive: true,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [
+              ...newBuffers.map((buffer) => ({ ...buffer, isActive: false })),
+              newBuffer,
+            ];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          syncBufferToPane(newBuffer.id);
+          return newBuffer.id;
+        },
+
+        openGitHubActionBuffer: ({ runId, repoPath, title, url }): string => {
+          const { buffers, maxOpenTabs } = get();
+          const path = repoPath
+            ? `github-action://${repoPath}#${runId}`
+            : `github-action://${runId}`;
+          const displayName = title || `Run #${runId}`;
+
+          const existing = buffers.find(
+            (buffer) =>
+              buffer.type === "githubAction" &&
+              buffer.runId === runId &&
+              buffer.repoPath === repoPath,
+          );
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((buffer) => ({
+                ...buffer,
+                isActive: buffer.id === existing.id,
+              }));
+            });
+            syncBufferToPane(existing.id);
+            return existing.id;
+          }
+
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((buffer) => !buffer.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((buffer) => !buffer.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((buffer) => buffer.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            type: "githubAction",
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isHtmlPreview: false,
+            isCsvPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: false,
+            isPdf: false,
+            isBinary: false,
+            runId,
+            repoPath,
+            url,
+            isActive: true,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [
+              ...newBuffers.map((buffer) => ({ ...buffer, isActive: false })),
+              newBuffer,
+            ];
             state.activeBufferId = newBuffer.id;
           });
 
@@ -807,6 +1092,7 @@ export const useBufferStore = createSelectors(
 
           const newBuffer: Buffer = {
             id: generateBufferId(path),
+            type: "terminal",
             path,
             name: displayName,
             content: "",
@@ -830,6 +1116,7 @@ export const useBufferStore = createSelectors(
             terminalSessionId: sessionId,
             terminalInitialCommand: options?.command,
             terminalWorkingDirectory: options?.workingDirectory,
+            sessionId,
             isActive: true,
             tokens: [],
           };
@@ -881,6 +1168,7 @@ export const useBufferStore = createSelectors(
 
           const newBuffer: Buffer = {
             id: generateBufferId(path),
+            type: "agent",
             path,
             name: displayName,
             content: "",
@@ -903,6 +1191,7 @@ export const useBufferStore = createSelectors(
             isAgent: true,
             agentSessionId,
             agentBackend,
+            sessionId: agentSessionId,
             isActive: true,
             tokens: [],
           };
@@ -1192,6 +1481,16 @@ export const useBufferStore = createSelectors(
               buffer.isVirtual = false;
               buffer.savedContent = buffer.content;
               buffer.language = detectLanguageFromFileName(newName);
+            }
+          });
+        },
+
+        updateBufferLanguage: (bufferId: string, languageId: string) => {
+          set((state) => {
+            const buffer = state.buffers.find((entry) => entry.id === bufferId);
+            if (buffer) {
+              buffer.languageOverride = languageId;
+              buffer.language = languageId;
             }
           });
         },

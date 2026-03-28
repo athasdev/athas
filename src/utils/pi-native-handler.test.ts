@@ -41,11 +41,38 @@ const invokeMock = mock(async (command: string, payload: Record<string, unknown>
 });
 
 mock.module("@tauri-apps/api/core", () => ({
+  SERIALIZE_TO_IPC_FN: "__TAURI_TO_IPC_KEY__",
   invoke: invokeMock,
+  Channel: class Channel {},
+  Resource: class Resource {
+    constructor(public rid: number) {}
+  },
+  transformCallback: () => 1,
+  convertFileSrc: (path: string) => path,
 }));
 
 mock.module("@tauri-apps/api/event", () => ({
   listen: mock(async () => () => {}),
+  once: mock(async () => () => {}),
+  emit: mock(async () => {}),
+  emitTo: mock(async () => {}),
+  TauriEvent: {
+    WINDOW_RESIZED: "tauri://resize",
+  },
+}));
+
+mock.module("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: () => ({ label: "main" }),
+}));
+
+mock.module("@tauri-apps/plugin-store", () => ({
+  load: mock(async () => ({
+    get: mock(async () => undefined),
+    set: mock(async () => {}),
+    save: mock(async () => {}),
+    reload: mock(async () => {}),
+    close: mock(async () => {}),
+  })),
 }));
 
 const chatStoreState = {
@@ -86,6 +113,18 @@ mock.module("@/stores/project-store", () => ({
       rootFolderPath: "/home/fsos/Developer/athas",
     }),
   },
+}));
+
+mock.module("@/features/settings/store", () => ({
+  useSettingsStore: {
+    getState: () => ({
+      settings: {
+        aiDefaultSessionMode: "one",
+      },
+    }),
+  },
+  waitForSettingsInitialization: () => Promise.resolve(),
+  initializeSettingsStore: () => Promise.resolve(),
 }));
 
 mock.module("@/features/editor/stores/buffer-store", () => ({

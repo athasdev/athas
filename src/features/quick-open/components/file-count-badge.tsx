@@ -1,3 +1,5 @@
+import Badge from "@/ui/badge";
+
 interface FileCountBadgeProps {
   totalFiles: number;
   resultCount: number;
@@ -18,8 +20,8 @@ export const FileCountBadge = ({
     : `${totalFiles} ${totalFiles === 1 ? "file" : "files"}`;
 
   return (
-    <div className="ui-font shrink-0 rounded bg-secondary-bg px-2 py-0.5 text-[10px] text-text-lighter">
+    <Badge variant="default" className="shrink-0 border-0 bg-secondary-bg text-text-lighter">
       {displayText}
-    </div>
+    </Badge>
   );
 };

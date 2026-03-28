@@ -1,6 +1,4 @@
-use crate::features::runtime::{
-   BunRuntime, NodeRuntime, RuntimeManager, RuntimeStatus, RuntimeType,
-};
+use athas_runtime::{BunRuntime, NodeRuntime, RuntimeManager, RuntimeStatus, RuntimeType};
 use tauri::AppHandle;
 
 /// Ensure a runtime is available, downloading if necessary

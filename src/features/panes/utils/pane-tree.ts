@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { DEFAULT_SPLIT_RATIO } from "../constants/pane";
-import type { PaneGroup, PaneNode, PaneSplit, SplitDirection } from "../types/pane";
+import type { PaneGroup, PaneNode, PaneSplit, SplitDirection, SplitPlacement } from "../types/pane";
 
 export function createPaneGroup(
   bufferIds: string[] = [],
@@ -106,18 +106,21 @@ export function splitPane(
   paneId: string,
   direction: SplitDirection,
   bufferId?: string,
+  placement: SplitPlacement = "after",
 ): PaneNode {
   if (root.id === paneId && root.type === "group") {
     const newGroup = createPaneGroup(bufferId ? [bufferId] : [], bufferId ?? null);
-    return createPaneSplit(direction, root, newGroup);
+    return placement === "before"
+      ? createPaneSplit(direction, newGroup, root)
+      : createPaneSplit(direction, root, newGroup);
   }
 
   if (root.type === "split") {
     return {
       ...root,
       children: [
-        splitPane(root.children[0], paneId, direction, bufferId),
-        splitPane(root.children[1], paneId, direction, bufferId),
+        splitPane(root.children[0], paneId, direction, bufferId, placement),
+        splitPane(root.children[1], paneId, direction, bufferId, placement),
       ],
     };
   }
@@ -279,19 +282,126 @@ export function setActivePaneBuffer(
   return root;
 }
 
+export function reorderPaneBuffers(
+  root: PaneNode,
+  paneId: string,
+  startIndex: number,
+  endIndex: number,
+): PaneNode {
+  if (root.id === paneId && root.type === "group") {
+    if (
+      startIndex < 0 ||
+      endIndex < 0 ||
+      startIndex >= root.bufferIds.length ||
+      endIndex >= root.bufferIds.length ||
+      startIndex === endIndex
+    ) {
+      return root;
+    }
+
+    const nextBufferIds = [...root.bufferIds];
+    const [movedBufferId] = nextBufferIds.splice(startIndex, 1);
+    nextBufferIds.splice(endIndex, 0, movedBufferId);
+
+    return {
+      ...root,
+      bufferIds: nextBufferIds,
+    };
+  }
+
+  if (root.type === "split") {
+    return {
+      ...root,
+      children: [
+        reorderPaneBuffers(root.children[0], paneId, startIndex, endIndex),
+        reorderPaneBuffers(root.children[1], paneId, startIndex, endIndex),
+      ],
+    };
+  }
+
+  return root;
+}
+
 export function getAdjacentPane(
   root: PaneNode,
   currentPaneId: string,
   direction: "left" | "right" | "up" | "down",
 ): PaneGroup | null {
-  const allGroups = getAllPaneGroups(root);
-  const currentIndex = allGroups.findIndex((g) => g.id === currentPaneId);
-
-  if (currentIndex === -1) return null;
-
-  if (direction === "left" || direction === "up") {
-    return currentIndex > 0 ? allGroups[currentIndex - 1] : null;
+  interface PaneRect {
+    pane: PaneGroup;
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
   }
 
-  return currentIndex < allGroups.length - 1 ? allGroups[currentIndex + 1] : null;
+  const rects: PaneRect[] = [];
+
+  const visit = (node: PaneNode, left: number, top: number, right: number, bottom: number) => {
+    if (node.type === "group") {
+      rects.push({ pane: node, left, top, right, bottom });
+      return;
+    }
+
+    const [firstSize, secondSize] = node.sizes;
+    const total = firstSize + secondSize || 100;
+
+    if (node.direction === "horizontal") {
+      const splitX = left + ((right - left) * firstSize) / total;
+      visit(node.children[0], left, top, splitX, bottom);
+      visit(node.children[1], splitX, top, right, bottom);
+      return;
+    }
+
+    const splitY = top + ((bottom - top) * firstSize) / total;
+    visit(node.children[0], left, top, right, splitY);
+    visit(node.children[1], left, splitY, right, bottom);
+  };
+
+  const overlapLength = (aStart: number, aEnd: number, bStart: number, bEnd: number) =>
+    Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
+
+  visit(root, 0, 0, 100, 100);
+
+  const currentRect = rects.find((entry) => entry.pane.id === currentPaneId);
+  if (!currentRect) return null;
+
+  let bestCandidate: PaneRect | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  let bestOverlap = -1;
+
+  for (const candidate of rects) {
+    if (candidate.pane.id === currentPaneId) continue;
+
+    let distance = Number.POSITIVE_INFINITY;
+    let overlap = 0;
+
+    if (direction === "left") {
+      if (candidate.right > currentRect.left) continue;
+      distance = currentRect.left - candidate.right;
+      overlap = overlapLength(currentRect.top, currentRect.bottom, candidate.top, candidate.bottom);
+    } else if (direction === "right") {
+      if (candidate.left < currentRect.right) continue;
+      distance = candidate.left - currentRect.right;
+      overlap = overlapLength(currentRect.top, currentRect.bottom, candidate.top, candidate.bottom);
+    } else if (direction === "up") {
+      if (candidate.bottom > currentRect.top) continue;
+      distance = currentRect.top - candidate.bottom;
+      overlap = overlapLength(currentRect.left, currentRect.right, candidate.left, candidate.right);
+    } else {
+      if (candidate.top < currentRect.bottom) continue;
+      distance = candidate.top - currentRect.bottom;
+      overlap = overlapLength(currentRect.left, currentRect.right, candidate.left, candidate.right);
+    }
+
+    if (overlap <= 0) continue;
+
+    if (distance < bestDistance || (distance === bestDistance && overlap > bestOverlap)) {
+      bestCandidate = candidate;
+      bestDistance = distance;
+      bestOverlap = overlap;
+    }
+  }
+
+  return bestCandidate?.pane ?? null;
 }

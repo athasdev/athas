@@ -25,6 +25,11 @@ Object.assign(globalThis, {
   window: {
     __TAURI_INTERNALS__: {
       invoke: tauriInvoke,
+      metadata: {
+        currentWindow: {
+          label: "main",
+        },
+      },
     },
     __TAURI_OS_PLUGIN_INTERNALS__: {
       platform: "linux",
@@ -39,15 +44,50 @@ Object.assign(globalThis, {
 });
 
 mock.module("@tauri-apps/api/core", () => ({
+  SERIALIZE_TO_IPC_FN: "__TAURI_TO_IPC_KEY__",
   invoke: tauriInvoke,
   Channel: class Channel {},
   Resource: class Resource {
     constructor(public rid: number) {}
   },
+  transformCallback: () => 1,
+  convertFileSrc: (path: string) => path,
 }));
 
 mock.module("@tauri-apps/api/event", () => ({
   listen: mock(async () => () => {}),
+  once: mock(async () => () => {}),
+  emit: mock(async () => {}),
+  emitTo: mock(async () => {}),
+  TauriEvent: {
+    WINDOW_RESIZED: "tauri://resize",
+  },
+}));
+
+mock.module("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: () => ({ label: "main" }),
+}));
+
+mock.module("@tauri-apps/plugin-store", () => ({
+  load: mock(async () => ({
+    get: mock(async () => undefined),
+    set: mock(async () => {}),
+    save: mock(async () => {}),
+    reload: mock(async () => {}),
+    close: mock(async () => {}),
+  })),
+}));
+
+mock.module("@/features/settings/store", () => ({
+  useSettingsStore: {
+    getState: () => ({
+      settings: {
+        aiDefaultSessionMode: "one",
+      },
+    }),
+  },
+  waitForSettingsInitialization: () => Promise.resolve(),
+  initializeSettingsStore: () => Promise.resolve(),
 }));
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

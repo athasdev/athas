@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { useSettingsStore } from "@/features/settings/store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import type { RecentFolder } from "../types/recent-folders";
 
 interface RecentFoldersState {
@@ -45,7 +47,20 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
         openRecentFolder: async (folderPath: string) => {
           try {
             const { useFileSystemStore } = await import("./store");
-            const { handleOpenFolderByPath } = useFileSystemStore.getState();
+            const { handleOpenFolderByPath, rootFolderPath } = useFileSystemStore.getState();
+            const { settings } = useSettingsStore.getState();
+            const hasOpenWorkspace =
+              !!rootFolderPath || useFileSystemStore.getState().files.length > 0;
+
+            if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+              await createAppWindow({
+                path: folderPath,
+                isDirectory: true,
+              });
+              get().addToRecents(folderPath);
+              return;
+            }
+
             await handleOpenFolderByPath(folderPath);
             get().addToRecents(folderPath);
           } catch (error) {

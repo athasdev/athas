@@ -114,6 +114,7 @@ const CAPTURE_TO_CLASS: Record<string, string> = {
   // Strings
   string: "token-string",
   "string.special": "token-string",
+  "string.special.key": "token-property",
   "string.special.url": "token-string",
   "string.escape": "token-string",
   "string.regexp": "token-string",

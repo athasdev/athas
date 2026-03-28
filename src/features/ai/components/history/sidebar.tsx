@@ -67,8 +67,10 @@ const getAgentColor = (agentId: string | undefined): string => {
   }
 };
 
-interface ChatHistorySidebarProps
-  extends Omit<ChatHistoryModalProps, "formatTime" | "onSwitchToChat"> {
+interface ChatHistorySidebarProps extends Omit<
+  ChatHistoryModalProps,
+  "formatTime" | "onSwitchToChat"
+> {
   onContinueToChat: (chatId: string) => void;
   onForkChat: (chatId: string) => Promise<void>;
 }

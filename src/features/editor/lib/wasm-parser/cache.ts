@@ -63,7 +63,7 @@ export class ParserCache {
     if (entry) {
       entry.parser.parser.delete();
       this.cache.delete(languageId);
-      logger.info("ParserCache", `Evicted parser for ${languageId}`);
+      logger.debug("ParserCache", `Evicted parser for ${languageId}`);
     }
   }
 
@@ -92,7 +92,7 @@ export class ParserCache {
   clear(): void {
     for (const [languageId, entry] of this.cache) {
       entry.parser.parser.delete();
-      logger.info("ParserCache", `Cleared parser for ${languageId}`);
+      logger.debug("ParserCache", `Cleared parser for ${languageId}`);
     }
     this.cache.clear();
   }

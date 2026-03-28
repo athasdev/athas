@@ -1,21 +1,18 @@
 import {
-  Brush,
-  Keyboard,
-  Languages,
-  Package,
+  ChevronDown,
+  ChevronRight,
   PenTool,
   Search,
-  Settings,
   Settings2,
   Shield,
   Sparkles,
-  Terminal,
-  Wrench,
 } from "lucide-react";
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import type { SettingsTab } from "@/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface SettingsVerticalTabsProps {
@@ -26,66 +23,63 @@ interface SettingsVerticalTabsProps {
 interface TabItem {
   id: SettingsTab;
   label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
-const tabs: TabItem[] = [
+interface TabGroup {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  items: TabItem[];
+}
+
+const tabGroups: TabGroup[] = [
   {
-    id: "general",
-    label: "General",
+    id: "workspace",
+    label: "Workspace",
     icon: Settings2,
+    items: [
+      { id: "general", label: "General" },
+      { id: "appearance", label: "Appearance" },
+      { id: "features", label: "Features" },
+    ],
   },
   {
-    id: "editor",
-    label: "Editor",
+    id: "development",
+    label: "Development",
     icon: PenTool,
+    items: [
+      { id: "editor", label: "Editor" },
+      { id: "file-explorer", label: "File Explorer" },
+      { id: "git", label: "Git" },
+      { id: "terminal", label: "Terminal" },
+      { id: "language", label: "Language" },
+      { id: "keyboard", label: "Keybindings" },
+      { id: "extensions", label: "Extensions" },
+      { id: "databases", label: "Databases" },
+    ],
   },
   {
-    id: "terminal",
-    label: "Terminal",
-    icon: Terminal,
-  },
-  {
-    id: "appearance",
-    label: "Appearance",
-    icon: Brush,
-  },
-  {
-    id: "extensions",
-    label: "Extensions",
-    icon: Package,
-  },
-  {
-    id: "ai",
-    label: "AI",
+    id: "intelligence",
+    label: "Intelligence",
     icon: Sparkles,
+    items: [{ id: "ai", label: "AI" }],
   },
   {
-    id: "keyboard",
-    label: "Keybindings",
-    icon: Keyboard,
-  },
-  {
-    id: "language",
-    label: "Language",
-    icon: Languages,
-  },
-  {
-    id: "features",
-    label: "Features",
-    icon: Settings,
-  },
-  {
-    id: "enterprise",
-    label: "Enterprise",
+    id: "administration",
+    label: "System",
     icon: Shield,
-  },
-  {
-    id: "advanced",
-    label: "Advanced",
-    icon: Wrench,
+    items: [
+      { id: "enterprise", label: "Enterprise" },
+      { id: "advanced", label: "Advanced" },
+    ],
   },
 ];
+
+const defaultExpandedGroups = ["workspace", "development", "intelligence"];
+
+function getGroupIdForTab(tab: SettingsTab) {
+  return tabGroups.find((group) => group.items.some((item) => item.id === tab))?.id ?? "workspace";
+}
 
 export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVerticalTabsProps) => {
   const searchQuery = useSettingsStore((state) => state.search.query);
@@ -93,15 +87,35 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
   const setSearchQuery = useSettingsStore((state) => state.setSearchQuery);
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
+  const [expandedGroups, setExpandedGroups] = React.useState<string[]>(() => {
+    const activeGroupId = getGroupIdForTab(activeTab);
+    return defaultExpandedGroups.includes(activeGroupId)
+      ? defaultExpandedGroups
+      : [...defaultExpandedGroups, activeGroupId];
+  });
 
   // Get unique tabs from search results
   const matchingTabs = searchQuery ? [...new Set(searchResults.map((result) => result.tab))] : [];
 
-  // Filter tabs based on search
-  const baseTabs = hasEnterpriseAccess ? tabs : tabs.filter((tab) => tab.id !== "enterprise");
-  const visibleTabs = searchQuery
-    ? baseTabs.filter((tab) => matchingTabs.includes(tab.id))
-    : baseTabs;
+  const availableGroups = tabGroups
+    .map((group) => ({
+      ...group,
+      items: hasEnterpriseAccess
+        ? group.items
+        : group.items.filter((item) => item.id !== "enterprise"),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const visibleGroups = searchQuery
+    ? availableGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => matchingTabs.includes(item.id)),
+        }))
+        .filter((group) => group.items.length > 0)
+    : availableGroups;
+
+  const visibleTabs = visibleGroups.flatMap((group) => group.items);
 
   // Auto-select first visible tab when searching
   React.useEffect(() => {
@@ -113,50 +127,101 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
     }
   }, [searchQuery, visibleTabs, activeTab, onTabChange]);
 
+  React.useEffect(() => {
+    if (searchQuery) return;
+
+    const activeGroupId = availableGroups.find((group) =>
+      group.items.some((item) => item.id === activeTab),
+    )?.id;
+    if (!activeGroupId || expandedGroups.includes(activeGroupId)) return;
+
+    setExpandedGroups((current) => [...current, activeGroupId]);
+  }, [searchQuery, availableGroups, activeTab, expandedGroups]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((current) =>
+      current.includes(groupId) ? current.filter((id) => id !== groupId) : [...current, groupId],
+    );
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Search Input */}
       <div className="p-3">
-        <div className="relative">
-          <Search
-            className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-            size={12}
-          />
-          <input
-            type="text"
-            placeholder="Search settings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="ui-font w-full rounded-full border border-border bg-secondary-bg/80 py-2 pr-3 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20"
-          />
-        </div>
+        <Input
+          type="text"
+          placeholder="Search settings..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          leftIcon={Search}
+          size="sm"
+        />
       </div>
 
       {/* Tabs */}
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
-        {visibleTabs.length > 0 ? (
-          visibleTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+        {visibleGroups.length > 0 ? (
+          visibleGroups.map((group) => {
+            const Icon = group.icon;
+            const isExpanded = searchQuery ? true : expandedGroups.includes(group.id);
+            const hasActiveItem = group.items.some((item) => item.id === activeTab);
 
             return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left font-medium text-xs transition-colors",
-                  isActive
-                    ? "bg-accent/10 text-accent"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
-                )}
-              >
-                <Icon size={14} />
-                <span>{tab.label}</span>
-              </button>
+              <div key={group.id} className="overflow-hidden rounded-xl">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleGroup(group.id)}
+                  className={cn(
+                    "ui-text-sm h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
+                    hasActiveItem
+                      ? "bg-accent/8 text-text"
+                      : "text-text-lighter hover:bg-hover hover:text-text",
+                  )}
+                >
+                  <Icon />
+                  <span className="flex-1">{group.label}</span>
+                  {isExpanded ? (
+                    <ChevronDown className="shrink-0" />
+                  ) : (
+                    <ChevronRight className="shrink-0" />
+                  )}
+                </Button>
+
+                {isExpanded ? (
+                  <div className="relative mt-1 space-y-1 pl-6">
+                    <div className="pointer-events-none absolute top-0 bottom-0 left-[17px] w-px bg-border/40" />
+                    {group.items.map((item) => {
+                      const isActive = activeTab === item.id;
+
+                      return (
+                        <Button
+                          key={item.id}
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => onTabChange(item.id)}
+                          className={cn(
+                            "ui-text-sm h-auto w-full justify-start px-2.5 py-1.5 text-left",
+                            isActive
+                              ? "bg-accent/10 text-accent"
+                              : "text-text-lighter hover:bg-hover hover:text-text",
+                          )}
+                        >
+                          <span>{item.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             );
           })
         ) : (
-          <div className="p-2 text-center text-text-lighter text-xs">No matching tabs</div>
+          <div className="ui-font ui-text-sm p-2 text-center text-text-lighter">
+            No matching settings
+          </div>
         )}
       </div>
     </div>

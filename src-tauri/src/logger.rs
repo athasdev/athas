@@ -7,7 +7,6 @@ use tauri_plugin_log::Builder;
 pub fn init<R: Runtime>(level: LevelFilter) -> TauriPlugin<R> {
    Builder::new()
       .level(LevelFilter::Warn) // external crates unrelated to "athas"
-      .level_for("interceptor", level) // interceptor
       .level_for("athas", level) // current app package target
       .level_for("athas_code", level) // backward-compatible target filter
       .format(|cb, _, record| {

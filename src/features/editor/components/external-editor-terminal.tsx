@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useTerminalTheme } from "@/features/terminal/hooks/use-terminal-theme";
-import { useProjectStore } from "@/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { cn } from "@/utils/cn";
 import "@xterm/xterm/css/xterm.css";
 import "@/features/terminal/styles/terminal.css";
@@ -154,7 +154,10 @@ export const ExternalEditorTerminal = ({
       }
     });
 
-    terminal.attachCustomKeyEventHandler(() => {
+    terminal.attachCustomKeyEventHandler((e) => {
+      if (e.metaKey && ["Backspace", "k", "a", "e", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        return true;
+      }
       return true;
     });
 

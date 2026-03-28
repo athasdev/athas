@@ -1,38 +1,82 @@
 import type { LucideIcon } from "lucide-react";
+import { cva } from "class-variance-authority";
 import type React from "react";
+import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";
+  variant?: "default" | "ghost";
   leftIcon?: LucideIcon;
   rightIcon?: LucideIcon;
   containerClassName?: string;
 }
 
-export default function Input({
-  size = "sm",
-  className,
-  leftIcon: LeftIcon,
-  rightIcon: RightIcon,
-  containerClassName,
-  ...props
-}: InputProps) {
-  const sizeClasses = {
-    xs: "h-6 text-xs",
-    sm: "h-7 text-xs",
-    md: "h-8 text-sm",
-  };
+const inputVariants = cva(
+  [
+    "w-full disabled:cursor-not-allowed disabled:opacity-50",
+    "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+    "placeholder:text-text-lighter",
+  ],
+  {
+    variants: {
+      variant: {
+        default: cn(
+          "rounded-lg border border-border bg-secondary-bg text-text transition-[border-color,box-shadow,background-color]",
+          "focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35",
+        ),
+        ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
+      },
+      size: {
+        xs: "h-6 ui-text-sm",
+        sm: "h-7 ui-text-sm",
+        md: "h-8 ui-text-md",
+      },
+      hasLeftIcon: {
+        true: "",
+        false: "",
+      },
+      hasRightIcon: {
+        true: "",
+        false: "",
+      },
+    },
+    compoundVariants: [
+      { size: "xs", hasLeftIcon: true, className: "pl-6 pr-2 py-1" },
+      { size: "xs", hasRightIcon: true, className: "pl-2 pr-6 py-1" },
+      { size: "xs", hasLeftIcon: false, hasRightIcon: false, className: "px-2 py-1" },
+      { size: "sm", hasLeftIcon: true, className: "pl-7 pr-2 py-1" },
+      { size: "sm", hasRightIcon: true, className: "pl-2 pr-7 py-1" },
+      { size: "sm", hasLeftIcon: false, hasRightIcon: false, className: "px-2 py-1" },
+      { size: "md", hasLeftIcon: true, className: "pl-9 pr-3 py-1" },
+      { size: "md", hasRightIcon: true, className: "pl-3 pr-9 py-1" },
+      { size: "md", hasLeftIcon: false, hasRightIcon: false, className: "px-3 py-1" },
+    ],
+    defaultVariants: {
+      size: "sm",
+      variant: "default",
+      hasLeftIcon: false,
+      hasRightIcon: false,
+    },
+  },
+);
 
-  const paddingClasses = {
-    xs: LeftIcon ? "pl-6 pr-2" : RightIcon ? "pl-2 pr-6" : "px-2",
-    sm: LeftIcon ? "pl-7 pr-2" : RightIcon ? "pl-2 pr-7" : "px-2",
-    md: LeftIcon ? "pl-9 pr-3" : RightIcon ? "pl-3 pr-9" : "px-3",
-  };
-
+const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    size = "sm",
+    variant = "default",
+    className,
+    leftIcon: LeftIcon,
+    rightIcon: RightIcon,
+    containerClassName,
+    ...props
+  },
+  ref,
+) {
   const iconSizes = {
-    xs: "var(--app-ui-icon-size-sm)",
-    sm: "var(--app-ui-icon-size-sm)",
-    md: "var(--app-ui-icon-size-md)",
+    xs: 12,
+    sm: 12,
+    md: 14,
   };
 
   const iconPositions = {
@@ -46,19 +90,14 @@ export default function Input({
     sm: "right-2",
     md: "right-2.5",
   };
+  const hasLeftIcon = Boolean(LeftIcon);
+  const hasRightIcon = Boolean(RightIcon);
 
   if (!LeftIcon && !RightIcon) {
     return (
       <input
-        className={cn(
-          "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "placeholder:text-text-lighter",
-          "px-2 py-1",
-          sizeClasses[size],
-          className,
-        )}
+        ref={ref}
+        className={cn(inputVariants({ size, variant, hasLeftIcon, hasRightIcon }), className)}
         {...props}
       />
     );
@@ -73,16 +112,8 @@ export default function Input({
         />
       )}
       <input
-        className={cn(
-          "w-full rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "placeholder:text-text-lighter",
-          "py-1",
-          paddingClasses[size],
-          sizeClasses[size],
-          className,
-        )}
+        ref={ref}
+        className={cn(inputVariants({ size, variant, hasLeftIcon, hasRightIcon }), className)}
         {...props}
       />
       {RightIcon && (
@@ -96,4 +127,6 @@ export default function Input({
       )}
     </div>
   );
-}
+});
+
+export default Input;

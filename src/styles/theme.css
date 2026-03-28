@@ -1,7 +1,7 @@
 @theme {
   --font-sans:
-    "Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    "Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono:
     "Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
@@ -79,6 +79,11 @@
     --editor-font-family: var(--font-mono);
     --app-ui-font-size: 14px;
     --app-ui-scale: 1;
+    --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
+    --ui-text-md: var(--app-ui-font-size);
+    --ui-text-lg: calc(var(--app-ui-font-size) * 1.14);
+    --app-ui-control-font-size: var(--ui-text-md);
+    --app-ui-control-icon-size: calc(var(--app-ui-font-size) * 0.86);
     --app-ui-icon-size-xs: calc(10px * var(--app-ui-scale));
     --app-ui-icon-size-sm: calc(12px * var(--app-ui-scale));
     --app-ui-icon-size-md: calc(14px * var(--app-ui-scale));
@@ -170,7 +175,7 @@
 
       --accent: #60a5fa;
 
-        --color-primary-bg: var(--primary-bg);
+      --color-primary-bg: var(--primary-bg);
       --color-secondary-bg: var(--secondary-bg);
       --color-text: var(--text);
       --color-text-light: var(--text-light);

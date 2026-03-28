@@ -13,7 +13,9 @@ import type {
   ApplyDiagnosticCodeActionResult,
   Diagnostic,
   DiagnosticCodeAction,
-} from "@/features/diagnostics/types";
+} from "@/features/diagnostics/types/diagnostics";
+import { hasTextContent } from "@/features/panes/types/pane-content";
+import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
 
@@ -51,6 +53,7 @@ export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
   private activeLanguages = new Set<string>(); // Track active language IDs for status
+  private activeServerFiles = new Map<string, string>(); // workspace:language -> file path
 
   private constructor() {
     this.setupDiagnosticsListener();
@@ -69,6 +72,53 @@ export class LspClient {
     } else {
       actions.updateLspStatus("disconnected", [], undefined, []);
     }
+  }
+
+  private findServerKeyForFile(filePath: string, languageId?: string): string | null {
+    if (languageId) {
+      const directMatch = Array.from(this.activeServerFiles.entries()).find(
+        ([key, trackedFilePath]) => trackedFilePath === filePath && key.endsWith(`:${languageId}`),
+      );
+      if (directMatch) return directMatch[0];
+    }
+
+    const fallbackMatch = Array.from(this.activeServerFiles.entries()).find(
+      ([, trackedFilePath]) => trackedFilePath === filePath,
+    );
+    return fallbackMatch?.[0] ?? null;
+  }
+
+  private parseServerKey(serverKey: string): { workspacePath: string; languageId: string } {
+    const separatorIndex = serverKey.lastIndexOf(":");
+    if (separatorIndex === -1) {
+      return { workspacePath: serverKey, languageId: "" };
+    }
+
+    return {
+      workspacePath: serverKey.slice(0, separatorIndex),
+      languageId: serverKey.slice(separatorIndex + 1),
+    };
+  }
+
+  getActiveServerEntries(): Array<{
+    key: string;
+    workspacePath: string;
+    languageId: string;
+    displayName: string;
+    filePath: string | null;
+  }> {
+    return Array.from(this.activeLanguageServers)
+      .map((key) => {
+        const { workspacePath, languageId } = this.parseServerKey(key);
+        return {
+          key,
+          workspacePath,
+          languageId,
+          displayName: this.getLanguageDisplayName(languageId),
+          filePath: this.activeServerFiles.get(key) ?? null,
+        };
+      })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
   static getInstance(): LspClient {
@@ -114,7 +164,7 @@ export class LspClient {
           const { setDiagnostics } = useDiagnosticsStore.getState().actions;
           setDiagnostics(filePath, convertedDiagnostics);
 
-          logger.info(
+          logger.debug(
             "LSPClient",
             `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
           );
@@ -144,7 +194,7 @@ export class LspClient {
         serverArgs = extensionRegistry.getLspServerArgs(filePath);
         languageId = extensionRegistry.getLanguageId(filePath) || undefined;
 
-        logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
+        logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
         // Check if this language server is already running for this workspace
         if (serverPath && languageId) {
@@ -169,7 +219,7 @@ export class LspClient {
         return;
       }
 
-      logger.info("LSPClient", `Invoking lsp_start with:`, {
+      logger.debug("LSPClient", `Invoking lsp_start with:`, {
         workspacePath,
         serverPath,
         serverArgs,
@@ -185,6 +235,9 @@ export class LspClient {
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
+        if (filePath) {
+          this.activeServerFiles.set(serverKey, filePath);
+        }
       }
 
       logger.debug("LSPClient", "LSP started successfully for workspace:", workspacePath);
@@ -205,6 +258,7 @@ export class LspClient {
       );
       for (const server of serversToRemove) {
         this.activeLanguageServers.delete(server);
+        this.activeServerFiles.delete(server);
         // Extract language from server key and remove from active languages
         const language = server.split(":")[1];
         if (language) {
@@ -247,12 +301,13 @@ export class LspClient {
         return;
       }
 
-      logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
+      logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
       // Track this language server BEFORE invoking backend to prevent race conditions
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
+        this.activeServerFiles.set(serverKey, filePath);
         // Track language with proper display name
         const displayName = this.getLanguageDisplayName(languageId);
         this.activeLanguages.add(displayName);
@@ -260,7 +315,7 @@ export class LspClient {
         this.updateLspStatus();
       }
 
-      logger.info("LSPClient", `Invoking lsp_start_for_file with:`, {
+      logger.debug("LSPClient", `Invoking lsp_start_for_file with:`, {
         filePath,
         workspacePath,
         serverPath,
@@ -279,6 +334,7 @@ export class LspClient {
         if (languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
           this.activeLanguageServers.delete(serverKey);
+          this.activeServerFiles.delete(serverKey);
           const displayName = this.getLanguageDisplayName(languageId);
           this.activeLanguages.delete(displayName);
           this.updateLspStatus();
@@ -326,11 +382,79 @@ export class LspClient {
   async stopForFile(filePath: string): Promise<void> {
     try {
       logger.debug("LSPClient", "Stopping LSP for file:", filePath);
+      const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
+      const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       await invoke<void>("lsp_stop_for_file", { filePath });
+
+      if (languageId) {
+        const activeKey = this.findServerKeyForFile(filePath, languageId);
+        if (activeKey) {
+          this.activeLanguageServers.delete(activeKey);
+          this.activeServerFiles.delete(activeKey);
+        }
+
+        const displayName = this.getLanguageDisplayName(languageId);
+        const stillActiveForLanguage = Array.from(this.activeLanguageServers).some((key) =>
+          key.endsWith(`:${languageId}`),
+        );
+        if (!stillActiveForLanguage) {
+          this.activeLanguages.delete(displayName);
+        }
+
+        this.updateLspStatus();
+      }
+
       logger.debug("LSPClient", "LSP stopped successfully for file:", filePath);
     } catch (error) {
       logger.error("LSPClient", "Failed to stop LSP for file:", error);
       throw error;
+    }
+  }
+
+  async stopTrackedServer(serverKey: string): Promise<void> {
+    const filePath = this.activeServerFiles.get(serverKey);
+    if (!filePath) {
+      const { workspacePath } = this.parseServerKey(serverKey);
+      await this.stop(workspacePath);
+      return;
+    }
+
+    await this.stopForFile(filePath);
+  }
+
+  async restartForFile(filePath: string, workspacePath: string, content: string): Promise<void> {
+    const { actions } = useLspStore.getState();
+
+    try {
+      actions.updateLspStatus("connecting");
+      actions.clearLspError();
+
+      await this.notifyDocumentClose(filePath);
+      await this.stopForFile(filePath);
+      await this.startForFile(filePath, workspacePath);
+      await this.notifyDocumentOpen(filePath, content);
+    } catch (error) {
+      logger.error("LSPClient", "Failed to restart LSP for file:", error);
+      actions.setLspError(`Failed to restart LSP: ${stringifyLspError(error)}`);
+      throw error;
+    }
+  }
+
+  async restartTrackedServer(serverKey: string): Promise<void> {
+    const filePath = this.activeServerFiles.get(serverKey);
+    if (!filePath) {
+      throw new Error("No tracked file for this language server");
+    }
+
+    const buffer = useBufferStore.getState().buffers.find((entry) => entry.path === filePath);
+    const content = buffer && hasTextContent(buffer) ? buffer.content : "";
+    await this.restartForFile(filePath, this.parseServerKey(serverKey).workspacePath, content);
+  }
+
+  async restartAllTrackedServers(): Promise<void> {
+    const serverKeys = this.getActiveServerEntries().map((entry) => entry.key);
+    for (const serverKey of serverKeys) {
+      await this.restartTrackedServer(serverKey);
     }
   }
 

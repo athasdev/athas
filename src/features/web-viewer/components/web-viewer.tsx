@@ -1,36 +1,29 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Code2,
-  Copy,
-  ExternalLink,
-  Home,
-  Lock,
-  Minus,
-  Plus,
-  RefreshCw,
-  Shield,
-  ShieldAlert,
-  X,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
+import { getWebViewerSecurity, normalizeWebViewerUrl } from "../utils/web-viewer-url";
+import { WebViewerToolbar } from "./web-viewer-toolbar";
 
-interface WebViewerProps {
+export interface WebViewerProps {
   url: string;
   bufferId: string;
   paneId?: string;
   isActive?: boolean;
+  isVisible?: boolean;
 }
 
-export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebViewerProps) {
+export function WebViewer({
+  url: initialUrl,
+  bufferId,
+  isActive = true,
+  isVisible = true,
+}: WebViewerProps) {
   const isNewTab = initialUrl === "https://" || initialUrl === "http://" || !initialUrl;
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
   const [isLoading, setIsLoading] = useState(!isNewTab);
-  const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -40,11 +33,17 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
   const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
   const historyIndexRef = useRef(isNewTab ? -1 : 0);
 
-  const isSecure = currentUrl.startsWith("https://");
-  const isLocalhost = currentUrl.includes("localhost") || currentUrl.includes("127.0.0.1");
-
   const { updateBuffer } = useBufferStore.use.actions();
   const buffers = useBufferStore.use.buffers();
+  const webviewLabel = useEmbeddedWebview({
+    bufferId,
+    currentUrl,
+    containerRef,
+    isActive,
+    isVisible,
+    onLoadStateChange: setIsLoading,
+  });
+  const security = getWebViewerSecurity(currentUrl);
 
   // Update buffer with title and favicon when URL changes
   useEffect(() => {
@@ -67,12 +66,13 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
       const faviconUrl = `${urlObj.origin}/favicon.ico`;
 
       // Update buffer with new title and favicon
+      if (buffer.type !== "webViewer") return;
       updateBuffer({
         ...buffer,
         name: title,
-        webViewerTitle: hostname,
-        webViewerFavicon: faviconUrl,
-        webViewerUrl: currentUrl,
+        title: hostname,
+        favicon: faviconUrl,
+        url: currentUrl,
       });
     } catch {
       // Invalid URL, ignore
@@ -87,100 +87,11 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
     }
   }, [isNewTab]);
 
-  useEffect(() => {
-    // Don't create webview if no URL
-    if (!currentUrl) return;
-
-    let mounted = true;
-    let currentLabel: string | null = null;
-
-    const createWebview = async () => {
-      if (!containerRef.current) return;
-
-      const rect = containerRef.current.getBoundingClientRect();
-
-      try {
-        const label = await invoke<string>("create_embedded_webview", {
-          url: currentUrl,
-          x: rect.left,
-          y: rect.top,
-          width: rect.width,
-          height: rect.height,
-        });
-
-        if (mounted) {
-          currentLabel = label;
-          setWebviewLabel(label);
-          setIsLoading(false);
-        } else {
-          await invoke("close_embedded_webview", { webviewLabel: label });
-        }
-      } catch (error) {
-        console.error("Failed to create embedded webview:", error);
-        setIsLoading(false);
-      }
-    };
-
-    createWebview();
-
-    return () => {
-      mounted = false;
-      if (currentLabel) {
-        invoke("close_embedded_webview", { webviewLabel: currentLabel }).catch(console.error);
-      }
-    };
-  }, [bufferId, currentUrl]);
-
-  useEffect(() => {
-    if (!webviewLabel || !containerRef.current) return;
-
-    const updatePosition = async () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-
-      try {
-        await invoke("resize_embedded_webview", {
-          webviewLabel,
-          x: rect.left,
-          y: rect.top,
-          width: rect.width,
-          height: rect.height,
-        });
-      } catch (error) {
-        console.error("Failed to resize webview:", error);
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(updatePosition);
-    resizeObserver.observe(containerRef.current);
-
-    window.addEventListener("resize", updatePosition);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [webviewLabel]);
-
-  useEffect(() => {
-    if (!webviewLabel) return;
-
-    invoke("set_webview_visible", { webviewLabel, visible: isActive }).catch(console.error);
-  }, [webviewLabel, isActive]);
-
   const navigateTo = useCallback(
     async (url: string, addToHistory = true) => {
       if (!webviewLabel) return;
 
-      let normalizedUrl = url.trim();
-
-      if (normalizedUrl && !normalizedUrl.match(/^https?:\/\//)) {
-        const isLocal =
-          normalizedUrl.toLowerCase().startsWith("localhost") ||
-          normalizedUrl.toLowerCase().startsWith("127.0.0.1");
-        normalizedUrl = isLocal ? `http://${normalizedUrl}` : `https://${normalizedUrl}`;
-      }
-
+      const normalizedUrl = normalizeWebViewerUrl(url);
       if (!normalizedUrl) return;
 
       setIsLoading(true);
@@ -238,15 +149,8 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
     (e: React.FormEvent) => {
       e.preventDefault();
 
-      let normalizedUrl = inputUrl.trim();
+      const normalizedUrl = normalizeWebViewerUrl(inputUrl);
       if (!normalizedUrl) return;
-
-      if (!normalizedUrl.match(/^https?:\/\//)) {
-        const isLocal =
-          normalizedUrl.toLowerCase().startsWith("localhost") ||
-          normalizedUrl.toLowerCase().startsWith("127.0.0.1");
-        normalizedUrl = isLocal ? `http://${normalizedUrl}` : `https://${normalizedUrl}`;
-      }
 
       // If no webview exists yet, set currentUrl to trigger webview creation
       if (!webviewLabel) {
@@ -336,6 +240,8 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
 
   // Keyboard shortcuts for the web viewer (when main app has focus)
   useEffect(() => {
+    if (!isActive || !isVisible) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
 
@@ -383,6 +289,8 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    isActive,
+    isVisible,
     handleFocusUrlBar,
     handleRefresh,
     handleStopLoading,
@@ -393,6 +301,8 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
 
   // Listen for zoom events from the keymaps system
   useEffect(() => {
+    if (!isActive || !isVisible) return;
+
     const handleZoomEvent = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail === "in") handleZoomIn();
@@ -402,11 +312,11 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
 
     window.addEventListener("webviewer-zoom", handleZoomEvent);
     return () => window.removeEventListener("webviewer-zoom", handleZoomEvent);
-  }, [handleZoomIn, handleZoomOut, handleResetZoom]);
+  }, [handleZoomIn, handleZoomOut, handleResetZoom, isActive, isVisible]);
 
   // Poll for shortcuts from the embedded webview
   useEffect(() => {
-    if (!webviewLabel) return;
+    if (!webviewLabel || !isActive || !isVisible) return;
 
     const pollShortcuts = async () => {
       try {
@@ -452,9 +362,11 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
       }
     };
 
-    const interval = setInterval(pollShortcuts, 100);
+    const interval = setInterval(pollShortcuts, 200);
     return () => clearInterval(interval);
   }, [
+    isActive,
+    isVisible,
     webviewLabel,
     handleFocusUrlBar,
     handleRefresh,
@@ -467,162 +379,42 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
     isLoading,
   ]);
 
-  const SecurityIcon = isLocalhost ? Shield : isSecure ? Lock : ShieldAlert;
-  const securityColor = isLocalhost ? "text-info" : isSecure ? "text-success" : "text-warning";
-  const securityTooltip = isLocalhost
-    ? "Local development server"
-    : isSecure
-      ? "Secure connection (HTTPS)"
-      : "Not secure (HTTP)";
-
   return (
     <div className="flex h-full flex-col bg-primary-bg">
-      <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
-        <div className="flex items-center gap-0.5">
-          <ToolbarButton
-            onClick={handleGoBack}
-            disabled={!canGoBack}
-            title="Go back"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={15} />
-          </ToolbarButton>
-          <ToolbarButton
-            onClick={handleGoForward}
-            disabled={!canGoForward}
-            title="Go forward"
-            aria-label="Go forward"
-          >
-            <ArrowRight size={15} />
-          </ToolbarButton>
-          <ToolbarButton
-            onClick={isLoading ? handleStopLoading : handleRefresh}
-            title={isLoading ? "Stop loading" : "Refresh"}
-            aria-label={isLoading ? "Stop loading" : "Refresh"}
-          >
-            {isLoading ? <X size={15} /> : <RefreshCw size={15} />}
-          </ToolbarButton>
-          <ToolbarButton onClick={handleHome} title="Go to home" aria-label="Go to home">
-            <Home size={15} />
-          </ToolbarButton>
-        </div>
-
-        <div className="mx-1.5 h-5 w-px bg-border" />
-
-        <form onSubmit={handleUrlSubmit} className="flex flex-1 items-center">
-          <div className="relative flex flex-1 items-center">
-            <div
-              className={`absolute left-2.5 flex items-center ${securityColor}`}
-              title={securityTooltip}
-            >
-              <SecurityIcon size={14} />
-            </div>
-            <input
-              ref={urlInputRef}
-              type="text"
-              value={inputUrl}
-              onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Enter URL..."
-              className="h-7 w-full rounded-md border border-border bg-primary-bg pr-8 pl-8 text-[13px] text-text placeholder:text-text-lighter focus:border-accent focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleCopyUrl}
-              className="absolute right-2 flex items-center text-text-lighter transition-colors hover:text-text"
-              title="Copy URL"
-              aria-label="Copy URL"
-            >
-              {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
-            </button>
-          </div>
-        </form>
-
-        <div className="mx-1.5 h-5 w-px bg-border" />
-
-        <div className="flex items-center gap-0.5">
-          <ToolbarButton
-            onClick={handleZoomOut}
-            disabled={zoomLevel <= 0.25}
-            title="Zoom out"
-            aria-label="Zoom out"
-          >
-            <Minus size={15} />
-          </ToolbarButton>
-          <button
-            type="button"
-            onClick={handleResetZoom}
-            className="flex h-7 min-w-[44px] items-center justify-center rounded px-1.5 text-[11px] text-text-light transition-colors hover:bg-hover"
-            title="Reset zoom (click to reset)"
-            aria-label="Reset zoom"
-          >
-            {Math.round(zoomLevel * 100)}%
-          </button>
-          <ToolbarButton
-            onClick={handleZoomIn}
-            disabled={zoomLevel >= 3}
-            title="Zoom in"
-            aria-label="Zoom in"
-          >
-            <Plus size={15} />
-          </ToolbarButton>
-        </div>
-
-        <div className="mx-1.5 h-5 w-px bg-border" />
-
-        <div className="flex items-center gap-0.5">
-          <ToolbarButton
-            onClick={handleOpenDevTools}
-            title="Open Developer Tools"
-            aria-label="Open Developer Tools"
-          >
-            <Code2 size={15} />
-          </ToolbarButton>
-          <ToolbarButton
-            onClick={handleOpenExternal}
-            title="Open in browser"
-            aria-label="Open in browser"
-          >
-            <ExternalLink size={15} />
-          </ToolbarButton>
-        </div>
-      </div>
+      <WebViewerToolbar
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        copied={copied}
+        inputUrl={inputUrl}
+        isLoading={isLoading}
+        isLocalhost={security.isLocalhost}
+        isSecure={security.isSecure}
+        securityToneClass={security.toneClass}
+        securityTooltip={security.tooltip}
+        urlInputRef={urlInputRef}
+        zoomLevel={zoomLevel}
+        onCopyUrl={handleCopyUrl}
+        onGoBack={handleGoBack}
+        onGoForward={handleGoForward}
+        onHome={handleHome}
+        onInputUrlChange={setInputUrl}
+        onOpenDevTools={handleOpenDevTools}
+        onOpenExternal={handleOpenExternal}
+        onRefresh={handleRefresh}
+        onResetZoom={handleResetZoom}
+        onStopLoading={handleStopLoading}
+        onUrlSubmit={handleUrlSubmit}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+      />
 
       <div ref={containerRef} className="relative flex-1">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary-bg">
-            <RefreshCw size={16} className="animate-spin text-text-lighter" />
+            <RefreshCw className="animate-spin text-text-lighter" />
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-interface ToolbarButtonProps {
-  onClick: () => void;
-  disabled?: boolean;
-  title: string;
-  children: React.ReactNode;
-  "aria-label": string;
-}
-
-function ToolbarButton({
-  onClick,
-  disabled,
-  title,
-  children,
-  "aria-label": ariaLabel,
-}: ToolbarButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex h-7 w-7 items-center justify-center rounded text-text-light transition-colors hover:bg-hover hover:text-text disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-light"
-      title={title}
-      aria-label={ariaLabel}
-    >
-      {children}
-    </button>
   );
 }

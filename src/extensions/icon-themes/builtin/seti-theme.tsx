@@ -10,7 +10,7 @@ export const setiIconTheme: IconThemeDefinition = {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {
-        component: <Icon size={14} />,
+        component: <Icon />,
       };
     }
 
@@ -69,7 +69,7 @@ export const setiIconTheme: IconThemeDefinition = {
     const color = extension ? colorMap[extension] || "#4d9375" : "#4d9375";
 
     return {
-      component: <Circle size={12} fill={color} color={color} />,
+      component: <Circle fill={color} color={color} />,
     };
   },
 };

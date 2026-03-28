@@ -1,11 +1,24 @@
-import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
+import {
+  Activity,
+  Database,
+  GitPullRequest,
+  Globe,
+  MessageSquare,
+  Package,
+  Pin,
+  Sparkles,
+  Terminal,
+  X,
+} from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import type { PaneContent } from "@/features/panes/types/pane-content";
+import { Button } from "@/ui/button";
+import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface TabBarItemProps {
-  buffer: Buffer;
+  buffer: PaneContent;
   displayName: string;
   index: number;
   isActive: boolean;
@@ -43,7 +56,7 @@ const TabBarItem = memo(function TabBarItem({
   // Reset favicon error when favicon URL changes
   useEffect(() => {
     setFaviconError(false);
-  }, [buffer.webViewerFavicon]);
+  }, [buffer.type === "webViewer" ? buffer.favicon : undefined]);
 
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
@@ -62,20 +75,15 @@ const TabBarItem = memo(function TabBarItem({
           <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
         </div>
       )}
-      <div
+      <Tab
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
-        aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
+        aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
-        className={cn(
-          "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border pr-5 pl-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
-          isActive
-            ? "border-border/80 bg-primary-bg/95 text-text"
-            : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
-          isDraggedTab ? "opacity-30" : "opacity-100",
-        )}
-        style={{ minWidth: 104, maxWidth: 290 }}
+        isActive={isActive}
+        isDragged={isDraggedTab}
+        className={isActive ? "bg-hover/80" : undefined}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -84,29 +92,82 @@ const TabBarItem = memo(function TabBarItem({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
+        action={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (buffer.isPinned) {
+                handleTabPin(buffer.id);
+              } else {
+                handleTabClose(buffer.id);
+              }
+            }}
+            className={cn(
+              "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
+              "hover:bg-hover/80 hover:text-text",
+              buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
+            )}
+            title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
+            tabIndex={-1}
+            draggable={false}
+          >
+            {buffer.isPinned ? (
+              <Pin className="pointer-events-none select-none fill-current text-accent" />
+            ) : (
+              <X className="pointer-events-none select-none" />
+            )}
+          </Button>
+        }
       >
         <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
-            <Package size={12} className="text-text-lighter" />
-          ) : buffer.isTerminal ? (
-            <Terminal size={12} className="text-text-lighter" />
-          ) : buffer.isAgent ? (
-            <Sparkles size={12} className="text-text-lighter" />
-          ) : buffer.isWebViewer ? (
-            buffer.webViewerFavicon && !faviconError ? (
+            <Package className="text-text-lighter" />
+          ) : buffer.type === "terminal" ? (
+            <Terminal className="text-text-lighter" />
+          ) : buffer.type === "agent" ? (
+            <Sparkles className="text-text-lighter" />
+          ) : buffer.type === "webViewer" ? (
+            buffer.favicon && !faviconError ? (
               <img
-                src={buffer.webViewerFavicon}
+                src={buffer.favicon}
                 alt=""
                 className="size-3 object-contain"
                 onError={() => setFaviconError(true)}
               />
             ) : (
-              <Globe size={12} className="text-text-lighter" />
+              <Globe className="text-text-lighter" />
             )
-          ) : buffer.isSQLite ? (
-            <Database size={12} className="text-text-lighter" />
+          ) : buffer.type === "database" ? (
+            <Database className="text-text-lighter" />
+          ) : buffer.type === "pullRequest" ? (
+            buffer.authorAvatarUrl ? (
+              <img
+                src={buffer.authorAvatarUrl}
+                alt=""
+                className="size-3 rounded-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <GitPullRequest className="text-text-lighter" />
+            )
+          ) : buffer.type === "githubIssue" ? (
+            buffer.authorAvatarUrl ? (
+              <img
+                src={buffer.authorAvatarUrl}
+                alt=""
+                className="size-3 rounded-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <MessageSquare className="text-text-lighter" />
+            )
+          ) : buffer.type === "githubAction" ? (
+            <Activity className="text-text-lighter" />
           ) : (
-            <FileIcon
+            <FileExplorerIcon
               fileName={buffer.name}
               isDir={false}
               className="text-text-lighter"
@@ -116,7 +177,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+            "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}
@@ -124,7 +185,7 @@ const TabBarItem = memo(function TabBarItem({
         >
           {displayName}
         </span>
-        {buffer.isDirty && (
+        {buffer.type === "editor" && buffer.isDirty && (
           <div
             className="size-2 shrink-0 rounded-full bg-accent"
             title="Unsaved changes"
@@ -132,33 +193,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-        {/* Pin button (replaces close button when pinned) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (buffer.isPinned) {
-              handleTabPin(buffer.id);
-            } else {
-              handleTabClose(buffer.id);
-            }
-          }}
-          className={cn(
-            "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
-            "hover:bg-hover hover:text-text",
-            buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-          )}
-          title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
-          tabIndex={-1}
-          draggable={false}
-        >
-          {buffer.isPinned ? (
-            <Pin className="pointer-events-none select-none text-accent" size={10} />
-          ) : (
-            <X className="pointer-events-none select-none" size={10} />
-          )}
-        </button>
-      </div>
+      </Tab>
     </>
   );
 });

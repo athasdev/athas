@@ -13,8 +13,8 @@ import {
   saveImageToFile,
 } from "@/features/image-editor/utils/image-file-utils";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
-import Button from "@/ui/button";
-import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
+import { Button } from "@/ui/button";
+import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { useImageZoom } from "../hooks/use-image-zoom";
@@ -233,7 +233,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
         )}
       >
         <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
-          <FileIcon size={14} className="shrink-0 text-text" />
+          <FileIcon className="shrink-0 text-text" />
           <span className="ui-font truncate text-text text-xs" title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
@@ -268,7 +268,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           />
           {onClose && (
             <Button onClick={handleClose} variant="ghost" size="xs" title="Close image viewer">
-              <X size={12} />
+              <X />
             </Button>
           )}
         </div>
@@ -319,9 +319,9 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
                   <span className="flex items-center gap-0.5 text-accent">
                     (
                     {currentSize < originalSize ? (
-                      <ArrowDown size={10} className="inline" />
+                      <ArrowDown className="inline" />
                     ) : (
-                      <ArrowUp size={10} className="inline" />
+                      <ArrowUp className="inline" />
                     )}
                     {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}
                     %)

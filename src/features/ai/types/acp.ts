@@ -10,6 +10,9 @@ export interface AgentConfig {
   icon: string | null;
   description: string | null;
   installed: boolean;
+  installRuntime: "node" | "python" | "go" | "rust" | "binary" | null;
+  installPackage: string | null;
+  canInstall: boolean;
 }
 
 export interface AcpAgentStatus {
@@ -42,6 +45,23 @@ export interface SessionMode {
   name: string;
   description?: string;
 }
+
+export interface SessionConfigOptionValue {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export type SessionConfigOption = {
+  id: string;
+  name: string;
+  description?: string;
+  kind: {
+    type: "select";
+    currentValue: string;
+    options: SessionConfigOptionValue[];
+  };
+};
 
 export interface SessionModeState {
   currentModeId: string | null;
@@ -178,6 +198,17 @@ export type AcpEvent =
       routeKey: string;
       sessionId: string;
       currentModeId: string;
+    }
+  | {
+      type: "config_options_update";
+      sessionId: string;
+      configOptions: SessionConfigOption[];
+    }
+  | {
+      type: "session_info_update";
+      sessionId: string;
+      title: string | null;
+      updatedAt: string | null;
     }
   | {
       type: "prompt_complete";

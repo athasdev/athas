@@ -1,10 +1,11 @@
 import { useState } from "react";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
+import KeybindingDisplay from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/store";
 import type { Command, Keybinding } from "../types";
-import { parseKeybinding } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
 import { KeybindingInput } from "./keybinding-input";
 
@@ -56,13 +57,6 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
     }
   };
 
-  const keys = keybinding?.key
-    ? parseKeybinding(keybinding.key).parts.flatMap((p) => [
-        ...p.modifiers.map((m) => m.charAt(0).toUpperCase() + m.slice(1)),
-        p.key.toUpperCase(),
-      ])
-    : [];
-
   const source = keybinding?.source || "default";
   const isUserOverride = source === "user";
 
@@ -91,18 +85,20 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onCancel={() => setIsEditing(false)}
           />
         ) : (
-          <button
+          <Button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="flex h-7 w-full items-center justify-start rounded border border-border bg-secondary-bg px-2 text-xs hover:border-accent"
+            variant="outline"
+            size="sm"
+            className="flex h-7 w-full items-center justify-start px-2 text-xs hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
-            {keys.length > 0 ? (
-              <KeybindingBadge keys={keys} />
+            {keybinding?.key ? (
+              <KeybindingDisplay binding={keybinding.key} />
             ) : (
               <span className="text-text-lighter">Not assigned</span>
             )}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -113,39 +109,36 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
       {/* Source */}
       <div className="flex items-center">
-        <span
-          className={cn(
-            "rounded px-2 py-0.5 text-[10px]",
-            isUserOverride ? "bg-accent/10 text-accent" : "text-text-lighter",
-          )}
-        >
-          {source}
-        </span>
+        <Badge variant={isUserOverride ? "accent" : "muted"}>{source}</Badge>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-1">
         {isUserOverride && (
-          <button
+          <Button
             type="button"
             onClick={handleReset}
+            variant="ghost"
+            size="xs"
             className="text-[10px] text-text-lighter hover:text-text"
             title="Reset to default"
             aria-label="Reset to default keybinding"
           >
             Reset
-          </button>
+          </Button>
         )}
         {keybinding && (
-          <button
+          <Button
             type="button"
             onClick={handleRemove}
+            variant="ghost"
+            size="xs"
             className="text-[10px] text-text-lighter hover:text-error"
             title="Remove keybinding"
             aria-label="Remove keybinding"
           >
             Remove
-          </button>
+          </Button>
         )}
       </div>
 

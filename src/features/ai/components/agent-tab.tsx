@@ -4,8 +4,7 @@ import {
   createHarnessChatScopeId,
   DEFAULT_HARNESS_SESSION_KEY,
 } from "@/features/ai/lib/chat-scope";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import { useBufferStore, type Buffer } from "@/features/editor/stores/buffer-store";
 import AIChat from "./chat/ai-chat";
 
 interface AgentTabProps {

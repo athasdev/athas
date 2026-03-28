@@ -5,6 +5,8 @@ export interface Terminal {
   isActive: boolean;
   isPinned?: boolean;
   shell?: string;
+  profileId?: string;
+  initialCommand?: string;
   createdAt: Date;
   lastActivity?: Date;
   connectionId?: string;
@@ -13,6 +15,7 @@ export interface Terminal {
   ref?: any;
   splitMode?: boolean;
   splitWithId?: string; // ID of the terminal to split with
+  remoteConnectionId?: string;
 }
 
 export interface Shell {
@@ -44,7 +47,9 @@ export interface PersistedTerminal {
   currentDirectory: string;
   isPinned: boolean;
   shell?: string;
+  profileId?: string;
   title?: string;
+  remoteConnectionId?: string;
 }
 
 export type TerminalAction =
@@ -55,6 +60,9 @@ export type TerminalAction =
         currentDirectory: string;
         shell?: string;
         id?: string;
+        remoteConnectionId?: string;
+        profileId?: string;
+        initialCommand?: string;
       };
     }
   | { type: "CLOSE_TERMINAL"; payload: { id: string } }

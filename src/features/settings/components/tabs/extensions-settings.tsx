@@ -6,7 +6,8 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
+import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 
 interface UnifiedExtension {
@@ -54,15 +55,15 @@ const ExtensionRow = ({
     <div className="flex items-center justify-between gap-4 border-border/50 border-b px-1 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-medium text-sm text-text">{extension.name}</span>
-          <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+          <span className="ui-font ui-text-md text-text">{extension.name}</span>
+          <Badge variant="default" size="compact">
             {getCategoryLabel(extension.category)}
-          </span>
+          </Badge>
           {extension.version && (
-            <span className="text-[10px] text-text-lighter">v{extension.version}</span>
+            <span className="ui-font ui-text-sm text-text-lighter">v{extension.version}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-text-lighter text-xs">
+        <div className="ui-font ui-text-sm flex items-center gap-2 text-text-lighter">
           {extension.publisher && <span>by {extension.publisher}</span>}
           {extension.publisher && extension.extensions && extension.extensions.length > 0 && (
             <span>·</span>
@@ -79,39 +80,35 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <span className="shrink-0 text-accent text-xs">Built-in</span>
+        <Badge variant="accent" size="compact" className="shrink-0">
+          Built-in
+        </Badge>
       ) : isInstalling ? (
         <div className="flex shrink-0 items-center gap-1.5 text-accent">
-          <RefreshCw size={12} className="animate-spin" />
-          <span className="text-xs">Installing</span>
+          <RefreshCw className="animate-spin" />
+          <span className="ui-font ui-text-sm">Installing</span>
         </div>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {hasUpdate && onUpdate && (
-            <button
-              onClick={onUpdate}
-              className="text-accent text-xs transition-colors hover:text-accent/80"
-              title="Update available"
-            >
+            <Button onClick={onUpdate} variant="primary" size="xs" title="Update available">
               Update
-            </button>
+            </Button>
           )}
-          <button
-            onClick={onToggle}
-            className="text-text-lighter text-xs transition-colors hover:text-red-500"
-            title="Uninstall"
-          >
+          <Button onClick={onToggle} variant="danger" size="xs" title="Uninstall">
             Uninstall
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
+        <Button
           onClick={onToggle}
-          className="shrink-0 text-text-lighter text-xs transition-colors hover:text-accent"
+          variant="secondary"
+          size="xs"
+          className="shrink-0"
           title="Install"
         >
           Install
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -279,7 +276,7 @@ export const ExtensionsSettings = () => {
       }
     } else if (extension.category === "icon-theme") {
       if (extension.isInstalled) {
-        updateSetting("iconTheme", "seti");
+        updateSetting("iconTheme", "colorful-material");
       } else {
         updateSetting("iconTheme", extension.id);
       }
@@ -307,58 +304,56 @@ export const ExtensionsSettings = () => {
           leftIcon={Search}
           size="xs"
           containerClassName="flex-1"
-          className="text-[11px]"
         />
       </div>
 
       <div className="mb-1.5 flex flex-wrap gap-1">
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "all")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
-          active={settings.extensionsActiveTab === "all"}
-          className="h-6 px-2 text-[11px]"
+          data-active={settings.extensionsActiveTab === "all"}
         >
           All
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "language")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
-          active={settings.extensionsActiveTab === "language"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          data-active={settings.extensionsActiveTab === "language"}
+          className="gap-1"
         >
-          <Languages size={11} />
+          <Languages />
           Languages
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "theme")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
-          active={settings.extensionsActiveTab === "theme"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          data-active={settings.extensionsActiveTab === "theme"}
+          className="gap-1"
         >
-          <Palette size={11} />
+          <Palette />
           Themes
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "icon-theme")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
-          active={settings.extensionsActiveTab === "icon-theme"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          data-active={settings.extensionsActiveTab === "icon-theme"}
+          className="gap-1"
         >
-          <Package size={11} />
+          <Package />
           Icon Themes
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "database")}
-          variant="ghost"
+          variant="secondary"
           size="xs"
-          active={settings.extensionsActiveTab === "database"}
-          className="flex h-6 items-center gap-1 px-2 text-[11px]"
+          data-active={settings.extensionsActiveTab === "database"}
+          className="gap-1"
         >
-          <Database size={11} />
+          <Database />
           Databases
         </Button>
       </div>
@@ -366,8 +361,8 @@ export const ExtensionsSettings = () => {
       <div className="flex-1 overflow-auto pr-1.5">
         {filteredExtensions.length === 0 ? (
           <div className="py-6 text-center text-text-lighter">
-            <Package size={20} className="mx-auto mb-1.5 opacity-50" />
-            <p className="text-[11px]">No extensions found matching your search.</p>
+            <Package className="mx-auto mb-1.5 opacity-50" />
+            <p className="ui-font ui-text-sm">No extensions found matching your search.</p>
           </div>
         ) : (
           <div>

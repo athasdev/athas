@@ -1,16 +1,35 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { motion } from "framer-motion";
-import { Edit, Folder, FolderOpen, Plus, Trash2, X } from "lucide-react";
+import {
+  Edit,
+  Folder,
+  FolderOpen,
+  Plus,
+  Server,
+  SquareArrowOutUpRight,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
 import ConnectionDialog from "@/features/remote/connection-dialog";
 import PasswordPromptDialog from "@/features/remote/password-prompt-dialog";
+import {
+  connectRemoteConnection,
+  loadRemoteConnections,
+} from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
+import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
+import { Button } from "@/ui/button";
+import Dialog from "@/ui/dialog";
+import { paneIconButtonClassName, paneTitleClassName } from "@/ui/pane";
+import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import { connectionStore } from "@/utils/connection-store";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 
 interface ProjectPickerDialogProps {
   isOpen: boolean;
@@ -29,13 +48,13 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const { openRecentFolder, removeFromRecents } = useRecentFoldersStore();
-  const { handleOpenFolder, handleOpenRemoteProject } = useFileSystemStore();
+  const { handleOpenFolder } = useFileSystemStore();
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
   // Load connections
   const loadConnections = useCallback(async () => {
     try {
-      const allConnections = await connectionStore.getAllConnections();
-      setConnections(allConnections as RemoteConnection[]);
+      setConnections(await loadRemoteConnections());
     } catch (error) {
       console.error("Failed to load connections:", error);
     }
@@ -49,9 +68,16 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   // Listen for connection status changes
   useEffect(() => {
-    const unsubscribe = listen("ssh_connection_status", () => {
-      loadConnections();
-    });
+    const unsubscribe = listen<{ connectionId: string; connected: boolean }>(
+      "ssh_connection_status",
+      async (event) => {
+        await connectionStore.updateConnectionStatus(
+          event.payload.connectionId,
+          event.payload.connected,
+        );
+        await loadConnections();
+      },
+    );
 
     return () => {
       unsubscribe.then((fn) => fn());
@@ -83,6 +109,22 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
     await openRecentFolder(folder.path);
   };
 
+  const handleRecentFolderNewWindowClick = async (folder: RecentFolder) => {
+    onClose();
+    await createAppWindow({
+      path: folder.path,
+      isDirectory: true,
+    });
+  };
+
+  const handleRemoteConnectionNewWindowClick = async (connection: RemoteConnection) => {
+    onClose();
+    await createAppWindow({
+      remoteConnectionId: connection.id,
+      remoteConnectionName: connection.name,
+    });
+  };
+
   const handleConnect = async (connectionId: string, providedPassword?: string) => {
     const connection = connections.find((c) => c.id === connectionId);
     if (!connection) return;
@@ -91,34 +133,13 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
       if (connectingMap[connectionId]) return;
       setConnectingMap((p) => ({ ...p, [connectionId]: true }));
       setStatusMap((p) => ({ ...p, [connectionId]: "idle" }));
-      await invoke("ssh_connect", {
-        connectionId,
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: providedPassword || connection.password || null,
-        keyPath: connection.keyPath || null,
-        useSftp: connection.type === "sftp",
-      });
-
-      await connectionStore.updateConnectionStatus(connectionId, true, new Date().toISOString());
+      await connectRemoteConnection(connection, providedPassword);
       await loadConnections();
-
-      // Open the remote project
-      if (handleOpenRemoteProject) {
-        await handleOpenRemoteProject(connectionId, connection.name);
-      }
-
       onClose();
     } catch (error) {
       console.error("Connection error:", error);
-      const errorStr = String(error);
 
-      const isAuthFailure =
-        errorStr.includes("No valid authentication method") ||
-        errorStr.includes("Authentication failed");
-
-      if (isAuthFailure && !providedPassword && !connection.password) {
+      if (isRemoteAuthFailure(error) && !providedPassword && !connection.password) {
         setConnectingMap((p) => ({ ...p, [connectionId]: false }));
         setPasswordPromptConnection(connection);
         return;
@@ -126,10 +147,11 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
       if (providedPassword) {
         setConnectingMap((p) => ({ ...p, [connectionId]: false }));
-        throw error;
+        throw new Error(getFriendlyRemoteError(error));
       }
 
       setStatusMap((p) => ({ ...p, [connectionId]: "error" }));
+      toast.error(getFriendlyRemoteError(error));
     } finally {
       setConnectingMap((p) => ({ ...p, [connectionId]: false }));
     }
@@ -165,77 +187,86 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   return (
     <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]"
-        onClick={onClose}
-      />
-
-      {/* Dialog */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999] w-[560px] overflow-hidden rounded-lg border border-border bg-primary-bg shadow-xl"
+      <Dialog
+        title="Open Project"
+        icon={FolderOpen}
+        onClose={onClose}
+        size="lg"
+        classNames={{
+          modal: "max-w-[560px] rounded-xl",
+          content: "p-0",
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
-          <div className="flex items-center gap-2">
-            <FolderOpen size={14} className="text-text-lighter" />
-            <span className="font-medium text-text text-xs">Open Project</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Content */}
         <div className="max-h-[400px] overflow-y-auto">
           {/* Recent Projects */}
           <div className="border-border border-b">
-            <div className="flex items-center justify-between bg-secondary-bg px-3 py-1.5">
-              <span className="text-[10px] text-text-lighter uppercase">Recent</span>
-              <button
+            <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
+              <span className={paneTitleClassName("text-text-lighter")}>Recent</span>
+              <Button
                 onClick={handleOpenFolderClick}
-                className="rounded p-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                variant="ghost"
+                size="icon-sm"
+                className={paneIconButtonClassName()}
                 aria-label="Open folder"
               >
-                <Plus size={12} />
-              </button>
+                <Plus />
+              </Button>
             </div>
             {recentFolders.length > 0 ? (
               recentFolders.map((folder) => (
                 <div key={folder.path} className="group flex items-center hover:bg-hover">
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleRecentFolderClick(folder)}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left"
+                    className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent"
                   >
-                    <Folder size={14} className="shrink-0 text-text-lighter" />
-                    <span className="truncate text-text text-xs">{folder.name}</span>
-                    <span className="ml-auto truncate text-[10px] text-text-lighter">
+                    {(() => {
+                      const matchingTab = projectTabs.find((t) => t.path === folder.path);
+                      if (matchingTab?.customIcon) {
+                        return (
+                          <img
+                            src={convertFileSrc(matchingTab.customIcon)}
+                            alt=""
+                            className="shrink-0 rounded-sm object-contain"
+                            style={{
+                              width: "var(--app-ui-font-size)",
+                              height: "var(--app-ui-font-size)",
+                            }}
+                          />
+                        );
+                      }
+                      return <Folder className="shrink-0 text-text-lighter" />;
+                    })()}
+                    <span className="ui-text-sm truncate text-text">{folder.name}</span>
+                    <span className="ui-text-sm ml-auto truncate text-text-lighter">
                       {folder.path}
                     </span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    onClick={() => void handleRecentFolderNewWindowClick(folder)}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 opacity-0 group-hover:opacity-100"
+                    aria-label="Open in new window"
+                    title="Open in new window"
+                  >
+                    <SquareArrowOutUpRight />
+                  </Button>
+                  <Button
                     onClick={() => removeFromRecents(folder.path)}
-                    className="mr-2 shrink-0 rounded p-1 text-text-lighter opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="mr-2 shrink-0 opacity-0 group-hover:opacity-100"
                     aria-label="Remove from recents"
                   >
-                    <X size={12} />
-                  </button>
+                    <X />
+                  </Button>
                 </div>
               ))
             ) : (
-              <div className="px-3 py-3 text-center text-text-lighter text-xs">
+              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 No recent projects
               </div>
             )}
@@ -243,76 +274,103 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
           {/* Remote Connections */}
           <div>
-            <div className="flex items-center justify-between bg-secondary-bg px-3 py-1.5">
-              <span className="text-[10px] text-text-lighter uppercase">Remote</span>
-              <button
+            <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
+              <span className={paneTitleClassName("text-text-lighter")}>Remote</span>
+              <Button
                 onClick={() => {
                   setEditingConnection(null);
                   setIsConnectionDialogOpen(true);
                 }}
-                className="rounded p-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                variant="ghost"
+                size="icon-sm"
+                className={paneIconButtonClassName()}
                 aria-label="Add remote connection"
               >
-                <Plus size={12} />
-              </button>
+                <Plus />
+              </Button>
             </div>
             {connections.length > 0 ? (
               connections.map((connection) => (
                 <div key={connection.id} className="group flex items-center hover:bg-hover">
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleConnect(connection.id)}
-                    className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left ${
-                      connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : ""
-                    }`}
+                    className={cn(
+                      "h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent",
+                      "border-l-2 border-transparent hover:border-sky-500/35",
+                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
+                    )}
                     disabled={!!connectingMap[connection.id]}
                   >
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
+                      <Server />
+                    </span>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="ui-text-sm truncate text-text">{connection.name}</span>
+                      <span className="ui-text-sm truncate text-text-lighter">
+                        {connectingMap[connection.id]
+                          ? "Connecting…"
+                          : statusMap[connection.id] === "error"
+                            ? "Connection failed"
+                            : `${connection.username}@${connection.host}`}
+                      </span>
+                    </div>
+                    <span className="ui-text-sm text-text-lighter">
+                      {connection.type.toUpperCase()}
+                    </span>
                     <span
                       className={cn(
-                        "h-2 w-2 shrink-0 rounded-full",
+                        "ml-auto size-2 shrink-0 rounded-full",
                         connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
                       )}
                     />
-                    <span className="truncate text-text text-xs">{connection.name}</span>
-                    <span className="text-[10px] text-text-lighter">
-                      {connection.type.toUpperCase()}
+                    <span className="sr-only">
+                      {connection.isConnected ? "Connected" : "Disconnected"}
                     </span>
-                    <span className="ml-auto truncate text-[10px] text-text-lighter">
-                      {connectingMap[connection.id]
-                        ? "Connecting…"
-                        : statusMap[connection.id] === "error"
-                          ? "Connection failed"
-                          : `${connection.username}@${connection.host}`}
-                    </span>
-                  </button>
+                  </Button>
                   <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
+                    <Button
+                      onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Open in new window"
+                      title="Open in new window"
+                    >
+                      <SquareArrowOutUpRight />
+                    </Button>
+                    <Button
                       onClick={() => {
                         setEditingConnection(connection);
                         setIsConnectionDialogOpen(true);
                       }}
-                      className="rounded p-1 text-text-lighter hover:text-text"
+                      variant="ghost"
+                      size="icon-xs"
                       aria-label="Edit connection"
                     >
-                      <Edit size={12} />
-                    </button>
-                    <button
+                      <Edit />
+                    </Button>
+                    <Button
                       onClick={() => handleDeleteConnection(connection.id)}
-                      className="rounded p-1 text-text-lighter hover:text-error"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="hover:text-error"
                       aria-label="Delete connection"
                     >
-                      <Trash2 size={12} />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="px-3 py-3 text-center text-text-lighter text-xs">
+              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 No remote connections
               </div>
             )}
           </div>
         </div>
-      </motion.div>
+      </Dialog>
 
       {/* Connection Dialog */}
       <ConnectionDialog

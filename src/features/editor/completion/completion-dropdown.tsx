@@ -9,7 +9,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { getAccurateCursorX } from "@/features/editor/utils/position";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { cn } from "@/utils/cn";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
 import { useOverlayManager } from "../hooks/use-overlay-manager";

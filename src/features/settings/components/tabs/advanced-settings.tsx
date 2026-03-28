@@ -1,8 +1,7 @@
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import Button from "@/ui/button";
-import Section, { SettingRow } from "@/ui/section";
-import { FileTreeSettings } from "./file-tree-settings";
+import { Button } from "@/ui/button";
+import Section, { SettingRow } from "../settings-section";
 
 export const AdvancedSettings = () => {
   const { resetToDefaults } = useSettingsStore();
@@ -21,8 +20,6 @@ export const AdvancedSettings = () => {
 
   return (
     <div className="space-y-4">
-      <FileTreeSettings />
-
       <Section title="Data">
         <SettingRow label="Reset Settings" description="Reset all settings to their default values">
           <Button

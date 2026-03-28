@@ -1,9 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
+import { Maximize2, Minimize2, Plus, Search, SplitSquareHorizontal } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { useSettingsStore } from "@/features/settings/store";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
-import { useUIState } from "@/stores/ui-state-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import {
+  resolveTerminalLaunch,
+  SYSTEM_DEFAULT_PROFILE_ID,
+} from "@/features/terminal/utils/terminal-profiles";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { Button } from "@/ui/button";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";
@@ -21,6 +32,11 @@ const TerminalContainer = ({
   onFullScreen,
   isFullScreen = false,
 }: TerminalContainerProps) => {
+  const getDisplayNameFromDirectory = useCallback((directory: string) => {
+    const normalized = directory.replace(/[\\/]+$/, "");
+    return normalized.split(/[\\/]/).pop() || "terminal";
+  }, []);
+
   const {
     terminals,
     activeTerminalId,
@@ -38,6 +54,13 @@ const TerminalContainer = ({
     getPersistedTerminals,
     restoreTerminalsFromPersisted,
   } = useTerminalTabs();
+  const terminalDefaultProfileId = useSettingsStore(
+    (state) => state.settings.terminalDefaultProfileId,
+  );
+  const terminalDefaultShellId = useSettingsStore((state) => state.settings.terminalDefaultShellId);
+  const tabLayout = useTerminalStore((state) => state.tabLayout);
+  const customProfiles = useTerminalProfilesStore.use.profiles();
+  const availableShells = useTerminalShellsStore.use.shells();
 
   // Wrapper to add logging and ensure terminal closes properly
   const closeTerminal = useCallback(
@@ -50,11 +73,11 @@ const TerminalContainer = ({
 
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
-  const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
-  const [newTerminalName, setNewTerminalName] = useState("");
   const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
-  const terminalSessionRefs = useRef<Map<string, { focus: () => void }>>(new Map());
+  const terminalSessionRefs = useRef<Map<string, { focus: () => void; showSearch: () => void }>>(
+    new Map(),
+  );
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const {
     registerTerminalFocus,
@@ -63,60 +86,90 @@ const TerminalContainer = ({
     isBottomPaneVisible,
     bottomPaneActiveTab,
   } = useUIState();
+  const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
-  const handleNewTerminal = useCallback(() => {
-    const dirName = currentDirectory.split("/").pop() || "terminal";
-    const newTerminalId = createTerminal(dirName, currentDirectory);
-    // Focus the new terminal after creation
-    if (newTerminalId) {
-      // Clear any existing timeout for this terminal
-      const existingTimeout = tabFocusTimeoutRef.current.get(newTerminalId);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
-      const timeoutId = setTimeout(() => {
-        const terminalRef = terminalSessionRefs.current.get(newTerminalId);
-        if (terminalRef) {
-          terminalRef.focus();
-        }
-        tabFocusTimeoutRef.current.delete(newTerminalId);
-      }, 150);
-      tabFocusTimeoutRef.current.set(newTerminalId, timeoutId);
+  useEffect(() => {
+    void useTerminalShellsStore.getState().actions.loadShells();
+  }, []);
+
+  const focusNewTerminal = useCallback((terminalId: string) => {
+    const existingTimeout = tabFocusTimeoutRef.current.get(terminalId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
     }
-  }, [createTerminal, currentDirectory]);
-
-  const handleTabCreate = useCallback(
-    (directory: string, shell?: string) => {
-      const dirName = directory.split("/").pop() || "terminal";
-      const newTerminalId = createTerminal(dirName, directory, shell);
-      // Focus the new terminal after creation
-      if (newTerminalId) {
-        setTimeout(() => {
-          const terminalRef = terminalSessionRefs.current.get(newTerminalId);
-          if (terminalRef) {
-            terminalRef.focus();
-          }
-        }, 150);
+    const timeoutId = setTimeout(() => {
+      const terminalRef = terminalSessionRefs.current.get(terminalId);
+      if (terminalRef) {
+        terminalRef.focus();
       }
+      tabFocusTimeoutRef.current.delete(terminalId);
+    }, 150);
+    tabFocusTimeoutRef.current.set(terminalId, timeoutId);
+  }, []);
+
+  const handleNewTerminal = useCallback(
+    (profileId?: string) => {
+      const resolvedLaunch = resolveTerminalLaunch({
+        currentDirectory,
+        customProfiles,
+        explicitProfileId: profileId,
+        settings: {
+          terminalDefaultProfileId,
+          terminalDefaultShellId,
+        },
+        shells: availableShells,
+      });
+      const dirName = getDisplayNameFromDirectory(resolvedLaunch.workingDirectory);
+      const newTerminalId = createTerminal({
+        name:
+          resolvedLaunch.profileId &&
+          resolvedLaunch.profileId !== SYSTEM_DEFAULT_PROFILE_ID &&
+          resolvedLaunch.name.trim()
+            ? resolvedLaunch.name
+            : dirName,
+        currentDirectory: resolvedLaunch.workingDirectory,
+        shell: resolvedLaunch.shell,
+        profileId: resolvedLaunch.profileId,
+        initialCommand: resolvedLaunch.initialCommand,
+      });
+      focusNewTerminal(newTerminalId);
     },
-    [createTerminal],
+    [
+      availableShells,
+      createTerminal,
+      currentDirectory,
+      customProfiles,
+      focusNewTerminal,
+      getDisplayNameFromDirectory,
+      terminalDefaultProfileId,
+      terminalDefaultShellId,
+    ],
   );
 
-  // Restore persisted terminals or create initial terminal on mount
+  const handleTabCreate = useCallback(
+    (directory: string, shell?: string, profileId?: string) => {
+      const dirName = getDisplayNameFromDirectory(directory);
+      const newTerminalId = createTerminal({
+        name: dirName,
+        currentDirectory: directory,
+        shell,
+        profileId,
+      });
+      focusNewTerminal(newTerminalId);
+    },
+    [createTerminal, focusNewTerminal, getDisplayNameFromDirectory],
+  );
+
+  // Restore persisted terminals on mount. Fresh terminal creation is deferred until pane is visible.
   useEffect(() => {
     if (!hasInitializedRef.current && terminals.length === 0) {
-      hasInitializedRef.current = true;
-
-      // Try to restore persisted terminals
       const persistedTerminals = getPersistedTerminals();
       if (persistedTerminals.length > 0) {
+        hasInitializedRef.current = true;
         restoreTerminalsFromPersisted(persistedTerminals);
-      } else {
-        // No persisted terminals, create a new one
-        handleNewTerminal();
       }
     }
-  }, [terminals.length, handleNewTerminal, getPersistedTerminals, restoreTerminalsFromPersisted]);
+  }, [terminals.length, getPersistedTerminals, restoreTerminalsFromPersisted]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -136,20 +189,8 @@ const TerminalContainer = ({
   const handleTabClick = useCallback(
     (terminalId: string) => {
       setActiveTerminal(terminalId);
-      // Clear any existing timeout for this terminal
-      const existingTimeout = tabFocusTimeoutRef.current.get(terminalId);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
-      // Focus the terminal after a short delay to ensure it's rendered
-      const timeoutId = setTimeout(() => {
-        const terminalRef = terminalSessionRefs.current.get(terminalId);
-        if (terminalRef) {
-          terminalRef.focus();
-        }
-        tabFocusTimeoutRef.current.delete(terminalId);
-      }, 50);
-      tabFocusTimeoutRef.current.set(terminalId, timeoutId);
+      // Focus is handled by XtermTerminal's isActive effect with verified retry.
+      // No additional focus attempt needed here to avoid race conditions.
     },
     [setActiveTerminal],
   );
@@ -173,14 +214,13 @@ const TerminalContainer = ({
   );
 
   const handleTabRename = useCallback(
-    (terminalId: string) => {
-      const terminal = terminals.find((t) => t.id === terminalId);
-      if (terminal) {
-        setRenamingTerminalId(terminalId);
-        setNewTerminalName(terminal.name);
-      }
+    (terminalId: string, name: string) => {
+      const trimmedName = name.trim();
+      if (!trimmedName) return;
+
+      updateTerminalName(terminalId, trimmedName);
     },
-    [terminals],
+    [updateTerminalName],
   );
 
   const handleCloseOtherTabs = useCallback(
@@ -216,19 +256,6 @@ const TerminalContainer = ({
     [terminals, closeTerminal],
   );
 
-  const confirmRename = useCallback(() => {
-    if (renamingTerminalId && newTerminalName.trim()) {
-      updateTerminalName(renamingTerminalId, newTerminalName.trim());
-    }
-    setRenamingTerminalId(null);
-    setNewTerminalName("");
-  }, [renamingTerminalId, newTerminalName, updateTerminalName]);
-
-  const cancelRename = useCallback(() => {
-    setRenamingTerminalId(null);
-    setNewTerminalName("");
-  }, []);
-
   const handleSplitView = useCallback(() => {
     if (!activeTerminalId) return;
 
@@ -245,14 +272,20 @@ const TerminalContainer = ({
     } else {
       // Create an actual companion terminal with independent session
       const companionName = `${activeTerminal.name} (Split)`;
-      const companionId = createTerminal(
-        companionName,
-        activeTerminal.currentDirectory,
-        activeTerminal.shell,
-      );
+      const companionId = createTerminal({
+        name: companionName,
+        currentDirectory: activeTerminal.currentDirectory,
+        shell: activeTerminal.shell,
+        profileId: activeTerminal.profileId,
+      });
       setTerminalSplitMode(activeTerminalId, true, companionId);
     }
   }, [activeTerminalId, terminals, setTerminalSplitMode, createTerminal, closeTerminal]);
+
+  const handleSearchTerminal = useCallback(() => {
+    if (!activeTerminalId) return;
+    terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
+  }, [activeTerminalId]);
 
   const handleDirectoryChange = useCallback(
     (terminalId: string, directory: string) => {
@@ -280,7 +313,7 @@ const TerminalContainer = ({
 
   // Register terminal session ref
   const registerTerminalRef = useCallback(
-    (terminalId: string, ref: { focus: () => void } | null) => {
+    (terminalId: string, ref: { focus: () => void; showSearch: () => void } | null) => {
       if (ref) {
         terminalSessionRefs.current.set(terminalId, ref);
       } else {
@@ -316,15 +349,22 @@ const TerminalContainer = ({
   // Listen for create-terminal-with-command event (used by agent install buttons)
   useEffect(() => {
     const handleCreateTerminalWithCommand = (event: Event) => {
-      const customEvent = event as CustomEvent<{ command: string; name?: string }>;
+      const customEvent = event as CustomEvent<{
+        command: string;
+        name?: string;
+      }>;
       const { command, name } = customEvent.detail;
 
       // Show bottom pane and switch to terminal tab
       setIsBottomPaneVisible(true);
 
       // Create a new terminal
-      const terminalName = name || "Install";
-      const newTerminalId = createTerminal(terminalName, currentDirectory);
+      const commandLabel = command.trim().split(/\s+/)[0]?.split(/[\\/]/).pop();
+      const terminalName = name || commandLabel || getDisplayNameFromDirectory(currentDirectory);
+      const newTerminalId = createTerminal({
+        name: terminalName,
+        currentDirectory,
+      });
 
       if (newTerminalId) {
         // Store the pending command
@@ -343,19 +383,25 @@ const TerminalContainer = ({
     window.addEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
     return () =>
       window.removeEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
-  }, [createTerminal, currentDirectory, setIsBottomPaneVisible]);
+  }, [createTerminal, currentDirectory, getDisplayNameFromDirectory, setIsBottomPaneVisible]);
 
   // Listen for terminal-ready events to execute pending commands
   useEffect(() => {
     const handleTerminalReady = (event: Event) => {
-      const customEvent = event as CustomEvent<{ terminalId: string; connectionId: string }>;
+      const customEvent = event as CustomEvent<{
+        terminalId: string;
+        connectionId: string;
+      }>;
       const { terminalId, connectionId } = customEvent.detail;
 
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
       if (pendingCommand && connectionId) {
         // Small delay to ensure shell prompt is ready
         setTimeout(() => {
-          invoke("terminal_write", { id: connectionId, data: pendingCommand }).catch(() => {});
+          invoke("terminal_write", {
+            id: connectionId,
+            data: pendingCommand,
+          }).catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);
       }
@@ -364,6 +410,16 @@ const TerminalContainer = ({
     window.addEventListener("terminal-ready", handleTerminalReady);
     return () => window.removeEventListener("terminal-ready", handleTerminalReady);
   }, []);
+
+  useEffect(() => {
+    const handleTerminalOpenSearch = () => {
+      if (!activeTerminalId) return;
+      terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
+    };
+
+    window.addEventListener("terminal-open-search", handleTerminalOpenSearch);
+    return () => window.removeEventListener("terminal-open-search", handleTerminalOpenSearch);
+  }, [activeTerminalId]);
 
   // Listen for terminal tab switch events from the keymaps system
   useEffect(() => {
@@ -380,137 +436,58 @@ const TerminalContainer = ({
     return () => window.removeEventListener("terminal-switch-tab", handleTerminalSwitchTab);
   }, [switchToNextTerminal, switchToPrevTerminal]);
 
-  // Terminal-specific keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle other shortcuts when the terminal container or its children have focus
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      if (!terminalContainer || !terminalContainer.contains(document.activeElement)) {
-        return;
-      }
-
-      // Cmd+T (Mac) or Ctrl+T (Windows/Linux) to create new terminal
-      if ((e.metaKey || e.ctrlKey) && e.key === "t" && !e.shiftKey) {
-        e.preventDefault();
-        handleNewTerminal();
-        return;
-      }
-
-      // Cmd+N (Mac) or Ctrl+N (Windows/Linux) to create new terminal (alternative)
-      if ((e.metaKey || e.ctrlKey) && e.key === "n" && !e.shiftKey) {
-        e.preventDefault();
-        handleNewTerminal();
-        return;
-      }
-
-      // Cmd+W (Mac) or Ctrl+W (Windows/Linux) to close current terminal
-      if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey) {
-        e.preventDefault();
-        if (activeTerminalId) {
-          closeTerminal(activeTerminalId);
-        }
-        return;
-      }
-
-      // Cmd+Shift+T (Mac) or Ctrl+Shift+T (Windows/Linux) to create new terminal (backup)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "T") {
-        e.preventDefault();
-        handleNewTerminal();
-        return;
-      }
-
-      // Cmd+Shift+W (Mac) or Ctrl+Shift+W (Windows/Linux) to close current terminal (backup)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "W") {
-        e.preventDefault();
-        if (activeTerminalId) {
-          closeTerminal(activeTerminalId);
-        }
-        return;
-      }
-
-      // Terminal tab navigation with Cmd/Ctrl + [ and ]
-      if ((e.metaKey || e.ctrlKey) && (e.key === "[" || e.key === "]")) {
-        e.preventDefault();
-        if (e.key === "]") {
-          switchToNextTerminal();
-        } else {
-          switchToPrevTerminal();
-        }
-        return;
-      }
-
-      // Terminal tab navigation with Alt+Left/Right
-      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-        e.preventDefault();
-        if (e.key === "ArrowRight") {
-          switchToNextTerminal();
-        } else {
-          switchToPrevTerminal();
-        }
-        return;
-      }
-
-      // Alternative: Ctrl+PageUp/PageDown for terminal navigation
-      if (e.ctrlKey && (e.key === "PageUp" || e.key === "PageDown")) {
-        e.preventDefault();
-        if (e.key === "PageDown") {
-          switchToNextTerminal();
-        } else {
-          switchToPrevTerminal();
-        }
-        return;
-      }
-
-      // Cmd+D (Mac) or Ctrl+D (Windows/Linux) to toggle split view
-      if ((e.metaKey || e.ctrlKey) && e.key === "d" && !e.shiftKey) {
-        e.preventDefault();
-        handleSplitView();
-        return;
-      }
-
-      // Number shortcuts: Cmd/Ctrl+1, Cmd/Ctrl+2, etc. to switch to specific terminal tabs
-      if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
-        e.preventDefault();
-        const tabIndex = parseInt(e.key) - 1;
-        if (tabIndex < terminals.length) {
-          setActiveTerminal(terminals[tabIndex].id);
-        }
-        return;
-      }
+    const handleNewTerminalEvent = () => {
+      handleNewTerminal();
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    activeTerminalId,
-    terminals,
-    handleNewTerminal,
-    closeTerminal,
-    setActiveTerminal,
-    switchToNextTerminal,
-    switchToPrevTerminal,
-    handleSplitView,
-  ]);
+    const handleEnsureTerminalSession = () => {
+      if (terminals.length === 0) {
+        hasInitializedRef.current = true;
+        handleNewTerminal();
+        return;
+      }
+
+      focusActiveTerminal();
+    };
+
+    const handleSplitTerminalEvent = () => {
+      handleSplitView();
+    };
+
+    const handleActivateTerminalTab = (event: Event) => {
+      const tabIndex = (event as CustomEvent<number>).detail;
+      if (typeof tabIndex !== "number" || tabIndex < 0 || tabIndex >= terminals.length) return;
+      setActiveTerminal(terminals[tabIndex].id);
+    };
+
+    window.addEventListener("terminal-new", handleNewTerminalEvent);
+    window.addEventListener("terminal-ensure-session", handleEnsureTerminalSession);
+    window.addEventListener("terminal-split", handleSplitTerminalEvent);
+    window.addEventListener("terminal-activate-tab", handleActivateTerminalTab);
+
+    return () => {
+      window.removeEventListener("terminal-new", handleNewTerminalEvent);
+      window.removeEventListener("terminal-ensure-session", handleEnsureTerminalSession);
+      window.removeEventListener("terminal-split", handleSplitTerminalEvent);
+      window.removeEventListener("terminal-activate-tab", handleActivateTerminalTab);
+    };
+  }, [terminals, focusActiveTerminal, handleNewTerminal, setActiveTerminal, handleSplitView]);
 
   // Auto-create first terminal when the pane becomes visible
   useEffect(() => {
     if (terminals.length === 0 && !hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-
-      // Try to restore persisted terminals
       const persistedTerminals = getPersistedTerminals();
       if (persistedTerminals.length > 0) {
+        hasInitializedRef.current = true;
         restoreTerminalsFromPersisted(persistedTerminals);
-      } else {
-        // No persisted terminals, create a new one
-        const dirName = currentDirectory.split("/").pop() || "terminal";
-        createTerminal(dirName, currentDirectory);
       }
     }
   }, [
     terminals.length,
     currentDirectory,
     createTerminal,
+    getDisplayNameFromDirectory,
     getPersistedTerminals,
     restoreTerminalsFromPersisted,
   ]);
@@ -520,136 +497,197 @@ const TerminalContainer = ({
     const isTerminalVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
     const justBecameVisible = isTerminalVisible && !wasVisibleRef.current;
 
-    if (justBecameVisible && terminals.length === 0 && hasInitializedRef.current) {
+    if (justBecameVisible && terminals.length === 0) {
+      hasInitializedRef.current = true;
       handleNewTerminal();
     }
 
     wasVisibleRef.current = isTerminalVisible;
   }, [isBottomPaneVisible, bottomPaneActiveTab, terminals.length, handleNewTerminal]);
 
+  const terminalTabBarProps = {
+    terminals,
+    activeTerminalId,
+    onTabClick: handleTabClick,
+    onTabClose: handleTabClose,
+    onTabReorder: reorderTerminals,
+    onTabPin: handleTabPin,
+    onTabRename: handleTabRename,
+    onNewTerminal: handleNewTerminal,
+    onNewTerminalWithProfile: handleNewTerminal,
+    onTabCreate: handleTabCreate,
+    onCloseOtherTabs: handleCloseOtherTabs,
+    onCloseAllTabs: handleCloseAllTabs,
+    onCloseTabsToRight: handleCloseTabsToRight,
+    onSplitView: handleSplitView,
+    onSearchTerminal: handleSearchTerminal,
+    onNextTerminal: switchToNextTerminal,
+    onPrevTerminal: switchToPrevTerminal,
+    onFullScreen,
+    isFullScreen,
+    isSplitView: terminals.find((t) => t.id === activeTerminalId)?.splitMode || false,
+  };
+
+  const terminalSessions = (
+    <div
+      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg"
+      style={{
+        transform: `scale(${zoomLevel})`,
+        transformOrigin: "top left",
+        width: `${100 / zoomLevel}%`,
+      }}
+    >
+      {(() => {
+        return (
+          <div className="flex h-full min-h-0 flex-col">
+            {terminals.map((terminal) => (
+              <div
+                key={terminal.id}
+                className="h-full min-h-0"
+                style={{
+                  display: terminal.id === activeTerminalId ? "flex" : "none",
+                }}
+              >
+                <div
+                  className={cn(
+                    "h-full min-h-0 w-full",
+                    terminal.splitMode && terminal.splitWithId && "w-1/2 border-border border-r",
+                  )}
+                >
+                  <TerminalSession
+                    key={terminal.id}
+                    terminal={terminal}
+                    isActive={terminal.id === activeTerminalId}
+                    isVisible={isTerminalPaneVisible && terminal.id === activeTerminalId}
+                    onDirectoryChange={handleDirectoryChange}
+                    onActivity={handleActivity}
+                    onRegisterRef={registerTerminalRef}
+                    onTerminalExit={closeTerminal}
+                  />
+                </div>
+                {terminal.splitMode &&
+                  terminal.splitWithId &&
+                  (() => {
+                    const companionTerminal = terminals.find((t) => t.id === terminal.splitWithId);
+                    if (!companionTerminal) return null;
+                    return (
+                      <div className="h-full min-h-0 w-1/2">
+                        <TerminalSession
+                          key={companionTerminal.id}
+                          terminal={companionTerminal}
+                          isActive={false}
+                          isVisible={isTerminalPaneVisible}
+                          onDirectoryChange={handleDirectoryChange}
+                          onActivity={handleActivity}
+                          onRegisterRef={registerTerminalRef}
+                          onTerminalExit={closeTerminal}
+                        />
+                      </div>
+                    );
+                  })()}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+    </div>
+  );
+
+  const isVertical = tabLayout === "vertical";
+  const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
+  const isSplitActive = terminals.find((t) => t.id === activeTerminalId)?.splitMode || false;
+
   return (
     <div
       className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
       data-terminal-container="active"
     >
-      {/* Terminal Tab Bar */}
-      <TerminalTabBar
-        terminals={terminals}
-        activeTerminalId={activeTerminalId}
-        onTabClick={handleTabClick}
-        onTabClose={handleTabClose}
-        onTabReorder={reorderTerminals}
-        onTabPin={handleTabPin}
-        onTabRename={handleTabRename}
-        onNewTerminal={handleNewTerminal}
-        onTabCreate={handleTabCreate}
-        onCloseOtherTabs={handleCloseOtherTabs}
-        onCloseAllTabs={handleCloseAllTabs}
-        onCloseTabsToRight={handleCloseTabsToRight}
-        onSplitView={handleSplitView}
-        onFullScreen={onFullScreen}
-        isFullScreen={isFullScreen}
-        isSplitView={terminals.find((t) => t.id === activeTerminalId)?.splitMode || false}
-      />
-
-      {/* Terminal Sessions */}
-      <div
-        className="relative min-h-0 flex-1 overflow-hidden bg-primary-bg"
-        style={{
-          transform: `scale(${zoomLevel})`,
-          transformOrigin: "top left",
-          width: `${100 / zoomLevel}%`,
-        }}
-      >
-        {(() => {
-          return (
-            <div className="h-full">
-              {terminals.map((terminal) => (
-                <div
-                  key={terminal.id}
-                  className="h-full"
-                  style={{ display: terminal.id === activeTerminalId ? "flex" : "none" }}
-                >
-                  <div
-                    className={cn(
-                      "w-full pl-[16px]",
-                      terminal.splitMode && terminal.splitWithId && "w-1/2 border-border border-r",
-                    )}
-                  >
-                    <TerminalSession
-                      key={terminal.id}
-                      terminal={terminal}
-                      isActive={terminal.id === activeTerminalId}
-                      onDirectoryChange={handleDirectoryChange}
-                      onActivity={handleActivity}
-                      onRegisterRef={registerTerminalRef}
-                      onTerminalExit={closeTerminal}
-                    />
-                  </div>
-                  {terminal.splitMode &&
-                    terminal.splitWithId &&
-                    (() => {
-                      const companionTerminal = terminals.find(
-                        (t) => t.id === terminal.splitWithId,
-                      );
-                      if (!companionTerminal) return null;
-                      return (
-                        <div className="w-1/2 pl-[16px]">
-                          <TerminalSession
-                            key={companionTerminal.id}
-                            terminal={companionTerminal}
-                            isActive={false}
-                            onDirectoryChange={handleDirectoryChange}
-                            onActivity={handleActivity}
-                            onRegisterRef={registerTerminalRef}
-                            onTerminalExit={closeTerminal}
-                          />
-                        </div>
-                      );
-                    })()}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* Rename Modal */}
-      {renamingTerminalId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="min-w-[300px] rounded-lg border border-border bg-secondary-bg p-4">
-            <h3 className="mb-3 font-medium text-sm text-text">Rename Terminal</h3>
-            <input
-              type="text"
-              value={newTerminalName}
-              onChange={(e) => setNewTerminalName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  confirmRename();
-                } else if (e.key === "Escape") {
-                  cancelRename();
-                }
-              }}
-              className="w-full rounded border border-border bg-primary-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Terminal name"
-            />
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                onClick={cancelRename}
-                className="px-3 py-1.5 text-text-lighter text-xs transition-colors hover:text-text"
+      {/* Vertical-only actions header */}
+      {isVertical && (
+        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 bg-primary-bg px-1.5 py-1">
+          <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
+            <Button
+              type="button"
+              onClick={handleSearchTerminal}
+              variant="ghost"
+              size="icon-sm"
+              className="size-6 shrink-0 text-text-lighter"
+              aria-label="Find in Terminal"
+            >
+              <Search />
+            </Button>
+          </Tooltip>
+          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+            <Button
+              type="button"
+              onClick={() => handleNewTerminal()}
+              variant="ghost"
+              size="icon-sm"
+              className="size-6 shrink-0 text-text-lighter"
+              aria-label="New Terminal"
+            >
+              <Plus />
+            </Button>
+          </Tooltip>
+          <Tooltip
+            content={isSplitActive ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
+            side="bottom"
+          >
+            <Button
+              type="button"
+              onClick={handleSplitView}
+              variant="ghost"
+              size="icon-sm"
+              className={cn(
+                "size-6 shrink-0",
+                isSplitActive ? "border-border/80 bg-primary-bg text-text" : "text-text-lighter",
+              )}
+              aria-label="Split Terminal"
+            >
+              <SplitSquareHorizontal />
+            </Button>
+          </Tooltip>
+          {onFullScreen && (
+            <Tooltip
+              content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
+              side="bottom"
+            >
+              <Button
+                type="button"
+                onClick={onFullScreen}
+                variant="ghost"
+                size="icon-sm"
+                className="size-6 shrink-0 text-text-lighter"
+                aria-label="Full Screen Terminal"
               >
-                Cancel
-              </button>
-              <button
-                onClick={confirmRename}
-                className="rounded bg-blue-500 px-3 py-1.5 text-white text-xs transition-colors hover:bg-blue-600"
-              >
-                Rename
-              </button>
-            </div>
-          </div>
+                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+              </Button>
+            </Tooltip>
+          )}
         </div>
       )}
+
+      <div className={cn("min-h-0 flex-1", isVertical ? "flex flex-row" : "flex flex-col")}>
+        {(!isVertical || tabSidebarPosition === "left") && (
+          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
+        )}
+
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col",
+            isVertical &&
+              (tabSidebarPosition === "left"
+                ? "rounded-tl-lg border-border/60 border-t border-l"
+                : "rounded-tr-lg border-border/60 border-t border-r"),
+          )}
+        >
+          {terminalSessions}
+        </div>
+
+        {isVertical && tabSidebarPosition === "right" && (
+          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
+        )}
+      </div>
     </div>
   );
 };
