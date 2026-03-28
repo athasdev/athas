@@ -185,14 +185,7 @@ export default function ChatHistorySidebar({
                     ) : (
                       treeItems.map(
                         (
-                          {
-                            chat,
-                            depth,
-                            hasChildren,
-                            descendantCount,
-                            isCollapsed,
-                            isCurrent,
-                          },
+                          { chat, depth, hasChildren, descendantCount, isCollapsed, isCurrent },
                           index,
                         ) => {
                           const summaryCounts = getChatSummaryCounts(chat);
