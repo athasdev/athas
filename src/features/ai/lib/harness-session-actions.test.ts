@@ -1,5 +1,8 @@
-import { describe, expect, test } from "bun:test";
-import { pickContinueRecentRuntimeSession } from "./harness-session-actions";
+import { describe, expect, mock, test } from "bun:test";
+import {
+  createNewHarnessSession,
+  pickContinueRecentRuntimeSession,
+} from "./harness-session-actions";
 
 describe("pickContinueRecentRuntimeSession", () => {
   test("prefers the latest non-current runtime session", () => {
@@ -19,5 +22,18 @@ describe("pickContinueRecentRuntimeSession", () => {
     expect(
       pickContinueRecentRuntimeSession([{ path: "/sessions/current.jsonl", isCurrent: true }]),
     ).toBeNull();
+  });
+});
+
+describe("createNewHarnessSession", () => {
+  test("creates a new session with the preferred Pi backend", () => {
+    const createAgentBuffer = mock(() => "buffer-1");
+
+    const bufferId = createNewHarnessSession(createAgentBuffer, "legacy-acp-bridge");
+
+    expect(bufferId).toBe("buffer-1");
+    expect(createAgentBuffer).toHaveBeenCalledWith({
+      backend: "legacy-acp-bridge",
+    });
   });
 });

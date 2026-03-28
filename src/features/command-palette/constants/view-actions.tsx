@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
 import { getPreferredHarnessEntryBackend } from "@/features/ai/lib/harness-entry-backend";
+import { createNewHarnessSession } from "@/features/ai/lib/harness-session-actions";
 import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useSettingsStore } from "@/features/settings/store";
 import type { Action } from "../models/action.types";
@@ -302,9 +303,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       icon: <Sparkles size={14} />,
       category: "View",
       action: () => {
-        createAgentBuffer({
-          backend: getPreferredHarnessEntryBackend(undefined, settings.aiPiHarnessBackend),
-        });
+        createNewHarnessSession(createAgentBuffer, settings.aiPiHarnessBackend);
         onClose();
       },
     },
