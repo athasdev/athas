@@ -47,11 +47,9 @@ describe("pane-store splitPane", () => {
       fullscreenPaneId: null,
     });
 
-    const newPaneId = usePaneStore.getState().actions.splitPane(
-      ROOT_PANE_ID,
-      "horizontal",
-      "buffer-1",
-    );
+    const newPaneId = usePaneStore
+      .getState()
+      .actions.splitPane(ROOT_PANE_ID, "horizontal", "buffer-1");
     const state = usePaneStore.getState();
 
     expect(newPaneId).not.toBeNull();
