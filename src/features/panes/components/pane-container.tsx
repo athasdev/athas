@@ -813,7 +813,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-<<<<<<< HEAD
       {isDragOver && !isTabDragOver && (
         <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />
       )}

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import type { PaneGroup } from "../types/pane";
 import { usePaneStore } from "./pane-store";
