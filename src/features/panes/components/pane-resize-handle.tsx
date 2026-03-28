@@ -80,7 +80,7 @@ export function PaneResizeHandle({
     <div
       ref={containerRef}
       className={`group relative flex shrink-0 items-center justify-center ${
-        isHorizontal ? "h-full w-1 cursor-col-resize" : "h-1 w-full cursor-row-resize"
+        isHorizontal ? "h-full w-px cursor-col-resize z-10" : "h-px w-full cursor-row-resize z-10"
       }`}
       onMouseDown={handleMouseDown}
       role="separator"
@@ -91,9 +91,15 @@ export function PaneResizeHandle({
       aria-valuemax={100 - MIN_PANE_SIZE}
       tabIndex={0}
     >
+      {/* Invisible expanded hit area for easier grabbing */}
       <div
-        className={`bg-border transition-colors ${
-          isDragging ? "bg-accent" : "group-hover:bg-accent"
+        className={`absolute ${isHorizontal ? "inset-y-0 -inset-x-2" : "inset-x-0 -inset-y-2"}`}
+      />
+
+      {/* Visible line */}
+      <div
+        className={`transition-colors ${
+          isDragging ? "bg-accent/80" : "bg-border/30 group-hover:bg-border/80"
         } ${isHorizontal ? "h-full w-px" : "h-px w-full"}`}
       />
       {isDragging && (

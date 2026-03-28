@@ -150,7 +150,7 @@ function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
 
   // If only 2 entries (no flattening benefit), still use the flat approach for consistency
   const totalSize = flatEntries.reduce((sum, e) => sum + e.size, 0);
-  const handleWidth = 4; // w-1 = 4px
+  const handleWidth = 1; // w-px = 1px
   const handleCount = flatEntries.length - 1;
 
   return (
