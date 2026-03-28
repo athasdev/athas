@@ -478,6 +478,27 @@ export class PiNativeStreamHandler {
     });
   }
 
+  static async reloadSessionResources(
+    scopeId: ChatScopeId = "panel",
+  ): Promise<PiNativeSessionSnapshot> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    const snapshot = await invoke<PiNativeSessionSnapshot>("reload_pi_native_session_resources", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+    useAIChatStore.getState().setAcpRuntimeState(snapshot.runtimeState, scopeId);
+    useAIChatStore
+      .getState()
+      .setSessionModeState(
+        snapshot.sessionModeState.currentModeId,
+        snapshot.sessionModeState.availableModes,
+        scopeId,
+      );
+    useAIChatStore.getState().setAvailableSlashCommands(snapshot.slashCommands, scopeId);
+    return snapshot;
+  }
+
   static async getSessionTranscript(sessionPath: string): Promise<PiNativeTranscriptMessage[]> {
     return invoke("get_pi_native_session_transcript", { sessionPath });
   }

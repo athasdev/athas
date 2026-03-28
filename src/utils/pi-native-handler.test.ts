@@ -296,3 +296,67 @@ describe("PiNativeStreamHandler session switching", () => {
     });
   });
 });
+
+describe("PiNativeStreamHandler resource reload", () => {
+  test("reloads active native session resources and refreshes cached runtime state", async () => {
+    const runtimeStateUpdates: unknown[][] = [];
+    const slashCommandUpdates: unknown[][] = [];
+    const sessionModeUpdates: unknown[][] = [];
+    chatStoreState.setAcpRuntimeState = (...args) => {
+      runtimeStateUpdates.push(args);
+    };
+    chatStoreState.setAvailableSlashCommands = (...args) => {
+      slashCommandUpdates.push(args);
+    };
+    chatStoreState.setSessionModeState = (...args) => {
+      sessionModeUpdates.push(args);
+    };
+
+    chatStoreState.currentChat = {
+      acpState: {
+        runtimeState: {
+          sessionId: "native-session-1",
+          sessionPath: "/tmp/session.jsonl",
+          workspacePath: "/tmp/project",
+        },
+      },
+    };
+
+    invokeResponses.set("reload_pi_native_session_resources", {
+      runtimeState: {
+        agentId: "pi",
+        source: "pi-native",
+        sessionId: "native-session-1",
+        sessionPath: "/tmp/session.jsonl",
+        workspacePath: "/tmp/project",
+        provider: "openai-codex",
+        modelId: "gpt-5.4-mini",
+        thinkingLevel: "high",
+        behavior: null,
+      },
+      slashCommands: [{ name: "deploy-preview", description: "Create a preview deploy" }],
+      sessionModeState: {
+        currentModeId: "all",
+        availableModes: [{ id: "all", name: "All at Once" }],
+      },
+    });
+
+    const { PiNativeStreamHandler } = await import("./pi-native-handler");
+    const snapshot = await PiNativeStreamHandler.reloadSessionResources("panel");
+
+    expect(invokeCalls[invokeCalls.length - 1]).toEqual({
+      command: "reload_pi_native_session_resources",
+      payload: {
+        routeKey: "panel",
+        workspacePath: "/tmp/project",
+        sessionPath: "/tmp/session.jsonl",
+      },
+    });
+    expect(snapshot.runtimeState.modelId).toBe("gpt-5.4-mini");
+    expect(runtimeStateUpdates).toEqual([[snapshot.runtimeState, "panel"]]);
+    expect(slashCommandUpdates).toEqual([[snapshot.slashCommands, "panel"]]);
+    expect(sessionModeUpdates).toEqual([
+      [snapshot.sessionModeState.currentModeId, snapshot.sessionModeState.availableModes, "panel"],
+    ]);
+  });
+});
