@@ -17,6 +17,7 @@ pub async fn start_pi_native_session(
    workspace_path: Option<String>,
    session_path: Option<String>,
    bootstrap: Option<AcpBootstrapContext>,
+   reuse_latest_session: Option<bool>,
    route_key: Option<String>,
 ) -> Result<AcpAgentStatus, String> {
    let bridge = { bridge.lock().await.clone() };
@@ -26,6 +27,7 @@ pub async fn start_pi_native_session(
          workspace_path,
          session_path,
          bootstrap,
+         reuse_latest_session,
       )
       .await
       .map_err(|e| e.to_string())

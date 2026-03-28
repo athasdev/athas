@@ -282,6 +282,7 @@ async function ensureRouteSession(routeKey, options = {}) {
     requestedPath,
     bootstrapConversationHistory: options.bootstrap?.conversationHistory ?? [],
     sessions: availableSessions,
+    reuseLatestSession: options.reuseLatestSession ?? true,
   });
 
   if (existing) {
@@ -359,6 +360,7 @@ async function handleRequest(id, method, params = {}) {
         agentDir: params.agentDir,
         sessionPath: params.sessionPath,
         bootstrap: params.bootstrap,
+        reuseLatestSession: params.reuseLatestSession,
       });
       return sendResponse(id, createStatus(record));
     }

@@ -98,6 +98,29 @@ describe("pi-native session listing", () => {
     ).toBe("/tmp/newer.jsonl");
   });
 
+  test("starts a fresh session when latest-session reuse is disabled", () => {
+    expect(
+      resolveSessionPathForStart({
+        requestedPath: null,
+        bootstrapConversationHistory: [],
+        reuseLatestSession: false,
+        sessions: [
+          {
+            path: "/tmp/newer.jsonl",
+            id: "newer",
+            cwd: "/tmp/project",
+            name: "Newer",
+            parentSessionPath: null,
+            createdAt: "2026-03-27T08:00:00.000Z",
+            modifiedAt: "2026-03-27T09:00:00.000Z",
+            messageCount: 4,
+            firstMessage: "newer",
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
+
   test("does not auto-resume the latest session when bootstrap history is being imported", () => {
     expect(
       resolveSessionPathForStart({

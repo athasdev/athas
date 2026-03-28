@@ -46,12 +46,14 @@ impl PiNativeBridge {
       workspace_path: Option<String>,
       session_path: Option<String>,
       bootstrap: Option<AcpBootstrapContext>,
+      reuse_latest_session: Option<bool>,
    ) -> Result<AcpAgentStatus> {
       let params = json!({
          "routeKey": route_key,
          "workspacePath": workspace_path,
          "sessionPath": session_path,
          "bootstrap": bootstrap,
+         "reuseLatestSession": reuse_latest_session,
          "agentDir": self.get_agent_dir()?,
       });
 

@@ -28,12 +28,17 @@ export function resolveSessionPathForStart({
   requestedPath,
   bootstrapConversationHistory,
   sessions,
+  reuseLatestSession = true,
 }) {
   if (requestedPath) {
     return requestedPath;
   }
 
   if (Array.isArray(bootstrapConversationHistory) && bootstrapConversationHistory.length > 0) {
+    return null;
+  }
+
+  if (!reuseLatestSession) {
     return null;
   }
 

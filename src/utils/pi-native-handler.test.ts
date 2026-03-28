@@ -290,9 +290,45 @@ describe("PiNativeStreamHandler session switching", () => {
     expect(invokeCalls[2]?.payload).toMatchObject({
       routeKey: "harness:main",
       sessionPath: null,
+      reuseLatestSession: false,
       bootstrap: {
         conversationHistory: bootstrapConversation,
       },
+    });
+  });
+
+  test("does not request latest-session reuse for an explicit new Harness scope", async () => {
+    const { PiNativeStreamHandler } = await import("./pi-native-handler");
+
+    chatStoreState.currentChat = {
+      acpState: {
+        runtimeState: {
+          sessionId: null,
+          sessionPath: null,
+          workspacePath: "/tmp/project",
+        },
+      },
+    };
+
+    const handler = new PiNativeStreamHandler({
+      scopeId: "harness:session-explicit-new",
+      onChunk() {},
+      onComplete() {},
+      onError() {},
+    });
+
+    await handler.start("Reply with exactly READY.", context);
+
+    expect(invokeCalls.map((call) => call.command)).toEqual([
+      "get_pi_native_status",
+      "start_pi_native_session",
+      "send_pi_native_prompt",
+    ]);
+    expect(invokeCalls[1]?.payload).toMatchObject({
+      routeKey: "harness:session-explicit-new",
+      sessionPath: null,
+      reuseLatestSession: false,
+      bootstrap: null,
     });
   });
 });

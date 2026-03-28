@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getChatPreferredAcpModeId } from "@/features/ai/lib/chat-acp-state";
+import { createHarnessChatScopeId, PANEL_CHAT_SCOPE_ID } from "@/features/ai/lib/chat-scope";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type {
   AcpAgentStatus,
@@ -44,6 +45,10 @@ interface PiNativeDesiredSessionIdentity {
   sessionId: string | null;
   sessionPath: string | null;
 }
+
+const shouldReuseLatestSessionForScope = (scopeId: ChatScopeId): boolean => {
+  return scopeId === PANEL_CHAT_SCOPE_ID || scopeId === createHarnessChatScopeId();
+};
 
 export class PiNativeStreamHandler {
   private static activeHandlers = new Map<ChatScopeId, PiNativeStreamHandler>();
@@ -110,6 +115,7 @@ export class PiNativeStreamHandler {
       workspacePath: this.getWorkspacePath(),
       sessionPath: desiredSession.sessionPath,
       bootstrap,
+      reuseLatestSession: shouldReuseLatestSessionForScope(this.scopeId),
       routeKey: this.resumeKey,
     });
 
