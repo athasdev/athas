@@ -280,6 +280,7 @@ async function ensureRouteSession(routeKey, options = {}) {
   );
   const sessionPath = resolveSessionPathForStart({
     requestedPath,
+    currentPath: existing?.session.sessionFile ?? null,
     bootstrapConversationHistory: options.bootstrap?.conversationHistory ?? [],
     sessions: availableSessions,
     reuseLatestSession: options.reuseLatestSession ?? true,

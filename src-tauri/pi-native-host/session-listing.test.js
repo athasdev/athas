@@ -69,6 +69,7 @@ describe("pi-native session listing", () => {
     expect(
       resolveSessionPathForStart({
         requestedPath: null,
+        currentPath: null,
         bootstrapConversationHistory: [],
         sessions: [
           {
@@ -102,6 +103,7 @@ describe("pi-native session listing", () => {
     expect(
       resolveSessionPathForStart({
         requestedPath: null,
+        currentPath: null,
         bootstrapConversationHistory: [],
         reuseLatestSession: false,
         sessions: [
@@ -125,6 +127,7 @@ describe("pi-native session listing", () => {
     expect(
       resolveSessionPathForStart({
         requestedPath: null,
+        currentPath: null,
         bootstrapConversationHistory: [{ role: "user", content: "hello" }],
         sessions: [
           {
@@ -141,5 +144,28 @@ describe("pi-native session listing", () => {
         ],
       }),
     ).toBeNull();
+  });
+
+  test("keeps the current route session for metadata requests without rebinding to latest", () => {
+    expect(
+      resolveSessionPathForStart({
+        requestedPath: null,
+        currentPath: "/tmp/current.jsonl",
+        bootstrapConversationHistory: [],
+        sessions: [
+          {
+            path: "/tmp/latest.jsonl",
+            id: "latest",
+            cwd: "/tmp/project",
+            name: "Latest",
+            parentSessionPath: null,
+            createdAt: "2026-03-27T08:00:00.000Z",
+            modifiedAt: "2026-03-27T09:00:00.000Z",
+            messageCount: 4,
+            firstMessage: "latest",
+          },
+        ],
+      }),
+    ).toBe("/tmp/current.jsonl");
   });
 });

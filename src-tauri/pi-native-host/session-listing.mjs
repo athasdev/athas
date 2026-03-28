@@ -26,12 +26,17 @@ export function sortAndSerializeSessions(sessions) {
 
 export function resolveSessionPathForStart({
   requestedPath,
+  currentPath,
   bootstrapConversationHistory,
   sessions,
   reuseLatestSession = true,
 }) {
   if (requestedPath) {
     return requestedPath;
+  }
+
+  if (currentPath) {
+    return currentPath;
   }
 
   if (Array.isArray(bootstrapConversationHistory) && bootstrapConversationHistory.length > 0) {
