@@ -150,7 +150,7 @@ const AIChat = memo(function AIChat({
   const chatState = useChatState(resolvedScopeId);
   const chatActions = useChatActions(resolvedScopeId);
   const closedBuffersHistory = useBufferStore.use.closedBuffersHistory();
-  const { closeBuffer, createAgentBuffer, openAgentBuffer, reopenClosedHarnessSession } =
+  const { closeBuffer, openAgentBuffer, reopenClosedHarnessSession } =
     useBufferStore.use.actions();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -893,10 +893,6 @@ const AIChat = memo(function AIChat({
     }
   };
 
-  const handleCreateHarnessSession = useCallback(() => {
-    createAgentBuffer({ backend: runtimeBackend });
-  }, [createAgentBuffer, runtimeBackend]);
-
   const handleSelectHarnessSession = useCallback(
     (nextSessionKey: string) => {
       openAgentBuffer(nextSessionKey, { backend: runtimeBackend });
@@ -1533,7 +1529,6 @@ const AIChat = memo(function AIChat({
                   sessions={harnessSessions}
                   activeSession={{ status: harnessTrustState }}
                   recentRuntimeSessions={recentPiNativeRailSessions}
-                  onCreateSession={handleCreateHarnessSession}
                   canReopenClosedSession={hasClosedHarnessSession}
                   onReopenClosedSession={handleReopenClosedHarnessSession}
                   onSelectSession={handleSelectHarnessSession}

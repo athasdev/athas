@@ -1,12 +1,4 @@
-import {
-  AlertCircle,
-  CircleDot,
-  CornerDownRight,
-  History,
-  LoaderCircle,
-  Plus,
-  X,
-} from "lucide-react";
+import { AlertCircle, CircleDot, CornerDownRight, History, LoaderCircle, X } from "lucide-react";
 import { pickContinueRecentRuntimeSession } from "@/features/ai/lib/harness-session-actions";
 import type { HarnessTrustState, HarnessTrustStateKind } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
@@ -35,7 +27,6 @@ interface HarnessSessionRailProps {
   sessions: HarnessRailSession[];
   activeSession: HarnessRailActiveSession;
   recentRuntimeSessions?: HarnessRailRecentRuntimeSession[];
-  onCreateSession: () => void;
   canReopenClosedSession: boolean;
   onReopenClosedSession: () => void;
   onSelectSession: (sessionKey: string) => void;
@@ -86,7 +77,6 @@ export function HarnessSessionRail({
   sessions,
   activeSession,
   recentRuntimeSessions = [],
-  onCreateSession,
   canReopenClosedSession,
   onReopenClosedSession,
   onSelectSession,
@@ -116,15 +106,6 @@ export function HarnessSessionRail({
                 <History size={12} />
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={onCreateSession}
-              className="flex items-center justify-center text-text-lighter transition-colors hover:text-text"
-              aria-label="Create new Harness session"
-              title="Create new Harness session"
-            >
-              <Plus size={12} />
-            </button>
           </div>
         </div>
         <div className="space-y-2">

@@ -16,8 +16,8 @@ import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 
 import { ContextSelector } from "../selectors/context-selector";
 import { PiNativeRuntimeControls } from "../selectors/pi-native-runtime-controls";
-import { SessionModeSelector } from "../selectors/session-mode-selector";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -298,6 +298,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
     const handleHarnessSeedKey = (event: KeyboardEvent) => {
       const harnessRoot =
         aiChatContainerRef.current?.closest("[data-ai-chat-surface='harness']") ?? null;
+
+      const paneId = aiChatContainerRef.current
+        ?.closest("[data-pane-id]")
+        ?.getAttribute("data-pane-id");
+      if (paneId && paneId !== usePaneStore.getState().activePaneId) {
+        return;
+      }
+
       if (
         !shouldSeedHarnessComposerKeyEvent({
           harnessRoot,
@@ -870,7 +878,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   variant="input"
                   onOpenSettings={() => {}}
                 />
-                <SessionModeSelector scopeId={scopeId} disabled={isStreaming} />
                 <PiNativeRuntimeControls
                   scopeId={scopeId}
                   agentId={currentAgentId}
