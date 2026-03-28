@@ -72,11 +72,41 @@ function writeJsonFile(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+function syncLegacyDefaultAliases(settings) {
+  const next = structuredClone(settings);
+
+  if ("defaultProvider" in next) {
+    if (next.defaultProvider == null) {
+      delete next.default_provider;
+    } else {
+      next.default_provider = next.defaultProvider;
+    }
+  }
+
+  if ("defaultModel" in next) {
+    if (next.defaultModel == null) {
+      delete next.default_model;
+    } else {
+      next.default_model = next.defaultModel;
+    }
+  }
+
+  if ("defaultThinkingLevel" in next) {
+    if (next.defaultThinkingLevel == null) {
+      delete next.default_thinking_level;
+    } else {
+      next.default_thinking_level = next.defaultThinkingLevel;
+    }
+  }
+
+  return next;
+}
+
 function writeScopedSettingsFile({ cwd, agentDir, scope, updater }) {
   const targetScope = normalizeScope(scope);
   const path = targetScope === "project" ? getProjectSettingsPath(cwd) : join(agentDir, "settings.json");
   const current = readJsonFile(path);
-  const next = updater(structuredClone(current));
+  const next = syncLegacyDefaultAliases(updater(structuredClone(current)));
   writeJsonFile(path, next);
   return next;
 }
@@ -361,6 +391,8 @@ export async function setPiScopedDefaults({
       settingsManager.setDefaultThinkingLevel(defaultThinkingLevel);
     }
     await settingsManager.flush();
+    const globalSettingsPath = join(agentDir, "settings.json");
+    writeJsonFile(globalSettingsPath, syncLegacyDefaultAliases(readJsonFile(globalSettingsPath)));
     return getPiSettingsSnapshot({ cwd, agentDir });
   }
 

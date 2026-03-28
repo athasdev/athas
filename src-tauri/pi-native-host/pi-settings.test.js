@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -94,6 +94,9 @@ describe("pi-native host settings helpers", () => {
     writeJson(join(agentDir, "settings.json"), {
       defaultProvider: "openai-codex",
       defaultModel: "gpt-5.4",
+      default_provider: "openai-codex",
+      default_model: "gpt-5.4",
+      default_thinking_level: "medium",
       theme: "dark",
     });
     writeJson(join(cwd, ".pi", "settings.json"), {
@@ -129,6 +132,20 @@ describe("pi-native host settings helpers", () => {
     });
     expect(snapshot.packages.global).toEqual([]);
     expect(snapshot.packages.project).toEqual([]);
+
+    const globalSettings = JSON.parse(readFileSync(join(agentDir, "settings.json"), "utf8"));
+    expect(globalSettings.defaultProvider).toBe("anthropic");
+    expect(globalSettings.defaultModel).toBe("claude-sonnet-4-6");
+    expect(globalSettings.defaultThinkingLevel).toBe("high");
+    expect(globalSettings.default_provider).toBe("anthropic");
+    expect(globalSettings.default_model).toBe("claude-sonnet-4-6");
+    expect(globalSettings.default_thinking_level).toBe("high");
+
+    const projectSettings = JSON.parse(readFileSync(join(cwd, ".pi", "settings.json"), "utf8"));
+    expect(projectSettings.defaultModel).toBe("claude-sonnet-4-6");
+    expect(projectSettings.defaultThinkingLevel).toBe("minimal");
+    expect(projectSettings.default_model).toBe("claude-sonnet-4-6");
+    expect(projectSettings.default_thinking_level).toBe("minimal");
   });
 
   test("clears inherited scoped defaults by removing keys instead of writing null", async () => {
@@ -163,6 +180,14 @@ describe("pi-native host settings helpers", () => {
       defaultModel: "gpt-5.4",
       defaultThinkingLevel: "medium",
     });
+
+    const projectSettings = JSON.parse(readFileSync(join(cwd, ".pi", "settings.json"), "utf8"));
+    expect(projectSettings.defaultProvider).toBeUndefined();
+    expect(projectSettings.defaultModel).toBeUndefined();
+    expect(projectSettings.defaultThinkingLevel).toBeUndefined();
+    expect(projectSettings.default_provider).toBeUndefined();
+    expect(projectSettings.default_model).toBeUndefined();
+    expect(projectSettings.default_thinking_level).toBeUndefined();
   });
 
   test("stores and clears shared API-key credentials", async () => {
