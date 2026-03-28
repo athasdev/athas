@@ -41,6 +41,8 @@ Configure AI settings in **Settings > AI**:
 
 When you use Pi in Harness with the native runtime, Athas reads the same session files used by standalone Pi. Reopened sessions restore their conversation history, active model, and thinking level from the shared Pi session data instead of starting from an empty Athas-only chat state.
 
+The Harness composer keeps native Pi session mode, model, and thinking controls together in the footer so you can change runtime behavior without leaving the current session.
+
 Forking a Pi-native conversation keeps the restored model and thinking defaults, but starts a new native branch instead of continuing the same underlying Pi session file.
 
 When you switch between restored Pi-native chats in the same Harness scope, Athas now rebinds the native route to the selected shared Pi session instead of accidentally continuing whichever Pi session was already live on that route.

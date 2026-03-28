@@ -1,11 +1,22 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Search } from "lucide-react";
-import type { ForwardRefExoticComponent, ReactNode, RefAttributes, RefObject } from "react";
+import type {
+  ForwardRefExoticComponent,
+  KeyboardEvent,
+  ReactNode,
+  RefAttributes,
+  RefObject,
+} from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/utils/cn";
 import { adjustPositionToFitViewport } from "@/utils/fit-viewport";
+
+type DropdownTriggerProps = {
+  onClick?: () => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
+};
 
 interface DropdownProps {
   value: string;
@@ -18,9 +29,7 @@ interface DropdownProps {
   searchable?: boolean;
   openDirection?: "up" | "down" | "auto";
   CustomTrigger?: ForwardRefExoticComponent<
-    {
-      onClick?: () => void;
-    } & RefAttributes<HTMLButtonElement>
+    DropdownTriggerProps & RefAttributes<HTMLButtonElement>
   >;
   variant?: "default" | "ghost";
 }
@@ -40,6 +49,7 @@ const Dropdown = ({
 }: DropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
@@ -109,6 +119,7 @@ const Dropdown = ({
     searchable && searchQuery
       ? options.filter((option) => option.label.toLowerCase().includes(searchQuery.toLowerCase()))
       : options;
+  const selectedIndex = filteredOptions.findIndex((option) => option.value === value);
 
   const sizeClasses = {
     xs: "px-2 py-1 text-xs h-6",
@@ -120,6 +131,100 @@ const Dropdown = ({
     xs: "var(--app-ui-icon-size-xs)",
     sm: "var(--app-ui-icon-size-sm)",
     md: "var(--app-ui-icon-size-md)",
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    if (filteredOptions.length === 0) {
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [filteredOptions, isOpen, selectedIndex]);
+
+  const selectOption = (nextValue: string) => {
+    onChange(nextValue);
+    setIsOpen(false);
+  };
+
+  const moveHighlight = (direction: -1 | 1) => {
+    if (filteredOptions.length === 0) {
+      return;
+    }
+
+    setHighlightedIndex((currentIndex) => {
+      if (currentIndex === -1) {
+        return selectedIndex >= 0 ? selectedIndex : 0;
+      }
+
+      return (currentIndex + direction + filteredOptions.length) % filteredOptions.length;
+    });
+  };
+
+  const handleSelectHighlighted = () => {
+    if (highlightedIndex < 0 || highlightedIndex >= filteredOptions.length) {
+      return;
+    }
+
+    selectOption(filteredOptions[highlightedIndex].value);
+  };
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) {
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      moveHighlight(event.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      handleSelectHighlighted();
+      return;
+    }
+
+    if (event.key === "Escape" && isOpen) {
+      event.preventDefault();
+      setIsOpen(false);
+    }
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      moveHighlight(event.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSelectHighlighted();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    }
   };
 
   const renderDropdown = () => (
@@ -154,6 +259,7 @@ const Dropdown = ({
                   placeholder="Search..."
                   className="w-full rounded border border-border bg-secondary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                   onClick={(e) => e.stopPropagation()}
+                  onKeyDown={handleSearchKeyDown}
                 />
               </div>
             </div>
@@ -163,18 +269,19 @@ const Dropdown = ({
               No matching options
             </div>
           ) : (
-            filteredOptions.map((option) => (
+            filteredOptions.map((option, index) => (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
+                onClick={() => selectOption(option.value)}
                 className={cn(
                   "w-full px-2 py-1 text-left text-text text-xs transition-colors",
                   "hover:bg-hover",
-                  value === option.value ? "bg-blue-500/20 text-blue-400" : "hover:text-text",
+                  highlightedIndex === index
+                    ? "bg-hover"
+                    : value === option.value
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "hover:text-text",
                 )}
               >
                 <span className="flex items-center gap-1.5">
@@ -192,12 +299,17 @@ const Dropdown = ({
   return (
     <div className={cn("relative", className)}>
       {CustomTrigger ? (
-        <CustomTrigger ref={buttonRef} onClick={() => !disabled && setIsOpen(!isOpen)} />
+        <CustomTrigger
+          ref={buttonRef}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onKeyDown={handleTriggerKeyDown}
+        />
       ) : (
         <button
           ref={buttonRef}
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
+          onKeyDown={handleTriggerKeyDown}
           disabled={disabled}
           className={cn(
             "flex w-full items-center justify-between gap-1 rounded-lg text-text transition-colors",

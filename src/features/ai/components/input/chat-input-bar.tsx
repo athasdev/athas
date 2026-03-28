@@ -1,4 +1,4 @@
-import { AlertCircle, LoaderCircle, Send, Slash, Square, X } from "lucide-react";
+import { Send, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import {
@@ -8,52 +8,22 @@ import {
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
-import type { HarnessTrustState } from "@/features/ai/types/chat-ui";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
-import { ChatModeSelector } from "../selectors/chat-mode-selector";
+
 import { ContextSelector } from "../selectors/context-selector";
 import { PiNativeRuntimeControls } from "../selectors/pi-native-runtime-controls";
+import { SessionModeSelector } from "../selectors/session-mode-selector";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
-
-const getHarnessStatusTone = (status: HarnessTrustState) => {
-  switch (status.kind) {
-    case "running":
-      return {
-        dotClassName: "bg-blue-400",
-        textClassName: "text-blue-200",
-        Icon: LoaderCircle,
-      };
-    case "attention":
-      return {
-        dotClassName: "bg-yellow-400",
-        textClassName: "text-yellow-200",
-        Icon: AlertCircle,
-      };
-    case "error":
-      return {
-        dotClassName: "bg-red-400",
-        textClassName: "text-red-200",
-        Icon: AlertCircle,
-      };
-    default:
-      return {
-        dotClassName: "bg-text-lighter/35",
-        textClassName: "text-text-lighter",
-        Icon: null,
-      };
-  }
-};
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
   surface = "panel",
   scopeId,
-  harnessStatus,
   runtimeBackend = "legacy-acp-bridge",
   onSendMessage,
   onStopStreaming,
@@ -797,7 +767,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
         ? "Ask Harness to work on this project... (@ to mention files)"
         : "Message... (@ to mention files)"
     : "Configure API key to enable the AI assistant...";
-  const harnessStatusTone = harnessStatus ? getHarnessStatusTone(harnessStatus) : null;
 
   return (
     <div
@@ -809,68 +778,28 @@ const AIChatInputBar = memo(function AIChatInputBar({
     >
       <div
         className={cn(
-          "border border-border/80 backdrop-blur-sm",
+          "flex flex-col border border-border/60 shadow-lg backdrop-blur-md transition-colors focus-within:border-border/80 focus-within:shadow-xl",
           surface === "harness"
-            ? "rounded-[26px] bg-secondary-bg/92 px-3 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
-            : "rounded-[24px] bg-secondary-bg/95 px-3 py-3 shadow-sm",
+            ? "rounded-3xl bg-secondary-bg/90 p-3"
+            : "rounded-2xl bg-secondary-bg/95 p-2",
         )}
       >
-        {surface === "harness" && harnessStatus ? (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-border/70 border-b px-1 pb-3 text-[11px]">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-border/70 bg-primary-bg/80 px-2.5 py-1 font-medium text-text">
-                {harnessStatus.agentLabel}
-              </span>
-              <span className="rounded-full border border-border/70 bg-primary-bg/70 px-2.5 py-1 text-text-lighter">
-                {harnessStatus.modeLabel}
-              </span>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-primary-bg/70 px-2.5 py-1 font-medium",
-                  harnessStatusTone?.textClassName,
-                )}
-              >
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    harnessStatusTone?.dotClassName,
-                    harnessStatus.kind === "running" && "animate-pulse",
-                  )}
-                  aria-hidden="true"
-                />
-                {harnessStatusTone?.Icon ? (
-                  <harnessStatusTone.Icon
-                    size={11}
-                    className={cn(harnessStatus.kind === "running" && "animate-spin")}
-                  />
-                ) : null}
-                <span>{harnessStatus.stateLabel}</span>
-              </span>
-            </div>
-            {harnessStatus.detail ? (
-              <span className="min-w-0 flex-1 truncate text-right text-text-lighter">
-                {harnessStatus.detail}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-
         {/* Pasted images preview */}
         {chatState.pastedImages.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-2 flex flex-wrap gap-2 px-2">
             {chatState.pastedImages.map((image) => (
               <div
                 key={image.id}
-                className="group relative overflow-hidden rounded-2xl border border-border/70 bg-primary-bg/70"
+                className="group relative overflow-hidden rounded-xl border border-border/60 bg-primary-bg/70"
               >
                 <img
                   src={image.dataUrl}
                   alt={image.name}
-                  className="h-16 w-auto max-w-[120px] object-cover"
+                  className="h-14 w-auto max-w-[100px] object-cover"
                 />
                 <button
                   onClick={() => chatActions.removePastedImage(image.id)}
-                  className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100"
+                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
                   aria-label="Remove image"
                 >
                   <X size={12} />
@@ -881,13 +810,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         )}
 
         {/* Input area */}
-        <div
-          className={cn(
-            surface === "harness"
-              ? "rounded-[22px] border border-border/70 bg-primary-bg/55 px-3 py-2.5"
-              : "",
-          )}
-        >
+        <div className="relative flex-1">
           <div
             ref={inputRef}
             contentEditable={isInputEnabled}
@@ -896,18 +819,17 @@ const AIChatInputBar = memo(function AIChatInputBar({
             onPaste={handlePaste}
             data-placeholder={placeholder}
             className={cn(
-              "max-h-[140px] w-full resize-none overflow-y-auto border-none bg-transparent",
-              "px-1 py-1.5 text-text",
-              "focus:outline-none",
+              "max-h-[30vh] w-full resize-none overflow-y-auto border-none bg-transparent outline-none",
+              "px-2 py-2 text-text",
               !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
-              "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
-              surface === "harness" ? "min-h-[96px]" : "min-h-[72px]",
+              "empty:before:pointer-events-none empty:before:text-text-lighter/60 empty:before:content-[attr(data-placeholder)]",
+              surface === "harness" ? "min-h-[64px]" : "min-h-[48px]",
             )}
             style={
               {
                 fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
-                fontSize: `${Math.max(fontSize - 2, 11)}px`,
-                lineHeight: "1.4",
+                fontSize: `${Math.max(fontSize - 1, 13)}px`,
+                lineHeight: "1.5",
                 wordWrap: "break-word",
                 overflowWrap: "break-word",
               } as React.CSSProperties
@@ -921,12 +843,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
         <div
           className={cn(
-            "mt-3 flex flex-wrap gap-2 border-border/70 border-t pt-3",
-            surface === "harness" ? "items-end justify-between" : "items-center",
+            "mt-2 flex items-center justify-between gap-2 px-1",
+            surface === "harness" ? "" : "flex-wrap",
           )}
         >
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <div ref={contextDropdownRef} className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div ref={contextDropdownRef} className="shrink-0">
               <ContextSelector
                 buffers={buffers}
                 selectedBufferIds={chatState.selectedBufferIds}
@@ -943,16 +865,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {/* Queue indicator */}
             {chatState.queueCount > 0 && (
               <div
-                className="flex items-center gap-1 rounded-full border border-border/70 bg-primary-bg/70 px-2.5 py-1 text-text-lighter text-xs"
+                className="flex items-center gap-1 rounded-full bg-primary-bg/40 px-2 py-0.5 text-text-lighter text-xs"
                 title={`Queued messages: ${chatState.steeringQueueCount} steering, ${chatState.followUpQueueCount} follow-up`}
               >
-                <span className="font-medium text-text">{chatState.queueCount}</span>
-                <span>queued</span>
+                <span className="font-semibold text-text">{chatState.queueCount}</span>
+                <span className="opacity-80">queued</span>
               </div>
             )}
           </div>
 
-          <div className="ml-auto flex shrink-0 select-none flex-wrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {surface === "harness" ? (
               <UnifiedAgentSelector
                 scopeId={scopeId}
@@ -962,7 +884,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
               />
             ) : null}
 
-            <ChatModeSelector surface={surface} scopeId={scopeId} />
+            {surface === "harness" ? (
+              <SessionModeSelector scopeId={scopeId} disabled={isStreaming} />
+            ) : null}
 
             {surface === "harness" ? (
               <PiNativeRuntimeControls
@@ -974,37 +898,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
               />
             ) : null}
 
-            {hasSlashCommands && (
-              <button
-                onClick={() => {
-                  if (inputRef.current && isInputEnabled) {
-                    inputRef.current.textContent = "/";
-                    chatActions.setInput("/");
-                    setHasInputText(true);
-                    inputRef.current.focus();
-                    // Trigger slash command detection
-                    showSlashCommands(getSlashDropdownPosition(), "");
-                  }
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-primary-bg/75 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                title="Show slash commands"
-              >
-                <Slash size={12} />
-              </button>
-            )}
-
             <Button
               type="submit"
               disabled={isSendDisabled}
               onClick={isStreaming ? onStopStreaming : handleSendMessage}
               className={cn(
-                "flex items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
-                "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
-                surface === "harness" ? "h-11 w-11 bg-primary-bg/85" : "h-9 w-9",
+                "ml-1 flex items-center justify-center rounded-full p-0 transition-all",
+                "focus:outline-none focus:ring-2 focus:ring-accent/50",
+                surface === "harness" ? "h-9 w-9" : "h-8 w-8",
                 isStreaming && !chatState.isSendAnimating && "button-morphing",
-                (hasInputText || hasImages) &&
-                  isInputEnabled &&
-                  "border-border bg-secondary-bg text-text hover:bg-hover hover:text-text",
+                (hasInputText || hasImages) && isInputEnabled
+                  ? "bg-text text-primary-bg hover:opacity-90"
+                  : "bg-primary-bg/50 text-text-lighter/50",
                 isSendDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
               )}
               title={
@@ -1018,14 +923,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
               tabIndex={0}
             >
               {isStreaming && !chatState.isSendAnimating ? (
-                <Square size={14} className="transition-all duration-300" />
+                <Square size={13} className="transition-all duration-300" strokeWidth={2.5} />
               ) : (
                 <Send
                   size={14}
                   className={cn(
-                    "send-icon transition-all duration-200",
+                    "send-icon ml-0.5 transition-all duration-200",
                     chatState.isSendAnimating && "flying",
                   )}
+                  strokeWidth={2}
                 />
               )}
             </Button>

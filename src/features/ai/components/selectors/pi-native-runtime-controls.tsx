@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Cpu, Zap } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useChatActions } from "@/features/ai/hooks/use-chat-store";
 import {
   type HarnessRuntimeModelInfo,
@@ -10,6 +11,54 @@ import type { AcpRuntimeState } from "@/features/ai/types/acp";
 import type { AgentType, ChatScopeId } from "@/features/ai/types/ai-chat";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import Dropdown from "@/ui/dropdown";
+
+const ModelTrigger = React.forwardRef<
+  HTMLButtonElement,
+  {
+    onClick?: () => void;
+    onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+    label: string;
+    disabled?: boolean;
+  }
+>(({ onClick, onKeyDown, label, disabled }, ref) => (
+  <button
+    ref={ref}
+    onClick={onClick}
+    onKeyDown={onKeyDown}
+    disabled={disabled}
+    type="button"
+    className="ui-font flex h-8 items-center gap-1.5 rounded-xl border border-transparent px-2.5 text-xs transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-50"
+  >
+    <Cpu size={11} className="text-text-lighter" />
+    <span className="max-w-[140px] truncate text-text">{label}</span>
+    <ChevronDown size={12} className="text-text-lighter" />
+  </button>
+));
+ModelTrigger.displayName = "ModelTrigger";
+
+const ThinkingTrigger = React.forwardRef<
+  HTMLButtonElement,
+  {
+    onClick?: () => void;
+    onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+    label: string;
+    disabled?: boolean;
+  }
+>(({ onClick, onKeyDown, label, disabled }, ref) => (
+  <button
+    ref={ref}
+    onClick={onClick}
+    onKeyDown={onKeyDown}
+    disabled={disabled}
+    type="button"
+    className="ui-font flex h-8 items-center gap-1.5 rounded-xl border border-transparent px-2.5 text-xs transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-50"
+  >
+    <Zap size={11} className="text-text-lighter" />
+    <span className="max-w-[140px] truncate text-text">{label}</span>
+    <ChevronDown size={12} className="text-text-lighter" />
+  </button>
+));
+ThinkingTrigger.displayName = "ThinkingTrigger";
 
 interface PiNativeRuntimeControlsProps {
   scopeId?: ChatScopeId;
@@ -175,11 +224,26 @@ export function PiNativeRuntimeControls({
           value={modelValue}
           options={modelOptions}
           onChange={(value) => void handleModelChange(value)}
-          size="xs"
           searchable={true}
-          disabled={disabled || loading}
-          className="w-36"
-          placeholder="Model"
+          className="w-auto"
+          CustomTrigger={React.forwardRef<
+            HTMLButtonElement,
+            {
+              onClick?: () => void;
+              onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+            }
+          >((props, ref) => {
+            const selectedOption = modelOptions.find((o) => o.value === modelValue);
+            return (
+              <ModelTrigger
+                ref={ref}
+                onClick={props.onClick}
+                onKeyDown={props.onKeyDown}
+                label={selectedOption?.label || "Model"}
+                disabled={disabled || loading}
+              />
+            );
+          })}
         />
       ) : null}
       {thinkingOptions.length > 0 ? (
@@ -187,10 +251,27 @@ export function PiNativeRuntimeControls({
           value={runtimeState?.thinkingLevel ?? ""}
           options={thinkingOptions}
           onChange={(value) => void handleThinkingChange(value)}
-          size="xs"
-          disabled={disabled || loading}
-          className="w-28"
-          placeholder="Thinking"
+          className="w-auto"
+          CustomTrigger={React.forwardRef<
+            HTMLButtonElement,
+            {
+              onClick?: () => void;
+              onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+            }
+          >((props, ref) => {
+            const selectedOption = thinkingOptions.find(
+              (o) => o.value === (runtimeState?.thinkingLevel ?? ""),
+            );
+            return (
+              <ThinkingTrigger
+                ref={ref}
+                onClick={props.onClick}
+                onKeyDown={props.onKeyDown}
+                label={selectedOption?.label || "Thinking"}
+                disabled={disabled || loading}
+              />
+            );
+          })}
         />
       ) : null}
     </>
