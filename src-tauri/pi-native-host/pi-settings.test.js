@@ -190,4 +190,45 @@ describe("pi-native host settings helpers", () => {
       false,
     );
   });
+
+  test("picks up standalone Pi settings edits on the next snapshot refresh", async () => {
+    const { agentDir, cwd } = createTempWorkspace();
+    const globalSettingsPath = join(agentDir, "settings.json");
+    const projectSettingsPath = join(cwd, ".pi", "settings.json");
+
+    writeJson(globalSettingsPath, {
+      defaultProvider: "openai-codex",
+      defaultModel: "gpt-5.4",
+      defaultThinkingLevel: "medium",
+    });
+    writeJson(projectSettingsPath, {
+      defaultModel: "gpt-5.4-mini",
+    });
+
+    const initialSnapshot = await getPiSettingsSnapshot({ cwd, agentDir });
+
+    expect(initialSnapshot.defaults.effective).toEqual({
+      defaultProvider: "openai-codex",
+      defaultModel: "gpt-5.4-mini",
+      defaultThinkingLevel: "medium",
+    });
+
+    writeJson(globalSettingsPath, {
+      defaultProvider: "anthropic",
+      defaultModel: "claude-sonnet-4-6",
+      defaultThinkingLevel: "high",
+    });
+    writeJson(projectSettingsPath, {
+      defaultModel: "claude-sonnet-4-6",
+      defaultThinkingLevel: "minimal",
+    });
+
+    const refreshedSnapshot = await getPiSettingsSnapshot({ cwd, agentDir });
+
+    expect(refreshedSnapshot.defaults.effective).toEqual({
+      defaultProvider: "anthropic",
+      defaultModel: "claude-sonnet-4-6",
+      defaultThinkingLevel: "minimal",
+    });
+  });
 });

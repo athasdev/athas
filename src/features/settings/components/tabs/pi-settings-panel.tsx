@@ -23,6 +23,10 @@ import {
   setPiApiKeyCredential,
   setPiScopedDefaults,
 } from "@/features/settings/lib/pi-settings";
+import {
+  reloadActivePiNativeSessionsForWorkspace,
+  subscribePiSettingsAutoRefresh,
+} from "@/features/settings/lib/pi-settings-runtime";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import Button from "@/ui/button";
@@ -123,6 +127,12 @@ export function PiSettingsPanel() {
     void loadSnapshot().catch(() => {});
     void loadLegacyHealth();
   }, [loadSnapshot, loadLegacyHealth]);
+
+  useEffect(() => {
+    return subscribePiSettingsAutoRefresh(() => {
+      void loadSnapshot().catch(() => {});
+    });
+  }, [loadSnapshot]);
 
   useEffect(() => {
     if (scope === "project" && !rootFolderPath) {
@@ -339,6 +349,17 @@ export function PiSettingsPanel() {
       const nextSnapshot = await installPiPackage({ workspacePath, scope, source });
       setPackageSource("");
       setSnapshotAndToast(nextSnapshot, `Installed ${source}`);
+      try {
+        await reloadActivePiNativeSessionsForWorkspace(workspacePath);
+      } catch (error) {
+        showToast({
+          message:
+            error instanceof Error
+              ? `Installed ${source}, but active Pi sessions did not reload: ${error.message}`
+              : `Installed ${source}, but active Pi sessions did not reload`,
+          type: "warning",
+        });
+      }
     } catch (error) {
       showToast({
         message: error instanceof Error ? error.message : `Failed to install ${source}`,
@@ -354,6 +375,17 @@ export function PiSettingsPanel() {
     try {
       const nextSnapshot = await removePiPackage({ workspacePath, scope, source });
       setSnapshotAndToast(nextSnapshot, `Removed ${source}`);
+      try {
+        await reloadActivePiNativeSessionsForWorkspace(workspacePath);
+      } catch (error) {
+        showToast({
+          message:
+            error instanceof Error
+              ? `Removed ${source}, but active Pi sessions did not reload: ${error.message}`
+              : `Removed ${source}, but active Pi sessions did not reload`,
+          type: "warning",
+        });
+      }
     } catch (error) {
       showToast({
         message: error instanceof Error ? error.message : `Failed to remove ${source}`,
