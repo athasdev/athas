@@ -4,7 +4,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -48,8 +47,6 @@ const GitHubIssuesView = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-  const { isAuthenticated } = useGitHubStore();
-  const { checkAuth } = useGitHubStore().actions;
   const { openGitHubIssueBuffer } = useBufferStore.use.actions();
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
@@ -95,25 +92,8 @@ const GitHubIssuesView = memo(() => {
   );
 
   useEffect(() => {
-    void checkAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      void fetchIssues();
-    }
-  }, [fetchIssues, isAuthenticated]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex h-full items-center justify-center p-4 text-center">
-        <div className="space-y-2">
-          <AlertCircle className="mx-auto text-text-lighter" />
-          <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
-        </div>
-      </div>
-    );
-  }
+    void fetchIssues();
+  }, [fetchIssues]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

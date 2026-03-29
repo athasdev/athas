@@ -35,6 +35,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const buffers = useBufferStore.use.buffers();
   const {
+    authSource,
     selectedPRDetails,
     selectedPRDiff,
     selectedPRFiles,
@@ -309,10 +310,8 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   }, [activeTab, filteredDiff]);
 
   const handleOpenInBrowser = useCallback(() => {
-    if (repoPath) {
-      openPRInBrowser(repoPath, prNumber);
-    }
-  }, [repoPath, prNumber, openPRInBrowser]);
+    void openPRInBrowser(selectedPRDetails?.url);
+  }, [openPRInBrowser, selectedPRDetails?.url]);
 
   const handleCheckout = useCallback(async () => {
     if (repoPath) {
@@ -479,6 +478,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         onCheckout={() => {
           void handleCheckout();
         }}
+        isCheckoutDisabled={authSource === "pat"}
         onOpenInBrowser={handleOpenInBrowser}
         onCopyPRLink={handleCopyPRLink}
         onCopyBranchName={handleCopyBranchName}

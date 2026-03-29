@@ -22,6 +22,7 @@ interface PRViewerHeaderProps {
   reviewSummary: string | null;
   metaItems: string[];
   isRefreshingDetails: boolean;
+  isCheckoutDisabled?: boolean;
   onRefresh: () => void;
   onCheckout: () => void;
   onOpenInBrowser: () => void;
@@ -53,6 +54,7 @@ export function PRViewerHeader({
   reviewSummary,
   metaItems,
   isRefreshingDetails,
+  isCheckoutDisabled = false,
   onRefresh,
   onCheckout,
   onOpenInBrowser,
@@ -92,6 +94,7 @@ export function PRViewerHeader({
             <Tooltip content="Checkout PR branch" side="bottom">
               <Button
                 onClick={onCheckout}
+                disabled={isCheckoutDisabled}
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Checkout PR branch"

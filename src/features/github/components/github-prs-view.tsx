@@ -15,6 +15,10 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import {
+  dismissGitHubAuthMigrationNotice,
+  isGitHubAuthMigrationNoticeDismissed,
+} from "@/features/github/lib/github-auth-notice";
 import { useSettingsStore } from "@/features/settings/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import { Button, buttonVariants } from "@/ui/button";
@@ -26,6 +30,7 @@ import { getFolderName } from "@/utils/path-helpers";
 import { useGitHubStore } from "../stores/github-store";
 import type { PRFilter, PullRequest } from "../types/github";
 import GitHubActionsView from "./github-actions-view";
+import GitHubAuthSurface from "./github-auth-surface";
 import GitHubIssuesView from "./github-issues-view";
 
 const filterLabels: Record<PRFilter, string> = {
@@ -88,8 +93,19 @@ PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const { prs, isLoading, error, currentFilter, isAuthenticated } = useGitHubStore();
-  const { fetchPRs, setFilter, checkAuth, setActiveRepoPath, openPRInBrowser, checkoutPR } =
+  const {
+    authStatus,
+    authSource,
+    cliAvailable,
+    currentUser,
+    hasLegacyStoredToken,
+    prs,
+    isLoading,
+    error,
+    currentFilter,
+    isAuthenticated,
+  } = useGitHubStore();
+  const { fetchPRs, setFilter, refreshAuthStatus, setActiveRepoPath, openPRInBrowser, checkoutPR } =
     useGitHubStore().actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRepoPaths = useRepositoryStore.use.workspaceRepoPaths();
@@ -112,6 +128,9 @@ const GitHubPRsView = memo(() => {
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<GitHubSidebarSection>("pull-requests");
+  const [isMigrationNoticeDismissed, setIsMigrationNoticeDismissed] = useState(() =>
+    isGitHubAuthMigrationNoticeDismissed(),
+  );
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const repoTriggerRef = useRef<HTMLButtonElement>(null);
   const prContextMenu = useContextMenu<PullRequest>();
@@ -132,8 +151,8 @@ const GitHubPRsView = memo(() => {
   );
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    void refreshAuthStatus();
+  }, [refreshAuthStatus]);
 
   useEffect(() => {
     if (availableSections.length === 0) return;
@@ -240,15 +259,14 @@ const GitHubPRsView = memo(() => {
           label: "Open on GitHub",
           icon: <ExternalLink />,
           onClick: () => {
-            if (activeRepoPath) {
-              void openPRInBrowser(activeRepoPath, selectedPR.number);
-            }
+            void openPRInBrowser(selectedPR.url);
           },
         },
         {
           id: "checkout-branch",
-          label: "Checkout Branch",
+          label: authSource === "pat" ? "Checkout Branch (CLI required)" : "Checkout Branch",
           icon: <GitBranch />,
+          disabled: authSource === "pat",
           onClick: () => {
             if (activeRepoPath) {
               void checkoutPR(activeRepoPath, selectedPR.number);
@@ -265,6 +283,15 @@ const GitHubPRsView = memo(() => {
         },
       ]
     : [];
+
+  const authSourceLabel =
+    authSource === "gh"
+      ? "GitHub CLI"
+      : authSource === "pat"
+        ? "PAT fallback"
+        : cliAvailable
+          ? "Not connected"
+          : "CLI missing";
 
   const renderRepoOption = (
     repoPath: string,
@@ -292,32 +319,42 @@ const GitHubPRsView = memo(() => {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full flex-col gap-2 p-2">
-        <div className="flex items-center justify-between px-0.5 py-0.5">
-          <span className="ui-text-sm font-medium text-text">GitHub</span>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
-          <AlertCircle className="mb-2 text-text-lighter" />
-          <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
-          <p className="ui-text-sm mt-1 text-text-lighter">
-            Run <code className="rounded bg-hover px-1 py-0.5">gh auth login</code> in terminal
-          </p>
-          <Button
-            onClick={() => void checkAuth()}
-            variant="ghost"
-            size="xs"
-            className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-            aria-label="Retry authentication check"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
+      <GitHubAuthSurface
+        authStatus={authStatus}
+        repoPath={activeRepoPath ?? rootFolderPath}
+        onRetry={() => {
+          void refreshAuthStatus();
+        }}
+      />
     );
   }
 
   return (
     <div className="ui-font flex h-full select-none flex-col gap-2 p-2">
+      {hasLegacyStoredToken && !isMigrationNoticeDismissed ? (
+        <div className="rounded-2xl border border-border/60 bg-secondary-bg/50 px-3 py-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="ui-text-sm text-text">GitHub CLI is now the preferred auth path.</p>
+              <p className="ui-text-sm mt-1 text-text-lighter">
+                Your existing stored token still works as a fallback until you remove it.
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                dismissGitHubAuthMigrationNotice();
+                setIsMigrationNoticeDismissed(true);
+              }}
+              variant="ghost"
+              size="xs"
+              className="h-auto shrink-0 px-0 text-text-lighter hover:bg-transparent hover:text-text"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-1 px-0.5 py-0.5">
         {availableSections.map((section) => (
           <Button
@@ -346,6 +383,11 @@ const GitHubPRsView = memo(() => {
         </div>
       ) : (
         <>
+          <div className="ui-text-sm flex items-center justify-between gap-2 px-1 text-text-lighter">
+            <span>{currentUser ? `Signed in as ${currentUser}` : "GitHub connected"}</span>
+            <span>{authSourceLabel}</span>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">
             <div>
               {activeSection === "pull-requests" ? (
