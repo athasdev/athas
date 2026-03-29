@@ -56,7 +56,9 @@ pub async fn resolve_github_auth(app: &AppHandle) -> Result<ResolvedGitHubAuth, 
          }
          Ok(false) => {}
          Err(error) => {
-            log::warn!("GitHub CLI auth resolution failed, falling back to PAT resolution: {error}");
+            log::warn!(
+               "GitHub CLI auth resolution failed, falling back to PAT resolution: {error}"
+            );
          }
       }
    }
@@ -95,10 +97,7 @@ pub async fn resolve_github_auth(app: &AppHandle) -> Result<ResolvedGitHubAuth, 
    })
 }
 
-pub async fn store_pat_fallback(
-   app: &AppHandle,
-   token: &str,
-) -> Result<GitHubAuthStatus, String> {
+pub async fn store_pat_fallback(app: &AppHandle, token: &str) -> Result<GitHubAuthStatus, String> {
    let trimmed_token = token.trim();
    if trimmed_token.is_empty() {
       return Err("Personal access token is required.".to_string());
@@ -138,7 +137,10 @@ mod tests {
       })
       .expect("auth status should serialize");
 
-      assert_eq!(json.get("source").and_then(|value| value.as_str()), Some("pat"));
+      assert_eq!(
+         json.get("source").and_then(|value| value.as_str()),
+         Some("pat")
+      );
       assert_eq!(
          json.get("cliAvailable").and_then(|value| value.as_bool()),
          Some(true)

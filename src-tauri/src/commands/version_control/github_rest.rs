@@ -105,13 +105,16 @@ pub async fn get_pr_details_with_pat(
       .unwrap_or_default();
 
    let status_checks = match pr.head.sha.as_deref() {
-      Some(head_sha) if !head_sha.is_empty() => {
-         fetch_status_checks(&client, &slug, head_sha).await.unwrap_or_default()
-      }
+      Some(head_sha) if !head_sha.is_empty() => fetch_status_checks(&client, &slug, head_sha)
+         .await
+         .unwrap_or_default(),
       _ => Vec::new(),
    };
 
-   let merge_state_status = pr.mergeable_state.as_deref().map(|state| state.to_uppercase());
+   let merge_state_status = pr
+      .mergeable_state
+      .as_deref()
+      .map(|state| state.to_uppercase());
    let mergeable = match pr.mergeable {
       Some(true) => Some("MERGEABLE".to_string()),
       Some(false) => Some("CONFLICTING".to_string()),
@@ -219,7 +222,10 @@ pub async fn get_pr_comments_with_pat(
       .collect())
 }
 
-pub async fn list_issues_with_pat(repo_path: &str, token: &str) -> Result<Vec<IssueListItem>, String> {
+pub async fn list_issues_with_pat(
+   repo_path: &str,
+   token: &str,
+) -> Result<Vec<IssueListItem>, String> {
    let slug = resolve_repo_slug(repo_path)?;
    let client = GitHubRestClient::new(token)?;
    let issues: Vec<RestIssueListItem> = client
@@ -349,7 +355,11 @@ pub async fn get_workflow_run_details_with_pat(
       url: run.html_url,
       head_branch: run.head_branch,
       head_sha: run.head_sha,
-      jobs: jobs_response.jobs.into_iter().map(map_workflow_job).collect(),
+      jobs: jobs_response
+         .jobs
+         .into_iter()
+         .map(map_workflow_job)
+         .collect(),
    })
 }
 
@@ -541,7 +551,10 @@ impl GitHubRestClient {
    fn new(token: &str) -> Result<Self, String> {
       let mut headers = HeaderMap::new();
       headers.insert(USER_AGENT, HeaderValue::from_static("athas"));
-      headers.insert(ACCEPT, HeaderValue::from_static("application/vnd.github+json"));
+      headers.insert(
+         ACCEPT,
+         HeaderValue::from_static("application/vnd.github+json"),
+      );
       headers.insert(
          "X-GitHub-Api-Version",
          HeaderValue::from_static(GITHUB_API_VERSION),
@@ -606,7 +619,8 @@ where
       return Err(extract_github_error_message(status.as_u16(), &body));
    }
 
-   serde_json::from_str(&body).map_err(|error| format!("Failed to parse GitHub API response: {error}"))
+   serde_json::from_str(&body)
+      .map_err(|error| format!("Failed to parse GitHub API response: {error}"))
 }
 
 async fn parse_github_text_response(response: reqwest::Response) -> Result<String, String> {
@@ -626,7 +640,12 @@ async fn parse_github_text_response(response: reqwest::Response) -> Result<Strin
 fn extract_github_error_message(status_code: u16, body: &str) -> String {
    let message = serde_json::from_str::<serde_json::Value>(body)
       .ok()
-      .and_then(|value| value.get("message").and_then(|message| message.as_str()).map(str::to_string))
+      .and_then(|value| {
+         value
+            .get("message")
+            .and_then(|message| message.as_str())
+            .map(str::to_string)
+      })
       .unwrap_or_else(|| body.trim().to_string())
       .trim()
       .to_string();

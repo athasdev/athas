@@ -34,16 +34,18 @@ pub async fn github_list_prs(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_list_prs(app, repo_path, filter),
-      GitHubAuthSource::Pat => list_prs_with_pat(
-         &repo_path,
-         &filter,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-         resolved.status.current_user.as_deref(),
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         list_prs_with_pat(
+            &repo_path,
+            &filter,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+            resolved.status.current_user.as_deref(),
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -69,14 +71,16 @@ pub async fn github_list_issues(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_list_issues(app, repo_path),
-      GitHubAuthSource::Pat => list_issues_with_pat(
-         &repo_path,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         list_issues_with_pat(
+            &repo_path,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -89,14 +93,16 @@ pub async fn github_list_workflow_runs(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_list_workflow_runs(app, repo_path),
-      GitHubAuthSource::Pat => list_workflow_runs_with_pat(
-         &repo_path,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         list_workflow_runs_with_pat(
+            &repo_path,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -135,15 +141,17 @@ pub async fn github_get_pr_details(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_get_pr_details(app, repo_path, pr_number),
-      GitHubAuthSource::Pat => get_pr_details_with_pat(
-         &repo_path,
-         pr_number,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         get_pr_details_with_pat(
+            &repo_path,
+            pr_number,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -157,15 +165,17 @@ pub async fn github_get_pr_diff(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_get_pr_diff(app, repo_path, pr_number),
-      GitHubAuthSource::Pat => get_pr_diff_with_pat(
-         &repo_path,
-         pr_number,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         get_pr_diff_with_pat(
+            &repo_path,
+            pr_number,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -179,15 +189,17 @@ pub async fn github_get_pr_files(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_get_pr_files(app, repo_path, pr_number),
-      GitHubAuthSource::Pat => get_pr_files_with_pat(
-         &repo_path,
-         pr_number,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         get_pr_files_with_pat(
+            &repo_path,
+            pr_number,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -201,15 +213,17 @@ pub async fn github_get_pr_comments(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_get_pr_comments(app, repo_path, pr_number),
-      GitHubAuthSource::Pat => get_pr_comments_with_pat(
-         &repo_path,
-         pr_number,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         get_pr_comments_with_pat(
+            &repo_path,
+            pr_number,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -223,15 +237,17 @@ pub async fn github_get_issue_details(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_get_issue_details(app, repo_path, issue_number),
-      GitHubAuthSource::Pat => get_issue_details_with_pat(
-         &repo_path,
-         issue_number,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         get_issue_details_with_pat(
+            &repo_path,
+            issue_number,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -245,15 +261,17 @@ pub async fn github_get_workflow_run_details(
    let resolved = resolve_github_auth(&app).await?;
    match resolved.status.source {
       GitHubAuthSource::Gh => athas_github::github_get_workflow_run_details(app, repo_path, run_id),
-      GitHubAuthSource::Pat => get_workflow_run_details_with_pat(
-         &repo_path,
-         run_id,
-         resolved
-            .pat_token
-            .as_deref()
-            .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
-      )
-      .await,
+      GitHubAuthSource::Pat => {
+         get_workflow_run_details_with_pat(
+            &repo_path,
+            run_id,
+            resolved
+               .pat_token
+               .as_deref()
+               .ok_or_else(|| "GitHub PAT fallback is unavailable.".to_string())?,
+         )
+         .await
+      }
       GitHubAuthSource::None => Err(build_auth_error(&resolved.status)),
    }
 }
@@ -295,5 +313,6 @@ fn build_auth_error(status: &GitHubAuthStatus) -> String {
       return "GitHub authentication is unavailable. Reconnect GitHub CLI or replace the stored personal access token.".to_string();
    }
 
-   "GitHub CLI is not authenticated. Run `gh auth login` or add a personal access token fallback.".to_string()
+   "GitHub CLI is not authenticated. Run `gh auth login` or add a personal access token fallback."
+      .to_string()
 }
