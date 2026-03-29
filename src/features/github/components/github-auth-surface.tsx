@@ -103,9 +103,7 @@ const GitHubAuthSurface = memo(({ authStatus, repoPath, onRetry }: GitHubAuthSur
 
           <div className="mb-8 space-y-2">
             <h2 className="ui-font text-base font-medium text-text">Connect GitHub</h2>
-            <p className="ui-text-sm leading-relaxed text-text-lighter">
-              {helperText}
-            </p>
+            <p className="ui-text-sm leading-relaxed text-text-lighter">{helperText}</p>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -121,7 +119,9 @@ const GitHubAuthSurface = memo(({ authStatus, repoPath, onRetry }: GitHubAuthSur
 
             <div className="flex items-center gap-3 py-1">
               <div className="h-px flex-1 bg-border/40" />
-              <span className="ui-font text-xs font-medium text-text-lighter/40 uppercase tracking-wider">OR</span>
+              <span className="ui-font text-xs font-medium text-text-lighter/40 uppercase tracking-wider">
+                OR
+              </span>
               <div className="h-px flex-1 bg-border/40" />
             </div>
 

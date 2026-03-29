@@ -92,7 +92,9 @@ export function PRViewerHeader({
               </Button>
             </Tooltip>
             <Tooltip
-              content={isCheckoutDisabled ? "Checkout PR branch (CLI required)" : "Checkout PR branch"}
+              content={
+                isCheckoutDisabled ? "Checkout PR branch (CLI required)" : "Checkout PR branch"
+              }
               side="bottom"
             >
               <Button

@@ -339,7 +339,8 @@ const GitHubPRsView = memo(() => {
             <div className="min-w-0 space-y-0.5">
               <p className="ui-text-sm font-medium text-accent">GitHub CLI support added</p>
               <p className="ui-text-sm text-text-lighter leading-relaxed">
-                Auth now prefers your local CLI session. Your existing token remains active as a fallback.
+                Auth now prefers your local CLI session. Your existing token remains active as a
+                fallback.
               </p>
             </div>
             <Button
@@ -386,7 +387,9 @@ const GitHubPRsView = memo(() => {
       ) : (
         <>
           <div className="ui-text-sm flex items-center justify-between gap-2 px-1 text-text-lighter">
-            <span className="truncate">{currentUser ? `Signed in as ${currentUser}` : "GitHub connected"}</span>
+            <span className="truncate">
+              {currentUser ? `Signed in as ${currentUser}` : "GitHub connected"}
+            </span>
             <span className="flex shrink-0 items-center gap-1.5 opacity-80">
               {authSource === "gh" ? (
                 <TerminalSquare className="size-3.5" />
