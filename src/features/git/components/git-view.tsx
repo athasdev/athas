@@ -624,7 +624,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
+      <div className="ui-font ui-text-sm @container flex h-full select-none flex-col gap-2 p-2">
         <div className={paneHeaderClassName("flex-wrap justify-between rounded-lg h-auto min-h-9")}>
           <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-wrap")}>
             <GitBranchManager
@@ -683,7 +683,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <TabsList
             variant="segmented"
-            className="grid h-auto shrink-0 grid-cols-4 border-border/60 bg-secondary-bg/40"
+            className="grid h-auto shrink-0 grid-cols-2 border-border/60 bg-secondary-bg/40 @lg:grid-cols-4"
           >
             {gitTabs.map((tab) => {
               const Icon = tab.icon;
