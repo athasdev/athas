@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { GitHubAuthStatus } from "../types/github";
 
-const invokeMock = mock(async (_command: string, _args?: Record<string, unknown>) => null);
+const invokeMock = mock(
+  async (_command: string, _args?: Record<string, unknown>): Promise<unknown> => null,
+);
 
 mock.module("@tauri-apps/api/core", () => ({
   invoke: invokeMock,
