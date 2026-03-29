@@ -625,8 +625,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("justify-between rounded-lg")}>
-          <div className={cn(PANE_GROUP_BASE, "min-w-0")}>
+        <div className={paneHeaderClassName("flex-wrap justify-between rounded-lg h-auto min-h-9")}>
+          <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-wrap")}>
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
@@ -643,7 +643,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 flex-wrap items-center gap-1">
             <Button
               ref={repoTriggerRef}
               onClick={() => {

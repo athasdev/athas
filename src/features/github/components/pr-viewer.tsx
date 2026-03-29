@@ -392,7 +392,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
             <div className="h-full w-1/4 animate-pulse bg-accent/70" />
           </div>
         )}
-        <div className="px-3 py-4 sm:px-5">
+        <div className="px-3 py-4 @sm:px-5">
           <div className="flex items-start gap-3">
             {prBuffer?.authorAvatarUrl ? (
               <img
@@ -486,7 +486,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       />
 
       {detailsError && (
-        <div className="px-3 pb-3 sm:px-5">
+        <div className="px-3 pb-3 @sm:px-5">
           <div className="flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
             <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
             <Button
@@ -501,7 +501,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         </div>
       )}
 
-      <div className="min-w-0 px-3 pb-4 sm:px-5">
+      <div className="min-w-0 px-3 pb-4 @sm:px-5">
         {activeTab === "activity" && (
           <PRActivityPanel
             body={pr.body}

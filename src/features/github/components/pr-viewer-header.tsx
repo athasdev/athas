@@ -61,9 +61,9 @@ export function PRViewerHeader({
   onToggleFilesView,
 }: PRViewerHeaderProps) {
   return (
-    <div className="shrink-0 px-3 py-4 sm:px-5">
+    <div className="shrink-0 px-3 py-4 @sm:px-5">
       <div className="flex flex-col gap-4 pb-2">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-start @3xl:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="ui-font ui-text-lg leading-tight font-medium text-text">{pr.title}</h1>
             <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 text-text-lighter">
