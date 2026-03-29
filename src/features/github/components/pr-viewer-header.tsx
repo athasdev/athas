@@ -91,7 +91,10 @@ export function PRViewerHeader({
                 <RefreshCw className={isRefreshingDetails ? "animate-spin" : ""} />
               </Button>
             </Tooltip>
-            <Tooltip content="Checkout PR branch" side="bottom">
+            <Tooltip
+              content={isCheckoutDisabled ? "Checkout PR branch (CLI required)" : "Checkout PR branch"}
+              side="bottom"
+            >
               <Button
                 onClick={onCheckout}
                 disabled={isCheckoutDisabled}

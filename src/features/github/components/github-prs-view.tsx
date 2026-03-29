@@ -8,7 +8,9 @@ import {
   FolderOpen,
   GitBranch,
   GitPullRequest,
+  KeyRound,
   RefreshCw,
+  TerminalSquare,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -288,9 +290,9 @@ const GitHubPRsView = memo(() => {
     authSource === "gh"
       ? "GitHub CLI"
       : authSource === "pat"
-        ? "PAT fallback"
+        ? "Personal token"
         : cliAvailable
-          ? "Not connected"
+          ? "Not signed in"
           : "CLI missing";
 
   const renderRepoOption = (
@@ -332,12 +334,12 @@ const GitHubPRsView = memo(() => {
   return (
     <div className="ui-font flex h-full select-none flex-col gap-2 p-2">
       {hasLegacyStoredToken && !isMigrationNoticeDismissed ? (
-        <div className="rounded-2xl border border-border/60 bg-secondary-bg/50 px-3 py-2">
+        <div className="rounded-xl bg-accent/5 px-3 py-2.5">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="ui-text-sm text-text">GitHub CLI is now the preferred auth path.</p>
-              <p className="ui-text-sm mt-1 text-text-lighter">
-                Your existing stored token still works as a fallback until you remove it.
+            <div className="min-w-0 space-y-0.5">
+              <p className="ui-text-sm font-medium text-accent">GitHub CLI support added</p>
+              <p className="ui-text-sm text-text-lighter leading-relaxed">
+                Auth now prefers your local CLI session. Your existing token remains active as a fallback.
               </p>
             </div>
             <Button
@@ -347,7 +349,7 @@ const GitHubPRsView = memo(() => {
               }}
               variant="ghost"
               size="xs"
-              className="h-auto shrink-0 px-0 text-text-lighter hover:bg-transparent hover:text-text"
+              className="h-auto shrink-0 px-1 py-0.5 text-accent/70 hover:bg-accent/10 hover:text-accent"
             >
               Dismiss
             </Button>
@@ -384,8 +386,15 @@ const GitHubPRsView = memo(() => {
       ) : (
         <>
           <div className="ui-text-sm flex items-center justify-between gap-2 px-1 text-text-lighter">
-            <span>{currentUser ? `Signed in as ${currentUser}` : "GitHub connected"}</span>
-            <span>{authSourceLabel}</span>
+            <span className="truncate">{currentUser ? `Signed in as ${currentUser}` : "GitHub connected"}</span>
+            <span className="flex shrink-0 items-center gap-1.5 opacity-80">
+              {authSource === "gh" ? (
+                <TerminalSquare className="size-3.5" />
+              ) : authSource === "pat" ? (
+                <KeyRound className="size-3.5" />
+              ) : null}
+              {authSourceLabel}
+            </span>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">

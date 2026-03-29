@@ -28,14 +28,14 @@ const GitHubAuthSurface = memo(({ authStatus, repoPath, onRetry }: GitHubAuthSur
   const cliTitle = authStatus.cliAvailable ? "Connect with GitHub CLI" : "Install GitHub CLI";
   const helperText = useMemo(() => {
     if (!authStatus.cliAvailable) {
-      return "GitHub CLI is not installed on this machine. Install it or use a personal access token fallback.";
+      return "GitHub CLI is not installed on this machine. Install it or provide a personal access token.";
     }
 
     if (authStatus.hasStoredPat && !authStatus.isAuthenticated) {
-      return "Athas found a stored personal access token, but it is no longer authenticating successfully. Reconnect GitHub CLI or replace the token fallback.";
+      return "The stored personal access token is no longer authenticating successfully. Please reconnect or replace the token.";
     }
 
-    return "Athas prefers your local GitHub CLI session. You can also use a personal access token fallback when CLI auth is unavailable.";
+    return "Sign in to manage pull requests, issues, and workflow runs directly from your workspace.";
   }, [authStatus.cliAvailable, authStatus.hasStoredPat, authStatus.isAuthenticated]);
 
   const handleCliAction = useCallback(async () => {
@@ -94,47 +94,56 @@ const GitHubAuthSurface = memo(({ authStatus, repoPath, onRetry }: GitHubAuthSur
           </Button>
         </div>
 
-        <div className="flex flex-1 flex-col justify-center rounded-2xl border border-border/60 bg-secondary-bg/60 p-4">
-          <div className="mx-auto mb-3 grid size-10 place-content-center rounded-full bg-primary-bg/80 text-text-lighter">
-            <Github className="size-5" />
+        <div className="flex flex-1 flex-col p-4 pt-10">
+          <div className="mb-6 flex">
+            <div className="flex size-10 items-center justify-center rounded-lg border border-border/60 bg-secondary-bg/40 text-text-lighter shadow-sm">
+              <Github className="size-5" />
+            </div>
           </div>
 
-          <div className="space-y-2 text-center">
-            <p className="ui-text-sm font-medium text-text">Connect GitHub</p>
-            <p className="ui-text-sm text-text-lighter">{helperText}</p>
+          <div className="mb-8 space-y-2">
+            <h2 className="ui-font text-base font-medium text-text">Connect GitHub</h2>
+            <p className="ui-text-sm leading-relaxed text-text-lighter">
+              {helperText}
+            </p>
           </div>
 
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <Button
               onClick={() => void handleCliAction()}
-              variant="outline"
+              variant="secondary"
               size="sm"
-              className="justify-center rounded-xl"
+              className="h-auto w-full justify-start rounded-xl py-2 text-left font-medium whitespace-normal"
             >
-              <TerminalSquare />
-              {cliTitle}
+              <TerminalSquare className="mr-1.5 size-4 shrink-0 opacity-70" />
+              <span>{cliTitle}</span>
             </Button>
+
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-border/40" />
+              <span className="ui-font text-xs font-medium text-text-lighter/40 uppercase tracking-wider">OR</span>
+              <div className="h-px flex-1 bg-border/40" />
+            </div>
 
             <Button
               onClick={() => setIsPatDialogOpen(true)}
               variant="ghost"
               size="sm"
-              className="justify-center rounded-xl"
+              className="h-auto w-full justify-start rounded-xl py-2 text-left text-text-lighter whitespace-normal hover:text-text"
             >
-              <KeyRound />
-              Use Personal Access Token
+              <KeyRound className="mr-1.5 size-4 shrink-0 opacity-70" />
+              <span>Use a personal access token</span>
             </Button>
           </div>
 
           {authStatus.hasStoredPat && !authStatus.isAuthenticated ? (
-            <div className="mt-4 rounded-xl border border-border/60 bg-primary-bg/70 p-3">
+            <div className="mt-8 rounded-xl border border-error/20 bg-error/5 p-3">
               <div className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 size-4 shrink-0 text-text-lighter" />
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-error/80" />
                 <div className="min-w-0 flex-1">
-                  <p className="ui-text-sm text-text">Stored PAT fallback needs attention</p>
-                  <p className="ui-text-sm mt-1 text-text-lighter">
-                    The saved token is still present, but GitHub rejected it for the current repo
-                    session.
+                  <p className="ui-text-sm font-medium text-error/90">Authentication failed</p>
+                  <p className="ui-text-sm mt-1 text-error/80">
+                    The stored token was rejected by GitHub.
                   </p>
                 </div>
               </div>
@@ -143,16 +152,12 @@ const GitHubAuthSurface = memo(({ authStatus, repoPath, onRetry }: GitHubAuthSur
                 disabled={isRemovingToken}
                 variant="ghost"
                 size="xs"
-                className="mt-3 h-auto px-0 text-text-lighter hover:bg-transparent hover:text-text"
+                className="mt-3 h-auto px-0 text-error/80 hover:bg-transparent hover:text-error"
               >
                 Remove stored token
               </Button>
             </div>
           ) : null}
-
-          <p className="ui-text-sm mt-4 text-center text-text-lighter">
-            GitHub CLI stays the preferred auth source whenever both are available.
-          </p>
         </div>
       </div>
 
