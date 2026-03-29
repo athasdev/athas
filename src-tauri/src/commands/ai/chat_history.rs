@@ -346,8 +346,8 @@ pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, Stri
    let mut stmt = conn
       .prepare(
          "SELECT id, title, created_at, last_message_at, agent_id, parent_chat_id, root_chat_id, \
-          branch_point_message_id, lineage_depth, session_name, acp_state, acp_activity FROM chats ORDER BY \
-          last_message_at DESC",
+          branch_point_message_id, lineage_depth, session_name, acp_state, acp_activity FROM \
+          chats ORDER BY last_message_at DESC",
       )
       .map_err(|e| format!("Failed to prepare query: {}", e))?;
 
@@ -383,7 +383,8 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
    let mut stmt = conn
       .prepare(
          "SELECT id, title, created_at, last_message_at, agent_id, parent_chat_id, root_chat_id, \
-          branch_point_message_id, lineage_depth, session_name, acp_state, acp_activity FROM chats WHERE id = ?1",
+          branch_point_message_id, lineage_depth, session_name, acp_state, acp_activity FROM \
+          chats WHERE id = ?1",
       )
       .map_err(|e| format!("Failed to prepare chat query: {}", e))?;
 
@@ -514,7 +515,8 @@ pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<Ch
    let mut stmt = conn
       .prepare(
          "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at, c.agent_id,
-             c.parent_chat_id, c.root_chat_id, c.branch_point_message_id, c.lineage_depth, c.session_name, c.acp_state, c.acp_activity
+             c.parent_chat_id, c.root_chat_id, c.branch_point_message_id, c.lineage_depth, \
+          c.session_name, c.acp_state, c.acp_activity
              FROM chats c
              LEFT JOIN messages m ON c.id = m.chat_id
              WHERE c.title LIKE ?1 OR m.content LIKE ?1

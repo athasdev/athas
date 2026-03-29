@@ -1,21 +1,28 @@
-use crate::features::acp::types::AcpRuntimeState;
-use crate::features::ai::acp::types::AcpEvent;
-use crate::features::ai::acp::{AcpAgentStatus, AcpBootstrapContext};
-use crate::features::ai::{
-   PiNativeModelInfo, PiNativeSessionInfo, PiNativeSessionModeState, PiNativeSessionSnapshot,
-   PiNativeSlashCommand, PiNativeTranscriptMessage,
+use crate::features::{
+   acp::types::AcpRuntimeState,
+   ai::{
+      PiNativeModelInfo, PiNativeSessionInfo, PiNativeSessionModeState, PiNativeSessionSnapshot,
+      PiNativeSlashCommand, PiNativeTranscriptMessage,
+      acp::{AcpAgentStatus, AcpBootstrapContext, types::AcpEvent},
+   },
+   runtime::{RuntimeManager, RuntimeType},
 };
-use crate::features::runtime::{RuntimeManager, RuntimeType};
 use anyhow::{Context, Result, anyhow};
 use serde_json::{Value, json};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+   collections::HashMap,
+   path::PathBuf,
+   sync::{
+      Arc,
+      atomic::{AtomicU64, Ordering},
+   },
+};
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{ChildStdin, Command};
-use tokio::sync::{Mutex, oneshot};
+use tokio::{
+   io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+   process::{ChildStdin, Command},
+   sync::{Mutex, oneshot},
+};
 
 struct HostProcess {
    pid: Option<u32>,

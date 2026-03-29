@@ -1,16 +1,18 @@
+use super::{
+   github_auth::{
+      GitHubAuthSource, GitHubAuthStatus, remove_pat_fallback, resolve_github_auth,
+      store_pat_fallback,
+   },
+   github_rest::{
+      get_issue_details_with_pat, get_pr_comments_with_pat, get_pr_details_with_pat,
+      get_pr_diff_with_pat, get_pr_files_with_pat, get_workflow_run_details_with_pat,
+      list_issues_with_pat, list_prs_with_pat, list_workflow_runs_with_pat,
+   },
+};
 use crate::secure_storage::get_secret;
 pub use athas_github::{
    IssueDetails, IssueListItem, PullRequest, PullRequestComment, PullRequestDetails,
    PullRequestFile, WorkflowRunDetails, WorkflowRunListItem,
-};
-
-use super::github_auth::{
-   GitHubAuthSource, GitHubAuthStatus, remove_pat_fallback, resolve_github_auth, store_pat_fallback,
-};
-use super::github_rest::{
-   get_issue_details_with_pat, get_pr_comments_with_pat, get_pr_details_with_pat,
-   get_pr_diff_with_pat, get_pr_files_with_pat, get_workflow_run_details_with_pat,
-   list_issues_with_pat, list_prs_with_pat, list_workflow_runs_with_pat,
 };
 
 const GITHUB_PAT_SECRET_KEY: &str = "github_token";
@@ -306,11 +308,15 @@ pub async fn remove_github_token(app: tauri::AppHandle) -> Result<(), String> {
 
 fn build_auth_error(status: &GitHubAuthStatus) -> String {
    if !status.cli_available {
-      return "GitHub CLI is not installed. Install GitHub CLI or add a personal access token fallback.".to_string();
+      return "GitHub CLI is not installed. Install GitHub CLI or add a personal access token \
+              fallback."
+         .to_string();
    }
 
    if status.has_stored_pat {
-      return "GitHub authentication is unavailable. Reconnect GitHub CLI or replace the stored personal access token.".to_string();
+      return "GitHub authentication is unavailable. Reconnect GitHub CLI or replace the stored \
+              personal access token."
+         .to_string();
    }
 
    "GitHub CLI is not authenticated. Run `gh auth login` or add a personal access token fallback."

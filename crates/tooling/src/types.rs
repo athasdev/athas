@@ -132,6 +132,7 @@ impl fmt::Display for ToolError {
    }
 }
 
+#[rustfmt::skip]
 impl std::error::Error for ToolError {}
 
 impl From<std::io::Error> for ToolError {

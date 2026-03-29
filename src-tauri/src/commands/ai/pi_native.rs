@@ -1,8 +1,10 @@
-use crate::features::acp::types::AcpRuntimeState;
-use crate::features::ai::{
-   AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeModelInfo, PiNativeSessionInfo,
-   PiNativeSessionModeState, PiNativeSessionSnapshot, PiNativeSlashCommand,
-   PiNativeTranscriptMessage,
+use crate::features::{
+   acp::types::AcpRuntimeState,
+   ai::{
+      AcpAgentStatus, AcpBootstrapContext, PiNativeBridge, PiNativeModelInfo, PiNativeSessionInfo,
+      PiNativeSessionModeState, PiNativeSessionSnapshot, PiNativeSlashCommand,
+      PiNativeTranscriptMessage,
+   },
 };
 use serde_json::Value;
 use std::sync::Arc;

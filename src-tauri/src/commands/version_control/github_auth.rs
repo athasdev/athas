@@ -1,8 +1,7 @@
+use super::github_rest::fetch_current_user_with_pat;
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
 use serde::Serialize;
 use tauri::AppHandle;
-
-use super::github_rest::fetch_current_user_with_pat;
 
 const GITHUB_PAT_SECRET_KEY: &str = "github_token";
 const GITHUB_PAT_SOURCE_KEY: &str = "github_pat_fallback_source";
