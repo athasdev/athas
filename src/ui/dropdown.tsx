@@ -1,619 +1,629 @@
-import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, type Transition } from "framer-motion";
-import {
-  type CSSProperties,
-  type ReactNode,
-  type RefObject,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
+import { AnimatePresence, motion, type HTMLMotionProps } from "framer-motion";
+import { ChevronDown, Search } from "lucide-react";
+import type {
+  CSSProperties,
+  ForwardRefExoticComponent,
+  KeyboardEvent,
+  ReactNode,
+  RefAttributes,
+  RefObject,
 } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { buttonVariants } from "@/ui/button";
-import Input from "@/ui/input";
+import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/utils/cn";
-import { Search } from "lucide-react";
+import { adjustPositionToFitViewport } from "@/utils/fit-viewport";
 
-export const DROPDOWN_TRIGGER_BASE = cn(
-  buttonVariants({
-    variant: "secondary",
-    size: "xs",
-  }),
-  "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
-);
+type DropdownTriggerProps = {
+  onClick?: () => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
+};
 
-const dropdownRootVariants = cva(
-  "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-);
+type SelectOption = {
+  value: string;
+  label: string;
+  icon?: ReactNode;
+};
 
-const dropdownItemVariants = cva(
-  "ui-font ui-text-sm flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
-  {
-    variants: {
-      disabled: {
-        true: "cursor-not-allowed opacity-50",
-        false: "cursor-pointer hover:bg-hover",
-      },
-      focused: {
-        true: "bg-hover",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      disabled: false,
-      focused: false,
-    },
-  },
-);
-
-const dropdownSectionLabelVariants = cva("ui-font ui-text-sm px-2.5 py-1 text-text-lighter");
-
-export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
-
-export function dropdownTriggerClassName(className?: string) {
-  return cn(DROPDOWN_TRIGGER_BASE, className);
-}
-
-export function dropdownItemClassName(className?: string) {
-  return cn(DROPDOWN_ITEM_BASE, className);
-}
+type MenuAnchorSide = "top" | "bottom";
+type MenuAnchorAlign = "start" | "center" | "end";
 
 export interface MenuItem {
   id: string;
-  label: string;
+  label: ReactNode;
   icon?: ReactNode;
+  shortcut?: ReactNode;
+  keybinding?: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   separator?: boolean;
-  keybinding?: ReactNode;
   className?: string;
 }
 
-interface MenuPopoverProps {
+interface SelectDropdownProps {
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+  size?: "xs" | "sm" | "md";
+  searchable?: boolean;
+  openDirection?: "up" | "down" | "auto";
+  CustomTrigger?: ForwardRefExoticComponent<
+    DropdownTriggerProps & RefAttributes<HTMLButtonElement>
+  >;
+  variant?: "default" | "ghost";
+}
+
+interface MenuDropdownProps {
   isOpen: boolean;
-  menuRef: RefObject<HTMLDivElement | null>;
+  onClose: () => void;
+  children?: ReactNode;
+  items?: MenuItem[];
+  point?: { x: number; y: number };
+  anchorRef?: RefObject<HTMLElement | null>;
+  anchorSide?: MenuAnchorSide;
+  anchorAlign?: MenuAnchorAlign;
+  className?: string;
+  style?: CSSProperties;
+}
+
+interface MenuPopoverProps extends Omit<HTMLMotionProps<"div">, "children" | "style" | "ref"> {
+  isOpen: boolean;
+  menuRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
-  initial?: { opacity: number; scale: number; y?: number };
-  animate?: { opacity: number; scale: number; y?: number };
-  exit?: { opacity: number; scale: number; y?: number };
-  transition?: Transition;
 }
 
-export function MenuPopover({
+type DropdownProps = SelectDropdownProps | MenuDropdownProps;
+
+const MENU_VIEWPORT_MARGIN = 8;
+
+export const dropdownTriggerClassName = (className?: string) =>
+  cn(
+    "ui-font inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 font-medium text-text-lighter transition-colors hover:bg-hover hover:text-text",
+    className,
+  );
+
+export const dropdownItemClassName = (className?: string) =>
+  cn(
+    "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs text-text transition-colors hover:bg-hover",
+    className,
+  );
+
+const sizeClasses = {
+  xs: "px-2 py-1 text-xs h-6",
+  sm: "px-2 py-1 text-xs h-7",
+  md: "px-3 py-1.5 text-sm h-8",
+};
+
+const iconSizes = {
+  xs: "var(--app-ui-icon-size-xs)",
+  sm: "var(--app-ui-icon-size-sm)",
+  md: "var(--app-ui-icon-size-md)",
+};
+
+const setRefValue = <T,>(ref: RefObject<T | null> | undefined, value: T | null) => {
+  if (!ref) {
+    return;
+  }
+
+  (ref as { current: T | null }).current = value;
+};
+
+const getMenuCoordinates = (
+  menuWidth: number,
+  menuHeight: number,
+  point?: { x: number; y: number },
+  anchor?: {
+    ref?: RefObject<HTMLElement | null>;
+    side?: MenuAnchorSide;
+    align?: MenuAnchorAlign;
+  },
+) => {
+  if (point) {
+    return adjustPositionToFitViewport({
+      x: point.x,
+      y: point.y,
+      width: menuWidth,
+      height: menuHeight,
+    });
+  }
+
+  const anchorElement = anchor?.ref?.current;
+  if (!anchorElement) {
+    return null;
+  }
+
+  const rect = anchorElement.getBoundingClientRect();
+  const side = anchor?.side ?? "bottom";
+  const align = anchor?.align ?? "start";
+
+  let x = rect.left;
+  if (align === "center") {
+    x = rect.left + (rect.width - menuWidth) / 2;
+  } else if (align === "end") {
+    x = rect.right - menuWidth;
+  }
+
+  const y = side === "top" ? rect.top - menuHeight - 8 : rect.bottom + 8;
+
+  return adjustPositionToFitViewport({
+    x,
+    y,
+    width: menuWidth,
+    height: menuHeight,
+  });
+};
+
+export const MenuItemsList = ({
+  items,
+  onItemSelect,
+}: {
+  items: MenuItem[];
+  onItemSelect?: () => void;
+}) => (
+  <div className="space-y-1">
+    {items.map((item) => {
+      if (item.separator) {
+        return <div key={item.id} className="my-1 border-border/60 border-t" />;
+      }
+
+      return (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => {
+            if (item.disabled) {
+              return;
+            }
+            item.onClick();
+            onItemSelect?.();
+          }}
+          disabled={item.disabled}
+          className={dropdownItemClassName(
+            cn(
+              item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
+              item.className,
+            ),
+          )}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            {item.icon}
+            <span className="truncate">{item.label}</span>
+          </span>
+          {(item.shortcut || item.keybinding) && (
+            <span className="text-text-lighter">{item.shortcut ?? item.keybinding}</span>
+          )}
+        </button>
+      );
+    })}
+  </div>
+);
+
+export const MenuPopover = ({
   isOpen,
   menuRef,
   children,
   className,
   style,
-  initial = { opacity: 0, scale: 0.95 },
-  animate = { opacity: 1, scale: 1 },
-  exit = { opacity: 0, scale: 0.95 },
-  transition = { duration: 0.12, ease: "easeOut" as const },
-}: MenuPopoverProps) {
-  if (typeof document === "undefined") return null;
-
-  const node = isOpen ? (
-    <motion.div
-      ref={menuRef}
-      initial={initial}
-      animate={animate}
-      exit={exit}
-      transition={transition}
-      className={cn(dropdownRootVariants(), className)}
-      style={style}
-    >
-      {children}
-    </motion.div>
-  ) : null;
-
-  return createPortal(<AnimatePresence>{node}</AnimatePresence>, document.body);
-}
-
-interface MenuItemsListProps {
-  items: MenuItem[];
-  onItemSelect?: () => void;
-  className?: string;
-  itemClassName?: string;
-  focusIndex?: number;
-}
-
-export function MenuItemsList({
-  items,
-  onItemSelect,
-  className,
-  itemClassName,
-  focusIndex = -1,
-}: MenuItemsListProps) {
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    if (focusIndex >= 0 && itemRefs.current[focusIndex]) {
-      itemRefs.current[focusIndex]?.scrollIntoView({ block: "nearest" });
-    }
-  }, [focusIndex]);
-
-  let selectableIdx = -1;
+  ...motionProps
+}: MenuPopoverProps) => {
+  const localRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className={className}>
-      {items.map((item) => {
-        if (item.separator) {
-          return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
-        }
-
-        selectableIdx++;
-        const isFocused = selectableIdx === focusIndex;
-
-        return (
-          <button
-            key={item.id}
-            ref={(el) => {
-              if (!item.disabled) {
-                itemRefs.current[selectableIdx] = el;
-              }
+    <AnimatePresence>
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <motion.div
+            ref={(node) => {
+              localRef.current = node;
+              setRefValue(menuRef, node);
             }}
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              if (item.disabled) return;
-              item.onClick();
-              onItemSelect?.();
-            }}
-            disabled={item.disabled}
+            initial={{ opacity: 0, scale: 0.96, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: -4 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className={cn(
-              dropdownItemVariants({
-                disabled: item.disabled,
-                focused: isFocused,
-              }),
-              itemClassName,
-              item.className,
+              "fixed z-[10040] overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl",
+              className,
             )}
+            style={style}
+            {...motionProps}
           >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
-            <span className="flex-1">{item.label}</span>
-            {item.keybinding && (
-              <span className="ui-text-sm shrink-0 text-text-lighter">{item.keybinding}</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
+            {children}
+          </motion.div>,
+          document.body,
+        )}
+    </AnimatePresence>
   );
-}
+};
 
-export interface DropdownSection {
-  id: string;
-  label?: string;
-  items: MenuItem[];
-}
+const isMenuDropdownProps = (props: DropdownProps): props is MenuDropdownProps =>
+  "isOpen" in props || "items" in props || "anchorRef" in props || "point" in props;
 
-type AnchorSide = "top" | "bottom";
-type AnchorAlign = "start" | "end";
-
-interface DropdownBaseProps {
-  isOpen: boolean;
-  onClose: () => void;
-  className?: string;
-  style?: CSSProperties;
-}
-
-interface AnchorPositioning {
-  anchorRef: RefObject<HTMLElement | null>;
-  anchorSide?: AnchorSide;
-  anchorAlign?: AnchorAlign;
-  point?: never;
-}
-
-interface PointPositioning {
-  point: { x: number; y: number };
-  anchorRef?: never;
-  anchorSide?: never;
-  anchorAlign?: never;
-}
-
-type PositioningProps = AnchorPositioning | PointPositioning;
-
-interface ItemsContent {
-  items: MenuItem[];
-  sections?: never;
-  children?: never;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-}
-
-interface SectionsContent {
-  sections: DropdownSection[];
-  items?: never;
-  children?: never;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-}
-
-interface ChildrenContent {
-  children: ReactNode;
-  items?: never;
-  sections?: never;
-  searchable?: never;
-  searchPlaceholder?: never;
-}
-
-type ContentProps = ItemsContent | SectionsContent | ChildrenContent;
-
-export type DropdownProps = DropdownBaseProps & PositioningProps & ContentProps;
-
-const VIEWPORT_PADDING = 8;
-const RESIZE_REPOSITION_THRESHOLD = 2;
-
-function getNumericMaxHeight(value: CSSProperties["maxHeight"]) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const match = value.trim().match(/^(\d+(?:\.\d+)?)px$/);
-    if (match) {
-      return Number.parseFloat(match[1]);
-    }
-  }
-  return null;
-}
-
-function getViewportBounds() {
-  const vv = window.visualViewport;
-  if (!vv || !Number.isFinite(vv.width) || !Number.isFinite(vv.height)) {
-    return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-  }
-  return {
-    left: Number.isFinite(vv.offsetLeft) ? vv.offsetLeft : 0,
-    top: Number.isFinite(vv.offsetTop) ? vv.offsetTop : 0,
-    width: vv.width,
-    height: vv.height,
-  };
-}
-
-export function Dropdown(props: DropdownProps) {
-  const { isOpen, onClose, className, style, searchable, searchPlaceholder } = props;
-
-  const menuRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const lockedWidthRef = useRef<number | null>(null);
-  const lastMenuSizeRef = useRef<{ width: number; height: number } | null>(null);
+const SelectDropdown = ({
+  value,
+  options,
+  onChange,
+  placeholder = "Select...",
+  className = "",
+  disabled = false,
+  size = "sm",
+  searchable = false,
+  openDirection = "down",
+  CustomTrigger,
+  variant = "default",
+}: SelectDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [focusIndex, setFocusIndex] = useState(-1);
-  const [resolvedSide, setResolvedSide] = useState<AnchorSide>("bottom");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
-  const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
-  const anchorSide = isAnchorMode
-    ? ((props as AnchorPositioning).anchorSide ?? "bottom")
-    : "bottom";
-  const anchorAlign = isAnchorMode
-    ? ((props as AnchorPositioning).anchorAlign ?? "start")
-    : "start";
-  const point = !isAnchorMode ? (props as PointPositioning).point : null;
+  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, (event) => {
+    const target = event.target as HTMLElement;
+    if (target && buttonRef.current?.contains(target)) {
+      return;
+    }
+    setIsOpen(false);
+  });
 
-  const hasItems = "items" in props && props.items != null;
-  const hasSections = "sections" in props && props.sections != null;
-  const hasChildren = "children" in props && props.children != null;
-
-  const getAllItems = useCallback((): MenuItem[] => {
-    if (hasItems) return props.items!;
-    if (hasSections) return props.sections!.flatMap((s) => s.items);
-    return [];
-  }, [hasItems, hasSections, props]);
-
-  const getFilteredItems = useCallback((): MenuItem[] => {
-    const all = getAllItems();
-    if (!searchQuery.trim()) return all;
-    const q = searchQuery.toLowerCase();
-    return all.filter((item) => !item.separator && item.label.toLowerCase().includes(q));
-  }, [getAllItems, searchQuery]);
-
-  const getFilteredSections = useCallback((): DropdownSection[] => {
-    if (!hasSections) return [];
-    if (!searchQuery.trim()) return props.sections!;
-    const q = searchQuery.toLowerCase();
-    return props
-      .sections!.map((section) => ({
-        ...section,
-        items: section.items.filter(
-          (item) => !item.separator && item.label.toLowerCase().includes(q),
-        ),
-      }))
-      .filter((section) => section.items.length > 0);
-  }, [hasSections, searchQuery, props]);
-
-  const positionMenu = useCallback(() => {
-    const menu = menuRef.current;
-    if (!menu) return;
-
-    const vp = getViewportBounds();
-    const userMaxHeight = getNumericMaxHeight(style?.maxHeight);
-    const hasExplicitWidth = style?.width != null;
-
-    const applyMaxHeight = (height: number) => {
-      const nextHeight = userMaxHeight == null ? height : Math.min(height, userMaxHeight);
-      menu.style.maxHeight = `${nextHeight}px`;
-    };
-
-    const applyLockedWidth = () => {
-      if (hasExplicitWidth) return;
-
-      if (lockedWidthRef.current == null) {
-        lockedWidthRef.current = menu.getBoundingClientRect().width;
-      }
-
-      if (lockedWidthRef.current != null) {
-        menu.style.width = `${lockedWidthRef.current}px`;
-      }
-    };
-
-    let x: number;
-    let y: number;
-    let finalSide: AnchorSide = "bottom";
-
-    if (anchorRef?.current) {
-      const anchorRect = anchorRef.current.getBoundingClientRect();
-      const viewportMaxHeight = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
-      const spaceBelow = vp.top + vp.height - anchorRect.bottom - VIEWPORT_PADDING;
-      const spaceAbove = anchorRect.top - vp.top - VIEWPORT_PADDING;
-
-      if (anchorSide === "bottom") {
-        finalSide = spaceBelow >= spaceAbove ? "bottom" : "top";
-      } else {
-        finalSide = spaceAbove >= spaceBelow ? "top" : "bottom";
-      }
-
-      const availableHeight = finalSide === "bottom" ? spaceBelow : spaceAbove;
-      applyMaxHeight(Math.max(120, Math.min(viewportMaxHeight, availableHeight)));
-      applyLockedWidth();
-
-      const menuRect = menu.getBoundingClientRect();
-
-      if (anchorAlign === "end") {
-        x = anchorRect.right - menuRect.width;
-      } else {
-        x = anchorRect.left;
-      }
-
-      if (finalSide === "bottom") {
-        if (menuRect.height <= spaceBelow || spaceBelow >= spaceAbove) {
-          y = anchorRect.bottom + 6;
-          finalSide = "bottom";
-        } else {
-          y = anchorRect.top - menuRect.height - 6;
-          finalSide = "top";
-        }
-      } else {
-        if (menuRect.height <= spaceAbove || spaceAbove >= spaceBelow) {
-          y = anchorRect.top - menuRect.height - 6;
-          finalSide = "top";
-        } else {
-          y = anchorRect.bottom + 6;
-          finalSide = "bottom";
-        }
-      }
-    } else if (point) {
-      const maxH = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
-      applyMaxHeight(maxH);
-      applyLockedWidth();
-
-      const menuRect = menu.getBoundingClientRect();
-      x = point.x;
-      y = point.y;
-
-      if (x + menuRect.width > vp.left + vp.width - VIEWPORT_PADDING) {
-        x = point.x - menuRect.width;
-      }
-      if (y + menuRect.height > vp.top + vp.height - VIEWPORT_PADDING) {
-        y = point.y - menuRect.height;
-      }
-    } else {
+  useEffect(() => {
+    if (!isOpen || !buttonRef.current) {
+      setSearchQuery("");
       return;
     }
 
-    const menuRect = menu.getBoundingClientRect();
+    const rect = buttonRef.current.getBoundingClientRect();
+    const y =
+      openDirection === "up"
+        ? rect.top - 8
+        : openDirection === "down"
+          ? rect.bottom + 8
+          : window.innerHeight - rect.bottom < 200 && rect.top > window.innerHeight - rect.bottom
+            ? rect.top - 8
+            : rect.bottom + 8;
 
-    const minX = vp.left + VIEWPORT_PADDING;
-    const maxX = vp.left + vp.width - menuRect.width - VIEWPORT_PADDING;
-    const minY = vp.top + VIEWPORT_PADDING;
-    const maxY = vp.top + vp.height - menuRect.height - VIEWPORT_PADDING;
-
-    x = Math.max(minX, Math.min(x, maxX));
-    y = Math.max(minY, Math.min(y, maxY));
-
-    menu.style.left = `${Math.round(x)}px`;
-    menu.style.top = `${Math.round(y)}px`;
-    setResolvedSide(finalSide);
-  }, [anchorRef, anchorSide, anchorAlign, point]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    const frame = requestAnimationFrame(positionMenu);
-    return () => cancelAnimationFrame(frame);
-  }, [isOpen, positionMenu, searchQuery]);
-
-  useEffect(() => {
-    if (isOpen) return;
-    lockedWidthRef.current = null;
-    lastMenuSizeRef.current = null;
-    if (menuRef.current && style?.width == null) {
-      menuRef.current.style.width = "";
-    }
-  }, [isOpen, style?.width]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-
-      const { width, height } = entry.contentRect;
-      const previousSize = lastMenuSizeRef.current;
-      lastMenuSizeRef.current = { width, height };
-
-      if (!previousSize) {
-        positionMenu();
-        return;
-      }
-
-      const widthDelta = Math.abs(width - previousSize.width);
-      const heightDelta = Math.abs(height - previousSize.height);
-
-      if (widthDelta < RESIZE_REPOSITION_THRESHOLD && heightDelta < RESIZE_REPOSITION_THRESHOLD) {
-        return;
-      }
-
-      positionMenu();
+    const position = adjustPositionToFitViewport({
+      x: rect.left,
+      y,
+      width: rect.width + 48,
+      height: dropdownRef.current?.offsetHeight || 200,
     });
-    if (menuRef.current) resizeObserver.observe(menuRef.current);
 
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target)) return;
-      if (anchorRef?.current?.contains(target)) return;
-      onClose();
+    setDropdownPosition({
+      top:
+        openDirection === "up"
+          ? position.y - (dropdownRef.current?.offsetHeight || 200)
+          : position.y,
+      left: position.x,
+      width: rect.width + 48,
+    });
+
+    if (searchable) {
+      searchInputRef.current?.focus();
+    }
+  }, [isOpen, searchable, openDirection]);
+
+  const selectedOption = options.find((option) => option.value === value);
+  const triggerLabel = selectedOption?.label || value || placeholder;
+  const filteredOptions =
+    searchable && searchQuery
+      ? options.filter((option) => option.label.toLowerCase().includes(searchQuery.toLowerCase()))
+      : options;
+  const selectedIndex = filteredOptions.findIndex((option) => option.value === value);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    if (filteredOptions.length === 0) {
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [filteredOptions, isOpen, selectedIndex]);
+
+  const selectOption = (nextValue: string) => {
+    onChange(nextValue);
+    setIsOpen(false);
+  };
+
+  const moveHighlight = (direction: -1 | 1) => {
+    if (filteredOptions.length === 0) {
+      return;
+    }
+
+    setHighlightedIndex((currentIndex) => {
+      if (currentIndex === -1) {
+        return selectedIndex >= 0 ? selectedIndex : 0;
+      }
+
+      return (currentIndex + direction + filteredOptions.length) % filteredOptions.length;
+    });
+  };
+
+  const handleSelectHighlighted = () => {
+    if (highlightedIndex < 0 || highlightedIndex >= filteredOptions.length) {
+      return;
+    }
+
+    selectOption(filteredOptions[highlightedIndex].value);
+  };
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) {
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      moveHighlight(event.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      handleSelectHighlighted();
+      return;
+    }
+
+    if (event.key === "Escape" && isOpen) {
+      event.preventDefault();
+      setIsOpen(false);
+    }
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      moveHighlight(event.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSelectHighlighted();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    }
+  };
+
+  const dropdown = (
+    <AnimatePresence>
+      {isOpen && !disabled && (
+        <motion.div
+          ref={dropdownRef}
+          initial={{ opacity: 0, scale: 0.95, y: openDirection === "up" ? 4 : -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: openDirection === "up" ? 4 : -4 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed z-[10040] max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            width: dropdownPosition.width,
+            transformOrigin: openDirection === "up" ? "bottom" : "top",
+          }}
+        >
+          {searchable && (
+            <div className="sticky top-0 border-border border-b bg-primary-bg p-2">
+              <div className="relative">
+                <Search
+                  size="var(--app-ui-icon-size-sm)"
+                  className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search..."
+                  className="w-full rounded border border-border bg-secondary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={handleSearchKeyDown}
+                />
+              </div>
+            </div>
+          )}
+          {filteredOptions.length === 0 ? (
+            <div className="px-2 py-4 text-center text-text-lighter text-xs">
+              No matching options
+            </div>
+          ) : (
+            filteredOptions.map((option, index) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => selectOption(option.value)}
+                className={cn(
+                  "w-full px-2 py-1 text-left text-text text-xs transition-colors",
+                  "hover:bg-hover",
+                  highlightedIndex === index
+                    ? "bg-hover"
+                    : value === option.value
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "hover:text-text",
+                )}
+              >
+                <span className="flex items-center gap-1.5">
+                  {option.icon}
+                  {option.label}
+                </span>
+              </button>
+            ))
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <div className={cn("relative", className)}>
+      {CustomTrigger ? (
+        <CustomTrigger
+          ref={buttonRef}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onKeyDown={handleTriggerKeyDown}
+        />
+      ) : (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onKeyDown={handleTriggerKeyDown}
+          disabled={disabled}
+          className={cn(
+            "flex w-full items-center justify-between gap-1 rounded-lg text-text transition-colors",
+            "focus:outline-none focus:ring-1 focus:ring-accent/50",
+            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
+            variant === "default" && "border border-border bg-secondary-bg",
+            variant === "ghost" && "border-transparent bg-transparent",
+            sizeClasses[size],
+          )}
+        >
+          {selectedOption?.icon}
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronDown
+            size={iconSizes[size]}
+            className={cn(
+              "shrink-0 text-text-lighter transition-transform",
+              isOpen && "rotate-180",
+            )}
+          />
+        </button>
+      )}
+      {typeof document !== "undefined" && createPortal(dropdown, document.body)}
+    </div>
+  );
+};
+
+const MenuDropdown = ({
+  isOpen,
+  onClose,
+  children,
+  items,
+  point,
+  anchorRef,
+  anchorSide = "bottom",
+  anchorAlign = "start",
+  className,
+  style,
+}: MenuDropdownProps) => {
+  const localMenuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useOnClickOutside(localMenuRef as RefObject<HTMLElement>, (event) => {
+    if (!isOpen) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    if (anchorRef?.current?.contains(target)) {
+      return;
+    }
+
+    onClose();
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const menu = localMenuRef.current;
+      if (!menu) {
+        return;
+      }
+
+      const nextPosition = getMenuCoordinates(
+        menu.offsetWidth || 200,
+        menu.offsetHeight || 200,
+        point,
+        {
+          ref: anchorRef,
+          side: anchorSide,
+          align: anchorAlign,
+        },
+      );
+      setPosition(nextPosition ? { left: nextPosition.x, top: nextPosition.y } : null);
     };
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorAlign, anchorRef, anchorSide, isOpen, point]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
         onClose();
       }
     };
 
-    window.addEventListener("resize", positionMenu);
-    window.addEventListener("scroll", positionMenu, true);
-    window.visualViewport?.addEventListener("resize", positionMenu);
-    window.visualViewport?.addEventListener("scroll", positionMenu);
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", positionMenu);
-      window.removeEventListener("scroll", positionMenu, true);
-      window.visualViewport?.removeEventListener("resize", positionMenu);
-      window.visualViewport?.removeEventListener("scroll", positionMenu);
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onClose, positionMenu, anchorRef]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setSearchQuery("");
-      setFocusIndex(-1);
-      if (searchable) {
-        requestAnimationFrame(() => searchRef.current?.focus());
-      }
-    }
-  }, [isOpen, searchable]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const items = getFilteredItems().filter((item) => !item.separator && !item.disabled);
-      if (items.length === 0) return;
-
-      switch (e.key) {
-        case "ArrowDown": {
-          e.preventDefault();
-          setFocusIndex((prev) => (prev + 1) % items.length);
-          break;
-        }
-        case "ArrowUp": {
-          e.preventDefault();
-          setFocusIndex((prev) => (prev <= 0 ? items.length - 1 : prev - 1));
-          break;
-        }
-        case "Home": {
-          e.preventDefault();
-          setFocusIndex(0);
-          break;
-        }
-        case "End": {
-          e.preventDefault();
-          setFocusIndex(items.length - 1);
-          break;
-        }
-        case "Enter": {
-          e.preventDefault();
-          if (focusIndex >= 0 && focusIndex < items.length) {
-            items[focusIndex].onClick();
-            onClose();
-          }
-          break;
-        }
-      }
-    },
-    [getFilteredItems, focusIndex, onClose],
-  );
-
-  if (typeof document === "undefined") return null;
-
-  const originMap: Record<string, string> = {
-    "bottom-start": "top left",
-    "bottom-end": "top right",
-    "top-start": "bottom left",
-    "top-end": "bottom right",
-  };
-  const transformOrigin =
-    originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
-
-  const yDir = resolvedSide === "top" ? 4 : -4;
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   return (
     <MenuPopover
       isOpen={isOpen}
-      menuRef={menuRef}
-      className={className}
-      style={{ transformOrigin, ...style }}
-      initial={{ opacity: 0, scale: 0.95, y: yDir }}
+      menuRef={localMenuRef}
+      initial={{ opacity: 0, scale: 0.96, y: anchorSide === "top" ? 4 : -4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: yDir }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      exit={{ opacity: 0, scale: 0.96, y: anchorSide === "top" ? 4 : -4 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+      className={cn("min-w-[180px] p-1.5", className)}
+      style={{
+        left: `${position?.left ?? MENU_VIEWPORT_MARGIN}px`,
+        top: `${position?.top ?? MENU_VIEWPORT_MARGIN}px`,
+        ...style,
+      }}
     >
-      <div role="menu" onKeyDown={handleKeyDown}>
-        {searchable && (
-          <div className="px-1 pb-1">
-            <Input
-              ref={searchRef}
-              type="text"
-              placeholder={searchPlaceholder ?? "Search..."}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setFocusIndex(-1);
-              }}
-              leftIcon={Search}
-              variant="ghost"
-              className="w-full"
-            />
-          </div>
-        )}
-        {hasChildren && (props as ChildrenContent).children}
-        {hasItems && (
-          <MenuItemsList
-            items={getFilteredItems()}
-            focusIndex={focusIndex}
-            onItemSelect={onClose}
-          />
-        )}
-        {hasSections &&
-          getFilteredSections().map((section, sectionIdx) => (
-            <div key={section.id}>
-              {sectionIdx > 0 && <div className="my-0.5 border-border/70 border-t" />}
-              {section.label && (
-                <div className={dropdownSectionLabelVariants()}>{section.label}</div>
-              )}
-              <MenuItemsList items={section.items} onItemSelect={onClose} />
-            </div>
-          ))}
-      </div>
+      {items ? <MenuItemsList items={items} onItemSelect={onClose} /> : children}
     </MenuPopover>
   );
-}
+};
+
+const DropdownComponent = (props: DropdownProps) =>
+  isMenuDropdownProps(props) ? <MenuDropdown {...props} /> : <SelectDropdown {...props} />;
+
+export const Dropdown = DropdownComponent;
+
+export default DropdownComponent;

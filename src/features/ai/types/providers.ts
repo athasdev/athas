@@ -65,6 +65,13 @@ export const AI_AGENTS: AIAgent[] = [
     description: "Alibaba Qwen Code agent",
     installed: false,
   },
+  {
+    id: "pi",
+    name: "Pi",
+    binaryName: "pi",
+    description: "Pi Coding Agent via local RPC bridge",
+    installed: false,
+  },
 ];
 
 // Helper to check if a provider ID is an agent

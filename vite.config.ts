@@ -22,6 +22,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "bun:test": path.resolve(__dirname, "./src/test/bun-test-compat.ts"),
     },
   },
 

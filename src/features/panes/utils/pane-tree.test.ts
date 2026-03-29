@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getAdjacentPane, splitPane } from "./pane-tree";
+import {
+  getAdjacentPane,
+  getCollapsedSplitRepairs,
+  normalizePanePairSizes,
+  splitPane,
+} from "./pane-tree";
 import type { PaneGroup, PaneNode } from "../types/pane";
 
 function createNamedPane(id: string): PaneGroup {
@@ -62,5 +67,45 @@ describe("getAdjacentPane", () => {
     expect(getAdjacentPane(root, "left", "right")?.id).toBe("top-right");
     expect(getAdjacentPane(root, "top-right", "down")?.id).toBe("bottom-right");
     expect(getAdjacentPane(root, "bottom-right", "up")?.id).toBe("top-right");
+  });
+});
+
+describe("normalizePanePairSizes", () => {
+  it("keeps healthy split sizes unchanged", () => {
+    expect(normalizePanePairSizes([50, 50])).toEqual([50, 50]);
+  });
+
+  it("repairs a collapsed first pane to a 40/60 split", () => {
+    expect(normalizePanePairSizes([19, 81])).toEqual([40, 60]);
+  });
+
+  it("repairs a collapsed second pane to a 60/40 split", () => {
+    expect(normalizePanePairSizes([81, 19])).toEqual([60, 40]);
+  });
+
+  it("keeps the 20% boundary unchanged", () => {
+    expect(normalizePanePairSizes([20, 80])).toEqual([20, 80]);
+  });
+});
+
+describe("getCollapsedSplitRepairs", () => {
+  it("collects repairs for collapsed splits in the tree", () => {
+    const left = createNamedPane("left");
+    const right = createNamedPane("right");
+
+    const root: PaneNode = {
+      id: "root-split",
+      type: "split",
+      direction: "horizontal",
+      children: [left, right],
+      sizes: [10, 90],
+    };
+
+    expect(getCollapsedSplitRepairs(root)).toEqual([
+      {
+        splitId: "root-split",
+        sizes: [40, 60],
+      },
+    ]);
   });
 });

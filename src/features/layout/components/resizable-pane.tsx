@@ -1,20 +1,17 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
 const MIN_PANE_WIDTH = 50;
-
 interface ResizablePaneProps {
   children: React.ReactNode;
   position: "left" | "right";
   widthKey: WidthSettingKey;
   className?: string;
-  hidden?: boolean;
   collapsible?: boolean;
   // Pixels user must push past min width before auto-collapse.
   collapseThreshold?: number;
@@ -26,50 +23,24 @@ export function ResizablePane({
   position,
   widthKey,
   className,
-  hidden = false,
   collapsible = false,
   collapseThreshold = 0,
   onCollapse,
 }: ResizablePaneProps) {
   const { settings, updateSetting } = useSettingsStore();
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const [width, setWidth] = useState(Math.max(settings[widthKey], MIN_PANE_WIDTH));
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
 
   const getViewportWidth = () => (typeof window !== "undefined" ? window.innerWidth : 1280);
 
-  const getMinWidth = useCallback(() => {
-    if (widthKey === "aiChatWidth") {
-      // Keep AI chat usable on normal widths, but relax for very small windows.
-      return getViewportWidth() < 1100 ? 220 : 300;
-    }
-    // Sidebar can be narrower than AI chat.
-    return 180;
-  }, [widthKey]);
+  const getMinWidth = useCallback(() => 180, []);
 
   const getMaxWidth = useCallback(() => {
     const windowWidth = getViewportWidth();
     const MIN_MAIN_CONTENT_WIDTH = 360; // Keep editor area readable on smaller windows
-    const shouldAccountForAiChat = settings.isAIChatVisible;
-
-    // Calculate available space accounting for both sidebars and minimum main content
-    if (widthKey === "sidebarWidth" && shouldAccountForAiChat) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.aiChatWidth - MIN_MAIN_CONTENT_WIDTH);
-    }
-    if (widthKey === "aiChatWidth" && isSidebarVisible) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.sidebarWidth - MIN_MAIN_CONTENT_WIDTH);
-    }
-
-    // Single sidebar case - leave room for main content
     return Math.max(MIN_PANE_WIDTH, windowWidth - MIN_MAIN_CONTENT_WIDTH);
-  }, [
-    widthKey,
-    settings.isAIChatVisible,
-    settings.aiChatWidth,
-    settings.sidebarWidth,
-    isSidebarVisible,
-  ]);
+  }, []);
 
   const clampWidth = useCallback(
     (value: number) => {
@@ -113,9 +84,6 @@ export function ResizablePane({
       const startWidth = width;
       let currentWidth = startWidth;
       let collapseRequested = false;
-      let rafId: number | null = null;
-
-      const paneEl = paneRef.current;
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaX = position === "right" ? startX - e.clientX : e.clientX - startX;
@@ -131,21 +99,14 @@ export function ResizablePane({
             collapseThreshold,
           })
         ) {
+          // Keep this sticky once user intentionally pushes past minimum.
           collapseRequested = true;
         }
         currentWidth = clampWidth(rawWidth);
-
-        if (rafId !== null) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(() => {
-          if (paneEl) {
-            paneEl.style.width = `${currentWidth}px`;
-          }
-        });
+        setWidth(currentWidth);
       };
 
       const handleMouseUp = () => {
-        if (rafId !== null) cancelAnimationFrame(rafId);
-        setWidth(currentWidth);
         setIsResizing(false);
         if (collapseRequested) {
           onCollapse?.();
@@ -172,7 +133,6 @@ export function ResizablePane({
       collapsible,
       collapseThreshold,
       onCollapse,
-      getMinWidth,
     ],
   );
 
@@ -180,48 +140,30 @@ export function ResizablePane({
   return (
     <div
       ref={paneRef}
-      style={{ width: hidden ? "0px" : `${width}px` }}
+      style={{ width: `${width}px` }}
       className={cn(
         "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
-        hidden && "pointer-events-none",
         className,
       )}
-      aria-hidden={hidden}
     >
-      {!hidden && (
-        <div
-          onMouseDown={handleMouseDown}
-          className={cn(
-            "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
-            "hover:bg-accent/30 active:bg-accent/50",
-            handlePosition,
-            isResizing && "bg-accent/50",
-          )}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize sidebar"
-          aria-valuenow={Math.round(width)}
-          aria-valuemin={Math.round(getMinWidth())}
-          aria-valuemax={Math.round(getMaxWidth())}
-          tabIndex={0}
-        />
-      )}
-      {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
       <div
+        onMouseDown={handleMouseDown}
         className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden py-0",
-          !hidden && (position === "left" ? "pl-2" : "pr-2"),
+          "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
+          "hover:bg-accent/30 active:bg-accent/50",
+          handlePosition,
+          isResizing && "bg-accent/50",
         )}
-      >
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
-            !hidden && "rounded-lg",
-          )}
-        >
-          {children}
-        </div>
-      </div>
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        aria-valuenow={Math.round(width)}
+        aria-valuemin={Math.round(getMinWidth())}
+        aria-valuemax={Math.round(getMaxWidth())}
+        tabIndex={0}
+      />
+      {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
+      {children}
     </div>
   );
 }

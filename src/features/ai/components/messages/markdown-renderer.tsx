@@ -2,7 +2,6 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
-import { Button } from "@/ui/button";
 import {
   fetchHighlightQuery,
   getDefaultParserWasmUrl,
@@ -321,16 +320,13 @@ function CodeBlock({
             <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
           )}
           {onApplyCode && code.trim() && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="xs"
+            <button
               onClick={() => onApplyCode(code)}
-              className="whitespace-nowrap opacity-0 group-hover:opacity-100"
+              className="ui-font whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
               title="Apply this code to current buffer"
             >
               Apply
-            </Button>
+            </button>
           )}
         </div>
         <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">
@@ -350,7 +346,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
     lines
       .find((l) => l.startsWith("title:"))
       ?.replace("title:", "")
-      .trim() || "";
+      .trim() || "Error";
   const code =
     lines
       .find((l) => l.startsWith("code:"))
@@ -366,39 +362,36 @@ function ErrorBlock({ errorData }: { errorData: string }) {
       .find((l) => l.startsWith("details:"))
       ?.replace("details:", "")
       .trim() || "";
-  const summary = title || message || "Error";
-  const normalizedDetails = details && details !== message ? details : "";
 
   return (
-    <div className="my-1 rounded-lg border border-red-500/25 bg-red-500/6 px-2.5 py-2">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <span className="text-red-300/85">Error</span>
-        <span className="text-red-100/95">{summary}</span>
-        {code ? <span className="text-red-200/55">({code})</span> : null}
-        {normalizedDetails && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="h-auto px-1 text-red-200/70 hover:bg-transparent hover:text-red-100"
-          >
-            {isExpanded ? <ChevronDown /> : <ChevronRight />}
-            {isExpanded ? "Hide details" : "Details"}
-          </Button>
-        )}
+    <div className="my-2 border-red-500/20 border-l py-0.5 pl-3 text-sm opacity-90">
+      <div className="font-medium text-red-400">
+        {title}
+        {code ? <span className="ml-1.5 font-normal opacity-60">({code})</span> : null}
       </div>
-      {normalizedDetails && isExpanded && (
-        <pre className="editor-font mt-2 overflow-x-auto rounded border border-red-500/20 bg-red-950/20 p-2 text-[11px] text-red-100/85">
-          {(() => {
-            try {
-              const parsed = JSON.parse(normalizedDetails);
-              return JSON.stringify(parsed, null, 2);
-            } catch {
-              return normalizedDetails;
-            }
-          })()}
-        </pre>
+      <div className="mt-0.5 text-[13px] text-red-300/80 leading-relaxed">{message}</div>
+      {details && (
+        <div className="mt-1.5">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-[11px] text-red-400/50 uppercase tracking-wide transition-colors hover:text-red-400/90"
+          >
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {isExpanded ? "Hide details" : "Show details"}
+          </button>
+          {isExpanded && (
+            <pre className="editor-font mt-2 max-h-48 overflow-x-auto whitespace-pre-wrap pl-1 text-[11px] text-red-400/60">
+              {(() => {
+                try {
+                  const parsed = JSON.parse(details);
+                  return JSON.stringify(parsed, null, 2);
+                } catch {
+                  return details;
+                }
+              })()}
+            </pre>
+          )}
+        </div>
       )}
     </div>
   );

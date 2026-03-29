@@ -1,6 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  Database,
   FileText,
   FolderOpen,
   Globe,
@@ -10,18 +9,23 @@ import {
   Terminal,
   Trash2,
 } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import { getPreferredHarnessEntryBackend } from "@/features/ai/lib/harness-entry-backend";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button } from "@/ui/button";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
-import Input from "@/ui/input";
+import {
+  EMPTY_EDITOR_CONTEXT_ACTIONS,
+  EMPTY_EDITOR_PRIMARY_ACTIONS,
+  type EmptyEditorActionId,
+} from "./empty-editor-state-actions";
 
 interface ActionItem {
   id: string;
@@ -30,23 +34,14 @@ interface ActionItem {
   action: () => void;
 }
 
-const newTabRowClassName =
-  "h-auto w-full justify-start gap-3 rounded-md px-3 py-1.5 text-left hover:bg-hover";
-
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
-  const { setIsDatabaseConnectionVisible } = useUIState();
+  const settings = useSettingsStore((state) => state.settings);
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
 
-  const allCustomActions = useCustomActionsStore.use.actions();
-  const { addAction, updateAction, deleteAction, getActionsForWorkspace } =
-    useCustomActionsStore.getState().storeActions;
-  const customActions = useMemo(
-    () => getActionsForWorkspace(rootFolderPath),
-    [allCustomActions, getActionsForWorkspace, rootFolderPath],
-  );
+  const customActions = useCustomActionsStore.use.actions();
+  const { addAction, updateAction, deleteAction } = useCustomActionsStore.getState().storeActions;
 
   const contextMenu = useContextMenu();
 
@@ -60,16 +55,17 @@ export function EmptyEditorState() {
   }, [openTerminalBuffer]);
 
   const handleOpenAgent = useCallback(() => {
-    openAgentBuffer();
-  }, [openAgentBuffer]);
+    openAgentBuffer(DEFAULT_HARNESS_SESSION_KEY, {
+      backend: getPreferredHarnessEntryBackend(
+        DEFAULT_HARNESS_SESSION_KEY,
+        settings.aiPiHarnessBackend,
+      ),
+    });
+  }, [openAgentBuffer, settings.aiPiHarnessBackend]);
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
   }, [openWebViewerBuffer]);
-
-  const handleOpenDatabaseConnection = useCallback(() => {
-    setIsDatabaseConnectionVisible(true);
-  }, [setIsDatabaseConnectionVisible]);
 
   const handleOpenFile = useCallback(async () => {
     try {
@@ -115,10 +111,10 @@ export function EmptyEditorState() {
     if (editingActionId) {
       updateAction(editingActionId, { name: command, command });
     } else {
-      addAction({ name: command, command, workspacePath: rootFolderPath });
+      addAction({ name: command, command });
     }
     handleCancel();
-  }, [inputValue, editingActionId, addAction, updateAction, handleCancel, rootFolderPath]);
+  }, [inputValue, editingActionId, addAction, updateAction, handleCancel]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -140,93 +136,56 @@ export function EmptyEditorState() {
     [deleteAction],
   );
 
+  const emptyStateActionsById = {
+    folder: handleOpenFolder,
+    file: handleOpenFile,
+    terminal: handleOpenTerminal,
+    agent: handleOpenAgent,
+    web: handleOpenWebViewer,
+    "open-folder": handleOpenFolder,
+    "open-file": handleOpenFile,
+    "new-terminal": handleOpenTerminal,
+    "new-agent": handleOpenAgent,
+    "open-url": handleOpenWebViewer,
+  } satisfies Record<EmptyEditorActionId, () => void>;
+
+  const emptyStateIconsById = {
+    folder: <FolderOpen size={14} className="text-text-light" />,
+    file: <FileText size={14} className="text-text-light" />,
+    terminal: <Terminal size={14} className="text-text-light" />,
+    agent: <Sparkles size={14} className="text-text-light" />,
+    web: <Globe size={14} className="text-text-light" />,
+    "open-folder": <FolderOpen size={12} />,
+    "open-file": <FileText size={12} />,
+    "new-terminal": <Terminal size={12} />,
+    "new-agent": <Sparkles size={12} />,
+    "open-url": <Globe size={12} />,
+  } satisfies Record<EmptyEditorActionId, React.ReactNode>;
+
   const getContextMenuItems = useCallback((): ContextMenuItem[] => {
     return [
-      {
-        id: "open-folder",
-        label: "Open Folder",
-        icon: <FolderOpen />,
-        onClick: handleOpenFolder,
-      },
-      {
-        id: "open-file",
-        label: "Open File",
-        icon: <FileText />,
-        onClick: handleOpenFile,
-      },
+      ...EMPTY_EDITOR_CONTEXT_ACTIONS.slice(0, 2).map((action) => ({
+        id: action.id,
+        label: action.label,
+        icon: emptyStateIconsById[action.id],
+        onClick: emptyStateActionsById[action.id],
+      })),
       { id: "sep-1", label: "", separator: true, onClick: () => {} },
-      {
-        id: "new-terminal",
-        label: "New Terminal",
-        icon: <Terminal />,
-        onClick: handleOpenTerminal,
-      },
-      {
-        id: "new-agent",
-        label: "New Agent",
-        icon: <Sparkles />,
-        onClick: handleOpenAgent,
-      },
-      {
-        id: "open-url",
-        label: "Open URL",
-        icon: <Globe />,
-        onClick: handleOpenWebViewer,
-      },
-      {
-        id: "connect-database",
-        label: "Connect Database",
-        icon: <Database />,
-        onClick: handleOpenDatabaseConnection,
-      },
+      ...EMPTY_EDITOR_CONTEXT_ACTIONS.slice(2).map((action) => ({
+        id: action.id,
+        label: action.label,
+        icon: emptyStateIconsById[action.id],
+        onClick: emptyStateActionsById[action.id],
+      })),
     ];
-  }, [
-    handleOpenFolder,
-    handleOpenFile,
-    handleOpenTerminal,
-    handleOpenAgent,
-    handleOpenWebViewer,
-    handleOpenDatabaseConnection,
-  ]);
+  }, [emptyStateActionsById, emptyStateIconsById]);
 
-  const actions: ActionItem[] = [
-    {
-      id: "folder",
-      label: "Open Folder",
-      icon: <FolderOpen className="text-text-light" />,
-      action: handleOpenFolder,
-    },
-    {
-      id: "file",
-      label: "Open File",
-      icon: <FileText className="text-text-light" />,
-      action: handleOpenFile,
-    },
-    {
-      id: "terminal",
-      label: "New Terminal",
-      icon: <Terminal className="text-text-light" />,
-      action: handleOpenTerminal,
-    },
-    {
-      id: "agent",
-      label: "New Agent",
-      icon: <Sparkles className="text-text-light" />,
-      action: handleOpenAgent,
-    },
-    {
-      id: "web",
-      label: "Open URL",
-      icon: <Globe className="text-text-light" />,
-      action: handleOpenWebViewer,
-    },
-    {
-      id: "database",
-      label: "Connect Database",
-      icon: <Database className="text-text-light" />,
-      action: handleOpenDatabaseConnection,
-    },
-  ];
+  const actions: ActionItem[] = EMPTY_EDITOR_PRIMARY_ACTIONS.map((action) => ({
+    id: action.id,
+    label: action.label,
+    icon: emptyStateIconsById[action.id],
+    action: emptyStateActionsById[action.id],
+  }));
 
   return (
     <div
@@ -235,17 +194,15 @@ export function EmptyEditorState() {
     >
       <div className="flex w-48 flex-col gap-0.5">
         {actions.map((item) => (
-          <Button
+          <button
             key={item.id}
             type="button"
             onClick={item.action}
-            variant="ghost"
-            size="sm"
-            className={newTabRowClassName}
+            className="flex items-center gap-3 rounded px-3 py-1.5 text-left transition-colors hover:bg-hover"
           >
             <span className="shrink-0">{item.icon}</span>
             <span className="text-text text-xs">{item.label}</span>
-          </Button>
+          </button>
         ))}
 
         {customActions.length > 0 && (
@@ -254,7 +211,7 @@ export function EmptyEditorState() {
             {customActions.map((action) =>
               editingActionId === action.id ? (
                 <div key={action.id} className="px-1">
-                  <Input
+                  <input
                     ref={inputRef}
                     type="text"
                     placeholder="command"
@@ -262,44 +219,38 @@ export function EmptyEditorState() {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onBlur={handleSave}
-                    className="w-full bg-secondary-bg"
+                    className="w-full rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs outline-none focus:border-accent"
                   />
                 </div>
               ) : (
                 <div
                   key={action.id}
-                  className="group flex items-center gap-1 rounded-md px-3 py-1.5 hover:bg-hover"
+                  className="group flex items-center gap-3 rounded px-3 py-1.5 text-left transition-colors hover:bg-hover"
                 >
-                  <Button
+                  <button
                     type="button"
                     onClick={() =>
-                      openTerminalBuffer({ name: action.name, command: action.command })
+                      openTerminalBuffer({ name: action.command, command: action.command })
                     }
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
+                    className="flex flex-1 items-center gap-3"
                   >
-                    <Terminal className="shrink-0 text-text-light" />
-                    <span className="text-text text-xs">{action.name}</span>
-                  </Button>
-                  <Button
+                    <Terminal size={14} className="shrink-0 text-text-light" />
+                    <span className="text-text text-xs">{action.command}</span>
+                  </button>
+                  <button
                     type="button"
                     onClick={() => handleStartEdit(action.id, action.command)}
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
+                    className="shrink-0 p-0.5 text-text-lighter opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
                   >
-                    <Pencil />
-                  </Button>
-                  <Button
+                    <Pencil size={12} />
+                  </button>
+                  <button
                     type="button"
                     onClick={(e) => handleDelete(action.id, e)}
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
+                    className="shrink-0 p-0.5 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
                   >
-                    <Trash2 />
-                  </Button>
+                    <Trash2 size={12} />
+                  </button>
                 </div>
               ),
             )}
@@ -310,7 +261,7 @@ export function EmptyEditorState() {
 
         {isAddingAction ? (
           <div className="px-1">
-            <Input
+            <input
               ref={inputRef}
               type="text"
               placeholder="command"
@@ -318,20 +269,18 @@ export function EmptyEditorState() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleSave}
-              className="w-full bg-secondary-bg"
+              className="w-full rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs outline-none focus:border-accent"
             />
           </div>
         ) : (
-          <Button
+          <button
             type="button"
             onClick={handleStartAdd}
-            variant="ghost"
-            size="sm"
-            className={newTabRowClassName}
+            className="flex items-center gap-3 rounded px-3 py-1.5 text-left transition-colors hover:bg-hover"
           >
-            <Plus className="shrink-0 text-text-lighter" />
+            <Plus size={14} className="shrink-0 text-text-lighter" />
             <span className="text-text-light text-xs">Add custom action...</span>
-          </Button>
+          </button>
         )}
       </div>
 

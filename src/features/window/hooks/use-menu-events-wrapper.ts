@@ -118,13 +118,13 @@ export function useMenuEventsWrapper() {
       }
     },
     onToggleAiChat: () => {
-      useSettingsStore.getState().toggleAIChatVisible();
+      useSettingsStore.getState().toggleHarnessEntry();
     },
     onSplitEditor: () => {
       const paneStore = usePaneStore.getState();
       const activePane = paneStore.actions.getActivePane();
-      if (activePane?.activeBufferId) {
-        paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
+      if (activePane) {
+        paneStore.actions.splitPane(activePane.id, "horizontal");
       }
     },
     onToggleVim: () => {
@@ -202,7 +202,7 @@ Edit:
 View:
 • Ctrl+B (Cmd+B): Toggle Sidebar
 • Ctrl+J (Cmd+J): Toggle Terminal
-• Ctrl+R (Cmd+R): Toggle AI Chat
+• Ctrl+R (Cmd+R): Toggle Harness
 
 Go:
 • Ctrl+P (Cmd+P): Quick Open

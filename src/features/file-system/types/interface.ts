@@ -7,6 +7,9 @@ export interface FsState {
   filesVersion: number;
   isFileTreeLoading: boolean;
   isSwitchingProject: boolean;
+  isRemoteWindow: boolean;
+  remoteConnectionId?: string;
+  remoteConnectionName?: string;
 
   // Cache for project files
   projectFilesCache?: {

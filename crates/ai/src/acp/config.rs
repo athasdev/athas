@@ -1,11 +1,10 @@
-use super::types::{AgentConfig, AgentRuntime};
+use super::{bridge::ensure_pi_local_runtime_files_for_current_user, types::AgentConfig};
 use std::{
    collections::HashMap,
    env, fs,
    path::{Path, PathBuf},
    time::Instant,
 };
-use tauri::{AppHandle, Manager};
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;
@@ -15,27 +14,30 @@ const DETECTION_CACHE_SECONDS: u64 = 60;
 pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
    last_detection: Option<Instant>,
-   managed_bin_dir: Option<PathBuf>,
 }
 
 impl AgentRegistry {
-   pub fn new(app_handle: &AppHandle) -> Self {
+   pub fn new() -> Self {
+      if let Err(error) = ensure_pi_local_runtime_files_for_current_user() {
+         log::warn!("Failed to repair Pi local runtime config during registry init: {error}");
+      }
+
       let mut agents = HashMap::new();
 
       // Claude Code - ACP adapter (Zed)
+      // Install: npm install -g @zed-industries/claude-code-acp
       agents.insert(
          "claude-code".to_string(),
          AgentConfig::new("claude-code", "Claude Code", "claude-code-acp")
-            .with_description("Claude Code (ACP adapter)")
-            .with_install(AgentRuntime::Node, "@zed-industries/claude-code-acp"),
+            .with_description("Claude Code (ACP adapter)"),
       );
 
       // Codex CLI (OpenAI) - ACP adapter
+      // Preferred install: npm install -g @zed-industries/codex-acp
       agents.insert(
          "codex-cli".to_string(),
          AgentConfig::new("codex-cli", "Codex CLI", "codex-acp")
-            .with_description("OpenAI Codex (ACP adapter)")
-            .with_install(AgentRuntime::Node, "@zed-industries/codex-acp"),
+            .with_description("OpenAI Codex (ACP adapter)"),
       );
 
       // Gemini CLI - native ACP support with --experimental-acp flag
@@ -43,45 +45,47 @@ impl AgentRegistry {
          "gemini-cli".to_string(),
          AgentConfig::new("gemini-cli", "Gemini CLI", "gemini")
             .with_description("Google Gemini CLI")
-            .with_args(vec!["--experimental-acp"])
-            .with_install(AgentRuntime::Node, "@google/gemini-cli")
-            .with_install_command("gemini"),
+            .with_args(vec!["--experimental-acp"]),
       );
 
       // Kimi CLI - native ACP support with --acp flag
+      // Install: npm install -g @anthropic/kimi-cli or cargo install kimi-cli
       agents.insert(
          "kimi-cli".to_string(),
          AgentConfig::new("kimi-cli", "Kimi CLI", "kimi")
             .with_description("Moonshot Kimi CLI")
-            .with_args(vec!["--acp"])
-            .with_install(AgentRuntime::Python, "kimi-cli")
-            .with_install_command("kimi-cli"),
+            .with_args(vec!["--acp"]),
       );
 
       // OpenCode - native ACP support with 'acp' subcommand
+      // Install: go install github.com/sst/opencode@latest
       agents.insert(
          "opencode".to_string(),
          AgentConfig::new("opencode", "OpenCode", "opencode")
             .with_description("SST OpenCode")
-            .with_args(vec!["acp"])
-            .with_install(AgentRuntime::Node, "opencode-ai")
-            .with_install_command("opencode"),
+            .with_args(vec!["acp"]),
       );
 
       // Qwen Code - native ACP support with --acp flag
+      // Install: pip install qwen-code or npm install -g qwen-code
       agents.insert(
          "qwen-code".to_string(),
-         AgentConfig::new("qwen-code", "Qwen Code", "qwen")
+         AgentConfig::new("qwen-code", "Qwen Code", "qwen-code")
             .with_description("Alibaba Qwen Code")
-            .with_args(vec!["--acp"])
-            .with_install(AgentRuntime::Node, "@qwen-code/qwen-code")
-            .with_install_command("qwen-code"),
+            .with_args(vec!["--acp"]),
+      );
+
+      // Pi Coding Agent - RPC mode, reuses the user's existing ~/.pi state
+      agents.insert(
+         "pi".to_string(),
+         AgentConfig::new("pi", "Pi", "pi")
+            .with_description("Pi Coding Agent")
+            .with_args(vec!["--mode", "rpc", "--auto", "medium"]),
       );
 
       Self {
          agents,
          last_detection: None,
-         managed_bin_dir: managed_acp_bin_dir(app_handle),
       }
    }
 
@@ -90,9 +94,7 @@ impl AgentRegistry {
    }
 
    pub fn list_all(&self) -> Vec<AgentConfig> {
-      let mut agents: Vec<_> = self.agents.values().cloned().collect();
-      agents.sort_by(|left, right| left.name.cmp(&right.name));
-      agents
+      self.agents.values().cloned().collect()
    }
 
    pub fn detect_installed(&mut self) {
@@ -110,12 +112,6 @@ impl AgentRegistry {
 
       log::debug!("Running binary detection for ACP agents");
       for config in self.agents.values_mut() {
-         if let Some(path) = managed_wrapper_path(self.managed_bin_dir.as_deref(), &config.id) {
-            config.installed = true;
-            config.binary_path = Some(path.to_string_lossy().to_string());
-            continue;
-         }
-
          if config.id == "codex-cli" {
             detect_codex_adapter(config);
             continue;
@@ -136,30 +132,7 @@ impl AgentRegistry {
 
 impl Default for AgentRegistry {
    fn default() -> Self {
-      panic!("AgentRegistry::default requires an AppHandle")
-   }
-}
-
-pub fn managed_wrapper_path(managed_bin_dir: Option<&Path>, agent_id: &str) -> Option<PathBuf> {
-   let dir = managed_bin_dir?;
-   let path = dir.join(wrapper_file_name(agent_id));
-   path.is_file().then_some(path)
-}
-
-fn managed_acp_bin_dir(app_handle: &AppHandle) -> Option<PathBuf> {
-   let data_dir = app_handle.path().app_data_dir().ok()?;
-   Some(data_dir.join("tools").join("acp"))
-}
-
-fn wrapper_file_name(agent_id: &str) -> String {
-   #[cfg(target_os = "windows")]
-   {
-      format!("{agent_id}.cmd")
-   }
-
-   #[cfg(not(target_os = "windows"))]
-   {
-      agent_id.to_string()
+      Self::new()
    }
 }
 
@@ -334,27 +307,104 @@ fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-   use super::{check_dir_for_binary, managed_wrapper_path};
-   use std::{fs, path::PathBuf};
+   use super::AgentRegistry;
+   use serde_json::json;
+   use std::{
+      env, fs,
+      sync::{LazyLock, Mutex},
+   };
+
+   static PI_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
    #[test]
-   fn managed_wrapper_path_prefers_expected_wrapper_name() {
-      let temp_dir = tempfile::tempdir().expect("temp dir");
-      let wrapper = if cfg!(windows) {
-         temp_dir.path().join("codex-cli.cmd")
-      } else {
-         temp_dir.path().join("codex-cli")
-      };
-      fs::write(&wrapper, "echo test").expect("write wrapper");
+   fn registry_includes_pi_rpc_agent() {
+      let registry = AgentRegistry::new();
+      let pi = registry.get("pi").expect("pi agent should be registered");
 
-      let resolved =
-         managed_wrapper_path(Some(temp_dir.path()), "codex-cli").expect("wrapper should exist");
-      assert_eq!(resolved, wrapper);
+      assert_eq!(pi.binary_name, "pi");
+      assert_eq!(
+         pi.args,
+         vec![
+            "--mode".to_string(),
+            "rpc".to_string(),
+            "--auto".to_string(),
+            "medium".to_string(),
+         ]
+      );
    }
 
    #[test]
-   fn check_dir_for_binary_returns_none_for_missing_binary() {
-      let missing = check_dir_for_binary(PathBuf::from("/tmp/athas-missing").as_path(), "nope");
-      assert!(missing.is_none());
+   fn registry_new_repairs_pi_local_runtime_files_without_overwriting_defaults() {
+      let _guard = PI_ENV_LOCK.lock().unwrap();
+      let temp_dir = tempfile::tempdir().unwrap();
+      let agent_root = temp_dir.path();
+      let original = env::var_os("PI_CODING_AGENT_DIR");
+
+      fs::write(
+         agent_root.join("settings.json"),
+         serde_json::to_string_pretty(&json!({
+            "defaultProvider": "droid",
+            "defaultModel": "gpt-5.4-mini",
+            "defaultThinkingLevel": "medium",
+         }))
+         .unwrap(),
+      )
+      .unwrap();
+      fs::write(
+         agent_root.join("reasoning-state.json"),
+         serde_json::to_string_pretty(&json!({
+            "effective": {
+               "provider": "droid",
+               "modelId": "gpt-5.4-mini",
+               "thinkingLevel": "medium",
+            }
+         }))
+         .unwrap(),
+      )
+      .unwrap();
+      fs::write(
+         agent_root.join("behavior-mode-state.json"),
+         serde_json::to_string_pretty(&json!({
+            "currentBehavior": "orchestrator",
+         }))
+         .unwrap(),
+      )
+      .unwrap();
+
+      unsafe {
+         env::set_var("PI_CODING_AGENT_DIR", agent_root);
+      }
+
+      let _registry = AgentRegistry::new();
+
+      match original {
+         Some(value) => unsafe {
+            env::set_var("PI_CODING_AGENT_DIR", value);
+         },
+         None => unsafe {
+            env::remove_var("PI_CODING_AGENT_DIR");
+         },
+      }
+
+      let settings = serde_json::from_str::<serde_json::Value>(
+         &fs::read_to_string(agent_root.join("settings.json")).unwrap(),
+      )
+      .unwrap();
+      assert_eq!(settings["defaultProvider"], json!("droid"));
+      assert_eq!(settings["default_provider"], json!("droid"));
+      assert_eq!(settings["defaultModel"], json!("gpt-5.4-mini"));
+      assert_eq!(settings["default_model"], json!("gpt-5.4-mini"));
+      assert_eq!(settings["defaultThinkingLevel"], json!("medium"));
+      assert_eq!(settings["default_thinking_level"], json!("medium"));
+
+      let reasoning = serde_json::from_str::<serde_json::Value>(
+         &fs::read_to_string(agent_root.join("reasoning-state.json")).unwrap(),
+      )
+      .unwrap();
+      assert_eq!(reasoning["effective"]["provider"], json!("droid"));
+      assert_eq!(reasoning["effective"]["modelId"], json!("gpt-5.4-mini"));
+      assert_eq!(reasoning["effective"]["thinkingLevel"], json!("medium"));
+
+      assert!(!agent_root.join("behavior-mode-state.json").exists());
    }
 }

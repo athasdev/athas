@@ -1,4 +1,6 @@
-export const MIN_PANE_SIZE = 10;
+export const MIN_PANE_SIZE = 20;
+
+export const AUTO_REBALANCE_PRIMARY_SIZE = 40;
 
 export const DEFAULT_SPLIT_RATIO: [number, number] = [50, 50];
 

@@ -1,12 +1,14 @@
-import { Check, Copy, RefreshCw, RotateCcw, Undo2 } from "lucide-react";
+import { Check, Copy, GitBranch, Layers3, RefreshCw, RotateCcw, Split, Undo2 } from "lucide-react";
 import { memo, useCallback, useState } from "react";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
+import { createHarnessChatScopeId, createHarnessSessionKey } from "@/features/ai/lib/chat-scope";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
-import type { Message } from "@/features/ai/types/ai-chat";
+import type { AIChatSurface, ChatScopeId, Message } from "@/features/ai/types/ai-chat";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import { isAcpAgent } from "@/utils/ai-chat";
 import { useAIChatStore } from "../../store/store";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
@@ -16,6 +18,8 @@ interface ChatMessageProps {
   message: Message;
   isLastMessage: boolean;
   onApplyCode?: (code: string, language?: string) => void;
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
 }
 
 function hasError(messageContent: string): boolean {
@@ -26,13 +30,14 @@ export const ChatMessage = memo(function ChatMessage({
   message,
   isLastMessage,
   onApplyCode,
+  surface = "panel",
+  scopeId,
 }: ChatMessageProps) {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
-  const currentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
-  const regenerateResponse = useAIChatStore((state) => state.regenerateResponse);
+  const chatState = useChatState(scopeId);
+  const chatActions = useChatActions(scopeId);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+  const { openAgentBuffer } = useBufferStore.use.actions();
 
   const handleOpenInEditor = useCallback(
     (filePath: string) => {
@@ -59,9 +64,9 @@ export const ChatMessage = memo(function ChatMessage({
 
   const handleRestoreCheckpoint = useCallback(
     (messageId: string) => {
-      if (!currentChatId) return;
+      if (!chatState.currentChatId) return;
 
-      const chat = getCurrentChat();
+      const chat = chatActions.getCurrentChat();
       if (!chat) return;
 
       const messageIndex = chat.messages.findIndex((m) => m.id === messageId);
@@ -75,58 +80,129 @@ export const ChatMessage = memo(function ChatMessage({
       };
 
       const chats = useAIChatStore.getState().chats;
-      const chatIndex = chats.findIndex((c) => c.id === currentChatId);
+      const chatIndex = chats.findIndex((c) => c.id === chatState.currentChatId);
       if (chatIndex !== -1) {
         useAIChatStore.setState((state) => {
           state.chats[chatIndex] = updatedChat;
         });
       }
 
-      useAIChatStore.getState().syncChatToDatabase(currentChatId);
+      useAIChatStore.getState().syncChatToDatabase(chatState.currentChatId);
     },
-    [currentChatId, getCurrentChat],
+    [chatActions, chatState.currentChatId],
   );
 
   const handleRetryMessage = useCallback(() => {
-    const lastUserMessage = regenerateResponse();
+    const lastUserMessage = chatActions.regenerateResponse();
     if (lastUserMessage) {
-      useAIChatStore.getState().addMessageToQueue(lastUserMessage);
+      useAIChatStore.getState().addMessageToQueue(lastUserMessage, "follow-up", scopeId);
     }
-  }, [regenerateResponse]);
+  }, [chatActions, scopeId]);
 
-  const handleExecuteStep = useCallback((step: PlanStep, stepIndex: number) => {
-    const { setMode, addMessageToQueue } = useAIChatStore.getState();
-    setMode("chat");
-    addMessageToQueue(
-      `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
-    );
-  }, []);
+  const handleForkCheckpoint = useCallback(
+    async (messageId: string) => {
+      if (!chatState.currentChatId) return;
+
+      if (surface === "harness") {
+        const nextSessionKey = createHarnessSessionKey();
+        openAgentBuffer(nextSessionKey);
+        await chatActions.forkChatFromChat(
+          chatState.currentChatId,
+          createHarnessChatScopeId(nextSessionKey),
+          messageId,
+        );
+        return;
+      }
+
+      await chatActions.forkChatFromChat(chatState.currentChatId, scopeId, messageId);
+    },
+    [chatActions, chatState.currentChatId, openAgentBuffer, scopeId, surface],
+  );
+
+  const handleExecuteStep = useCallback(
+    (step: PlanStep, stepIndex: number) => {
+      const { setMode, addMessageToQueue } = useAIChatStore.getState();
+      setMode("chat", scopeId);
+      addMessageToQueue(
+        `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
+        "follow-up",
+        scopeId,
+      );
+    },
+    [scopeId],
+  );
 
   if (message.role === "user") {
     return (
-      <div className="w-full">
-        <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
-          <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
-          <Tooltip content="Restore to this point" side="top">
-            <Button
-              onClick={() => handleRestoreCheckpoint(message.id)}
-              variant="ghost"
-              size="icon-xs"
-              className="-translate-y-1/2 absolute top-1/2 right-1.5 rounded-full border border-border bg-secondary-bg/80 text-text-lighter opacity-40 hover:bg-hover hover:opacity-100"
-              title="Restore checkpoint"
-              aria-label="Restore to this checkpoint"
-            >
-              <Undo2 />
-            </Button>
-          </Tooltip>
+      <div className="flex w-full justify-end py-2">
+        <div className="group relative max-w-[85%] rounded-3xl bg-secondary-bg/80 px-4 py-3 shadow-sm">
+          <div className="whitespace-pre-wrap break-words text-[14px] text-text leading-relaxed">
+            {message.content}
+          </div>
+          <div className="-top-1 -right-4 absolute flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <Tooltip content="Fork from this checkpoint" side="top">
+              <button
+                onClick={() => void handleForkCheckpoint(message.id)}
+                className="flex items-center justify-center text-text-lighter/60 transition-colors hover:text-text"
+                title="Fork from checkpoint"
+                aria-label="Fork from this checkpoint"
+              >
+                <Split size={14} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Trim this chat to this point" side="top">
+              <button
+                onClick={() => handleRestoreCheckpoint(message.id)}
+                className="flex items-center justify-center text-text-lighter/60 transition-colors hover:text-text"
+                title="Restore checkpoint"
+                aria-label="Restore to this checkpoint"
+              >
+                <Undo2 size={14} />
+              </button>
+            </Tooltip>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  if (message.kind === "compaction-summary" || message.kind === "branch-summary") {
+    const isCompaction = message.kind === "compaction-summary";
+    const branchSummaryMeta = message.summaryMeta?.type === "branch" ? message.summaryMeta : null;
+
+    return (
+      <div className="my-2 border-border/20 border-y py-4 opacity-80">
+        <div className="mb-2 flex items-center gap-2 text-[10px] text-text-lighter/60 uppercase tracking-[0.16em]">
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            {isCompaction ? <Layers3 size={12} /> : <GitBranch size={12} />}
+            {isCompaction ? "Compaction Summary" : "Branch Summary"}
+          </span>
+          {message.summaryMeta?.type === "compaction" ? (
+            <span className="opacity-80">
+              · {message.summaryMeta.trigger} · {message.summaryMeta.tokensBefore}
+            </span>
+          ) : null}
+          {branchSummaryMeta ? (
+            <button
+              onClick={() => {
+                if (chatState.chats.some((chat) => chat.id === branchSummaryMeta.sourceChatId)) {
+                  chatActions.switchToChat(branchSummaryMeta.sourceChatId);
+                }
+              }}
+              className="opacity-80 transition-colors hover:text-text"
+            >
+              · {branchSummaryMeta.sourceChatTitle}
+            </button>
+          ) : null}
+        </div>
+        <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
       </div>
     );
   }
 
   if (isToolOnlyMessage) {
     return (
-      <div className="space-y-2">
+      <>
         {message.toolCalls!.map((toolCall, toolIndex) => (
           <ToolCallDisplay
             key={`${message.id}-tool-${toolIndex}`}
@@ -138,7 +214,7 @@ export const ChatMessage = memo(function ChatMessage({
             onOpenInEditor={handleOpenInEditor}
           />
         ))}
-      </div>
+      </>
     );
   }
 
@@ -148,7 +224,7 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    if (isAcpAgent(currentAgentId())) {
+    if (isAcpAgent(chatActions.getCurrentAgentId())) {
       return null;
     }
 
@@ -167,7 +243,7 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div className="group relative w-full">
       {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="mb-2 space-y-2">
+        <div className="mb-1 space-y-1">
           {message.toolCalls!.map((toolCall, toolIndex) => (
             <ToolCallDisplay
               key={`${message.id}-tool-${toolIndex}`}
@@ -213,7 +289,7 @@ export const ChatMessage = memo(function ChatMessage({
 
       {message.content && (
         <>
-          <div className="pr-1 leading-relaxed">
+          <div className="pr-8 text-[14px] text-text leading-relaxed">
             {hasPlanBlock(message.content) ? (
               <PlanBlockDisplay
                 plan={parsePlan(message.content)!}
@@ -225,45 +301,43 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </div>
 
-          <div className="pointer-events-none absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="absolute top-0 right-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             {isLastMessage &&
               (hasError(message.content) ? (
                 <Tooltip content="Retry" side="top">
-                  <Button
+                  <button
                     onClick={handleRetryMessage}
-                    variant="ghost"
-                    size="icon-sm"
-                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
+                    className="rounded-full border border-border/70 bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Retry"
                     aria-label="Retry failed message"
                   >
-                    <RefreshCw />
-                  </Button>
+                    <RefreshCw size={12} />
+                  </button>
                 </Tooltip>
               ) : (
                 <Tooltip content="Regenerate" side="top">
-                  <Button
+                  <button
                     onClick={handleRetryMessage}
-                    variant="ghost"
-                    size="icon-sm"
-                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
+                    className="rounded-full border border-border/70 bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Regenerate"
                     aria-label="Regenerate response"
                   >
-                    <RotateCcw />
-                  </Button>
+                    <RotateCcw size={12} />
+                  </button>
                 </Tooltip>
               ))}
-            <Button
+            <button
               onClick={() => handleCopyMessage(message.content, message.id)}
-              variant="ghost"
-              size="icon-sm"
-              className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
+              className="rounded-full border border-border/70 bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
               title="Copy message"
               aria-label="Copy message"
             >
-              {copiedMessageId === message.id ? <Check className="text-green-400" /> : <Copy />}
-            </Button>
+              {copiedMessageId === message.id ? (
+                <Check size={12} className="text-green-400" />
+              ) : (
+                <Copy size={12} />
+              )}
+            </button>
           </div>
         </>
       )}

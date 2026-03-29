@@ -22,6 +22,7 @@ interface PRViewerHeaderProps {
   reviewSummary: string | null;
   metaItems: string[];
   isRefreshingDetails: boolean;
+  isCheckoutDisabled?: boolean;
   onRefresh: () => void;
   onCheckout: () => void;
   onOpenInBrowser: () => void;
@@ -53,6 +54,7 @@ export function PRViewerHeader({
   reviewSummary,
   metaItems,
   isRefreshingDetails,
+  isCheckoutDisabled = false,
   onRefresh,
   onCheckout,
   onOpenInBrowser,
@@ -61,9 +63,9 @@ export function PRViewerHeader({
   onToggleFilesView,
 }: PRViewerHeaderProps) {
   return (
-    <div className="shrink-0 px-3 py-4 sm:px-5">
+    <div className="shrink-0 px-3 py-4 @sm:px-5">
       <div className="flex flex-col gap-4 pb-2">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-start @3xl:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="ui-font ui-text-lg leading-tight font-medium text-text">{pr.title}</h1>
             <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 text-text-lighter">
@@ -89,9 +91,15 @@ export function PRViewerHeader({
                 <RefreshCw className={isRefreshingDetails ? "animate-spin" : ""} />
               </Button>
             </Tooltip>
-            <Tooltip content="Checkout PR branch" side="bottom">
+            <Tooltip
+              content={
+                isCheckoutDisabled ? "Checkout PR branch (CLI required)" : "Checkout PR branch"
+              }
+              side="bottom"
+            >
               <Button
                 onClick={onCheckout}
+                disabled={isCheckoutDisabled}
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Checkout PR branch"

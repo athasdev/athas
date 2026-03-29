@@ -47,6 +47,21 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
    })
 }
 
+pub fn collect_open_requests(args: &[String], cwd: &Path) -> Vec<OpenRequest> {
+   args
+      .iter()
+      .filter(|arg| !arg.starts_with('-'))
+      .filter_map(|arg| parse_open_arg(arg, cwd))
+      .collect()
+}
+
+#[tauri::command]
+pub fn get_startup_open_requests() -> Vec<OpenRequest> {
+   let cwd = std::env::current_dir().unwrap_or_default();
+   let args: Vec<String> = std::env::args().skip(1).collect();
+   collect_open_requests(&args, &cwd)
+}
+
 #[cfg(test)]
 mod tests {
    fn to_deep_link_url(req: &OpenRequest) -> String {
@@ -166,5 +181,25 @@ mod tests {
       let cwd = std::env::current_dir().unwrap();
       let req = parse_open_arg("this_file_does_not_exist_xyz_123.txt", &cwd);
       assert!(req.is_none());
+   }
+
+   #[test]
+   fn collect_open_requests_filters_flags_and_keeps_valid_paths() {
+      let cwd = std::env::current_dir().unwrap();
+      let args = vec![
+         "--verbose".to_string(),
+         ".".to_string(),
+         "this_file_does_not_exist_xyz_123.txt".to_string(),
+      ];
+
+      let requests = collect_open_requests(&args, &cwd);
+
+      assert_eq!(requests.len(), 1);
+      assert_eq!(
+         requests[0].path,
+         cwd.canonicalize().unwrap().to_string_lossy()
+      );
+      assert!(requests[0].is_directory);
+      assert_eq!(requests[0].line, None);
    }
 }

@@ -1,37 +1,38 @@
-import type { SessionConfigOption, SessionMode, SlashCommand } from "@/features/ai/types/acp";
-import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
+import type { ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
+import type {
+  AcpPlanEntry,
+  AcpRuntimeState,
+  SessionMode,
+  SlashCommand,
+} from "@/features/ai/types/acp";
+import type {
+  AgentType,
+  Chat,
+  ChatScopeId,
+  CompactionTrigger,
+  Message,
+} from "@/features/ai/types/ai-chat";
+import type { ChatAcpPermissionRequest, ChatAcpToolEventData } from "@/features/ai/types/chat-ui";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
+import type { ProviderModel } from "@/utils/providers/provider-interface";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
+export type ChatLineageState = Pick<
+  Chat,
+  "parentChatId" | "rootChatId" | "branchPointMessageId" | "lineageDepth" | "sessionName"
+>;
 
-export interface AIWorkspaceSessionSnapshot {
+interface ScopedSessionModeState {
+  currentModeId: string | null;
+  availableModes: SessionMode[];
+}
+
+export type QueuedMessageKind = "steering" | "follow-up";
+
+export interface ChatScopeState {
   currentChatId: string | null;
   selectedAgentId: AgentType;
-  isChatHistoryVisible: boolean;
-  selectedBufferPaths: string[];
-  selectedFilesPaths: string[];
-}
-
-export interface QueuedMessage {
-  id: string;
-  content: string;
-  timestamp: Date;
-}
-
-export interface PastedImage {
-  id: string;
-  dataUrl: string;
-  name: string;
-  size: number;
-}
-
-export interface AIChatState {
-  // Single session state
-  chats: Chat[];
-  currentChatId: string | null;
-  selectedAgentId: AgentType; // Current agent selection for new chats
   input: string;
   pastedImages: PastedImage[];
   isTyping: boolean;
@@ -43,11 +44,32 @@ export interface AIChatState {
   messageQueue: QueuedMessage[];
   isProcessingQueue: boolean;
   mode: ChatMode;
+  isChatHistoryVisible: boolean;
+  availableSlashCommands: SlashCommand[];
+  sessionModeState: ScopedSessionModeState;
+}
+
+export interface QueuedMessage {
+  id: string;
+  content: string;
+  kind: QueuedMessageKind;
+  timestamp: Date;
+}
+
+export interface PastedImage {
+  id: string;
+  dataUrl: string;
+  name: string;
+  size: number;
+}
+
+export interface AIChatState {
+  chats: Chat[];
+  chatScopes: Record<string, ChatScopeState>;
   outputStyle: OutputStyle;
 
   // Global state
   hasApiKey: boolean;
-  isChatHistoryVisible: boolean;
 
   // Provider API keys state
   providerApiKeys: Map<string, boolean>;
@@ -72,60 +94,68 @@ export interface AIChatState {
     search: string;
     selectedIndex: number;
   };
-  availableSlashCommands: SlashCommand[];
-
-  // Session mode state
-  sessionModeState: {
-    currentModeId: string | null;
-    availableModes: SessionMode[];
-  };
-  sessionConfigOptions: SessionConfigOption[];
 }
 
 export interface AIChatActions {
   // Agent selection
-  setSelectedAgentId: (agentId: AgentType) => void;
-  getCurrentAgentId: () => AgentType; // Gets agent for current chat or selected agent
-  changeCurrentChatAgent: (agentId: AgentType) => void; // Change agent for current chat
+  setSelectedAgentId: (agentId: AgentType, scopeId?: ChatScopeId) => void;
+  getCurrentAgentId: (scopeId?: ChatScopeId) => AgentType; // Gets agent for current chat or selected agent
+  changeCurrentChatAgent: (agentId: AgentType, scopeId?: ChatScopeId) => void; // Change agent for current chat
 
   // Chat mode actions
-  setMode: (mode: ChatMode) => void;
+  setMode: (mode: ChatMode, scopeId?: ChatScopeId) => void;
   setOutputStyle: (outputStyle: OutputStyle) => void;
 
   // Message queue actions
-  addMessageToQueue: (message: string) => void;
-  processNextMessage: () => QueuedMessage | null;
-  clearMessageQueue: () => void;
+  addMessageToQueue: (message: string, kind?: QueuedMessageKind, scopeId?: ChatScopeId) => void;
+  processNextMessage: (scopeId?: ChatScopeId) => QueuedMessage | null;
+  clearMessageQueue: (scopeId?: ChatScopeId) => void;
 
   // Input actions
-  setInput: (input: string) => void;
-  addPastedImage: (image: PastedImage) => void;
-  removePastedImage: (imageId: string) => void;
-  clearPastedImages: () => void;
-  setIsTyping: (isTyping: boolean) => void;
-  setStreamingMessageId: (streamingMessageId: string | null) => void;
-  toggleBufferSelection: (bufferId: string) => void;
-  toggleFileSelection: (filePath: string) => void;
-  setIsContextDropdownOpen: (isContextDropdownOpen: boolean) => void;
-  setIsSendAnimating: (isSendAnimating: boolean) => void;
+  setInput: (input: string, scopeId?: ChatScopeId) => void;
+  addPastedImage: (image: PastedImage, scopeId?: ChatScopeId) => void;
+  removePastedImage: (imageId: string, scopeId?: ChatScopeId) => void;
+  clearPastedImages: (scopeId?: ChatScopeId) => void;
+  setIsTyping: (isTyping: boolean, scopeId?: ChatScopeId) => void;
+  setStreamingMessageId: (streamingMessageId: string | null, scopeId?: ChatScopeId) => void;
+  toggleBufferSelection: (bufferId: string, scopeId?: ChatScopeId) => void;
+  toggleFileSelection: (filePath: string, scopeId?: ChatScopeId) => void;
+  setIsContextDropdownOpen: (isContextDropdownOpen: boolean, scopeId?: ChatScopeId) => void;
+  setIsSendAnimating: (isSendAnimating: boolean, scopeId?: ChatScopeId) => void;
   setHasApiKey: (hasApiKey: boolean) => void;
-  clearSelectedBuffers: () => void;
-  clearSelectedFiles: () => void;
-  setSelectedBufferIds: (selectedBufferIds: Set<string>) => void;
-  setSelectedFilesPaths: (selectedFilesPaths: Set<string>) => void;
-  autoSelectBuffer: (bufferId: string) => void;
+  clearSelectedBuffers: (scopeId?: ChatScopeId) => void;
+  clearSelectedFiles: (scopeId?: ChatScopeId) => void;
+  setSelectedBufferIds: (selectedBufferIds: Set<string>, scopeId?: ChatScopeId) => void;
+  setSelectedFilesPaths: (selectedFilesPaths: Set<string>, scopeId?: ChatScopeId) => void;
+  autoSelectBuffer: (bufferId: string, scopeId?: ChatScopeId) => void;
 
   // Chat actions
-  createNewChat: (agentId?: AgentType) => string;
-  ensureChatForAgent: (agentId: AgentType) => string;
-  switchToChat: (chatId: string) => void;
-  deleteChat: (chatId: string) => void;
+  createNewChat: (agentId?: AgentType, scopeId?: ChatScopeId) => string;
+  createSeededChat: (
+    agentId: AgentType,
+    seed: Pick<Chat, "title" | "messages" | "acpState" | "acpActivity"> & {
+      lineage?: ChatLineageState | null;
+    },
+    scopeId?: ChatScopeId,
+  ) => string;
+  ensureChatForAgent: (agentId: AgentType, scopeId?: ChatScopeId) => string;
+  switchToChat: (chatId: string, scopeId?: ChatScopeId) => void;
+  continueChatInPlace: (chatId: string, scopeId?: ChatScopeId) => void;
+  forkChatFromChat: (
+    sourceChatId: string,
+    targetScopeId?: ChatScopeId,
+    branchPointMessageId?: string | null,
+  ) => Promise<string | null>;
+  compactChat: (reason?: CompactionTrigger, scopeId?: ChatScopeId) => Promise<boolean>;
+  summarizeBranchTransition: (sourceChatId: string, targetChatId: string) => Promise<boolean>;
+  deleteChat: (chatId: string, scopeId?: ChatScopeId) => void;
   updateChatTitle: (chatId: string, title: string) => void;
-  setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
+  setChatLineage: (chatId: string, lineage: ChatLineageState) => void;
   addMessage: (chatId: string, message: Message) => void;
+  replaceChatMessages: (chatId: string, messages: Message[]) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
-  regenerateResponse: () => string | null;
-  setIsChatHistoryVisible: (isChatHistoryVisible: boolean) => void;
+  regenerateResponse: (scopeId?: ChatScopeId) => string | null;
+  setIsChatHistoryVisible: (isChatHistoryVisible: boolean, scopeId?: ChatScopeId) => void;
 
   // SQLite database actions
   initializeDatabase: () => Promise<void>;
@@ -163,32 +193,51 @@ export interface AIChatActions {
   showSlashCommands: (position: { top: number; left: number }, search: string) => void;
   hideSlashCommands: () => void;
   updateSlashCommandSearch: (search: string) => void;
-  selectNextSlashCommand: () => void;
-  selectPreviousSlashCommand: () => void;
+  selectNextSlashCommand: (scopeId?: ChatScopeId) => void;
+  selectPreviousSlashCommand: (scopeId?: ChatScopeId) => void;
   setSlashCommandSelectedIndex: (index: number) => void;
-  setAvailableSlashCommands: (commands: SlashCommand[]) => void;
-  getFilteredSlashCommands: () => SlashCommand[];
+  setAvailableSlashCommands: (commands: SlashCommand[], scopeId?: ChatScopeId) => void;
+  getFilteredSlashCommands: (scopeId?: ChatScopeId) => SlashCommand[];
 
   // Session mode actions
-  setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
-  setCurrentModeId: (modeId: string) => void;
-  changeSessionMode: (modeId: string) => Promise<void>;
-  setSessionConfigOptions: (options: SessionConfigOption[]) => void;
-  changeSessionConfigOption: (configId: string, value: string) => Promise<void>;
+  setSessionModeState: (
+    currentModeId: string | null,
+    availableModes: SessionMode[],
+    scopeId?: ChatScopeId,
+  ) => void;
+  setAcpRuntimeState: (runtimeState: AcpRuntimeState | null, scopeId?: ChatScopeId) => void;
+  setCurrentModeId: (modeId: string, scopeId?: ChatScopeId) => void;
+  changeSessionMode: (modeId: string, scopeId?: ChatScopeId) => Promise<void>;
+  changeSessionModel: (
+    selection: { provider: string; modelId: string },
+    scopeId?: ChatScopeId,
+  ) => Promise<void>;
+  changeSessionThinkingLevel: (level: string, scopeId?: ChatScopeId) => Promise<void>;
+  hydrateAcpStateFromCurrentChat: (scopeId?: ChatScopeId) => void;
+  appendAcpActivityEvent: (event: ChatAcpEventInput, scopeId?: ChatScopeId) => void;
+  completeAcpToolEvent: (
+    activityId: string,
+    success: boolean,
+    tool?: ChatAcpToolEventData,
+    scopeId?: ChatScopeId,
+  ) => void;
+  setAcpPlanEntries: (entries: AcpPlanEntry[], scopeId?: ChatScopeId) => void;
+  addAcpPermissionRequest: (
+    permission: Omit<ChatAcpPermissionRequest, "status" | "timestamp" | "resolvedAt">,
+    scopeId?: ChatScopeId,
+  ) => void;
+  resolveAcpPermissionRequest: (
+    requestId: string,
+    status: "approved" | "denied",
+    scopeId?: ChatScopeId,
+  ) => void;
+  markPendingAcpPermissionsStale: (scopeId?: ChatScopeId) => void;
 
   // Settings integration
   applyDefaultSettings: () => void;
 
-  // Workspace session integration
-  getWorkspaceSessionSnapshot: (
-    buffers: Array<{ id: string; path: string }>,
-  ) => AIWorkspaceSessionSnapshot;
-  restoreWorkspaceSession: (
-    snapshot: AIWorkspaceSessionSnapshot | null | undefined,
-    buffers: Array<{ id: string; path: string }>,
-  ) => void;
-
   // Helper getters
-  getCurrentChat: () => Chat | undefined;
-  getCurrentMessages: () => Message[];
+  getCurrentChat: (scopeId?: ChatScopeId) => Chat | undefined;
+  getCurrentMessages: (scopeId?: ChatScopeId) => Message[];
+  getEffectiveMessages: (scopeId?: ChatScopeId) => Message[];
 }

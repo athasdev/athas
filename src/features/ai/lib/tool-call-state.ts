@@ -20,12 +20,23 @@ export const markToolCallComplete = (
   toolCalls: ToolCall[],
   toolName: string,
   toolId?: string,
+  result?: {
+    output?: unknown;
+    error?: string;
+  },
 ): ToolCall[] => {
   if (toolCalls.length === 0) return toolCalls;
 
   if (toolId) {
     return toolCalls.map((toolCall) =>
-      toolCall.id === toolId && !toolCall.isComplete ? { ...toolCall, isComplete: true } : toolCall,
+      toolCall.id === toolId && !toolCall.isComplete
+        ? {
+            ...toolCall,
+            isComplete: true,
+            output: result?.output ?? toolCall.output,
+            error: result?.error ?? toolCall.error,
+          }
+        : toolCall,
     );
   }
 
@@ -37,6 +48,13 @@ export const markToolCallComplete = (
 
   const resolvedIndex = toolCalls.length - 1 - latestMatchingIndex;
   return toolCalls.map((toolCall, index) =>
-    index === resolvedIndex ? { ...toolCall, isComplete: true } : toolCall,
+    index === resolvedIndex
+      ? {
+          ...toolCall,
+          isComplete: true,
+          output: result?.output ?? toolCall.output,
+          error: result?.error ?? toolCall.error,
+        }
+      : toolCall,
   );
 };

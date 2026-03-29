@@ -1,27 +1,57 @@
-import { History } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button } from "@/ui/button";
-import Input from "@/ui/input";
+import { GitBranch, History, Layers3, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import {
-  PANE_CHIP_BASE,
-  paneHeaderClassName,
-  paneIconButtonClassName,
-  paneTitleClassName,
-} from "@/ui/pane";
+  getChatCompactionPolicyShortLabel,
+  isAutoCompactionEnabled,
+} from "@/features/ai/lib/chat-compaction-policy";
+import {
+  estimateChatMessagesTokens,
+  getChatSummaryCounts,
+  getEffectiveChatMessages,
+} from "@/features/ai/lib/chat-context";
+import { getChatLineagePath } from "@/features/ai/lib/chat-lineage";
+import { createNewHarnessSession } from "@/features/ai/lib/harness-session-actions";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { useAIChatStore } from "../../store/store";
-import ChatHistoryDropdown from "../history/sidebar";
+import type { AIChatProps, Chat } from "../../types/ai-chat";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
+
+const formatTokenCount = (count: number): string =>
+  count >= 1000 ? `${Math.round(count / 100) / 10}k ctx` : `${count} ctx`;
+
+const getSurfaceAgentLabel = (chat: Chat | undefined): string => {
+  if (!chat) {
+    return "Pi";
+  }
+
+  switch (chat.agentId) {
+    case "claude-code":
+      return "Claude";
+    case "codex-cli":
+      return "Codex";
+    case "gemini-cli":
+      return "Gemini";
+    case "pi":
+      return "Pi";
+    case "custom":
+      return "API";
+    default:
+      return chat.agentId;
+  }
+};
 
 function EditableChatTitle({
   title,
   onUpdateTitle,
+  variant = "default",
 }: {
   title: string;
   onUpdateTitle: (title: string) => void;
+  variant?: "default" | "harness";
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
@@ -65,21 +95,31 @@ function EditableChatTitle({
 
   if (isEditing) {
     return (
-      <Input
+      <input
         ref={inputRef}
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 text-xs font-medium focus:border-accent/40 focus:bg-hover"
-        style={{ minWidth: "100px", maxWidth: "200px" }}
+        className={cn(
+          "border border-border bg-secondary-bg/80 font-medium text-text outline-none focus:border-accent/40 focus:bg-hover",
+          variant === "harness"
+            ? "rounded-xl px-2.5 py-1.5 font-medium text-sm"
+            : "rounded-full px-2.5 py-1 text-sm",
+        )}
+        style={{ minWidth: variant === "harness" ? "140px" : "100px", maxWidth: "280px" }}
       />
     );
   }
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:bg-hover"
+      className={cn(
+        "block max-w-full cursor-pointer truncate font-medium transition-colors hover:text-text",
+        variant === "harness"
+          ? "px-1 font-medium text-[13px] text-text-lighter"
+          : "rounded-full bg-hover px-2 py-1 text-sm hover:bg-hover/80",
+      )}
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -89,68 +129,207 @@ function EditableChatTitle({
 }
 
 interface ChatHeaderProps {
-  onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
+  surface?: AIChatProps["surface"];
+  scopeId?: AIChatProps["scopeId"];
+  onForkCurrentChat?: () => void;
 }
 
-export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
-  const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
-  const chats = useAIChatStore((state) => state.chats);
-  const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
-  const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
-  const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
-  const switchToChat = useAIChatStore((state) => state.switchToChat);
-
+export function ChatHeader({ surface = "panel", scopeId, onForkCurrentChat }: ChatHeaderProps) {
+  const chatState = useChatState(scopeId);
+  const chatActions = useChatActions(scopeId);
+  const { settings } = useSettingsStore();
+  const { createAgentBuffer } = useBufferStore.use.actions();
   const { openSettingsDialog } = useUIState();
-  const currentChat = getCurrentChat();
-  const currentAgentId = useAIChatStore((state) => state.getCurrentAgentId());
-  const historyButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleNewHarnessSession = useCallback(() => {
+    createNewHarnessSession(createAgentBuffer, settings.aiPiHarnessBackend);
+  }, [createAgentBuffer, settings.aiPiHarnessBackend]);
+
+  const currentChat = useMemo(
+    () => chatState.chats.find((chat) => chat.id === chatState.currentChatId),
+    [chatState.chats, chatState.currentChatId],
+  );
+  const lineageChats = useMemo(() => {
+    if (!currentChat) {
+      return [];
+    }
+
+    const lineagePath = getChatLineagePath(chatState.chats, currentChat.id);
+    const chatsById = new Map(chatState.chats.map((chat) => [chat.id, chat]));
+    return lineagePath
+      .map((chatId) => chatsById.get(chatId))
+      .filter((chat): chat is Chat => Boolean(chat));
+  }, [chatState.chats, currentChat]);
+  const summaryCounts = currentChat ? getChatSummaryCounts(currentChat) : null;
+  const contextTokenCount = currentChat
+    ? estimateChatMessagesTokens(getEffectiveChatMessages(currentChat))
+    : null;
+  const compactionPolicyLabel = getChatCompactionPolicyShortLabel(settings.aiAutoCompactionPolicy);
+  const isAutoCompactionArmed = isAutoCompactionEnabled(settings.aiAutoCompactionPolicy);
+  const currentAgentLabel = getSurfaceAgentLabel(currentChat);
+
+  if (surface === "harness") {
+    return (
+      <div className="relative z-[10020] bg-transparent pt-6 pb-2">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-3 opacity-50 transition-opacity hover:opacity-100 sm:px-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3 text-text-lighter">
+            {chatState.currentChatId ? (
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Session"}
+                onUpdateTitle={(title) =>
+                  chatActions.updateChatTitle(chatState.currentChatId!, title)
+                }
+                variant="harness"
+              />
+            ) : (
+              <span className="font-medium text-[13px] text-text">New Session</span>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <Tooltip content="New Session" side="bottom">
+              <button
+                onClick={handleNewHarnessSession}
+                className="flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text"
+                aria-label="New session"
+              >
+                <Plus size={13} />
+              </button>
+            </Tooltip>
+
+            <Tooltip content="Session History" side="bottom">
+              <button
+                onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text",
+                  chatState.isChatHistoryVisible && "text-text",
+                )}
+                aria-label="Toggle session history"
+              >
+                <History size={13} />
+              </button>
+            </Tooltip>
+
+            {chatState.currentChatId && onForkCurrentChat ? (
+              <Tooltip content="Fork session" side="bottom">
+                <button
+                  onClick={() => onForkCurrentChat()}
+                  className="flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text"
+                  aria-label="Fork session"
+                >
+                  <GitBranch size={13} />
+                </button>
+              </Tooltip>
+            ) : null}
+
+            <Tooltip content="Compact context" side="bottom">
+              <button
+                onClick={() => {
+                  void chatActions.compactChat("manual");
+                }}
+                className="flex h-6 w-6 items-center justify-center text-text-lighter transition-colors hover:text-text"
+                aria-label="Compact session context"
+              >
+                <Layers3 size={13} />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={cn("relative z-[10020]", paneHeaderClassName())}>
-      <div className="min-w-0 flex-1">
-        {currentChatId ? (
-          <EditableChatTitle
-            title={currentChat ? currentChat.title : "New Chat"}
-            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
-          />
-        ) : (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
-              <ProviderIcon providerId={currentAgentId} size={12} />
+    <div className="relative z-[10020] border-border/70 border-b bg-secondary-bg/90 px-3 py-2.5 backdrop-blur-sm">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-[0.14em]">
+            <span className="rounded-full border border-border/70 bg-primary-bg/85 px-2 py-1 text-text">
+              {currentAgentLabel}
             </span>
-            <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
+            {contextTokenCount !== null ? (
+              <span className="rounded-full border border-border/70 bg-primary-bg/70 px-2 py-1 normal-case tracking-normal">
+                {formatTokenCount(contextTokenCount)}
+              </span>
+            ) : null}
+            {summaryCounts?.branch ? (
+              <span className="rounded-full border border-border/70 bg-primary-bg/70 px-2 py-1 normal-case tracking-normal">
+                {summaryCounts.branch} branches
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "rounded-full border px-2 py-1 normal-case tracking-normal",
+                isAutoCompactionArmed
+                  ? "border-border/70 bg-primary-bg/70 text-text"
+                  : "border-border/60 bg-primary-bg/55 text-text-lighter",
+              )}
+            >
+              Compact {compactionPolicyLabel}
+            </span>
           </div>
-        )}
+
+          {chatState.currentChatId ? (
+            <>
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Chat"}
+                onUpdateTitle={(title) =>
+                  chatActions.updateChatTitle(chatState.currentChatId!, title)
+                }
+              />
+              {currentChat && lineageChats.length > 1 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-text-lighter">
+                  {lineageChats.map((chat, index) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => chatActions.switchToChat(chat.id)}
+                      className={cn(
+                        "rounded-full border border-border/60 bg-primary-bg/60 px-2 py-1 transition-colors hover:bg-hover",
+                        chat.id === currentChat.id && "border-border/80 bg-primary-bg text-text",
+                      )}
+                    >
+                      {index === 0 ? "Root" : chat.title}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <span className="font-medium text-sm text-text">New Chat</span>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Tooltip content="Chat History" side="bottom">
+            <button
+              onClick={() => chatActions.setIsChatHistoryVisible(!chatState.isChatHistoryVisible)}
+              className="flex h-8 items-center justify-center rounded-2xl border border-border/70 bg-primary-bg/70 px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              aria-label="Toggle chat history"
+            >
+              <History size={14} />
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Compact context" side="bottom">
+            <button
+              onClick={() => {
+                void chatActions.compactChat("manual");
+              }}
+              className="flex h-8 items-center justify-center rounded-2xl border border-border/70 bg-primary-bg/70 px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              aria-label="Compact chat context"
+            >
+              <Layers3 size={14} />
+            </button>
+          </Tooltip>
+
+          <UnifiedAgentSelector
+            scopeId={scopeId}
+            surface={surface}
+            variant="header"
+            onOpenSettings={() => openSettingsDialog("ai")}
+          />
+        </div>
       </div>
-
-      <div className="flex shrink-0 items-center gap-1.5">
-        <Tooltip content="Chat History" side="bottom">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            ref={historyButtonRef}
-            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            className={paneIconButtonClassName()}
-            aria-label="Toggle chat history"
-          >
-            <History />
-          </Button>
-        </Tooltip>
-
-        <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
-      </div>
-
-      <ChatHistoryDropdown
-        isOpen={isChatHistoryVisible}
-        onClose={() => setIsChatHistoryVisible(false)}
-        chats={chats}
-        currentChatId={currentChatId}
-        onSwitchToChat={switchToChat}
-        onDeleteChat={onDeleteChat ?? (() => {})}
-        triggerRef={historyButtonRef}
-      />
     </div>
   );
 }

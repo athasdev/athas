@@ -48,6 +48,8 @@ export default function ToolCallDisplay({
 
     if (typeof input === "string") return input;
 
+    const normalizedToolName = toolName.toLowerCase();
+
     // Extract filename helper
     const getFilename = (path: string) => path.split("/").pop() || path;
 
@@ -58,11 +60,11 @@ export default function ToolCallDisplay({
     };
 
     // Special formatting for common tools
-    if (toolName === "Read" && input.file_path) {
+    if ((toolName === "Read" || normalizedToolName.includes("read")) && input.file_path) {
       return getFilename(input.file_path);
     }
 
-    if (toolName === "Edit" && input.file_path) {
+    if ((toolName === "Edit" || normalizedToolName.includes("edit")) && input.file_path) {
       const filename = getFilename(input.file_path);
       const editType = input.replace_all ? "Replace all" : "Single edit";
       // Show a preview of what's being edited if strings are short
@@ -72,11 +74,11 @@ export default function ToolCallDisplay({
       return `${filename} (${editType})`;
     }
 
-    if (toolName === "Write" && input.file_path) {
+    if ((toolName === "Write" || normalizedToolName.includes("write")) && input.file_path) {
       return getFilename(input.file_path);
     }
 
-    if (toolName === "MultiEdit" && input.file_path) {
+    if ((toolName === "MultiEdit" || normalizedToolName.includes("multi")) && input.file_path) {
       const filename = getFilename(input.file_path);
       const editCount = input.edits?.length || 0;
       return `${filename} (${editCount} edit${editCount !== 1 ? "s" : ""})`;
@@ -86,11 +88,11 @@ export default function ToolCallDisplay({
       return getFilename(input.notebook_path);
     }
 
-    if (toolName === "Bash" && input.command) {
+    if ((toolName === "Bash" || normalizedToolName.includes("bash")) && input.command) {
       return truncate(input.command, 60);
     }
 
-    if (toolName === "Grep" && input.pattern) {
+    if ((toolName === "Grep" || normalizedToolName.includes("grep")) && input.pattern) {
       const pattern = truncate(input.pattern, 30);
       return `Pattern: "${pattern}"${input.path ? ` in ${getFilename(input.path)}` : ""}`;
     }
@@ -99,7 +101,7 @@ export default function ToolCallDisplay({
       return `Pattern: ${input.pattern}${input.path ? ` in ${getFilename(input.path)}` : ""}`;
     }
 
-    if (toolName === "LS" && input.path) {
+    if ((toolName === "LS" || normalizedToolName.includes("ls")) && input.path) {
       return getFilename(input.path);
     }
 
@@ -107,8 +109,16 @@ export default function ToolCallDisplay({
       return truncate(input.query, 50);
     }
 
-    if (toolName === "WebFetch" && input.url) {
+    if ((toolName === "WebFetch" || normalizedToolName.includes("fetch")) && input.url) {
       return truncate(input.url, 50);
+    }
+
+    if (input.file_path) {
+      return getFilename(input.file_path);
+    }
+
+    if (input.path) {
+      return getFilename(input.path);
     }
 
     // Default: show meaningful key-value pairs, skip very long values

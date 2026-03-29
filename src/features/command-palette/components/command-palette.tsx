@@ -87,10 +87,12 @@ const CommandPalette = () => {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const {
     closeBuffer,
+    createAgentBuffer,
     setActiveBuffer,
     switchToNextBuffer,
     switchToPreviousBuffer,
     reopenClosedTab,
+    openAgentBuffer,
     openWebViewerBuffer,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
@@ -112,6 +114,7 @@ const CommandPalette = () => {
       onClose,
     }),
     ...createViewActions({
+      isHarnessActive: Boolean(activeBuffer?.isAgent),
       isSidebarVisible,
       setIsSidebarVisible,
       isBottomPaneVisible,
@@ -121,10 +124,10 @@ const CommandPalette = () => {
       isFindVisible,
       setIsFindVisible,
       settings: {
-        isAIChatVisible: settings.isAIChatVisible,
         sidebarPosition: settings.sidebarPosition,
         nativeMenuBar: settings.nativeMenuBar,
         compactMenuBar: settings.compactMenuBar,
+        aiPiHarnessBackend: settings.aiPiHarnessBackend,
       },
       updateSetting: useSettingsStore.getState().updateSetting as (
         key: string,
@@ -133,6 +136,8 @@ const CommandPalette = () => {
       zoomIn,
       zoomOut,
       resetZoom,
+      createAgentBuffer,
+      openAgentBuffer,
       openWebViewerBuffer,
       onClose,
     }),

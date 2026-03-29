@@ -1,0 +1,29 @@
+import type { AIChatSurface } from "@/features/ai/types/ai-chat";
+
+interface ChatSurfaceLayout {
+  shellMaxWidthClassName: string;
+  timelineMaxWidthClassName: string;
+  composerMaxWidthClassName: string;
+  railContainerClassName: string | null;
+  showsSecondaryRail: boolean;
+}
+
+export function getChatSurfaceLayout(surface: AIChatSurface): ChatSurfaceLayout {
+  if (surface === "harness") {
+    return {
+      shellMaxWidthClassName: "max-w-none",
+      timelineMaxWidthClassName: "max-w-3xl",
+      composerMaxWidthClassName: "max-w-3xl pt-2",
+      railContainerClassName: "hidden xl:flex xl:w-[220px] transition-all",
+      showsSecondaryRail: true,
+    };
+  }
+
+  return {
+    shellMaxWidthClassName: "max-w-none",
+    timelineMaxWidthClassName: "max-w-none",
+    composerMaxWidthClassName: "max-w-none",
+    railContainerClassName: null,
+    showsSecondaryRail: false,
+  };
+}

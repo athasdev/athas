@@ -47,7 +47,7 @@ pub async fn close_terminal(
 }
 
 #[tauri::command]
-pub fn list_shells() -> Vec<Shell> {
+pub fn get_shells() -> Vec<Shell> {
    athas_terminal::get_shells()
 }
 

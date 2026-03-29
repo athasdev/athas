@@ -50,7 +50,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../src/extensions/bundled": "bundled"
+      "../src/extensions/bundled": "bundled",
+      "pi-native-host": "pi-native-host"
     },
     "macOS": {
       "frameworks": [],

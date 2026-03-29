@@ -150,11 +150,14 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Enable AI Chat" description="Enable AI chat panel for enterprise users.">
+        <SettingRow
+          label="Enable AI Assistant"
+          description="Enable the AI assistant and Harness for enterprise users."
+        >
           <Switch
             checked={policy.aiChatEnabled}
             onChange={(checked) =>
-              savePolicyPatch({ aiChatEnabled: checked }, "AI chat policy updated.")
+              savePolicyPatch({ aiChatEnabled: checked }, "AI assistant policy updated.")
             }
             size="sm"
             disabled={!isAdmin || isSaving || !policy.managedMode}

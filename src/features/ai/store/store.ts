@@ -1,49 +1,169 @@
 import { produce } from "immer";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
+import {
+  addAcpPermissionRequest,
+  appendAcpActivityEvent,
+  cloneChatAcpActivity,
+  completeAcpActivityTool,
+  markPendingAcpPermissionsStale,
+  resolveAcpPermissionRequest,
+  setAcpActivityPlanEntries,
+} from "@/features/ai/lib/chat-acp-activity";
+import {
+  createForkedChatAcpState,
+  getChatWarmStartAcpState,
+  withCachedSessionModeState,
+  withCachedSlashCommands,
+  withPreferredAcpModeId,
+  withRuntimeState,
+} from "@/features/ai/lib/chat-acp-state";
+import {
+  createSummaryMessage,
+  getBranchDeltaMessages,
+  getEffectiveChatMessages,
+  prepareChatCompaction,
+} from "@/features/ai/lib/chat-context";
+import {
+  cloneMessagesForFork,
+  createForkedChatLineage,
+  createRootChatLineage,
+  normalizeChatMessage,
+} from "@/features/ai/lib/chat-lineage";
+import {
+  createScopedChatId,
+  filterChatsForScope,
+  getDefaultChatTitle,
+  PANEL_CHAT_SCOPE_ID,
+} from "@/features/ai/lib/chat-scope";
+import {
+  generateBranchSummary,
+  generateCompactionSummary,
+  getConfiguredSummaryModel,
+} from "@/features/ai/lib/chat-summarizer";
+import {
+  changeHarnessRuntimeSessionMode,
+  setHarnessRuntimeModel,
+  setHarnessRuntimeThinkingLevel,
+  stopHarnessRuntime,
+} from "@/features/ai/lib/harness-runtime";
+import { getNextQueuedMessageIndex } from "@/features/ai/lib/message-queue";
+import type { AgentType, Chat, ChatScopeId, CompactionTrigger } from "@/features/ai/types/ai-chat";
+import { AI_PROVIDERS } from "@/features/ai/types/providers";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { FileEntry } from "@/features/file-system/types/app";
+import { useSettingsStore } from "@/features/settings/store";
 import {
   getProviderApiToken,
+  isAcpAgent,
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
-} from "@/features/ai/services/ai-token-service";
-import { AI_PROVIDERS } from "@/features/ai/types/providers";
-import type { FileEntry } from "@/features/file-system/types/app";
+} from "@/utils/ai-chat";
 import {
   deleteChatFromDb,
   initChatDatabase,
   loadAllChatsFromDb,
   loadChatFromDb,
   saveChatToDb,
-} from "@/features/ai/services/ai-chat-history-service";
-import type { AIChatActions, AIChatState } from "./types";
+} from "@/utils/chat-history-db";
+import { normalizePersistedAIChatState } from "./persist";
+import { createDefaultChatScopeState } from "./scope-defaults";
+import type { AIChatActions, AIChatState, ChatScopeState } from "./types";
+
+const DEFAULT_SCOPE_ID: ChatScopeId = PANEL_CHAT_SCOPE_ID;
+
+const ensureChatScopeState = (
+  state: AIChatState,
+  scopeId: ChatScopeId = DEFAULT_SCOPE_ID,
+): ChatScopeState => {
+  if (!state.chatScopes[scopeId]) {
+    state.chatScopes[scopeId] = createDefaultChatScopeState(scopeId);
+  }
+
+  return state.chatScopes[scopeId];
+};
+
+const getChatScopeState = (
+  state: AIChatState,
+  scopeId: ChatScopeId = DEFAULT_SCOPE_ID,
+): ChatScopeState => state.chatScopes[scopeId] ?? createDefaultChatScopeState(scopeId);
+
+const hydrateChatInStore = (state: AIChatState, nextChat: Chat) => {
+  const chatIndex = state.chats.findIndex((chat) => chat.id === nextChat.id);
+  if (chatIndex === -1) {
+    state.chats.unshift({
+      ...nextChat,
+      messages: nextChat.messages.map(normalizeChatMessage),
+    });
+    return;
+  }
+
+  state.chats[chatIndex] = {
+    ...nextChat,
+    messages: nextChat.messages.map(normalizeChatMessage),
+  };
+};
+
+const getChatById = (chats: Chat[], chatId: string | null): Chat | undefined =>
+  chats.find((chat) => chat.id === chatId);
+
+const getCurrentRuntimeBuffer = () => useBufferStore.getState().actions.getActiveBuffer();
+
+const applyWarmStartAcpScopeState = (scopeState: ChatScopeState, chat?: Chat) => {
+  if (chat && isAcpAgent(chat.agentId)) {
+    const warmStartState = getChatWarmStartAcpState(chat);
+    scopeState.availableSlashCommands = warmStartState.slashCommands;
+    scopeState.sessionModeState = {
+      currentModeId: warmStartState.currentModeId,
+      availableModes: warmStartState.availableModes,
+    };
+    return;
+  }
+
+  scopeState.availableSlashCommands = [];
+  scopeState.sessionModeState = {
+    currentModeId: null,
+    availableModes: [],
+  };
+};
+
+const updateCurrentChatAcpState = (
+  state: AIChatState,
+  scopeId: ChatScopeId,
+  updater: (chat: Chat) => void,
+): string | null => {
+  const currentChat = getChatById(state.chats, ensureChatScopeState(state, scopeId).currentChatId);
+  if (!currentChat || !isAcpAgent(currentChat.agentId)) {
+    return null;
+  }
+
+  updater(currentChat);
+  return currentChat.id;
+};
+
+const getLatestBranchSummary = (chat: Chat, sourceChatId: string) =>
+  [...chat.messages]
+    .reverse()
+    .find(
+      (message) =>
+        message.kind === "branch-summary" &&
+        message.summaryMeta?.type === "branch" &&
+        message.summaryMeta.sourceChatId === sourceChatId,
+    );
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
   immer(
     persist(
       (set, get) => ({
-        // Single session state
         chats: [],
-        currentChatId: null,
-        selectedAgentId: "custom" as AgentType, // Default to custom (API-based)
-        input: "",
-        pastedImages: [],
-        isTyping: false,
-        streamingMessageId: null,
-        selectedBufferIds: new Set<string>(),
-        selectedFilesPaths: new Set<string>(),
-        isContextDropdownOpen: false,
-        isSendAnimating: false,
-        messageQueue: [],
-        isProcessingQueue: false,
-        mode: "chat",
+        chatScopes: {
+          [PANEL_CHAT_SCOPE_ID]: createDefaultChatScopeState(PANEL_CHAT_SCOPE_ID),
+        },
         outputStyle: "default",
 
-        // Global state
         hasApiKey: false,
-        isChatHistoryVisible: false,
 
         providerApiKeys: new Map<string, boolean>(),
         apiKeyModalState: { isOpen: false, providerId: null },
@@ -63,43 +183,35 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           search: "",
           selectedIndex: 0,
         },
-        availableSlashCommands: [],
-
-        sessionModeState: {
-          currentModeId: null,
-          availableModes: [],
-        },
-        sessionConfigOptions: [],
 
         // Agent selection actions
-        setSelectedAgentId: (agentId) =>
+        setSelectedAgentId: (agentId, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedAgentId = agentId;
+            ensureChatScopeState(state, scopeId).selectedAgentId = agentId;
           }),
 
-        getCurrentAgentId: () => {
+        getCurrentAgentId: (scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
-          // If there's a current chat, return its agent
-          if (state.currentChatId) {
-            const chat = state.chats.find((c) => c.id === state.currentChatId);
+          const scopeState = getChatScopeState(state, scopeId);
+          const currentChatId = scopeState.currentChatId;
+          if (currentChatId) {
+            const chat = state.chats.find((c) => c.id === currentChatId);
             if (chat?.agentId) {
               return chat.agentId;
             }
           }
-          // Otherwise return the selected agent for new chats
-          return state.selectedAgentId;
+
+          return scopeState.selectedAgentId;
         },
 
-        changeCurrentChatAgent: (agentId) => {
-          // When changing agent, create a new chat with the new agent
-          // This preserves the behavior that each chat belongs to a specific agent
-          get().createNewChat(agentId);
+        changeCurrentChatAgent: (agentId, scopeId = DEFAULT_SCOPE_ID) => {
+          get().createNewChat(agentId, scopeId);
         },
 
         // Chat mode actions
-        setMode: (mode) =>
+        setMode: (mode, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.mode = mode;
+            ensureChatScopeState(state, scopeId).mode = mode;
           }),
 
         setOutputStyle: (outputStyle) =>
@@ -108,206 +220,518 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }),
 
         // Message queue actions
-        addMessageToQueue: (message) =>
+        addMessageToQueue: (message, kind = "steering", scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
             const queuedMessage = {
               id: Date.now().toString(),
               content: message,
+              kind,
               timestamp: new Date(),
             };
-            state.messageQueue.push(queuedMessage);
+            const scopeState = ensureChatScopeState(state, scopeId);
+            scopeState.messageQueue.push(queuedMessage);
+            scopeState.isProcessingQueue = true;
           }),
 
-        processNextMessage: () => {
+        processNextMessage: (scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
-          if (state.messageQueue.length > 0) {
-            const nextMessage = state.messageQueue[0];
+          const scopeState = getChatScopeState(state, scopeId);
+          const nextMessageIndex = getNextQueuedMessageIndex(scopeState.messageQueue);
+          if (nextMessageIndex !== -1) {
+            const nextMessage = scopeState.messageQueue[nextMessageIndex];
             set((state) => {
-              state.messageQueue.shift();
-              state.isProcessingQueue = state.messageQueue.length > 0;
+              const nextScopeState = ensureChatScopeState(state, scopeId);
+              nextScopeState.messageQueue.splice(nextMessageIndex, 1);
+              nextScopeState.isProcessingQueue = nextScopeState.messageQueue.length > 0;
             });
             return nextMessage;
           }
           return null;
         },
 
-        clearMessageQueue: () =>
+        clearMessageQueue: (scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.messageQueue = [];
-            state.isProcessingQueue = false;
+            const scopeState = ensureChatScopeState(state, scopeId);
+            scopeState.messageQueue = [];
+            scopeState.isProcessingQueue = false;
           }),
 
         // Input actions
-        setInput: (input) =>
+        setInput: (input, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.input = input;
+            ensureChatScopeState(state, scopeId).input = input;
           }),
-        addPastedImage: (image) =>
+        addPastedImage: (image, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.pastedImages = [...state.pastedImages, image];
+            const scopeState = ensureChatScopeState(state, scopeId);
+            scopeState.pastedImages = [...scopeState.pastedImages, image];
           }),
-        removePastedImage: (imageId) =>
+        removePastedImage: (imageId, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.pastedImages = state.pastedImages.filter((img) => img.id !== imageId);
+            const scopeState = ensureChatScopeState(state, scopeId);
+            scopeState.pastedImages = scopeState.pastedImages.filter((img) => img.id !== imageId);
           }),
-        clearPastedImages: () =>
+        clearPastedImages: (scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.pastedImages = [];
+            ensureChatScopeState(state, scopeId).pastedImages = [];
           }),
-        setIsTyping: (isTyping) =>
+        setIsTyping: (isTyping, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.isTyping = isTyping;
+            ensureChatScopeState(state, scopeId).isTyping = isTyping;
           }),
-        setStreamingMessageId: (streamingMessageId) =>
+        setStreamingMessageId: (streamingMessageId, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.streamingMessageId = streamingMessageId;
+            ensureChatScopeState(state, scopeId).streamingMessageId = streamingMessageId;
           }),
-        toggleBufferSelection: (bufferId) =>
+        toggleBufferSelection: (bufferId, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedBufferIds = new Set(state.selectedBufferIds);
-            if (state.selectedBufferIds.has(bufferId)) {
-              state.selectedBufferIds.delete(bufferId);
+            const scopeState = ensureChatScopeState(state, scopeId);
+            scopeState.selectedBufferIds = new Set(scopeState.selectedBufferIds);
+            if (scopeState.selectedBufferIds.has(bufferId)) {
+              scopeState.selectedBufferIds.delete(bufferId);
             } else {
-              state.selectedBufferIds.add(bufferId);
+              scopeState.selectedBufferIds.add(bufferId);
             }
           }),
-        toggleFileSelection: (filePath) =>
+        toggleFileSelection: (filePath, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedFilesPaths = new Set(state.selectedFilesPaths);
-            if (state.selectedFilesPaths.has(filePath)) {
-              state.selectedFilesPaths.delete(filePath);
+            const scopeState = ensureChatScopeState(state, scopeId);
+            scopeState.selectedFilesPaths = new Set(scopeState.selectedFilesPaths);
+            if (scopeState.selectedFilesPaths.has(filePath)) {
+              scopeState.selectedFilesPaths.delete(filePath);
             } else {
-              state.selectedFilesPaths.add(filePath);
+              scopeState.selectedFilesPaths.add(filePath);
             }
           }),
-        setIsContextDropdownOpen: (isContextDropdownOpen) =>
+        setIsContextDropdownOpen: (isContextDropdownOpen, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.isContextDropdownOpen = isContextDropdownOpen;
+            ensureChatScopeState(state, scopeId).isContextDropdownOpen = isContextDropdownOpen;
           }),
-        setIsSendAnimating: (isSendAnimating) =>
+        setIsSendAnimating: (isSendAnimating, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.isSendAnimating = isSendAnimating;
+            ensureChatScopeState(state, scopeId).isSendAnimating = isSendAnimating;
           }),
         setHasApiKey: (hasApiKey) =>
           set((state) => {
             state.hasApiKey = hasApiKey;
           }),
-        clearSelectedBuffers: () =>
+        clearSelectedBuffers: (scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedBufferIds = new Set<string>();
+            ensureChatScopeState(state, scopeId).selectedBufferIds = new Set<string>();
           }),
-        clearSelectedFiles: () =>
+        clearSelectedFiles: (scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedFilesPaths = new Set<string>();
+            ensureChatScopeState(state, scopeId).selectedFilesPaths = new Set<string>();
           }),
-        setSelectedBufferIds: (selectedBufferIds) =>
+        setSelectedBufferIds: (selectedBufferIds, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedBufferIds = selectedBufferIds;
+            ensureChatScopeState(state, scopeId).selectedBufferIds = selectedBufferIds;
           }),
-        setSelectedFilesPaths: (selectedFilesPaths) =>
+        setSelectedFilesPaths: (selectedFilesPaths, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.selectedFilesPaths = selectedFilesPaths;
+            ensureChatScopeState(state, scopeId).selectedFilesPaths = selectedFilesPaths;
           }),
-        autoSelectBuffer: (bufferId) =>
+        autoSelectBuffer: (bufferId, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            if (!state.selectedBufferIds.has(bufferId)) {
-              state.selectedBufferIds = new Set(state.selectedBufferIds);
-              state.selectedBufferIds.add(bufferId);
+            const scopeState = ensureChatScopeState(state, scopeId);
+            if (!scopeState.selectedBufferIds.has(bufferId)) {
+              scopeState.selectedBufferIds = new Set(scopeState.selectedBufferIds);
+              scopeState.selectedBufferIds.add(bufferId);
             }
           }),
 
         // Chat actions
-        createNewChat: (agentId?: AgentType) => {
+        createNewChat: (agentId?: AgentType, scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
-          const chatAgentId = agentId || state.selectedAgentId;
+          const scopeState = getChatScopeState(state, scopeId);
+          const chatAgentId = agentId || scopeState.selectedAgentId;
+          const previousChat = getChatById(state.chats, scopeState.currentChatId);
+          const chatId = createScopedChatId(scopeId);
           const newChat: Chat = {
-            id: Date.now().toString(),
-            title: "New Chat",
+            id: chatId,
+            title: getDefaultChatTitle(scopeId),
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
             agentId: chatAgentId,
-            acpSessionId: null,
+            acpState: null,
+            acpActivity: null,
+            ...createRootChatLineage(chatId),
           };
           set((state) => {
+            const nextScopeState = ensureChatScopeState(state, scopeId);
             state.chats.unshift(newChat);
-            state.currentChatId = newChat.id;
-            state.isChatHistoryVisible = false;
-            // Clear input and reset state when creating new chat
-            state.input = "";
-            state.isTyping = false;
-            state.streamingMessageId = null;
+            nextScopeState.currentChatId = newChat.id;
+            nextScopeState.isChatHistoryVisible = false;
+            nextScopeState.input = "";
+            nextScopeState.isTyping = false;
+            nextScopeState.streamingMessageId = null;
+            applyWarmStartAcpScopeState(nextScopeState, newChat);
           });
-          // Save to SQLite
           saveChatToDb(newChat).catch((err) =>
             console.error("Failed to save new chat to database:", err),
           );
+          if (isAcpAgent(previousChat?.agentId ?? chatAgentId)) {
+            get().markPendingAcpPermissionsStale(scopeId);
+            void stopHarnessRuntime(
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            ).catch((error) => console.error("Failed to reset ACP route for new chat:", error));
+          }
           return newChat.id;
         },
-        ensureChatForAgent: (agentId: AgentType) => {
+        createSeededChat: (agentId, seed, scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
+          const previousChat = getChatById(
+            state.chats,
+            getChatScopeState(state, scopeId).currentChatId,
+          );
+          const chatId = createScopedChatId(scopeId);
+          const normalizedMessages = seed.messages.map(normalizeChatMessage);
+          const lastTimestamp =
+            normalizedMessages.length > 0
+              ? normalizedMessages[normalizedMessages.length - 1]?.timestamp
+              : null;
+          const newChat: Chat = {
+            id: chatId,
+            title: seed.title || getDefaultChatTitle(scopeId),
+            messages: normalizedMessages,
+            createdAt: new Date(),
+            lastMessageAt: lastTimestamp ? new Date(lastTimestamp) : new Date(),
+            agentId,
+            acpState: seed.acpState ?? null,
+            acpActivity: seed.acpActivity ?? null,
+            ...(seed.lineage ?? createRootChatLineage(chatId)),
+          };
 
-          if (state.currentChatId) {
-            const current = state.chats.find((c) => c.id === state.currentChatId);
+          set((state) => {
+            const nextScopeState = ensureChatScopeState(state, scopeId);
+            state.chats.unshift(newChat);
+            nextScopeState.currentChatId = newChat.id;
+            nextScopeState.isChatHistoryVisible = false;
+            nextScopeState.input = "";
+            nextScopeState.isTyping = false;
+            nextScopeState.streamingMessageId = null;
+            applyWarmStartAcpScopeState(nextScopeState, newChat);
+          });
+
+          saveChatToDb(newChat).catch((err) =>
+            console.error("Failed to save seeded chat to database:", err),
+          );
+
+          if (isAcpAgent(previousChat?.agentId ?? agentId)) {
+            get().markPendingAcpPermissionsStale(scopeId);
+            void stopHarnessRuntime(
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            ).catch((error) => console.error("Failed to reset ACP route for seeded chat:", error));
+          }
+
+          return newChat.id;
+        },
+        ensureChatForAgent: (agentId: AgentType, scopeId = DEFAULT_SCOPE_ID) => {
+          const state = get();
+          const scopedChats = filterChatsForScope(state.chats, scopeId);
+          const currentChatId = getChatScopeState(state, scopeId).currentChatId;
+
+          if (currentChatId) {
+            const current = scopedChats.find((c) => c.id === currentChatId);
             if (current) {
               return current.id;
             }
           }
 
-          const matchingChat = state.chats.find((c) => c.agentId === agentId);
+          const matchingChat = scopedChats.find((c) => c.agentId === agentId);
           if (matchingChat) {
             set((state) => {
-              state.currentChatId = matchingChat.id;
-              state.isChatHistoryVisible = false;
+              const nextScopeState = ensureChatScopeState(state, scopeId);
+              nextScopeState.currentChatId = matchingChat.id;
+              nextScopeState.isChatHistoryVisible = false;
+              applyWarmStartAcpScopeState(nextScopeState, matchingChat);
             });
             return matchingChat.id;
           }
 
-          if (state.chats.length > 0) {
-            const fallback = state.chats[0];
+          if (scopedChats.length > 0) {
+            const fallback = scopedChats[0];
             set((state) => {
-              state.currentChatId = fallback.id;
-              state.isChatHistoryVisible = false;
+              const nextScopeState = ensureChatScopeState(state, scopeId);
+              nextScopeState.currentChatId = fallback.id;
+              nextScopeState.isChatHistoryVisible = false;
+              applyWarmStartAcpScopeState(nextScopeState, fallback);
             });
             return fallback.id;
           }
 
-          return get().createNewChat(agentId);
+          return get().createNewChat(agentId, scopeId);
         },
 
-        switchToChat: (chatId) => {
+        switchToChat: (chatId, scopeId = DEFAULT_SCOPE_ID) => {
+          const sourceChatId = getChatScopeState(get(), scopeId).currentChatId;
+          const sourceChat = getChatById(get().chats, sourceChatId);
+          const targetChat = getChatById(get().chats, chatId);
+          if (sourceChatId && sourceChatId !== chatId) {
+            void get().summarizeBranchTransition(sourceChatId, chatId);
+            if (isAcpAgent(sourceChat?.agentId ?? targetChat?.agentId ?? "custom")) {
+              get().markPendingAcpPermissionsStale(scopeId);
+              void stopHarnessRuntime(
+                scopeId,
+                useBufferStore.getState().buffers,
+                getCurrentRuntimeBuffer(),
+              ).catch((error) => console.error("Failed to reset ACP route on chat switch:", error));
+            }
+          }
           set((state) => {
-            state.currentChatId = chatId;
-            state.isChatHistoryVisible = false;
-            // Clear input and reset state when switching chats
-            state.input = "";
-            state.isTyping = false;
-            state.streamingMessageId = null;
+            const nextScopeState = ensureChatScopeState(state, scopeId);
+            nextScopeState.currentChatId = chatId;
+            nextScopeState.isChatHistoryVisible = false;
+            nextScopeState.input = "";
+            nextScopeState.isTyping = false;
+            nextScopeState.streamingMessageId = null;
+            applyWarmStartAcpScopeState(nextScopeState, targetChat);
           });
-          // Load messages from database
           get().loadChatMessages(chatId);
         },
 
-        deleteChat: (chatId) => {
+        continueChatInPlace: (chatId, scopeId = DEFAULT_SCOPE_ID) => {
+          get().switchToChat(chatId, scopeId);
+        },
+
+        forkChatFromChat: async (
+          sourceChatId,
+          targetScopeId = DEFAULT_SCOPE_ID,
+          branchPointMessageId = null,
+        ) => {
+          try {
+            let sourceChat = get().chats.find((chat) => chat.id === sourceChatId);
+            if (!sourceChat || sourceChat.messages.length === 0) {
+              sourceChat = await loadChatFromDb(sourceChatId);
+              set((state) => {
+                hydrateChatInStore(state, sourceChat!);
+              });
+            }
+
+            if (!sourceChat) {
+              return null;
+            }
+
+            const effectiveBranchPointMessageId =
+              branchPointMessageId ??
+              sourceChat.messages[sourceChat.messages.length - 1]?.id ??
+              null;
+            const branchPointIndex = effectiveBranchPointMessageId
+              ? sourceChat.messages.findIndex(
+                  (message) => message.id === effectiveBranchPointMessageId,
+                )
+              : sourceChat.messages.length - 1;
+            const branchMessages =
+              branchPointIndex >= 0
+                ? sourceChat.messages.slice(0, branchPointIndex + 1)
+                : sourceChat.messages;
+            const chatId = createScopedChatId(targetScopeId);
+
+            const forkedChat: Chat = {
+              id: chatId,
+              title: sourceChat.title,
+              messages: cloneMessagesForFork(branchMessages),
+              createdAt: new Date(),
+              lastMessageAt: new Date(),
+              agentId: sourceChat.agentId,
+              acpState: createForkedChatAcpState(sourceChat),
+              acpActivity: cloneChatAcpActivity(sourceChat.acpActivity),
+              ...createForkedChatLineage(sourceChat, effectiveBranchPointMessageId),
+            };
+
+            set((state) => {
+              const nextScopeState = ensureChatScopeState(state, targetScopeId);
+              state.chats.unshift(forkedChat);
+              nextScopeState.currentChatId = forkedChat.id;
+              nextScopeState.isChatHistoryVisible = false;
+              nextScopeState.input = "";
+              nextScopeState.isTyping = false;
+              nextScopeState.streamingMessageId = null;
+              applyWarmStartAcpScopeState(nextScopeState, forkedChat);
+            });
+
+            await saveChatToDb(forkedChat);
+            if (isAcpAgent(forkedChat.agentId)) {
+              get().markPendingAcpPermissionsStale(targetScopeId);
+              await stopHarnessRuntime(
+                targetScopeId,
+                useBufferStore.getState().buffers,
+                getCurrentRuntimeBuffer(),
+              );
+            }
+
+            return forkedChat.id;
+          } catch (error) {
+            console.error(`Failed to fork chat ${sourceChatId}:`, error);
+            return null;
+          }
+        },
+
+        compactChat: async (reason: CompactionTrigger = "manual", scopeId = DEFAULT_SCOPE_ID) => {
+          try {
+            const currentChatId = getChatScopeState(get(), scopeId).currentChatId;
+            if (!currentChatId) {
+              return false;
+            }
+
+            let chat = getChatById(get().chats, currentChatId);
+            if (!chat || chat.messages.length === 0) {
+              chat = await loadChatFromDb(currentChatId);
+              set((state) => {
+                hydrateChatInStore(state, chat!);
+              });
+            }
+
+            if (!chat) {
+              return false;
+            }
+
+            const { modelMaxTokens } = getConfiguredSummaryModel();
+            const { aiAutoCompactionKeepRecentTokens, aiAutoCompactionReserveTokens } =
+              useSettingsStore.getState().settings;
+            const compactionPlan = prepareChatCompaction(
+              chat,
+              modelMaxTokens,
+              aiAutoCompactionReserveTokens,
+              aiAutoCompactionKeepRecentTokens,
+              reason === "manual",
+            );
+
+            if (!compactionPlan) {
+              return false;
+            }
+
+            const summary = await generateCompactionSummary(compactionPlan.messagesToSummarize);
+            const summaryMessage = createSummaryMessage("compaction-summary", summary, {
+              type: "compaction",
+              firstKeptLineageMessageId: compactionPlan.firstKeptLineageMessageId,
+              tokensBefore: compactionPlan.tokensBefore,
+              trigger: reason,
+            });
+
+            set((state) => {
+              const targetChat = state.chats.find((entry) => entry.id === currentChatId);
+              if (!targetChat) {
+                return;
+              }
+
+              targetChat.messages.push(summaryMessage);
+              targetChat.lastMessageAt = new Date();
+            });
+
+            await get().syncChatToDatabase(currentChatId);
+            if (isAcpAgent(chat.agentId)) {
+              get().markPendingAcpPermissionsStale(scopeId);
+              await stopHarnessRuntime(
+                scopeId,
+                useBufferStore.getState().buffers,
+                getCurrentRuntimeBuffer(),
+              );
+            }
+            return true;
+          } catch (error) {
+            console.error("Failed to compact chat:", error);
+            return false;
+          }
+        },
+
+        summarizeBranchTransition: async (sourceChatId: string, targetChatId: string) => {
+          try {
+            if (sourceChatId === targetChatId) {
+              return false;
+            }
+
+            let sourceChat = getChatById(get().chats, sourceChatId);
+            if (!sourceChat || sourceChat.messages.length === 0) {
+              sourceChat = await loadChatFromDb(sourceChatId);
+              set((state) => {
+                hydrateChatInStore(state, sourceChat!);
+              });
+            }
+
+            let targetChat = getChatById(get().chats, targetChatId);
+            if (!targetChat || targetChat.messages.length === 0) {
+              targetChat = await loadChatFromDb(targetChatId);
+              set((state) => {
+                hydrateChatInStore(state, targetChat!);
+              });
+            }
+
+            if (!sourceChat || !targetChat || sourceChat.rootChatId !== targetChat.rootChatId) {
+              return false;
+            }
+
+            const delta = getBranchDeltaMessages(sourceChat, targetChat);
+            if (!delta) {
+              return false;
+            }
+
+            const latestExistingSummary = getLatestBranchSummary(targetChat, sourceChatId);
+            if (
+              latestExistingSummary?.summaryMeta?.type === "branch" &&
+              latestExistingSummary.summaryMeta.sourceLastLineageMessageId ===
+                delta.sourceLastLineageMessageId
+            ) {
+              return false;
+            }
+
+            const summary = await generateBranchSummary(delta.messages);
+            const summaryMessage = createSummaryMessage("branch-summary", summary, {
+              type: "branch",
+              sourceChatId: sourceChat.id,
+              sourceChatTitle: sourceChat.title,
+              sourceRootChatId: sourceChat.rootChatId,
+              sourceSessionName: sourceChat.sessionName,
+              commonAncestorLineageMessageId: delta.commonAncestorLineageMessageId,
+              sourceLastLineageMessageId: delta.sourceLastLineageMessageId,
+            });
+
+            set((state) => {
+              const nextTargetChat = state.chats.find((entry) => entry.id === targetChatId);
+              if (!nextTargetChat) {
+                return;
+              }
+
+              nextTargetChat.messages.push(summaryMessage);
+              nextTargetChat.lastMessageAt = new Date();
+            });
+
+            await get().syncChatToDatabase(targetChatId);
+            return true;
+          } catch (error) {
+            console.error("Failed to summarize branch transition:", error);
+            return false;
+          }
+        },
+
+        deleteChat: (chatId, scopeId = DEFAULT_SCOPE_ID) => {
           set((state) => {
             const chatIndex = state.chats.findIndex((chat) => chat.id === chatId);
             if (chatIndex !== -1) {
               state.chats.splice(chatIndex, 1);
             }
 
-            // If we deleted the current chat, switch to the most recent one
-            if (chatId === state.currentChatId) {
-              if (state.chats.length > 0) {
-                const mostRecent = [...state.chats].sort(
+            const scopeState = ensureChatScopeState(state, scopeId);
+            const currentChatId = scopeState.currentChatId;
+            if (chatId === currentChatId) {
+              const scopedChats = filterChatsForScope(state.chats, scopeId);
+              if (scopedChats.length > 0) {
+                const mostRecent = [...scopedChats].sort(
                   (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
                 )[0];
-                state.currentChatId = mostRecent.id;
+                scopeState.currentChatId = mostRecent.id;
+                applyWarmStartAcpScopeState(scopeState, mostRecent);
               } else {
-                state.currentChatId = null;
+                scopeState.currentChatId = null;
+                applyWarmStartAcpScopeState(scopeState);
               }
             }
           });
-          // Delete from SQLite
           deleteChatFromDb(chatId).catch((err) =>
             console.error("Failed to delete chat from database:", err),
           );
@@ -320,16 +744,21 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.title = title;
             }
           });
-          // Save to SQLite
           get().syncChatToDatabase(chatId);
         },
 
-        setChatAcpSessionId: (chatId, sessionId) => {
+        setChatLineage: (chatId, lineage) => {
           set((state) => {
-            const chat = state.chats.find((c) => c.id === chatId);
-            if (chat) {
-              chat.acpSessionId = sessionId;
+            const chat = state.chats.find((entry) => entry.id === chatId);
+            if (!chat) {
+              return;
             }
+
+            chat.parentChatId = lineage.parentChatId;
+            chat.rootChatId = lineage.rootChatId;
+            chat.branchPointMessageId = lineage.branchPointMessageId;
+            chat.lineageDepth = lineage.lineageDepth;
+            chat.sessionName = lineage.sessionName;
           });
           get().syncChatToDatabase(chatId);
         },
@@ -338,11 +767,29 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             const chat = state.chats.find((c) => c.id === chatId);
             if (chat) {
-              chat.messages.push(message);
+              chat.messages.push(normalizeChatMessage(message));
               chat.lastMessageAt = new Date();
             }
           });
           // Save to SQLite
+          get().syncChatToDatabase(chatId);
+        },
+
+        replaceChatMessages: (chatId, messages) => {
+          set((state) => {
+            const chat = state.chats.find((c) => c.id === chatId);
+            if (!chat) {
+              return;
+            }
+
+            const normalizedMessages = messages.map(normalizeChatMessage);
+            chat.messages = normalizedMessages;
+            const lastTimestamp =
+              normalizedMessages.length > 0
+                ? normalizedMessages[normalizedMessages.length - 1]?.timestamp
+                : null;
+            chat.lastMessageAt = lastTimestamp ? new Date(lastTimestamp) : new Date();
+          });
           get().syncChatToDatabase(chatId);
         },
 
@@ -353,19 +800,20 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               const message = chat.messages.find((m) => m.id === messageId);
               if (message) {
                 Object.assign(message, updates);
+                Object.assign(message, normalizeChatMessage(message));
                 chat.lastMessageAt = new Date();
               }
             }
           });
-          // Save to SQLite
           get().syncChatToDatabase(chatId);
         },
 
-        regenerateResponse: () => {
+        regenerateResponse: (scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
-          if (!state.currentChatId) return null;
+          const currentChatId = getChatScopeState(state, scopeId).currentChatId;
+          if (!currentChatId) return null;
 
-          const chat = state.chats.find((c) => c.id === state.currentChatId);
+          const chat = state.chats.find((c) => c.id === currentChatId);
           if (!chat || chat.messages.length === 0) return null;
 
           // Find the last user message
@@ -382,25 +830,24 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           const lastUserMessage = chat.messages[lastUserMessageIndex];
 
           set((state) => {
-            const currentChat = state.chats.find((c) => c.id === state.currentChatId);
+            const scopedCurrentChatId = ensureChatScopeState(state, scopeId).currentChatId;
+            const currentChat = state.chats.find((c) => c.id === scopedCurrentChatId);
             if (currentChat) {
-              // Remove all messages after the last user message
               currentChat.messages.splice(lastUserMessageIndex + 1);
               currentChat.lastMessageAt = new Date();
             }
           });
 
-          // Save to SQLite
-          if (state.currentChatId) {
-            get().syncChatToDatabase(state.currentChatId);
+          if (currentChatId) {
+            get().syncChatToDatabase(currentChatId);
           }
 
           return lastUserMessage.content;
         },
 
-        setIsChatHistoryVisible: (isChatHistoryVisible) =>
+        setIsChatHistoryVisible: (isChatHistoryVisible, scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            state.isChatHistoryVisible = isChatHistoryVisible;
+            ensureChatScopeState(state, scopeId).isChatHistoryVisible = isChatHistoryVisible;
           }),
 
         // Provider API key actions
@@ -656,16 +1103,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.slashCommandState.selectedIndex = 0;
           }),
 
-        selectNextSlashCommand: () =>
+        selectNextSlashCommand: (scopeId = DEFAULT_SCOPE_ID) =>
           set((state) => {
-            const filtered = get().getFilteredSlashCommands();
+            const filtered = get().getFilteredSlashCommands(scopeId);
             state.slashCommandState.selectedIndex = Math.min(
               state.slashCommandState.selectedIndex + 1,
               filtered.length - 1,
             );
           }),
 
-        selectPreviousSlashCommand: () =>
+        selectPreviousSlashCommand: (_surface = "panel") =>
           set((state) => {
             state.slashCommandState.selectedIndex = Math.max(
               state.slashCommandState.selectedIndex - 1,
@@ -678,14 +1125,23 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.slashCommandState.selectedIndex = index;
           }),
 
-        setAvailableSlashCommands: (commands) =>
+        setAvailableSlashCommands: (commands, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
           set((state) => {
-            state.availableSlashCommands = commands;
-          }),
+            ensureChatScopeState(state, scopeId).availableSlashCommands = commands;
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpState = withCachedSlashCommands(chat.acpState, commands);
+            });
+          });
 
-        getFilteredSlashCommands: () => {
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        getFilteredSlashCommands: (scopeId = DEFAULT_SCOPE_ID) => {
           const { search } = get().slashCommandState;
-          const commands = get().availableSlashCommands;
+          const commands = getChatScopeState(get(), scopeId).availableSlashCommands;
           const query = search.toLowerCase();
 
           if (!query) return commands.slice(0, 10);
@@ -700,42 +1156,197 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
 
         // Session mode actions
-        setSessionModeState: (currentModeId, availableModes) =>
+        setSessionModeState: (currentModeId, availableModes, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
           set((state) => {
-            state.sessionModeState = {
+            ensureChatScopeState(state, scopeId).sessionModeState = {
               currentModeId,
               availableModes,
             };
-          }),
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpState = withCachedSessionModeState(
+                chat.acpState,
+                currentModeId,
+                availableModes,
+              );
+            });
+          });
 
-        setCurrentModeId: (modeId) =>
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        setAcpRuntimeState: (runtimeState, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
           set((state) => {
-            state.sessionModeState.currentModeId = modeId;
-          }),
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpState = withRuntimeState(chat.acpState, runtimeState);
+            });
+          });
 
-        changeSessionMode: async (modeId) => {
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        setCurrentModeId: (modeId, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            ensureChatScopeState(state, scopeId).sessionModeState.currentModeId = modeId;
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpState = withPreferredAcpModeId(chat.acpState, modeId);
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        appendAcpActivityEvent: (event, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpActivity = appendAcpActivityEvent(chat.acpActivity, event);
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        completeAcpToolEvent: (activityId, success, tool, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpActivity = completeAcpActivityTool(
+                chat.acpActivity,
+                activityId,
+                success,
+                tool,
+              );
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        setAcpPlanEntries: (entries, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpActivity = setAcpActivityPlanEntries(chat.acpActivity, entries);
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        addAcpPermissionRequest: (permission, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpActivity = addAcpPermissionRequest(chat.acpActivity, permission);
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        resolveAcpPermissionRequest: (requestId, status, scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpActivity = resolveAcpPermissionRequest(chat.acpActivity, requestId, status);
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        markPendingAcpPermissionsStale: (scopeId = DEFAULT_SCOPE_ID) => {
+          let chatIdToSync: string | null = null;
+          set((state) => {
+            chatIdToSync = updateCurrentChatAcpState(state, scopeId, (chat) => {
+              chat.acpActivity = markPendingAcpPermissionsStale(chat.acpActivity);
+            });
+          });
+
+          if (chatIdToSync) {
+            void get().syncChatToDatabase(chatIdToSync);
+          }
+        },
+
+        changeSessionMode: async (modeId, scopeId = DEFAULT_SCOPE_ID) => {
           try {
-            const { invoke } = await import("@tauri-apps/api/core");
-            await invoke("set_acp_session_mode", { modeId });
-            // The mode will be updated via the event handler when the agent confirms
+            const nextModeState = await changeHarnessRuntimeSessionMode(
+              modeId,
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            );
+            if (nextModeState) {
+              get().setSessionModeState(
+                nextModeState.currentModeId,
+                nextModeState.availableModes,
+                scopeId,
+              );
+            }
           } catch (error) {
             console.error("Failed to change session mode:", error);
           }
         },
 
-        setSessionConfigOptions: (options) =>
-          set((state) => {
-            state.sessionConfigOptions = options;
-          }),
-
-        changeSessionConfigOption: async (configId, value) => {
+        changeSessionModel: async (selection, scopeId = DEFAULT_SCOPE_ID) => {
           try {
-            const { invoke } = await import("@tauri-apps/api/core");
-            await invoke("set_acp_session_config_option", { args: { configId, value } });
+            const runtimeState = await setHarnessRuntimeModel(
+              selection,
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            );
+            if (runtimeState) {
+              get().setAcpRuntimeState(runtimeState, scopeId);
+            }
           } catch (error) {
-            console.error("Failed to change session config option:", error);
+            console.error("Failed to change session model:", error);
+            throw error;
           }
         },
+
+        changeSessionThinkingLevel: async (level, scopeId = DEFAULT_SCOPE_ID) => {
+          try {
+            const runtimeState = await setHarnessRuntimeThinkingLevel(
+              level,
+              scopeId,
+              useBufferStore.getState().buffers,
+              getCurrentRuntimeBuffer(),
+            );
+            if (runtimeState) {
+              get().setAcpRuntimeState(runtimeState, scopeId);
+            }
+          } catch (error) {
+            console.error("Failed to change session thinking level:", error);
+            throw error;
+          }
+        },
+
+        hydrateAcpStateFromCurrentChat: (scopeId = DEFAULT_SCOPE_ID) =>
+          set((state) => {
+            const scopeState = ensureChatScopeState(state, scopeId);
+            const currentChat = getChatById(state.chats, scopeState.currentChatId);
+            applyWarmStartAcpScopeState(scopeState, currentChat);
+          }),
 
         // SQLite database actions
         initializeDatabase: async () => {
@@ -750,9 +1361,23 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         loadChatsFromDatabase: async () => {
           try {
             const chatsMetadata = await loadAllChatsFromDb();
+            const currentChatIdsToHydrate = new Set<string>();
             set((state) => {
               state.chats = chatsMetadata as Chat[];
+              for (const [scopeId, scopeState] of Object.entries(state.chatScopes)) {
+                const currentChat = getChatById(
+                  state.chats,
+                  state.chatScopes[scopeId]?.currentChatId ?? scopeState.currentChatId,
+                );
+                if (currentChat) {
+                  currentChatIdsToHydrate.add(currentChat.id);
+                }
+                applyWarmStartAcpScopeState(scopeState, currentChat);
+              }
             });
+            await Promise.all(
+              [...currentChatIdsToHydrate].map((chatId) => get().loadChatMessages(chatId)),
+            );
             console.log(`Loaded ${chatsMetadata.length} chats from database`);
           } catch (error) {
             console.error("Failed to load chats from database:", error);
@@ -766,6 +1391,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               const chatIndex = state.chats.findIndex((c) => c.id === chatId);
               if (chatIndex !== -1) {
                 state.chats[chatIndex] = fullChat;
+              }
+
+              for (const scopeState of Object.values(state.chatScopes)) {
+                if (scopeState.currentChatId === chatId) {
+                  applyWarmStartAcpScopeState(scopeState, fullChat);
+                }
               }
             });
           } catch (error) {
@@ -794,10 +1425,9 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             // Clear state
             set((state) => {
               state.chats = [];
-              state.currentChatId = null;
-              state.input = "";
-              state.isTyping = false;
-              state.streamingMessageId = null;
+              state.chatScopes = {
+                [PANEL_CHAT_SCOPE_ID]: createDefaultChatScopeState(PANEL_CHAT_SCOPE_ID),
+              };
             });
             console.log("All chats cleared");
           } catch (error) {
@@ -810,77 +1440,57 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           // No-op: settings that were applied here have been removed
         },
 
-        getWorkspaceSessionSnapshot: (buffers) => {
-          const state = get();
-          const selectedBufferPaths = buffers
-            .filter((buffer) => state.selectedBufferIds.has(buffer.id))
-            .map((buffer) => buffer.path);
-
-          return {
-            currentChatId: state.currentChatId,
-            selectedAgentId: state.selectedAgentId,
-            isChatHistoryVisible: state.isChatHistoryVisible,
-            selectedBufferPaths,
-            selectedFilesPaths: Array.from(state.selectedFilesPaths),
-          };
-        },
-
-        restoreWorkspaceSession: (snapshot, buffers) => {
-          const selectedBufferIds = new Set(
-            buffers
-              .filter((buffer) => snapshot?.selectedBufferPaths.includes(buffer.path))
-              .map((buffer) => buffer.id),
-          );
-
-          set((state) => {
-            state.currentChatId = snapshot?.currentChatId || null;
-            state.selectedAgentId = snapshot?.selectedAgentId || "custom";
-            state.isChatHistoryVisible = snapshot?.isChatHistoryVisible || false;
-            state.selectedBufferIds = selectedBufferIds;
-            state.selectedFilesPaths = new Set(snapshot?.selectedFilesPaths || []);
-            state.input = "";
-            state.isTyping = false;
-            state.streamingMessageId = null;
-          });
-
-          if (snapshot?.currentChatId) {
-            void get().loadChatMessages(snapshot.currentChatId);
-          }
-        },
-
         // Helper getters
-        getCurrentChat: () => {
+        getCurrentChat: (scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
-          return state.chats.find((chat) => chat.id === state.currentChatId);
+          const currentChatId = getChatScopeState(state, scopeId).currentChatId;
+          return state.chats.find((chat) => chat.id === currentChatId);
         },
 
-        getCurrentMessages: () => {
+        getCurrentMessages: (scopeId = DEFAULT_SCOPE_ID) => {
           const state = get();
-          const chat = state.chats.find((chat) => chat.id === state.currentChatId);
+          const currentChatId = getChatScopeState(state, scopeId).currentChatId;
+          const chat = getChatById(state.chats, currentChatId);
           return chat?.messages || [];
+        },
+
+        getEffectiveMessages: (scopeId = DEFAULT_SCOPE_ID) => {
+          const state = get();
+          const currentChatId = getChatScopeState(state, scopeId).currentChatId;
+          const chat = getChatById(state.chats, currentChatId);
+          return chat ? getEffectiveChatMessages(chat) : [];
         },
       }),
       {
         name: "athas-ai-chat-settings-v7",
         version: 3,
+        storage: createJSONStorage(() => globalThis.localStorage),
         partialize: (state) => ({
-          mode: state.mode,
           outputStyle: state.outputStyle,
-          selectedAgentId: state.selectedAgentId,
-          sessionModeState: state.sessionModeState,
+          chatScopes: Object.fromEntries(
+            Object.entries(state.chatScopes).map(([scopeId, scopeState]) => [
+              scopeId,
+              {
+                currentChatId: scopeState.currentChatId,
+                selectedAgentId: scopeState.selectedAgentId,
+                mode: scopeState.mode,
+                sessionModeState: scopeState.sessionModeState,
+              },
+            ]),
+          ),
         }),
         merge: (persistedState, currentState) =>
           produce(currentState, (draft) => {
-            // Only merge mode, outputStyle, selectedAgentId, and sessionModeState from localStorage
-            // Chats are loaded from SQLite separately
-            if (persistedState) {
-              draft.mode = (persistedState as any).mode || "chat";
-              draft.outputStyle = (persistedState as any).outputStyle || "default";
-              draft.selectedAgentId = (persistedState as any).selectedAgentId || "custom";
-              draft.sessionModeState = (persistedState as any).sessionModeState || {
-                currentModeId: null,
-                availableModes: [],
-              };
+            const normalizedPersistedState = normalizePersistedAIChatState(persistedState);
+            if (normalizedPersistedState) {
+              draft.outputStyle = normalizedPersistedState.outputStyle || "default";
+              const persistedScopes = normalizedPersistedState.chatScopes || {};
+              for (const [scopeId, persistedScope] of Object.entries(persistedScopes)) {
+                draft.chatScopes[scopeId] = {
+                  ...createDefaultChatScopeState(scopeId as ChatScopeId),
+                  ...(persistedScope as object),
+                };
+              }
             }
           }),
       },

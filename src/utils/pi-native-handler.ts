@@ -1,0 +1,625 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getChatPreferredAcpModeId } from "@/features/ai/lib/chat-acp-state";
+import { createHarnessChatScopeId, PANEL_CHAT_SCOPE_ID } from "@/features/ai/lib/chat-scope";
+import { useAIChatStore } from "@/features/ai/store/store";
+import type {
+  AcpAgentStatus,
+  AcpEvent,
+  AcpRuntimeState,
+  SessionModeState,
+  SlashCommand,
+} from "@/features/ai/types/acp";
+import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
+import type { AIMessage } from "@/features/ai/types/messages";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useProjectStore } from "@/stores/project-store";
+import { buildPiNativePromptMessage } from "./pi-native-prompt";
+import type { ContextInfo } from "./types";
+
+interface PiNativeHandlers {
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
+  resumeKey?: string;
+  onChunk: (chunk: string) => void;
+  onComplete: () => void;
+  onError: (error: string, canReconnect?: boolean) => void;
+  onNewMessage?: () => void;
+  onToolUse?: (toolName: string, toolInput?: unknown, toolId?: string) => void;
+  onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
+  onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
+  onEvent?: (event: AcpEvent) => void;
+  onImageChunk?: (data: string, mediaType: string) => void;
+  onResourceChunk?: (uri: string, name: string | null) => void;
+}
+
+interface PiNativeListeners {
+  event?: () => void;
+}
+
+interface PiNativeBootstrapContext {
+  conversationHistory: AIMessage[];
+}
+
+interface PiNativeDesiredSessionIdentity {
+  sessionId: string | null;
+  sessionPath: string | null;
+}
+
+const shouldReuseLatestSessionForScope = (scopeId: ChatScopeId): boolean => {
+  return scopeId === PANEL_CHAT_SCOPE_ID || scopeId === createHarnessChatScopeId();
+};
+
+export class PiNativeStreamHandler {
+  private static activeHandlers = new Map<ChatScopeId, PiNativeStreamHandler>();
+  private static lastSessionPathByKey = new Map<string, string>();
+  private static readonly TERMINAL_SETTLE_DELAY_MS = 100;
+  private listeners: PiNativeListeners = {};
+  private timeout?: NodeJS.Timeout;
+  private terminalSettleTimeout?: NodeJS.Timeout;
+  private lastActivityTime = Date.now();
+  private hasObservedResponseActivity = false;
+  private activeTools = new Map<string, string>();
+  private pendingPermissionRequestIds = new Set<string>();
+  private sessionComplete = false;
+  private pendingNewMessage = false;
+  private cancelled = false;
+  private sessionId: string | null = null;
+  private readonly scopeId: ChatScopeId;
+  private readonly resumeKey: string;
+
+  constructor(private handlers: PiNativeHandlers) {
+    this.scopeId = handlers.scopeId ?? "panel";
+    this.resumeKey = handlers.resumeKey ?? this.scopeId;
+  }
+
+  async start(
+    userMessage: string,
+    context: ContextInfo,
+    conversationHistory?: AIMessage[],
+  ): Promise<void> {
+    try {
+      await this.setupListeners();
+      await this.ensureSessionRunning(conversationHistory);
+      PiNativeStreamHandler.activeHandlers.set(this.scopeId, this);
+      const fullMessage = this.buildMessage(userMessage, context);
+      await invoke("send_pi_native_prompt", { prompt: fullMessage, routeKey: this.resumeKey });
+      this.setupTimeout();
+    } catch (error) {
+      console.error("Pi native error:", error);
+      this.cleanup();
+      this.handlers.onError(error instanceof Error ? error.message : "Pi native is unavailable");
+    }
+  }
+
+  private async ensureSessionRunning(conversationHistory?: AIMessage[]): Promise<void> {
+    const status = await invoke<AcpAgentStatus>("get_pi_native_status", {
+      routeKey: this.resumeKey,
+    });
+    const desiredSession = this.getDesiredSessionIdentity();
+    const bootstrap: PiNativeBootstrapContext | null =
+      !desiredSession.sessionPath && conversationHistory && conversationHistory.length > 0
+        ? { conversationHistory }
+        : null;
+
+    if (status.running && status.sessionId) {
+      if (this.shouldReuseRunningSession(status, desiredSession, bootstrap)) {
+        this.sessionId = status.sessionId;
+        return;
+      }
+
+      await this.stopRouteSession();
+    }
+
+    const startStatus = await invoke<AcpAgentStatus>("start_pi_native_session", {
+      workspacePath: this.getWorkspacePath(),
+      sessionPath: desiredSession.sessionPath,
+      bootstrap,
+      reuseLatestSession: shouldReuseLatestSessionForScope(this.scopeId),
+      routeKey: this.resumeKey,
+    });
+
+    if (!startStatus.initialized) {
+      throw new Error("Pi native session failed to initialize");
+    }
+
+    this.sessionId = startStatus.sessionId ?? null;
+  }
+
+  private getDesiredSessionIdentity(): PiNativeDesiredSessionIdentity {
+    const currentChat = useAIChatStore.getState().getCurrentChat(this.scopeId);
+    const runtimeState = currentChat?.acpState?.runtimeState;
+    const runtimePath = runtimeState?.sessionPath;
+    if (runtimePath) {
+      PiNativeStreamHandler.lastSessionPathByKey.set(this.resumeKey, runtimePath);
+      return {
+        sessionId: runtimeState?.sessionId ?? null,
+        sessionPath: runtimePath,
+      };
+    }
+
+    return {
+      sessionId: runtimeState?.sessionId ?? null,
+      sessionPath: null,
+    };
+  }
+
+  private shouldReuseRunningSession(
+    status: AcpAgentStatus,
+    desiredSession: PiNativeDesiredSessionIdentity,
+    bootstrap: PiNativeBootstrapContext | null,
+  ): boolean {
+    if (!status.running || !status.sessionId) {
+      return false;
+    }
+
+    if (bootstrap) {
+      return false;
+    }
+
+    if (desiredSession.sessionId && desiredSession.sessionId !== status.sessionId) {
+      return false;
+    }
+
+    const cachedSessionPath =
+      PiNativeStreamHandler.lastSessionPathByKey.get(this.resumeKey) ?? null;
+    if (desiredSession.sessionPath && cachedSessionPath !== desiredSession.sessionPath) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private async stopRouteSession(): Promise<void> {
+    PiNativeStreamHandler.lastSessionPathByKey.delete(this.resumeKey);
+    await invoke("stop_pi_native_session", { routeKey: this.resumeKey });
+  }
+
+  private getWorkspacePath(): string | null {
+    return useProjectStore.getState().rootFolderPath ?? null;
+  }
+
+  private buildMessage(userMessage: string, context: ContextInfo): string {
+    return buildPiNativePromptMessage(userMessage, context);
+  }
+
+  private async setupListeners(): Promise<void> {
+    this.listeners.event = await listen<AcpEvent>("acp-event", (event) => {
+      this.handleEvent(event.payload);
+    });
+  }
+
+  private handleEvent(event: AcpEvent): void {
+    const routeKey = "routeKey" in event ? event.routeKey : undefined;
+    if (this.cancelled || (routeKey && routeKey !== this.resumeKey)) {
+      return;
+    }
+
+    if (this.handlers.onEvent) {
+      this.handlers.onEvent(event);
+    }
+
+    this.lastActivityTime = Date.now();
+
+    switch (event.type) {
+      case "content_chunk":
+        this.hasObservedResponseActivity = true;
+        if (this.pendingNewMessage && this.handlers.onNewMessage) {
+          this.handlers.onNewMessage();
+        }
+        this.pendingNewMessage = false;
+
+        if (event.content.type === "text") {
+          this.handlers.onChunk(event.content.text);
+        } else if (event.content.type === "image" && this.handlers.onImageChunk) {
+          this.handlers.onImageChunk(event.content.data, event.content.mediaType);
+        } else if (event.content.type === "resource" && this.handlers.onResourceChunk) {
+          this.handlers.onResourceChunk(event.content.uri, event.content.name);
+        }
+        break;
+
+      case "thought_chunk":
+        this.hasObservedResponseActivity = true;
+        break;
+
+      case "tool_start":
+        this.hasObservedResponseActivity = true;
+        this.activeTools.set(event.toolId, event.toolName);
+        this.handlers.onToolUse?.(event.toolName, event.input, event.toolId);
+        break;
+
+      case "tool_complete": {
+        this.hasObservedResponseActivity = true;
+        const toolName = this.activeTools.get(event.toolId);
+        if (toolName) {
+          const error =
+            event.success === false
+              ? typeof event.output === "string"
+                ? event.output
+                : "Tool failed"
+              : undefined;
+          this.handlers.onToolComplete?.(toolName, event.toolId, event.output, error);
+        }
+        this.activeTools.delete(event.toolId);
+        this.pendingNewMessage = true;
+        break;
+      }
+
+      case "permission_request":
+        this.hasObservedResponseActivity = true;
+        this.pendingPermissionRequestIds.add(event.requestId);
+        this.handlers.onPermissionRequest?.(event);
+        break;
+
+      case "runtime_state_update":
+        if (event.runtimeState.sessionId) {
+          this.sessionId = event.runtimeState.sessionId;
+        }
+        if (event.runtimeState.sessionPath) {
+          PiNativeStreamHandler.lastSessionPathByKey.set(
+            this.resumeKey,
+            event.runtimeState.sessionPath,
+          );
+        }
+        useAIChatStore.getState().setAcpRuntimeState(event.runtimeState, this.scopeId);
+        break;
+
+      case "session_mode_update":
+        useAIChatStore
+          .getState()
+          .setSessionModeState(
+            event.modeState.currentModeId,
+            event.modeState.availableModes,
+            this.scopeId,
+          );
+        break;
+
+      case "current_mode_update":
+        useAIChatStore.getState().setCurrentModeId(event.currentModeId, this.scopeId);
+        break;
+
+      case "slash_commands_update":
+        useAIChatStore.getState().setAvailableSlashCommands(event.commands, this.scopeId);
+        break;
+
+      case "status_changed":
+        if (!event.status.running) {
+          this.pendingPermissionRequestIds.clear();
+        }
+        if (!event.status.running) {
+          useAIChatStore.getState().markPendingAcpPermissionsStale(this.scopeId);
+          useAIChatStore.getState().hydrateAcpStateFromCurrentChat(this.scopeId);
+        }
+        break;
+
+      case "prompt_complete":
+        if (event.stopReason === "cancelled") {
+          this.cleanup();
+          this.handlers.onComplete();
+          return;
+        }
+
+        if (event.stopReason === "max_tokens") {
+          this.cleanup();
+          this.handlers.onError("Pi native context window exceeded");
+          return;
+        }
+
+        this.scheduleTerminalCompletion();
+        break;
+
+      case "session_complete":
+        this.sessionComplete = true;
+        this.pendingNewMessage = false;
+        this.cleanup();
+        this.handlers.onComplete();
+        break;
+
+      case "error":
+        this.scheduleTerminalError(event.error);
+        break;
+
+      case "ui_action": {
+        const bufferActions = useBufferStore.getState().actions;
+        if (event.action.action === "open_web_viewer") {
+          bufferActions.openWebViewerBuffer(event.action.url);
+        } else if (event.action.action === "open_terminal") {
+          bufferActions.openTerminalBuffer({
+            command: event.action.command ?? undefined,
+            name: event.action.command ?? undefined,
+          });
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  private scheduleTerminalCompletion(): void {
+    if (this.sessionComplete || this.cancelled) {
+      return;
+    }
+
+    if (this.terminalSettleTimeout) {
+      clearTimeout(this.terminalSettleTimeout);
+    }
+
+    this.terminalSettleTimeout = setTimeout(() => {
+      this.terminalSettleTimeout = undefined;
+      if (this.sessionComplete || this.cancelled) {
+        return;
+      }
+      this.sessionComplete = true;
+      this.cleanup();
+      this.handlers.onComplete();
+    }, PiNativeStreamHandler.TERMINAL_SETTLE_DELAY_MS);
+  }
+
+  private scheduleTerminalError(error: string): void {
+    if (this.sessionComplete || this.cancelled) {
+      return;
+    }
+
+    if (this.terminalSettleTimeout) {
+      clearTimeout(this.terminalSettleTimeout);
+    }
+
+    this.terminalSettleTimeout = setTimeout(() => {
+      this.terminalSettleTimeout = undefined;
+      if (this.sessionComplete || this.cancelled) {
+        return;
+      }
+      this.cleanup();
+      this.handlers.onError(error);
+    }, PiNativeStreamHandler.TERMINAL_SETTLE_DELAY_MS);
+  }
+
+  private setupTimeout(): void {
+    const checkInactivity = () => {
+      if (this.sessionComplete) {
+        return;
+      }
+
+      const inactiveTime = Date.now() - this.lastActivityTime;
+      if (this.pendingPermissionRequestIds.size > 0) {
+        this.timeout = setTimeout(checkInactivity, 1000);
+        return;
+      }
+
+      if (this.hasObservedResponseActivity && inactiveTime > 10000 && this.activeTools.size === 0) {
+        this.cleanup();
+        this.handlers.onComplete();
+        return;
+      }
+
+      if (inactiveTime > 60000) {
+        this.cleanup();
+        this.handlers.onError("Request timed out - no activity");
+        return;
+      }
+
+      this.timeout = setTimeout(checkInactivity, 1000);
+    };
+
+    this.timeout = setTimeout(checkInactivity, 1000);
+  }
+
+  private cleanup(): void {
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+      this.timeout = undefined;
+    }
+    if (this.terminalSettleTimeout) {
+      clearTimeout(this.terminalSettleTimeout);
+      this.terminalSettleTimeout = undefined;
+    }
+    this.pendingNewMessage = false;
+    this.hasObservedResponseActivity = false;
+    this.activeTools.clear();
+    this.pendingPermissionRequestIds.clear();
+
+    if (this.listeners.event) {
+      this.listeners.event();
+      this.listeners.event = undefined;
+    }
+
+    if (PiNativeStreamHandler.activeHandlers.get(this.scopeId) === this) {
+      PiNativeStreamHandler.activeHandlers.delete(this.scopeId);
+    }
+  }
+
+  private forceStop(): void {
+    if (this.sessionComplete || this.cancelled) {
+      return;
+    }
+    this.cancelled = true;
+    this.cleanup();
+    this.handlers.onComplete();
+  }
+
+  static async getStatus(scopeId: ChatScopeId = "panel"): Promise<AcpAgentStatus> {
+    return invoke("get_pi_native_status", { routeKey: scopeId });
+  }
+
+  static async listSessions(workspacePath: string | null): Promise<PiNativeSessionInfo[]> {
+    return invoke("list_pi_native_sessions", { workspacePath });
+  }
+
+  static async listCommands(scopeId: ChatScopeId = "panel"): Promise<SlashCommand[]> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("list_pi_native_commands", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async listModels(scopeId: ChatScopeId = "panel"): Promise<PiNativeModelInfo[]> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("list_pi_native_models", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async listThinkingLevels(scopeId: ChatScopeId = "panel"): Promise<string[]> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("list_pi_native_thinking_levels", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async getSessionSnapshot(
+    scopeId: ChatScopeId = "panel",
+  ): Promise<PiNativeSessionSnapshot> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("get_pi_native_session_snapshot", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async reloadSessionResources(
+    scopeId: ChatScopeId = "panel",
+  ): Promise<PiNativeSessionSnapshot> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    const snapshot = await invoke<PiNativeSessionSnapshot>("reload_pi_native_session_resources", {
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+    useAIChatStore.getState().setAcpRuntimeState(snapshot.runtimeState, scopeId);
+    useAIChatStore
+      .getState()
+      .setSessionModeState(
+        snapshot.sessionModeState.currentModeId,
+        snapshot.sessionModeState.availableModes,
+        scopeId,
+      );
+    useAIChatStore.getState().setAvailableSlashCommands(snapshot.slashCommands, scopeId);
+    return snapshot;
+  }
+
+  static async getSessionTranscript(sessionPath: string): Promise<PiNativeTranscriptMessage[]> {
+    return invoke("get_pi_native_session_transcript", { sessionPath });
+  }
+
+  static async changeSessionMode(
+    modeId: string,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<SessionModeState> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("change_pi_native_mode", {
+      modeId,
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async setModel(
+    selection: Pick<PiNativeModelInfo, "provider" | "modelId">,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<AcpRuntimeState> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("set_pi_native_model", {
+      provider: selection.provider,
+      modelId: selection.modelId,
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async setThinkingLevel(
+    level: string,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<AcpRuntimeState> {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    return invoke("set_pi_native_thinking_level", {
+      level,
+      routeKey: scopeId,
+      workspacePath: currentChat?.acpState?.runtimeState?.workspacePath ?? null,
+      sessionPath: currentChat?.acpState?.runtimeState?.sessionPath ?? null,
+    });
+  }
+
+  static async stopSession(scopeId: ChatScopeId = "panel"): Promise<void> {
+    PiNativeStreamHandler.activeHandlers.get(scopeId)?.forceStop();
+    PiNativeStreamHandler.lastSessionPathByKey.delete(scopeId);
+    await invoke("stop_pi_native_session", { routeKey: scopeId });
+  }
+
+  static async cancelPrompt(scopeId: ChatScopeId = "panel"): Promise<void> {
+    PiNativeStreamHandler.activeHandlers.get(scopeId)?.forceStop();
+    try {
+      await invoke("cancel_pi_native_prompt", { routeKey: scopeId });
+    } catch (error) {
+      console.error("Failed to cancel native Pi prompt on backend:", error);
+    }
+  }
+
+  static async respondToPermission(
+    requestId: string,
+    approved: boolean,
+    cancelled = false,
+    value?: string | null,
+    scopeId: ChatScopeId = "panel",
+  ): Promise<void> {
+    await invoke("respond_pi_native_permission", {
+      requestId,
+      approved,
+      cancelled,
+      value: value ?? null,
+      routeKey: scopeId,
+    });
+  }
+
+  static getPreferredModeId(scopeId: ChatScopeId): string | null {
+    const currentChat = useAIChatStore.getState().getCurrentChat(scopeId);
+    const defaultModeId = null;
+    return getChatPreferredAcpModeId(currentChat, defaultModeId);
+  }
+}
+
+export interface PiNativeSessionInfo {
+  path: string;
+  id: string;
+  cwd: string;
+  name: string | null;
+  parentSessionPath: string | null;
+  createdAt: string;
+  modifiedAt: string;
+  messageCount: number;
+  firstMessage: string;
+}
+
+export interface PiNativeTranscriptMessage {
+  id: string;
+  entryType: "message" | "model_change" | "thinking_level_change";
+  role: "user" | "assistant" | null;
+  content: string | null;
+  timestamp: string;
+  provider: string | null;
+  modelId: string | null;
+  thinkingLevel: string | null;
+}
+
+export interface PiNativeModelInfo {
+  provider: string;
+  modelId: string;
+  name: string;
+  reasoning: boolean;
+}
+
+export interface PiNativeSessionSnapshot {
+  runtimeState: AcpRuntimeState;
+  slashCommands: SlashCommand[];
+  sessionModeState: SessionModeState;
+}

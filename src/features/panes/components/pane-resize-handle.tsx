@@ -4,14 +4,21 @@ import { MIN_PANE_SIZE } from "../constants/pane";
 interface PaneResizeHandleProps {
   direction: "horizontal" | "vertical";
   onResize: (sizes: [number, number]) => void;
+  onResizeEnd?: (sizes: [number, number]) => void;
   initialSizes: [number, number];
 }
 
-export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResizeHandleProps) {
+export function PaneResizeHandle({
+  direction,
+  onResize,
+  onResizeEnd,
+  initialSizes,
+}: PaneResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const startPositionRef = useRef(0);
   const startSizesRef = useRef(initialSizes);
+  const currentSizesRef = useRef(initialSizes);
 
   const isHorizontal = direction === "horizontal";
 
@@ -21,6 +28,7 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       setIsDragging(true);
       startPositionRef.current = isHorizontal ? e.clientX : e.clientY;
       startSizesRef.current = initialSizes;
+      currentSizesRef.current = initialSizes;
     },
     [isHorizontal, initialSizes],
   );
@@ -37,6 +45,7 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       const handleSize = isHorizontal ? handle.offsetWidth : handle.offsetHeight;
       const containerSize =
         (isHorizontal ? containerRect.width : containerRect.height) - handleSize;
+      if (containerSize <= 0) return;
 
       const currentPosition = isHorizontal ? e.clientX : e.clientY;
       const delta = currentPosition - startPositionRef.current;
@@ -46,22 +55,16 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       const scaledDelta = (delta / containerSize) * pairTotal;
 
       let newFirstSize = startSizesRef.current[0] + scaledDelta;
-      let newSecondSize = startSizesRef.current[1] - scaledDelta;
+      newFirstSize = Math.max(0, Math.min(pairTotal, newFirstSize));
+      const nextSizes: [number, number] = [newFirstSize, pairTotal - newFirstSize];
 
-      const minSize = Math.min(MIN_PANE_SIZE, pairTotal * 0.1);
-      if (newFirstSize < minSize) {
-        newFirstSize = minSize;
-        newSecondSize = pairTotal - minSize;
-      } else if (newSecondSize < minSize) {
-        newSecondSize = minSize;
-        newFirstSize = pairTotal - minSize;
-      }
-
-      onResize([newFirstSize, newSecondSize]);
+      currentSizesRef.current = nextSizes;
+      onResize(nextSizes);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      onResizeEnd?.(currentSizesRef.current);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -71,13 +74,13 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, isHorizontal, onResize]);
+  }, [isDragging, isHorizontal, onResize, onResizeEnd]);
 
   return (
     <div
       ref={containerRef}
       className={`group relative flex shrink-0 items-center justify-center ${
-        isHorizontal ? "h-full w-1 cursor-col-resize" : "h-1 w-full cursor-row-resize"
+        isHorizontal ? "h-full w-px cursor-col-resize z-10" : "h-px w-full cursor-row-resize z-10"
       }`}
       onMouseDown={handleMouseDown}
       role="separator"
@@ -88,9 +91,15 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       aria-valuemax={100 - MIN_PANE_SIZE}
       tabIndex={0}
     >
+      {/* Invisible expanded hit area for easier grabbing */}
       <div
-        className={`bg-border transition-colors ${
-          isDragging ? "bg-accent" : "group-hover:bg-accent"
+        className={`absolute ${isHorizontal ? "inset-y-0 -inset-x-2" : "inset-x-0 -inset-y-2"}`}
+      />
+
+      {/* Visible line */}
+      <div
+        className={`transition-colors ${
+          isDragging ? "bg-accent/80" : "bg-border/30 group-hover:bg-border/80"
         } ${isHorizontal ? "h-full w-px" : "h-px w-full"}`}
       />
       {isDragging && (

@@ -5,36 +5,24 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use athas_ai::AcpAgentBridge;
-use athas_database::ConnectionManager;
 use athas_lsp::LspManager;
-use athas_project::FileWatcher;
+use athas_terminal::TerminalManager;
 use commands::*;
+use features::{AcpAgentBridge, FileWatcher, PiNativeBridge};
 use log::{debug, info};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
-use terminal::{
-   ManagedTerminalManager as TerminalManager, close_terminal, create_terminal, list_shells,
-   terminal_resize, terminal_write,
-};
+use terminal::{close_terminal, create_terminal, get_shells, terminal_resize, terminal_write};
 use tokio::sync::Mutex;
 
 mod commands;
+mod features;
 mod logger;
 mod menu;
 mod secure_storage;
 mod terminal;
-
-fn get_active_webview_window<R: tauri::Runtime>(
-   app: &tauri::AppHandle<R>,
-) -> Option<tauri::WebviewWindow<R>> {
-   app.get_focused_window()
-      .and_then(|window| app.get_webview_window(window.label()))
-      .or_else(|| app.get_webview_window("main"))
-      .or_else(|| app.webview_windows().into_values().next())
-}
 
 #[cfg(target_os = "macos")]
 #[allow(unexpected_cfgs)]
@@ -129,12 +117,15 @@ fn main() {
          let terminal_manager = Arc::new(TerminalManager::new());
          app.manage(terminal_manager.clone());
 
-         // Set up ACP agent bridge
+         // Set up ACP agent bridge (new implementation)
          let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
             app.handle().clone(),
             terminal_manager,
          )));
          app.manage(acp_bridge);
+
+         let pi_native_bridge = Arc::new(Mutex::new(PiNativeBridge::new(app.handle().clone())));
+         app.manage(pi_native_bridge);
 
          // Set up LSP manager
          app.manage(LspManager::new(app.handle().clone()));
@@ -145,18 +136,11 @@ fn main() {
          // Set up file clipboard
          app.manage(FileClipboard::new(None));
 
-         // Set up database connection manager
-         app.manage(Arc::new(ConnectionManager::new()));
-
          // Process CLI arguments (file/folder paths passed on launch)
          {
-            let cwd = std::env::current_dir().unwrap_or_default();
             let args: Vec<String> = std::env::args().skip(1).collect();
-            let open_requests: Vec<commands::development::cli_args::OpenRequest> = args
-               .iter()
-               .filter(|a| !a.starts_with('-'))
-               .filter_map(|a| commands::development::cli_args::parse_open_arg(a, &cwd))
-               .collect();
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let open_requests = commands::development::cli_args::collect_open_requests(&args, &cwd);
 
             if !open_requests.is_empty() {
                let app_handle = app.handle().clone();
@@ -174,7 +158,26 @@ fn main() {
 
          // Platform-specific window configuration
          if let Some(window) = app.get_webview_window("main") {
-            commands::ui::window::configure_app_window(&window);
+            #[cfg(target_os = "macos")]
+            {
+               use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
+
+               // Apply vibrancy effect for macOS
+               apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
+                  .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            }
+
+            #[cfg(target_os = "windows")]
+            {
+               // Keep decorations enabled on Windows (native controls)
+               let _ = window.set_decorations(true);
+            }
+
+            #[cfg(target_os = "linux")]
+            {
+               // Disable decorations on Linux (use custom controls only)
+               let _ = window.set_decorations(false);
+            }
          }
 
          // Auto-fix CLI script if it contains wrong-platform commands
@@ -182,154 +185,140 @@ fn main() {
          commands::development::cli::auto_fix_cli_on_startup();
 
          app.on_menu_event(move |_app_handle: &tauri::AppHandle, event| {
-            match event.id().0.as_str() {
-               "new_window" => {
-                  let app_handle = _app_handle.clone();
-                  std::thread::spawn(move || {
-                     if let Err(error) =
-                        commands::ui::window::create_app_window_internal(&app_handle, None)
-                     {
-                        log::error!("Failed to create app window from menu: {}", error);
-                     }
-                  });
-               }
-               event_id => {
-                  if let Some(window) = get_active_webview_window(_app_handle) {
-                     match event_id {
-                        "quit" => {
-                           info!("Quit menu item clicked");
-                           std::process::exit(0);
+            if let Some(window) = _app_handle.get_webview_window("main") {
+               match event.id().0.as_str() {
+                  "quit" => {
+                     info!("Quit menu item clicked");
+                     std::process::exit(0);
+                  }
+                  "quit_app" => {
+                     info!("Quit app menu item triggered");
+                     std::process::exit(0);
+                  }
+                  "new_file" => {
+                     let _ = window.emit("menu_new_file", ());
+                  }
+                  "open_folder" => {
+                     let _ = window.emit("menu_open_folder", ());
+                  }
+                  "close_folder" => {
+                     let _ = window.emit("menu_close_folder", ());
+                  }
+                  "save" => {
+                     let _ = window.emit("menu_save", ());
+                  }
+                  "save_as" => {
+                     let _ = window.emit("menu_save_as", ());
+                  }
+                  "close_tab" => {
+                     debug!("Close tab menu item triggered");
+                     let _ = window.emit("menu_close_tab", ());
+                  }
+                  "undo" => {
+                     let _ = window.emit("menu_undo", ());
+                  }
+                  "redo" => {
+                     let _ = window.emit("menu_redo", ());
+                  }
+                  "find" => {
+                     let _ = window.emit("menu_find", ());
+                  }
+                  "find_replace" => {
+                     let _ = window.emit("menu_find_replace", ());
+                  }
+                  "command_palette" => {
+                     let _ = window.emit("menu_command_palette", ());
+                  }
+                  "toggle_sidebar" => {
+                     let _ = window.emit("menu_toggle_sidebar", ());
+                  }
+                  "toggle_terminal" => {
+                     let _ = window.emit("menu_toggle_terminal", ());
+                  }
+                  "toggle_ai_chat" => {
+                     let _ = window.emit("menu_toggle_ai_chat", ());
+                  }
+                  "split_editor" => {
+                     let _ = window.emit("menu_split_editor", ());
+                  }
+                  "toggle_menu_bar" => {
+                     // Toggle menu visibility by setting it to None or recreating it
+                     let current_menu = _app_handle.menu();
+                     if current_menu.is_some() {
+                        // Hide menu by setting it to None
+                        if let Err(e) = _app_handle.remove_menu() {
+                           log::error!("Failed to hide menu: {}", e);
+                        } else {
+                           log::info!("Menu bar hidden");
                         }
-                        "quit_app" => {
-                           info!("Quit app menu item triggered");
-                           std::process::exit(0);
-                        }
-                        "new_file" => {
-                           let _ = window.emit("menu_new_file", ());
-                        }
-                        "open_folder" => {
-                           let _ = window.emit("menu_open_folder", ());
-                        }
-                        "close_folder" => {
-                           let _ = window.emit("menu_close_folder", ());
-                        }
-                        "save" => {
-                           let _ = window.emit("menu_save", ());
-                        }
-                        "save_as" => {
-                           let _ = window.emit("menu_save_as", ());
-                        }
-                        "close_tab" => {
-                           debug!("Close tab menu item triggered");
-                           let _ = window.emit("menu_close_tab", ());
-                        }
-                        "undo" => {
-                           let _ = window.emit("menu_undo", ());
-                        }
-                        "redo" => {
-                           let _ = window.emit("menu_redo", ());
-                        }
-                        "find" => {
-                           let _ = window.emit("menu_find", ());
-                        }
-                        "find_replace" => {
-                           let _ = window.emit("menu_find_replace", ());
-                        }
-                        "command_palette" => {
-                           let _ = window.emit("menu_command_palette", ());
-                        }
-                        "toggle_sidebar" => {
-                           let _ = window.emit("menu_toggle_sidebar", ());
-                        }
-                        "toggle_terminal" => {
-                           let _ = window.emit("menu_toggle_terminal", ());
-                        }
-                        "toggle_ai_chat" => {
-                           let _ = window.emit("menu_toggle_ai_chat", ());
-                        }
-                        "split_editor" => {
-                           let _ = window.emit("menu_split_editor", ());
-                        }
-                        "toggle_menu_bar" => {
-                           // Toggle menu visibility by setting it to None or recreating it
-                           let current_menu = _app_handle.menu();
-                           if current_menu.is_some() {
-                              // Hide menu by setting it to None
-                              if let Err(e) = _app_handle.remove_menu() {
-                                 log::error!("Failed to hide menu: {}", e);
+                     } else {
+                        // Show menu by recreating it
+                        match menu::create_menu(_app_handle) {
+                           Ok(new_menu) => {
+                              if let Err(e) = _app_handle.set_menu(new_menu) {
+                                 log::error!("Failed to show menu: {}", e);
                               } else {
-                                 log::info!("Menu bar hidden");
-                              }
-                           } else {
-                              // Show menu by recreating it
-                              match menu::create_menu(_app_handle) {
-                                 Ok(new_menu) => {
-                                    if let Err(e) = _app_handle.set_menu(new_menu) {
-                                       log::error!("Failed to show menu: {}", e);
-                                    } else {
-                                       log::info!("Menu bar shown");
-                                    }
-                                 }
-                                 Err(e) => {
-                                    log::error!("Failed to create menu: {}", e);
-                                 }
+                                 log::info!("Menu bar shown");
                               }
                            }
-                        }
-                        "toggle_vim" => {
-                           let _ = window.emit("menu_toggle_vim", ());
-                        }
-                        "quick_open" => {
-                           let _ = window.emit("menu_quick_open", ());
-                        }
-                        "go_to_line" => {
-                           let _ = window.emit("menu_go_to_line", ());
-                        }
-                        "next_tab" => {
-                           let _ = window.emit("menu_next_tab", ());
-                        }
-                        "prev_tab" => {
-                           let _ = window.emit("menu_prev_tab", ());
-                        }
-                        "about" => {
-                           // Native About dialog is handled automatically by macOS
-                        }
-                        "help" => {
-                           let _ = window.emit("menu_help", ());
-                        }
-                        "report_bug" => {
-                           let _ = window.emit("menu_report_bug", ());
-                        }
-                        "about_athas" => {
-                           let _ = window.emit("menu_about_athas", ());
-                        }
-                        // Window menu items
-                        "minimize_window" => {
-                           if let Err(e) = window.minimize() {
-                              log::error!("Failed to minimize window: {}", e);
+                           Err(e) => {
+                              log::error!("Failed to create menu: {}", e);
                            }
                         }
-                        "maximize_window" => {
-                           if let Err(e) = window.maximize() {
-                              log::error!("Failed to maximize window: {}", e);
-                           }
-                        }
-                        "toggle_fullscreen" => {
-                           let is_fullscreen = window.is_fullscreen().unwrap_or(false);
-                           if let Err(e) = window.set_fullscreen(!is_fullscreen) {
-                              log::error!("Failed to toggle fullscreen: {}", e);
-                           }
-                        }
-                        // Theme menu items - handle theme IDs from registry
-                        // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
-                        theme_id if theme_id.contains('-') => {
-                           // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
-                           // "tokyo-night")
-                           let _ = window.emit("menu_theme_change", theme_id);
-                        }
-                        _ => {}
                      }
                   }
+                  "toggle_vim" => {
+                     let _ = window.emit("menu_toggle_vim", ());
+                  }
+                  "quick_open" => {
+                     let _ = window.emit("menu_quick_open", ());
+                  }
+                  "go_to_line" => {
+                     let _ = window.emit("menu_go_to_line", ());
+                  }
+                  "next_tab" => {
+                     let _ = window.emit("menu_next_tab", ());
+                  }
+                  "prev_tab" => {
+                     let _ = window.emit("menu_prev_tab", ());
+                  }
+                  "about" => {
+                     // Native About dialog is handled automatically by macOS
+                  }
+                  "help" => {
+                     let _ = window.emit("menu_help", ());
+                  }
+                  "report_bug" => {
+                     let _ = window.emit("menu_report_bug", ());
+                  }
+                  "about_athas" => {
+                     let _ = window.emit("menu_about_athas", ());
+                  }
+                  // Window menu items
+                  "minimize_window" => {
+                     if let Err(e) = window.minimize() {
+                        log::error!("Failed to minimize window: {}", e);
+                     }
+                  }
+                  "maximize_window" => {
+                     if let Err(e) = window.maximize() {
+                        log::error!("Failed to maximize window: {}", e);
+                     }
+                  }
+                  "toggle_fullscreen" => {
+                     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
+                     if let Err(e) = window.set_fullscreen(!is_fullscreen) {
+                        log::error!("Failed to toggle fullscreen: {}", e);
+                     }
+                  }
+                  // Theme menu items - handle theme IDs from registry
+                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
+                  theme_id if theme_id.contains('-') => {
+                     // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
+                     // "tokyo-night")
+                     let _ = window.emit("menu_theme_change", theme_id);
+                  }
+                  _ => {}
                }
             }
          });
@@ -381,10 +370,6 @@ fn main() {
          git_get_tags,
          git_create_tag,
          git_delete_tag,
-         git_get_worktrees,
-         git_add_worktree,
-         git_remove_worktree,
-         git_prune_worktrees,
          git_stage_hunk,
          git_unstage_hunk,
          git_blame_file,
@@ -392,10 +377,11 @@ fn main() {
          store_github_token,
          get_github_token,
          remove_github_token,
+         store_github_pat_fallback,
+         remove_github_pat_fallback,
          github_check_cli_auth,
+         github_get_auth_status,
          github_list_prs,
-         github_list_issues,
-         github_list_workflow_runs,
          github_get_current_user,
          github_open_pr_in_browser,
          github_checkout_pr,
@@ -403,7 +389,9 @@ fn main() {
          github_get_pr_diff,
          github_get_pr_files,
          github_get_pr_comments,
+         github_list_issues,
          github_get_issue_details,
+         github_list_workflow_runs,
          github_get_workflow_run_details,
          // AI Provider token commands
          store_ai_provider_token,
@@ -435,44 +423,56 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
-         store_remote_credential,
-         get_remote_credential,
-         remove_remote_credential,
          // Terminal commands
          create_terminal,
          terminal_write,
          terminal_resize,
          close_terminal,
-         list_shells,
+         get_shells,
          // execute_shell,
          // SSH commands
          ssh_connect,
          ssh_disconnect,
          ssh_disconnect_only,
-         ssh_create_file,
-         ssh_create_directory,
-         ssh_delete_path,
-         ssh_rename_path,
-         ssh_copy_path,
          ssh_write_file,
          ssh_read_directory,
          ssh_read_file,
-         ssh_get_connected_ids,
-         create_remote_terminal,
-         remote_terminal_write,
-         remote_terminal_resize,
-         close_remote_terminal,
+         get_startup_open_requests,
          // ACP agent commands (new)
          get_available_agents,
-         install_acp_agent,
          start_acp_agent,
          stop_acp_agent,
          send_acp_prompt,
          get_acp_status,
          respond_acp_permission,
          set_acp_session_mode,
-         set_acp_session_config_option,
          cancel_acp_prompt,
+         // Pi native commands
+         start_pi_native_session,
+         stop_pi_native_session,
+         send_pi_native_prompt,
+         get_pi_native_status,
+         list_pi_native_sessions,
+         list_pi_native_commands,
+         list_pi_native_models,
+         list_pi_native_thinking_levels,
+         get_pi_native_session_snapshot,
+         reload_pi_native_session_resources,
+         get_pi_native_settings_snapshot,
+         set_pi_native_scoped_defaults,
+         set_pi_native_api_key_credential,
+         clear_pi_native_auth_credential,
+         login_pi_native_provider,
+         logout_pi_native_provider,
+         respond_pi_native_auth_prompt,
+         install_pi_native_package,
+         remove_pi_native_package,
+         get_pi_native_session_transcript,
+         change_pi_native_mode,
+         set_pi_native_model,
+         set_pi_native_thinking_level,
+         cancel_pi_native_prompt,
+         respond_pi_native_permission,
          // Theme commands
          get_system_theme,
          load_toml_themes,
@@ -495,65 +495,6 @@ fn main() {
          update_sqlite_row,
          delete_sqlite_row,
          get_sqlite_foreign_keys,
-         // DuckDB commands
-         get_duckdb_tables,
-         query_duckdb,
-         query_duckdb_filtered,
-         execute_duckdb,
-         insert_duckdb_row,
-         update_duckdb_row,
-         delete_duckdb_row,
-         get_duckdb_foreign_keys,
-         // Connection management
-         connect_database,
-         disconnect_database,
-         test_connection,
-         // Credentials
-         store_db_credential,
-         get_db_credential,
-         remove_db_credential,
-         save_connection,
-         list_saved_connections,
-         delete_saved_connection,
-         // PostgreSQL commands
-         get_postgres_tables,
-         query_postgres,
-         query_postgres_filtered,
-         execute_postgres,
-         get_postgres_foreign_keys,
-         get_postgres_table_schema,
-         get_postgres_subscription_info,
-         get_postgres_subscription_status,
-         create_postgres_subscription,
-         drop_postgres_subscription,
-         set_postgres_subscription_enabled,
-         refresh_postgres_subscription,
-         insert_postgres_row,
-         update_postgres_row,
-         delete_postgres_row,
-         // MySQL commands
-         get_mysql_tables,
-         query_mysql,
-         query_mysql_filtered,
-         execute_mysql,
-         get_mysql_foreign_keys,
-         get_mysql_table_schema,
-         insert_mysql_row,
-         update_mysql_row,
-         delete_mysql_row,
-         // MongoDB commands
-         get_mongo_databases,
-         get_mongo_collections,
-         query_mongo_documents,
-         insert_mongo_document,
-         update_mongo_document,
-         delete_mongo_document,
-         // Redis commands
-         redis_scan_keys,
-         redis_get_value,
-         redis_set_value,
-         redis_delete_key,
-         redis_get_info,
          // LSP commands
          lsp_start,
          lsp_stop,

@@ -8,14 +8,20 @@ import {
   PanelLeft,
   RotateCcw,
   Search,
+  Sparkles,
   Terminal,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { DEFAULT_HARNESS_SESSION_KEY } from "@/features/ai/lib/chat-scope";
+import { getPreferredHarnessEntryBackend } from "@/features/ai/lib/harness-entry-backend";
+import { createNewHarnessSession } from "@/features/ai/lib/harness-session-actions";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useSettingsStore } from "@/features/settings/store";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
+  isHarnessActive: boolean;
   isSidebarVisible: boolean;
   setIsSidebarVisible: (v: boolean) => void;
   isBottomPaneVisible: boolean;
@@ -25,21 +31,29 @@ interface ViewActionsParams {
   isFindVisible: boolean;
   setIsFindVisible: (v: boolean) => void;
   settings: {
-    isAIChatVisible: boolean;
     sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
+    aiPiHarnessBackend: HarnessRuntimeBackend;
   };
   updateSetting: (key: string, value: any) => void | Promise<void>;
   zoomIn: (target: "editor" | "terminal") => void;
   zoomOut: (target: "editor" | "terminal") => void;
   resetZoom: (target: "editor" | "terminal") => void;
+  openAgentBuffer: (
+    sessionId?: string,
+    options?: {
+      backend?: HarnessRuntimeBackend;
+    },
+  ) => void;
+  createAgentBuffer: (options?: { backend?: HarnessRuntimeBackend }) => void;
   openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
 }
 
 export const createViewActions = (params: ViewActionsParams): Action[] => {
   const {
+    isHarnessActive,
     isSidebarVisible,
     setIsSidebarVisible,
     isBottomPaneVisible,
@@ -53,6 +67,8 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     zoomIn,
     zoomOut,
     resetZoom,
+    createAgentBuffer,
+    openAgentBuffer,
     openWebViewerBuffer,
     onClose,
   } = params;
@@ -62,7 +78,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-sidebar",
       label: isSidebarVisible ? "View: Hide Sidebar" : "View: Show Sidebar",
       description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
-      icon: <PanelLeft />,
+      icon: <PanelLeft size={14} />,
       category: "View",
       keybinding: ["⌘", "B"],
       action: () => {
@@ -74,7 +90,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-bottom-pane",
       label: isBottomPaneVisible ? "View: Hide Bottom Pane" : "View: Show Bottom Pane",
       description: isBottomPaneVisible ? "Hide the bottom pane" : "Show the bottom pane",
-      icon: <PanelBottom />,
+      icon: <PanelBottom size={14} />,
       category: "View",
       action: () => {
         setIsBottomPaneVisible(!isBottomPaneVisible);
@@ -88,7 +104,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           ? "View: Hide Terminal"
           : "View: Show Terminal",
       description: "Toggle integrated terminal panel",
-      icon: <Terminal />,
+      icon: <Terminal size={14} />,
       category: "View",
       keybinding: ["⌘", "`"],
       action: () => {
@@ -97,7 +113,6 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         } else {
           setBottomPaneActiveTab("terminal");
           setIsBottomPaneVisible(true);
-          window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
         }
         onClose();
       },
@@ -109,7 +124,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           ? "View: Hide Diagnostics"
           : "View: Show Diagnostics",
       description: "Toggle diagnostics panel",
-      icon: <AlertCircle />,
+      icon: <AlertCircle size={14} />,
       category: "View",
       keybinding: ["⌘", "⇧", "J"],
       action: () => {
@@ -124,13 +139,15 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     },
     {
       id: "toggle-ai-chat-view",
-      label: settings.isAIChatVisible ? "View: Hide AI Chat" : "View: Show AI Chat",
-      description: settings.isAIChatVisible ? "Hide AI chat panel" : "Show AI chat panel",
-      icon: <MessageSquare />,
+      label: isHarnessActive ? "View: Close Harness" : "View: Open Harness",
+      description: isHarnessActive
+        ? "Close the active harness tab"
+        : "Open the harness workspace tab",
+      icon: <MessageSquare size={14} />,
       category: "View",
       keybinding: ["⌘", "R"],
       action: () => {
-        useSettingsStore.getState().toggleAIChatVisible();
+        useSettingsStore.getState().toggleHarnessEntry();
         onClose();
       },
     },
@@ -138,7 +155,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-find-view",
       label: isFindVisible ? "View: Hide Find" : "View: Show Find",
       description: isFindVisible ? "Hide find in file" : "Show find in file",
-      icon: <Search />,
+      icon: <Search size={14} />,
       category: "View",
       keybinding: ["⌘", "F"],
       action: () => {
@@ -153,7 +170,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         settings.sidebarPosition === "left"
           ? "Move sidebar to right side"
           : "Move sidebar to left side",
-      icon: <ArrowLeftRight />,
+      icon: <ArrowLeftRight size={14} />,
       category: "View",
       keybinding: ["⌘", "⇧", "B"],
       action: () => {
@@ -169,7 +186,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: settings.nativeMenuBar
         ? "Use custom menu bar"
         : "Use native operating system menu bar",
-      icon: <Menu />,
+      icon: <Menu size={14} />,
       category: "View",
       action: async () => {
         const newValue = !settings.nativeMenuBar;
@@ -187,7 +204,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: settings.compactMenuBar
         ? "Show full menu bar"
         : "Use compact menu bar with hamburger icon",
-      icon: <Menu />,
+      icon: <Menu size={14} />,
       category: "View",
       action: () => {
         updateSetting("compactMenuBar", !settings.compactMenuBar);
@@ -198,7 +215,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-zoom-in",
       label: "Editor: Zoom In",
       description: "Increase editor zoom level",
-      icon: <ZoomIn />,
+      icon: <ZoomIn size={14} />,
       category: "View",
       keybinding: ["⌘", "+"],
       action: () => {
@@ -210,7 +227,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-zoom-out",
       label: "Editor: Zoom Out",
       description: "Decrease editor zoom level",
-      icon: <ZoomOut />,
+      icon: <ZoomOut size={14} />,
       category: "View",
       keybinding: ["⌘", "-"],
       action: () => {
@@ -222,7 +239,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-reset-zoom",
       label: "Editor: Reset Zoom",
       description: "Reset editor zoom to default level",
-      icon: <RotateCcw />,
+      icon: <RotateCcw size={14} />,
       category: "View",
       keybinding: ["⌘", "0"],
       action: () => {
@@ -234,7 +251,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-zoom-in",
       label: "Terminal: Zoom In",
       description: "Increase terminal zoom level",
-      icon: <ZoomIn />,
+      icon: <ZoomIn size={14} />,
       category: "Terminal",
       action: () => {
         zoomIn("terminal");
@@ -245,7 +262,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-zoom-out",
       label: "Terminal: Zoom Out",
       description: "Decrease terminal zoom level",
-      icon: <ZoomOut />,
+      icon: <ZoomOut size={14} />,
       category: "Terminal",
       action: () => {
         zoomOut("terminal");
@@ -256,7 +273,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-reset-zoom",
       label: "Terminal: Reset Zoom",
       description: "Reset terminal zoom to default level",
-      icon: <RotateCcw />,
+      icon: <RotateCcw size={14} />,
       category: "Terminal",
       action: () => {
         resetZoom("terminal");
@@ -264,10 +281,37 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       },
     },
     {
+      id: "open-harness",
+      label: "View: Open Harness",
+      description: "Open the harness workspace tab",
+      icon: <Sparkles size={14} />,
+      category: "View",
+      action: () => {
+        openAgentBuffer(DEFAULT_HARNESS_SESSION_KEY, {
+          backend: getPreferredHarnessEntryBackend(
+            DEFAULT_HARNESS_SESSION_KEY,
+            settings.aiPiHarnessBackend,
+          ),
+        });
+        onClose();
+      },
+    },
+    {
+      id: "new-harness-session",
+      label: "View: New Harness Session",
+      description: "Open a new harness session tab",
+      icon: <Sparkles size={14} />,
+      category: "View",
+      action: () => {
+        createNewHarnessSession(createAgentBuffer, settings.aiPiHarnessBackend);
+        onClose();
+      },
+    },
+    {
       id: "open-web-viewer",
       label: "View: Open Web Viewer",
       description: "Open a new web viewer tab",
-      icon: <Globe />,
+      icon: <Globe size={14} />,
       category: "View",
       action: () => {
         openWebViewerBuffer("about:blank");
@@ -278,7 +322,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "open-url",
       label: "View: Open URL...",
       description: "Open a URL in web viewer",
-      icon: <Globe />,
+      icon: <Globe size={14} />,
       category: "View",
       action: async () => {
         const url = prompt("Enter URL:", "https://");

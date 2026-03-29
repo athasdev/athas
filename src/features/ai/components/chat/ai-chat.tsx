@@ -1,37 +1,136 @@
-import { listen } from "@tauri-apps/api/event";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
-import {
-  appendChatAcpEvent,
-  type ChatAcpEventInput,
-  truncateDetail,
-  updateToolCompletionAcpEvent,
-} from "@/features/ai/lib/acp-event-timeline";
-import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { truncateDetail } from "@/features/ai/lib/acp-event-timeline";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
+import {
+  getPendingAcpPermissions,
+  getStaleAcpPermissions,
+  reconcileIdleAcpRestore,
+} from "@/features/ai/lib/chat-acp-activity";
+import { isCompactionTriggerEnabled } from "@/features/ai/lib/chat-compaction-policy";
+import { buildConversationHistory } from "@/features/ai/lib/chat-context";
+import {
+  createHarnessChatScopeId,
+  createHarnessSessionKey,
+  DEFAULT_HARNESS_SESSION_KEY,
+  filterChatsForScope,
+  getDefaultChatTitle,
+  isDefaultHarnessSessionKey,
+  PANEL_CHAT_SCOPE_ID,
+} from "@/features/ai/lib/chat-scope";
+import {
+  formatStreamErrorBlock,
+  getStreamErrorInfo,
+  getStreamRetryDelayMs,
+  shouldAutoRetryStreamError,
+} from "@/features/ai/lib/chat-stream-retry";
+import { getChatSurfaceLayout } from "@/features/ai/lib/chat-surface-layout";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import {
+  cancelHarnessRuntimePrompt,
+  getHarnessRuntimeSessionSnapshot,
+  getHarnessRuntimeSessionTranscript,
+  getHarnessRuntimeStatus,
+  listHarnessRuntimeSessions,
+  resolveHarnessRuntimeBackendForScope,
+  respondToHarnessPermission,
+} from "@/features/ai/lib/harness-runtime";
+import { getMostRecentClosedHarnessSession } from "@/features/ai/lib/harness-session-lifecycle";
+import { getHarnessTrustState } from "@/features/ai/lib/harness-trust-state";
+import {
+  buildPiNativeChatMessagesFromTranscript,
+  buildPiNativeRuntimeStateFromSession,
+  buildPiNativeSessionLineage,
+  derivePiNativeSessionTitle,
+  findOpenHarnessPiNativeSessionKey,
+  findPiNativeParentChatForSession,
+  shouldEnsurePiNativeRestoreChat,
+  shouldReconcilePiNativeSession,
+  shouldReuseCurrentHarnessSessionForPiNativeResume,
+} from "@/features/ai/lib/pi-native-restore";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
-import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpEvent } from "@/features/ai/types/acp";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { AGENT_OPTIONS, type AIChatProps, type Message } from "@/features/ai/types/ai-chat";
+import type { AcpEvent, AcpToolLocation } from "@/features/ai/types/acp";
+import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
+import { useAuthStore } from "@/stores/auth-store";
+import { useProjectStore } from "@/stores/project-store";
+import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
+import { cn } from "@/utils/cn";
+import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { useAIChatStore } from "../../store/store";
+import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+import { HarnessSessionRail } from "./harness-session-rail";
+
+const createMessageId = () => crypto.randomUUID();
+const MAX_STREAM_RETRY_ATTEMPTS = 2;
+
+const isContextOverflowError = (error: string): boolean =>
+  /(context|token).*(length|limit|window|maximum|too long)|max[_\s-]?tokens/i.test(error);
+
+const getLatestHarnessRailEvent = (events: ChatAcpEvent[]): ChatAcpEvent | null =>
+  [...events].reverse().find((event) => {
+    if (event.kind === "permission" || event.kind === "error" || event.kind === "tool") {
+      return true;
+    }
+
+    if (event.kind === "plan" || event.kind === "mode") {
+      return true;
+    }
+
+    return event.state === "running" || event.state === "error" || Boolean(event.detail);
+  }) ??
+  events[events.length - 1] ??
+  null;
+
+const normalizeToolLocations = (locations?: AcpToolLocation[] | null) =>
+  locations?.map((location) => ({ path: location.path, line: location.line ?? null }));
+
+const summarizeToolPayload = (value: unknown): string | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized ? truncateDetail(normalized) : undefined;
+  }
+
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized && serialized !== "{}" && serialized !== "[]"
+      ? truncateDetail(serialized)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const getToolCompletionData = (event: Extract<AcpEvent, { type: "tool_complete" }>) => {
+  const locations = normalizeToolLocations(event.locations);
+  const output = event.output;
+  const detail =
+    summarizeToolPayload(output) ??
+    locations?.[0]?.path?.split("/").pop() ??
+    (event.success ? "completed" : "failed");
+
+  return {
+    detail,
+    tool: {
+      output,
+      locations,
+      error: event.success ? undefined : (summarizeToolPayload(output) ?? "Tool failed"),
+    },
+  };
+};
 
 const AIChat = memo(function AIChat({
   className,
+  surface = "panel",
+  sessionKey,
+  scopeId,
   activeBuffer,
   buffers = [],
   selectedFiles = [],
@@ -46,17 +145,20 @@ const AIChat = memo(function AIChat({
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
   );
 
-  const chatState = useChatState();
-  const chatActions = useChatActions();
-  const { showToast } = useToast();
+  const resolvedScopeId =
+    scopeId ?? (surface === "harness" ? createHarnessChatScopeId(sessionKey) : PANEL_CHAT_SCOPE_ID);
+  const chatState = useChatState(resolvedScopeId);
+  const chatActions = useChatActions(resolvedScopeId);
+  const closedBuffersHistory = useBufferStore.use.closedBuffersHistory();
+  const { closeBuffer, openAgentBuffer, reopenClosedHarnessSession } = useBufferStore.use.actions();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [permissionQueue, setPermissionQueue] = useState<
-    Array<{ requestId: string; description: string; permissionType: string; resource: string }>
+  const nativeSessionRestoreAttemptRef = useRef<string | null>(null);
+  const [harnessSessionStatuses, setHarnessSessionStatuses] = useState<Record<string, boolean>>({});
+  const [recentPiNativeSessions, setRecentPiNativeSessions] = useState<
+    Awaited<ReturnType<typeof listHarnessRuntimeSessions>>
   >([]);
-  const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
-  const activeToolEventIdsRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (activeBuffer) {
@@ -69,74 +171,44 @@ const AIChat = memo(function AIChat({
     chatActions.checkAllProviderApiKeys();
   }, [settings.aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
 
-  // Clear ACP events when switching chats
-  useEffect(() => {
-    setAcpEvents([]);
-    activeToolEventIdsRef.current.clear();
-  }, [chatState.currentChatId]);
+  const scopedChats = useMemo(
+    () => filterChatsForScope(chatState.chats, resolvedScopeId),
+    [chatState.chats, resolvedScopeId],
+  );
+  const acpResumeKey = resolvedScopeId;
+  const currentChat = useMemo(
+    () => scopedChats.find((chat) => chat.id === chatState.currentChatId),
+    [chatState.currentChatId, scopedChats],
+  );
+  const acpEvents = currentChat?.acpActivity?.events ?? [];
+  const pendingPermissions = useMemo(
+    () => getPendingAcpPermissions(currentChat?.acpActivity),
+    [currentChat?.acpActivity],
+  );
+  const stalePermissions = useMemo(
+    () => getStaleAcpPermissions(currentChat?.acpActivity),
+    [currentChat?.acpActivity],
+  );
+  const currentPermission = pendingPermissions[0];
+  const [permissionValue, setPermissionValue] = useState("");
+  const currentAgentId = chatActions.getCurrentAgentId();
+  const runtimeBackend = useMemo(
+    () => resolveHarnessRuntimeBackendForScope(resolvedScopeId, buffers, activeBuffer ?? null),
+    [activeBuffer, buffers, resolvedScopeId],
+  );
+  const currentPiNativeSessionPath =
+    currentChat?.acpState?.runtimeState?.source === "pi-native"
+      ? currentChat.acpState.runtimeState.sessionPath
+      : null;
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
+    if (!currentPermission) {
+      setPermissionValue("");
+      return;
+    }
 
-    const setupAcpStateSync = async () => {
-      unlisten = await listen<AcpEvent>("acp-event", ({ payload }) => {
-        const store = useAIChatStore.getState();
-
-        switch (payload.type) {
-          case "slash_commands_update":
-            store.setAvailableSlashCommands(payload.commands);
-            break;
-          case "session_mode_update":
-            store.setSessionModeState(
-              payload.modeState.currentModeId,
-              payload.modeState.availableModes,
-            );
-            break;
-          case "current_mode_update":
-            store.setCurrentModeId(payload.currentModeId);
-            break;
-          case "config_options_update":
-            store.setSessionConfigOptions(payload.configOptions);
-            break;
-          case "session_info_update": {
-            const chat = store.getCurrentChat();
-            const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
-            if (chat && nextTitle) {
-              store.updateChatTitle(chat.id, nextTitle);
-            }
-            break;
-          }
-          case "status_changed":
-            if (!payload.status.running) {
-              store.setAvailableSlashCommands([]);
-              store.setSessionModeState(null, []);
-              store.setSessionConfigOptions([]);
-            }
-            break;
-          default:
-            break;
-        }
-      });
-    };
-
-    setupAcpStateSync().catch((error) => {
-      if (!disposed) {
-        console.error("Failed to initialize ACP state sync listener:", error);
-      }
-    });
-
-    return () => {
-      disposed = true;
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, []);
-
-  const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
-    setAcpEvents((prev) => appendChatAcpEvent(prev, event));
-  }, []);
+    setPermissionValue(currentPermission.defaultValue ?? currentPermission.options?.[0] ?? "");
+  }, [currentPermission]);
 
   // Agent availability is now handled dynamically by the model-provider-selector component
   // No need to check Claude Code status on mount
@@ -156,10 +228,10 @@ const AIChat = memo(function AIChat({
     // Build active buffer context, including web viewer content if applicable
     let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
       activeBuffer || undefined;
-    if (activeBuffer?.type === "webViewer" && activeBuffer.url) {
+    if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
       // Fetch web page content for context
-      const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
-      const webContent = await fetchWebPageContent(activeBuffer.url);
+      const { fetchWebPageContent } = await import("@/utils/web-fetcher");
+      const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
       activeBufferContext = {
         ...activeBuffer,
         webViewerContent: webContent,
@@ -176,7 +248,7 @@ const AIChat = memo(function AIChat({
       agentId,
     };
 
-    if (activeBuffer && activeBuffer.type !== "webViewer") {
+    if (activeBuffer && !activeBuffer.isWebViewer) {
       const extension = activeBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
@@ -210,14 +282,22 @@ const AIChat = memo(function AIChat({
     const currentAgentId = chatActions.getCurrentAgentId();
     if (isAcpAgent(currentAgentId)) {
       try {
-        await AcpStreamHandler.cancelPrompt();
-        if (permissionQueue.length > 0) {
+        await cancelHarnessRuntimePrompt(resolvedScopeId, buffers, activeBuffer ?? null);
+        if (pendingPermissions.length > 0) {
           await Promise.all(
-            permissionQueue.map((item) =>
-              AcpStreamHandler.respondToPermission(item.requestId, false, true),
+            pendingPermissions.map((item) =>
+              respondToHarnessPermission(
+                item.requestId,
+                false,
+                true,
+                resolvedScopeId,
+                buffers,
+                undefined,
+                activeBuffer ?? null,
+              ),
             ),
           );
-          setPermissionQueue([]);
+          chatActions.markPendingAcpPermissionsStale();
         }
       } catch (error) {
         console.error("Failed to cancel ACP prompt:", error);
@@ -228,7 +308,6 @@ const AIChat = memo(function AIChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    activeToolEventIdsRef.current.clear();
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
   };
@@ -260,22 +339,38 @@ const AIChat = memo(function AIChat({
       chatId = chatActions.ensureChatForAgent(chatActions.getCurrentAgentId());
     }
 
+    if (isCompactionTriggerEnabled(settings.aiAutoCompactionPolicy, "threshold")) {
+      await chatActions.compactChat("threshold");
+    }
+
+    const currentChatBeforeSend = chatActions.getCurrentChat();
+    const conversationContext = currentChatBeforeSend
+      ? buildConversationHistory(currentChatBeforeSend)
+      : [];
+    const shouldUpdateTitle =
+      !currentChatBeforeSend ||
+      currentChatBeforeSend.messages.length === 0 ||
+      currentChatBeforeSend.title === getDefaultChatTitle(surface);
+
     const { processedMessage } = await parseMentionsAndLoadFiles(
       messageContent.trim(),
       allProjectFiles,
     );
 
     const context = await buildContext(currentAgentId);
+    const userMessageId = createMessageId();
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: userMessageId,
+      lineageMessageId: userMessageId,
       content: messageContent.trim(),
       role: "user",
       timestamp: new Date(),
     };
 
-    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessageId = createMessageId();
     const assistantMessage: Message = {
       id: assistantMessageId,
+      lineageMessageId: assistantMessageId,
       content: "",
       role: "assistant",
       timestamp: new Date(),
@@ -285,8 +380,7 @@ const AIChat = memo(function AIChat({
     chatActions.addMessage(chatId, userMessage);
     chatActions.addMessage(chatId, assistantMessage);
 
-    const currentMessages = chatActions.getCurrentMessages();
-    if (currentMessages.length === 2) {
+    if (shouldUpdateTitle) {
       const title =
         userMessage.content.length > 50
           ? `${userMessage.content.substring(0, 50)}...`
@@ -333,315 +427,324 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const conversationContext = currentMessages
-        .filter((msg) => msg.role !== "system")
-        .map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-        }));
-
       const enhancedMessage = processedMessage;
-      if (isAcp) {
-        setAcpEvents([]);
-        activeToolEventIdsRef.current.clear();
-      }
 
-      await getChatCompletionStream(
-        currentAgentId,
-        settings.aiProviderId,
-        settings.aiModelId,
-        enhancedMessage,
-        context,
-        (chunk: string) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            content: (currentMessage?.content || "") + chunk,
-          }));
-          requestAnimationFrame(scrollToBottom);
-        },
-        () => {
-          const currentMessage = chatActions
-            .getCurrentMessages()
-            .find((message) => message.id === currentAssistantMessageId);
-          const hasVisibleResponse = Boolean(
-            currentMessage?.content?.trim() ||
-            currentMessage?.toolCalls?.length ||
-            currentMessage?.images?.length ||
-            currentMessage?.resources?.length,
-          );
-
-          if (!hasVisibleResponse && isAcpAgent(currentAgentId)) {
-            const fallbackMessage = `${AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "Agent"} did not return a visible response. Try sending the message again.`;
-            updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
-              content: `[ERROR_BLOCK]
-title: No Response
-code: EMPTY_RESPONSE
-message: ${fallbackMessage}
-details: The agent session started, but no content, tool output, or resource was returned.
-[/ERROR_BLOCK]`,
+      let didOverflowRetry = false;
+      let streamRetryAttempt = 0;
+      const startCompletion = async (history = conversationContext) =>
+        getChatCompletionStream(
+          currentAgentId,
+          settings.aiProviderId,
+          settings.aiModelId,
+          enhancedMessage,
+          context,
+          (chunk: string) => {
+            updateStreamingAssistantMessage(
+              chatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                content: (currentMessage?.content || "") + chunk,
+              }),
+            );
+            requestAnimationFrame(scrollToBottom);
+          },
+          () => {
+            if (streamRetryAttempt > 0) {
+              chatActions.appendAcpActivityEvent({
+                kind: "status",
+                label: "Retry recovered",
+                detail: `Succeeded after ${streamRetryAttempt} retr${
+                  streamRetryAttempt === 1 ? "y" : "ies"
+                }`,
+                state: "success",
+              });
+              streamRetryAttempt = 0;
+            }
+            chatActions.updateMessage(chatId, currentAssistantMessageId, {
               isStreaming: false,
-            }));
-            showToast({
-              message: fallbackMessage,
-              type: "error",
             });
             chatActions.setIsTyping(false);
             chatActions.setStreamingMessageId(null);
             abortControllerRef.current = null;
             processQueuedMessages();
-            return;
-          }
+          },
+          (error: string, canReconnect?: boolean) => {
+            void (async () => {
+              console.error("Streaming error:", error);
 
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            isStreaming: false,
-          });
-          chatActions.setIsTyping(false);
-          chatActions.setStreamingMessageId(null);
-          abortControllerRef.current = null;
-          processQueuedMessages();
-        },
-        (error: string, canReconnect?: boolean) => {
-          console.error("Streaming error:", error);
-
-          let errorTitle = "API Error";
-          let errorMessage = error;
-          let errorCode = "";
-          let errorDetails = "";
-
-          const parts = error.split("|||");
-          const mainError = parts[0];
-          if (parts.length > 1) {
-            errorDetails = parts[1];
-          }
-
-          const codeMatch = mainError.match(/error:\s*(\d+)/i);
-          if (codeMatch) {
-            errorCode = codeMatch[1];
-            if (errorCode === "429") {
-              errorTitle = "Rate Limit Exceeded";
-              errorMessage =
-                "The API is temporarily rate-limited. Please wait a moment and try again.";
-            } else if (errorCode === "401") {
-              errorTitle = "Authentication Error";
-              errorMessage = "Invalid API key. Please check your API settings.";
-            } else if (errorCode === "403") {
-              errorTitle = "Access Denied";
-              errorMessage = "You don't have permission to access this resource.";
-            } else if (errorCode === "500") {
-              errorTitle = "Server Error";
-              errorMessage = "The API server encountered an error. Please try again later.";
-            } else if (errorCode === "400") {
-              errorTitle = "Bad Request";
-              if (errorDetails) {
-                try {
-                  const parsed = JSON.parse(errorDetails);
-                  if (parsed.error?.message) {
-                    errorMessage = parsed.error.message;
-                  }
-                } catch {
-                  errorMessage = mainError;
+              if (
+                isCompactionTriggerEnabled(settings.aiAutoCompactionPolicy, "overflow") &&
+                !didOverflowRetry &&
+                isContextOverflowError(error)
+              ) {
+                didOverflowRetry = true;
+                const compacted = await chatActions.compactChat("overflow");
+                if (compacted) {
+                  const retryChat = chatActions.getCurrentChat();
+                  const retryHistory = retryChat
+                    ? buildConversationHistory({
+                        ...retryChat,
+                        messages: retryChat.messages.filter(
+                          (message) =>
+                            message.id !== userMessageId &&
+                            message.id !== currentAssistantMessageId,
+                        ),
+                      })
+                    : history;
+                  await startCompletion(retryHistory);
+                  return;
                 }
               }
-            }
-          }
 
-          if (canReconnect) {
-            errorTitle = "Connection Lost";
-            errorCode = "RECONNECT";
-          }
+              const errorInfo = getStreamErrorInfo(error, canReconnect);
+              const currentStreamingMessage = chatActions
+                .getCurrentMessages()
+                .find((message) => message.id === currentAssistantMessageId);
+              const nextRetryAttempt = streamRetryAttempt + 1;
 
-          const formattedError = `[ERROR_BLOCK]
-title: ${errorTitle}
-code: ${errorCode}
-message: ${errorMessage}
-details: ${errorDetails || mainError}
-[/ERROR_BLOCK]`;
+              if (
+                shouldAutoRetryStreamError({
+                  error: errorInfo,
+                  attempt: nextRetryAttempt,
+                  maxAttempts: MAX_STREAM_RETRY_ATTEMPTS,
+                  hasToolCalls: (currentStreamingMessage?.toolCalls?.length ?? 0) > 0,
+                  pendingPermissionCount: pendingPermissions.length,
+                })
+              ) {
+                streamRetryAttempt = nextRetryAttempt;
+                const delayMs = getStreamRetryDelayMs(streamRetryAttempt);
+                chatActions.appendAcpActivityEvent({
+                  kind: "status",
+                  label: "Retrying response",
+                  detail: `${errorInfo.title} · attempt ${streamRetryAttempt}/${MAX_STREAM_RETRY_ATTEMPTS}`,
+                  state: "running",
+                });
+                updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+                  content: "",
+                  isToolUse: false,
+                  toolName: undefined,
+                  toolCalls: [],
+                  images: [],
+                  resources: [],
+                  isStreaming: true,
+                }));
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+                await startCompletion(history);
+                return;
+              }
 
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            content: currentMessage?.content || formattedError,
-            isStreaming: false,
-          }));
-          showToast({
-            message: errorMessage,
-            type: "error",
-          });
-          chatActions.setIsTyping(false);
-          chatActions.setStreamingMessageId(null);
-          abortControllerRef.current = null;
-          processQueuedMessages();
-        },
-        conversationContext,
-        () => {
-          const newMessageId = Date.now().toString();
-          const newAssistantMessage: Message = {
-            id: newMessageId,
-            content: "",
-            role: "assistant",
-            timestamp: new Date(),
-            isStreaming: true,
-          };
+              streamRetryAttempt = 0;
+              const formattedError = formatStreamErrorBlock(errorInfo);
 
-          chatActions.addMessage(chatId, newAssistantMessage);
-          currentAssistantMessageId = newMessageId;
-          chatActions.setStreamingMessageId(newMessageId);
-          requestAnimationFrame(scrollToBottom);
-        },
-        (toolName: string, toolInput?: any, toolId?: string) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            isToolUse: true,
-            toolName,
-            toolCalls: [
-              ...(currentMessage?.toolCalls || []),
-              createToolCall(toolName, toolInput, toolId),
-            ],
-          }));
-        },
-        (toolName: string, toolId?: string) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            toolCalls: markToolCallComplete(currentMessage?.toolCalls || [], toolName, toolId),
-          }));
-        },
-        (event) => {
-          appendAcpEvent({
-            kind: "permission",
-            label: "Permission requested",
-            detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
-            state: "info",
-          });
-          setPermissionQueue((prev) => [
-            ...prev,
-            {
+              updateStreamingAssistantMessage(
+                chatId,
+                currentAssistantMessageId,
+                (currentMessage) => ({
+                  content: currentMessage?.content || formattedError,
+                  isStreaming: false,
+                }),
+              );
+              chatActions.setIsTyping(false);
+              chatActions.setStreamingMessageId(null);
+              abortControllerRef.current = null;
+              processQueuedMessages();
+            })();
+          },
+          history,
+          () => {
+            const newMessageId = createMessageId();
+            const newAssistantMessage: Message = {
+              id: newMessageId,
+              lineageMessageId: newMessageId,
+              content: "",
+              role: "assistant",
+              timestamp: new Date(),
+              isStreaming: true,
+            };
+
+            chatActions.addMessage(chatId, newAssistantMessage);
+            currentAssistantMessageId = newMessageId;
+            chatActions.setStreamingMessageId(newMessageId);
+            requestAnimationFrame(scrollToBottom);
+          },
+          (toolName: string, toolInput?: any, toolId?: string) => {
+            updateStreamingAssistantMessage(
+              chatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                isToolUse: true,
+                toolName,
+                toolCalls: [
+                  ...(currentMessage?.toolCalls || []),
+                  createToolCall(toolName, toolInput, toolId),
+                ],
+              }),
+            );
+          },
+          (toolName: string, toolId?: string, output?: unknown, error?: string) => {
+            updateStreamingAssistantMessage(
+              chatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                toolCalls: markToolCallComplete(currentMessage?.toolCalls || [], toolName, toolId, {
+                  output,
+                  error,
+                }),
+              }),
+            );
+          },
+          (event) => {
+            chatActions.addAcpPermissionRequest({
               requestId: event.requestId,
               description: event.description,
               permissionType: event.permissionType,
               resource: event.resource,
-            },
-          ]);
-        },
-        (event) => {
-          if (!isAcpAgent(currentAgentId)) return;
-          // Only show meaningful events, skip noisy ones
-          if (
-            event.type === "content_chunk" ||
-            event.type === "user_message_chunk" ||
-            event.type === "session_complete"
-          ) {
-            return;
-          }
-          switch (event.type) {
-            case "thought_chunk": {
-              appendAcpEvent({
-                kind: "thinking",
-                label: "Thinking",
-                state: "running",
-              });
-              break;
+              title: event.title,
+              placeholder: event.placeholder,
+              defaultValue: event.defaultValue,
+              options: event.options,
+            });
+            chatActions.appendAcpActivityEvent({
+              id: `permission-${event.requestId}`,
+              kind: "permission",
+              label: "Permission requested",
+              detail: truncateDetail(event.description),
+              state: "info",
+            });
+          },
+          (event) => {
+            if (!isAcpAgent(currentAgentId)) return;
+            // Only show meaningful events, skip noisy ones
+            if (
+              event.type === "content_chunk" ||
+              event.type === "user_message_chunk" ||
+              event.type === "session_complete"
+            ) {
+              return;
             }
-            case "tool_start": {
-              const activityId = `tool-${event.toolId}`;
-              activeToolEventIdsRef.current.set(event.toolId, activityId);
-              appendAcpEvent({
-                id: activityId,
-                kind: "tool",
-                label: event.toolName,
-                detail: "running",
-                state: "running",
-              });
-              break;
-            }
-            case "tool_complete": {
-              const activityId =
-                activeToolEventIdsRef.current.get(event.toolId) ?? `tool-${event.toolId}`;
-              setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, activityId, event.success));
-              activeToolEventIdsRef.current.delete(event.toolId);
-              break;
-            }
-            case "permission_request":
-              break; // Handled separately with permission UI
-            case "prompt_complete":
-              break; // Not useful to show
-            case "session_mode_update":
-              if (event.modeState.currentModeId) {
-                appendAcpEvent({
+            switch (event.type) {
+              case "thought_chunk": {
+                chatActions.appendAcpActivityEvent({
+                  kind: "thinking",
+                  label: "Thinking",
+                  state: "running",
+                });
+                break;
+              }
+              case "tool_start": {
+                chatActions.appendAcpActivityEvent({
+                  id: `tool-${event.toolId}`,
+                  kind: "tool",
+                  label: event.toolName,
+                  detail: "running",
+                  state: "running",
+                  tool: {
+                    input: event.input,
+                  },
+                });
+                break;
+              }
+              case "tool_complete": {
+                const completion = getToolCompletionData(event);
+                chatActions.completeAcpToolEvent(
+                  `tool-${event.toolId}`,
+                  event.success,
+                  completion.tool,
+                );
+                if (completion.detail !== (event.success ? "completed" : "failed")) {
+                  chatActions.appendAcpActivityEvent({
+                    kind: "tool",
+                    label: event.success ? "Tool output" : "Tool failure",
+                    detail: completion.detail,
+                    state: event.success ? "info" : "error",
+                  });
+                }
+                break;
+              }
+              case "permission_request":
+                break; // Handled separately with permission UI
+              case "prompt_complete":
+                break; // Not useful to show
+              case "session_mode_update":
+                if (event.modeState.currentModeId) {
+                  chatActions.appendAcpActivityEvent({
+                    kind: "mode",
+                    label: "Mode changed",
+                    detail: event.modeState.currentModeId,
+                    state: "info",
+                  });
+                }
+                break;
+              case "current_mode_update":
+                chatActions.appendAcpActivityEvent({
                   kind: "mode",
                   label: "Mode changed",
-                  detail: event.modeState.currentModeId,
+                  detail: event.currentModeId,
                   state: "info",
                 });
-              }
-              break;
-            case "config_options_update":
-              appendAcpEvent({
-                kind: "status",
-                label: "Session options updated",
-                detail: `${event.configOptions.length} option${event.configOptions.length === 1 ? "" : "s"} available`,
-                state: "info",
-              });
-              break;
-            case "session_info_update":
-              if (event.title) {
-                appendAcpEvent({
-                  kind: "status",
-                  label: "Session title updated",
-                  detail: event.title,
+                break;
+              case "slash_commands_update":
+                break; // Not useful to show
+              case "runtime_state_update":
+                break; // Internal runtime state sync
+              case "plan_update": {
+                const summary =
+                  event.entries.length > 0
+                    ? event.entries
+                        .slice(0, 2)
+                        .map((entry) => entry.content)
+                        .join(" | ")
+                    : "No plan steps";
+                chatActions.setAcpPlanEntries(event.entries);
+                chatActions.appendAcpActivityEvent({
+                  kind: "plan",
+                  label: `Plan updated (${event.entries.length} steps)`,
+                  detail: truncateDetail(summary),
                   state: "info",
                 });
+                break;
               }
-              break;
-            case "current_mode_update":
-              appendAcpEvent({
-                kind: "mode",
-                label: "Mode changed",
-                detail: event.currentModeId,
-                state: "info",
-              });
-              break;
-            case "slash_commands_update":
-              break; // Not useful to show
-            case "plan_update": {
-              const summary =
-                event.entries.length > 0
-                  ? event.entries
-                      .slice(0, 2)
-                      .map((entry) => entry.content)
-                      .join(" | ")
-                  : "No plan steps";
-              appendAcpEvent({
-                kind: "plan",
-                label: `Plan updated (${event.entries.length} steps)`,
-                detail: truncateDetail(summary),
-                state: "info",
-              });
-              break;
+              case "status_changed":
+                break; // internal state sync
+              case "error":
+                chatActions.appendAcpActivityEvent({
+                  kind: "error",
+                  label: "Agent error",
+                  detail: truncateDetail(event.error),
+                  state: "error",
+                });
+                break;
+              case "ui_action":
+                break; // Handled by acp-handler
             }
-            case "status_changed":
-              break; // internal state sync
-            case "error":
-              appendAcpEvent({
-                kind: "error",
-                label: "Agent error",
-                detail: truncateDetail(event.error),
-                state: "error",
-              });
-              break;
-            case "ui_action":
-              break; // Handled by acp-handler
-          }
-        },
-        chatState.mode,
-        chatState.outputStyle,
-        (data: string, mediaType: string) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            images: [...(currentMessage?.images || []), { data, mediaType }],
-          }));
-          requestAnimationFrame(scrollToBottom);
-        },
-        (uri: string, name: string | null) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            resources: [...(currentMessage?.resources || []), { uri, name }],
-          }));
-          requestAnimationFrame(scrollToBottom);
-        },
-      );
+          },
+          chatState.mode,
+          chatState.outputStyle,
+          (data: string, mediaType: string) => {
+            updateStreamingAssistantMessage(
+              chatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                images: [...(currentMessage?.images || []), { data, mediaType }],
+              }),
+            );
+            requestAnimationFrame(scrollToBottom);
+          },
+          (uri: string, name: string | null) => {
+            updateStreamingAssistantMessage(
+              chatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                resources: [...(currentMessage?.resources || []), { uri, name }],
+              }),
+            );
+            requestAnimationFrame(scrollToBottom);
+          },
+          surface,
+          acpResumeKey,
+          runtimeBackend,
+        );
+      await startCompletion();
     } catch (error) {
       console.error("Failed to start streaming:", error);
       chatActions.updateMessage(chatId, assistantMessageId, {
@@ -661,7 +764,7 @@ details: ${errorDetails || mainError}
 
     const nextMessage = chatActions.processNextMessage();
     if (nextMessage) {
-      console.log("Processing next queued message:", nextMessage.content);
+      console.log(`Processing next ${nextMessage.kind} message:`, nextMessage.content);
       await new Promise((resolve) => setTimeout(resolve, 500));
       await processMessage(nextMessage.content);
     }
@@ -699,28 +802,533 @@ details: ${errorDetails || mainError}
     },
     [sendMessage],
   );
+  const currentSessionKey = sessionKey ?? DEFAULT_HARNESS_SESSION_KEY;
+  const latestHarnessRailEvent = useMemo(() => getLatestHarnessRailEvent(acpEvents), [acpEvents]);
+  const harnessTrustState = useMemo(
+    () =>
+      getHarnessTrustState({
+        agentId: currentAgentId,
+        mode: chatState.mode,
+        isRunning:
+          (harnessSessionStatuses[currentSessionKey] ?? false) ||
+          chatState.isTyping ||
+          chatState.queueCount > 0,
+        queueCount: chatState.queueCount,
+        pendingPermissionCount: pendingPermissions.length,
+        stalePermissionCount: stalePermissions.length,
+        latestEvent: latestHarnessRailEvent,
+      }),
+    [
+      chatState.isTyping,
+      chatState.mode,
+      chatState.queueCount,
+      currentAgentId,
+      currentSessionKey,
+      harnessSessionStatuses,
+      latestHarnessRailEvent,
+      pendingPermissions.length,
+      stalePermissions.length,
+    ],
+  );
+  const harnessSessions = useMemo(
+    () =>
+      buffers
+        .filter((buffer) => buffer.isAgent && buffer.agentSessionId)
+        .map((buffer) => ({
+          bufferId: buffer.id,
+          sessionKey: buffer.agentSessionId!,
+          title: buffer.name,
+          isActive: buffer.agentSessionId === currentSessionKey,
+          isDefault: isDefaultHarnessSessionKey(buffer.agentSessionId!),
+          state:
+            buffer.agentSessionId === currentSessionKey
+              ? harnessTrustState.kind
+              : harnessSessionStatuses[buffer.agentSessionId!]
+                ? "running"
+                : "idle",
+        })),
+    [buffers, currentSessionKey, harnessSessionStatuses, harnessTrustState.kind],
+  );
+  const recentPiNativeRailSessions = useMemo(
+    () =>
+      recentPiNativeSessions.map((session) => ({
+        path: session.path,
+        title: derivePiNativeSessionTitle(session),
+        detail: session.messageCount === 1 ? "1 message" : `${session.messageCount} messages`,
+        isCurrent: session.path === currentPiNativeSessionPath,
+      })),
+    [currentPiNativeSessionPath, recentPiNativeSessions],
+  );
+  const surfaceLayout = useMemo(() => getChatSurfaceLayout(surface), [surface]);
+  const hasClosedHarnessSession = useMemo(
+    () => getMostRecentClosedHarnessSession(closedBuffersHistory) !== null,
+    [closedBuffersHistory],
+  );
 
-  const currentPermission = permissionQueue[0];
-  const handlePermission = async (approved: boolean) => {
+  const handlePermission = async (approved: boolean, cancelled = false, value?: string) => {
     if (!currentPermission) return;
     try {
-      appendAcpEvent({
+      chatActions.appendAcpActivityEvent({
         kind: "permission",
         label: "Permission response",
-        detail: approved ? "allow" : "deny",
+        detail: cancelled ? "cancel" : approved ? "allow" : "deny",
         state: approved ? "success" : "info",
       });
-      await AcpStreamHandler.respondToPermission(currentPermission.requestId, approved);
+      await respondToHarnessPermission(
+        currentPermission.requestId,
+        approved,
+        cancelled,
+        resolvedScopeId,
+        buffers,
+        value,
+        activeBuffer ?? null,
+      );
+      chatActions.resolveAcpPermissionRequest(
+        currentPermission.requestId,
+        approved && !cancelled ? "approved" : "denied",
+      );
     } finally {
-      setPermissionQueue((prev) => prev.slice(1));
+      // Activity is persisted in the chat store; no local queue to drain.
     }
   };
 
+  const handleSelectHarnessSession = useCallback(
+    (nextSessionKey: string) => {
+      openAgentBuffer(nextSessionKey, { backend: runtimeBackend });
+    },
+    [openAgentBuffer, runtimeBackend],
+  );
+
+  const handleCloseHarnessSession = useCallback(
+    (bufferId: string) => {
+      closeBuffer(bufferId);
+    },
+    [closeBuffer],
+  );
+
+  const handleReopenClosedHarnessSession = useCallback(() => {
+    void reopenClosedHarnessSession();
+  }, [reopenClosedHarnessSession]);
+
+  const handleOpenRecentPiNativeSession = useCallback(
+    async (sessionPath: string) => {
+      const session = recentPiNativeSessions.find((entry) => entry.path === sessionPath);
+      if (!session) {
+        return;
+      }
+
+      try {
+        const openHarnessSessionKey = findOpenHarnessPiNativeSessionKey({
+          sessionPath: session.path,
+          sessions: buffers
+            .filter((buffer) => buffer.isAgent && buffer.agentSessionId)
+            .map((buffer) => ({
+              sessionKey: buffer.agentSessionId,
+              chat: useAIChatStore
+                .getState()
+                .getCurrentChat(createHarnessChatScopeId(buffer.agentSessionId!)),
+            })),
+        });
+        if (openHarnessSessionKey) {
+          openAgentBuffer(openHarnessSessionKey, { backend: "pi-native" });
+          return;
+        }
+
+        const transcript = await getHarnessRuntimeSessionTranscript(
+          "pi-native",
+          "pi",
+          session.path,
+        );
+        const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
+        const seededRuntimeState = buildPiNativeRuntimeStateFromSession(session, transcript);
+        const seededTitle = derivePiNativeSessionTitle(session);
+        const shouldReuseCurrentSession = shouldReuseCurrentHarnessSessionForPiNativeResume({
+          sessionKey,
+          chat: currentChat,
+        });
+        const nextSessionKey =
+          shouldReuseCurrentSession && sessionKey ? sessionKey : createHarnessSessionKey();
+        const targetScopeId = createHarnessChatScopeId(nextSessionKey);
+        const targetChatStore = useAIChatStore.getState();
+        const parentChat = findPiNativeParentChatForSession({
+          session,
+          chats: targetChatStore.chats,
+        });
+        const seededLineage = buildPiNativeSessionLineage({
+          sessionTitle: seededTitle,
+          parentChat,
+        });
+
+        openAgentBuffer(nextSessionKey, { backend: "pi-native" });
+
+        const targetChatId = shouldReuseCurrentSession
+          ? targetChatStore.ensureChatForAgent("pi", targetScopeId)
+          : targetChatStore.createSeededChat(
+              "pi",
+              {
+                title: seededTitle,
+                messages: transcriptMessages,
+                acpState: {
+                  preferredModeId: null,
+                  currentModeId: null,
+                  availableModes: [],
+                  slashCommands: [],
+                  runtimeState: seededRuntimeState,
+                },
+                acpActivity: null,
+                lineage: seededLineage,
+              },
+              targetScopeId,
+            );
+
+        if (shouldReuseCurrentSession) {
+          targetChatStore.replaceChatMessages(targetChatId, transcriptMessages);
+          targetChatStore.updateChatTitle(targetChatId, seededTitle);
+          if (seededLineage) {
+            targetChatStore.setChatLineage(targetChatId, seededLineage);
+          }
+        }
+
+        targetChatStore.setAcpRuntimeState(seededRuntimeState, targetScopeId);
+        const snapshot = await getHarnessRuntimeSessionSnapshot("pi-native", "pi", targetScopeId);
+        if (snapshot) {
+          targetChatStore.setAcpRuntimeState(snapshot.runtimeState, targetScopeId);
+          targetChatStore.setAvailableSlashCommands(snapshot.slashCommands, targetScopeId);
+          targetChatStore.setSessionModeState(
+            snapshot.sessionModeState.currentModeId,
+            snapshot.sessionModeState.availableModes,
+            targetScopeId,
+          );
+        }
+      } catch (error) {
+        console.error("Failed to open recent Pi native session:", error);
+      }
+    },
+    [buffers, currentChat, openAgentBuffer, recentPiNativeSessions, sessionKey],
+  );
+
+  const handleContinueChatFromHistory = useCallback(
+    (chatId: string) => {
+      chatActions.continueChatInPlace(chatId);
+    },
+    [chatActions],
+  );
+
+  const handleForkChatFromHistory = useCallback(
+    async (chatId: string) => {
+      if (surface === "harness") {
+        const nextSessionKey = createHarnessSessionKey();
+        openAgentBuffer(nextSessionKey, { backend: runtimeBackend });
+        await chatActions.forkChatFromChat(chatId, createHarnessChatScopeId(nextSessionKey));
+        return;
+      }
+
+      await chatActions.forkChatFromChat(chatId, resolvedScopeId);
+    },
+    [chatActions, openAgentBuffer, resolvedScopeId, runtimeBackend, surface],
+  );
+
+  const handleForkCurrentHarnessChat = useCallback(() => {
+    if (!currentChat) {
+      return;
+    }
+
+    void handleForkChatFromHistory(currentChat.id);
+  }, [currentChat, handleForkChatFromHistory]);
+
+  useEffect(() => {
+    if (surface !== "harness") {
+      return;
+    }
+
+    const harnessSessionKeys = buffers
+      .filter((buffer) => buffer.isAgent && buffer.agentSessionId)
+      .map((buffer) => buffer.agentSessionId!);
+
+    if (harnessSessionKeys.length === 0) {
+      setHarnessSessionStatuses({});
+      return;
+    }
+
+    let disposed = false;
+
+    const refreshHarnessSessionStatuses = async () => {
+      const nextStatuses = await Promise.all(
+        harnessSessionKeys.map(async (harnessSessionKey) => {
+          try {
+            const status = await getHarnessRuntimeStatus(
+              createHarnessChatScopeId(harnessSessionKey),
+              buffers,
+            );
+            return [harnessSessionKey, status.running] as const;
+          } catch (error) {
+            console.error("Failed to refresh Harness session status", error);
+            return [harnessSessionKey, false] as const;
+          }
+        }),
+      );
+
+      if (disposed) {
+        return;
+      }
+
+      setHarnessSessionStatuses(Object.fromEntries(nextStatuses));
+    };
+
+    void refreshHarnessSessionStatuses();
+
+    const statusInterval = window.setInterval(() => {
+      void refreshHarnessSessionStatuses();
+    }, 3000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(statusInterval);
+    };
+  }, [buffers, surface]);
+
+  useEffect(() => {
+    if (
+      surface !== "harness" ||
+      runtimeBackend !== "pi-native" ||
+      currentAgentId !== "pi" ||
+      !rootFolderPath
+    ) {
+      setRecentPiNativeSessions([]);
+      return;
+    }
+
+    let disposed = false;
+
+    void listHarnessRuntimeSessions("pi-native", "pi", rootFolderPath)
+      .then((sessions) => {
+        if (!disposed) {
+          setRecentPiNativeSessions(sessions.slice(0, 6));
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load recent Pi native sessions:", error);
+        if (!disposed) {
+          setRecentPiNativeSessions([]);
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [
+    currentAgentId,
+    currentChat?.lastMessageAt,
+    currentPiNativeSessionPath,
+    rootFolderPath,
+    runtimeBackend,
+    surface,
+  ]);
+
+  useEffect(() => {
+    if (surface !== "harness" || !currentChat) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const reconcileRestoredHarnessState = async () => {
+      try {
+        const status = await getHarnessRuntimeStatus(
+          resolvedScopeId,
+          buffers,
+          activeBuffer ?? null,
+        );
+        if (cancelled) {
+          return;
+        }
+
+        const reconciled = reconcileIdleAcpRestore(currentChat.acpActivity, status);
+        if (!reconciled.shouldResetTransientUi) {
+          return;
+        }
+
+        const currentScopeState = useAIChatStore.getState().chatScopes[resolvedScopeId];
+        if (currentScopeState?.isTyping) {
+          useAIChatStore.getState().setIsTyping(false, resolvedScopeId);
+        }
+
+        if (currentScopeState?.streamingMessageId) {
+          useAIChatStore.getState().setStreamingMessageId(null, resolvedScopeId);
+        }
+
+        if (pendingPermissions.length > 0) {
+          useAIChatStore.getState().markPendingAcpPermissionsStale(resolvedScopeId);
+        }
+      } catch (error) {
+        console.error("Failed to reconcile restored Harness session state", error);
+      }
+    };
+
+    void reconcileRestoredHarnessState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBuffer, buffers, currentChat?.id, pendingPermissions.length, resolvedScopeId, surface]);
+
+  useEffect(() => {
+    if (
+      !shouldEnsurePiNativeRestoreChat({
+        surface,
+        runtimeBackend,
+        agentId: currentAgentId,
+        workspacePath: rootFolderPath ?? null,
+        chat: currentChat,
+      })
+    ) {
+      return;
+    }
+
+    chatActions.ensureChatForAgent("pi");
+  }, [
+    chatActions.ensureChatForAgent,
+    currentAgentId,
+    currentChat,
+    rootFolderPath,
+    runtimeBackend,
+    surface,
+  ]);
+
+  useEffect(() => {
+    if (!currentChat) {
+      return;
+    }
+
+    if (
+      !shouldReconcilePiNativeSession({
+        scopeId: resolvedScopeId,
+        surface,
+        runtimeBackend,
+        agentId: currentAgentId,
+        workspacePath: rootFolderPath ?? null,
+        chat: currentChat,
+      })
+    ) {
+      return;
+    }
+
+    const currentChatId = currentChat.id;
+    const restoreAttemptKey = [
+      resolvedScopeId,
+      currentChatId,
+      runtimeBackend,
+      currentAgentId,
+      rootFolderPath ?? "",
+    ].join(":");
+
+    if (nativeSessionRestoreAttemptRef.current === restoreAttemptKey) {
+      return;
+    }
+
+    nativeSessionRestoreAttemptRef.current = restoreAttemptKey;
+
+    const reconcileNativeSession = async () => {
+      try {
+        const sessions = await listHarnessRuntimeSessions(
+          runtimeBackend,
+          currentAgentId,
+          rootFolderPath ?? null,
+        );
+        if (sessions.length === 0) {
+          return;
+        }
+
+        const latestSession = sessions[0];
+        const liveCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
+        if (
+          !liveCurrentChat ||
+          liveCurrentChat.id !== currentChatId ||
+          !shouldReconcilePiNativeSession({
+            scopeId: resolvedScopeId,
+            surface,
+            runtimeBackend,
+            agentId: currentAgentId,
+            workspacePath: rootFolderPath ?? null,
+            chat: liveCurrentChat,
+          })
+        ) {
+          return;
+        }
+
+        const transcript = await getHarnessRuntimeSessionTranscript(
+          runtimeBackend,
+          currentAgentId,
+          latestSession.path,
+        );
+        const seededRuntimeState = buildPiNativeRuntimeStateFromSession(latestSession, transcript);
+        const snapshot = await getHarnessRuntimeSessionSnapshot(
+          runtimeBackend,
+          currentAgentId,
+          resolvedScopeId,
+        );
+        const hydratedCurrentChat = useAIChatStore.getState().getCurrentChat(resolvedScopeId);
+        if (
+          !hydratedCurrentChat ||
+          hydratedCurrentChat.id !== currentChatId ||
+          hydratedCurrentChat.messages.length > 0
+        ) {
+          return;
+        }
+
+        if (snapshot) {
+          useAIChatStore.getState().setAcpRuntimeState(snapshot.runtimeState, resolvedScopeId);
+          useAIChatStore
+            .getState()
+            .setAvailableSlashCommands(snapshot.slashCommands, resolvedScopeId);
+          useAIChatStore
+            .getState()
+            .setSessionModeState(
+              snapshot.sessionModeState.currentModeId,
+              snapshot.sessionModeState.availableModes,
+              resolvedScopeId,
+            );
+        } else {
+          useAIChatStore.getState().setAcpRuntimeState(seededRuntimeState, resolvedScopeId);
+        }
+
+        const transcriptMessages = buildPiNativeChatMessagesFromTranscript(transcript);
+        if (transcriptMessages.length > 0) {
+          useAIChatStore.getState().replaceChatMessages(currentChatId, transcriptMessages);
+        }
+
+        if (hydratedCurrentChat.title === getDefaultChatTitle(surface)) {
+          const nextTitle = derivePiNativeSessionTitle(latestSession);
+          if (nextTitle !== hydratedCurrentChat.title) {
+            useAIChatStore.getState().updateChatTitle(currentChatId, nextTitle);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to reconcile pi-native Harness session", error);
+      } finally {
+        if (nativeSessionRestoreAttemptRef.current === restoreAttemptKey) {
+          nativeSessionRestoreAttemptRef.current = null;
+        }
+      }
+    };
+
+    void reconcileNativeSession();
+  }, [currentAgentId, currentChat, resolvedScopeId, rootFolderPath, runtimeBackend, surface]);
+
   return (
     <div
-      className={`ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
+      data-ai-chat-surface={surface}
+      className={cn(
+        "ui-font flex h-full flex-col text-text text-xs",
+        surface === "harness" ? "bg-primary-bg" : "bg-secondary-bg/92",
+        className,
+      )}
     >
-      <ChatHeader onDeleteChat={handleDeleteChat} />
+      <ChatHeader
+        surface={surface}
+        scopeId={resolvedScopeId}
+        onForkCurrentChat={surface === "harness" ? handleForkCurrentHarnessChat : undefined}
+      />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -732,69 +1340,204 @@ details: ${errorDetails || mainError}
         </div>
       ) : (
         <>
-          <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
-            <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
-          </div>
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              surface === "harness" &&
+                cn("mx-auto flex w-full min-w-0", surfaceLayout.shellMaxWidthClassName),
+            )}
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div
+                className={cn(
+                  "scrollbar-hidden relative z-0 flex-1 overflow-y-auto",
+                  surface === "harness" && "px-3 pt-4 sm:px-4",
+                )}
+              >
+                <div
+                  className={cn(
+                    surface === "harness" && "mx-auto flex min-h-full w-full flex-col",
+                    surface === "harness" && surfaceLayout.timelineMaxWidthClassName,
+                  )}
+                >
+                  <ChatMessages
+                    ref={messagesEndRef}
+                    onApplyCode={onApplyCode}
+                    acpEvents={acpEvents}
+                    surface={surface}
+                    scopeId={resolvedScopeId}
+                  />
+                </div>
+              </div>
 
-          {currentPermission && (
-            <div className="bg-transparent px-3 pt-2 text-xs">
-              <div className="rounded-2xl border border-border bg-primary-bg/90 px-3 py-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        shape="pill"
-                        className="bg-secondary-bg/70 font-medium uppercase tracking-[0.16em] text-text-lighter"
-                      >
-                        Permission
-                      </Badge>
-                      {permissionQueue.length > 1 ? (
-                        <span className="text-[11px] text-text-lighter">
-                          {permissionQueue.length - 1} more queued
+              {currentPermission && (
+                <div
+                  className={cn(
+                    "bg-transparent pt-3 text-xs",
+                    surface === "harness" ? "px-3 sm:px-4" : "px-3",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "mx-auto w-full",
+                      surface === "harness" && surfaceLayout.composerMaxWidthClassName,
+                    )}
+                  >
+                    <div className="flex flex-col gap-2 rounded-[24px] border border-border/70 bg-secondary-bg/50 px-4 py-3 font-mono backdrop-blur-sm">
+                      <div className="flex items-center gap-2 text-[11px] text-text-lighter uppercase tracking-[0.16em]">
+                        <span>Permission required</span>
+                        <span
+                          className="min-w-0 flex-1 truncate text-right text-[11px] text-text normal-case tracking-normal"
+                          title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
+                        >
+                          {currentPermission.description}
                         </span>
-                      ) : null}
-                    </div>
-                    <div
-                      className="mt-2 break-words font-mono text-text"
-                      title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
-                    >
-                      {currentPermission.description}
-                    </div>
-                    <div className="mt-1 text-[11px] text-text-lighter">
-                      Review this request before the agent can continue.
+                      </div>
+
+                      {currentPermission.permissionType === "input" ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={permissionValue}
+                            onChange={(event) => setPermissionValue(event.target.value)}
+                            placeholder={currentPermission.placeholder ?? "Enter value"}
+                            className="min-w-0 flex-1 rounded-2xl border border-border/70 bg-primary-bg/80 px-3 py-2 text-text outline-none"
+                          />
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(false, true)}
+                              className="rounded-full border border-border/70 bg-primary-bg/80 px-3 py-1.5 text-text-lighter hover:bg-hover"
+                            >
+                              cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(true, false, permissionValue)}
+                              className="rounded-full border border-border/70 bg-primary-bg/80 px-3 py-1.5 text-text hover:bg-hover"
+                            >
+                              submit
+                            </button>
+                          </div>
+                        </div>
+                      ) : currentPermission.permissionType === "select" ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            aria-label={currentPermission.title ?? "Selection request"}
+                            value={permissionValue}
+                            onChange={(event) => setPermissionValue(event.target.value)}
+                            className="min-w-0 flex-1 rounded-2xl border border-border/70 bg-primary-bg/80 px-3 py-2 text-text outline-none"
+                          >
+                            {(currentPermission.options ?? []).map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(false, true)}
+                              className="rounded-full border border-border/70 bg-primary-bg/80 px-3 py-1.5 text-text-lighter hover:bg-hover"
+                            >
+                              cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePermission(true, false, permissionValue)}
+                              className="rounded-full border border-border/70 bg-primary-bg/80 px-3 py-1.5 text-text hover:bg-hover"
+                            >
+                              choose
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex shrink-0 items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handlePermission(false)}
+                            className="rounded-full border border-border/70 bg-primary-bg/80 px-3 py-1.5 text-text-lighter hover:bg-hover"
+                          >
+                            deny
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePermission(true)}
+                            className="rounded-full border border-border/70 bg-primary-bg/80 px-3 py-1.5 text-text hover:bg-hover"
+                          >
+                            allow
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handlePermission(false)}
-                      className="rounded-full"
-                    >
-                      Deny
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handlePermission(true)}
-                      className="rounded-full"
-                    >
-                      Allow
-                    </Button>
+                </div>
+              )}
+
+              {!currentPermission && stalePermissions.length > 0 ? (
+                <div
+                  className={cn(
+                    "bg-transparent pt-3 text-xs",
+                    surface === "harness" ? "px-3 sm:px-4" : "px-3",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "mx-auto w-full",
+                      surface === "harness" && surfaceLayout.composerMaxWidthClassName,
+                    )}
+                  >
+                    <div className="rounded-[24px] border border-border/70 bg-secondary-bg/50 px-4 py-3 text-text-lighter backdrop-blur-sm">
+                      {stalePermissions.length} permission request
+                      {stalePermissions.length === 1 ? "" : "s"} expired when the ACP session reset.
+                      Re-run the prompt to request permission again.
+                    </div>
                   </div>
+                </div>
+              ) : null}
+
+              <div className={cn(surface === "harness" && "px-3 pb-4 sm:px-4")}>
+                <div
+                  className={cn(
+                    "mx-auto w-full",
+                    surface === "harness" && surfaceLayout.composerMaxWidthClassName,
+                  )}
+                >
+                  <AIChatInputBar
+                    buffers={buffers}
+                    allProjectFiles={allProjectFiles}
+                    surface={surface}
+                    scopeId={resolvedScopeId}
+                    harnessStatus={surface === "harness" ? harnessTrustState : null}
+                    runtimeBackend={runtimeBackend}
+                    onSendMessage={handleSendMessage}
+                    onStopStreaming={stopStreaming}
+                  />
                 </div>
               </div>
             </div>
-          )}
 
-          <AIChatInputBar
-            buffers={buffers}
-            allProjectFiles={allProjectFiles}
-            onSendMessage={handleSendMessage}
-            onStopStreaming={stopStreaming}
-          />
+            {surfaceLayout.showsSecondaryRail ? (
+              <div
+                className={cn(
+                  "hidden xl:flex xl:shrink-0 xl:border-border/60 xl:border-l",
+                  surfaceLayout.railContainerClassName,
+                )}
+              >
+                <HarnessSessionRail
+                  sessions={harnessSessions}
+                  activeSession={{ status: harnessTrustState }}
+                  recentRuntimeSessions={recentPiNativeRailSessions}
+                  canReopenClosedSession={hasClosedHarnessSession}
+                  onReopenClosedSession={handleReopenClosedHarnessSession}
+                  onSelectSession={handleSelectHarnessSession}
+                  onCloseSession={handleCloseHarnessSession}
+                  onOpenRuntimeSession={handleOpenRecentPiNativeSession}
+                  onContinueRecentRuntimeSession={handleOpenRecentPiNativeSession}
+                />
+              </div>
+            ) : null}
+          </div>
 
           <ApiKeyModal
             isOpen={chatState.apiKeyModalState.isOpen}
@@ -807,6 +1550,16 @@ details: ${errorDetails || mainError}
                 ? chatActions.hasProviderApiKey(chatState.apiKeyModalState.providerId)
                 : false
             }
+          />
+
+          <ChatHistorySidebar
+            chats={scopedChats}
+            currentChatId={chatState.currentChatId}
+            onContinueToChat={handleContinueChatFromHistory}
+            onForkChat={handleForkChatFromHistory}
+            onDeleteChat={handleDeleteChat}
+            isOpen={chatState.isChatHistoryVisible}
+            onClose={() => chatActions.setIsChatHistoryVisible(false)}
           />
         </>
       )}

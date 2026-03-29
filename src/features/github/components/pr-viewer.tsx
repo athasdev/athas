@@ -35,6 +35,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const buffers = useBufferStore.use.buffers();
   const {
+    authSource,
     selectedPRDetails,
     selectedPRDiff,
     selectedPRFiles,
@@ -309,10 +310,8 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   }, [activeTab, filteredDiff]);
 
   const handleOpenInBrowser = useCallback(() => {
-    if (repoPath) {
-      openPRInBrowser(repoPath, prNumber);
-    }
-  }, [repoPath, prNumber, openPRInBrowser]);
+    void openPRInBrowser(selectedPRDetails?.url);
+  }, [openPRInBrowser, selectedPRDetails?.url]);
 
   const handleCheckout = useCallback(async () => {
     if (repoPath) {
@@ -392,7 +391,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
             <div className="h-full w-1/4 animate-pulse bg-accent/70" />
           </div>
         )}
-        <div className="px-3 py-4 sm:px-5">
+        <div className="px-3 py-4 @sm:px-5">
           <div className="flex items-start gap-3">
             {prBuffer?.authorAvatarUrl ? (
               <img
@@ -479,6 +478,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         onCheckout={() => {
           void handleCheckout();
         }}
+        isCheckoutDisabled={authSource === "pat"}
         onOpenInBrowser={handleOpenInBrowser}
         onCopyPRLink={handleCopyPRLink}
         onCopyBranchName={handleCopyBranchName}
@@ -486,7 +486,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       />
 
       {detailsError && (
-        <div className="px-3 pb-3 sm:px-5">
+        <div className="px-3 pb-3 @sm:px-5">
           <div className="flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
             <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
             <Button
@@ -501,7 +501,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         </div>
       )}
 
-      <div className="min-w-0 px-3 pb-4 sm:px-5">
+      <div className="min-w-0 px-3 pb-4 @sm:px-5">
         {activeTab === "activity" && (
           <PRActivityPanel
             body={pr.body}

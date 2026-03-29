@@ -1,22 +1,36 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { createHarnessRuntimePromptSession } from "@/features/ai/lib/harness-runtime";
+import type { HarnessRuntimeBackend } from "@/features/ai/lib/harness-runtime-backend";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpEvent } from "@/features/ai/types/acp";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
+import {
+  AGENT_OPTIONS,
+  type AgentType,
+  type AIChatSurface,
+  type ChatScopeId,
+} from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
-import { processStreamingResponse } from "@/utils/stream-utils";
-import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
-import { AcpStreamHandler } from "./acp-stream-handler";
-import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
+import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
+import { getProvider } from "./providers";
+import { processStreamingResponse } from "./stream-utils";
+import { getProviderApiToken } from "./token-manager";
+import type { ContextInfo } from "./types";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
   const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
   return agent?.isAcp ?? false;
 };
+
+export {
+  getProviderApiToken,
+  removeProviderApiToken,
+  storeProviderApiToken,
+  validateProviderApiKey,
+} from "./token-manager";
+// Re-export types and legacy functions;
 
 // Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (
@@ -31,30 +45,40 @@ export const getChatCompletionStream = async (
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
   onToolUse?: (toolName: string, toolInput?: any, toolId?: string) => void,
-  onToolComplete?: (toolName: string, toolId?: string) => void,
+  onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void,
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void,
   onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
   onImageChunk?: (data: string, mediaType: string) => void,
   onResourceChunk?: (uri: string, name: string | null) => void,
+  surface: AIChatSurface = "panel",
+  acpResumeKey: ChatScopeId = "panel",
+  runtimeBackend: HarnessRuntimeBackend = "legacy-acp-bridge",
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
     if (isAcpAgent(agentId)) {
-      const handler = new AcpStreamHandler(agentId, {
-        onChunk,
-        onComplete,
-        onError,
-        onNewMessage,
-        onToolUse,
-        onToolComplete,
-        onPermissionRequest,
-        onEvent: onAcpEvent,
-        onImageChunk,
-        onResourceChunk,
+      const handler = createHarnessRuntimePromptSession({
+        backend: runtimeBackend,
+        agentId,
+        handlers: {
+          surface,
+          scopeId: acpResumeKey,
+          resumeKey: acpResumeKey,
+          onChunk,
+          onComplete,
+          onError,
+          onNewMessage,
+          onToolUse,
+          onToolComplete,
+          onPermissionRequest,
+          onEvent: onAcpEvent,
+          onImageChunk,
+          onResourceChunk,
+        },
       });
-      await handler.start(userMessage, context);
+      await handler.start(userMessage, context, conversationHistory);
       return;
     }
 
@@ -126,10 +150,8 @@ export const getChatCompletionStream = async (
 
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
-    // Use Tauri's fetch for providers that don't support browser CORS
-    const needsTauriFetch =
-      providerId === "gemini" || providerId === "ollama" || providerId === "anthropic";
-    const fetchFn = needsTauriFetch ? tauriFetch : fetch;
+    // Use Tauri's fetch for Gemini and Ollama to bypass CORS restrictions
+    const fetchFn = providerId === "gemini" || providerId === "ollama" ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",
       headers,

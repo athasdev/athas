@@ -170,11 +170,12 @@ export const PRFilesPanel = memo(
     }
 
     return (
-      <div className="flex min-h-[560px] min-w-0 items-stretch gap-3">
+      <div className="flex min-h-[560px] min-w-0 flex-col @3xl:flex-row items-stretch gap-3">
         <div
           className={cn(
-            "shrink-0 overflow-auto rounded-xl bg-secondary-bg/20 p-1",
-            isWideSplit ? "w-[280px]" : "w-[220px]",
+            "shrink-0 overflow-y-auto overflow-x-hidden rounded-xl bg-secondary-bg/20 p-1 flex flex-col",
+            isWideSplit ? "@3xl:w-[280px]" : "@3xl:w-[220px]",
+            "max-h-[30vh] @3xl:max-h-none",
           )}
           onKeyDown={handleSidebarKeyDown}
           role="listbox"
@@ -234,7 +235,7 @@ export const PRFilesPanel = memo(
                   placeholder="Search files..."
                   leftIcon={Search}
                   size="sm"
-                  className="h-7 w-full border-0 bg-primary-bg/70 sm:w-56"
+                  className="h-7 w-full border-0 bg-primary-bg/70 @sm:w-56"
                 />
                 <Select
                   value={fileStatusFilter}

@@ -1,4 +1,4 @@
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import type { ChatAcpEvent, ChatAcpToolEventData } from "@/features/ai/types/chat-ui";
 
 const MAX_EVENTS = 40;
 const DEDUPE_WINDOW_MS = 1200;
@@ -43,6 +43,7 @@ export const updateToolCompletionAcpEvent = (
   previousEvents: ChatAcpEvent[],
   activityId: string,
   success: boolean,
+  tool?: ChatAcpToolEventData,
 ): ChatAcpEvent[] => {
   const hasExisting = previousEvents.some((event) => event.id === activityId);
   const completionDetail = success ? "completed" : "failed";
@@ -55,6 +56,7 @@ export const updateToolCompletionAcpEvent = (
       label: "Tool call",
       detail: completionDetail,
       state: completionState,
+      tool,
     });
   }
 
@@ -65,6 +67,11 @@ export const updateToolCompletionAcpEvent = (
           ...event,
           detail: completionDetail,
           state: completionState,
+          tool: {
+            ...event.tool,
+            ...tool,
+            locations: tool?.locations ?? event.tool?.locations,
+          },
           timestamp: now,
         }
       : event,

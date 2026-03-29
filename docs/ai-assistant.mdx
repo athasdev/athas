@@ -1,29 +1,30 @@
 ---
 title: AI Assistant
-description: Built-in AI chat and code assistance
+description: Built-in AI assistance through Harness
 ---
 
 import { Steps, Step } from "fumadocs-ui/components/steps";
 
-Athas includes a built-in AI assistant for coding help.
+Athas includes a built-in AI assistant for coding help through Harness.
 
 ## Features
 
 - **Chat Interface**: Conversational AI for coding questions
 - **Multiple Providers**: OpenAI, Anthropic, OpenRouter, Gemini, Grok, Ollama, and more
 - **Context Awareness**: AI can use files you reference
+- **Pi Native Restore**: Pi sessions reopen with their shared session identity plus restored model and thinking settings
 
 ## Getting Started
 
 <Steps>
   <Step>
-    Open the AI panel from the sidebar (or `Cmd+Shift+A` / `Ctrl+Shift+A`)
+    Open Harness from the footer button or `Cmd+R` / `Ctrl+R`
   </Step>
   <Step>
     Configure your AI provider in **Settings > AI**
   </Step>
   <Step>
-    Start chatting or asking questions about your code
+    Start chatting or asking questions about your code in Harness
   </Step>
 </Steps>
 
@@ -35,3 +36,23 @@ Configure AI settings in **Settings > AI**:
 - **Model**: Choose the specific model
 - **Temperature**: Control response creativity (0-2)
 - **Max Tokens**: Limit response length
+
+## Pi Native Sessions
+
+When you use Pi in Harness with the native runtime, Athas reads the same session files used by standalone Pi. Reopened sessions restore their conversation history, active model, and thinking level from the shared Pi session data instead of starting from an empty Athas-only chat state.
+
+The Harness composer keeps native Pi session mode, model, and thinking controls together in the footer so you can change runtime behavior without leaving the current session.
+
+Forking a Pi-native conversation keeps the restored model and thinking defaults, but starts a new native branch instead of continuing the same underlying Pi session file.
+
+When you switch between restored Pi-native chats in the same Harness scope, Athas now rebinds the native route to the selected shared Pi session instead of accidentally continuing whichever Pi session was already live on that route.
+
+When Pi reports that a restored session was branched from another Pi session, Athas now mirrors that parent-child relationship in its chat lineage instead of treating every restored Pi session as a disconnected root chat.
+
+Settings in **Settings > AI** read the same shared Pi state used by standalone Pi. Athas refreshes that snapshot when the panel opens, when the app regains focus, and when you use the manual refresh button.
+
+When you install or remove Pi packages from Athas, active Pi-native sessions in the current workspace now reload their commands, skills, prompts, and themes without needing you to close and reopen Harness first.
+
+The default Harness tab now reopens with whichever Pi backend you currently selected in **Settings > AI**, so switching between **Pi Native** and **Legacy ACP Bridge** survives app restore cleanly.
+
+When you use the legacy ACP fallback with Pi, Athas now respects the same shared Pi provider, model, and thinking defaults that standalone Pi uses instead of rewriting them to a separate built-in profile.

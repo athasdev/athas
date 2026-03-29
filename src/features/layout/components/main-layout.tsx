@@ -1,17 +1,14 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
-import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
+import type { Diagnostic } from "@/features/diagnostics/types";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
-import { useGitStore } from "@/features/git/stores/git-store";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
@@ -20,19 +17,39 @@ import { useSettingsStore } from "@/features/settings/store";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { useFolderDrop } from "@/hooks/use-folder-drop";
+import { useUIState } from "@/stores/ui-state-store";
+import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
+import { parseDroppedPaths } from "@/utils/dropped-file-paths";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
-import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
+import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
-import Footer from "./footer/footer";
+import EditorFooter from "./footer/editor-footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
 
 const SIDEBAR_COLLAPSE_THRESHOLD = 48;
+
+function SidebarRestoreHandle({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  const isLeft = side === "left";
+
+  return (
+    <div className={`flex shrink-0 items-center py-2 ${isLeft ? "pr-1 pl-0" : "pr-0 pl-1"}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`flex h-16 w-5 items-center justify-center border border-border bg-secondary-bg/90 text-text-lighter transition-colors hover:bg-hover hover:text-text ${
+          isLeft ? "rounded-r-full border-l-0" : "rounded-l-full border-r-0"
+        }`}
+        aria-label={`Show ${side} sidebar`}
+        title="Show sidebar"
+      >
+        {isLeft ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+      </button>
+    </div>
+  );
+}
 
 export function MainLayout() {
   useChatInitialization();
@@ -45,8 +62,6 @@ export function MainLayout() {
     setIsThemeSelectorVisible,
     isIconThemeSelectorVisible,
     setIsIconThemeSelectorVisible,
-    isDatabaseConnectionVisible,
-    setIsDatabaseConnectionVisible,
   } = useUIState();
   const { settings, updateSetting } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
@@ -55,13 +70,14 @@ export function MainLayout() {
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject?.() ?? false;
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
-  const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
-  const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const activeProjectTab = useMemo(() => projectTabs.find((tab) => tab.isActive), [projectTabs]);
 
-  const hasRestoredWorkspace = useRef(false);
-  const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
+  const shouldRestoreWorkspace = useRef(true);
+  const { isDraggingOver } = useFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
     const droppedPaths = parseDroppedPaths(paths);
@@ -102,14 +118,10 @@ export function MainLayout() {
     return allDiagnostics;
   }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
-  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
-  const showInlineAiChat = settings.isAIChatVisible;
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
-      setRelativeLineNumbers(settings.vimRelativeLineNumbers, {
-        persist: false,
-      });
+      setRelativeLineNumbers(settings.vimRelativeLineNumbers, { persist: false });
     }
   }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
 
@@ -165,20 +177,27 @@ export function MainLayout() {
 
   // Restore workspace on app startup
   useEffect(() => {
-    if (hasRestoredWorkspace.current) return;
+    if (!shouldRestoreWorkspace.current || !activeProjectTab) return;
+    if (rootFolderPath === activeProjectTab.path) {
+      shouldRestoreWorkspace.current = false;
+      return;
+    }
+    if (isSwitchingProject) return;
 
     const restoreWorkspace = async () => {
-      // Get the active project tab from persisted state
-      const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
-
-      if (activeTab && switchToProject && setIsSwitchingProject) {
-        hasRestoredWorkspace.current = true;
-
+      if (switchToProject && setIsSwitchingProject) {
         // Set flag BEFORE calling switchToProject to prevent tab bar from hiding
         setIsSwitchingProject(true);
 
         try {
-          await switchToProject(activeTab.id);
+          const restored = await switchToProject(activeProjectTab.id);
+          const currentRootPath = useFileSystemStore.getState().rootFolderPath;
+          if (restored || currentRootPath === activeProjectTab.path) {
+            shouldRestoreWorkspace.current = false;
+            return;
+          }
+
+          setIsSwitchingProject(false);
         } catch (error) {
           console.error("Failed to restore workspace:", error);
           // Make sure to clear the flag even if restoration fails
@@ -188,41 +207,13 @@ export function MainLayout() {
     };
 
     restoreWorkspace();
-  }, [switchToProject, setIsSwitchingProject]);
-
-  useEffect(() => {
-    if (!rootFolderPath) {
-      setWorkspaceGitStatus(null, null);
-      return;
-    }
-
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const refreshGitState = (event?: Event) => {
-      const filePath =
-        event instanceof CustomEvent && typeof event.detail?.filePath === "string"
-          ? event.detail.filePath
-          : null;
-
-      if (filePath && !filePath.startsWith(rootFolderPath)) {
-        return;
-      }
-
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        void refreshWorkspaceGitStatus(rootFolderPath);
-      }, 300);
-    };
-
-    window.addEventListener("git-status-updated", refreshGitState);
-    window.addEventListener("git-status-changed", refreshGitState);
-
-    return () => {
-      window.removeEventListener("git-status-updated", refreshGitState);
-      window.removeEventListener("git-status-changed", refreshGitState);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
+  }, [
+    activeProjectTab,
+    isSwitchingProject,
+    rootFolderPath,
+    switchToProject,
+    setIsSwitchingProject,
+  ]);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
@@ -241,79 +232,49 @@ export function MainLayout() {
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
-          {/* Left sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <div className={!showInlineAiChat ? "hidden" : undefined}>
-              <ResizablePane
-                position="left"
-                widthKey="aiChatWidth"
-                collapsible
-                collapseThreshold={0}
-                onCollapse={() => updateSetting("isAIChatVisible", false)}
-              >
-                <AIChat mode="chat" />
-              </ResizablePane>
-            </div>
-          ) : (
-            sidebarPosition === "left" && (
+          {sidebarPosition === "left" &&
+            (isSidebarVisible ? (
               <ResizablePane
                 position="left"
                 widthKey="sidebarWidth"
-                hidden={!isSidebarVisible}
                 collapsible
                 collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 onCollapse={() => setIsSidebarVisible(false)}
               >
                 <MainSidebar />
               </ResizablePane>
-            )
-          )}
+            ) : (
+              <SidebarRestoreHandle side="left" onClick={() => setIsSidebarVisible(true)} />
+            ))}
 
           {/* Main content area with split view */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
-              <SplitViewRoot />
-            </div>
-            {terminalWidthMode === "editor" && (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2 py-2">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg">
+              <div className="relative min-h-0 flex-1 overflow-hidden">
+                <SplitViewRoot />
+              </div>
               <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-            )}
+            </div>
           </div>
 
-          {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <ResizablePane
-              position="right"
-              widthKey="sidebarWidth"
-              hidden={!isSidebarVisible}
-              collapsible
-              collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-              onCollapse={() => setIsSidebarVisible(false)}
-            >
-              <MainSidebar />
-            </ResizablePane>
-          ) : (
-            <div className={!showInlineAiChat ? "hidden" : undefined}>
+          {sidebarPosition === "right" &&
+            (isSidebarVisible ? (
               <ResizablePane
                 position="right"
-                widthKey="aiChatWidth"
+                widthKey="sidebarWidth"
                 collapsible
-                collapseThreshold={0}
-                onCollapse={() => updateSetting("isAIChatVisible", false)}
+                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                onCollapse={() => setIsSidebarVisible(false)}
               >
-                <AIChat mode="chat" />
+                <MainSidebar />
               </ResizablePane>
-            </div>
-          )}
+            ) : (
+              <SidebarRestoreHandle side="right" onClick={() => setIsSidebarVisible(true)} />
+            ))}
         </div>
-
-        {terminalWidthMode === "full" && (
-          <div className="px-2">
-            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-          </div>
-        )}
       </div>
 
-      <Footer />
+      <EditorFooter />
 
       {/* Global modals and overlays */}
       <QuickOpen />
@@ -335,10 +296,6 @@ export function MainLayout() {
         onClose={() => setIsIconThemeSelectorVisible(false)}
         onThemeChange={handleIconThemeChange}
         currentTheme={settings.iconTheme}
-      />
-      <ConnectionDialog
-        isOpen={isDatabaseConnectionVisible}
-        onClose={() => setIsDatabaseConnectionVisible(false)}
       />
     </div>
   );

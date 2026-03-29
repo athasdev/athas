@@ -2,28 +2,33 @@ import { motion } from "framer-motion";
 import { Command } from "lucide-react";
 import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useChatActions, useChatState } from "@/features/ai/hooks/use-chat-store";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
+import type { AIChatSurface, ChatScopeId } from "@/features/ai/types/ai-chat";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface SlashCommandDropdownProps {
+  surface?: AIChatSurface;
+  scopeId?: ChatScopeId;
   onSelect: (command: SlashCommand) => void;
 }
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
+  scopeId,
   onSelect,
 }: SlashCommandDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const chatState = useChatState(scopeId);
+  const chatActions = useChatActions(scopeId);
 
   const slashCommandState = useAIChatStore((state) => state.slashCommandState);
   const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
-  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
-  const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
 
   const { position, selectedIndex } = slashCommandState;
-  const filteredCommands = getFilteredSlashCommands();
+  const filteredCommands = chatActions.getFilteredSlashCommands();
 
   // Scroll selected item into view
   useEffect(() => {
@@ -150,7 +155,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
         </div>
       ) : (
         <div className="px-3 py-2.5 text-text-lighter text-xs">
-          {availableSlashCommands.length > 0 ? (
+          {chatState.availableSlashCommands.length > 0 ? (
             <>
               <div className="font-medium text-text">No matching slash commands</div>
               <div className="mt-0.5 text-[10px] opacity-75">Try a different search after `/`.</div>
@@ -159,7 +164,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
             <>
               <div className="font-medium text-text">No slash commands available yet</div>
               <div className="mt-0.5 text-[10px] opacity-75">
-                Start an ACP session to load commands for this agent.
+                Slash commands appear when the active runtime exposes them for this agent.
               </div>
             </>
           )}
