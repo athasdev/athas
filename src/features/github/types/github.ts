@@ -157,4 +157,15 @@ export interface WorkflowRunListItem {
   headSha: string | null;
 }
 
+export type GitHubAuthSource = "gh" | "pat" | "none";
+
+export interface GitHubAuthStatus {
+  source: GitHubAuthSource;
+  isAuthenticated: boolean;
+  currentUser: string | null;
+  cliAvailable: boolean;
+  hasStoredPat: boolean;
+  hasLegacyStoredToken: boolean;
+}
+
 export type PRFilter = "all" | "my-prs" | "review-requests";

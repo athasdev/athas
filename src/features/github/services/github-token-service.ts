@@ -1,21 +1,24 @@
-// Store GitHub token securely
-export const storeGitHubToken = async (token: string): Promise<void> => {
+import type { GitHubAuthStatus } from "../types/github";
+
+export const storeGitHubPatFallback = async (token: string): Promise<GitHubAuthStatus> => {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("store_github_token", { token });
+    return await invoke<GitHubAuthStatus>("store_github_pat_fallback", { token });
   } catch (error) {
-    console.error("Error storing GitHub token:", error);
+    console.error("Error storing GitHub PAT fallback:", error);
     throw error;
   }
 };
 
-// Remove GitHub token from storage
-export const removeGitHubToken = async (): Promise<void> => {
+export const removeGitHubPatFallback = async (): Promise<GitHubAuthStatus> => {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("remove_github_token");
+    return await invoke<GitHubAuthStatus>("remove_github_pat_fallback");
   } catch (error) {
-    console.error("Error removing GitHub token:", error);
+    console.error("Error removing GitHub PAT fallback:", error);
     throw error;
   }
 };
+
+export const storeGitHubToken = storeGitHubPatFallback;
+export const removeGitHubToken = removeGitHubPatFallback;
