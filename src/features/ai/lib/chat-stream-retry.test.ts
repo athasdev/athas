@@ -51,4 +51,23 @@ describe("chat stream retry helpers", () => {
     expect(getStreamRetryDelayMs(1)).toBe(1000);
     expect(getStreamRetryDelayMs(3)).toBe(4000);
   });
+
+  test("normalizes multi-line JSON details to single line in error block", () => {
+    const multiLineBody = JSON.stringify(
+      { error: { code: 429, message: "Resource exhausted.", status: "RESOURCE_EXHAUSTED" } },
+      null,
+      2,
+    );
+    const error = getStreamErrorInfo(`Google Gemini API error: 429|||${multiLineBody}`);
+    const block = formatStreamErrorBlock(error);
+
+    const lines = block.split("\n");
+    const detailsLineIdx = lines.findIndex((l) => l.startsWith("details:"));
+    expect(detailsLineIdx).toBeGreaterThan(-1);
+    // All JSON content must be on the same line as "details:" (no embedded newlines)
+    const detailsValue = lines[detailsLineIdx]!.replace("details:", "").trim();
+    expect(() => JSON.parse(detailsValue)).not.toThrow();
+    // The next line should be the closing tag, not more JSON
+    expect(lines[detailsLineIdx + 1]).toBe("[/ERROR_BLOCK]");
+  });
 });

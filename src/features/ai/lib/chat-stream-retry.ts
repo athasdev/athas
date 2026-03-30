@@ -114,9 +114,17 @@ export const shouldAutoRetryStreamError = ({
   return true;
 };
 
-export const formatStreamErrorBlock = (error: StreamErrorInfo): string => `[ERROR_BLOCK]
+export const formatStreamErrorBlock = (error: StreamErrorInfo): string => {
+  let details = error.details;
+  try {
+    details = JSON.stringify(JSON.parse(details));
+  } catch {
+    details = details.replace(/\r?\n/g, " ").trim();
+  }
+  return `[ERROR_BLOCK]
 title: ${error.title}
 code: ${error.code}
 message: ${error.message}
-details: ${error.details}
+details: ${details}
 [/ERROR_BLOCK]`;
+};
