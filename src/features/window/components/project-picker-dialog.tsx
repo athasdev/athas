@@ -307,36 +307,31 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
                       <Server />
                     </span>
-                    <div className="flex min-w-0 flex-col">
-                      <span className="ui-text-sm truncate text-text">{connection.name}</span>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="ui-text-sm truncate font-medium text-text">{connection.name}</span>
+                        {connection.isConnected && (
+                           <span className="shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">Connected</span>
+                        )}
+                        {statusMap[connection.id] === "error" && (
+                           <span className="shrink-0 rounded bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error">Failed</span>
+                        )}
+                        {connectingMap[connection.id] && (
+                           <span className="shrink-0 text-[10px] text-text-lighter">Connecting...</span>
+                        )}
+                      </div>
                       <span className="ui-text-sm truncate text-text-lighter">
-                        {connectingMap[connection.id]
-                          ? "Connecting…"
-                          : statusMap[connection.id] === "error"
-                            ? "Connection failed"
-                            : `${connection.username}@${connection.host}`}
+                        {`${connection.username}@${connection.host}`}
                       </span>
                     </div>
-                    <span className="ui-text-sm text-text-lighter">
-                      {connection.type.toUpperCase()}
-                    </span>
-                    <span
-                      className={cn(
-                        "ml-auto size-2 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
-                      )}
-                    />
-                    <span className="sr-only">
-                      {connection.isConnected ? "Connected" : "Disconnected"}
-                    </span>
                   </Button>
-                  <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="mr-2 flex shrink-0 items-center gap-1">
                     <Button
                       onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
                       variant="ghost"
                       size="icon-xs"
+                      className="text-text-lighter hover:text-text"
                       aria-label="Open in new window"
-                      title="Open in new window"
                     >
                       <SquareArrowOutUpRight />
                     </Button>
@@ -347,6 +342,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       }}
                       variant="ghost"
                       size="icon-xs"
+                      className="text-text-lighter hover:text-text"
                       aria-label="Edit connection"
                     >
                       <Edit />
@@ -355,7 +351,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       onClick={() => handleDeleteConnection(connection.id)}
                       variant="ghost"
                       size="icon-xs"
-                      className="hover:text-error"
+                      className="text-text-lighter hover:text-error"
                       aria-label="Delete connection"
                     >
                       <Trash2 />

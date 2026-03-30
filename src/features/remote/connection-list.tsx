@@ -28,19 +28,6 @@ const ConnectionList = ({
 }: ConnectionListProps) => {
   const contextMenu = useContextMenu<string>();
 
-  const formatLastConnected = (dateString?: string): string => {
-    if (!dateString) return "Never";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMinutes < 1) return "just now";
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-    return `${Math.floor(diffMinutes / 1440)}d ago`;
-  };
-
   const handleContextMenu = (e: React.MouseEvent, connectionId: string) => {
     contextMenu.open(e, connectionId);
   };
@@ -75,19 +62,19 @@ const ConnectionList = ({
   return (
     <div className="flex h-full select-none flex-col bg-secondary-bg">
       {/* Header */}
-      <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
-        <h3 className="ui-font font-medium text-text text-xs tracking-wide">Remote</h3>
+      <div className="flex items-center justify-between border-border border-b bg-secondary-bg/50 px-3 py-2">
+        <h3 className="ui-font text-sm font-medium text-text">Remote Connections</h3>
         <Button
           onClick={onAddNew}
           variant="ghost"
           size="sm"
           className={cn(
-            "flex size-5 items-center justify-center rounded p-0",
-            "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+            "h-auto rounded-lg px-2 py-1 text-xs font-medium text-text-lighter hover:bg-hover hover:text-text",
           )}
           aria-label="Add Remote Connection"
         >
-          <Plus />
+          <Plus className="mr-1.5 size-3.5" />
+          Add
         </Button>
       </div>
 
@@ -139,29 +126,20 @@ const ConnectionList = ({
                 />
 
                 {/* Connection Info */}
-                <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <span className="truncate">{connection.name}</span>
-                  <span className="shrink-0 text-[10px] text-text-lighter">
-                    {connection.type.toUpperCase()}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{connection.name}</span>
+                    {connection.isConnected && (
+                       <span className="shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">Connected</span>
+                    )}
+                  </div>
+                  <span className="truncate text-xs text-text-lighter">
+                    {`${connection.username}@${connection.host}`}
                   </span>
                 </div>
 
-                {/* Status Text */}
-                {(() => {
-                  const statusText = connectingMap[connection.id]
-                    ? "Connecting…"
-                    : connection.isConnected
-                      ? "Connected"
-                      : connection.lastConnected
-                        ? formatLastConnected(connection.lastConnected)
-                        : "";
-                  return (
-                    <span className="shrink-0 text-[10px] text-text-lighter">{statusText}</span>
-                  );
-                })()}
-
                 {/* Action Buttons */}
-                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 items-center gap-1">
                   {connection.isConnected ? (
                     <>
                       <Button
@@ -172,6 +150,7 @@ const ConnectionList = ({
                         }}
                         variant="ghost"
                         size="icon-xs"
+                        className="text-text-lighter hover:text-text"
                         aria-label="Browse Files"
                       >
                         <FolderOpen />
@@ -184,7 +163,7 @@ const ConnectionList = ({
                         }}
                         variant="ghost"
                         size="icon-xs"
-                        className="hover:text-red-400"
+                        className="text-text-lighter hover:text-red-400"
                         aria-label="Disconnect"
                       >
                         <WifiOff />
@@ -200,6 +179,7 @@ const ConnectionList = ({
                       variant="ghost"
                       size="icon-xs"
                       className={cn(
+                        "text-text-lighter hover:text-text",
                         connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                       )}
                       disabled={!!connectingMap[connection.id]}
