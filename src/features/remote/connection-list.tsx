@@ -130,7 +130,9 @@ const ConnectionList = ({
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">{connection.name}</span>
                     {connection.isConnected && (
-                       <span className="shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">Connected</span>
+                      <span className="shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">
+                        Connected
+                      </span>
                     )}
                   </div>
                   <span className="truncate text-xs text-text-lighter">

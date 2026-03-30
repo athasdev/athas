@@ -309,15 +309,23 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col">
                       <div className="flex items-center gap-2">
-                        <span className="ui-text-sm truncate font-medium text-text">{connection.name}</span>
+                        <span className="ui-text-sm truncate font-medium text-text">
+                          {connection.name}
+                        </span>
                         {connection.isConnected && (
-                           <span className="shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">Connected</span>
+                          <span className="shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">
+                            Connected
+                          </span>
                         )}
                         {statusMap[connection.id] === "error" && (
-                           <span className="shrink-0 rounded bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error">Failed</span>
+                          <span className="shrink-0 rounded bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error">
+                            Failed
+                          </span>
                         )}
                         {connectingMap[connection.id] && (
-                           <span className="shrink-0 text-[10px] text-text-lighter">Connecting...</span>
+                          <span className="shrink-0 text-[10px] text-text-lighter">
+                            Connecting...
+                          </span>
                         )}
                       </div>
                       <span className="ui-text-sm truncate text-text-lighter">
