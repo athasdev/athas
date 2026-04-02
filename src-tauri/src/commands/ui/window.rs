@@ -85,12 +85,11 @@ pub fn create_app_window_internal(
    );
    let url = build_window_open_url(request.as_ref());
 
-   let window_builder =
-      tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
-         .title("")
-         .inner_size(1200.0, 800.0)
-         .min_inner_size(400.0, 400.0)
-         .center()
+   let window_builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
+      .title("")
+      .inner_size(1200.0, 800.0)
+      .min_inner_size(400.0, 400.0)
+      .center()
       .decorations(true)
       .resizable(true)
       .shadow(true);
