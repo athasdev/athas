@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
-use tauri::{
-   AppHandle, Manager, TitleBarStyle, WebviewBuilder, WebviewUrl, WebviewWindow, command,
-};
+use tauri::{AppHandle, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -87,16 +85,22 @@ pub fn create_app_window_internal(
    );
    let url = build_window_open_url(request.as_ref());
 
-   let window = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
-      .title("")
-      .inner_size(1200.0, 800.0)
-      .min_inner_size(400.0, 400.0)
-      .center()
+   let window_builder =
+      tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
+         .title("")
+         .inner_size(1200.0, 800.0)
+         .min_inner_size(400.0, 400.0)
+         .center()
       .decorations(true)
       .resizable(true)
-      .shadow(true)
+      .shadow(true);
+
+   #[cfg(target_os = "macos")]
+   let window_builder = window_builder
       .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay)
+      .title_bar_style(tauri::TitleBarStyle::Overlay);
+
+   let window = window_builder
       .build()
       .map_err(|e| format!("Failed to create app window: {e}"))?;
 
