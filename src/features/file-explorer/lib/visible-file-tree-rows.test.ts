@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { buildVisibleFileTreeRows } from "./visible-file-tree-rows";
 
 const tree = [
