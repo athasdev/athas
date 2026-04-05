@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vite-plus/test";
 import { formatCellValue } from "../hooks/use-cell-copy";
 import { isIsoDate, isJsonString, isUnixTimestamp } from "./cell-renderer";
 

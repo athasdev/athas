@@ -9,6 +9,7 @@ interface DiagnosticIndicatorsProps {
   fontFamily: string;
   startLine: number;
   endLine: number;
+  hiddenLines?: Set<number>;
 }
 
 function DiagnosticIndicatorsComponent({
@@ -16,6 +17,7 @@ function DiagnosticIndicatorsComponent({
   lineHeight,
   startLine,
   endLine,
+  hiddenLines,
 }: DiagnosticIndicatorsProps) {
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
 
@@ -51,6 +53,7 @@ function DiagnosticIndicatorsComponent({
     };
 
     for (let lineNum = startLine; lineNum < endLine; lineNum++) {
+      if (hiddenLines?.has(lineNum)) continue;
       const severity = diagnosticsByLine.get(lineNum);
       if (severity) {
         result.push(
@@ -84,7 +87,7 @@ function DiagnosticIndicatorsComponent({
     }
 
     return result;
-  }, [diagnosticsByLine, startLine, endLine, lineHeight]);
+  }, [diagnosticsByLine, startLine, endLine, lineHeight, hiddenLines]);
 
   return (
     <div

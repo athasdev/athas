@@ -1,7 +1,4 @@
-(pair
-  key: (_) @string.special.key)
-
-(string) @string
+(comment) @comment
 
 (number) @number
 
@@ -13,4 +10,11 @@
 
 (escape_sequence) @escape
 
-(comment) @comment
+(string) @string
+
+(pair
+  key: (_) @string.special.key)
+
+["," ":"] @punctuation.delimiter
+
+["{" "}" "[" "]"] @punctuation.bracket

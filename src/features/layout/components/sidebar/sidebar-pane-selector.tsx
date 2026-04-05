@@ -1,11 +1,12 @@
 import { Folder, GitBranch, GitPullRequest, Search } from "lucide-react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
-import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
-import Button from "../../../../ui/button";
+import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
+import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
+import { Tabs, type TabsItem } from "@/ui/tabs";
 import type { SidebarView } from "./sidebar-pane-utils";
 
 interface SidebarPaneSelectorProps {
+  activeSidebarView: SidebarView;
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   coreFeatures: CoreFeaturesState;
@@ -15,6 +16,7 @@ interface SidebarPaneSelectorProps {
 }
 
 export const SidebarPaneSelector = ({
+  activeSidebarView,
   isGitViewActive,
   isGitHubPRsViewActive,
   coreFeatures,
@@ -22,79 +24,100 @@ export const SidebarPaneSelector = ({
   onSearchClick,
   compact = false,
 }: SidebarPaneSelectorProps) => {
-  const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive;
   const tooltipSide = compact ? "bottom" : "right";
-  const getTabClass = (isActive: boolean) =>
-    cn(
-      "flex items-center justify-center rounded-full p-0 text-xs transition-colors duration-150",
-      compact ? "h-6 w-6" : "h-8 w-8",
-      isActive ? "bg-hover text-text" : "text-text-lighter hover:bg-hover hover:text-text",
-    );
+  const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const extensionViews = useExtensionViews();
+
+  const items: TabsItem[] = [
+    {
+      id: "files",
+      icon: <Folder />,
+      isActive: isFilesActive,
+      onClick: () => onViewChange("files"),
+      role: "tab",
+      ariaLabel: "File Explorer",
+      className: compact ? undefined : "w-8 rounded-md",
+      tooltip: {
+        content: "File Explorer",
+        shortcut: "Mod+Shift+E",
+        side: tooltipSide,
+      },
+    },
+    ...(coreFeatures.search && onSearchClick
+      ? [
+          {
+            id: "search",
+            icon: <Search />,
+            onClick: onSearchClick,
+            ariaLabel: "Search",
+            className: compact ? undefined : "w-8 rounded-md",
+            tooltip: {
+              content: "Search",
+              shortcut: "Mod+Shift+F",
+              side: tooltipSide,
+            },
+          } satisfies TabsItem,
+        ]
+      : []),
+    ...(coreFeatures.git
+      ? [
+          {
+            id: "git",
+            icon: <GitBranch />,
+            isActive: isGitViewActive,
+            onClick: () => onViewChange("git"),
+            role: "tab",
+            ariaLabel: "Git Source Control",
+            className: compact ? undefined : "w-8 rounded-md",
+            tooltip: {
+              content: "Source Control",
+              shortcut: "Mod+Shift+G",
+              side: tooltipSide,
+            },
+          } satisfies TabsItem,
+        ]
+      : []),
+    ...(coreFeatures.github
+      ? [
+          {
+            id: "github-prs",
+            icon: <GitPullRequest />,
+            isActive: isGitHubPRsViewActive,
+            onClick: () => onViewChange("github-prs"),
+            role: "tab",
+            ariaLabel: "GitHub Pull Requests",
+            className: compact ? undefined : "w-8 rounded-md",
+            tooltip: {
+              content: "Pull Requests",
+              side: tooltipSide,
+            },
+          } satisfies TabsItem,
+        ]
+      : []),
+    ...Array.from(extensionViews.values()).map(
+      (view) =>
+        ({
+          id: view.id,
+          icon: <DynamicIcon name={view.icon} />,
+          isActive: activeSidebarView === view.id,
+          onClick: () => onViewChange(view.id),
+          role: "tab",
+          ariaLabel: view.title,
+          className: compact ? undefined : "w-8 rounded-md",
+          tooltip: {
+            content: view.title,
+            side: tooltipSide,
+          },
+        }) satisfies TabsItem,
+    ),
+  ];
 
   return (
-    <div className={cn("flex items-center gap-1", compact ? "p-0.5" : "p-1")}>
-      <Tooltip content="File Explorer" side={tooltipSide}>
-        <Button
-          aria-role="tab"
-          aria-selected={isFilesActive}
-          aria-label="File Explorer"
-          onClick={() => onViewChange("files")}
-          variant="ghost"
-          size="sm"
-          data-active={isFilesActive}
-          className={getTabClass(isFilesActive)}
-        >
-          <Folder size={14} />
-        </Button>
-      </Tooltip>
-
-      {coreFeatures.search && onSearchClick && (
-        <Tooltip content="Search (⇧⌘F)" side={tooltipSide}>
-          <Button
-            aria-label="Search"
-            onClick={onSearchClick}
-            variant="ghost"
-            size="sm"
-            className={getTabClass(false)}
-          >
-            <Search size={14} />
-          </Button>
-        </Tooltip>
-      )}
-
-      {coreFeatures.git && (
-        <Tooltip content="Source Control" side={tooltipSide}>
-          <Button
-            aria-role="tab"
-            aria-selected={isGitViewActive}
-            aria-label="Git Source Control"
-            onClick={() => onViewChange("git")}
-            variant="ghost"
-            size="sm"
-            data-active={isGitViewActive}
-            className={getTabClass(isGitViewActive)}
-          >
-            <GitBranch size={14} />
-          </Button>
-        </Tooltip>
-      )}
-
-      {coreFeatures.github && (
-        <Tooltip content="Pull Requests" side={tooltipSide}>
-          <Button
-            aria-role="tab"
-            aria-selected={isGitHubPRsViewActive}
-            aria-label="GitHub Pull Requests"
-            onClick={() => onViewChange("github-prs")}
-            variant="ghost"
-            size="sm"
-            data-active={isGitHubPRsViewActive}
-            className={getTabClass(isGitHubPRsViewActive)}
-          >
-            <GitPullRequest size={14} />
-          </Button>
-        </Tooltip>
-      )}
-    </div>
+    <Tabs
+      items={items}
+      size={compact ? "xs" : "sm"}
+      variant={compact ? "segmented" : "default"}
+      className={compact ? undefined : "gap-0.5 p-1"}
+    />
   );
 };

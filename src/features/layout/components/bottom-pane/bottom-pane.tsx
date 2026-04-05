@@ -4,10 +4,10 @@ import { useSettingsStore } from "@/features/settings/store";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
-import { useProjectStore } from "../../../../stores/project-store";
-import { useUIState } from "../../../../stores/ui-state-store";
-import DiagnosticsPane from "../../../diagnostics/diagnostics-pane";
-import type { Diagnostic } from "../../../diagnostics/types";
+import { useProjectStore } from "@/features/window/stores/project-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import DiagnosticsPane from "../../../diagnostics/components/diagnostics-pane";
+import type { Diagnostic } from "../../../diagnostics/types/diagnostics";
 
 interface BottomPaneProps {
   diagnostics: Diagnostic[];
@@ -55,20 +55,18 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
 
   const titleBarHeight = IS_MAC ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
   const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
-  const _totalReservedHeight = titleBarHeight + footerHeight;
-
   return (
     <div
       className={cn(
-        "relative flex flex-col overflow-hidden border-border border-t bg-secondary-bg",
-        isFullScreen && "fixed inset-x-0 z-[100]",
+        "relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
+        isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
         !isBottomPaneVisible && "hidden",
       )}
       style={
         isFullScreen
           ? {
-              top: `${titleBarHeight}px`,
-              bottom: `${footerHeight}px`,
+              top: `${titleBarHeight + 8}px`,
+              bottom: `${footerHeight + 8}px`,
             }
           : {
               height: `${height}px`,
@@ -114,6 +112,8 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
               onClose={() => {}}
               onDiagnosticClick={onDiagnosticClick}
               isEmbedded={true}
+              onFullScreen={() => setIsFullScreen(!isFullScreen)}
+              isFullScreen={isFullScreen}
             />
           </div>
         ) : bottomPaneActiveTab !== "terminal" && bottomPaneActiveTab !== "diagnostics" ? (

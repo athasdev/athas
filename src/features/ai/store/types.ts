@@ -1,10 +1,18 @@
-import type { SessionMode, SlashCommand } from "@/features/ai/types/acp";
+import type { SessionConfigOption, SessionMode, SlashCommand } from "@/features/ai/types/acp";
 import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { ProviderModel } from "@/utils/providers/provider-interface";
+import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
+
+export interface AIWorkspaceSessionSnapshot {
+  currentChatId: string | null;
+  selectedAgentId: AgentType;
+  isChatHistoryVisible: boolean;
+  selectedBufferPaths: string[];
+  selectedFilesPaths: string[];
+}
 
 export interface QueuedMessage {
   id: string;
@@ -17,6 +25,13 @@ export interface PastedImage {
   dataUrl: string;
   name: string;
   size: number;
+}
+
+export interface InlineDropdownPosition {
+  top: number;
+  bottom: number;
+  left: number;
+  width: number;
 }
 
 export interface AIChatState {
@@ -51,7 +66,7 @@ export interface AIChatState {
   // Mention state
   mentionState: {
     active: boolean;
-    position: { top: number; left: number };
+    position: InlineDropdownPosition;
     search: string;
     startIndex: number;
     selectedIndex: number;
@@ -60,7 +75,7 @@ export interface AIChatState {
   // Slash command state
   slashCommandState: {
     active: boolean;
-    position: { top: number; left: number };
+    position: InlineDropdownPosition;
     search: string;
     selectedIndex: number;
   };
@@ -71,6 +86,7 @@ export interface AIChatState {
     currentModeId: string | null;
     availableModes: SessionMode[];
   };
+  sessionConfigOptions: SessionConfigOption[];
 }
 
 export interface AIChatActions {
@@ -112,6 +128,7 @@ export interface AIChatActions {
   switchToChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
   updateChatTitle: (chatId: string, title: string) => void;
+  setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
   regenerateResponse: () => string | null;
@@ -136,21 +153,17 @@ export interface AIChatActions {
   setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
 
   // Mention actions
-  showMention: (
-    position: { top: number; left: number },
-    search: string,
-    startIndex: number,
-  ) => void;
+  showMention: (position: InlineDropdownPosition, search: string, startIndex: number) => void;
   hideMention: () => void;
   updateSearch: (search: string) => void;
-  updatePosition: (position: { top: number; left: number }) => void;
+  updatePosition: (position: InlineDropdownPosition) => void;
   selectNext: () => void;
   selectPrevious: () => void;
   setSelectedIndex: (index: number) => void;
   getFilteredFiles: (allFiles: FileEntry[]) => FileEntry[];
 
   // Slash command actions
-  showSlashCommands: (position: { top: number; left: number }, search: string) => void;
+  showSlashCommands: (position: InlineDropdownPosition, search: string) => void;
   hideSlashCommands: () => void;
   updateSlashCommandSearch: (search: string) => void;
   selectNextSlashCommand: () => void;
@@ -163,11 +176,24 @@ export interface AIChatActions {
   setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
   setCurrentModeId: (modeId: string) => void;
   changeSessionMode: (modeId: string) => Promise<void>;
+  setSessionConfigOptions: (options: SessionConfigOption[]) => void;
+  changeSessionConfigOption: (configId: string, value: string) => Promise<void>;
 
   // Settings integration
   applyDefaultSettings: () => void;
 
+  // Workspace session integration
+  getWorkspaceSessionSnapshot: (
+    buffers: Array<{ id: string; path: string }>,
+  ) => AIWorkspaceSessionSnapshot;
+  restoreWorkspaceSession: (
+    snapshot: AIWorkspaceSessionSnapshot | null | undefined,
+    buffers: Array<{ id: string; path: string }>,
+  ) => void;
+
   // Helper getters
   getCurrentChat: () => Chat | undefined;
   getCurrentMessages: () => Message[];
+  getChatById: (chatId: string) => Chat | undefined;
+  getMessagesForChat: (chatId: string) => Message[];
 }

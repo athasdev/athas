@@ -5,6 +5,12 @@ import type { FileSearchResult } from "@/features/global-search/lib/rust-api/sea
 import { searchFilesContent } from "@/features/global-search/lib/rust-api/search";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 
+export interface ContentSearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  useRegex: boolean;
+}
+
 export const useContentSearch = (isVisible: boolean) => {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const [query, setQuery] = useState("");
@@ -12,7 +18,19 @@ export const useContentSearch = (isVisible: boolean) => {
   const [results, setResults] = useState<FileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchOptions, setSearchOptions] = useState<ContentSearchOptions>({
+    caseSensitive: false,
+    wholeWord: false,
+    useRegex: false,
+  });
   const requestIdRef = useRef(0);
+
+  const setSearchOption = useCallback(
+    <K extends keyof ContentSearchOptions>(key: K, value: ContentSearchOptions[K]) => {
+      setSearchOptions((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   const performSearch = useCallback(async () => {
     if (!debouncedQuery || !rootFolderPath) {
@@ -24,11 +42,22 @@ export const useContentSearch = (isVisible: boolean) => {
     setIsSearching(true);
     setError(null);
 
+    let effectiveQuery = debouncedQuery;
+    if (searchOptions.useRegex) {
+      if (searchOptions.wholeWord) {
+        effectiveQuery = `\\b${debouncedQuery}\\b`;
+      }
+    } else {
+      if (searchOptions.wholeWord) {
+        effectiveQuery = `\\b${debouncedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`;
+      }
+    }
+
     try {
       const searchResults = await searchFilesContent({
         root_path: rootFolderPath,
-        query: debouncedQuery,
-        case_sensitive: false,
+        query: effectiveQuery,
+        case_sensitive: searchOptions.caseSensitive,
         max_results: 100,
       });
 
@@ -49,7 +78,7 @@ export const useContentSearch = (isVisible: boolean) => {
         setIsSearching(false);
       }
     }
-  }, [debouncedQuery, rootFolderPath]);
+  }, [debouncedQuery, rootFolderPath, searchOptions]);
 
   useEffect(() => {
     if (isVisible) {
@@ -74,5 +103,7 @@ export const useContentSearch = (isVisible: boolean) => {
     isSearching,
     error,
     rootFolderPath,
+    searchOptions,
+    setSearchOption,
   };
 };

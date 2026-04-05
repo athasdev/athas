@@ -7,6 +7,7 @@ export interface CustomTerminalAction {
   name: string;
   command: string;
   icon?: string;
+  workspacePath?: string;
 }
 
 interface CustomActionsState {
@@ -16,6 +17,7 @@ interface CustomActionsState {
     updateAction: (id: string, updates: Partial<CustomTerminalAction>) => void;
     deleteAction: (id: string) => void;
     getAction: (id: string) => CustomTerminalAction | undefined;
+    getActionsForWorkspace: (workspacePath?: string) => CustomTerminalAction[];
     reorderActions: (startIndex: number, endIndex: number) => void;
   };
 }
@@ -43,6 +45,16 @@ const useCustomActionsStoreBase = create<CustomActionsState>()(
         },
         getAction: (id) => {
           return get().actions.find((a) => a.id === id);
+        },
+        getActionsForWorkspace: (workspacePath) => {
+          const actions = get().actions;
+          if (!workspacePath) {
+            return actions.filter((action) => !action.workspacePath);
+          }
+
+          const scopedActions = actions.filter((action) => action.workspacePath === workspacePath);
+          const sharedActions = actions.filter((action) => !action.workspacePath);
+          return [...scopedActions, ...sharedActions];
         },
         reorderActions: (startIndex, endIndex) => {
           set((state) => {

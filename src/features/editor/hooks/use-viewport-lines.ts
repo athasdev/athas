@@ -142,19 +142,3 @@ export function useViewportLines(options: UseViewportLinesOptions) {
     isLineInViewport,
   };
 }
-
-/**
- * Helper to determine if two viewport ranges overlap significantly
- */
-export function hasSignificantOverlap(range1: ViewportRange, range2: ViewportRange): boolean {
-  const overlapStart = Math.max(range1.startLine, range2.startLine);
-  const overlapEnd = Math.min(range1.endLine, range2.endLine);
-  const overlapSize = Math.max(0, overlapEnd - overlapStart);
-
-  const range1Size = range1.endLine - range1.startLine;
-  const range2Size = range2.endLine - range2.startLine;
-  const minSize = Math.min(range1Size, range2Size);
-
-  // Consider significant if overlap is more than 50% of smaller range
-  return overlapSize > minSize * 0.5;
-}

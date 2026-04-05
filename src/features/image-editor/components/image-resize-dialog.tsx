@@ -1,6 +1,9 @@
 import { Image } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface ImageResizeDialogProps {
@@ -60,18 +63,12 @@ export function ImageResizeDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <button
-            onClick={onClose}
-            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
-          >
+          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="rounded bg-accent px-3 py-1.5 text-white text-xs transition-colors hover:bg-accent-hover"
-          >
+          </Button>
+          <Button type="button" variant="primary" size="sm" onClick={handleSubmit}>
             Resize
-          </button>
+          </Button>
         </>
       }
     >
@@ -80,15 +77,12 @@ export function ImageResizeDialog({
         <label htmlFor="width" className="mb-1 block text-text-lighter text-xs">
           Width (px)
         </label>
-        <input
+        <Input
           id="width"
           type="number"
           value={width}
           onChange={(e) => handleWidthChange(Number.parseInt(e.target.value) || 0)}
-          className={cn(
-            "w-full rounded border border-border bg-primary-bg px-3 py-2 text-sm text-text transition-colors",
-            "focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20",
-          )}
+          className={cn("w-full bg-primary-bg text-sm focus:border-accent focus:ring-accent/20")}
           min={1}
         />
       </div>
@@ -98,27 +92,22 @@ export function ImageResizeDialog({
         <label htmlFor="height" className="mb-1 block text-text-lighter text-xs">
           Height (px)
         </label>
-        <input
+        <Input
           id="height"
           type="number"
           value={height}
           onChange={(e) => handleHeightChange(Number.parseInt(e.target.value) || 0)}
-          className={cn(
-            "w-full rounded border border-border bg-primary-bg px-3 py-2 text-sm text-text transition-colors",
-            "focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20",
-          )}
+          className={cn("w-full bg-primary-bg text-sm focus:border-accent focus:ring-accent/20")}
           min={1}
         />
       </div>
 
       {/* Maintain Aspect Ratio Checkbox */}
       <div className="flex items-center gap-2">
-        <input
+        <Checkbox
           id="maintainAspectRatio"
-          type="checkbox"
           checked={maintainAspectRatio}
-          onChange={(e) => setMaintainAspectRatio(e.target.checked)}
-          className="h-4 w-4 rounded border-border text-accent transition-colors focus:ring-2 focus:ring-accent/20 focus:ring-offset-0"
+          onChange={setMaintainAspectRatio}
         />
         <label htmlFor="maintainAspectRatio" className="cursor-pointer text-text text-xs">
           Maintain aspect ratio

@@ -1,12 +1,17 @@
-import { ChevronDown, ChevronUp, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/utils/cn";
+import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search";
+
+export interface TerminalSearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  regex: boolean;
+}
 
 interface TerminalSearchProps {
-  onSearch: (term: string) => void;
-  onNext: (term: string) => void;
-  onPrevious: (term: string) => void;
+  onSearch: (term: string, options: TerminalSearchOptions) => void;
+  onNext: (term: string, options: TerminalSearchOptions) => void;
+  onPrevious: (term: string, options: TerminalSearchOptions) => void;
   onClose: () => void;
   isVisible: boolean;
   currentMatch: number;
@@ -23,6 +28,11 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
   totalMatches,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchOptions, setSearchOptions] = useState<TerminalSearchOptions>({
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false,
+  });
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,24 +42,26 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
     }
   }, [isVisible]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    if (term) {
-      onSearch(term);
-    }
-  };
-
   const handleNext = () => {
     if (searchTerm) {
-      onNext(searchTerm);
+      onNext(searchTerm, searchOptions);
     }
   };
 
   const handlePrevious = () => {
     if (searchTerm) {
-      onPrevious(searchTerm);
+      onPrevious(searchTerm, searchOptions);
     }
+  };
+
+  const toggleOption = (key: keyof TerminalSearchOptions) => {
+    setSearchOptions((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (searchTerm) {
+        onSearch(searchTerm, next);
+      }
+      return next;
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -67,65 +79,47 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="absolute top-1.5 right-10 z-50 flex items-center gap-1 border border-border bg-secondary-bg px-1.5 py-1 shadow-lg">
-      <input
-        ref={inputRef}
-        type="text"
+    <div className="absolute top-2 right-2 z-30">
+      <SearchPopover
         value={searchTerm}
-        onChange={handleSearchChange}
+        onChange={(term) => {
+          setSearchTerm(term);
+          onSearch(term, searchOptions);
+        }}
         onKeyDown={handleKeyDown}
-        placeholder="Find..."
-        className={cn(
-          "ui-font w-32 bg-transparent px-1.5 py-0.5 text-text text-xs",
-          "border-none outline-none focus:outline-none",
-          "placeholder:text-text-lighter",
-        )}
+        onClose={onClose}
+        placeholder="Find in terminal..."
+        inputRef={inputRef}
+        matchLabel={
+          searchTerm ? (totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0") : null
+        }
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        canNavigate={Boolean(searchTerm) && totalMatches > 0}
+        options={[
+          {
+            id: "case-sensitive",
+            label: "Match case",
+            icon: SEARCH_TOGGLE_ICONS.caseSensitive,
+            active: searchOptions.caseSensitive,
+            onToggle: () => toggleOption("caseSensitive"),
+          },
+          {
+            id: "whole-word",
+            label: "Match whole word",
+            icon: SEARCH_TOGGLE_ICONS.wholeWord,
+            active: searchOptions.wholeWord,
+            onToggle: () => toggleOption("wholeWord"),
+          },
+          {
+            id: "regex",
+            label: "Use regular expression",
+            icon: SEARCH_TOGGLE_ICONS.regex,
+            active: searchOptions.regex,
+            onToggle: () => toggleOption("regex"),
+          },
+        ]}
       />
-
-      {searchTerm && totalMatches > 0 && (
-        <span className="ui-font whitespace-nowrap text-[10px] text-text-lighter">
-          {currentMatch}/{totalMatches}
-        </span>
-      )}
-
-      <div className="mx-0.5 h-3 w-px bg-border" />
-
-      <button
-        type="button"
-        onClick={handlePrevious}
-        disabled={!searchTerm}
-        className={cn(
-          "flex items-center justify-center rounded p-0.5 text-text-light transition-colors hover:bg-hover hover:text-text",
-          !searchTerm && "cursor-not-allowed opacity-40",
-        )}
-        title="Previous (Shift+Enter)"
-      >
-        <ChevronUp size={12} />
-      </button>
-
-      <button
-        type="button"
-        onClick={handleNext}
-        disabled={!searchTerm}
-        className={cn(
-          "flex items-center justify-center rounded p-0.5 text-text-light transition-colors hover:bg-hover hover:text-text",
-          !searchTerm && "cursor-not-allowed opacity-40",
-        )}
-        title="Next (Enter)"
-      >
-        <ChevronDown size={12} />
-      </button>
-
-      <div className="mx-0.5 h-3 w-px bg-border" />
-
-      <button
-        type="button"
-        onClick={onClose}
-        className="flex items-center justify-center rounded p-0.5 text-text-light transition-colors hover:bg-hover hover:text-text"
-        title="Close (Esc)"
-      >
-        <X size={12} />
-      </button>
     </div>
   );
 };

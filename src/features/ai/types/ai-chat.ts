@@ -1,6 +1,7 @@
 import type React from "react";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
 
 export interface ToolCall {
   id?: string;
@@ -33,6 +34,7 @@ export interface Message {
   toolCalls?: ToolCall[];
   images?: ImageContent[];
   resources?: ResourceContent[];
+  ui?: GenerativeUIComponent[];
 }
 
 // Agent types for AI chat
@@ -91,8 +93,8 @@ export const AGENT_OPTIONS: AgentInfo[] = [
   },
   {
     id: "custom",
-    name: "Custom (API)",
-    description: "Use HTTP API providers",
+    name: "Athas Agent",
+    description: "Use Athas chat settings and provider configuration",
     isAcp: false,
   },
 ];
@@ -104,11 +106,12 @@ export interface Chat {
   createdAt: Date;
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
+  acpSessionId?: string | null;
 }
 
 export interface ContextInfo {
-  activeBuffer?: Buffer & { webViewerContent?: string };
-  openBuffers?: Buffer[];
+  activeBuffer?: PaneContent & { webViewerContent?: string };
+  openBuffers?: PaneContent[];
   selectedFiles?: string[];
   projectRoot?: string;
   language?: string;
@@ -119,8 +122,8 @@ export interface ContextInfo {
 export interface AIChatProps {
   className?: string;
   // Context from the main app
-  activeBuffer?: Buffer | null;
-  buffers?: Buffer[];
+  activeBuffer?: PaneContent | null;
+  buffers?: PaneContent[];
   selectedFiles?: string[];
   allProjectFiles?: FileEntry[];
   mode: "chat";
@@ -144,7 +147,7 @@ export interface MarkdownRendererProps {
 }
 
 export interface AIChatInputBarProps {
-  buffers: Buffer[];
+  buffers: PaneContent[];
   allProjectFiles: FileEntry[];
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;

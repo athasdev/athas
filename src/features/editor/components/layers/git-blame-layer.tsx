@@ -1,8 +1,8 @@
 import { forwardRef, memo, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { splitLines } from "@/features/editor/utils/lines";
-import { InlineGitBlame } from "@/features/git/components/inline-blame";
-import { useGitBlame } from "@/features/git/hooks/use-blame";
+import { InlineGitBlame } from "@/features/git/components/git-inline-blame";
+import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 
 interface GitBlameLayerProps {
   filePath: string;

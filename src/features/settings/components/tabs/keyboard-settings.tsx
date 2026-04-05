@@ -5,9 +5,10 @@ import { useKeymapStore } from "@/features/keymaps/stores/store";
 import type { Keybinding } from "@/features/keymaps/types";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { TableHeadCell, TableHeader } from "@/ui/table";
+import { cn } from "@/utils/cn";
 
 type FilterType = "all" | "user" | "default" | "extension";
 
@@ -102,55 +103,45 @@ export const KeyboardSettings = () => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Search and Filters */}
       <div className="mb-4 space-y-3">
         <Input
           placeholder="Search keybindings..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           leftIcon={Search}
+          size="sm"
           containerClassName="w-full"
         />
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="xs"
-            active={filterType === "all"}
-            onClick={() => setFilterType("all")}
-          >
-            All
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            active={filterType === "user"}
-            onClick={() => setFilterType("user")}
-          >
-            User
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            active={filterType === "default"}
-            onClick={() => setFilterType("default")}
-          >
-            Default
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            active={filterType === "extension"}
-            onClick={() => setFilterType("extension")}
-          >
-            Extension
-          </Button>
+        <div className="flex flex-wrap gap-1.5">
+          {(["all", "user", "default", "extension"] as const).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setFilterType(filter)}
+              className={cn(
+                "ui-font ui-text-sm inline-flex h-7 items-center rounded-lg px-2.5 transition-colors",
+                filterType === filter
+                  ? "bg-primary-bg text-text shadow-sm"
+                  : "text-text-lighter hover:bg-hover hover:text-text",
+              )}
+            >
+              {filter === "all"
+                ? "All"
+                : filter === "user"
+                  ? "User"
+                  : filter === "default"
+                    ? "Default"
+                    : "Extension"}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Keybindings Table */}
       <div className="flex-1 overflow-y-auto">
-        {/* Table Header */}
-        <TableHeader gridCols="2fr 200px 2fr 80px 100px">
+        <TableHeader
+          gridCols="minmax(0,2.2fr) minmax(180px,1.1fr) minmax(0,1.6fr) 88px 108px"
+          className="px-2"
+        >
           <TableHeadCell>Command</TableHeadCell>
           <TableHeadCell>Keybinding</TableHeadCell>
           <TableHeadCell>When</TableHeadCell>
@@ -158,9 +149,8 @@ export const KeyboardSettings = () => {
           <TableHeadCell>Actions</TableHeadCell>
         </TableHeader>
 
-        {/* Rows */}
         {filteredCommands.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-sm text-text-lighter">
+          <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
             No keybindings found
           </div>
         ) : (
@@ -171,19 +161,18 @@ export const KeyboardSettings = () => {
         )}
       </div>
 
-      {/* Footer Actions */}
-      <div className="mt-4 flex items-center justify-between border-border border-t pt-4">
-        <div className="text-text-lighter text-xs">
+      <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+        <div className="ui-font ui-text-sm text-text-lighter">
           {filteredCommands.length} of {commands.length} keybindings
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={handleResetAll}>
+          <Button variant="secondary" size="xs" onClick={handleResetAll}>
             Reset to Defaults
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleImport}>
+          <Button variant="secondary" size="xs" onClick={handleImport}>
             Import
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleExport}>
+          <Button variant="secondary" size="xs" onClick={handleExport}>
             Export
           </Button>
         </div>

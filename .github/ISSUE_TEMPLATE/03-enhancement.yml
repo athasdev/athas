@@ -1,0 +1,33 @@
+name: Enhancement
+description: Suggest an improvement to an existing capability
+title: ""
+type: Enhancement
+body:
+  - type: input
+    id: current_feature
+    attributes:
+      label: Existing Feature
+      description: What existing part of Athas should be improved?
+      placeholder: Editor, Terminal, AI, Git, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Improvement
+      description: What should change?
+      placeholder: Describe the improvement you want.
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Why This Helps
+      placeholder: Explain the benefit or pain point.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      placeholder: Examples, screenshots, or related links.

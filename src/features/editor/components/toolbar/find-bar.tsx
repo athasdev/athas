@@ -1,19 +1,14 @@
-import {
-  CaseSensitive,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Regex,
-  Replace,
-  Search,
-  WholeWord,
-  X,
-} from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { cn } from "@/utils/cn";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import {
+  SEARCH_TOGGLE_ICONS,
+  SearchPopover,
+  SearchReplaceRow,
+  SearchReplaceToggle,
+} from "@/ui/search";
 
 const FindBar = () => {
   // Get data from stores
@@ -24,6 +19,9 @@ const FindBar = () => {
   const replaceQuery = useEditorUIStore.use.replaceQuery();
   const isReplaceVisible = useEditorUIStore.use.isReplaceVisible();
   const searchOptions = useEditorUIStore.use.searchOptions();
+  const selection = useEditorStateStore((state) => state.selection);
+  const editorValue = useEditorStateStore((state) => state.value);
+  const editorRef = useEditorStateStore((state) => state.editorRef);
   const {
     setSearchQuery,
     searchNext,
@@ -36,9 +34,16 @@ const FindBar = () => {
   } = useEditorUIStore.use.actions();
 
   const isVisible = isFindVisible;
-  const onClose = () => setIsFindVisible(false);
+  const onClose = () => {
+    setIsFindVisible(false);
+    const textarea = editorRef?.current?.querySelector("textarea");
+    if (textarea instanceof HTMLTextAreaElement) {
+      textarea.focus();
+    }
+  };
   const currentMatch = currentMatchIndex + 1;
   const totalMatches = searchMatches.length;
+  const hasNoResults = Boolean(searchQuery) && totalMatches === 0;
   const onSearch = (direction: "next" | "previous") => {
     if (direction === "next") {
       searchNext();
@@ -48,21 +53,58 @@ const FindBar = () => {
   };
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const wasVisibleRef = useRef(false);
+
+  const getSelectedSearchText = () => {
+    if (!selection) return "";
+
+    const startOffset = Math.min(selection.start.offset, selection.end.offset);
+    const endOffset = Math.max(selection.start.offset, selection.end.offset);
+
+    if (startOffset === endOffset) return "";
+
+    const selectedText = editorValue.slice(startOffset, endOffset);
+    if (!selectedText || selectedText.includes("\n")) return "";
+
+    return selectedText;
+  };
 
   // Focus input when find bar becomes visible
   useEffect(() => {
-    if (isVisible && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (!isVisible) {
+      wasVisibleRef.current = false;
+      return;
     }
-  }, [isVisible]);
 
-  // Global Cmd+F handler to toggle find bar even when input is focused
+    if (!wasVisibleRef.current) {
+      const selectedText = getSelectedSearchText();
+      if (selectedText && selectedText !== searchQuery) {
+        setSearchQuery(selectedText);
+      }
+      wasVisibleRef.current = true;
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }
+  }, [isVisible, searchQuery, selection, editorValue, setSearchQuery]);
+
+  // Global find navigation shortcuts while the popover is open
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         onClose();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          searchPrevious();
+        } else {
+          searchNext();
+        }
       }
     };
 
@@ -72,7 +114,7 @@ const FindBar = () => {
         document.removeEventListener("keydown", handleGlobalKeyDown);
       };
     }
-  }, [isVisible, onClose]);
+  }, [isVisible, onClose, searchNext, searchPrevious]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -82,19 +124,14 @@ const FindBar = () => {
       } else {
         onSearch("next");
       }
+    } else if (e.key === "Tab" && isReplaceVisible) {
+      e.preventDefault();
+      replaceInputRef.current?.focus();
+      replaceInputRef.current?.select();
     } else if (e.key === "Escape") {
       e.preventDefault();
       onClose();
     }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-  };
-
-  const handleReplaceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setReplaceQuery(e.target.value);
   };
 
   const handleReplaceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -105,6 +142,14 @@ const FindBar = () => {
       } else {
         replaceNext();
       }
+    } else if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      inputRef.current?.focus();
+      inputRef.current?.select();
     } else if (e.key === "Escape") {
       e.preventDefault();
       onClose();
@@ -116,176 +161,70 @@ const FindBar = () => {
   }
 
   return (
-    <div className="find-bar flex flex-col border-border border-b bg-secondary-bg">
-      {/* Find row */}
-      <div className="flex items-center gap-2 px-2 py-1.5">
-        {/* Toggle replace visibility */}
-        <button
-          onClick={() => setIsReplaceVisible(!isReplaceVisible)}
-          className="flex h-5 w-5 items-center justify-center p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-          title={isReplaceVisible ? "Hide replace" : "Show replace"}
-          aria-label={isReplaceVisible ? "Hide replace" : "Show replace"}
-        >
-          <ChevronRight
-            size={12}
-            className={cn("transition-transform", isReplaceVisible && "rotate-90")}
-          />
-        </button>
-
-        <div className="flex flex-1 items-center gap-2">
-          <Search size={12} className="text-text-lighter" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchQuery}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Find in file..."
-            className="ui-font flex-1 border-none bg-transparent text-text text-xs focus:outline-none focus:ring-0"
-            style={{ outline: "none", boxShadow: "none" }}
-            aria-label="Search query"
-          />
-
-          {searchQuery && (
-            <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
-              <span>{totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Search options */}
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => setSearchOption("caseSensitive", !searchOptions.caseSensitive)}
-            className={cn(
-              "flex h-5 w-5 items-center justify-center p-0 transition-colors hover:bg-hover",
-              searchOptions.caseSensitive
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:text-text",
-            )}
-            title="Match case"
-            aria-label="Match case"
-            aria-pressed={searchOptions.caseSensitive}
-          >
-            <CaseSensitive size={12} />
-          </button>
-          <button
-            onClick={() => setSearchOption("wholeWord", !searchOptions.wholeWord)}
-            className={cn(
-              "flex h-5 w-5 items-center justify-center p-0 transition-colors hover:bg-hover",
-              searchOptions.wholeWord
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:text-text",
-            )}
-            title="Match whole word"
-            aria-label="Match whole word"
-            aria-pressed={searchOptions.wholeWord}
-          >
-            <WholeWord size={12} />
-          </button>
-          <button
-            onClick={() => setSearchOption("useRegex", !searchOptions.useRegex)}
-            className={cn(
-              "flex h-5 w-5 items-center justify-center p-0 transition-colors hover:bg-hover",
-              searchOptions.useRegex
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:text-text",
-            )}
-            title="Use regular expression"
-            aria-label="Use regular expression"
-            aria-pressed={searchOptions.useRegex}
-          >
-            <Regex size={12} />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => onSearch("previous")}
-            disabled={!searchQuery || totalMatches === 0}
-            className={cn(
-              "flex h-5 w-5 items-center justify-center p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
-              (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
-            )}
-            title="Previous match (Shift+Enter)"
-            aria-label="Previous match"
-          >
-            <ChevronUp size={12} />
-          </button>
-          <button
-            onClick={() => onSearch("next")}
-            disabled={!searchQuery || totalMatches === 0}
-            className={cn(
-              "flex h-5 w-5 items-center justify-center p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
-              (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
-            )}
-            title="Next match (Enter)"
-            aria-label="Next match"
-          >
-            <ChevronDown size={12} />
-          </button>
-          <button
-            onClick={onClose}
-            className="flex h-5 w-5 items-center justify-center p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-            title="Close (Escape)"
-            aria-label="Close find bar"
-          >
-            <X size={12} />
-          </button>
-        </div>
-      </div>
-
-      {/* Replace row */}
-      {isReplaceVisible && (
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          {/* Spacer to align with find row */}
-          <div className="h-5 w-5" />
-
-          <div className="flex flex-1 items-center gap-2">
-            <Replace size={12} className="text-text-lighter" />
-            <input
-              ref={replaceInputRef}
-              type="text"
-              value={replaceQuery}
-              onChange={handleReplaceInputChange}
-              onKeyDown={handleReplaceKeyDown}
-              placeholder="Replace with..."
-              className="ui-font flex-1 border-none bg-transparent text-text text-xs focus:outline-none focus:ring-0"
-              style={{ outline: "none", boxShadow: "none" }}
-              aria-label="Replace text"
+    <div className="pointer-events-none absolute top-9 right-2 z-30">
+      <div className="pointer-events-auto">
+        <SearchPopover
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onKeyDown={handleKeyDown}
+          onClose={onClose}
+          placeholder="Find in file..."
+          inputRef={inputRef}
+          matchLabel={
+            searchQuery
+              ? totalMatches > 0
+                ? `${currentMatch}/${totalMatches}`
+                : "No results"
+              : null
+          }
+          matchTone={hasNoResults ? "warning" : "default"}
+          onNext={() => onSearch("next")}
+          onPrevious={() => onSearch("previous")}
+          canNavigate={Boolean(searchQuery) && totalMatches > 0}
+          leadingControl={
+            <SearchReplaceToggle
+              isExpanded={isReplaceVisible}
+              onToggle={() => setIsReplaceVisible(!isReplaceVisible)}
             />
-          </div>
-
-          {/* Replace actions */}
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={replaceNext}
-              disabled={!searchQuery || totalMatches === 0}
-              className={cn(
-                "ui-font flex h-5 items-center justify-center px-2 text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text",
-                (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
-              )}
-              title="Replace (Enter)"
-              aria-label="Replace current match"
-            >
-              Replace
-            </button>
-            <button
-              onClick={replaceAll}
-              disabled={!searchQuery || totalMatches === 0}
-              className={cn(
-                "ui-font flex h-5 items-center justify-center px-2 text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text",
-                (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
-              )}
-              title="Replace all (Shift+Enter)"
-              aria-label="Replace all matches"
-            >
-              All
-            </button>
-          </div>
-        </div>
-      )}
+          }
+          options={[
+            {
+              id: "case-sensitive",
+              label: "Match case",
+              icon: SEARCH_TOGGLE_ICONS.caseSensitive,
+              active: searchOptions.caseSensitive,
+              onToggle: () => setSearchOption("caseSensitive", !searchOptions.caseSensitive),
+            },
+            {
+              id: "whole-word",
+              label: "Match whole word",
+              icon: SEARCH_TOGGLE_ICONS.wholeWord,
+              active: searchOptions.wholeWord,
+              onToggle: () => setSearchOption("wholeWord", !searchOptions.wholeWord),
+            },
+            {
+              id: "regex",
+              label: "Use regular expression",
+              icon: SEARCH_TOGGLE_ICONS.regex,
+              active: searchOptions.useRegex,
+              onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
+            },
+          ]}
+          secondaryRow={
+            isReplaceVisible ? (
+              <SearchReplaceRow
+                value={replaceQuery}
+                onChange={setReplaceQuery}
+                onKeyDown={handleReplaceKeyDown}
+                inputRef={replaceInputRef}
+                onReplace={replaceNext}
+                onReplaceAll={replaceAll}
+                canReplace={Boolean(searchQuery) && totalMatches > 0}
+              />
+            ) : null
+          }
+        />
+      </div>
     </div>
   );
 };

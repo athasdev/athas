@@ -1,7 +1,11 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { ChevronDown, ChevronRight, Terminal } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
+import { useAIChatStore } from "@/features/ai/store/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { Button } from "@/ui/button";
 import {
   fetchHighlightQuery,
   getDefaultParserWasmUrl,
@@ -320,13 +324,16 @@ function CodeBlock({
             <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
           )}
           {onApplyCode && code.trim() && (
-            <button
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
               onClick={() => onApplyCode(code)}
-              className="ui-font whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
+              className="whitespace-nowrap opacity-0 group-hover:opacity-100"
               title="Apply this code to current buffer"
             >
               Apply
-            </button>
+            </Button>
           )}
         </div>
         <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">
@@ -340,13 +347,20 @@ function CodeBlock({
 // Error Block Component
 function ErrorBlock({ errorData }: { errorData: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRestartingSession, setIsRestartingSession] = useState(false);
+  const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const setChatAcpSessionId = useAIChatStore((state) => state.setChatAcpSessionId);
+  const setAvailableSlashCommands = useAIChatStore((state) => state.setAvailableSlashCommands);
+  const setSessionModeState = useAIChatStore((state) => state.setSessionModeState);
+  const setSessionConfigOptions = useAIChatStore((state) => state.setSessionConfigOptions);
 
   const lines = errorData.split("\n");
   const title =
     lines
       .find((l) => l.startsWith("title:"))
       ?.replace("title:", "")
-      .trim() || "Error";
+      .trim() || "";
   const code =
     lines
       .find((l) => l.startsWith("code:"))
@@ -362,38 +376,128 @@ function ErrorBlock({ errorData }: { errorData: string }) {
       .find((l) => l.startsWith("details:"))
       ?.replace("details:", "")
       .trim() || "";
+  const summary = title || message || "Error";
+  const normalizedDetails = details && details !== message ? details : "";
+  const isAuthRequired = code === "AUTH_REQUIRED";
+
+  const suggestedCommand = useMemo(() => {
+    const normalizedText = `${summary} ${message} ${normalizedDetails}`.toLowerCase();
+
+    if (normalizedText.includes("claude code")) {
+      return "claude auth login";
+    }
+    if (normalizedText.includes("codex")) {
+      return "codex";
+    }
+    if (normalizedText.includes("gemini")) {
+      return "gemini";
+    }
+    if (normalizedText.includes("opencode")) {
+      return "opencode";
+    }
+    if (normalizedText.includes("qwen")) {
+      return "qwen";
+    }
+    if (normalizedText.includes("kimi")) {
+      return "kimi";
+    }
+
+    return null;
+  }, [summary, message, normalizedDetails]);
+
+  const handleRestartAgentSession = async () => {
+    setIsRestartingSession(true);
+    try {
+      await invoke("stop_acp_agent");
+      if (currentChatId) {
+        setChatAcpSessionId(currentChatId, null);
+      }
+      setAvailableSlashCommands([]);
+      setSessionModeState(null, []);
+      setSessionConfigOptions([]);
+    } catch (error) {
+      console.error("Failed to restart ACP agent session:", error);
+    } finally {
+      setIsRestartingSession(false);
+    }
+  };
 
   return (
-    <div className="error-block">
-      <div className="error-header">
-        <span className="error-title">
-          {title}
-          {code ? ` (${code})` : ""}
-        </span>
-      </div>
-      <div className="error-message">{message}</div>
-      {details && (
-        <div className="mt-1.5">
-          <button
+    <div className="my-1 rounded-lg border border-red-500/25 bg-red-500/6 px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <span className="text-red-300/85">Error</span>
+        <span className="text-red-100/95">{summary}</span>
+        {code ? <span className="text-red-200/55">({code})</span> : null}
+        {normalizedDetails && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-red-400 text-xs transition-colors hover:text-red-300"
+            className="h-auto px-1 text-red-200/70 hover:bg-transparent hover:text-red-100"
           >
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {isExpanded ? "Hide" : "Show"} details
-          </button>
-          {isExpanded && (
-            <pre className="editor-font mt-1.5 overflow-x-auto rounded bg-red-950/20 p-2 text-red-300 text-xs">
-              {(() => {
-                try {
-                  const parsed = JSON.parse(details);
-                  return JSON.stringify(parsed, null, 2);
-                } catch {
-                  return details;
-                }
-              })()}
-            </pre>
+            {isExpanded ? <ChevronDown /> : <ChevronRight />}
+            {isExpanded ? "Hide details" : "Details"}
+          </Button>
+        )}
+      </div>
+      {isAuthRequired && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            onClick={() => void handleRestartAgentSession()}
+            disabled={isRestartingSession}
+            className="h-auto gap-1.5"
+          >
+            <Terminal size={12} />
+            {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
+          </Button>
+          {suggestedCommand ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              onClick={() =>
+                openTerminalBuffer({
+                  command: suggestedCommand,
+                  name: suggestedCommand,
+                })
+              }
+              className="h-auto gap-1.5"
+            >
+              <Terminal size={12} />
+              Open Login Terminal
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
+              className="h-auto gap-1.5"
+            >
+              <Terminal size={12} />
+              Open Terminal
+            </Button>
           )}
+          <span className="text-[11px] text-red-200/70">
+            Complete login in the agent CLI, then retry.
+          </span>
         </div>
+      )}
+      {normalizedDetails && isExpanded && (
+        <pre className="editor-font mt-2 overflow-x-auto rounded border border-red-500/20 bg-red-950/20 p-2 text-[11px] text-red-100/85">
+          {(() => {
+            try {
+              const parsed = JSON.parse(normalizedDetails);
+              return JSON.stringify(parsed, null, 2);
+            } catch {
+              return normalizedDetails;
+            }
+          })()}
+        </pre>
       )}
     </div>
   );

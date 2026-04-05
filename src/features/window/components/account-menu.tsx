@@ -1,16 +1,20 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
-import { useRef, useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import Tooltip from "@/ui/tooltip";
 import {
-  beginDesktopAuthSession,
-  DesktopAuthError,
-  waitForDesktopAuthToken,
-} from "@/utils/auth-api";
-import { cn } from "@/utils/cn";
+  BookOpen,
+  CircleUser,
+  CreditCard,
+  ExternalLink,
+  LogIn,
+  LogOut,
+  Settings,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import Tooltip from "@/ui/tooltip";
+import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 
 interface AccountMenuProps {
   iconSize?: number;
@@ -22,45 +26,30 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
   const logout = useAuthStore((s) => s.logout);
-  const handleAuthCallback = useAuthStore((s) => s.handleAuthCallback);
+  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const hasBlockingModalOpen = useUIState(
+    (state) =>
+      state.isQuickOpenVisible ||
+      state.isCommandPaletteVisible ||
+      state.isGlobalSearchVisible ||
+      state.isSettingsDialogVisible ||
+      state.isThemeSelectorVisible ||
+      state.isIconThemeSelectorVisible ||
+      state.isProjectPickerVisible ||
+      state.isDatabaseConnectionVisible,
+  );
 
   const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const handleClick = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setMenuPosition({
-      x: rect.right - 190,
-      y: rect.bottom + 8,
-    });
-    setIsOpen(true);
-  };
+  const { signIn } = useDesktopSignIn({
+    onSuccess: () => setIsOpen(false),
+  });
 
   const handleSignIn = async () => {
-    try {
-      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession();
-      if (import.meta.env.DEV) {
-        console.log("[Auth] Opening desktop login URL:", loginUrl);
-      }
-      await openUrl(loginUrl);
-      toast.info("Complete sign-in in your browser. Waiting for confirmation...");
-
-      const token = await waitForDesktopAuthToken(sessionId, pollSecret);
-      await handleAuthCallback(token);
-      toast.success("Signed in successfully!");
-    } catch (error) {
-      if (error instanceof DesktopAuthError && error.code === "endpoint_unavailable") {
-        toast.error(
-          "Desktop sign-in endpoint is unavailable on this server. Please use the local dev www server.",
-        );
-        return;
-      }
-
-      const message = error instanceof Error ? error.message : "Authentication failed.";
-      toast.error(message);
+    if (import.meta.env.DEV) {
+      console.log("[Auth] Starting desktop sign-in flow from account menu");
     }
+    await signIn();
   };
 
   const handleSignOut = async () => {
@@ -75,26 +64,52 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     await openUrl("https://athas.dev/pricing");
   };
 
+  const handleOpenDocs = async () => {
+    await openUrl("https://athas.dev/docs");
+  };
+
+  const handleOpenSettings = () => {
+    setIsSettingsDialogVisible(true);
+  };
+
   const subscriptionStatus = subscription?.status ?? "free";
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
 
-  const signedOutItems: ContextMenuItem[] = [
+  const signedOutItems: MenuItem[] = [
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings />,
+      onClick: handleOpenSettings,
+    },
+    {
+      id: "docs",
+      label: "Docs",
+      icon: <BookOpen />,
+      onClick: handleOpenDocs,
+    },
+    {
+      id: "settings-separator",
+      label: "",
+      separator: true,
+      onClick: () => {},
+    },
     {
       id: "sign-in",
       label: "Sign In",
-      icon: <LogIn size={12} />,
+      icon: <LogIn />,
       onClick: handleSignIn,
     },
   ];
 
-  const signedInItems: ContextMenuItem[] = [
+  const signedInItems: MenuItem[] = [
     {
       id: "user-info",
       label: user?.name || user?.email || "Account",
       icon: user?.avatar_url ? (
-        <img src={user.avatar_url} alt="" className="h-3 w-3 rounded-full" />
+        <img src={user.avatar_url} alt="" className="size-3 rounded-full" />
       ) : (
-        <CircleUser size={12} />
+        <CircleUser />
       ),
       onClick: () => {},
       disabled: true,
@@ -107,15 +122,27 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     },
     {
       id: "subscription",
-      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : subscriptionStatus === "trial" ? "Trial" : "Free"}`,
-      icon: <CreditCard size={12} />,
+      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : "Free"}`,
+      icon: <CreditCard />,
       onClick: handleViewPricing,
     },
     {
       id: "manage-account",
       label: "Manage Account",
-      icon: <ExternalLink size={12} />,
+      icon: <ExternalLink />,
       onClick: handleManageAccount,
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings />,
+      onClick: handleOpenSettings,
+    },
+    {
+      id: "docs",
+      label: "Docs",
+      icon: <BookOpen />,
+      onClick: handleOpenDocs,
     },
     {
       id: "sign-out-separator",
@@ -126,42 +153,47 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "sign-out",
       label: "Sign Out",
-      icon: <LogOut size={12} />,
+      icon: <LogOut />,
       onClick: handleSignOut,
     },
   ];
 
   const tooltipLabel = isAuthenticated ? user?.name || user?.email || "Account" : "Account";
 
+  useEffect(() => {
+    if (!isOpen || !hasBlockingModalOpen) return;
+    setIsOpen(false);
+  }, [hasBlockingModalOpen, isOpen]);
+
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <button
+        <Button
           ref={buttonRef}
-          onClick={handleClick}
-          className={cn(
-            "flex h-7 min-w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 p-1",
-            "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-            isAuthenticated && "text-blue-400 hover:text-blue-300",
-            className,
-          )}
-          style={{ minHeight: 0, minWidth: 0 }}
+          onClick={() => setIsOpen((open) => !open)}
+          type="button"
+          variant="secondary"
+          size="icon-sm"
+          className={className}
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
         >
           {isAuthenticated && user?.avatar_url ? (
             <img
               src={user.avatar_url}
               alt=""
-              className="rounded-full"
+              className="rounded-full object-cover"
               style={{ width: iconSize, height: iconSize }}
             />
           ) : (
             <CircleUser size={iconSize} />
           )}
-        </button>
+        </Button>
       </Tooltip>
-      <ContextMenu
+      <Dropdown
         isOpen={isOpen}
-        position={menuPosition}
+        anchorRef={buttonRef}
+        anchorAlign="end"
         items={isAuthenticated ? signedInItems : signedOutItems}
         onClose={() => setIsOpen(false)}
       />

@@ -2,7 +2,10 @@ import { Download, FileJson, Rows } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
+import { Button } from "@/ui/button";
+import Select from "@/ui/select";
 import { TableView } from "@/ui/table-view";
 import { parseCsv } from "./csv-utils";
 
@@ -31,18 +34,21 @@ export function CsvPreview() {
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
 
   // Get the source buffer if this is a preview buffer
-  const sourceBuffer = activeBuffer?.sourceFilePath
-    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath)
+  const sourceFilePath =
+    activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
+  const sourceBuffer = sourceFilePath
+    ? buffers.find((b) => b.path === sourceFilePath)
     : activeBuffer;
 
   const [delimiter, setDelimiter] = useState<Delim | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
 
+  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
+
   const { headers, rows } = useMemo(() => {
-    const content = sourceBuffer?.content ?? "";
-    const delim = delimiter === "auto" ? autodetectDelimiter(content) : delimiter;
-    return parseCsv(content, delim, hasHeader);
-  }, [sourceBuffer?.content, delimiter, hasHeader]);
+    const delim = delimiter === "auto" ? autodetectDelimiter(sourceContent) : delimiter;
+    return parseCsv(sourceContent, delim, hasHeader);
+  }, [sourceContent, delimiter, hasHeader]);
 
   const handleCopyCsv = async () => {
     try {
@@ -88,46 +94,54 @@ export function CsvPreview() {
             <label htmlFor="csv-delimiter" className="ui-font mr-1 text-text-lighter text-xs">
               Delimiter
             </label>
-            <select
+            <Select
               id="csv-delimiter"
               value={delimiter}
-              onChange={(e) => setDelimiter(e.target.value as any)}
-              className="ui-font rounded border border-border bg-secondary-bg px-1 py-0.5 text-text text-xs"
+              onChange={(value) => setDelimiter(value as any)}
+              options={[
+                { value: "auto", label: "Auto" },
+                { value: ",", label: "Comma" },
+                { value: "\t", label: "Tab" },
+                { value: ";", label: "Semicolon" },
+                { value: "|", label: "Pipe" },
+              ]}
+              size="xs"
+              className="min-w-24 rounded border-border px-1"
               title="Change delimiter"
-            >
-              <option value="auto">Auto</option>
-              <option value=",">Comma</option>
-              <option value="\t">Tab</option>
-              <option value=";">Semicolon</option>
-              <option value="|">Pipe</option>
-            </select>
+            />
 
             {/* Header toggle */}
-            <button
+            <Button
               onClick={() => setHasHeader((v) => !v)}
-              className="flex h-6 items-center gap-1 rounded border border-border bg-secondary-bg px-2 text-text-lighter text-xs hover:bg-hover"
+              variant="outline"
+              size="xs"
+              className="h-6 gap-1 text-text-lighter"
               title="Toggle header row"
             >
-              <Rows size={12} /> {hasHeader ? "Header On" : "Header Off"}
-            </button>
+              <Rows /> {hasHeader ? "Header On" : "Header Off"}
+            </Button>
 
             {/* Copy CSV */}
-            <button
+            <Button
               onClick={handleCopyCsv}
-              className="flex h-6 items-center gap-1 rounded border border-border bg-secondary-bg px-2 text-text-lighter text-xs hover:bg-hover"
+              variant="outline"
+              size="xs"
+              className="h-6 gap-1 text-text-lighter"
               title="Copy as CSV"
             >
-              <Download size={12} /> CSV
-            </button>
+              <Download /> CSV
+            </Button>
 
             {/* Copy JSON */}
-            <button
+            <Button
               onClick={handleCopyJson}
-              className="flex h-6 items-center gap-1 rounded border border-border bg-secondary-bg px-2 text-text-lighter text-xs hover:bg-hover"
+              variant="outline"
+              size="xs"
+              className="h-6 gap-1 text-text-lighter"
               title="Copy as JSON"
             >
-              <FileJson size={12} /> JSON
-            </button>
+              <FileJson /> JSON
+            </Button>
           </div>
         }
       />

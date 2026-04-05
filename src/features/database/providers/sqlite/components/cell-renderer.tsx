@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { ForeignKeyInfo } from "../types";
+import type { ForeignKeyInfo } from "../sqlite-types";
 
 interface CellRendererProps {
   value: unknown;
@@ -40,13 +41,15 @@ export default function CellRenderer({
   if (typeof value === "string" && isJsonString(value)) {
     return (
       <span onContextMenu={handleContextMenu}>
-        <button
+        <Button
           onClick={() => setExpanded(!expanded)}
-          className="block max-w-[280px] truncate text-left font-mono text-accent"
+          variant="ghost"
+          size="sm"
+          className="block h-auto max-w-[280px] truncate p-0 text-left font-mono text-accent"
           title="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
-        </button>
+        </Button>
         {expanded && (
           <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg/80 p-2 font-mono text-xs">
             {formatJson(value)}
@@ -78,14 +81,16 @@ export default function CellRenderer({
   // Foreign key value
   if (foreignKey && onFkClick) {
     return (
-      <button
+      <Button
         onClick={() => onFkClick(columnName, value)}
-        className="block truncate text-left text-accent underline decoration-accent/40"
+        variant="ghost"
+        size="sm"
+        className="block h-auto truncate p-0 text-left text-accent underline decoration-accent/40"
         title={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
       >
         {String(value)}
-      </button>
+      </Button>
     );
   }
 
@@ -103,17 +108,19 @@ export default function CellRenderer({
   if (text.length > 100) {
     return (
       <span onContextMenu={handleContextMenu}>
-        <button
+        <Button
           onClick={() => setExpanded(!expanded)}
+          variant="ghost"
+          size="sm"
           className={cn(
-            "block max-w-[280px] text-left",
+            "block h-auto max-w-[280px] p-0 text-left",
             expanded ? "whitespace-pre-wrap" : "truncate",
-            isPrimaryKey && "font-semibold text-amber-600",
+            isPrimaryKey && "font-semibold text-text",
           )}
           title="Click to expand"
         >
           {expanded ? text : truncateText(text, 100)}
-        </button>
+        </Button>
       </span>
     );
   }
@@ -121,7 +128,7 @@ export default function CellRenderer({
   // Default
   return (
     <span
-      className={cn("block truncate", isPrimaryKey && "font-semibold text-amber-600")}
+      className={cn("block truncate", isPrimaryKey && "font-semibold text-text")}
       onContextMenu={handleContextMenu}
     >
       {text}

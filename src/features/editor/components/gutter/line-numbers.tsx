@@ -17,6 +17,7 @@ interface LineNumbersProps {
   foldMapping?: LineMapping;
   startLine: number;
   endLine: number;
+  hiddenLines?: Set<number>;
 }
 
 function LineNumbersComponent({
@@ -28,11 +29,11 @@ function LineNumbersComponent({
   foldMapping,
   startLine,
   endLine,
+  hiddenLines,
 }: LineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const lineNumberWidth = calculateLineNumberWidth(totalLines);
 
-  // Convert actual cursor line to virtual for comparison when folds are active
   const visualCursorLine = useMemo(() => {
     if (foldMapping?.actualToVirtual) {
       return foldMapping.actualToVirtual.get(actualCursorLine) ?? actualCursorLine;
@@ -58,6 +59,7 @@ function LineNumbersComponent({
             lineHeight: `${lineHeight}px`,
             textAlign: "right",
             paddingRight: "12px",
+            visibility: hiddenLines?.has(i) ? "hidden" : "visible",
             color: isActive
               ? "var(--text, #d4d4d4)"
               : "var(--text-light, rgba(255, 255, 255, 0.5))",
@@ -74,7 +76,7 @@ function LineNumbersComponent({
       );
     }
     return result;
-  }, [startLine, endLine, visualCursorLine, lineHeight, onLineClick, foldMapping]);
+  }, [startLine, endLine, visualCursorLine, lineHeight, onLineClick, foldMapping, hiddenLines]);
 
   return (
     <div

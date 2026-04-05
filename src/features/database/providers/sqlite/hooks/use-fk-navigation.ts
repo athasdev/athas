@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useSqliteStore } from "../stores/sqlite-store";
-import type { ForeignKeyInfo } from "../types";
+import type { ForeignKeyInfo } from "../sqlite-types";
 
 export function useFkNavigation() {
   const foreignKeys = useSqliteStore.use.foreignKeys();

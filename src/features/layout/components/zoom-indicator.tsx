@@ -1,4 +1,4 @@
-import { useZoomStore } from "../../../stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 
 export function ZoomIndicator() {
   const showZoomIndicator = useZoomStore.use.showZoomIndicator();

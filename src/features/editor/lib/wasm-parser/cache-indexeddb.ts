@@ -55,7 +55,7 @@ class IndexedDBParserCache {
 
       request.onsuccess = () => {
         this.db = request.result;
-        logger.info("ParserCache", "IndexedDB initialized successfully");
+        logger.debug("ParserCache", "IndexedDB initialized successfully");
         resolve();
       };
 
@@ -72,7 +72,7 @@ class IndexedDBParserCache {
           store.createIndex("lastUsedAt", "lastUsedAt", { unique: false });
           store.createIndex("size", "size", { unique: false });
 
-          logger.info("ParserCache", "Created parser cache object store");
+          logger.debug("ParserCache", "Created parser cache object store");
         }
       };
     });
@@ -145,7 +145,7 @@ class IndexedDBParserCache {
       };
 
       request.onsuccess = () => {
-        logger.info(
+        logger.debug(
           "ParserCache",
           `Stored parser ${entry.languageId} (${(entry.size / 1024).toFixed(1)} KB)`,
         );
@@ -176,7 +176,7 @@ class IndexedDBParserCache {
       };
 
       request.onsuccess = () => {
-        logger.info("ParserCache", `Deleted parser ${languageId} from cache`);
+        logger.debug("ParserCache", `Deleted parser ${languageId} from cache`);
         resolve();
       };
     });
@@ -231,7 +231,7 @@ class IndexedDBParserCache {
       };
 
       request.onsuccess = () => {
-        logger.info("ParserCache", "Cleared parser cache");
+        logger.debug("ParserCache", "Cleared parser cache");
         resolve();
       };
     });
@@ -286,7 +286,7 @@ class IndexedDBParserCache {
       this.db.close();
       this.db = null;
       this.initPromise = null;
-      logger.info("ParserCache", "Closed IndexedDB connection");
+      logger.debug("ParserCache", "Closed IndexedDB connection");
     }
   }
 }

@@ -1,8 +1,8 @@
 import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { LineToken } from "../types/editor";
-import { logger } from "../utils/logger";
 import { useBufferStore } from "./buffer-store";
 
 interface EditorViewState {
@@ -135,19 +135,20 @@ export const useEditorViewStore = createSelectors(
       actions: {
         getLines: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          if (!activeBuffer) return [""];
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return [""];
           return activeBuffer.content.split("\n");
         },
 
         getLineTokens: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          if (!activeBuffer) return new Map();
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return new Map();
           return convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
         },
 
         getContent: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          return activeBuffer?.content || "";
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return "";
+          return activeBuffer.content;
         },
       },
     }),
@@ -155,25 +156,33 @@ export const useEditorViewStore = createSelectors(
   ),
 );
 
+let previousActiveBufferSnapshot: {
+  id: string;
+  content: string;
+} | null = null;
+
 // Subscribe to buffer changes and update computed values
 useBufferStore.subscribe((state) => {
   const activeBuffer = state.actions.getActiveBuffer();
-  if (activeBuffer) {
-    // Always recalculate line tokens when content or tokens change
-    // The token filtering in convertToLineTokens handles stale tokens gracefully
-    const lineTokens = convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
-    logger.debug(
-      "Editor",
-      "[EditorViewStore] Buffer tokens:",
-      activeBuffer.tokens.length,
-      "Line tokens:",
-      lineTokens.size,
-    );
+  if (activeBuffer && isEditorContent(activeBuffer)) {
+    if (
+      previousActiveBufferSnapshot &&
+      previousActiveBufferSnapshot.id === activeBuffer.id &&
+      previousActiveBufferSnapshot.content === activeBuffer.content
+    ) {
+      return;
+    }
+
+    previousActiveBufferSnapshot = {
+      id: activeBuffer.id,
+      content: activeBuffer.content,
+    };
     useEditorViewStore.setState({
       lines: activeBuffer.content.split("\n"),
-      lineTokens,
+      lineTokens: new Map(),
     });
   } else {
+    previousActiveBufferSnapshot = null;
     useEditorViewStore.setState({
       lines: [""],
       lineTokens: new Map(),

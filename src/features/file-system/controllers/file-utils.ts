@@ -1,4 +1,5 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import type { DatabaseType } from "@/features/database/models/provider.types";
 
 /**
  * Get the programming language from a filename based on its extension
@@ -56,11 +57,27 @@ export const getLanguageFromFilename = (filename: string): string => {
  * Check if a file is a SQLite database based on its extension
  */
 export const isSQLiteFile = (path: string): boolean => {
+  const lowerPath = path.toLowerCase();
   return (
-    path.toLowerCase().endsWith(".sqlite") ||
-    path.toLowerCase().endsWith(".db") ||
-    path.toLowerCase().endsWith(".sqlite3")
+    lowerPath.endsWith(".sqlite") || lowerPath.endsWith(".db") || lowerPath.endsWith(".sqlite3")
   );
+};
+
+/**
+ * Check if a file is a DuckDB database based on its extension
+ */
+export const isDuckDBFile = (path: string): boolean => {
+  const lowerPath = path.toLowerCase();
+  return lowerPath.endsWith(".duckdb") || lowerPath.endsWith(".duck");
+};
+
+/**
+ * Get the database type from a file path, or null if not a database file
+ */
+export const getDatabaseTypeFromPath = (path: string): DatabaseType | null => {
+  if (isSQLiteFile(path)) return "sqlite";
+  if (isDuckDBFile(path)) return "duckdb";
+  return null;
 };
 
 /**

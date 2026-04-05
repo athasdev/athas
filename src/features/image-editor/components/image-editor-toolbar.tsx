@@ -9,7 +9,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useState } from "react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { ImageFormat } from "../models/image-operation.types";
 import { ImageFormatDialog } from "./image-format-dialog";
@@ -47,6 +47,10 @@ export function ImageEditorToolbar({
   currentImageSrc,
   currentFileName,
 }: ImageEditorToolbarProps) {
+  const menuItemClass = cn(
+    "ui-font h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text text-xs",
+  );
+
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [showConvertMenu, setShowConvertMenu] = useState(false);
   const [formatDialogState, setFormatDialogState] = useState<{
@@ -81,7 +85,7 @@ export function ImageEditorToolbar({
           title="Edit operations"
         >
           <span className="text-xs">Edit</span>
-          <ChevronDown size={12} className="ml-1" />
+          <ChevronDown className="ml-1" />
         </Button>
 
         {showEditMenu && (
@@ -98,74 +102,68 @@ export function ImageEditorToolbar({
               )}
             >
               <div className="py-1">
-                <button
+                <Button
                   type="button"
                   onClick={() => handleEdit(onResize)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <Image size={14} />
+                  <Image />
                   <span>Resize...</span>
-                </button>
+                </Button>
                 <div className="my-1 h-px bg-border" />
-                <button
+                <Button
                   type="button"
                   onClick={() => handleEdit(onRotateCW)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <RotateCw size={14} />
+                  <RotateCw />
                   <span>Rotate 90° CW</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleEdit(onRotateCCW)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <RotateCcw size={14} />
+                  <RotateCcw />
                   <span>Rotate 90° CCW</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleEdit(onRotate180)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <RotateCw size={14} />
+                  <RotateCw />
                   <span>Rotate 180°</span>
-                </button>
+                </Button>
                 <div className="my-1 h-px bg-border" />
-                <button
+                <Button
                   type="button"
                   onClick={() => handleEdit(onFlipHorizontal)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <FlipHorizontal size={14} />
+                  <FlipHorizontal />
                   <span>Flip Horizontal</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleEdit(onFlipVertical)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <FlipVertical size={14} />
+                  <FlipVertical />
                   <span>Flip Vertical</span>
-                </button>
+                </Button>
               </div>
             </div>
           </>
@@ -182,7 +180,7 @@ export function ImageEditorToolbar({
           title="Convert format"
         >
           <span className="text-xs">Convert</span>
-          <ChevronDown size={12} className="ml-1" />
+          <ChevronDown className="ml-1" />
         </Button>
 
         {showConvertMenu && (
@@ -199,50 +197,46 @@ export function ImageEditorToolbar({
               )}
             >
               <div className="py-1">
-                <button
+                <Button
                   type="button"
                   onClick={() => handleFormatSelect("png")}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <Image size={14} />
+                  <Image />
                   <span>PNG</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleFormatSelect("jpeg")}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <Image size={14} />
+                  <Image />
                   <span>JPEG</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleFormatSelect("webp")}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <Image size={14} />
+                  <Image />
                   <span>WebP</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleFormatSelect("avif")}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-text text-xs transition-colors",
-                    "hover:bg-hover",
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  className={menuItemClass}
                 >
-                  <Image size={14} />
+                  <Image />
                   <span>AVIF</span>
-                </button>
+                </Button>
               </div>
             </div>
           </>
@@ -260,7 +254,7 @@ export function ImageEditorToolbar({
         disabled={!canUndo || isProcessing}
         title="Undo last operation"
       >
-        <Undo2 size={12} />
+        <Undo2 />
       </Button>
 
       {/* Save Button - shows when there are changes */}
@@ -273,7 +267,7 @@ export function ImageEditorToolbar({
           title="Save changes"
           className="text-accent"
         >
-          <Save size={12} />
+          <Save />
         </Button>
       )}
 

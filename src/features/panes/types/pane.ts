@@ -16,8 +16,10 @@ export interface PaneSplit {
 export type PaneNode = PaneGroup | PaneSplit;
 
 export type SplitDirection = "horizontal" | "vertical";
+export type SplitPlacement = "before" | "after";
 
 export interface PaneState {
   root: PaneNode;
   activePaneId: string;
+  fullscreenPaneId?: string | null;
 }

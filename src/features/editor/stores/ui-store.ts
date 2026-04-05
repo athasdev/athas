@@ -9,6 +9,7 @@ import { createSelectors } from "@/utils/zustand-selectors";
 type HoverInfo = {
   content: string;
   position: { top: number; left: number };
+  opensUpward?: boolean;
 };
 
 type CompletionPosition = {

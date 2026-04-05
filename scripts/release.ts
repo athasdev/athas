@@ -1,9 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 
-// ANSI colors for pretty output
 const colors = {
   reset: "\x1b[0m",
   red: "\x1b[31m",
@@ -14,74 +11,156 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
+type ReleaseChannel = "alpha" | "beta" | "rc";
+
+interface ParsedVersion {
+  major: number;
+  minor: number;
+  patch: number;
+  prerelease?: {
+    channel: ReleaseChannel;
+    number: number;
+  };
+}
+
 function log(message: string, color: keyof typeof colors = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
 function error(message: string) {
-  log(`${message}`, "red");
+  log(message, "red");
   process.exit(1);
 }
 
 function success(message: string) {
-  log(`${message}`, "green");
+  log(message, "green");
 }
 
 function info(message: string) {
-  log(`${message}`, "cyan");
+  log(message, "cyan");
 }
 
-// Parse semver version
-function parseVersion(version: string): { major: number; minor: number; patch: number } {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
+function parseVersion(version: string): ParsedVersion {
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/);
   if (!match) {
     error(`Invalid version format: ${version}`);
   }
+
   return {
     major: parseInt(match[1]),
     minor: parseInt(match[2]),
     patch: parseInt(match[3]),
+    prerelease:
+      match[4] && match[5]
+        ? {
+            channel: match[4] as ReleaseChannel,
+            number: parseInt(match[5]),
+          }
+        : undefined,
   };
 }
 
-// Bump version based on type
-function bumpVersion(currentVersion: string, bumpType: string): string {
-  const { major, minor, patch } = parseVersion(currentVersion);
+function formatVersion(version: ParsedVersion): string {
+  const base = `${version.major}.${version.minor}.${version.patch}`;
+  if (!version.prerelease) {
+    return base;
+  }
+
+  return `${base}-${version.prerelease.channel}.${version.prerelease.number}`;
+}
+
+function isReleaseChannel(value: string): value is ReleaseChannel {
+  return value === "alpha" || value === "beta" || value === "rc";
+}
+
+function getStableBase(version: ParsedVersion): ParsedVersion {
+  return {
+    major: version.major,
+    minor: version.minor,
+    patch: version.patch,
+  };
+}
+
+function bumpStableBase(version: ParsedVersion, bumpType: string): ParsedVersion {
+  const stable = getStableBase(version);
 
   switch (bumpType) {
     case "major":
-      return `${major + 1}.0.0`;
+      return { major: stable.major + 1, minor: 0, patch: 0 };
     case "minor":
-      return `${major}.${minor + 1}.0`;
+      return { major: stable.major, minor: stable.minor + 1, patch: 0 };
     case "patch":
-      return `${major}.${minor}.${patch + 1}`;
-    default:
-      // Check if it's a valid version string
-      if (/^\d+\.\d+\.\d+$/.test(bumpType)) {
-        return bumpType;
+      if (version.prerelease) {
+        return stable;
       }
+      return { major: stable.major, minor: stable.minor, patch: stable.patch + 1 };
+    default:
+      if (/^\d+\.\d+\.\d+$/.test(bumpType)) {
+        return parseVersion(bumpType);
+      }
+
       error(
-        `Invalid bump type: ${bumpType}. Use: patch, minor, major, or a version number (e.g., 1.2.3)`,
+        `Invalid bump type: ${bumpType}. Use: patch, minor, major, alpha, beta, rc, or an exact version`,
       );
-      return ""; // unreachable
+      return stable;
   }
 }
 
-// Get commits since last tag
+function bumpVersion(currentVersion: string, args: string[]): string {
+  const current = parseVersion(currentVersion);
+  const [firstArg, secondArg] = args;
+
+  if (!firstArg) {
+    error(
+      "Please specify: patch, minor, major, alpha, beta, rc, or an exact version (e.g. 1.2.3 or 1.2.3-beta.1)",
+    );
+  }
+
+  if (/^\d+\.\d+\.\d+(?:-(alpha|beta|rc)\.\d+)?$/.test(firstArg)) {
+    return formatVersion(parseVersion(firstArg));
+  }
+
+  if (isReleaseChannel(firstArg)) {
+    let baseVersion: ParsedVersion;
+
+    if (secondArg) {
+      baseVersion = bumpStableBase(current, secondArg);
+    } else if (current.prerelease) {
+      baseVersion = getStableBase(current);
+    } else {
+      baseVersion = bumpStableBase(current, "patch");
+    }
+
+    const shouldIncrementExisting =
+      current.prerelease?.channel === firstArg &&
+      !secondArg &&
+      current.major === baseVersion.major &&
+      current.minor === baseVersion.minor &&
+      current.patch === baseVersion.patch;
+
+    return formatVersion({
+      ...baseVersion,
+      prerelease: {
+        channel: firstArg,
+        number: shouldIncrementExisting ? current.prerelease.number + 1 : 1,
+      },
+    });
+  }
+
+  return formatVersion(bumpStableBase(current, firstArg));
+}
+
 async function getCommitsSinceLastTag(): Promise<string[]> {
   try {
-    // Get the last tag
     const lastTag = await $`git describe --tags --abbrev=0`.text();
     const tag = lastTag.trim();
 
-    // Get commits since that tag
     const commits = await $`git log ${tag}..HEAD --pretty=format:"%s"`.text();
     return commits
       .trim()
       .split("\n")
       .filter((line) => line.length > 0);
   } catch {
-    // No previous tags, get all commits
     try {
       const commits = await $`git log --pretty=format:"%s"`.text();
       return commits
@@ -94,25 +173,43 @@ async function getCommitsSinceLastTag(): Promise<string[]> {
   }
 }
 
-// Update package.json version
-function updatePackageJson(newVersion: string) {
-  const pkgPath = join(process.cwd(), "package.json");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+async function updatePackageJson(newVersion: string) {
+  const pkgPath = `${process.cwd()}/package.json`;
+  const pkg = JSON.parse(await Bun.file(pkgPath).text());
   pkg.version = newVersion;
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  await Bun.write(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   success(`Updated package.json to v${newVersion}`);
 }
 
-// Update tauri.conf.json version
-function updateTauriConfig(newVersion: string) {
-  const configPath = join(process.cwd(), "src-tauri/tauri.conf.json");
-  const config = JSON.parse(readFileSync(configPath, "utf-8"));
-  config.version = newVersion;
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+async function updateTauriConfig(newVersion: string) {
+  const configPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
+  const configText = await Bun.file(configPath).text();
+  const updatedConfig = configText.replace(/"version"\s*:\s*"[^"]+"/, `"version": "${newVersion}"`);
+
+  if (updatedConfig === configText) {
+    error("Could not update version in src-tauri/tauri.conf.json");
+  }
+
+  await Bun.write(configPath, updatedConfig);
   success(`Updated tauri.conf.json to v${newVersion}`);
 }
 
-// Check if working directory is clean
+async function updateCargoToml(newVersion: string) {
+  const cargoPath = `${process.cwd()}/src-tauri/Cargo.toml`;
+  const cargoToml = await Bun.file(cargoPath).text();
+  const updatedCargoToml = cargoToml.replace(
+    /^version\s*=\s*"[^"]+"/m,
+    `version = "${newVersion}"`,
+  );
+
+  if (updatedCargoToml === cargoToml) {
+    error("Could not update version in src-tauri/Cargo.toml");
+  }
+
+  await Bun.write(cargoPath, updatedCargoToml);
+  success(`Updated src-tauri/Cargo.toml to v${newVersion}`);
+}
+
 async function checkWorkingDirectory() {
   const status = await $`git status --porcelain`.text();
   if (status.trim().length > 0) {
@@ -120,31 +217,31 @@ async function checkWorkingDirectory() {
   }
 }
 
-// Main release function
 async function release() {
   log("\nStarting release process...\n", "magenta");
 
-  // Get bump type from command line args
-  const bumpType = process.argv[2];
-  if (!bumpType) {
-    error("Please specify bump type: patch, minor, major, or a version number (e.g., 1.2.3)");
+  const releaseArgs = process.argv.slice(2);
+
+  if (!process.env.RELEASE_SKIP_CHECKS) {
+    log("Running pre-release checks...\n", "magenta");
+    await $`bun pre-release`;
+    success("Pre-release checks passed");
+  } else {
+    info("Skipping pre-release checks because RELEASE_SKIP_CHECKS is set");
   }
 
-  // Check if working directory is clean
   await checkWorkingDirectory();
 
-  // Read current version
-  const pkgPath = join(process.cwd(), "package.json");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+  const pkgPath = `${process.cwd()}/package.json`;
+  const pkg = JSON.parse(await Bun.file(pkgPath).text());
   const currentVersion = pkg.version;
 
   info(`Current version: ${currentVersion}`);
 
-  // Calculate new version
-  const newVersion = bumpVersion(currentVersion, bumpType);
+  const newVersion = bumpVersion(currentVersion, releaseArgs);
+  const parsedNewVersion = parseVersion(newVersion);
   info(`New version: ${newVersion}`);
 
-  // Get commits since last release
   log("\nFetching recent commits...\n", "yellow");
   const commits = await getCommitsSinceLastTag();
 
@@ -160,14 +257,20 @@ async function release() {
     }
   }
 
-  // Confirm release
-  log("\n⚠️  This will:", "yellow");
-  log(`  1. Update package.json and tauri.conf.json to v${newVersion}`, "yellow");
-  log(`  2. Create a commit with these changes`, "yellow");
+  log("\n  This will:", "yellow");
+  log(`  1. Update package.json, tauri.conf.json, and Cargo.toml to v${newVersion}`, "yellow");
+  log("  2. Create a commit with these changes", "yellow");
   log(`  3. Create and push tag v${newVersion}`, "yellow");
-  log(`  4. Trigger GitHub Actions to build and release\n`, "yellow");
+  log("  4. Trigger GitHub Actions to build and release\n", "yellow");
 
-  // In non-interactive mode (CI), skip confirmation
+  if (parsedNewVersion.prerelease) {
+    info(
+      `Release channel: ${parsedNewVersion.prerelease.channel} (#${parsedNewVersion.prerelease.number})`,
+    );
+  } else {
+    info("Release channel: stable");
+  }
+
   if (!process.stdin.isTTY) {
     info("Running in non-interactive mode, proceeding...");
   } else {
@@ -180,24 +283,20 @@ async function release() {
 
   log("\n📦 Updating version files...\n", "magenta");
 
-  // Update versions
-  updatePackageJson(newVersion);
-  updateTauriConfig(newVersion);
+  await updatePackageJson(newVersion);
+  await updateTauriConfig(newVersion);
+  await updateCargoToml(newVersion);
 
-  // Git add
-  await $`git add package.json src-tauri/tauri.conf.json`;
+  await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml`;
   success("Staged version changes");
 
-  // Create commit
   const commitMessage = `Bump version to ${newVersion}`;
   await $`git commit -m ${commitMessage}`;
   success(`Created commit: ${commitMessage}`);
 
-  // Create tag
   await $`git tag v${newVersion}`;
   success(`Created tag: v${newVersion}`);
 
-  // Push changes and tag
   log("\nPushing to remote...\n", "magenta");
   await $`git push origin master`;
   success("Pushed commits");
@@ -207,10 +306,9 @@ async function release() {
 
   log("\n✨ Release process complete!\n", "green");
   log(`GitHub Actions will now build and release v${newVersion}`, "cyan");
-  log(`View the progress at: https://github.com/athasdev/athas/actions\n`, "cyan");
+  log("View the progress at: https://github.com/athasdev/athas/actions\n", "cyan");
 }
 
-// Run the release
 release().catch((err) => {
   error(`Release failed: ${err.message}`);
 });

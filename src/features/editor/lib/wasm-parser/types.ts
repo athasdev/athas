@@ -22,6 +22,7 @@ export interface LoadedParser {
   parser: Parser;
   language: Language;
   highlightQuery?: Query;
+  highlightQueryText?: string;
   languageId: string;
 }
 

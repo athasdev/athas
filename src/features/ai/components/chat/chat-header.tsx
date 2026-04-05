@@ -1,9 +1,21 @@
 import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useUIState } from "@/stores/ui-state-store";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Button } from "@/ui/button";
+import Input from "@/ui/input";
+import {
+  PANE_CHIP_BASE,
+  paneHeaderClassName,
+  paneIconButtonClassName,
+  paneTitleClassName,
+} from "@/ui/pane";
 import Tooltip from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
-import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
+import ChatHistoryDropdown from "../history/sidebar";
+import { AgentSelector } from "../selectors/agent-selector";
 
 function EditableChatTitle({
   title,
@@ -54,13 +66,13 @@ function EditableChatTitle({
 
   if (isEditing) {
     return (
-      <input
+      <Input
         ref={inputRef}
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 font-medium text-text outline-none focus:border-accent/40 focus:bg-hover"
+        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 text-xs font-medium focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );
@@ -68,7 +80,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-full px-2 py-1 font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -77,42 +89,71 @@ function EditableChatTitle({
   );
 }
 
-export function ChatHeader() {
+interface ChatHeaderProps {
+  onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
+}
+
+export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
+  const chats = useAIChatStore((state) => state.chats);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
+  const switchToChat = useAIChatStore((state) => state.switchToChat);
 
   const { openSettingsDialog } = useUIState();
-  const currentChat = getCurrentChat();
+  const currentChat = chats.find((chat) => chat.id === currentChatId);
+  const currentAgentId = currentChat?.agentId ?? selectedAgentId;
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const historyButtonRef = useRef<HTMLButtonElement>(null);
+  const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;
 
   return (
-    <div className="relative z-[10020] flex items-center gap-2 border-border border-b bg-secondary-bg/70 px-3 py-2 backdrop-blur-sm">
+    <div className={cn("relative z-[10020]", paneHeaderClassName())}>
       <div className="min-w-0 flex-1">
-        {currentChatId ? (
-          <EditableChatTitle
-            title={currentChat ? currentChat.title : "New Chat"}
-            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
-          />
-        ) : (
-          <span className="font-medium text-text text-xs">New Chat</span>
-        )}
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
+            <ProviderIcon providerId={currentHeaderIconId} size={12} />
+          </span>
+          {currentChatId ? (
+            <EditableChatTitle
+              title={currentChat ? currentChat.title : "New Chat"}
+              onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
+            />
+          ) : (
+            <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
         <Tooltip content="Chat History" side="bottom">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            ref={historyButtonRef}
             onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+            className={paneIconButtonClassName()}
             aria-label="Toggle chat history"
           >
-            <History size={14} />
-          </button>
+            <History />
+          </Button>
         </Tooltip>
 
-        <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
+        <AgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
       </div>
+
+      <ChatHistoryDropdown
+        isOpen={isChatHistoryVisible}
+        onClose={() => setIsChatHistoryVisible(false)}
+        chats={chats}
+        currentChatId={currentChatId}
+        onSwitchToChat={switchToChat}
+        onDeleteChat={onDeleteChat ?? (() => {})}
+        triggerRef={historyButtonRef}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vite-plus/test";
 import { __test__ } from "./use-autocomplete";
 
 describe("use-autocomplete helpers", () => {

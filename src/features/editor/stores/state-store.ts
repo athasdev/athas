@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { isDragScrolling } from "@/features/editor/hooks/use-drag-scroll";
 import type { Cursor, MultiCursorState, Position, Range } from "@/features/editor/types/editor";
 import { getLineHeight } from "@/features/editor/utils/position";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -93,6 +94,9 @@ const viewStateCache = new EditorViewStateCacheManager();
 
 const ensureCursorVisible = (position: Position) => {
   if (typeof window === "undefined") return;
+
+  // Skip scroll adjustment during drag selection auto-scroll
+  if (isDragScrolling()) return;
 
   const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
   if (!viewport) return;

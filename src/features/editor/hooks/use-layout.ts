@@ -7,7 +7,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 
 /**
  * Measure character width using Canvas API for accurate positioning

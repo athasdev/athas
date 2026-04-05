@@ -1,26 +1,27 @@
 import { Calendar, FileText, Filter, Hash, Key, Link, Type } from "lucide-react";
-import type { ColumnInfo, ForeignKeyInfo } from "../types";
+import { Button } from "@/ui/button";
+import type { ColumnInfo, ForeignKeyInfo } from "../sqlite-types";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },
   num: { icon: Hash, color: "text-accent" },
-  text: { icon: Type, color: "text-green-500" },
-  varchar: { icon: Type, color: "text-green-500" },
-  char: { icon: Type, color: "text-green-500" },
-  date: { icon: Calendar, color: "text-purple-500" },
-  time: { icon: Calendar, color: "text-purple-500" },
-  blob: { icon: FileText, color: "text-red-500" },
-  binary: { icon: FileText, color: "text-red-500" },
+  text: { icon: Type, color: "text-text-lighter" },
+  varchar: { icon: Type, color: "text-text-lighter" },
+  char: { icon: Type, color: "text-text-lighter" },
+  date: { icon: Calendar, color: "text-accent" },
+  time: { icon: Calendar, color: "text-accent" },
+  blob: { icon: FileText, color: "text-text-lighter" },
+  binary: { icon: FileText, color: "text-text-lighter" },
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
-  if (isPrimaryKey) return <Key size={12} className="text-text-lighter" />;
-  if (isForeignKey) return <Link size={12} className="text-accent" />;
+  if (isPrimaryKey) return <Key className="text-text-lighter" />;
+  if (isForeignKey) return <Link className="text-accent" />;
   const lowerType = type.toLowerCase();
   for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
-    if (lowerType.includes(key)) return <Icon size={12} className={color} />;
+    if (lowerType.includes(key)) return <Icon className={color} />;
   }
-  return <Type size={12} className="text-text-lighter" />;
+  return <Type className="text-text-lighter" />;
 }
 
 interface SchemaViewProps {
@@ -67,13 +68,16 @@ export default function SchemaView({
                   </span>
                 )}
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => onAddFilter(c.name)}
-                className="rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs opacity-60 hover:border-border/70 hover:bg-hover hover:text-text hover:opacity-100"
+                className="rounded-full text-text-lighter opacity-60 hover:text-text hover:opacity-100"
                 aria-label={`Filter by ${c.name}`}
               >
-                <Filter size={12} />
-              </button>
+                <Filter />
+              </Button>
             </div>
           );
         })}

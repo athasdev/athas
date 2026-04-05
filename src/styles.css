@@ -12,4 +12,5 @@
 @import "./styles/utilities.css";
 
 @import "./features/editor/styles/token-theme.css";
+@import "./features/editor/styles/overlay-card.css";
 @import "./features/editor/markdown/styles.css";

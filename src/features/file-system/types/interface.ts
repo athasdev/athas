@@ -8,11 +8,6 @@ export interface FsState {
   isFileTreeLoading: boolean;
   isSwitchingProject: boolean;
 
-  // Remote connection state
-  isRemoteWindow: boolean;
-  remoteConnectionId?: string;
-  remoteConnectionName?: string;
-
   // Cache for project files
   projectFilesCache?: {
     path: string;
@@ -41,6 +36,7 @@ export interface FsActions {
   ) => Promise<void>;
   handleFileOpen: (path: string, isDir: boolean) => Promise<void>;
   toggleFolder: (path: string) => Promise<void>;
+  revealPathInTree: (targetPath: string) => Promise<void>;
   handleCreateNewFile: () => Promise<void>;
   handleCreateNewFileInDirectory: (
     dirPath: string,
@@ -75,5 +71,5 @@ export interface FsActions {
   setIsSwitchingProject: (value: boolean) => void;
 
   // Session restoration
-  restoreSession: (projectPath: string) => Promise<void>;
+  restoreSession: (projectPath: string, skipBufferPath?: string) => Promise<void>;
 }

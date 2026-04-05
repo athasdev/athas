@@ -1,4 +1,4 @@
-use crate::features::tools::{
+use athas_tooling::{
    LanguageToolConfigSet, LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
 };
 use tauri::AppHandle;

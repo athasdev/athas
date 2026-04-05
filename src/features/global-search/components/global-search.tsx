@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { Button } from "@/ui/button";
 import { CommandInput, CommandList } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useGlobalSearch } from "../hooks/use-global-search";
@@ -41,9 +42,11 @@ const GlobalSearch = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
       {/* Backdrop - click to close */}
-      <button
+      <Button
         type="button"
-        className="absolute inset-0 cursor-default bg-black/20"
+        variant="ghost"
+        size="sm"
+        className="absolute inset-0 cursor-default rounded-none bg-black/20 hover:bg-black/20"
         onClick={onClose}
         aria-label="Close global search"
         tabIndex={-1}
@@ -79,9 +82,9 @@ const GlobalSearch = () => {
                 hasQuery={!!debouncedQuery}
                 isLoading={isLoadingFiles}
               />
-              <button onClick={onClose} className="rounded p-0.5 transition-colors hover:bg-hover">
-                <X size={12} className="text-text-lighter" />
-              </button>
+              <Button onClick={onClose} variant="ghost" size="icon-xs" className="rounded">
+                <X className="text-text-lighter" />
+              </Button>
             </div>
           </div>
 
@@ -109,7 +112,7 @@ const GlobalSearch = () => {
                         index={index}
                         isSelected={index === selectedIndex}
                         onClick={handleItemSelect}
-                        onMouseEnter={() => handlePreviewChange(file.path)}
+                        onPreview={handlePreviewChange}
                         rootFolderPath={rootFolderPath}
                       />
                     ))}
@@ -129,7 +132,7 @@ const GlobalSearch = () => {
                           index={globalIndex}
                           isSelected={globalIndex === selectedIndex}
                           onClick={handleItemSelect}
-                          onMouseEnter={() => handlePreviewChange(file.path)}
+                          onPreview={handlePreviewChange}
                           rootFolderPath={rootFolderPath}
                         />
                       );
@@ -151,7 +154,7 @@ const GlobalSearch = () => {
                           index={globalIndex}
                           isSelected={globalIndex === selectedIndex}
                           onClick={handleItemSelect}
-                          onMouseEnter={() => handlePreviewChange(file.path)}
+                          onPreview={handlePreviewChange}
                           rootFolderPath={rootFolderPath}
                         />
                       );

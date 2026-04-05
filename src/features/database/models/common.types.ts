@@ -1,5 +1,8 @@
+export type DatabaseObjectKind = "table" | "subscription";
+
 export interface TableInfo {
   name: string;
+  kind?: DatabaseObjectKind;
 }
 
 export interface QueryResult {
@@ -64,6 +67,37 @@ export interface ForeignKeyInfo {
   from_column: string;
   to_table: string;
   to_column: string;
+}
+
+export interface PostgresSubscriptionInfo {
+  name: string;
+  owner: string;
+  enabled: boolean;
+  publications: string[];
+  connection_string: string;
+  slot_name: string | null;
+  synchronous_commit: string | null;
+  binary: boolean;
+  streaming: string | null;
+  two_phase: boolean;
+  disable_on_error: boolean;
+  password_required: boolean;
+  run_as_owner: boolean;
+  origin: string | null;
+  failover: boolean;
+  two_phase_state: string | null;
+}
+
+export interface CreatePostgresSubscriptionParams {
+  name: string;
+  connection_string: string;
+  publications: string[];
+  enabled: boolean;
+  create_slot: boolean;
+  copy_data: boolean;
+  connect: boolean;
+  failover: boolean;
+  with_slot_name?: string | null;
 }
 
 export type ViewMode = "data" | "schema" | "info";

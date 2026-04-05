@@ -6,19 +6,37 @@ import { createSelectors } from "@/utils/zustand-selectors";
 
 export type VimMode = "normal" | "insert" | "visual" | "command";
 
+interface RegisterEntry {
+  content: string;
+  linewise: boolean;
+}
+
+interface MarkEntry {
+  line: number;
+  column: number;
+}
+
+interface JumpEntry {
+  line: number;
+  column: number;
+}
+
+const MAX_JUMP_LIST_SIZE = 100;
+const MAX_NUMBERED_REGISTERS = 9;
+
 interface VimState {
   mode: VimMode;
   relativeLineNumbers: boolean;
-  isCommandMode: boolean; // When user presses : in normal mode
-  commandInput: string; // The command being typed after :
-  lastCommand: string; // Store the last executed command
-  lastKey: string | null; // For double key commands like dd, yy
-  keyBuffer: string[]; // Buffer for multi-key commands (e.g., "3", "d", "w")
+  isCommandMode: boolean;
+  commandInput: string;
+  lastCommand: string;
+  lastKey: string | null;
+  keyBuffer: string[];
   visualSelection: {
     start: { line: number; column: number } | null;
     end: { line: number; column: number } | null;
   };
-  visualMode: "char" | "line" | null; // Track visual mode type
+  visualMode: "char" | "line" | null;
   register: {
     text: string;
     isLineWise: boolean;
@@ -27,7 +45,12 @@ interface VimState {
     type: "command" | "action" | null;
     keys: string[];
     count?: number;
-  } | null; // For repeat (.) functionality
+  } | null;
+  registers: Map<string, RegisterEntry>;
+  currentRegister: string | null;
+  marks: Map<string, MarkEntry>;
+  jumpList: JumpEntry[];
+  jumpListIndex: number;
 }
 
 const defaultVimState: VimState = {
@@ -48,6 +71,11 @@ const defaultVimState: VimState = {
     isLineWise: false,
   },
   lastOperation: null,
+  registers: new Map<string, RegisterEntry>(),
+  currentRegister: null,
+  marks: new Map<string, MarkEntry>(),
+  jumpList: [],
+  jumpListIndex: -1,
 };
 
 const useVimStoreBase = create(
@@ -230,6 +258,157 @@ const useVimStoreBase = create(
           set((state) => {
             state.lastOperation = null;
           });
+        },
+
+        // Named register system
+        setCurrentRegister: (reg: string) => {
+          set((state) => {
+            state.currentRegister = reg;
+          });
+        },
+
+        clearCurrentRegister: () => {
+          set((state) => {
+            state.currentRegister = null;
+          });
+        },
+
+        setNamedRegister: (name: string, content: string, linewise: boolean) => {
+          set((state) => {
+            state.registers.set(name, { content, linewise });
+          });
+        },
+
+        getNamedRegister: (name: string): RegisterEntry | undefined => {
+          return get().registers.get(name);
+        },
+
+        writeToRegister: (content: string, linewise: boolean, isDelete: boolean) => {
+          const state = get();
+          const targetRegister = state.currentRegister;
+
+          set((draft) => {
+            // Always write to unnamed register
+            draft.registers.set("", { content, linewise });
+
+            if (targetRegister) {
+              // User explicitly specified a register with "
+              if (targetRegister >= "A" && targetRegister <= "Z") {
+                // Uppercase register: append to the lowercase variant
+                const lowerReg = targetRegister.toLowerCase();
+                const existing = draft.registers.get(lowerReg);
+                if (existing) {
+                  draft.registers.set(lowerReg, {
+                    content: existing.content + content,
+                    linewise: existing.linewise || linewise,
+                  });
+                } else {
+                  draft.registers.set(lowerReg, { content, linewise });
+                }
+              } else {
+                draft.registers.set(targetRegister, { content, linewise });
+              }
+              draft.currentRegister = null;
+            } else if (isDelete) {
+              // Shift numbered delete registers 1-9
+              for (let i = MAX_NUMBERED_REGISTERS; i >= 2; i--) {
+                const prev = draft.registers.get(String(i - 1));
+                if (prev) {
+                  draft.registers.set(String(i), { ...prev });
+                }
+              }
+              draft.registers.set("1", { content, linewise });
+            } else {
+              // Yank: write to "0" register
+              draft.registers.set("0", { content, linewise });
+            }
+          });
+        },
+
+        readFromRegister: (): RegisterEntry | undefined => {
+          const state = get();
+          const targetRegister = state.currentRegister;
+
+          if (targetRegister) {
+            // Clear the current register after reading
+            set((draft) => {
+              draft.currentRegister = null;
+            });
+            const regName =
+              targetRegister >= "A" && targetRegister <= "Z"
+                ? targetRegister.toLowerCase()
+                : targetRegister;
+            return state.registers.get(regName);
+          }
+
+          // Default: read from unnamed register
+          return state.registers.get("");
+        },
+
+        // Marks system
+        setMark: (name: string, line: number, column: number) => {
+          set((state) => {
+            state.marks.set(name, { line, column });
+          });
+        },
+
+        getMark: (name: string): MarkEntry | undefined => {
+          return get().marks.get(name);
+        },
+
+        // Jump list system
+        pushJump: (line: number, column: number) => {
+          set((state) => {
+            // If we're in the middle of the list, truncate forward entries
+            if (state.jumpListIndex < state.jumpList.length - 1) {
+              state.jumpList = state.jumpList.slice(0, state.jumpListIndex + 1);
+            }
+
+            // Don't push duplicate of the current position
+            const last = state.jumpList[state.jumpList.length - 1];
+            if (last && last.line === line && last.column === column) {
+              return;
+            }
+
+            state.jumpList.push({ line, column });
+
+            // Limit jump list size
+            if (state.jumpList.length > MAX_JUMP_LIST_SIZE) {
+              state.jumpList = state.jumpList.slice(state.jumpList.length - MAX_JUMP_LIST_SIZE);
+            }
+
+            state.jumpListIndex = state.jumpList.length - 1;
+          });
+        },
+
+        jumpBack: (): JumpEntry | null => {
+          const state = get();
+          if (state.jumpListIndex <= 0) return null;
+
+          const newIndex = state.jumpListIndex - 1;
+          const entry = state.jumpList[newIndex];
+          if (!entry) return null;
+
+          set((draft) => {
+            draft.jumpListIndex = newIndex;
+          });
+
+          return { line: entry.line, column: entry.column };
+        },
+
+        jumpForward: (): JumpEntry | null => {
+          const state = get();
+          if (state.jumpListIndex >= state.jumpList.length - 1) return null;
+
+          const newIndex = state.jumpListIndex + 1;
+          const entry = state.jumpList[newIndex];
+          if (!entry) return null;
+
+          set((draft) => {
+            draft.jumpListIndex = newIndex;
+          });
+
+          return { line: entry.line, column: entry.column };
         },
       },
     })),

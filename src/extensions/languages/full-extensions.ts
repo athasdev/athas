@@ -4,8 +4,6 @@
  * that need to be downloaded as platform-specific packages.
  */
 
-import { PLATFORM_ARCH } from "@/utils/platform";
-
 import type { ExtensionManifest } from "../types/extension-manifest";
 
 // CDN base URL for extensions
@@ -110,31 +108,4 @@ export const fullExtensions: ExtensionManifest[] = [
  */
 export function getFullExtensions(): ExtensionManifest[] {
   return fullExtensions;
-}
-
-/**
- * Get download info for current platform
- */
-export function getDownloadInfoForPlatform(manifest: ExtensionManifest): {
-  downloadUrl: string;
-  size: number;
-  checksum: string;
-} | null {
-  if (!manifest.installation) {
-    return null;
-  }
-
-  const platformArch = PLATFORM_ARCH;
-
-  // Check for platform+arch specific package
-  if (manifest.installation.platformArch?.[platformArch]) {
-    return manifest.installation.platformArch[platformArch];
-  }
-
-  // Fallback to default download URL
-  return {
-    downloadUrl: manifest.installation.downloadUrl,
-    size: manifest.installation.size,
-    checksum: manifest.installation.checksum,
-  };
 }

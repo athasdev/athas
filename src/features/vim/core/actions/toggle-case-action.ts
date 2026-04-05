@@ -1,63 +1,54 @@
 /**
  * Toggle case action (~)
+ *
+ * When called with a count (e.g. 3~), the command executor invokes this action
+ * count times. Each invocation reads the fresh cursor position from the store
+ * so that successive calls advance correctly.
  */
 
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import type { Action, EditorContext } from "../core/types";
 
-/**
- * Toggle case action - toggles the case of the character under the cursor and moves to the next character
- */
 export const toggleCaseAction: Action = {
   name: "toggleCase",
   repeatable: true,
   entersInsertMode: false,
 
   execute: (context: EditorContext): void => {
-    const { lines, updateContent, setCursorPosition, cursor } = context;
+    const { updateContent, setCursorPosition } = context;
 
-    const repeatCount = 1;
+    // Read fresh cursor and lines so repeated invocations advance correctly
+    const cursor = useEditorStateStore.getState().cursorPosition;
+    const lines = [...useEditorViewStore.getState().lines];
 
-    let currentLine = cursor.line;
+    const currentLine = cursor.line;
     let currentColumn = cursor.column;
-    const updatedLines = [...lines];
 
-    // Toggle case for the specified number of characters
-    for (let i = 0; i < repeatCount; i++) {
-      // Check if we're at the end of the current line
-      if (currentColumn >= updatedLines[currentLine]?.length || 0) {
-        // Move to the next line if there is one
-        if (currentLine < updatedLines.length - 1) {
-          currentLine++;
-          currentColumn = 0;
-        } else {
-          // We're at the end of the file, stop
-          break;
-        }
-      }
+    if (currentLine >= lines.length) return;
 
-      // Check if we have a valid position
-      if (currentLine < updatedLines.length && currentColumn < updatedLines[currentLine].length) {
-        const char = updatedLines[currentLine][currentColumn];
-        const toggledChar = char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase();
+    // If at end of line, nothing to toggle
+    if (currentColumn >= lines[currentLine].length) return;
 
-        updatedLines[currentLine] =
-          updatedLines[currentLine].slice(0, currentColumn) +
-          toggledChar +
-          updatedLines[currentLine].slice(currentColumn + 1);
+    const char = lines[currentLine][currentColumn];
+    const toggledChar = char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase();
 
-        // Move to the next character
-        currentColumn++;
-      }
-    }
+    lines[currentLine] =
+      lines[currentLine].slice(0, currentColumn) +
+      toggledChar +
+      lines[currentLine].slice(currentColumn + 1);
 
-    const toggledContent = updatedLines.join("\n");
+    currentColumn++;
+
+    const toggledContent = lines.join("\n");
     updateContent(toggledContent);
 
-    // Position cursor after the last toggled character
+    const newOffset = calculateOffsetFromPosition(currentLine, currentColumn, lines);
     setCursorPosition({
       line: currentLine,
       column: currentColumn,
-      offset: cursor.offset + repeatCount, // Approximate offset
+      offset: newOffset,
     });
   },
 };

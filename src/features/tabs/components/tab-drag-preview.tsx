@@ -1,11 +1,11 @@
 import { Database, Package, Pin } from "lucide-react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 
 interface TabDragPreviewProps {
   x: number;
   y: number;
-  buffer: Buffer;
+  buffer: PaneContent;
 }
 
 const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
@@ -16,17 +16,24 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
     <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 text-xs opacity-95 shadow-sm">
       <span className="grid size-3 shrink-0 place-content-center">
         {buffer.path === "extensions://marketplace" ? (
-          <Package size={12} className="text-accent" />
-        ) : buffer.isSQLite ? (
-          <Database size={12} className="text-text-lighter" />
+          <Package className="text-accent" />
+        ) : buffer.type === "database" ? (
+          <Database className="text-text-lighter" />
         ) : (
-          <FileIcon fileName={buffer.name} isDir={false} className="text-text-lighter" size={12} />
+          <FileExplorerIcon
+            fileName={buffer.name}
+            isDir={false}
+            className="text-text-lighter"
+            size={12}
+          />
         )}
       </span>
-      {buffer.isPinned && <Pin size={8} className="shrink-0 text-accent" />}
+      {buffer.isPinned && <Pin className="shrink-0 text-accent" />}
       <span className="max-w-[200px] truncate text-text">
         {buffer.name}
-        {buffer.isDirty && <span className="ml-1 text-text-lighter">•</span>}
+        {buffer.type === "editor" && buffer.isDirty && (
+          <span className="ml-1 text-text-lighter">•</span>
+        )}
       </span>
     </div>
   </div>

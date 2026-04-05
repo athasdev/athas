@@ -1,4 +1,4 @@
-use crate::extensions::{DownloadInfo, ExtensionInstaller, ExtensionMetadata};
+use athas_extensions::{DownloadInfo, ExtensionInstaller, ExtensionMetadata};
 use sha2::{Digest, Sha256};
 use std::{
    env,

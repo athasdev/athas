@@ -69,7 +69,7 @@ export const EDITOR_CONSTANTS = {
 
   // Hover Tooltip
   HOVER_TOOLTIP_DELAY: 300,
-  HOVER_TOOLTIP_HEIGHT: 200,
+  HOVER_TOOLTIP_HEIGHT: 360,
   HOVER_TOOLTIP_MARGIN: 10,
 
   // Dynamic Typing Speed

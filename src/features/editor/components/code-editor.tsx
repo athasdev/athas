@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -9,10 +9,11 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAppStore } from "@/stores/app-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";
@@ -20,7 +21,7 @@ import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
 import { EditorStylesheet } from "./stylesheet";
-import Breadcrumb from "./toolbar/breadcrumb";
+import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
 
 interface CodeEditorProps {
@@ -31,6 +32,13 @@ interface CodeEditorProps {
   className?: string;
   paneId?: string;
   bufferId?: string;
+  isActiveSurface?: boolean;
+  showToolbar?: boolean;
+  readOnly?: boolean;
+  breadcrumbProps?: BreadcrumbProps;
+  scrollable?: boolean;
+  backgroundLayer?: ReactNode;
+  onReadonlySurfaceClick?: (position: { line: number; column: number }) => void;
 }
 
 export interface CodeEditorRef {
@@ -40,12 +48,23 @@ export interface CodeEditorRef {
 
 interface GoToLineEventDetail {
   line?: number;
+  column?: number;
   path?: string;
 }
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 
-const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
+const CodeEditor = ({
+  className,
+  bufferId: propBufferId,
+  isActiveSurface = true,
+  showToolbar = true,
+  readOnly = false,
+  breadcrumbProps,
+  scrollable = true,
+  backgroundLayer,
+  onReadonlySurfaceClick,
+}: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
@@ -56,36 +75,40 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
   const activeBufferId = propBufferId ?? globalActiveBufferId;
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { handleContentChange } = useAppStore.use.actions();
+  const { handleContentChange } = useEditorAppStore.use.actions();
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
-  const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const { settings } = useSettingsStore();
+  const isFindVisible = useUIState((state) => state.isFindVisible);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
 
   // Extract values from active buffer or use defaults
-  const value = activeBuffer?.content || "";
+  const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
+  const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
 
-  const showMarkdownPreview = activeBuffer?.isMarkdownPreview || false;
-  const showHtmlPreview = activeBuffer?.isHtmlPreview || false;
-  const showCsvPreview = activeBuffer?.isCsvPreview || false;
+  const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
+  const showHtmlPreview = activeBuffer?.type === "htmlPreview";
+  const showCsvPreview = activeBuffer?.type === "csvPreview";
 
   // Initialize refs in store
   useEffect(() => {
+    if (!isActiveSurface) return;
     setRefs({
       editorRef,
     });
-  }, [setRefs]);
+  }, [isActiveSurface, setRefs]);
 
   // Focus editor when active buffer changes
   useEffect(() => {
+    if (!enableInteractiveServices) return;
     if (activeBufferId && editorRef.current) {
       // Find the textarea element within the editor
       const textarea = editorRef.current.querySelector("textarea");
@@ -96,29 +119,33 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         }, 0);
       }
     }
-  }, [activeBufferId]);
+  }, [activeBufferId, enableInteractiveServices]);
 
   // Sync content and file info with editor instance store
   useEffect(() => {
+    if (!isActiveSurface) return;
     setContent(value, onChange);
-  }, [value, onChange, setContent]);
+  }, [isActiveSurface, value, onChange, setContent]);
 
   useEffect(() => {
+    if (!isActiveSurface) return;
     setFileInfo(filePath);
-  }, [filePath, setFileInfo]);
+  }, [filePath, isActiveSurface, setFileInfo]);
 
   // Editor view store automatically syncs with active buffer
 
   // Set disabled state
   useEffect(() => {
+    if (!isActiveSurface) return;
     setDisabled(false);
-  }, [setDisabled]);
+  }, [isActiveSurface, setDisabled]);
 
   // Get cursor position for LSP integration
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
+    enabled: enableInteractiveServices,
     filePath,
     value,
     cursorPosition,
@@ -128,12 +155,14 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!enableInteractiveServices) return;
     hoverHandlers.handleHover(e);
     definitionLinkHandlers.handleMouseMove(e);
   };
 
   // Combine mouse leave handlers
   const handleMouseLeave = () => {
+    if (!enableInteractiveServices) return;
     hoverHandlers.handleMouseLeave();
     definitionLinkHandlers.handleMouseLeave();
   };
@@ -143,7 +172,8 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
 
   // Handle go-to-line events (from search results, diagnostics, vim, etc.)
   useEffect(() => {
-    const goToLine = (lineNumber: number) => {
+    if (!isActiveSurface) return;
+    const goToLine = (lineNumber: number, columnNumber?: number) => {
       if (!editorRef.current) return false;
 
       const textarea = editorRef.current.querySelector("textarea");
@@ -159,11 +189,17 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       // Convert to 0-indexed line number and clamp to valid range
       const targetLine = Math.max(0, Math.min(lineNumber - 1, lines.length - 1));
 
+      const targetColumn = Math.max(
+        0,
+        Math.min((columnNumber ?? 1) - 1, lines[targetLine]?.length ?? 0),
+      );
+
       // Calculate character offset for the target line
       let offset = 0;
       for (let i = 0; i < targetLine; i++) {
         offset += lines[i].length + 1;
       }
+      offset += targetColumn;
 
       // Set cursor position in textarea
       textarea.selectionStart = offset;
@@ -181,7 +217,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       const { setCursorPosition } = useEditorStateStore.getState().actions;
       setCursorPosition({
         line: targetLine,
-        column: 0,
+        column: targetColumn,
         offset: offset,
       });
 
@@ -190,13 +226,14 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
 
     const handleGoToLine = (event: CustomEvent<GoToLineEventDetail>) => {
       const lineNumber = event.detail?.line;
+      const columnNumber = event.detail?.column;
       const targetPath = event.detail?.path;
       if (targetPath && targetPath !== filePath) return;
       if (!lineNumber) return;
 
       // Try immediately, then retry if content not ready yet
-      if (!goToLine(lineNumber)) {
-        setTimeout(() => goToLine(lineNumber), 150);
+      if (!goToLine(lineNumber, columnNumber)) {
+        setTimeout(() => goToLine(lineNumber, columnNumber), 150);
       }
     };
 
@@ -204,13 +241,18 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     return () => {
       window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
     };
-  }, [filePath]);
+  }, [filePath, isActiveSurface]);
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
-    // Clear existing timer
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
+    }
+
+    if (!enableInteractiveServices || !isFindVisible) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
     }
 
     // Clear matches immediately if no query
@@ -239,10 +281,19 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         clearTimeout(searchTimerRef.current);
       }
     };
-  }, [searchQuery, searchOptions, value, setSearchMatches, setCurrentMatchIndex]);
+  }, [
+    enableInteractiveServices,
+    isFindVisible,
+    searchQuery,
+    searchOptions,
+    value,
+    setSearchMatches,
+    setCurrentMatchIndex,
+  ]);
 
   // Effect to handle search navigation - scroll to current match and move cursor
   useEffect(() => {
+    if (!enableInteractiveServices) return;
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (match && editorRef.current) {
@@ -268,9 +319,9 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         }
       }
     }
-  }, [currentMatchIndex, searchMatches, value, zoomedFontSize]);
+  }, [currentMatchIndex, enableInteractiveServices, searchMatches, value, zoomedFontSize]);
 
-  if (!activeBuffer || isFileTreeLoading) {
+  if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
   }
 
@@ -279,10 +330,10 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
-        {settings.coreFeatures.breadcrumbs && <Breadcrumb />}
+        {showToolbar && settings.coreFeatures.breadcrumbs && <Breadcrumb {...breadcrumbProps} />}
 
         {/* Find Bar */}
-        <FindBar />
+        {showToolbar && enableInteractiveServices && <FindBar />}
 
         <div
           ref={editorRef}
@@ -296,10 +347,10 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
           }}
         >
           {/* Hover Tooltip */}
-          <HoverTooltip />
+          {enableInteractiveServices && <HoverTooltip />}
 
           {/* Completion Dropdown */}
-          <CompletionDropdown />
+          {enableInteractiveServices && <CompletionDropdown />}
 
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">
@@ -311,10 +362,19 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
               <CsvPreview />
             ) : (
               <Editor
+                bufferId={activeBufferId ?? undefined}
+                isActiveSurface={isActiveSurface}
+                isPreviewMode={isPreviewBuffer}
+                readOnly={readOnly}
+                scrollable={scrollable}
+                backgroundLayer={backgroundLayer}
+                onReadonlySurfaceClick={onReadonlySurfaceClick}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                onMouseEnter={hoverHandlers.handleMouseEnter}
-                onClick={goToDefinitionHandlers.handleClick}
+                onMouseEnter={
+                  enableInteractiveServices ? hoverHandlers.handleMouseEnter : undefined
+                }
+                onClick={enableInteractiveServices ? goToDefinitionHandlers.handleClick : undefined}
               />
             )}
           </div>
@@ -322,7 +382,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       </div>
 
       {/* Debug overlay for scroll monitoring */}
-      <ScrollDebugOverlay />
+      {enableInteractiveServices && <ScrollDebugOverlay />}
     </>
   );
 };

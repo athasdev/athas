@@ -1,6 +1,7 @@
 import { ListChecks, Play } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import type { ParsedPlan, PlanStep } from "@/features/ai/lib/plan-parser";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import MarkdownRenderer from "./markdown-renderer";
 import { PlanStepDisplay } from "./plan-step-display";
@@ -40,7 +41,7 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
 
       <div className="my-2 rounded-2xl border border-accent/20 bg-accent/5">
         <div className="flex items-center gap-1.5 border-accent/20 border-b px-3 py-2">
-          <ListChecks size={12} className="text-accent" />
+          <ListChecks className="text-accent" />
           <span className="font-medium text-accent text-xs">
             Plan ({plan.steps.length} {plan.steps.length === 1 ? "step" : "steps"})
           </span>
@@ -54,17 +55,19 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
 
         {!isStreaming && onExecuteStep && (
           <div className="border-accent/20 border-t px-3 py-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleExecutePlan}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border border-accent/30 px-3 py-1 text-xs transition-colors",
+                "gap-1.5 rounded-full border border-accent/30",
                 "bg-accent/20 text-accent hover:bg-accent/30",
               )}
             >
-              <Play size={10} />
+              <Play />
               Execute Plan
-            </button>
+            </Button>
           </div>
         )}
       </div>

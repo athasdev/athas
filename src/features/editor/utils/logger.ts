@@ -21,7 +21,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 class EditorLogger {
   private config: LoggerConfig = {
     enabled: import.meta.env.DEV, // Only enabled in development
-    minLevel: "debug",
+    minLevel: "info",
     prefix: "[Editor]",
   };
 

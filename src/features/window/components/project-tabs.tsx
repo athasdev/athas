@@ -1,18 +1,36 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Copy, Folder, FolderOpen, Plus, X } from "lucide-react";
+import {
+  Copy,
+  EllipsisVertical,
+  Folder,
+  FolderOpen,
+  Image,
+  Plus,
+  Server,
+  SquareArrowOutUpRight,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
-import { useUIState } from "@/stores/ui-state-store";
-import type { ProjectTab } from "@/stores/workspace-tabs-store";
-import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import type { ProjectTab } from "@/features/window/stores/workspace-tabs-store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { Button } from "@/ui/button";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
+import { Tab, TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
+import ProjectIconPicker from "./project-icon-picker";
 import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
+
+const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
 interface TabPosition {
   index: number;
@@ -26,10 +44,11 @@ const ProjectTabs = () => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
   const { switchToProject, closeProject } = useFileSystemStore();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragStateRef = useRef({
     isDragging: false,
     draggedIndex: null as number | null,
@@ -51,6 +70,8 @@ const ProjectTabs = () => {
     currentPosition: null,
     tabPositions: [],
   });
+
+  const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
 
   const contextMenu = useContextMenu<ProjectTab>();
 
@@ -155,13 +176,9 @@ const ProjectTabs = () => {
   );
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent, index: number, tab: ProjectTab) => {
+    (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
       if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
         return;
-      }
-
-      if (!tab.isActive) {
-        switchToProject(tab.id);
       }
 
       e.preventDefault();
@@ -177,13 +194,32 @@ const ProjectTabs = () => {
     [switchToProject],
   );
 
-  const handleCloseTab = async (e: React.MouseEvent, projectId: string) => {
-    e.stopPropagation();
-    await closeProject(projectId);
-  };
+  const handleTabClick = useCallback(
+    async (tab: ProjectTab) => {
+      if (isSwitchingProject || tab.isActive) return;
+      await switchToProject(tab.id);
+    },
+    [isSwitchingProject, switchToProject],
+  );
+
+  const handleTabKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, tab: ProjectTab) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      void handleTabClick(tab);
+    },
+    [handleTabClick],
+  );
 
   const handleAddProject = () => {
     setIsProjectPickerVisible(true);
+  };
+
+  const handleTabActionsClick = (e: React.MouseEvent, tab: ProjectTab) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    contextMenu.openAt({ x: rect.right, y: rect.bottom + 4 }, tab);
   };
 
   // Build context menu items based on the selected tab
@@ -197,7 +233,7 @@ const ProjectTabs = () => {
         {
           id: "copy-path",
           label: "Copy Path",
-          icon: <Copy size={12} />,
+          icon: <Copy />,
           onClick: async () => {
             await writeText(tab.path);
           },
@@ -205,11 +241,41 @@ const ProjectTabs = () => {
         {
           id: "reveal",
           label: "Reveal in Finder",
-          icon: <FolderOpen size={12} />,
+          icon: <FolderOpen />,
           onClick: () => {
             if (handleRevealInFolder) {
               handleRevealInFolder(tab.path);
             }
+          },
+        },
+        {
+          id: "select-icon",
+          label: "Select Icon",
+          icon: <Image />,
+          onClick: () => {
+            setIconPickerTab(tab);
+          },
+        },
+        {
+          id: "open-in-new-window",
+          label: "Open in New Window",
+          icon: <SquareArrowOutUpRight />,
+          onClick: () => {
+            if (isRemoteProjectTab(tab)) {
+              const match = tab.path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+              if (!match) return;
+
+              void createAppWindow({
+                remoteConnectionId: match[1],
+                remoteConnectionName: tab.name,
+              });
+              return;
+            }
+
+            void createAppWindow({
+              path: tab.path,
+              isDirectory: true,
+            });
           },
         },
         {
@@ -223,7 +289,7 @@ const ProjectTabs = () => {
       items.push({
         id: "close-project",
         label: "Close Project",
-        icon: <X size={12} />,
+        icon: <X />,
         onClick: () => {
           closeProject(tab.id);
         },
@@ -325,51 +391,79 @@ const ProjectTabs = () => {
 
   return (
     <>
-      <div
-        ref={tabBarRef}
-        className="flex items-center gap-1 rounded-lg border border-border bg-primary-bg/70 px-1 py-0.5"
-      >
+      <TabsList ref={tabBarRef} variant="segmented" className="group">
         {projectTabs.map((tab: ProjectTab, index: number) => {
+          const isRemote = isRemoteProjectTab(tab);
           const isDraggedTab = isDragging && draggedIndex === index;
           const showDropIndicatorBefore =
             isDragging && dropTargetIndex === index && draggedIndex !== index;
 
           return (
-            <div key={tab.id} className="relative flex items-center">
+            <div key={tab.id} className="relative flex h-full items-stretch">
               {showDropIndicatorBefore && (
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
-              <button
+              <Tab
                 role="tab"
+                tabIndex={0}
+                aria-selected={tab.isActive}
+                isActive={tab.isActive}
+                isDragged={isDraggedTab}
+                size="xs"
+                variant="segmented"
+                labelPosition="start"
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index, tab)}
                 onContextMenu={(e) => contextMenu.open(e, tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 className={cn(
-                  "group relative flex h-6 items-center gap-1.5 rounded-md border pr-5 pl-2 text-xs transition-colors",
-                  tab.isActive
-                    ? "border-border/80 bg-secondary-bg text-text"
-                    : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
-                  isDraggedTab && "opacity-30",
+                  "px-6",
+                  isRemote &&
+                    (tab.isActive
+                      ? "bg-sky-500/15 text-sky-100"
+                      : "text-sky-200/85 hover:text-sky-100"),
+                  isSwitchingProject && "cursor-wait",
                 )}
+                style={{ fontSize: "var(--ui-text-sm)" }}
+                onClick={() => void handleTabClick(tab)}
                 title={tab.path}
+                action={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={(e) => handleTabActionsClick(e, tab)}
+                    className={cn(
+                      "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
+                      "hover:bg-hover/60 hover:text-text",
+                      "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
+                    )}
+                    title="Project actions"
+                    aria-label="Project actions"
+                  >
+                    <EllipsisVertical />
+                  </Button>
+                }
               >
-                <Folder size={12} />
+                {tab.customIcon ? (
+                  <img
+                    src={convertFileSrc(tab.customIcon)}
+                    alt=""
+                    className="shrink-0 rounded-sm object-contain"
+                    style={{
+                      width: "var(--app-ui-font-size)",
+                      height: "var(--app-ui-font-size)",
+                    }}
+                  />
+                ) : isRemote ? (
+                  <Server />
+                ) : (
+                  <Folder />
+                )}
                 <span className="max-w-32 truncate">{tab.name}</span>
-                <button
-                  onClick={(e) => handleCloseTab(e, tab.id)}
-                  className={cn(
-                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded-md text-text-lighter transition-opacity",
-                    "hover:bg-hover hover:text-text",
-                    "opacity-0 group-hover:opacity-100",
-                  )}
-                  title="Close project"
-                  aria-label="Close project"
-                >
-                  <X size={10} />
-                </button>
-              </button>
+              </Tab>
             </div>
           );
         })}
@@ -378,15 +472,20 @@ const ProjectTabs = () => {
             <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
           </div>
         )}
-        <button
-          onClick={handleAddProject}
-          className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-text-lighter transition-colors hover:border-border/60 hover:bg-hover/80 hover:text-text"
-          title="Open folder"
-          aria-label="Open folder"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
+        <div className="w-0 overflow-hidden transition-[width,opacity] duration-150 ease-out group-hover:w-6 focus-within:w-6">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={handleAddProject}
+            className="h-full w-6 rounded-none border-0 text-text-lighter opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 hover:bg-hover/60 hover:text-text"
+            title="Open folder"
+            aria-label="Open folder"
+          >
+            <Plus />
+          </Button>
+        </div>
+      </TabsList>
 
       {createPortal(
         <ContextMenu
@@ -405,6 +504,17 @@ const ProjectTabs = () => {
         />,
         document.body,
       )}
+
+      {iconPickerTab &&
+        createPortal(
+          <ProjectIconPicker
+            isOpen={!!iconPickerTab}
+            onClose={() => setIconPickerTab(null)}
+            projectId={iconPickerTab.id}
+            projectPath={iconPickerTab.path}
+          />,
+          document.body,
+        )}
     </>
   );
 };

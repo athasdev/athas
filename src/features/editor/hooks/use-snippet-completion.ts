@@ -11,6 +11,7 @@ import type { SnippetSession } from "@/features/editor/snippets/types";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import type { Position } from "@/features/editor/types/editor";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import { logger } from "@/features/editor/utils/logger";
 
 /**
@@ -68,7 +69,7 @@ export function useSnippetCompletion(filePath: string | undefined) {
 
     const cursorPosition = useEditorStateStore.getState().cursorPosition;
     const buffer = useBufferStore.getState().buffers.find((b) => b.id === activeBufferId);
-    if (!buffer) return false;
+    if (!buffer || !isEditorContent(buffer)) return false;
 
     const snippet = completion.data.snippet;
     if (!snippet) return false;
@@ -149,7 +150,7 @@ export function useSnippetCompletion(filePath: string | undefined) {
       .getState()
       .buffers.find((b) => b.id === useBufferStore.getState().activeBufferId);
 
-    if (buffer) {
+    if (buffer && isEditorContent(buffer)) {
       const newPosition = calculatePosition(buffer.content, newOffset);
       useEditorStateStore.getState().actions.setCursorPosition(newPosition);
 
@@ -179,7 +180,7 @@ export function useSnippetCompletion(filePath: string | undefined) {
       .getState()
       .buffers.find((b) => b.id === useBufferStore.getState().activeBufferId);
 
-    if (buffer) {
+    if (buffer && isEditorContent(buffer)) {
       const newPosition = calculatePosition(buffer.content, newOffset);
       useEditorStateStore.getState().actions.setCursorPosition(newPosition);
 

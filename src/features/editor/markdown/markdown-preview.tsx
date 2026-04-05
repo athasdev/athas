@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { logger } from "../utils/logger";
 import { parseMarkdown } from "./parser";
@@ -21,15 +22,18 @@ export function MarkdownPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Get the source buffer if this is a preview buffer
-  const sourceBuffer = activeBuffer?.sourceFilePath
-    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath)
-    : activeBuffer;
+  const sourceBuffer =
+    activeBuffer?.type === "markdownPreview"
+      ? (buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer)
+      : activeBuffer;
+
+  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
 
   useEffect(() => {
-    if (!sourceBuffer) return;
-    const parsedHtml = parseMarkdown(sourceBuffer.content);
+    if (!sourceContent) return;
+    const parsedHtml = parseMarkdown(sourceContent);
     setHtml(parsedHtml);
-  }, [sourceBuffer?.content, sourceBuffer]);
+  }, [sourceContent]);
 
   const resolvePath = useCallback(
     (href: string, currentFilePath: string): string => {
@@ -103,7 +107,7 @@ export function MarkdownPreview() {
         return;
       }
 
-      if (!sourceBuffer) return;
+      if (!sourceBuffer?.path) return;
 
       const targetPath = resolvePath(href, sourceBuffer.path);
 

@@ -295,8 +295,9 @@ export const useLspStore = createSelectors(
 
         const line = lines.length - 1;
 
-        // Check cache first
-        const cacheKey = actions.getCacheKey(filePath, line, character);
+        // Cache by prefix start position so "st", "str", "struct" all hit the same cache
+        const prefixStartColumn = Math.max(0, character - prefix.length);
+        const cacheKey = actions.getCacheKey(filePath, line, prefixStartColumn);
         const cachedEntry = completionCache[cacheKey];
 
         if (cachedEntry && Date.now() - cachedEntry.timestamp < COMPLETION_CACHE_TTL_MS) {
@@ -343,15 +344,12 @@ export const useLspStore = createSelectors(
         set({ currentCompletionRequest: abortController });
 
         try {
-          const startTime = performance.now();
           const lspCompletions = await getCompletions(filePath, line, character);
 
           // Check if request was cancelled
           if (abortController.signal.aborted) {
             return;
           }
-
-          const _elapsed = performance.now() - startTime;
 
           // Get snippet completions and merge with LSP completions
           const snippetCompletions = getSnippetCompletions(filePath, prefix);
