@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Search, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";
 import { cn } from "@/utils/cn";
@@ -41,10 +41,10 @@ export default function ChatHistoryDropdown({
     });
   }, [chats, searchQuery]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     onClose();
     triggerRef.current?.focus();
-  };
+  }, [onClose, triggerRef]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -82,7 +82,7 @@ export default function ChatHistoryDropdown({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [filteredChats, isOpen, onSwitchToChat, selectedIndex]);
+  }, [filteredChats, handleClose, isOpen, onSwitchToChat, selectedIndex]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -95,10 +95,10 @@ export default function ChatHistoryDropdown({
   }, [filteredChats.length, selectedIndex]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogPrimitive.Portal>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <AnimatePresence>
+        {isOpen && (
+          <DialogPrimitive.Portal forceMount>
             <div className="fixed inset-0 z-[10030] flex items-start justify-center px-4 pt-16 sm:pt-24">
               <DialogPrimitive.Overlay asChild>
                 <motion.div
@@ -161,6 +161,7 @@ export default function ChatHistoryDropdown({
                               onSwitchToChat(chat.id);
                               handleClose();
                             }}
+                            onMouseEnter={() => setSelectedIndex(index)}
                             className={cn(
                               "group relative mb-0.5 flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3 transition-colors",
                               isSelected ? "bg-hover/80" : "hover:bg-hover/40",
@@ -232,8 +233,8 @@ export default function ChatHistoryDropdown({
               </DialogPrimitive.Content>
             </div>
           </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </DialogPrimitive.Root>
   );
 }
