@@ -6,6 +6,7 @@
  *    using tree-sitter-cli and individual grammar packages
  */
 import { $ } from "bun";
+import { existsSync } from "node:fs";
 
 // ─── LSP Dependencies ───────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
   c_sharp: { package: "tree-sitter-c-sharp" },
   cpp: { package: "tree-sitter-cpp" },
   css: { package: "tree-sitter-css" },
+  diff: { package: "tree-sitter-diff" },
   dart: { package: "tree-sitter-dart" },
   elisp: { package: "tree-sitter-elisp" },
   elixir: { package: "tree-sitter-elixir" },
@@ -71,7 +73,10 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
   json: { package: "tree-sitter-json" },
   kotlin: { package: "tree-sitter-kotlin" },
   lua: { package: "tree-sitter-lua" },
-  markdown: { package: "@tree-sitter-grammars/tree-sitter-markdown", subdir: "tree-sitter-markdown" },
+  markdown: {
+    package: "@tree-sitter-grammars/tree-sitter-markdown",
+    subdir: "tree-sitter-markdown",
+  },
   objc: { package: "tree-sitter-objc" },
   ocaml: { package: "tree-sitter-ocaml", subdir: "grammars/ocaml" },
   php: { package: "tree-sitter-php", subdir: "php" },
@@ -81,6 +86,7 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
   rust: { package: "tree-sitter-rust" },
   scala: { package: "tree-sitter-scala" },
   solidity: { package: "tree-sitter-solidity" },
+  svelte: { package: "tree-sitter-svelte" },
   sql: { package: "@derekstride/tree-sitter-sql" },
   swift: { package: "tree-sitter-swift" },
   systemrdl: { package: "tree-sitter-systemrdl" },
@@ -95,7 +101,7 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
 
 async function buildParserWasm(lang: string, source: ParserSource): Promise<boolean> {
   const packageDir = `${process.cwd()}/node_modules/${source.package}`;
-  if (!(await Bun.file(packageDir).exists())) {
+  if (!existsSync(packageDir)) {
     console.warn(`  Warning: ${source.package} not found in node_modules`);
     return false;
   }

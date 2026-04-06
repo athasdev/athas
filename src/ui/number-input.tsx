@@ -1,19 +1,47 @@
+import { cva } from "class-variance-authority";
 import { Minus, Plus } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
 
-interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "onChange"> {
+interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size" | "onChange"
+> {
   size?: "xs" | "sm" | "md";
   onChange?: (value: number) => void;
 }
 
-const sizeClasses = {
-  xs: "px-2 py-1 text-xs",
-  sm: "px-2 py-1 text-xs",
-  md: "px-3 py-1.5 text-sm",
-};
+const numberInputFieldVariants = cva(
+  "rounded text-text focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  {
+    variants: {
+      size: {
+        xs: "ui-text-sm px-2 py-1",
+        sm: "ui-text-sm px-2 py-1",
+        md: "ui-text-md px-3 py-1.5",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+    },
+  },
+);
+
+const numberInputStepperButtonVariants = cva(
+  "bg-secondary-bg text-text transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
+  {
+    variants: {
+      segment: {
+        top: "border-border border-b",
+        bottom: "",
+      },
+    },
+    defaultVariants: {
+      segment: "bottom",
+    },
+  },
+);
 
 export default function NumberInput({
   size = "sm",
@@ -107,11 +135,7 @@ export default function NumberInput({
         value={inputValue}
         onChange={handleInputChange}
         onBlur={handleBlur}
-        className={cn(
-          "rounded text-text focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-          className,
-          sizeClasses[size],
-        )}
+        className={cn(numberInputFieldVariants({ size }), className)}
         {...props}
       />
       <div className="flex h-full flex-col border-border border-l">
@@ -119,23 +143,17 @@ export default function NumberInput({
           type="button"
           onClick={handleIncrement}
           disabled={numericValue >= max}
-          className={cn(
-            "border-border border-b bg-secondary-bg text-text transition-colors hover:bg-hover",
-            "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
-          )}
+          className={numberInputStepperButtonVariants({ segment: "top" })}
         >
-          <Plus size="var(--app-ui-icon-size-md)" className="text-text-lighter" />
+          <Plus className="text-text-lighter" />
         </button>
         <button
           type="button"
           onClick={handleDecrement}
           disabled={numericValue <= min}
-          className={cn(
-            "bg-secondary-bg text-text transition-colors hover:bg-hover",
-            "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
-          )}
+          className={numberInputStepperButtonVariants({ segment: "bottom" })}
         >
-          <Minus size="var(--app-ui-icon-size-md)" className="text-text-lighter" />
+          <Minus className="text-text-lighter" />
         </button>
       </div>
     </div>

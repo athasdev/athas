@@ -30,24 +30,31 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
 
     const handleMouseMove = (e: MouseEvent) => {
       const container = containerRef.current?.parentElement;
-      if (!container) return;
+      const handle = containerRef.current;
+      if (!container || !handle) return;
 
       const containerRect = container.getBoundingClientRect();
-      const containerSize = isHorizontal ? containerRect.width : containerRect.height;
+      const handleSize = isHorizontal ? handle.offsetWidth : handle.offsetHeight;
+      const containerSize =
+        (isHorizontal ? containerRect.width : containerRect.height) - handleSize;
 
       const currentPosition = isHorizontal ? e.clientX : e.clientY;
       const delta = currentPosition - startPositionRef.current;
-      const deltaPercent = (delta / containerSize) * 100;
 
-      let newFirstSize = startSizesRef.current[0] + deltaPercent;
-      let newSecondSize = startSizesRef.current[1] - deltaPercent;
+      const pairTotal = startSizesRef.current[0] + startSizesRef.current[1];
+      // Scale delta to pair's proportion of the container
+      const scaledDelta = (delta / containerSize) * pairTotal;
 
-      if (newFirstSize < MIN_PANE_SIZE) {
-        newFirstSize = MIN_PANE_SIZE;
-        newSecondSize = 100 - MIN_PANE_SIZE;
-      } else if (newSecondSize < MIN_PANE_SIZE) {
-        newSecondSize = MIN_PANE_SIZE;
-        newFirstSize = 100 - MIN_PANE_SIZE;
+      let newFirstSize = startSizesRef.current[0] + scaledDelta;
+      let newSecondSize = startSizesRef.current[1] - scaledDelta;
+
+      const minSize = Math.min(MIN_PANE_SIZE, pairTotal * 0.1);
+      if (newFirstSize < minSize) {
+        newFirstSize = minSize;
+        newSecondSize = pairTotal - minSize;
+      } else if (newSecondSize < minSize) {
+        newSecondSize = minSize;
+        newFirstSize = pairTotal - minSize;
       }
 
       onResize([newFirstSize, newSecondSize]);

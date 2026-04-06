@@ -1,5 +1,4 @@
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandPalette from "@/features/command-palette/components/command-palette";
@@ -7,54 +6,35 @@ import IconThemeSelector from "@/features/command-palette/components/icon-theme-
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import type { Diagnostic } from "@/features/diagnostics/types";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { useGitStore } from "@/features/git/stores/git-store";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import QuickOpen from "@/features/quick-open/components/quick-open";
 import { useSettingsStore } from "@/features/settings/store";
-import { GlobalNewTabMenu } from "@/features/tabs/components/global-new-tab-menu";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { useFolderDrop } from "@/hooks/use-folder-drop";
-import { useUIState } from "@/stores/ui-state-store";
-import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
-import { parseDroppedPaths } from "@/utils/dropped-file-paths";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
-import CustomTitleBarWithSettings from "../../window/custom-title-bar";
+import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
-import EditorFooter from "./footer/editor-footer";
+import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
 
-const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
 const SIDEBAR_COLLAPSE_THRESHOLD = 48;
-
-function SidebarRestoreHandle({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
-  const isLeft = side === "left";
-
-  return (
-    <div className={`flex shrink-0 items-center py-2 ${isLeft ? "pr-1 pl-0" : "pr-0 pl-1"}`}>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`flex h-16 w-5 items-center justify-center border border-border bg-secondary-bg/90 text-text-lighter transition-colors hover:bg-hover hover:text-text ${
-          isLeft ? "rounded-r-full border-l-0" : "rounded-l-full border-r-0"
-        }`}
-        aria-label={`Show ${side} sidebar`}
-        title="Show sidebar"
-      >
-        {isLeft ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
-    </div>
-  );
-}
 
 export function MainLayout() {
   useChatInitialization();
@@ -83,11 +63,7 @@ export function MainLayout() {
   const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
 
   const hasRestoredWorkspace = useRef(false);
-  const [viewportWidth, setViewportWidth] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth : 1440,
-  );
-
-  const { isDraggingOver } = useFolderDrop(async (paths) => {
+  const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
     const droppedPaths = parseDroppedPaths(paths);
@@ -128,36 +104,14 @@ export function MainLayout() {
     return allDiagnostics;
   }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
-  const isCompactAiOverlay = viewportWidth < AI_CHAT_OVERLAY_BREAKPOINT;
-  const showInlineAiChat = settings.isAIChatVisible && !isCompactAiOverlay;
-  const showOverlayAiChat = settings.isAIChatVisible && isCompactAiOverlay;
-  const aiOverlaySide = sidebarPosition === "right" ? "left" : "right";
-
-  useEffect(() => {
-    const handleResize = () => {
-      setViewportWidth(window.innerWidth);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (!showOverlayAiChat) return;
-
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        updateSetting("isAIChatVisible", false);
-      }
-    };
-
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [showOverlayAiChat, updateSetting]);
+  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
+  const showInlineAiChat = settings.isAIChatVisible;
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
-      setRelativeLineNumbers(settings.vimRelativeLineNumbers, { persist: false });
+      setRelativeLineNumbers(settings.vimRelativeLineNumbers, {
+        persist: false,
+      });
     }
   }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
 
@@ -218,17 +172,30 @@ export function MainLayout() {
     const restoreWorkspace = async () => {
       // Get the active project tab from persisted state
       const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+      frontendTrace("info", "workspace-open", "startupRestore:checked", {
+        hasActiveTab: !!activeTab,
+        tabPath: activeTab?.path ?? null,
+      });
 
       if (activeTab && switchToProject && setIsSwitchingProject) {
         hasRestoredWorkspace.current = true;
+        frontendTrace("info", "workspace-open", "startupRestore:start", {
+          tabPath: activeTab.path,
+        });
 
         // Set flag BEFORE calling switchToProject to prevent tab bar from hiding
         setIsSwitchingProject(true);
 
         try {
           await switchToProject(activeTab.id);
+          frontendTrace("info", "workspace-open", "startupRestore:end", {
+            tabPath: activeTab.path,
+          });
         } catch (error) {
           console.error("Failed to restore workspace:", error);
+          frontendTrace("error", "workspace-open", "startupRestore:error", {
+            tabPath: activeTab.path,
+          });
           // Make sure to clear the flag even if restoration fails
           setIsSwitchingProject(false);
         }
@@ -304,37 +271,8 @@ export function MainLayout() {
             </div>
           ) : (
             sidebarPosition === "left" && (
-              <>
-                <ResizablePane
-                  position="left"
-                  widthKey="sidebarWidth"
-                  hidden={!isSidebarVisible}
-                  collapsible
-                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                  onCollapse={() => setIsSidebarVisible(false)}
-                >
-                  <MainSidebar />
-                </ResizablePane>
-                {!isSidebarVisible && (
-                  <SidebarRestoreHandle side="left" onClick={() => setIsSidebarVisible(true)} />
-                )}
-              </>
-            )
-          )}
-
-          {/* Main content area with split view */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2 py-2">
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-primary-bg">
-              <SplitViewRoot />
-            </div>
-            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-          </div>
-
-          {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <>
               <ResizablePane
-                position="right"
+                position="left"
                 widthKey="sidebarWidth"
                 hidden={!isSidebarVisible}
                 collapsible
@@ -343,10 +281,31 @@ export function MainLayout() {
               >
                 <MainSidebar />
               </ResizablePane>
-              {!isSidebarVisible && (
-                <SidebarRestoreHandle side="right" onClick={() => setIsSidebarVisible(true)} />
-              )}
-            </>
+            )
+          )}
+
+          {/* Main content area with split view */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
+              <SplitViewRoot />
+            </div>
+            {terminalWidthMode === "editor" && (
+              <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+            )}
+          </div>
+
+          {/* Right sidebar or AI chat based on settings */}
+          {sidebarPosition === "right" ? (
+            <ResizablePane
+              position="right"
+              widthKey="sidebarWidth"
+              hidden={!isSidebarVisible}
+              collapsible
+              collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+              onCollapse={() => setIsSidebarVisible(false)}
+            >
+              <MainSidebar />
+            </ResizablePane>
           ) : (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
               <ResizablePane
@@ -362,35 +321,14 @@ export function MainLayout() {
           )}
         </div>
 
-        {showOverlayAiChat && (
-          <>
-            <button
-              type="button"
-              className="absolute inset-0 z-[10015] bg-black/30 backdrop-blur-[1px]"
-              onClick={() => updateSetting("isAIChatVisible", false)}
-              aria-label="Close AI chat overlay"
-            />
-
-            <div
-              className={`absolute top-2 bottom-2 z-[10020] w-[min(460px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-border bg-secondary-bg shadow-2xl ${
-                aiOverlaySide === "right" ? "right-2" : "left-2"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => updateSetting("isAIChatVisible", false)}
-                className="absolute top-2 right-2 z-[10030] flex h-7 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/90 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                aria-label="Close AI chat"
-              >
-                <X size={14} />
-              </button>
-              <AIChat mode="chat" className="h-full" />
-            </div>
-          </>
+        {terminalWidthMode === "full" && (
+          <div className="px-2">
+            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+          </div>
         )}
       </div>
 
-      <EditorFooter />
+      <Footer />
 
       {/* Global modals and overlays */}
       <QuickOpen />
@@ -399,7 +337,6 @@ export function MainLayout() {
       <VimSearchBar />
       <CommandPalette />
       <ProjectNameMenu />
-      <GlobalNewTabMenu />
 
       {/* Dialog components */}
       <ThemeSelector
@@ -418,6 +355,7 @@ export function MainLayout() {
         isOpen={isDatabaseConnectionVisible}
         onClose={() => setIsDatabaseConnectionVisible(false)}
       />
+      <ExtensionDialogs />
     </div>
   );
 }

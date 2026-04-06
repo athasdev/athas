@@ -1,7 +1,8 @@
 import { Plus, X } from "lucide-react";
-import Dropdown from "@/ui/dropdown";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types";
+import Select from "@/ui/select";
+import type { ColumnFilter, ColumnInfo, FilterOperator } from "../sqlite-types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "equals", label: "=" },
@@ -47,35 +48,39 @@ export default function FilterBar({
             {filters.length} filter{filters.length !== 1 ? "s" : ""}
           </span>
           {columns.length > 0 && (
-            <button
+            <Button
               onClick={() => onAddFilter(columns[0].name)}
-              className="flex items-center gap-0.5 rounded-full border border-transparent px-1.5 py-0.5 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              variant="ghost"
+              size="xs"
+              className="rounded-full gap-0.5 text-text-lighter"
               aria-label="Add filter"
             >
-              <Plus size={10} />
+              <Plus />
               Add
-            </button>
+            </Button>
           )}
         </div>
-        <button
+        <Button
           onClick={onClear}
-          className="rounded-full border border-transparent px-2 py-0.5 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+          variant="ghost"
+          size="xs"
+          className="rounded-full text-text-lighter"
           aria-label="Clear all filters"
         >
           Clear all
-        </button>
+        </Button>
       </div>
       <div className="space-y-1">
         {filters.map((f, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
-            <Dropdown
+            <Select
               value={f.column}
               options={columns.map((c) => ({ value: c.name, label: c.name }))}
               onChange={(v) => onUpdate(i, { column: v })}
               size="xs"
               className="min-w-20"
             />
-            <Dropdown
+            <Select
               value={f.operator}
               options={FILTER_OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
               onChange={(v) => onUpdate(i, { operator: v as FilterOperator })}
@@ -100,13 +105,15 @@ export default function FilterBar({
                 className="flex-1"
               />
             )}
-            <button
+            <Button
               onClick={() => onRemove(i)}
+              variant="ghost"
+              size="icon-xs"
               className="text-text-lighter hover:text-red-500"
               aria-label="Remove filter"
             >
-              <X size={12} />
-            </button>
+              <X />
+            </Button>
           </div>
         ))}
       </div>

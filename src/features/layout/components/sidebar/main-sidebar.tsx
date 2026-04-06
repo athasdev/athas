@@ -1,16 +1,19 @@
 import { memo } from "react";
-import { FileTree } from "@/features/file-explorer/components/file-tree";
+import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import GitView from "@/features/git/components/view";
+import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
-import { useSidebarStore } from "@/stores/sidebar-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
+import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { cn } from "@/utils/cn";
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const { isGitViewActive, isGitHubPRsViewActive } = useUIState();
+  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView } = useUIState();
+  const extensionViews = useExtensionViews();
 
   // file system store
   const setFiles = useFileSystemStore.use.setFiles?.();
@@ -36,9 +39,11 @@ export const MainSidebar = memo(() => {
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
+  const isFilesViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
 
   return (
-    <div className="flex h-full min-h-0 flex-col p-2">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
@@ -57,10 +62,13 @@ export const MainSidebar = memo(() => {
         )}
 
         <div
-          className={cn("relative h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}
+          className={cn(
+            "relative h-full",
+            (!isFilesViewActive || isGitViewActive || isGitHubPRsViewActive) && "hidden",
+          )}
         >
           {(!isFileTreeLoading || isSwitchingProject) && (
-            <FileTree
+            <FileExplorerTree
               files={files}
               activePath={activePath}
               updateActivePath={updateActivePath}
@@ -87,6 +95,14 @@ export const MainSidebar = memo(() => {
             </div>
           )}
         </div>
+
+        {Array.from(extensionViews).map(([viewId, view]) => (
+          <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>
+            <ExtensionErrorBoundary extensionId={view.extensionId} name={view.title}>
+              {view.render()}
+            </ExtensionErrorBoundary>
+          </div>
+        ))}
       </div>
     </div>
   );

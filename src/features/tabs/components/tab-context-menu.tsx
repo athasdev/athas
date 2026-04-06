@@ -10,15 +10,16 @@ import {
   X,
 } from "lucide-react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
+import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TabContextMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
-  buffer: Buffer | null;
+  buffer: PaneContent | null;
   paneId?: string;
   onClose: () => void;
   onPin: (bufferId: string) => void;
@@ -59,7 +60,7 @@ const TabContextMenu = ({
     {
       id: "pin",
       label: buffer.isPinned ? "Unpin Tab" : "Pin Tab",
-      icon: buffer.isPinned ? <PinOff size={12} /> : <Pin size={12} />,
+      icon: buffer.isPinned ? <PinOff /> : <Pin />,
       onClick: () => onPin(buffer.id),
     },
     { id: "sep-1", label: "", separator: true, onClick: () => {} },
@@ -68,7 +69,7 @@ const TabContextMenu = ({
           {
             id: "split-right",
             label: "Split Right",
-            icon: <Columns2 size={12} />,
+            icon: <Columns2 />,
             onClick: () => onSplitRight(paneId, buffer.id),
           },
         ]
@@ -78,7 +79,7 @@ const TabContextMenu = ({
           {
             id: "split-down",
             label: "Split Down",
-            icon: <Rows2 size={12} />,
+            icon: <Rows2 />,
             onClick: () => onSplitDown(paneId, buffer.id),
           },
         ]
@@ -89,7 +90,7 @@ const TabContextMenu = ({
     {
       id: "copy-path",
       label: "Copy Path",
-      icon: <Copy size={12} />,
+      icon: <Copy />,
       onClick: async () => {
         if (onCopyPath) {
           onCopyPath(buffer.path);
@@ -106,21 +107,21 @@ const TabContextMenu = ({
     {
       id: "copy-relative-path",
       label: "Copy Relative Path",
-      icon: <Copy size={12} />,
+      icon: <Copy />,
       onClick: () => onCopyRelativePath?.(buffer.path),
     },
     {
       id: "reveal",
       label: "Reveal in Finder",
-      icon: <FolderOpen size={12} />,
+      icon: <FolderOpen />,
       onClick: () => onRevealInFinder?.(buffer.path),
     },
-    ...(!buffer.isVirtual && !buffer.path.includes("://")
+    ...(!isVirtualContent(buffer) && !buffer.path.includes("://")
       ? [
           {
             id: "terminal",
             label: "Open in Terminal",
-            icon: <Terminal size={12} />,
+            icon: <Terminal />,
             onClick: () => {
               const dirPath = buffer.path.substring(0, buffer.path.lastIndexOf("/"));
               const dirName = dirPath.split("/").pop() || "terminal";
@@ -138,7 +139,7 @@ const TabContextMenu = ({
           {
             id: "reload",
             label: "Reload",
-            icon: <RotateCcw size={12} />,
+            icon: <RotateCcw />,
             onClick: () => onReload?.(buffer.id),
           },
         ]
@@ -147,8 +148,8 @@ const TabContextMenu = ({
     {
       id: "close",
       label: "Close",
-      icon: <X size={12} />,
-      keybinding: <KeybindingBadge keys={closeKeys} className="opacity-60" />,
+      icon: <X />,
+      keybinding: <Keybinding keys={closeKeys} className="opacity-60" />,
       onClick: () => onCloseTab(buffer.id),
     },
     {

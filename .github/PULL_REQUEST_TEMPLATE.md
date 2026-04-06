@@ -6,7 +6,7 @@
 
 <!-- Describe the changes made in the PR. -->
 
-- 
+-
 -
 -
 -
@@ -18,7 +18,6 @@
 ## Screenshots/Videos
 
 <!-- If applicable, add screenshots or screen recordings to help explain your changes. -->
-
 
 ## Related Issues
 

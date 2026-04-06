@@ -1,5 +1,6 @@
 import { Image } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
@@ -62,18 +63,12 @@ export function ImageResizeDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <button
-            onClick={onClose}
-            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
-          >
+          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="rounded bg-accent px-3 py-1.5 text-white text-xs transition-colors hover:bg-accent-hover"
-          >
+          </Button>
+          <Button type="button" variant="primary" size="sm" onClick={handleSubmit}>
             Resize
-          </button>
+          </Button>
         </>
       }
     >

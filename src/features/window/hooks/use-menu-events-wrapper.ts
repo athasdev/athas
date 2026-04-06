@@ -1,13 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAppStore } from "@/stores/app-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { fetchRawAppVersion } from "@/utils/app-utils";
+import { fetchRawAppVersion } from "@/features/window/utils/app-version";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { useMenuEvents } from "./use-menu-events";
 
 export function useMenuEventsWrapper() {
@@ -18,13 +18,23 @@ export function useMenuEventsWrapper() {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
-  const { handleSave } = useAppStore.use.actions();
-
-  // Get current window for window operations (currently unused but kept for future functionality)
-  const _currentWindow = getCurrentWebviewWindow();
+  const { handleSave } = useEditorAppStore.use.actions();
+  const isTerminalFocused = () => {
+    const activeElement = document.activeElement as HTMLElement | null;
+    return activeElement?.closest(".terminal-container") !== null;
+  };
 
   useMenuEvents({
-    onNewFile: fileSystemStore.handleCreateNewFile,
+    onNewWindow: () => {
+      void createAppWindow();
+    },
+    onNewFile: () => {
+      if (isTerminalFocused()) {
+        window.dispatchEvent(new CustomEvent("terminal-new"));
+        return;
+      }
+      void fileSystemStore.handleCreateNewFile();
+    },
     onOpenFolder: fileSystemStore.handleOpenFolder,
     onCloseFolder: fileSystemStore.closeFolder,
     onSave: handleSave,
@@ -52,7 +62,7 @@ export function useMenuEventsWrapper() {
           try {
             await invoke("write_file", {
               path: result,
-              contents: activeBuffer.content || "",
+              contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
             });
             console.log("File saved successfully to:", result);
             // Update buffer with new file path if needed
@@ -110,8 +120,8 @@ export function useMenuEventsWrapper() {
       uiState.setBottomPaneActiveTab("terminal");
       uiState.setIsBottomPaneVisible(showingTerminal);
 
-      // Request terminal focus after showing
       if (showingTerminal) {
+        window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
         setTimeout(() => {
           uiState.requestTerminalFocus();
         }, 100);
@@ -187,7 +197,7 @@ GitHub: https://github.com/athasdev/athas`;
       const helpText = `Athas Help - Keyboard Shortcuts
 
 File:
-• Ctrl+N (Cmd+N): New File
+• Ctrl+N (Cmd+N): New Tab
 • Ctrl+O (Cmd+O): Open Folder
 • Ctrl+S (Cmd+S): Save
 • Ctrl+Shift+S (Cmd+Shift+S): Save As

@@ -1,5 +1,5 @@
 import { Code, Search, X } from "lucide-react";
-import Button from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 
@@ -36,7 +36,7 @@ export default function QueryBar({
         />
         <div className="flex justify-end gap-2">
           <Button onClick={() => setIsCustomQuery(false)} variant="ghost" size="sm">
-            <X size={14} className="mr-1" />
+            <X className="mr-1" />
             Cancel
           </Button>
           <Button
@@ -45,7 +45,7 @@ export default function QueryBar({
             size="sm"
             disabled={isLoading || !customQuery.trim()}
           >
-            <Code size={14} className="mr-1" />
+            <Code className="mr-1" />
             Execute
           </Button>
         </div>
@@ -65,17 +65,20 @@ export default function QueryBar({
             size="sm"
           />
           {searchTerm && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setSearchTerm("")}
-              className="-translate-y-1/2 absolute top-1/2 right-2 text-text-lighter hover:text-text"
+              className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
               aria-label="Clear search"
             >
-              <X size={14} />
-            </button>
+              <X />
+            </Button>
           )}
         </div>
         <Button onClick={() => setIsCustomQuery(true)} variant="default" size="sm">
-          <Code size={14} className="mr-1" />
+          <Code className="mr-1" />
           SQL
         </Button>
       </div>

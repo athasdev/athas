@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 
 export interface LintOptions {
   filePath: string;
@@ -126,16 +127,15 @@ export function isLintingAvailable(filePath: string, languageId?: string): boole
 
 /**
  * Get workspace folder from file path
- *
- * This should ideally return the project root (where .git, package.json, Cargo.toml, etc. are)
- * For now, it returns the directory containing the file as a fallback
- *
- * TODO: Integrate with file system store to get actual workspace root
  */
 function getWorkspaceFolder(filePath: string): string | undefined {
-  const parts = filePath.split("/");
-  if (parts.length > 1) {
-    return parts.slice(0, -1).join("/");
+  const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+  if (rootFolderPath) return rootFolderPath;
+
+  // Fallback to file's directory if no project is open
+  const lastSlash = filePath.lastIndexOf("/");
+  if (lastSlash > 0) {
+    return filePath.slice(0, lastSlash);
   }
   return undefined;
 }

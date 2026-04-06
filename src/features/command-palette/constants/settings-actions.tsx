@@ -48,6 +48,8 @@ interface SettingsActionsParams {
   updateSetting: (key: string, value: any) => void | Promise<void>;
   handleFileSelect: ((path: string, isDir: boolean) => void) | undefined;
   getAppDataDir: () => Promise<string>;
+  openWhatsNew: () => void | Promise<void>;
+  openOnboarding: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -60,6 +62,8 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     updateSetting,
     handleFileSelect,
     getAppDataDir,
+    openWhatsNew,
+    openOnboarding,
     onClose,
   } = params;
 
@@ -68,7 +72,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "open-settings",
       label: "Preferences: Open Settings",
       description: "Open settings dialog",
-      icon: <Settings size={14} />,
+      icon: <Settings />,
       category: "Settings",
       keybinding: ["⌘", ","],
       action: () => {
@@ -80,7 +84,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "report-bug",
       label: "Help: Report a Bug",
       description: "Copy environment details and open the bug report page",
-      icon: <AlertCircle size={14} />,
+      icon: <AlertCircle />,
       category: "Settings",
       action: async () => {
         try {
@@ -114,10 +118,32 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "show-whats-new",
+      label: "Help: What's New",
+      description: "Open the latest release notes for this version",
+      icon: <Sparkles />,
+      category: "Settings",
+      action: () => {
+        onClose();
+        void openWhatsNew();
+      },
+    },
+    {
+      id: "open-onboarding",
+      label: "Help: Open Onboarding",
+      description: "Open the onboarding flow again",
+      icon: <Sparkles />,
+      category: "Settings",
+      action: () => {
+        onClose();
+        void openOnboarding();
+      },
+    },
+    {
       id: "open-settings-json",
       label: "Preferences: Open Settings JSON file",
       description: "Open settings JSON file",
-      icon: <Settings size={14} />,
+      icon: <Settings />,
       category: "Settings",
       action: () => {
         onClose();
@@ -132,7 +158,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "color-theme",
       label: "Preferences: Color Theme",
       description: "Choose a color theme",
-      icon: <Palette size={14} />,
+      icon: <Palette />,
       category: "Theme",
       keybinding: ["⌘", "T"],
       action: () => {
@@ -144,7 +170,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "icon-theme",
       label: "Preferences: Icon Theme",
       description: "Choose an icon theme",
-      icon: <Palette size={14} />,
+      icon: <Palette />,
       category: "Theme",
       action: () => {
         onClose();
@@ -155,7 +181,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "toggle-vim-mode",
       label: settings.vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim keybindings",
       description: settings.vimMode ? "Switch to normal editing mode" : "Enable Vim keybindings",
-      icon: <Terminal size={14} />,
+      icon: <Terminal />,
       category: "Vim",
       action: () => {
         updateSetting("vimMode", !settings.vimMode);
@@ -168,7 +194,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.wordWrap
         ? "Disable line wrapping in editor"
         : "Wrap lines that exceed viewport width",
-      icon: <WrapText size={14} />,
+      icon: <WrapText />,
       category: "Editor",
       action: () => {
         updateSetting("wordWrap", !settings.wordWrap);
@@ -181,7 +207,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.lineNumbers
         ? "Hide line numbers in editor"
         : "Show line numbers in editor",
-      icon: <Hash size={14} />,
+      icon: <Hash />,
       category: "Editor",
       action: () => {
         updateSetting("lineNumbers", !settings.lineNumbers);
@@ -196,7 +222,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.vimRelativeLineNumbers
         ? "Use absolute line numbers"
         : "Show relative line numbers (Vim mode)",
-      icon: <Hash size={14} />,
+      icon: <Hash />,
       category: "Editor",
       action: () => {
         updateSetting("vimRelativeLineNumbers", !settings.vimRelativeLineNumbers);
@@ -209,7 +235,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.autoSave
         ? "Disable automatic file saving"
         : "Automatically save files when editing",
-      icon: <Save size={14} />,
+      icon: <Save />,
       category: "Settings",
       action: () => {
         updateSetting("autoSave", !settings.autoSave);
@@ -224,7 +250,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.autoDetectLanguage
         ? "Manually set language for files"
         : "Automatically detect file language from extension",
-      icon: <Languages size={14} />,
+      icon: <Languages />,
       category: "Language",
       action: () => {
         updateSetting("autoDetectLanguage", !settings.autoDetectLanguage);
@@ -239,7 +265,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.formatOnSave
         ? "Disable automatic formatting on save"
         : "Automatically format code when saving",
-      icon: <Code2 size={14} />,
+      icon: <Code2 />,
       category: "Language",
       action: () => {
         updateSetting("formatOnSave", !settings.formatOnSave);
@@ -254,7 +280,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.autoCompletion
         ? "Disable completion suggestions"
         : "Show completion suggestions while typing",
-      icon: <Lightbulb size={14} />,
+      icon: <Lightbulb />,
       category: "Language",
       action: () => {
         updateSetting("autoCompletion", !settings.autoCompletion);
@@ -269,7 +295,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.parameterHints
         ? "Disable function parameter hints"
         : "Show function parameter hints",
-      icon: <Info size={14} />,
+      icon: <Info />,
       category: "Language",
       action: () => {
         updateSetting("parameterHints", !settings.parameterHints);
@@ -282,7 +308,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.aiCompletion
         ? "Disable AI-powered code completion"
         : "Enable AI-powered code completion",
-      icon: <Sparkles size={14} />,
+      icon: <Sparkles />,
       category: "AI",
       action: () => {
         updateSetting("aiCompletion", !settings.aiCompletion);
@@ -297,7 +323,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.coreFeatures.breadcrumbs
         ? "Hide breadcrumbs navigation"
         : "Show breadcrumbs navigation",
-      icon: <ChevronRight size={14} />,
+      icon: <ChevronRight />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -315,7 +341,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.coreFeatures.diagnostics
         ? "Hide diagnostics panel"
         : "Show diagnostics panel",
-      icon: <AlertCircle size={14} />,
+      icon: <AlertCircle />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -331,7 +357,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.coreFeatures.search
         ? "Disable search functionality"
         : "Enable search functionality",
-      icon: <Search size={14} />,
+      icon: <Search />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -345,7 +371,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "toggle-git-feature",
       label: settings.coreFeatures.git ? "Features: Disable Git" : "Features: Enable Git",
       description: settings.coreFeatures.git ? "Disable Git integration" : "Enable Git integration",
-      icon: <GitBranch size={14} />,
+      icon: <GitBranch />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -363,7 +389,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.coreFeatures.terminal
         ? "Disable integrated terminal"
         : "Enable integrated terminal",
-      icon: <Terminal size={14} />,
+      icon: <Terminal />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -379,7 +405,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         ? "Features: Disable AI Chat"
         : "Features: Enable AI Chat",
       description: settings.coreFeatures.aiChat ? "Disable AI chat panel" : "Enable AI chat panel",
-      icon: <MessageSquare size={14} />,
+      icon: <MessageSquare />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -395,7 +421,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.coreFeatures.remote
         ? "Disable remote development"
         : "Enable remote development",
-      icon: <Cloud size={14} />,
+      icon: <Cloud />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {
@@ -413,7 +439,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: settings.coreFeatures.persistentCommands
         ? "Disable persistent commands"
         : "Enable persistent commands",
-      icon: <Cloud size={14} />,
+      icon: <Cloud />,
       category: "Features",
       action: () => {
         updateSetting("coreFeatures", {

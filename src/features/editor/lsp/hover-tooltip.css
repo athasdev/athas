@@ -1,21 +1,3 @@
-.hover-tooltip {
-  border-radius: 10px;
-  border: 1px solid var(--color-border, rgba(128, 128, 128, 0.35));
-  background-color: var(--color-primary-bg, #1b1b1f);
-  box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.2),
-    0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-}
-
-@supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
-  .hover-tooltip {
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    background-color: color-mix(in srgb, var(--color-primary-bg) 88%, transparent);
-  }
-}
-
 .hover-tooltip-body {
   overflow: auto;
   padding: 8px 10px;
@@ -31,13 +13,26 @@
   margin: 0.2em 0;
 }
 
-.hover-tooltip-content pre {
-  border-radius: 8px;
-  margin: 0.3em 0;
-  padding: 0.45em 0.55em;
-  border-color: color-mix(in srgb, var(--color-border) 82%, transparent);
+/* Code blocks: subtle background, no border — must override .markdown-preview pre */
+.hover-tooltip-content.markdown-preview pre {
+  background: color-mix(in srgb, var(--color-hover) 50%, transparent);
+  border: none;
+  border-radius: 6px;
+  margin: 0.25em 0;
+  padding: 0.4em 0.5em;
+  overflow-x: hidden;
 }
 
-.hover-tooltip-content code {
-  border-radius: 5px;
+.hover-tooltip-content.markdown-preview pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.95em;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.hover-tooltip-content.markdown-preview code {
+  border-radius: 4px;
 }

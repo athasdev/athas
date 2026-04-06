@@ -1,0 +1,18 @@
+/* Shared styling for all editor overlay cards (hover tooltip, git blame, etc.) */
+.editor-overlay-card {
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  background: color-mix(in srgb, var(--color-secondary-bg) 96%, transparent);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, var(--color-hover) 42%, transparent);
+  overflow: hidden;
+}
+
+@supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
+  .editor-overlay-card {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--color-secondary-bg) 90%, transparent);
+  }
+}

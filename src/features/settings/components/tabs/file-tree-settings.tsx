@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import Badge from "@/ui/badge";
 import Input from "@/ui/input";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 
 export const FileTreeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -55,18 +56,15 @@ export const FileTreeSettings = () => {
 
   const renderPatternPills = (patterns: string[]) => {
     if (patterns.length === 0) {
-      return <p className="text-[11px] text-text-lighter">No patterns configured.</p>;
+      return <p className="ui-font ui-text-sm text-text-lighter">No patterns configured.</p>;
     }
 
     return (
       <div className="flex flex-wrap gap-1.5">
         {patterns.map((pattern) => (
-          <span
-            key={pattern}
-            className="ui-font rounded-md border border-border bg-secondary-bg px-2 py-1 text-[11px] text-text-lighter"
-          >
+          <Badge key={pattern} variant="default" size="compact">
             {pattern}
-          </span>
+          </Badge>
         ))}
       </div>
     );
@@ -74,7 +72,7 @@ export const FileTreeSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="File Explorer Filters">
+      <Section title="Filters">
         <SettingRow
           label="Hidden File Patterns"
           description="Files matching these glob patterns will be hidden from the file tree"
@@ -95,9 +93,9 @@ export const FileTreeSettings = () => {
             onBlur={handleFilePatternsBlur}
             onKeyDown={(e) => handlePatternInputEnter(e, handleFilePatternsBlur)}
             placeholder="e.g., *.log, *.tmp, **/*.bak"
-            className="h-9 w-full rounded-xl border-border bg-secondary-bg/80 focus:border-accent focus:ring-accent/30"
+            size="md"
           />
-          <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
+          <p className="ui-font ui-text-sm text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenFilePatterns)}
         </SettingRow>
 
@@ -121,9 +119,9 @@ export const FileTreeSettings = () => {
             onBlur={handleDirectoryPatternsBlur}
             onKeyDown={(e) => handlePatternInputEnter(e, handleDirectoryPatternsBlur)}
             placeholder="e.g., node_modules, .git, build/"
-            className="h-9 w-full rounded-xl border-border bg-secondary-bg/80 focus:border-accent focus:ring-accent/30"
+            size="md"
           />
-          <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
+          <p className="ui-font ui-text-sm text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenDirectoryPatterns)}
         </SettingRow>
       </Section>

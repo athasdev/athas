@@ -1,5 +1,5 @@
 import type { Chat } from "@/features/ai/types/ai-chat";
-import { saveChatToDb } from "@/utils/chat-history-db";
+import { saveChatToDb } from "@/features/ai/services/ai-chat-history-service";
 
 /**
  * Migrate chat history from localStorage to SQLite

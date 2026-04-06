@@ -29,7 +29,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-branch-manager",
       label: "Git: Open Branch Manager",
       description: "Open branch manager dropdown",
-      icon: <GitBranch size={14} />,
+      icon: <GitBranch />,
       category: "Git",
       action: () => {
         onClose();
@@ -40,7 +40,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-stage-all",
       label: "Git: Stage All Changes",
       description: "Stage all modified files",
-      icon: <GitBranch size={14} />,
+      icon: <GitBranch />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -66,7 +66,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-unstage-all",
       label: "Git: Unstage All Changes",
       description: "Unstage all staged files",
-      icon: <GitBranch size={14} />,
+      icon: <GitBranch />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -92,7 +92,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-commit",
       label: "Git: Commit Changes",
       description: "Commit staged changes",
-      icon: <GitCommit size={14} />,
+      icon: <GitCommit />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -123,7 +123,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-push",
       label: "Git: Push",
       description: "Push changes to remote",
-      icon: <ArrowUp size={14} />,
+      icon: <ArrowUp />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -149,7 +149,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-pull",
       label: "Git: Pull",
       description: "Pull changes from remote",
-      icon: <RefreshCw size={14} />,
+      icon: <RefreshCw />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -176,7 +176,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-fetch",
       label: "Git: Fetch",
       description: "Fetch changes from remote",
-      icon: <RefreshCw size={14} />,
+      icon: <RefreshCw />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -201,7 +201,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-discard-all",
       label: "Git: Discard All Changes",
       description: "Discard all uncommitted changes",
-      icon: <GitBranch size={14} />,
+      icon: <GitBranch />,
       category: "Git",
       action: async () => {
         if (!rootFolderPath) {
@@ -231,7 +231,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-refresh",
       label: "Git: Refresh Status",
       description: "Refresh Git status",
-      icon: <RefreshCw size={14} />,
+      icon: <RefreshCw />,
       category: "Git",
       action: () => {
         gitStore.actions.setIsRefreshing(true);

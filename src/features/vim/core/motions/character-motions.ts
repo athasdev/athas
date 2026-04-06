@@ -206,8 +206,3 @@ export const repeatFindCharReverse: Motion = {
 export const resetFindChar = () => {
   lastFindChar = null;
 };
-
-/**
- * Get last find char for external use
- */
-export const getLastFindChar = () => lastFindChar;

@@ -1,11 +1,11 @@
 /**
  * Vim command parser
  * Handles: [count][operator][count][motion/text-object] and [count][action]
- * Examples: 3dw, d3w, 2ciw, c2aw, p, 3p, P, etc.
+ * Examples: 3dw, d3w, 2ciw, c2aw, p, 3p, P, guw, gUiw, gJ, etc.
  */
 
-import { getActionKeys } from "../actions";
-import { getOperatorKeys } from "../operators";
+import { getActionKeys } from "../actions/action-registry";
+import { getOperatorKeys } from "../operators/operator-registry";
 import { getMotionKeys } from "./motion-registry";
 import type { VimCommand } from "./types";
 
@@ -32,6 +32,12 @@ interface MotionMatchResult {
   length?: number;
 }
 
+interface MultiKeyMatchResult {
+  status: "complete" | "partial" | "none";
+  key?: string;
+  length?: number;
+}
+
 let cachedMotionKeys: string[] | null = null;
 const motionKeysDescending = (): string[] => {
   if (!cachedMotionKeys) {
@@ -40,7 +46,27 @@ const motionKeysDescending = (): string[] => {
   return cachedMotionKeys;
 };
 
-const matchMotion = (keys: string[], startIndex: number): MotionMatchResult => {
+let cachedOperatorKeys: string[] | null = null;
+const operatorKeysDescending = (): string[] => {
+  if (!cachedOperatorKeys) {
+    cachedOperatorKeys = [...getOperatorKeys()].sort((a, b) => b.length - a.length);
+  }
+  return cachedOperatorKeys;
+};
+
+let cachedActionKeys: string[] | null = null;
+const actionKeysDescending = (): string[] => {
+  if (!cachedActionKeys) {
+    cachedActionKeys = [...getActionKeys()].sort((a, b) => b.length - a.length);
+  }
+  return cachedActionKeys;
+};
+
+const matchMultiKey = (
+  keys: string[],
+  startIndex: number,
+  registeredKeys: string[],
+): MultiKeyMatchResult => {
   const remaining = keys.slice(startIndex);
   if (remaining.length === 0) {
     return { status: "partial" };
@@ -49,17 +75,17 @@ const matchMotion = (keys: string[], startIndex: number): MotionMatchResult => {
   const remainingString = remaining.join("");
   let hasPartialMatch = false;
 
-  for (const motionKey of motionKeysDescending()) {
-    if (motionKey.length <= remaining.length) {
-      const candidate = remaining.slice(0, motionKey.length).join("");
-      if (candidate === motionKey) {
+  for (const regKey of registeredKeys) {
+    if (regKey.length <= remaining.length) {
+      const candidate = remaining.slice(0, regKey.length).join("");
+      if (candidate === regKey) {
         return {
           status: "complete",
-          motion: motionKey,
-          length: motionKey.length,
+          key: regKey,
+          length: regKey.length,
         };
       }
-    } else if (motionKey.startsWith(remainingString)) {
+    } else if (regKey.startsWith(remainingString)) {
       hasPartialMatch = true;
     }
   }
@@ -69,6 +95,23 @@ const matchMotion = (keys: string[], startIndex: number): MotionMatchResult => {
   }
 
   return { status: "none" };
+};
+
+const matchMotion = (keys: string[], startIndex: number): MotionMatchResult => {
+  const result = matchMultiKey(keys, startIndex, motionKeysDescending());
+  return {
+    status: result.status,
+    motion: result.key,
+    length: result.length,
+  };
+};
+
+const matchOperator = (keys: string[], startIndex: number): MultiKeyMatchResult => {
+  return matchMultiKey(keys, startIndex, operatorKeysDescending());
+};
+
+const matchAction = (keys: string[], startIndex: number): MultiKeyMatchResult => {
+  return matchMultiKey(keys, startIndex, actionKeysDescending());
 };
 
 const parseNumber = (keys: string[], index: number): { value?: number; nextIndex: number } => {
@@ -113,51 +156,63 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
     return { status: "incomplete" };
   }
 
-  // Check for standalone actions first (p, P, etc.)
-  const potentialAction = keys[index];
-  if (isActionKey(potentialAction)) {
-    // Check if this is a complete action command
-    if (index === keys.length - 1) {
-      state.action = potentialAction;
+  // Try multi-char action first (e.g., gJ)
+  const actionMatch = matchAction(keys, index);
+  if (actionMatch.status === "complete" && actionMatch.key && actionMatch.length) {
+    if (index + actionMatch.length === keys.length) {
+      state.action = actionMatch.key;
       const command: VimCommand = {};
-
       if (state.count1) {
         command.count = state.count1;
       }
       command.action = state.action;
-
-      return {
-        status: "complete",
-        command,
-      };
+      return { status: "complete", command };
     }
-    // If there are more keys after the action, it's invalid
+    // Extra keys after a complete action is invalid
     return { status: "invalid" };
   }
 
-  // Parse operator
-  if (isOperatorKey(potentialAction)) {
-    state.operator = potentialAction;
-    index++;
+  // Try multi-char operator (e.g., gu, gU)
+  const operatorMatch = matchOperator(keys, index);
+  if (operatorMatch.status === "complete" && operatorMatch.key && operatorMatch.length) {
+    state.operator = operatorMatch.key;
+    index += operatorMatch.length;
+
+    if (index >= keys.length) {
+      return { status: "incomplete" };
+    }
+  } else if (operatorMatch.status === "partial") {
+    // Could be start of operator or action, check if action also partial
+    if (actionMatch.status === "partial") {
+      return { status: "incomplete" };
+    }
+    // Only operator is partial
+    return { status: "incomplete" };
+  }
+
+  // If no operator matched yet and action was "none", fall through to motion-only parsing
+  // This handles cases like plain motions (j, k, w, etc.)
+
+  if (!state.operator && operatorMatch.status === "none" && actionMatch.status === "none") {
+    // No operator or action matched - try as a pure motion
+    // But first check if it could be a partial action/operator (already handled above)
+  }
+
+  // Parse second count (after operator)
+  if (state.operator) {
+    const secondCount = parseNumber(keys, index);
+    if (secondCount.value !== undefined) {
+      state.count2 = secondCount.value;
+    }
+    index = secondCount.nextIndex;
 
     if (index >= keys.length) {
       return { status: "incomplete" };
     }
   }
 
-  // Parse second count (after operator)
-  const secondCount = parseNumber(keys, index);
-  if (secondCount.value !== undefined) {
-    state.count2 = secondCount.value;
-  }
-  index = secondCount.nextIndex;
-
-  if (index >= keys.length) {
-    return { status: "incomplete" };
-  }
-
-  // Parse text object mode (i or a)
-  if (keys[index] === "i" || keys[index] === "a") {
+  // Parse text object mode (i or a) - only valid after an operator
+  if (state.operator && (keys[index] === "i" || keys[index] === "a")) {
     state.textObjectMode = keys[index] as "inner" | "around";
     index++;
 
@@ -167,9 +222,30 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
 
     state.textObject = keys[index];
     index++;
-  } else if (keys[index] === state.operator) {
-    state.motion = state.operator;
-    index++;
+  } else if (state.operator && keys.slice(index).join("") === state.operator) {
+    // Handle doubled operator (dd, yy, cc, etc.)
+    // For multi-char operators like "gu", doubled would be "gugu"
+    const opLen = state.operator.length;
+    const remainingStr = keys.slice(index).join("");
+    if (remainingStr === state.operator) {
+      state.motion = state.operator;
+      index += opLen;
+    } else if (state.operator.length === 1 && keys[index] === state.operator) {
+      state.motion = state.operator;
+      index++;
+    } else {
+      // Parse motion
+      const motionMatch = matchMotion(keys, index);
+      if (motionMatch.status === "partial") {
+        return { status: "incomplete" };
+      }
+      if (motionMatch.status === "none" || !motionMatch.motion || !motionMatch.length) {
+        return { status: "invalid" };
+      }
+
+      state.motion = motionMatch.motion;
+      index += motionMatch.length;
+    }
   } else {
     // Parse motion (supports multi-key motions)
     const motionMatch = matchMotion(keys, index);
@@ -232,20 +308,6 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
 export const parseVimCommand = (keys: string[]): VimCommand | null => {
   const result = parseVimCommandInternal(keys);
   return result.status === "complete" ? (result.command ?? null) : null;
-};
-
-/**
- * Check if a key is an operator
- */
-const isOperatorKey = (key: string): boolean => {
-  return getOperatorKeys().includes(key);
-};
-
-/**
- * Check if a key is an action
- */
-const isActionKey = (key: string): boolean => {
-  return getActionKeys().includes(key);
 };
 
 /**

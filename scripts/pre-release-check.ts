@@ -45,6 +45,33 @@ function info(message: string) {
   log(`  ${message}`, "dim");
 }
 
+function parseStableVersion(
+  version: string,
+): { major: number; minor: number; patch: number } | null {
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    major: parseInt(match[1]),
+    minor: parseInt(match[2]),
+    patch: parseInt(match[3]),
+  };
+}
+
+function parsePrerelease(version: string): { channel: string; number: number } | null {
+  const match = version.match(/-(alpha|beta|rc)\.(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    channel: match[1],
+    number: parseInt(match[2]),
+  };
+}
+
 interface CheckResult {
   name: string;
   passed: boolean;
@@ -128,11 +155,27 @@ async function main() {
   header("Version Info");
   log(`  Current version: v${currentVersion}`, "blue");
 
-  // Calculate next versions
-  const [major, minor, patch] = currentVersion.split(".").map(Number);
+  const stableVersion = parseStableVersion(currentVersion);
+  if (!stableVersion) {
+    throw new Error(`Invalid version in package.json: ${currentVersion}`);
+  }
+
+  const prerelease = parsePrerelease(currentVersion);
+  const { major, minor, patch } = stableVersion;
   log(`  Next patch:      v${major}.${minor}.${patch + 1}`, "dim");
   log(`  Next minor:      v${major}.${minor + 1}.0`, "dim");
   log(`  Next major:      v${major + 1}.0.0`, "dim");
+  if (prerelease) {
+    log(
+      `  Continue ${prerelease.channel}: v${major}.${minor}.${patch}-${prerelease.channel}.${prerelease.number + 1}`,
+      "dim",
+    );
+    log(`  Promote to rc:   v${major}.${minor}.${patch}-rc.1`, "dim");
+    log(`  Finalize patch:  v${major}.${minor}.${patch}`, "dim");
+  } else {
+    log(`  Next beta:       v${major}.${minor}.${patch + 1}-beta.1`, "dim");
+    log(`  Next rc:         v${major}.${minor}.${patch + 1}-rc.1`, "dim");
+  }
 
   header("Git Checks");
 
@@ -173,7 +216,15 @@ async function main() {
 
   // Check: Up to date with remote
   await runCheck("Up to date with remote", async () => {
-    await $`git fetch origin master`.quiet();
+    const fetchResult = await $`git fetch origin master`.quiet().nothrow();
+    if (fetchResult.exitCode !== 0) {
+      return {
+        passed: true,
+        warning: true,
+        message: "Could not fetch origin/master in current environment",
+      };
+    }
+
     const status = await $`git status -uno`.text();
     if (status.includes("Your branch is behind")) {
       return { passed: false, message: "Branch is behind origin/master" };
@@ -210,11 +261,42 @@ async function main() {
   await runCheck("Tree-sitter parsers", async () => {
     const parsersDir = `${process.cwd()}/public/tree-sitter/parsers`;
     const expectedLangs = [
-      "bash", "c", "c_sharp", "cpp", "css", "dart", "elisp", "elixir",
-      "go", "html", "java", "javascript", "json", "kotlin", "lua",
-      "markdown", "objc", "ocaml", "php", "python", "rescript", "ruby",
-      "rust", "scala", "solidity", "sql", "swift", "systemrdl", "tlaplus",
-      "toml", "tsx", "typescript", "vue", "yaml", "zig",
+      "bash",
+      "c",
+      "c_sharp",
+      "cpp",
+      "css",
+      "dart",
+      "elisp",
+      "elixir",
+      "go",
+      "html",
+      "java",
+      "javascript",
+      "json",
+      "kotlin",
+      "lua",
+      "markdown",
+      "objc",
+      "ocaml",
+      "php",
+      "python",
+      "rescript",
+      "ruby",
+      "rust",
+      "scala",
+      "solidity",
+      "svelte",
+      "sql",
+      "swift",
+      "systemrdl",
+      "tlaplus",
+      "toml",
+      "tsx",
+      "typescript",
+      "vue",
+      "yaml",
+      "zig",
     ];
 
     const missing: string[] = [];
@@ -245,27 +327,27 @@ async function main() {
     return { passed: true };
   });
 
-  // Check: Biome lint
-  await runCheck("Biome lint check", async () => {
-    const result = await $`bun check`.quiet().nothrow();
+  // Check: Vite+ lint and format
+  await runCheck("Vite+ check", async () => {
+    const result = await $`bunx vp check`.quiet().nothrow();
     if (result.exitCode !== 0) {
-      return { passed: false, message: "Lint errors found" };
+      return { passed: false, message: "Format, lint, or type errors found" };
     }
     return { passed: true };
   });
 
-  await runCheck("Bun test suite", async () => {
-    const result = await $`bun test`.quiet().nothrow();
+  await runCheck("Vite+ test suite", async () => {
+    const result = await $`bunx vp test run`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Tests failed" };
     }
     return { passed: true };
   });
 
-  // Check: Vite build (full mode only)
+  // Check: Vite+ build (full mode only)
   if (fullMode) {
-    await runCheck("Vite build", async () => {
-      const result = await $`bun vite build`.quiet().nothrow();
+    await runCheck("Vite+ build", async () => {
+      const result = await $`bunx vp build`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Frontend build failed" };
       }
@@ -305,6 +387,14 @@ async function main() {
     const result = await $`cargo check --workspace`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Compilation errors found" };
+    }
+    return { passed: true };
+  });
+
+  await runCheck("Cargo check (release)", async () => {
+    const result = await $`cargo check --release -p athas`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Release-profile compilation errors found" };
     }
     return { passed: true };
   });
@@ -386,7 +476,8 @@ async function main() {
 
   await runCheck("GitHub release workflow exists", async () => {
     const workflowPath = `${process.cwd()}/.github/workflows`;
-    if (!(await Bun.file(workflowPath).exists())) {
+    const workflowDirCheck = await $`test -d ${workflowPath}`.nothrow();
+    if (workflowDirCheck.exitCode !== 0) {
       return { passed: false, message: "Missing .github/workflows directory" };
     }
 
@@ -406,7 +497,15 @@ async function main() {
 
   // Get commits since last tag
   try {
-    const lastTag = (await $`git describe --tags --abbrev=0`.text()).trim();
+    const lastTag = (await $`git tag --sort=-v:refname --list "v*"`.text())
+      .split("\n")
+      .map((tag) => tag.trim())
+      .find(Boolean);
+
+    if (!lastTag) {
+      throw new Error("No version tags found");
+    }
+
     const commits = await $`git log ${lastTag}..HEAD --oneline`.text();
     const commitList = commits.trim().split("\n").filter(Boolean);
 
@@ -441,7 +540,10 @@ async function main() {
     log("  Ready to release. Run one of:", "cyan");
     log("    bun release:patch  # Bug fixes", "dim");
     log("    bun release:minor  # New features", "dim");
-    log("    bun release:major  # Breaking changes\n", "dim");
+    log("    bun release:major  # Breaking changes", "dim");
+    log("    bun release:alpha  # Early preview build", "dim");
+    log("    bun release:beta   # Next patch prerelease", "dim");
+    log("    bun release:rc     # Release candidate for current patch\n", "dim");
     process.exit(0);
   } else {
     log(`\n  ${passed} passed, ${warned} warnings, ${failed} failed\n`, "red");

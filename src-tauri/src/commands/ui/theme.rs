@@ -29,7 +29,7 @@ fn get_system_theme_sync() -> String {
    {
       // Try GNOME color-scheme first (most reliable on modern systems)
       if let Ok(output) = Command::new("gsettings")
-         .args(&["get", "org.gnome.desktop.interface", "color-scheme"])
+         .args(["get", "org.gnome.desktop.interface", "color-scheme"])
          .output()
       {
          if output.status.success() {
@@ -45,7 +45,7 @@ fn get_system_theme_sync() -> String {
 
       // Fallback to gtk-theme
       if let Ok(output) = Command::new("gsettings")
-         .args(&["get", "org.gnome.desktop.interface", "gtk-theme"])
+         .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
          .output()
       {
          if output.status.success() {
@@ -58,7 +58,7 @@ fn get_system_theme_sync() -> String {
 
       // Check for KDE Plasma theme
       if let Ok(output) = Command::new("kreadconfig5")
-         .args(&[
+         .args([
             "--file",
             "kdeglobals",
             "--group",
@@ -100,7 +100,7 @@ fn get_system_theme_sync() -> String {
    {
       // For Windows, check registry for dark theme
       if let Ok(output) = Command::new("reg")
-         .args(&[
+         .args([
             "query",
             "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
             "/v",

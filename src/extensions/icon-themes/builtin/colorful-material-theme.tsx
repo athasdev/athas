@@ -10,7 +10,7 @@ export const colorfulMaterialIconTheme: IconThemeDefinition = {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {
-        component: <Icon size={14} />,
+        component: <Icon />,
       };
     }
 

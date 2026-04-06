@@ -25,8 +25,17 @@ body {
   background: transparent;
 }
 
-button {
-  cursor: pointer;
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+svg.lucide {
+  width: var(--app-ui-font-size);
+  height: var(--app-ui-font-size);
+  flex-shrink: 0;
 }
 
 input,

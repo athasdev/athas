@@ -12,13 +12,14 @@ import {
   Type,
 } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
 import { useColumnResize } from "../hooks/use-column-resize";
 import { useFkNavigation } from "../hooks/use-fk-navigation";
-import type { ColumnInfo } from "../types";
+import type { ColumnInfo } from "../sqlite-types";
 import CellRenderer from "./cell-renderer";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
@@ -34,13 +35,13 @@ const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
-  if (isPrimaryKey) return <Key size={12} className="text-text-lighter" />;
-  if (isForeignKey) return <Link size={12} className="text-accent" />;
+  if (isPrimaryKey) return <Key className="text-text-lighter" />;
+  if (isForeignKey) return <Link className="text-accent" />;
   const lowerType = type.toLowerCase();
   for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
-    if (lowerType.includes(key)) return <Icon size={12} className={color} />;
+    if (lowerType.includes(key)) return <Icon className={color} />;
   }
-  return <Type size={12} className="text-text-lighter" />;
+  return <Type className="text-text-lighter" />;
 }
 
 interface DataGridProps {
@@ -57,6 +58,11 @@ interface DataGridProps {
   onRowContextMenu: (e: React.MouseEvent, rowIndex: number) => void;
   onCellEdit: (rowIndex: number, columnName: string, newValue: unknown) => void;
   onCreateRow: () => void;
+  canSortColumns?: boolean;
+  canFilterColumns?: boolean;
+  canEditCells?: boolean;
+  canCreateRows?: boolean;
+  canOpenRowMenu?: boolean;
 }
 
 export default function DataGrid({
@@ -73,6 +79,11 @@ export default function DataGrid({
   onRowContextMenu,
   onCellEdit,
   onCreateRow,
+  canSortColumns = true,
+  canFilterColumns = true,
+  canEditCells = true,
+  canCreateRows = true,
+  canOpenRowMenu = true,
 }: DataGridProps) {
   const [editing, setEditing] = useState<{ row: number; col: string } | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -83,6 +94,7 @@ export default function DataGrid({
   const { getForeignKey, isForeignKey, navigateToReference } = useFkNavigation();
 
   const handleCellClick = (row: number, col: string, value: unknown) => {
+    if (!canEditCells) return;
     const info = tableMeta.find((c) => c.name === col);
     if (info?.primary_key) return;
     setEditing({ row, col });
@@ -108,7 +120,7 @@ export default function DataGrid({
     {
       id: "copy-value",
       label: "Copy value",
-      icon: <Copy size={12} />,
+      icon: <Copy />,
       onClick: copyValue,
     },
   ];
@@ -125,13 +137,20 @@ export default function DataGrid({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="group flex items-center justify-between border-border/50 border-b px-3 py-2">
         <span className="text-text-lighter text-xs">{queryResult.rows.length} rows</span>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={onCreateRow}
-          className="rounded-full border border-transparent px-1.5 py-1 opacity-0 transition-colors hover:border-border/70 hover:bg-hover group-hover:opacity-100"
+          className={cn(
+            "rounded-full",
+            canCreateRows ? "opacity-0 group-hover:opacity-100" : "cursor-default opacity-30",
+          )}
           aria-label="Add row"
+          disabled={!canCreateRows}
         >
-          <Plus size={10} className="text-text-lighter hover:text-text" />
-        </button>
+          <Plus className="text-text-lighter hover:text-text" />
+        </Button>
       </div>
       <div className="custom-scrollbar flex-1 overflow-auto px-2 pb-2">
         <table className="w-full border-separate border-spacing-0 text-xs">
@@ -151,7 +170,7 @@ export default function DataGrid({
                     key={i}
                     className="group relative cursor-pointer whitespace-nowrap border-border/60 border-b bg-primary-bg/95 px-2 py-2 text-left transition-colors hover:bg-hover/80"
                     style={{ width: colWidth, minWidth: 60 }}
-                    onClick={() => onColumnSort(col)}
+                    onClick={() => canSortColumns && onColumnSort(col)}
                   >
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-1.5">
@@ -160,9 +179,9 @@ export default function DataGrid({
                           {col}
                           {sorted &&
                             (sortDirection === "asc" ? (
-                              <ArrowUp size={10} className="text-accent" />
+                              <ArrowUp className="text-accent" />
                             ) : (
-                              <ArrowDown size={10} className="text-accent" />
+                              <ArrowDown className="text-accent" />
                             ))}
                         </span>
                         {fk && (
@@ -173,16 +192,22 @@ export default function DataGrid({
                             FK
                           </span>
                         )}
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAddColumnFilter(col);
+                            if (canFilterColumns) onAddColumnFilter(col);
                           }}
-                          className="opacity-0 group-hover:opacity-100"
+                          className={cn(
+                            "opacity-0 group-hover:opacity-100",
+                            !canFilterColumns && "pointer-events-none opacity-20",
+                          )}
                           aria-label={`Filter by ${col}`}
                         >
-                          <Filter size={10} className="text-text-lighter hover:text-text" />
-                        </button>
+                          <Filter className="text-text-lighter hover:text-text" />
+                        </Button>
                       </div>
                       {showColumnTypes && info && (
                         <div className="text-text-lighter text-xs opacity-75">
@@ -210,7 +235,7 @@ export default function DataGrid({
               <tr
                 key={ri}
                 className="cursor-pointer transition-colors hover:bg-hover/25"
-                onContextMenu={(e) => onRowContextMenu(e, ri)}
+                onContextMenu={(e) => canOpenRowMenu && onRowContextMenu(e, ri)}
               >
                 <td className="border-border/40 border-b px-2 py-1.5 text-text-lighter">
                   {(currentPage - 1) * pageSize + ri + 1}
@@ -227,11 +252,11 @@ export default function DataGrid({
                       key={ci}
                       className={cn(
                         "max-w-[300px] border-border/40 border-b px-2 py-1.5",
-                        !isPK && "cursor-pointer hover:bg-hover/40",
+                        canEditCells && !isPK && "cursor-pointer hover:bg-hover/40",
                         isPK && "bg-selected/60",
                       )}
                       style={{ width: getColumnWidth(col), minWidth: 60 }}
-                      onClick={() => !isPK && !fk && handleCellClick(ri, col, cell)}
+                      onClick={() => canEditCells && !isPK && !fk && handleCellClick(ri, col, cell)}
                     >
                       {isEditing ? (
                         <Input

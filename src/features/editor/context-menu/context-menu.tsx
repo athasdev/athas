@@ -10,6 +10,7 @@ import {
   FileText,
   Indent,
   Outdent,
+  PenLine,
   RotateCcw,
   Scissors,
   Search,
@@ -20,7 +21,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { logger } from "@/features/editor/utils/logger";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface EditorContextMenuProps {
@@ -33,6 +34,9 @@ interface EditorContextMenuProps {
   onSelectAll?: () => void;
   onFind?: () => void;
   onGoToLine?: () => void;
+  onGoToDefinition?: () => void;
+  onFindReferences?: () => void;
+  onRenameSymbol?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
   onIndent?: () => void;
@@ -55,6 +59,9 @@ const EditorContextMenu = ({
   onSelectAll,
   onFind,
   onGoToLine,
+  onGoToDefinition,
+  onFindReferences,
+  onRenameSymbol,
   onDelete,
   onDuplicate,
   onIndent,
@@ -85,31 +92,31 @@ const EditorContextMenu = ({
     {
       id: "copy",
       label: "Copy",
-      icon: <Copy size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "C"]} className="opacity-60" />,
+      icon: <Copy />,
+      keybinding: <Keybinding keys={[modifierKey, "C"]} className="opacity-60" />,
       disabled: !hasSelection,
       onClick: () => void handleCopy(),
     },
     {
       id: "cut",
       label: "Cut",
-      icon: <Scissors size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "X"]} className="opacity-60" />,
+      icon: <Scissors />,
+      keybinding: <Keybinding keys={[modifierKey, "X"]} className="opacity-60" />,
       disabled: !hasSelection,
       onClick: () => onCut?.(),
     },
     {
       id: "paste",
       label: "Paste",
-      icon: <ClipboardPaste size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "V"]} className="opacity-60" />,
+      icon: <ClipboardPaste />,
+      keybinding: <Keybinding keys={[modifierKey, "V"]} className="opacity-60" />,
       onClick: () => onPaste?.(),
     },
     {
       id: "delete",
       label: "Delete",
-      icon: <Trash2 size={11} />,
-      keybinding: <KeybindingBadge keys={["Del"]} className="opacity-60" />,
+      icon: <Trash2 />,
+      keybinding: <Keybinding keys={["Del"]} className="opacity-60" />,
       disabled: !hasSelection,
       onClick: () => onDelete?.(),
     },
@@ -117,90 +124,110 @@ const EditorContextMenu = ({
     {
       id: "select-all",
       label: "Select All",
-      icon: <Type size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "A"]} className="opacity-60" />,
+      icon: <Type />,
+      keybinding: <Keybinding keys={[modifierKey, "A"]} className="opacity-60" />,
       onClick: () => onSelectAll?.(),
     },
     {
       id: "duplicate",
       label: "Duplicate Line",
-      icon: <FileText size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "D"]} className="opacity-60" />,
+      icon: <FileText />,
+      keybinding: <Keybinding keys={[modifierKey, "D"]} className="opacity-60" />,
       onClick: () => onDuplicate?.(),
     },
     { id: "sep-2", label: "", separator: true, onClick: () => {} },
     {
       id: "toggle-comment",
       label: "Toggle Comment",
-      icon: <Code size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "/"]} className="opacity-60" />,
+      icon: <Code />,
+      keybinding: <Keybinding keys={[modifierKey, "/"]} className="opacity-60" />,
       onClick: () => onToggleComment?.(),
     },
     {
       id: "indent",
       label: "Indent",
-      icon: <Indent size={11} />,
-      keybinding: <KeybindingBadge keys={["Tab"]} className="opacity-60" />,
+      icon: <Indent />,
+      keybinding: <Keybinding keys={["Tab"]} className="opacity-60" />,
       onClick: () => onIndent?.(),
     },
     {
       id: "outdent",
       label: "Outdent",
-      icon: <Outdent size={11} />,
-      keybinding: <KeybindingBadge keys={["Shift", "Tab"]} className="opacity-60" />,
+      icon: <Outdent />,
+      keybinding: <Keybinding keys={["Shift", "Tab"]} className="opacity-60" />,
       onClick: () => onOutdent?.(),
     },
     {
       id: "format",
       label: "Format Document",
-      icon: <AlignLeft size={11} />,
-      keybinding: <KeybindingBadge keys={["Shift", altKey, "F"]} className="opacity-60" />,
+      icon: <AlignLeft />,
+      keybinding: <Keybinding keys={["Shift", altKey, "F"]} className="opacity-60" />,
       onClick: () => onFormat?.(),
     },
     { id: "sep-3", label: "", separator: true, onClick: () => {} },
     {
       id: "move-up",
       label: "Move Line Up",
-      icon: <ChevronUp size={11} />,
-      keybinding: <KeybindingBadge keys={[altKey, "Up"]} className="opacity-60" />,
+      icon: <ChevronUp />,
+      keybinding: <Keybinding keys={[altKey, "Up"]} className="opacity-60" />,
       onClick: () => onMoveLineUp?.(),
     },
     {
       id: "move-down",
       label: "Move Line Down",
-      icon: <ChevronDown size={11} />,
-      keybinding: <KeybindingBadge keys={[altKey, "Down"]} className="opacity-60" />,
+      icon: <ChevronDown />,
+      keybinding: <Keybinding keys={[altKey, "Down"]} className="opacity-60" />,
       onClick: () => onMoveLineDown?.(),
     },
     {
       id: "toggle-case",
       label: "Toggle Case",
-      icon: <CaseSensitive size={11} />,
+      icon: <CaseSensitive />,
       disabled: !hasSelection,
       onClick: () => onToggleCase?.(),
     },
     { id: "sep-4", label: "", separator: true, onClick: () => {} },
     {
+      id: "go-to-definition",
+      label: "Go to Definition",
+      icon: <Code />,
+      keybinding: <Keybinding keys={["F12"]} className="opacity-60" />,
+      onClick: () => onGoToDefinition?.(),
+    },
+    {
+      id: "find-references",
+      label: "Find All References",
+      icon: <Search />,
+      keybinding: <Keybinding keys={["Shift", "F12"]} className="opacity-60" />,
+      onClick: () => onFindReferences?.(),
+    },
+    {
+      id: "rename-symbol",
+      label: "Rename Symbol",
+      icon: <PenLine />,
+      keybinding: <Keybinding keys={["F2"]} className="opacity-60" />,
+      onClick: () => onRenameSymbol?.(),
+    },
+    { id: "sep-5", label: "", separator: true, onClick: () => {} },
+    {
       id: "find",
       label: "Find",
-      icon: <Search size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "F"]} className="opacity-60" />,
+      icon: <Search />,
+      keybinding: <Keybinding keys={[modifierKey, "F"]} className="opacity-60" />,
       onClick: () => onFind?.(),
     },
     {
       id: "go-to-line",
       label: "Go to Line",
-      icon: <RotateCcw size={11} />,
-      keybinding: <KeybindingBadge keys={[modifierKey, "G"]} className="opacity-60" />,
+      icon: <RotateCcw />,
+      keybinding: <Keybinding keys={[modifierKey, "G"]} className="opacity-60" />,
       onClick: () => onGoToLine?.(),
     },
     {
       id: "bookmark",
       label: "Toggle Bookmark",
-      icon: <Bookmark size={11} />,
-      keybinding: (
-        <KeybindingBadge keys={[modifierKey, "K", modifierKey, "K"]} className="opacity-60" />
-      ),
+      icon: <Bookmark />,
+      keybinding: <Keybinding keys={[modifierKey, "K", modifierKey, "K"]} className="opacity-60" />,
       onClick: () => onToggleBookmark?.(),
     },
   ];

@@ -1,13 +1,14 @@
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAppStore } from "@/stores/app-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { isMac } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 import type { Command } from "../types";
@@ -18,19 +19,29 @@ function getZoomTarget(): "editor" | "terminal" | "webviewer" {
   if (terminalContainer?.contains(document.activeElement)) return "terminal";
 
   const activeBuffer = useBufferStore.getState().buffers.find((b) => b.isActive);
-  if (activeBuffer?.isWebViewer) return "webviewer";
+  if (activeBuffer?.type === "webViewer") return "webviewer";
 
   return "editor";
 }
 
 const fileCommands: Command[] = [
   {
+    id: "workbench.newTab",
+    title: "New Tab",
+    category: "File",
+    keybinding: "cmd+n",
+    execute: () => {
+      if (useKeymapStore.getState().contexts.terminalFocus) return;
+      useBufferStore.getState().actions.showNewTabView();
+    },
+  },
+  {
     id: "file.save",
     title: "Save File",
     category: "File",
     keybinding: "cmd+s",
     execute: () => {
-      useAppStore.getState().actions.handleSave();
+      useEditorAppStore.getState().actions.handleSave();
     },
   },
   {
@@ -61,7 +72,7 @@ const fileCommands: Command[] = [
       if (result) {
         await invoke("write_file", {
           path: result,
-          contents: activeBuffer.content || "",
+          contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
         });
       }
     },
@@ -106,7 +117,6 @@ const fileCommands: Command[] = [
     id: "file.new",
     title: "New File",
     category: "File",
-    keybinding: "cmd+n",
     execute: () => {
       if (useKeymapStore.getState().contexts.terminalFocus) return;
 
@@ -129,6 +139,36 @@ const fileCommands: Command[] = [
     keybinding: "cmd+p",
     execute: () => {
       useUIState.getState().setIsQuickOpenVisible(true);
+    },
+  },
+];
+
+const terminalCommands: Command[] = [
+  {
+    id: "terminal.new",
+    title: "New Terminal",
+    category: "Terminal",
+    keybinding: "cmd+t",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-new"));
+    },
+  },
+  {
+    id: "terminal.close",
+    title: "Close Terminal",
+    category: "Terminal",
+    keybinding: "cmd+w",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    },
+  },
+  {
+    id: "terminal.split",
+    title: "Split Terminal",
+    category: "Terminal",
+    keybinding: "cmd+d",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-split"));
     },
   },
 ];
@@ -251,6 +291,7 @@ const toggleTerminalPane = () => {
   } else {
     state.setBottomPaneActiveTab("terminal");
     state.setIsBottomPaneVisible(true);
+    window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
     setTimeout(() => state.requestTerminalFocus(), 100);
   }
 };
@@ -359,6 +400,14 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "help.showWhatsNew",
+    title: "What's New",
+    category: "Help",
+    execute: async () => {
+      await useWhatsNewStore.getState().open();
+    },
+  },
+  {
     id: "workbench.toggleAIChat",
     title: "Toggle AI Chat",
     category: "View",
@@ -430,10 +479,7 @@ const viewCommands: Command[] = [
   },
 ];
 
-const isTerminalFocused = () => {
-  const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-  return terminalContainer?.contains(document.activeElement) ?? false;
-};
+const isTerminalFocused = () => useKeymapStore.getState().contexts.terminalFocus;
 
 const switchNextTab = () => {
   if (isTerminalFocused()) {
@@ -509,6 +555,10 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: `cmd+${i + 1}`,
     execute: () => {
+      if (isTerminalFocused()) {
+        window.dispatchEvent(new CustomEvent("terminal-activate-tab", { detail: i }));
+        return;
+      }
       const bufferStore = useBufferStore.getState();
       const buffer = bufferStore.buffers[i];
       if (buffer) bufferStore.actions.setActiveBuffer(buffer.id);
@@ -521,9 +571,8 @@ const navigationCommands: Command[] = [
     keybinding: "F12",
     execute: async () => {
       const { LspClient } = await import("@/features/editor/lsp/lsp-client");
-      const { readFileContent } = await import(
-        "@/features/file-system/controllers/file-operations"
-      );
+      const { readFileContent } =
+        await import("@/features/file-system/controllers/file-operations");
 
       const lspClient = LspClient.getInstance();
       const bufferStore = useBufferStore.getState();
@@ -588,6 +637,9 @@ const navigationCommands: Command[] = [
     keybinding: "shift+F12",
     execute: async () => {
       const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+      const { useReferencesStore } = await import("@/features/references/stores/references-store");
+      const { readFileContent } =
+        await import("@/features/file-system/controllers/file-operations");
 
       const lspClient = LspClient.getInstance();
       const bufferStore = useBufferStore.getState();
@@ -596,6 +648,21 @@ const navigationCommands: Command[] = [
 
       if (!activeBuffer?.path) return;
 
+      // Get the symbol name under cursor for display
+      const lines = editorAPI.getLines();
+      const currentLine = lines[cursorPosition.line] || "";
+      const wordMatch = currentLine.slice(0, cursorPosition.column + 1).match(/[\w$]+$/);
+      const wordEnd = currentLine.slice(cursorPosition.column).match(/^[\w$]*/);
+      const symbol = (wordMatch?.[0] || "") + (wordEnd?.[0]?.slice(1) || "");
+
+      const referencesActions = useReferencesStore.getState().actions;
+      referencesActions.setIsLoading(true);
+
+      // Open the references panel
+      const uiState = useUIState.getState();
+      uiState.setBottomPaneActiveTab("references");
+      uiState.setIsBottomPaneVisible(true);
+
       const references = await lspClient.getReferences(
         activeBuffer.path,
         cursorPosition.line,
@@ -603,8 +670,69 @@ const navigationCommands: Command[] = [
       );
 
       if (references && references.length > 0) {
-        console.log(`Found ${references.length} references:`, references);
+        // Collect file contents for line context
+        const fileContentsCache = new Map<string, string[]>();
+
+        // Get content from open buffers first, then read from disk
+        for (const ref of references) {
+          const filePath = ref.uri.replace("file://", "");
+          if (fileContentsCache.has(filePath)) continue;
+
+          const buffer = bufferStore.buffers.find((b) => b.path === filePath);
+          if (buffer && "content" in buffer && typeof buffer.content === "string") {
+            fileContentsCache.set(filePath, buffer.content.split("\n"));
+          } else {
+            try {
+              const content = await readFileContent(filePath);
+              fileContentsCache.set(filePath, content.split("\n"));
+            } catch {
+              fileContentsCache.set(filePath, []);
+            }
+          }
+        }
+
+        const converted = references.map((ref) => {
+          const filePath = ref.uri.replace("file://", "");
+          const fileLines = fileContentsCache.get(filePath) || [];
+          return {
+            filePath,
+            line: ref.range.start.line,
+            column: ref.range.start.character,
+            endLine: ref.range.end.line,
+            endColumn: ref.range.end.character,
+            lineContent: fileLines[ref.range.start.line] || "",
+          };
+        });
+
+        referencesActions.setReferences(
+          {
+            symbol: symbol || "symbol",
+            filePath: activeBuffer.path,
+            line: cursorPosition.line,
+            column: cursorPosition.column,
+          },
+          converted,
+        );
+      } else {
+        referencesActions.setReferences(
+          {
+            symbol: symbol || "symbol",
+            filePath: activeBuffer.path,
+            line: cursorPosition.line,
+            column: cursorPosition.column,
+          },
+          [],
+        );
       }
+    },
+  },
+  {
+    id: "editor.renameSymbol",
+    title: "Rename Symbol",
+    category: "Navigation",
+    keybinding: "F2",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("editor-rename-symbol"));
     },
   },
   {
@@ -745,9 +873,10 @@ const windowCommands: Command[] = [
   },
 ];
 
-export const allCommands: Command[] = [
+const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
+  ...terminalCommands,
   ...viewCommands,
   ...navigationCommands,
   ...databaseCommands,

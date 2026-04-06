@@ -1,26 +1,37 @@
 import { forwardRef, memo, type ReactNode, useMemo } from "react";
+import { ChevronDown, ChevronRight, FileJson2, FileText } from "lucide-react";
+import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
 
 interface HighlightLayerProps {
   content: string;
   tokens: Token[];
+  foldMarkers?: Map<number, number>;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
   tabSize?: number;
+  wordWrap?: boolean;
   viewportRange?: { startLine: number; endLine: number };
 }
 
 interface LineProps {
   lineContent: string;
   tokens: Token[];
+  foldedCount?: number;
   lineStart: number;
   lineIndex: number;
 }
 
 const Line = memo<LineProps>(
-  ({ lineContent, tokens, lineStart, lineIndex }) => {
+  ({ lineContent, tokens, foldedCount, lineStart, lineIndex }) => {
+    const accordionMeta = useMemo(() => parseDiffAccordionLine(lineContent), [lineContent]);
+
     const spans = useMemo((): ReactNode[] => {
+      if (accordionMeta) {
+        return [];
+      }
+
       if (tokens.length === 0) {
         return [];
       }
@@ -83,6 +94,36 @@ const Line = memo<LineProps>(
       return result;
     }, [lineContent, tokens, lineStart, lineIndex]);
 
+    if (accordionMeta) {
+      const Icon = accordionMeta.name.endsWith(".json") ? FileJson2 : FileText;
+
+      return (
+        <div className="diff-accordion-line">
+          <div className="diff-accordion-card">
+            <span className="diff-accordion-chevron">
+              {accordionMeta.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+            </span>
+            <span className="diff-accordion-icon">
+              <Icon size={16} />
+            </span>
+            <span className="diff-accordion-name">{accordionMeta.name}</span>
+            <span className="diff-accordion-path">{accordionMeta.path}</span>
+            {accordionMeta.hiddenCount ? (
+              <span className="diff-accordion-count">{accordionMeta.hiddenCount} hidden</span>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    if (foldedCount) {
+      return (
+        <div className="highlight-layer-line folded-preview-line">
+          {lineContent || `${foldedCount} lines hidden`}
+        </div>
+      );
+    }
+
     return (
       <div className="highlight-layer-line">
         {spans.length > 0 ? spans : lineContent || "\u00A0"}
@@ -94,7 +135,8 @@ const Line = memo<LineProps>(
     return (
       prev.lineContent === next.lineContent &&
       prev.lineStart === next.lineStart &&
-      prev.tokens === next.tokens
+      prev.tokens === next.tokens &&
+      prev.foldedCount === next.foldedCount
     );
   },
 );
@@ -102,7 +144,20 @@ const Line = memo<LineProps>(
 Line.displayName = "HighlightLayerLine";
 
 const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
-  ({ content, tokens, fontSize, fontFamily, lineHeight, tabSize = 2, viewportRange }, ref) => {
+  (
+    {
+      content,
+      tokens,
+      foldMarkers,
+      fontSize,
+      fontFamily,
+      lineHeight,
+      tabSize = 2,
+      wordWrap = false,
+      viewportRange,
+    },
+    ref,
+  ) => {
     // Normalize line endings first to ensure consistent rendering with textarea
     const normalizedContent = useMemo(() => normalizeLineEndings(content), [content]);
 
@@ -173,12 +228,14 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
         const line = lines[i];
         const lineTokens = lineTokensMap.get(i) || [];
         const lineStart = lineOffsets[i];
+        const foldedCount = foldMarkers?.get(i);
 
         result.push(
           <Line
             key={i}
             lineContent={line}
             tokens={lineTokens}
+            foldedCount={foldedCount}
             lineStart={lineStart}
             lineIndex={i}
           />,
@@ -198,7 +255,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       }
 
       return result;
-    }, [lines, lineTokensMap, lineOffsets, viewportRange, lineHeight]);
+    }, [lines, lineTokensMap, lineOffsets, viewportRange, lineHeight, foldMarkers]);
 
     return (
       <div
@@ -208,6 +265,9 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
           fontFamily,
           lineHeight: `${lineHeight}px`,
           tabSize: tabSize,
+          whiteSpace: wordWrap ? "pre-wrap" : "pre",
+          overflowWrap: wordWrap ? "anywhere" : "normal",
+          wordBreak: wordWrap ? "break-word" : "normal",
         }}
         aria-hidden="true"
       >
@@ -222,10 +282,6 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 HighlightLayerComponent.displayName = "HighlightLayer";
 
 export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
-  if (prev.content !== next.content) {
-    return false;
-  }
-
   // Check viewport range changes
   const viewportUnchanged =
     prev.viewportRange?.startLine === next.viewportRange?.startLine &&
@@ -239,26 +295,33 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     return (
       !prev.tokens &&
       !next.tokens &&
+      prev.content === next.content &&
       prev.fontSize === next.fontSize &&
       prev.fontFamily === next.fontFamily &&
       prev.lineHeight === next.lineHeight &&
-      prev.tabSize === next.tabSize
+      prev.tabSize === next.tabSize &&
+      prev.wordWrap === next.wordWrap
     );
   }
 
-  const tokensUnchanged =
-    prev.tokens === next.tokens ||
-    (prev.tokens.length === next.tokens.length &&
-      (prev.tokens.length === 0 ||
-        (prev.tokens[0]?.start === next.tokens[0]?.start &&
-          prev.tokens[prev.tokens.length - 1]?.end === next.tokens[prev.tokens.length - 1]?.end)));
+  const tokensUnchanged = prev.tokens === next.tokens;
+
+  // If only content changed but tokens haven't updated yet, skip the intermediate render.
+  // The tokenizer will produce new tokens shortly, triggering a proper re-render then.
+  // This prevents the flash of unhighlighted text between keystroke and tokenization.
+  if (prev.content !== next.content && tokensUnchanged) {
+    return true;
+  }
 
   const shouldSkipRender =
+    prev.content === next.content &&
     tokensUnchanged &&
+    prev.foldMarkers === next.foldMarkers &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
-    prev.tabSize === next.tabSize;
+    prev.tabSize === next.tabSize &&
+    prev.wordWrap === next.wordWrap;
 
   return shouldSkipRender;
 });

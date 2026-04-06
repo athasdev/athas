@@ -2,7 +2,7 @@
 ;-----------
 
 (bare_key) @property
-(quoted_key) @string
+(quoted_key) @property
 
 ; Literals
 ;---------

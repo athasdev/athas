@@ -3,21 +3,21 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
-import { AI_PROVIDERS } from "@/features/ai/types/providers";
-import type { FileEntry } from "@/features/file-system/types/app";
 import {
   getProviderApiToken,
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
-} from "@/utils/ai-chat";
+} from "@/features/ai/services/ai-token-service";
+import { AI_PROVIDERS } from "@/features/ai/types/providers";
+import type { FileEntry } from "@/features/file-system/types/app";
 import {
   deleteChatFromDb,
   initChatDatabase,
   loadAllChatsFromDb,
   loadChatFromDb,
   saveChatToDb,
-} from "@/utils/chat-history-db";
+} from "@/features/ai/services/ai-chat-history-service";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -51,7 +51,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         mentionState: {
           active: false,
-          position: { top: 0, left: 0 },
+          position: { top: 0, bottom: 0, left: 0, width: 0 },
           search: "",
           startIndex: 0,
           selectedIndex: 0,
@@ -59,7 +59,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         slashCommandState: {
           active: false,
-          position: { top: 0, left: 0 },
+          position: { top: 0, bottom: 0, left: 0, width: 0 },
           search: "",
           selectedIndex: 0,
         },
@@ -69,6 +69,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           currentModeId: null,
           availableModes: [],
         },
+        sessionConfigOptions: [],
 
         // Agent selection actions
         setSelectedAgentId: (agentId) =>
@@ -226,6 +227,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             createdAt: new Date(),
             lastMessageAt: new Date(),
             agentId: chatAgentId,
+            acpSessionId: null,
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -319,6 +321,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             }
           });
           // Save to SQLite
+          get().syncChatToDatabase(chatId);
+        },
+
+        setChatAcpSessionId: (chatId, sessionId) => {
+          set((state) => {
+            const chat = state.chats.find((c) => c.id === chatId);
+            if (chat) {
+              chat.acpSessionId = sessionId;
+            }
+          });
           get().syncChatToDatabase(chatId);
         },
 
@@ -554,7 +566,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.mentionState = {
               active: false,
-              position: { top: 0, left: 0 },
+              position: { top: 0, bottom: 0, left: 0, width: 0 },
               search: "",
               startIndex: 0,
               selectedIndex: 0,
@@ -632,7 +644,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.slashCommandState = {
               active: false,
-              position: { top: 0, left: 0 },
+              position: { top: 0, bottom: 0, left: 0, width: 0 },
               search: "",
               selectedIndex: 0,
             };
@@ -708,6 +720,41 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             // The mode will be updated via the event handler when the agent confirms
           } catch (error) {
             console.error("Failed to change session mode:", error);
+          }
+        },
+
+        setSessionConfigOptions: (options) =>
+          set((state) => {
+            state.sessionConfigOptions = options;
+          }),
+
+        changeSessionConfigOption: async (configId, value) => {
+          const previousOptions = get().sessionConfigOptions;
+
+          set((state) => {
+            state.sessionConfigOptions = state.sessionConfigOptions.map((option) => {
+              if (option.id !== configId || option.kind.type !== "select") {
+                return option;
+              }
+
+              return {
+                ...option,
+                kind: {
+                  ...option.kind,
+                  currentValue: value,
+                },
+              };
+            });
+          });
+
+          try {
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("set_acp_session_config_option", { args: { configId, value } });
+          } catch (error) {
+            console.error("Failed to change session config option:", error);
+            set((state) => {
+              state.sessionConfigOptions = previousOptions;
+            });
           }
         },
 
@@ -831,6 +878,17 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         getCurrentMessages: () => {
           const state = get();
           const chat = state.chats.find((chat) => chat.id === state.currentChatId);
+          return chat?.messages || [];
+        },
+
+        getChatById: (chatId) => {
+          const state = get();
+          return state.chats.find((chat) => chat.id === chatId);
+        },
+
+        getMessagesForChat: (chatId) => {
+          const state = get();
+          const chat = state.chats.find((item) => item.id === chatId);
           return chat?.messages || [];
         },
       }),

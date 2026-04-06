@@ -16,10 +16,12 @@ const generateContent = (lineCount: number) => {
   return content;
 };
 
-await Promise.all(Object.entries(BENCHMARKS).map(async ([key, config]) => {
-  const filePath = `${process.cwd()}/${config.name}`;
-  console.log(`Generating ${key} benchmark (${config.lines} lines) to ${config.name}...`);
-  await Bun.write(filePath, generateContent(config.lines));
-}));
+await Promise.all(
+  Object.entries(BENCHMARKS).map(async ([key, config]) => {
+    const filePath = `${process.cwd()}/${config.name}`;
+    console.log(`Generating ${key} benchmark (${config.lines} lines) to ${config.name}...`);
+    await Bun.write(filePath, generateContent(config.lines));
+  }),
+);
 
 console.log("Benchmark suite generated successfully.");

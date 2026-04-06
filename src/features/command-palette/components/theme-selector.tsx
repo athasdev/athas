@@ -1,9 +1,11 @@
-import { Monitor, Moon, Palette, Sun, Upload } from "lucide-react";
+import { Monitor, Moon, Palette, Settings, Sun, Upload } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
-import Button from "@/ui/button";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -27,16 +29,16 @@ interface ThemeSelectorProps {
   currentTheme?: string;
 }
 
-const getThemeIcon = (category: string, _isDark?: boolean): React.ReactNode => {
+const getThemeIcon = (category: string): React.ReactNode => {
   switch (category) {
     case "System":
-      return <Monitor size={14} />;
+      return <Monitor />;
     case "Light":
-      return <Sun size={14} />;
+      return <Sun />;
     case "Dark":
-      return <Moon size={14} />;
+      return <Moon />;
     default:
-      return <Palette size={14} />;
+      return <Palette />;
   }
 };
 
@@ -57,18 +59,15 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
   useEffect(() => {
     const loadThemes = () => {
       const registryThemes = themeRegistry.getAllThemes();
-      const themeInfos: ThemeInfo[] = [
-        // Convert registry themes to ThemeInfo
-        ...registryThemes.map(
-          (theme: ThemeDefinition): ThemeInfo => ({
-            id: theme.id,
-            name: theme.name,
-            description: theme.description,
-            category: theme.category,
-            icon: getThemeIcon(theme.category, theme.isDark),
-          }),
-        ),
-      ];
+      const themeInfos: ThemeInfo[] = registryThemes.map(
+        (theme: ThemeDefinition): ThemeInfo => ({
+          id: theme.id,
+          name: theme.name,
+          description: theme.description,
+          category: theme.category,
+          icon: getThemeIcon(theme.category),
+        }),
+      );
       setThemes(themeInfos);
     };
 
@@ -181,7 +180,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const { uploadTheme } = await import("../../../utils/theme-upload");
+        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
         const result = await uploadTheme(file);
         if (result.success) {
           console.log("Theme uploaded successfully:", result.theme?.name);
@@ -216,8 +215,21 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
             variant="ghost"
             size="xs"
             className="shrink-0 gap-1 px-2"
+            aria-label="Upload theme"
           >
-            <Upload size={12} />
+            <Upload />
+          </Button>
+          <Button
+            onClick={() => {
+              onClose();
+              useUIState.getState().openSettingsDialog("appearance");
+            }}
+            variant="ghost"
+            size="xs"
+            className="shrink-0 gap-1 px-2"
+            aria-label="Open appearance settings"
+          >
+            <Settings />
           </Button>
         </div>
       </CommandHeader>
@@ -240,19 +252,18 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 }}
                 onMouseEnter={() => {
                   setSelectedIndex(index);
-                  applyPreviewTheme(theme.id);
                 }}
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
               >
-                <div className="shrink-0 text-text-lighter">{theme.icon || <Moon size={14} />}</div>
+                <div className="shrink-0 text-text-lighter">{theme.icon || <Moon />}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>
-                    {isCurrent && !isSelected && (
-                      <span className="rounded bg-accent/10 px-1 py-0.5 font-medium text-[10px] text-accent">
-                        current
-                      </span>
+                    {isCurrent && (
+                      <Badge variant="accent" size="compact">
+                        Current
+                      </Badge>
                     )}
                   </div>
                 </div>

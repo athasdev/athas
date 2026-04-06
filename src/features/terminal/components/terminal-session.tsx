@@ -27,14 +27,28 @@ const TerminalSession = ({
   const terminalRef = useRef<any>(null);
   const xtermInstanceRef = useRef<any>(null);
 
-  // Focus method that can be called externally
+  // Focus method that can be called externally, with verified retry
   const focusTerminal = useCallback(() => {
-    // Try multiple focus methods to ensure it works
-    if (xtermInstanceRef.current?.focus) {
-      xtermInstanceRef.current.focus();
-    } else if (terminalRef.current?.focus) {
-      terminalRef.current.focus();
-    }
+    const ref = xtermInstanceRef.current || terminalRef.current;
+    if (!ref?.focus) return;
+
+    let attempt = 0;
+    const tryFocus = () => {
+      if (attempt >= 6 || !ref.focus) return;
+      attempt++;
+      ref.focus();
+
+      // Verify focus landed on the terminal's textarea
+      requestAnimationFrame(() => {
+        const textarea = ref.terminal?.textarea;
+        if (textarea && document.activeElement !== textarea) {
+          tryFocus();
+        }
+      });
+    };
+
+    // Wait for layout to settle before first focus attempt
+    requestAnimationFrame(() => tryFocus());
   }, []);
 
   const showSearch = useCallback(() => {
@@ -64,12 +78,13 @@ const TerminalSession = ({
   }, [isActive, terminal.id, onActivity]);
 
   return (
-    <div className="h-full" data-terminal-id={terminal.id}>
+    <div className="flex h-full min-h-0 flex-col" data-terminal-id={terminal.id}>
       <TerminalErrorBoundary>
         <XtermTerminal
           sessionId={terminal.id}
           isActive={isActive}
           isVisible={isVisible}
+          initialCommand={terminal.initialCommand}
           onReady={() => {
             // Additional ready callback if needed
           }}
@@ -79,6 +94,7 @@ const TerminalSession = ({
             terminalRef.current = ref;
           }}
           onTerminalExit={onTerminalExit}
+          remoteConnectionId={terminal.remoteConnectionId}
         />
       </TerminalErrorBoundary>
     </div>

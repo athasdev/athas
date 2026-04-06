@@ -4,9 +4,11 @@ import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import { isAcpAgent } from "@/utils/ai-chat";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "../../store/store";
+import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import ToolCallDisplay from "../messages/tool-call-display";
@@ -45,6 +47,7 @@ export const ChatMessage = memo(function ChatMessage({
     message.toolCalls &&
     message.toolCalls.length > 0 &&
     (!message.content || message.content.trim().length === 0);
+  const isAcp = isAcpAgent(currentAgentId());
 
   const handleCopyMessage = useCallback(async (messageContent: string, messageId: string) => {
     try {
@@ -107,14 +110,16 @@ export const ChatMessage = memo(function ChatMessage({
         <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
           <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
           <Tooltip content="Restore to this point" side="top">
-            <button
+            <Button
               onClick={() => handleRestoreCheckpoint(message.id)}
-              className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
+              variant="ghost"
+              size="icon-xs"
+              className="-translate-y-1/2 absolute top-1/2 right-1.5 rounded-full border border-border bg-secondary-bg/80 text-text-lighter opacity-40 hover:bg-hover hover:opacity-100"
               title="Restore checkpoint"
               aria-label="Restore to this checkpoint"
             >
-              <Undo2 size={10} />
-            </button>
+              <Undo2 />
+            </Button>
           </Tooltip>
         </div>
       </div>
@@ -122,8 +127,12 @@ export const ChatMessage = memo(function ChatMessage({
   }
 
   if (isToolOnlyMessage) {
+    if (isAcp) {
+      return null;
+    }
+
     return (
-      <>
+      <div className="space-y-2">
         {message.toolCalls!.map((toolCall, toolIndex) => (
           <ToolCallDisplay
             key={`${message.id}-tool-${toolIndex}`}
@@ -135,7 +144,7 @@ export const ChatMessage = memo(function ChatMessage({
             onOpenInEditor={handleOpenInEditor}
           />
         ))}
-      </>
+      </div>
     );
   }
 
@@ -163,8 +172,8 @@ export const ChatMessage = memo(function ChatMessage({
 
   return (
     <div className="group relative w-full">
-      {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="mb-1 space-y-1">
+      {!isAcp && message.toolCalls && message.toolCalls.length > 0 && (
+        <div className="mb-2 space-y-2">
           {message.toolCalls!.map((toolCall, toolIndex) => (
             <ToolCallDisplay
               key={`${message.id}-tool-${toolIndex}`}
@@ -208,6 +217,14 @@ export const ChatMessage = memo(function ChatMessage({
         </div>
       )}
 
+      {message.ui && message.ui.length > 0 && (
+        <div className="mb-2 space-y-2">
+          {message.ui.map((component, index) => (
+            <GenerativeUIRenderer key={`${message.id}-ui-${index}`} component={component} />
+          ))}
+        </div>
+      )}
+
       {message.content && (
         <>
           <div className="pr-1 leading-relaxed">
@@ -222,43 +239,45 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </div>
 
-          <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="pointer-events-none absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             {isLastMessage &&
               (hasError(message.content) ? (
                 <Tooltip content="Retry" side="top">
-                  <button
+                  <Button
                     onClick={handleRetryMessage}
-                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
                     title="Retry"
                     aria-label="Retry failed message"
                   >
-                    <RefreshCw size={12} />
-                  </button>
+                    <RefreshCw />
+                  </Button>
                 </Tooltip>
               ) : (
                 <Tooltip content="Regenerate" side="top">
-                  <button
+                  <Button
                     onClick={handleRetryMessage}
-                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
                     title="Regenerate"
                     aria-label="Regenerate response"
                   >
-                    <RotateCcw size={12} />
-                  </button>
+                    <RotateCcw />
+                  </Button>
                 </Tooltip>
               ))}
-            <button
+            <Button
               onClick={() => handleCopyMessage(message.content, message.id)}
-              className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+              variant="ghost"
+              size="icon-sm"
+              className="pointer-events-auto rounded-full border border-border bg-primary-bg/90"
               title="Copy message"
               aria-label="Copy message"
             >
-              {copiedMessageId === message.id ? (
-                <Check size={12} className="text-green-400" />
-              ) : (
-                <Copy size={12} />
-              )}
-            </button>
+              {copiedMessageId === message.id ? <Check className="text-green-400" /> : <Copy />}
+            </Button>
           </div>
         </>
       )}

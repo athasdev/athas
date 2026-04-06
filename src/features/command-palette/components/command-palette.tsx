@@ -4,17 +4,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { commitChanges } from "@/features/git/api/commits";
-import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/remotes";
-import { discardAllChanges, stageAllFiles, unstageAllFiles } from "@/features/git/api/status";
+import { commitChanges } from "@/features/git/api/git-commits-api";
+import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/git-remotes-api";
+import {
+  discardAllChanges,
+  stageAllFiles,
+  unstageAllFiles,
+} from "@/features/git/api/git-status-api";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { useOnboardingStore } from "@/features/onboarding/store";
 import { useSettingsStore } from "@/features/settings/store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useAppStore } from "@/stores/app-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -22,7 +28,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
@@ -57,7 +63,7 @@ const CommandPalette = () => {
     setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
-  const { openQuickEdit } = useAppStore.use.actions();
+  const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const isVisible = isCommandPaletteVisible;
   const onClose = () => setIsCommandPaletteVisible(false);
@@ -76,6 +82,8 @@ const CommandPalette = () => {
   const { rootFolderPath } = useFileSystemStore();
   const gitStore = useGitStore();
   const { showToast } = useToast();
+  const openWhatsNew = useWhatsNewStore((state) => state.open);
+  const openOnboarding = useOnboardingStore((state) => state.openPreview);
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -141,6 +149,8 @@ const CommandPalette = () => {
       ) => void | Promise<void>,
       handleFileSelect,
       getAppDataDir: appDataDir,
+      openWhatsNew,
+      openOnboarding,
       onClose,
     }),
     ...createNavigationActions({
@@ -249,7 +259,7 @@ const CommandPalette = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, filteredActions, selectedIndex, prioritizedActions]);
+  }, [isVisible, selectedIndex, prioritizedActions, pushAction]);
 
   // Reset state when visibility changes
   useEffect(() => {
@@ -312,13 +322,13 @@ const CommandPalette = () => {
                 isSelected={index === selectedIndex}
                 className="px-3 py-1.5"
               >
-                {isRecent && <History size={12} className="shrink-0 text-text-lighter" />}
+                {isRecent && <History className="shrink-0 text-text-lighter" />}
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs">{action.label}</div>
                 </div>
                 {action.keybinding && (
                   <div className="shrink-0">
-                    <KeybindingBadge keys={action.keybinding} />
+                    <Keybinding keys={action.keybinding} />
                   </div>
                 )}
               </CommandItem>

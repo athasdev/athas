@@ -2,7 +2,7 @@ import { Copy, Download, Edit, Pin, PinOff, RotateCcw, X } from "lucide-react";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TerminalTabContextMenuProps {
@@ -43,41 +43,41 @@ const TerminalTabContextMenu = ({
         {
           id: "pin",
           label: terminal.isPinned ? "Unpin Terminal" : "Pin Terminal",
-          icon: terminal.isPinned ? <PinOff size={12} /> : <Pin size={12} />,
+          icon: terminal.isPinned ? <PinOff /> : <Pin />,
           onClick: () => onPin(terminal.id),
         },
         { id: "sep-1", label: "", separator: true, onClick: () => {} },
         {
           id: "duplicate",
           label: "Duplicate Terminal",
-          icon: <Copy size={12} />,
+          icon: <Copy />,
           onClick: () => onDuplicate(terminal.id),
         },
         {
           id: "clear",
           label: "Clear Terminal",
-          icon: <RotateCcw size={12} />,
+          icon: <RotateCcw />,
           onClick: () => onClear(terminal.id),
         },
         {
           id: "rename",
           label: "Rename Terminal",
-          icon: <Edit size={12} />,
-          keybinding: <KeybindingBadge keys={["F2"]} />,
+          icon: <Edit />,
+          keybinding: <Keybinding keys={["F2"]} />,
           onClick: () => onRename(terminal.id),
         },
         {
           id: "export",
           label: "Export Output",
-          icon: <Download size={12} />,
+          icon: <Download />,
           onClick: () => onExport(terminal.id),
         },
         { id: "sep-2", label: "", separator: true, onClick: () => {} },
         {
           id: "close",
           label: "Close Terminal",
-          icon: <X size={12} />,
-          keybinding: <KeybindingBadge keys={[modKey, "W"]} />,
+          icon: <X />,
+          keybinding: <Keybinding keys={[modKey, "W"]} />,
           onClick: () => onCloseTab(terminal.id),
         },
         {

@@ -1,28 +1,31 @@
 import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import ApiKeyModal from "@/features/ai/components/api-key-modal";
+import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
   truncateDetail,
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
+import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
+import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpEvent } from "@/features/ai/types/acp";
-import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
+import type { ContextInfo } from "@/features/ai/types/ai-context";
+import { AGENT_OPTIONS, type AIChatProps, type Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import { useProjectStore } from "@/stores/project-store";
-import { AcpStreamHandler } from "@/utils/acp-handler";
-import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
-import type { ContextInfo } from "@/utils/types";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
+import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
-import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
@@ -45,9 +48,12 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
+  const { showToast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const shouldAutoScrollRef = useRef(true);
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
   >([]);
@@ -92,10 +98,22 @@ const AIChat = memo(function AIChat({
           case "current_mode_update":
             store.setCurrentModeId(payload.currentModeId);
             break;
+          case "config_options_update":
+            store.setSessionConfigOptions(payload.configOptions);
+            break;
+          case "session_info_update": {
+            const chat = store.getCurrentChat();
+            const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
+            if (chat && nextTitle) {
+              store.updateChatTitle(chat.id, nextTitle);
+            }
+            break;
+          }
           case "status_changed":
             if (!payload.status.running) {
               store.setAvailableSlashCommands([]);
               store.setSessionModeState(null, []);
+              store.setSessionConfigOptions([]);
             }
             break;
           default:
@@ -130,8 +148,21 @@ const AIChat = memo(function AIChat({
     chatActions.deleteChat(chatId);
   };
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((force = false) => {
+    if (!force && !shouldAutoScrollRef.current) {
+      return;
+    }
+
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 48;
   }, []);
 
   const buildContext = async (agentId: string): Promise<ContextInfo> => {
@@ -140,10 +171,10 @@ const AIChat = memo(function AIChat({
     // Build active buffer context, including web viewer content if applicable
     let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
       activeBuffer || undefined;
-    if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
+    if (activeBuffer?.type === "webViewer" && activeBuffer.url) {
       // Fetch web page content for context
-      const { fetchWebPageContent } = await import("@/utils/web-fetcher");
-      const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
+      const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
+      const webContent = await fetchWebPageContent(activeBuffer.url);
       activeBufferContext = {
         ...activeBuffer,
         webViewerContent: webContent,
@@ -160,7 +191,7 @@ const AIChat = memo(function AIChat({
       agentId,
     };
 
-    if (activeBuffer && !activeBuffer.isWebViewer) {
+    if (activeBuffer && activeBuffer.type !== "webViewer") {
       const extension = activeBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
@@ -223,25 +254,26 @@ const AIChat = memo(function AIChat({
       messageId: string,
       mutate: (currentMessage: Message | undefined) => Partial<Message>,
     ) => {
-      const currentMessages = chatActions.getCurrentMessages();
+      const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
       const currentMessage = currentMessages.find((message) => message.id === messageId);
       chatActions.updateMessage(chatId, messageId, mutate(currentMessage));
     },
-    [chatActions.getCurrentMessages, chatActions.updateMessage],
+    [chatActions.updateMessage],
   );
 
   const processMessage = async (messageContent: string) => {
-    const currentAgentId = chatActions.getCurrentAgentId();
+    const store = useAIChatStore.getState();
+    const currentAgentId = store.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
     // For ACP agents (Claude Code, etc.), we don't need an API key
     // For Custom API, we need an API key to be set
-    if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+    if (!messageContent.trim() || (!isAcp && !store.hasApiKey)) return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
-    let chatId = chatState.currentChatId;
+    let chatId = store.currentChatId;
     if (!chatId) {
-      chatId = chatActions.ensureChatForAgent(chatActions.getCurrentAgentId());
+      chatId = chatActions.createNewChat(currentAgentId);
     }
 
     const { processedMessage } = await parseMentionsAndLoadFiles(
@@ -269,7 +301,7 @@ const AIChat = memo(function AIChat({
     chatActions.addMessage(chatId, userMessage);
     chatActions.addMessage(chatId, assistantMessage);
 
-    const currentMessages = chatActions.getCurrentMessages();
+    const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
     if (currentMessages.length === 2) {
       const title =
         userMessage.content.length > 50
@@ -281,10 +313,12 @@ const AIChat = memo(function AIChat({
     chatActions.setIsTyping(true);
     chatActions.setStreamingMessageId(assistantMessageId);
 
-    requestAnimationFrame(scrollToBottom);
+    requestAnimationFrame(() => scrollToBottom(true));
 
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
+    let acpProducedStateOnlyUpdate = false;
+    let acpCommandResultLabel: string | null = null;
 
     try {
       // Handle direct ACP UI intents locally so they are always reliable.
@@ -317,7 +351,9 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const conversationContext = currentMessages
+      const conversationContext = useAIChatStore
+        .getState()
+        .getMessagesForChat(chatId)
         .filter((msg) => msg.role !== "system")
         .map((msg) => ({
           role: msg.role as "user" | "assistant",
@@ -340,9 +376,54 @@ const AIChat = memo(function AIChat({
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             content: (currentMessage?.content || "") + chunk,
           }));
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom());
         },
         () => {
+          const currentMessage = chatActions
+            .getMessagesForChat(chatId)
+            .find((message) => message.id === currentAssistantMessageId);
+          const hasVisibleResponse = Boolean(
+            currentMessage?.content?.trim() ||
+            currentMessage?.toolCalls?.length ||
+            currentMessage?.images?.length ||
+            currentMessage?.resources?.length,
+          );
+
+          if (!hasVisibleResponse && isAcpAgent(currentAgentId)) {
+            if (acpProducedStateOnlyUpdate) {
+              const slashCommand = messageContent.trim().match(/^\/([^\s]+)/)?.[1];
+              const fallbackContent =
+                acpCommandResultLabel ||
+                (slashCommand ? `Applied \`/${slashCommand}\`.` : "Session updated.");
+
+              updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+                content: fallbackContent,
+                isStreaming: false,
+              }));
+              chatActions.setIsTyping(false);
+              chatActions.setStreamingMessageId(null);
+              abortControllerRef.current = null;
+              processQueuedMessages();
+              return;
+            }
+
+            const fallbackMessage = `${AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "Agent"} did not return a visible response. Try sending the message again.`;
+            updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+              content: `[ERROR_BLOCK]
+title: No Response
+code: EMPTY_RESPONSE
+message: ${fallbackMessage}
+details: The agent session started, but no content, tool output, or resource was returned.
+[/ERROR_BLOCK]`,
+              isStreaming: false,
+            }));
+            chatActions.setIsTyping(false);
+            chatActions.setStreamingMessageId(null);
+            abortControllerRef.current = null;
+            processQueuedMessages();
+            return;
+          }
+
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             isStreaming: false,
           });
@@ -396,10 +477,38 @@ const AIChat = memo(function AIChat({
             }
           }
 
+          const isAcpAuthError =
+            isAcpAgent(currentAgentId) &&
+            (mainError.includes("Authentication required") ||
+              errorDetails.includes("Authentication required"));
+
+          if (isAcpAuthError) {
+            errorTitle = "Authentication Required";
+            errorCode = "AUTH_REQUIRED";
+            const agentName =
+              AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "This agent";
+            errorMessage = `${agentName} needs external authentication before it can accept prompts.`;
+
+            if (
+              mainError.includes("Method not implemented") ||
+              errorDetails.includes("Method not implemented")
+            ) {
+              errorDetails =
+                "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again.";
+            } else if (!errorDetails) {
+              errorDetails =
+                "Complete authentication in the underlying CLI/adapter, then try again.";
+            }
+          }
+
           if (canReconnect) {
             errorTitle = "Connection Lost";
             errorCode = "RECONNECT";
           }
+
+          const shouldSuppressToast =
+            isAcpAgent(currentAgentId) &&
+            (mainError.includes("did not return any response") || errorCode === "RECONNECT");
 
           const formattedError = `[ERROR_BLOCK]
 title: ${errorTitle}
@@ -412,6 +521,12 @@ details: ${errorDetails || mainError}
             content: currentMessage?.content || formattedError,
             isStreaming: false,
           }));
+          if (!shouldSuppressToast) {
+            showToast({
+              message: errorMessage,
+              type: "error",
+            });
+          }
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
           abortControllerRef.current = null;
@@ -431,7 +546,7 @@ details: ${errorDetails || mainError}
           chatActions.addMessage(chatId, newAssistantMessage);
           currentAssistantMessageId = newMessageId;
           chatActions.setStreamingMessageId(newMessageId);
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom(true));
         },
         (toolName: string, toolInput?: any, toolId?: string) => {
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
@@ -449,6 +564,12 @@ details: ${errorDetails || mainError}
           }));
         },
         (event) => {
+          appendAcpEvent({
+            kind: "permission",
+            label: "Permission requested",
+            detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
+            state: "info",
+          });
           setPermissionQueue((prev) => [
             ...prev,
             {
@@ -502,6 +623,10 @@ details: ${errorDetails || mainError}
             case "prompt_complete":
               break; // Not useful to show
             case "session_mode_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = event.modeState.currentModeId
+                ? `Mode set to \`${event.modeState.currentModeId}\`.`
+                : "Session mode updated.";
               if (event.modeState.currentModeId) {
                 appendAcpEvent({
                   kind: "mode",
@@ -511,7 +636,36 @@ details: ${errorDetails || mainError}
                 });
               }
               break;
+            case "config_options_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel =
+                event.configOptions.length === 1
+                  ? "Session option updated."
+                  : "Session options updated.";
+              appendAcpEvent({
+                kind: "status",
+                label: "Session options updated",
+                detail: `${event.configOptions.length} option${event.configOptions.length === 1 ? "" : "s"} available`,
+                state: "info",
+              });
+              break;
+            case "session_info_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = event.title
+                ? `Session title updated to "${event.title}".`
+                : "Session metadata updated.";
+              if (event.title) {
+                appendAcpEvent({
+                  kind: "status",
+                  label: "Session title updated",
+                  detail: event.title,
+                  state: "info",
+                });
+              }
+              break;
             case "current_mode_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = `Mode set to \`${event.currentModeId}\`.`;
               appendAcpEvent({
                 kind: "mode",
                 label: "Mode changed",
@@ -520,6 +674,8 @@ details: ${errorDetails || mainError}
               });
               break;
             case "slash_commands_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = "Slash commands refreshed.";
               break; // Not useful to show
             case "plan_update": {
               const summary =
@@ -557,14 +713,15 @@ details: ${errorDetails || mainError}
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             images: [...(currentMessage?.images || []), { data, mediaType }],
           }));
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom());
         },
         (uri: string, name: string | null) => {
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             resources: [...(currentMessage?.resources || []), { uri, name }],
           }));
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom());
         },
+        chatId,
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -644,7 +801,7 @@ details: ${errorDetails || mainError}
     <div
       className={`ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
-      <ChatHeader />
+      <ChatHeader onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -656,35 +813,62 @@ details: ${errorDetails || mainError}
         </div>
       ) : (
         <>
-          <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto"
+          >
             <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
           </div>
 
           {currentPermission && (
             <div className="bg-transparent px-3 pt-2 text-xs">
-              <div className="flex items-center gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
-                <span className="text-text-lighter">permission:</span>
-                <span
-                  className="min-w-0 flex-1 truncate text-text"
-                  title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
-                >
-                  {currentPermission.description}
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handlePermission(false)}
-                    className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
-                  >
-                    deny
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handlePermission(true)}
-                    className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
-                  >
-                    allow
-                  </button>
+              <div className="rounded-2xl border border-border bg-primary-bg/90 px-3 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        shape="pill"
+                        className="bg-secondary-bg/70 font-medium uppercase tracking-[0.16em] text-text-lighter"
+                      >
+                        Permission
+                      </Badge>
+                      {permissionQueue.length > 1 ? (
+                        <span className="text-[11px] text-text-lighter">
+                          {permissionQueue.length - 1} more queued
+                        </span>
+                      ) : null}
+                    </div>
+                    <div
+                      className="mt-2 break-words font-mono text-text"
+                      title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
+                    >
+                      {currentPermission.description}
+                    </div>
+                    <div className="mt-1 text-[11px] text-text-lighter">
+                      Review this request before the agent can continue.
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handlePermission(false)}
+                      className="rounded-full"
+                    >
+                      Deny
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handlePermission(true)}
+                      className="rounded-full"
+                    >
+                      Allow
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -697,7 +881,7 @@ details: ${errorDetails || mainError}
             onStopStreaming={stopStreaming}
           />
 
-          <ApiKeyModal
+          <ProviderApiKeyModal
             isOpen={chatState.apiKeyModalState.isOpen}
             onClose={() => chatActions.setApiKeyModalState({ isOpen: false, providerId: null })}
             providerId={chatState.apiKeyModalState.providerId || ""}
@@ -708,15 +892,6 @@ details: ${errorDetails || mainError}
                 ? chatActions.hasProviderApiKey(chatState.apiKeyModalState.providerId)
                 : false
             }
-          />
-
-          <ChatHistorySidebar
-            chats={chatState.chats}
-            currentChatId={chatState.currentChatId}
-            onSwitchToChat={chatActions.switchToChat}
-            onDeleteChat={handleDeleteChat}
-            isOpen={chatState.isChatHistoryVisible}
-            onClose={() => chatActions.setIsChatHistoryVisible(false)}
           />
         </>
       )}

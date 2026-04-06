@@ -1,4 +1,4 @@
-import type { Position, Range } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor";
 import { parseSnippet, replaceVariables } from "./snippet-parser";
 import type { SnippetSession, TabStop } from "./types";
 
@@ -101,37 +101,4 @@ export function previousTabStop(session: SnippetSession): TabStop | null {
   session.currentTabStopIndex = uniqueIndices[currentIndexPosition - 1];
 
   return getCurrentTabStop(session);
-}
-
-/**
- * Get the selection range for a tab stop
- */
-export function getTabStopRange(session: SnippetSession, tabStop: TabStop): Range | null {
-  const startLine = session.insertPosition.line;
-  const startColumn = session.insertPosition.column + tabStop.offset;
-
-  return {
-    start: {
-      line: startLine,
-      column: startColumn,
-      offset: session.insertPosition.offset + tabStop.offset,
-    },
-    end: {
-      line: startLine,
-      column: startColumn + tabStop.length,
-      offset: session.insertPosition.offset + tabStop.offset + tabStop.length,
-    },
-  };
-}
-
-/**
- * Calculate all tab stop positions after snippet insertion
- */
-export function getAllTabStopRanges(
-  session: SnippetSession,
-): Array<{ tabStop: TabStop; range: Range }> {
-  return session.parsedSnippet.tabStops.map((tabStop) => ({
-    tabStop,
-    range: getTabStopRange(session, tabStop)!,
-  }));
 }

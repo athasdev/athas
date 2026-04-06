@@ -1,9 +1,14 @@
-import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
+import {
+  convertToEditorTokens,
+  tokenizeCode,
+  wasmParserLoader,
+} from "../../lib/wasm-parser/wasm-parser-api";
 import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
 import {
   fetchHighlightQuery,
   getDefaultParserWasmUrl,
 } from "../../lib/wasm-parser/extension-assets";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
 import { getLanguageIdFromPath } from "../../utils/language-id";
@@ -59,7 +64,12 @@ class SyntaxHighlighter {
     const bufferStore = useBufferStore.getState();
     const activeBuffer = bufferStore.actions.getActiveBuffer();
 
-    if (activeBuffer && activeBuffer.path === this.filePath && activeBuffer.tokens.length > 0) {
+    if (
+      activeBuffer &&
+      isEditorContent(activeBuffer) &&
+      activeBuffer.path === this.filePath &&
+      activeBuffer.tokens.length > 0
+    ) {
       // Use cached tokens immediately
       this.tokens = activeBuffer.tokens;
       this.applyDecorations(affectedLines);
@@ -142,10 +152,10 @@ class SyntaxHighlighter {
       // Get content for the specific target file path to avoid races
       const bufferStoreAtStart = useBufferStore.getState();
       const targetBufferAtStart = bufferStoreAtStart.buffers.find((b) => b.path === targetFilePath);
-      if (!targetBufferAtStart) {
+      if (!targetBufferAtStart || !isEditorContent(targetBufferAtStart)) {
         logger.warn(
           "SyntaxHighlighter",
-          "No buffer found for path at fetch start:",
+          "No editor buffer found for path at fetch start:",
           targetFilePath,
         );
         return;
@@ -158,7 +168,9 @@ class SyntaxHighlighter {
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      const languageId = getLanguageIdFromPath(targetFilePath || "");
+      const languageId =
+        (isEditorContent(targetBufferAtStart) && targetBufferAtStart.languageOverride) ||
+        getLanguageIdFromPath(targetFilePath || "");
       if (!languageId) {
         logger.debug("SyntaxHighlighter", "No language mapping for extension:", extension);
         this.tokens = [];
@@ -200,8 +212,12 @@ class SyntaxHighlighter {
       // Verify content hash matches (additional safety check)
       const bufferStore = useBufferStore.getState();
       const targetBuffer = bufferStore.buffers.find((b) => b.path === targetFilePath);
-      if (!targetBuffer) {
-        logger.warn("SyntaxHighlighter", "Target buffer not found for path:", targetFilePath);
+      if (!targetBuffer || !isEditorContent(targetBuffer)) {
+        logger.warn(
+          "SyntaxHighlighter",
+          "Target editor buffer not found for path:",
+          targetFilePath,
+        );
         return;
       }
 

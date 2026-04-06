@@ -42,7 +42,7 @@ export function buildLineOffsetMap(content: string): number[] {
   }
 
   const lines = normalizedContent.split("\n");
-  const offsets: number[] = new Array(lines.length);
+  const offsets: number[] = Array.from({ length: lines.length }, () => 0);
   let offset = 0;
 
   for (let i = 0; i < lines.length; i++) {

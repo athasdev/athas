@@ -1,6 +1,7 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useWhatsNewStore } from "../stores/whats-new-store";
 
 export interface UpdateInfo {
   version: string;
@@ -37,6 +38,7 @@ export const useUpdater = (checkOnMount = true) => {
   });
 
   const updateRef = useRef<Update | null>(null);
+  const updateInfoRef = useRef<UpdateInfo | null>(null);
 
   const checkForUpdates = useCallback(async () => {
     try {
@@ -46,20 +48,23 @@ export const useUpdater = (checkOnMount = true) => {
       updateRef.current = update;
 
       if (update?.available) {
+        const updateInfo = {
+          version: update.version,
+          currentVersion: update.currentVersion,
+          body: update.body,
+          date: update.date,
+        };
+        updateInfoRef.current = updateInfo;
         setState((prev) => ({
           ...prev,
           available: true,
           checking: false,
-          updateInfo: {
-            version: update.version,
-            currentVersion: update.currentVersion,
-            body: update.body,
-            date: update.date,
-          },
+          updateInfo,
         }));
         return true;
       }
 
+      updateInfoRef.current = null;
       setState((prev) => ({
         ...prev,
         available: false,
@@ -68,6 +73,7 @@ export const useUpdater = (checkOnMount = true) => {
       }));
       return false;
     } catch (error) {
+      updateInfoRef.current = null;
       setState((prev) => ({
         ...prev,
         checking: false,
@@ -86,6 +92,12 @@ export const useUpdater = (checkOnMount = true) => {
           throw new Error("No update available");
         }
         updateRef.current = newUpdate;
+        updateInfoRef.current = {
+          version: newUpdate.version,
+          currentVersion: newUpdate.currentVersion,
+          body: newUpdate.body,
+          date: newUpdate.date,
+        };
       }
 
       setState((prev) => ({
@@ -128,6 +140,10 @@ export const useUpdater = (checkOnMount = true) => {
         }
       });
 
+      if (updateInfoRef.current) {
+        useWhatsNewStore.getState().queuePendingUpdate(updateInfoRef.current);
+      }
+
       // Relaunch the app to apply the update
       await relaunch();
     } catch (error) {
@@ -150,6 +166,7 @@ export const useUpdater = (checkOnMount = true) => {
       downloadProgress: null,
     }));
     updateRef.current = null;
+    updateInfoRef.current = null;
   }, []);
 
   // Check for updates on mount if enabled

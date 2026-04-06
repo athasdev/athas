@@ -46,7 +46,7 @@ export function TableView({
     <div className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
       {(actions || columns.length > 0) && (
         <div className="flex items-center justify-between border-border border-b bg-terniary-bg px-2 py-1.5">
-          <div className="ui-font text-text-lighter text-xs">
+          <div className="ui-font ui-text-sm text-text-lighter">
             {rows.length} rows • {columns.length} columns
           </div>
           <div className="flex items-center gap-1">{actions}</div>
@@ -56,7 +56,7 @@ export function TableView({
         {/* Header */}
         <div
           className={cn(
-            "ui-font grid w-full gap-0 border-border border-b bg-secondary-bg text-xs",
+            "ui-font ui-text-sm grid w-full gap-0 border-border border-b bg-secondary-bg",
             stickyHeader && "sticky top-0 isolate z-30",
           )}
           style={{ gridTemplateColumns: gridTemplate, willChange: "transform" }}
@@ -94,7 +94,7 @@ export function TableView({
                     <div
                       key={cIndex}
                       className={cn(
-                        "max-w-[360px] border-border border-b px-2 text-xs",
+                        "ui-text-sm max-w-[360px] border-border border-b px-2",
                         cIndex > 0 && "border-border border-l",
                         dense ? "py-1" : "py-2",
                       )}
@@ -125,7 +125,7 @@ export function TableView({
                   <div
                     key={cIndex}
                     className={cn(
-                      "max-w-[360px] border-border border-b px-2 text-xs",
+                      "ui-text-sm max-w-[360px] border-border border-b px-2",
                       cIndex > 0 && "border-border border-l",
                       dense ? "py-1" : "py-2",
                     )}

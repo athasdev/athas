@@ -1,11 +1,15 @@
-import { Pin, Terminal as TerminalIcon, X } from "lucide-react";
+import { Pin, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface TerminalTabBarItemProps {
   terminal: Terminal;
+  displayName: string;
+  orientation?: "horizontal" | "vertical";
   isActive: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
@@ -27,6 +31,8 @@ interface TerminalTabBarItemProps {
 
 const TerminalTabBarItem = memo(function TerminalTabBarItem({
   terminal,
+  displayName,
+  orientation = "horizontal",
   isActive,
   isDraggedTab,
   showDropIndicatorBefore,
@@ -73,24 +79,33 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
     <>
       {showDropIndicatorBefore && (
         <div className="relative">
-          <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+          <div
+            className={cn(
+              "drop-indicator absolute z-20 bg-accent",
+              orientation === "vertical"
+                ? "top-0 right-1 left-1 h-0.5"
+                : "top-1 bottom-1 left-0 w-0.5",
+            )}
+          />
         </div>
       )}
-      <div
+      <Tab
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
         aria-label={`${terminal.name}${terminal.isPinned ? " (pinned)" : ""}`}
         tabIndex={isActive ? 0 : -1}
+        isActive={isActive}
+        isDragged={isDraggedTab}
+        labelPosition={orientation === "vertical" ? "start" : "center"}
         className={cn(
-          "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border pl-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
-          isActive
-            ? "border-border/80 bg-primary-bg/95 text-text"
-            : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
-          isEditing ? "pr-2" : "pr-5",
-          isDraggedTab ? "opacity-30" : "opacity-100",
+          orientation === "vertical"
+            ? "w-full max-w-none justify-start pr-5 pl-2"
+            : "min-w-[88px] w-fit pr-5 pl-2",
+          isActive ? "bg-hover/80" : undefined,
+          isEditing ? "pr-2" : undefined,
         )}
-        style={{ maxWidth: 290 }}
+        maxWidth={orientation === "vertical" ? undefined : 290}
         onMouseDown={isEditing ? undefined : onMouseDown}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
@@ -98,8 +113,40 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
+        action={
+          !isEditing ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (terminal.isPinned) {
+                  handleTabPin(terminal.id);
+                } else {
+                  handleTabClose(terminal.id);
+                }
+              }}
+              className={cn(
+                "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
+                "hover:bg-hover/80 hover:text-text",
+                terminal.isPinned || isActive
+                  ? "opacity-100"
+                  : "opacity-0 group-hover/tab:opacity-100",
+              )}
+              title={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
+              tabIndex={-1}
+              draggable={false}
+            >
+              {terminal.isPinned ? (
+                <Pin className="pointer-events-none select-none fill-current text-accent" />
+              ) : (
+                <X className="pointer-events-none select-none" />
+              )}
+            </Button>
+          ) : null
+        }
       >
-        <TerminalIcon size={12} className="shrink-0 text-text-lighter" />
         {isEditing ? (
           <Input
             ref={inputRef}
@@ -122,7 +169,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             }}
             variant="ghost"
             className={cn(
-              "ui-font h-5 min-w-0 flex-1 px-0 text-xs",
+              "ui-font ui-text-sm h-5 min-w-0 px-0",
+              orientation === "vertical" ? "text-left" : "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}
             style={{
@@ -135,42 +183,16 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+              "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
+              "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}
             title={terminal.currentDirectory}
           >
-            {terminal.name}
+            {displayName}
           </span>
         )}
-        {!isEditing && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (terminal.isPinned) {
-                handleTabPin(terminal.id);
-              } else {
-                handleTabClose(terminal.id);
-              }
-            }}
-            className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
-              "hover:bg-hover hover:text-text",
-              terminal.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-            )}
-            title={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
-            tabIndex={-1}
-            draggable={false}
-          >
-            {terminal.isPinned ? (
-              <Pin className="pointer-events-none select-none fill-current text-accent" size={10} />
-            ) : (
-              <X className="pointer-events-none select-none" size={10} />
-            )}
-          </button>
-        )}
-      </div>
+      </Tab>
     </>
   );
 });

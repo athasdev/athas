@@ -1,10 +1,10 @@
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import { FontSelector } from "@/ui/font-selector";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { FontSelector } from "../font-selector";
 
 export const EditorSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -147,6 +147,21 @@ export const EditorSettings = () => {
             size="xs"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Buffer Carousel"
+          description="Show open buffers as a horizontally scrollable carousel in the main view"
+          onReset={() =>
+            updateSetting("horizontalTabScroll", getDefaultSetting("horizontalTabScroll"))
+          }
+          canReset={settings.horizontalTabScroll !== getDefaultSetting("horizontalTabScroll")}
+        >
+          <Switch
+            checked={settings.horizontalTabScroll}
+            onChange={(checked) => updateSetting("horizontalTabScroll", checked)}
+            size="sm"
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Saving">
@@ -189,7 +204,8 @@ export const EditorSettings = () => {
               )
             }
             className="w-48"
-            size="sm"
+            size="xs"
+            variant="secondary"
           />
         </SettingRow>
 
@@ -208,7 +224,7 @@ export const EditorSettings = () => {
               onChange={(e) => updateSetting("customEditorCommand", e.target.value)}
               placeholder="micro $FILE"
               className="w-48"
-              size="sm"
+              size="xs"
             />
           </SettingRow>
         )}

@@ -1,76 +1,21 @@
-// Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(unexpected_cfgs)]
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use commands::{database::connection_manager::ConnectionManager, *};
-use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
-use log::{debug, info};
-use lsp::LspManager;
-use ssh::{
-   ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_read_directory, ssh_read_file,
-   ssh_write_file,
-};
-use std::sync::Arc;
-use tauri::{Emitter, Manager};
-use tauri_plugin_os::platform;
-use tauri_plugin_store::StoreExt;
-use terminal::{
-   TerminalManager, close_terminal, create_terminal, get_shells, terminal_resize, terminal_write,
-};
-use tokio::sync::Mutex;
+use app_setup::configure_app;
+use commands::*;
+use terminal::{close_terminal, create_terminal, list_shells, terminal_resize, terminal_write};
 
+mod app_setup;
+mod bootstrap;
 mod commands;
-mod extensions;
-mod features;
+mod file_events;
 mod logger;
-mod lsp;
 mod menu;
 mod secure_storage;
-mod ssh;
 mod terminal;
-
-#[cfg(target_os = "macos")]
-#[allow(unexpected_cfgs)]
-fn disable_macos_autofill_heuristics() {
-   use objc::{
-      class, msg_send,
-      runtime::{NO, Object},
-      sel, sel_impl,
-   };
-   use std::ffi::CString;
-
-   // Disables macOS AutoFill heuristics in the app webview process.
-   // This is known to reduce extra AutoFill subprocess activity.
-   unsafe {
-      let key_cstr = match CString::new("NSAutoFillHeuristicControllerEnabled") {
-         Ok(value) => value,
-         Err(_) => return,
-      };
-
-      let key: *mut Object = msg_send![class!(NSString), stringWithUTF8String: key_cstr.as_ptr()];
-      if key.is_null() {
-         return;
-      }
-
-      let user_defaults: *mut Object = msg_send![class!(NSUserDefaults), standardUserDefaults];
-      if user_defaults.is_null() {
-         return;
-      }
-
-      let existing_value: *mut Object = msg_send![user_defaults, objectForKey: key];
-      if existing_value.is_null() {
-         let false_value: *mut Object = msg_send![class!(NSNumber), numberWithBool: NO];
-         if false_value.is_null() {
-            return;
-         }
-
-         let _: () = msg_send![user_defaults, setObject: false_value forKey: key];
-      }
-   }
-}
 
 fn main() {
    #[cfg(target_os = "linux")]
@@ -82,7 +27,7 @@ fn main() {
    }
 
    #[cfg(target_os = "macos")]
-   disable_macos_autofill_heuristics();
+   bootstrap::macos::disable_macos_autofill_heuristics();
 
    tauri::Builder::default()
       .plugin(tauri_plugin_store::Builder::default().build())
@@ -98,266 +43,7 @@ fn main() {
       .plugin(tauri_plugin_process::init())
       .plugin(tauri_plugin_deep_link::init())
       .plugin(tauri_plugin_updater::Builder::new().build())
-      .setup(|app| {
-         let store = app.store("settings.json")?;
-
-         let native_menu_bar = store
-            .get("nativeMenuBar")
-            .and_then(|v| v.as_bool())
-            .unwrap_or_else(|| {
-               // If setting is missing, detect platform; if on MacOS, enable native menu bar
-               let default = platform() == "macos";
-               store.set("nativeMenuBar", default);
-               default
-            });
-
-         if native_menu_bar {
-            let menu = menu::create_menu(app.handle())?;
-            app.set_menu(menu)?;
-         }
-
-         log::info!("Starting app!");
-
-         // Set up the file watcher
-         app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
-
-         // Set up terminal manager (shared between ACP and direct terminal usage)
-         let terminal_manager = Arc::new(TerminalManager::new());
-         app.manage(terminal_manager.clone());
-
-         // Set up Claude bridge (legacy, kept for rollback)
-         let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
-         app.manage(claude_bridge.clone());
-
-         // Set up ACP agent bridge (new implementation)
-         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
-            app.handle().clone(),
-            terminal_manager,
-         )));
-         app.manage(acp_bridge);
-
-         // Set up LSP manager
-         app.manage(LspManager::new(app.handle().clone()));
-
-         // Set up theme cache
-         app.manage(ThemeCache::new(std::collections::HashMap::new()));
-
-         // Set up file clipboard
-         app.manage(FileClipboard::new(None));
-
-         // Set up database connection manager
-         app.manage(Arc::new(ConnectionManager::new()));
-
-         // Auto-start interceptor on app launch
-         {
-            let claude_bridge_clone = claude_bridge.clone();
-            tauri::async_runtime::spawn(async move {
-               // Small delay to ensure app is fully initialized
-               tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-               let mut bridge = claude_bridge_clone.lock().await;
-               match bridge.start_interceptor().await {
-                  Ok(_) => log::info!("Interceptor auto-started successfully"),
-                  Err(_) => {
-                     log::warn!("Claude Code service is unavailable. Disabling Claude provider.");
-                  }
-               }
-            });
-         }
-
-         // Process CLI arguments (file/folder paths passed on launch)
-         {
-            let cwd = std::env::current_dir().unwrap_or_default();
-            let args: Vec<String> = std::env::args().skip(1).collect();
-            let open_requests: Vec<commands::development::cli_args::OpenRequest> = args
-               .iter()
-               .filter(|a| !a.starts_with('-'))
-               .filter_map(|a| commands::development::cli_args::parse_open_arg(a, &cwd))
-               .collect();
-
-            if !open_requests.is_empty() {
-               let app_handle = app.handle().clone();
-               tauri::async_runtime::spawn(async move {
-                  // Delay to ensure frontend is ready to receive events
-                  tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
-                  for req in open_requests {
-                     if let Err(e) = app_handle.emit("cli_open_request", &req) {
-                        log::error!("Failed to emit cli_open_request: {}", e);
-                     }
-                  }
-               });
-            }
-         }
-
-         // Platform-specific window configuration
-         if let Some(window) = app.get_webview_window("main") {
-            #[cfg(target_os = "macos")]
-            {
-               use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
-
-               // Apply vibrancy effect for macOS
-               apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
-                  .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-               // Keep decorations enabled on Windows (native controls)
-               let _ = window.set_decorations(true);
-            }
-
-            #[cfg(target_os = "linux")]
-            {
-               // Disable decorations on Linux (use custom controls only)
-               let _ = window.set_decorations(false);
-            }
-         }
-
-         // Auto-fix CLI script if it contains wrong-platform commands
-         #[cfg(all(unix, not(target_os = "macos")))]
-         commands::development::cli::auto_fix_cli_on_startup();
-
-         app.on_menu_event(move |_app_handle: &tauri::AppHandle, event| {
-            if let Some(window) = _app_handle.get_webview_window("main") {
-               match event.id().0.as_str() {
-                  "quit" => {
-                     info!("Quit menu item clicked");
-                     std::process::exit(0);
-                  }
-                  "quit_app" => {
-                     info!("Quit app menu item triggered");
-                     std::process::exit(0);
-                  }
-                  "new_file" => {
-                     let _ = window.emit("menu_new_file", ());
-                  }
-                  "open_folder" => {
-                     let _ = window.emit("menu_open_folder", ());
-                  }
-                  "close_folder" => {
-                     let _ = window.emit("menu_close_folder", ());
-                  }
-                  "save" => {
-                     let _ = window.emit("menu_save", ());
-                  }
-                  "save_as" => {
-                     let _ = window.emit("menu_save_as", ());
-                  }
-                  "close_tab" => {
-                     debug!("Close tab menu item triggered");
-                     let _ = window.emit("menu_close_tab", ());
-                  }
-                  "undo" => {
-                     let _ = window.emit("menu_undo", ());
-                  }
-                  "redo" => {
-                     let _ = window.emit("menu_redo", ());
-                  }
-                  "find" => {
-                     let _ = window.emit("menu_find", ());
-                  }
-                  "find_replace" => {
-                     let _ = window.emit("menu_find_replace", ());
-                  }
-                  "command_palette" => {
-                     let _ = window.emit("menu_command_palette", ());
-                  }
-                  "toggle_sidebar" => {
-                     let _ = window.emit("menu_toggle_sidebar", ());
-                  }
-                  "toggle_terminal" => {
-                     let _ = window.emit("menu_toggle_terminal", ());
-                  }
-                  "toggle_ai_chat" => {
-                     let _ = window.emit("menu_toggle_ai_chat", ());
-                  }
-                  "split_editor" => {
-                     let _ = window.emit("menu_split_editor", ());
-                  }
-                  "toggle_menu_bar" => {
-                     // Toggle menu visibility by setting it to None or recreating it
-                     let current_menu = _app_handle.menu();
-                     if current_menu.is_some() {
-                        // Hide menu by setting it to None
-                        if let Err(e) = _app_handle.remove_menu() {
-                           log::error!("Failed to hide menu: {}", e);
-                        } else {
-                           log::info!("Menu bar hidden");
-                        }
-                     } else {
-                        // Show menu by recreating it
-                        match menu::create_menu(_app_handle) {
-                           Ok(new_menu) => {
-                              if let Err(e) = _app_handle.set_menu(new_menu) {
-                                 log::error!("Failed to show menu: {}", e);
-                              } else {
-                                 log::info!("Menu bar shown");
-                              }
-                           }
-                           Err(e) => {
-                              log::error!("Failed to create menu: {}", e);
-                           }
-                        }
-                     }
-                  }
-                  "toggle_vim" => {
-                     let _ = window.emit("menu_toggle_vim", ());
-                  }
-                  "quick_open" => {
-                     let _ = window.emit("menu_quick_open", ());
-                  }
-                  "go_to_line" => {
-                     let _ = window.emit("menu_go_to_line", ());
-                  }
-                  "next_tab" => {
-                     let _ = window.emit("menu_next_tab", ());
-                  }
-                  "prev_tab" => {
-                     let _ = window.emit("menu_prev_tab", ());
-                  }
-                  "about" => {
-                     // Native About dialog is handled automatically by macOS
-                  }
-                  "help" => {
-                     let _ = window.emit("menu_help", ());
-                  }
-                  "report_bug" => {
-                     let _ = window.emit("menu_report_bug", ());
-                  }
-                  "about_athas" => {
-                     let _ = window.emit("menu_about_athas", ());
-                  }
-                  // Window menu items
-                  "minimize_window" => {
-                     if let Err(e) = window.minimize() {
-                        log::error!("Failed to minimize window: {}", e);
-                     }
-                  }
-                  "maximize_window" => {
-                     if let Err(e) = window.maximize() {
-                        log::error!("Failed to maximize window: {}", e);
-                     }
-                  }
-                  "toggle_fullscreen" => {
-                     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
-                     if let Err(e) = window.set_fullscreen(!is_fullscreen) {
-                        log::error!("Failed to toggle fullscreen: {}", e);
-                     }
-                  }
-                  // Theme menu items - handle theme IDs from registry
-                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
-                  theme_id if theme_id.contains('-') => {
-                     // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
-                     // "tokyo-night")
-                     let _ = window.emit("menu_theme_change", theme_id);
-                  }
-                  _ => {}
-               }
-            }
-         });
-
-         Ok(())
-      })
+      .setup(configure_app)
       .invoke_handler(tauri::generate_handler![
          // File system commands
          open_file_external,
@@ -403,6 +89,10 @@ fn main() {
          git_get_tags,
          git_create_tag,
          git_delete_tag,
+         git_get_worktrees,
+         git_add_worktree,
+         git_remove_worktree,
+         git_prune_worktrees,
          git_stage_hunk,
          git_unstage_hunk,
          git_blame_file,
@@ -412,6 +102,8 @@ fn main() {
          remove_github_token,
          github_check_cli_auth,
          github_list_prs,
+         github_list_issues,
+         github_list_workflow_runs,
          github_get_current_user,
          github_open_pr_in_browser,
          github_checkout_pr,
@@ -419,6 +111,8 @@ fn main() {
          github_get_pr_diff,
          github_get_pr_files,
          github_get_pr_comments,
+         github_get_issue_details,
+         github_get_workflow_run_details,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,
@@ -436,7 +130,7 @@ fn main() {
          search_chats,
          get_chat_stats,
          // Window commands
-         create_remote_window,
+         create_app_window,
          create_embedded_webview,
          close_embedded_webview,
          navigate_embedded_webview,
@@ -449,33 +143,43 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
+         store_remote_credential,
+         get_remote_credential,
+         remove_remote_credential,
          // Terminal commands
          create_terminal,
          terminal_write,
          terminal_resize,
          close_terminal,
-         get_shells,
+         list_shells,
          // execute_shell,
          // SSH commands
          ssh_connect,
          ssh_disconnect,
          ssh_disconnect_only,
+         ssh_create_file,
+         ssh_create_directory,
+         ssh_delete_path,
+         ssh_rename_path,
+         ssh_copy_path,
          ssh_write_file,
          ssh_read_directory,
          ssh_read_file,
-         // Claude commands (legacy)
-         start_claude_code,
-         stop_claude_code,
-         send_claude_input,
-         get_claude_status,
+         ssh_get_connected_ids,
+         create_remote_terminal,
+         remote_terminal_write,
+         remote_terminal_resize,
+         close_remote_terminal,
          // ACP agent commands (new)
          get_available_agents,
+         install_acp_agent,
          start_acp_agent,
          stop_acp_agent,
          send_acp_prompt,
          get_acp_status,
          respond_acp_permission,
          set_acp_session_mode,
+         set_acp_session_config_option,
          cancel_acp_prompt,
          // Theme commands
          get_system_theme,
@@ -526,6 +230,12 @@ fn main() {
          execute_postgres,
          get_postgres_foreign_keys,
          get_postgres_table_schema,
+         get_postgres_subscription_info,
+         get_postgres_subscription_status,
+         create_postgres_subscription,
+         drop_postgres_subscription,
+         set_postgres_subscription_enabled,
+         refresh_postgres_subscription,
          insert_postgres_row,
          update_postgres_row,
          delete_postgres_row,
@@ -560,6 +270,13 @@ fn main() {
          lsp_get_completions,
          lsp_get_hover,
          lsp_get_definition,
+         lsp_get_semantic_tokens,
+         lsp_get_code_lens,
+         lsp_get_inlay_hints,
+         lsp_get_document_symbols,
+         lsp_get_signature_help,
+         lsp_get_references,
+         lsp_rename,
          lsp_get_code_actions,
          lsp_apply_code_action,
          lsp_document_open,
@@ -604,6 +321,7 @@ fn main() {
          get_language_tool_status,
          get_tool_path,
          get_available_tools,
+         frontend_trace,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

@@ -1,5 +1,6 @@
 import type React from "react";
 import { Component, type ReactNode } from "react";
+import { Button } from "@/ui/button";
 
 interface Props {
   children: ReactNode;
@@ -35,12 +36,15 @@ export class TerminalErrorBoundary extends Component<Props, State> {
               <p className="text-text-lighter text-xs">
                 {this.state.error?.message || "Failed to initialize terminal"}
               </p>
-              <button
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => this.setState({ hasError: false, error: undefined })}
-                className="mt-4 rounded bg-selected px-3 py-1 text-text text-xs hover:bg-hover"
+                className="mt-4"
               >
                 Retry
-              </button>
+              </Button>
             </div>
           </div>
         )

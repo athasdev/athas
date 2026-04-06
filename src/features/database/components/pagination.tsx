@@ -1,6 +1,7 @@
 import { useState } from "react";
-import Dropdown from "@/ui/dropdown";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 
 interface PaginationProps {
   currentPage: number;
@@ -50,7 +51,7 @@ export default function Pagination({
   return (
     <div className="flex items-center justify-between border-border border-t bg-secondary-bg px-3 py-2">
       <div className="flex items-center gap-2">
-        <Dropdown
+        <Select
           value={pageSize.toString()}
           options={[
             { value: "10", label: "10" },
@@ -63,17 +64,19 @@ export default function Pagination({
           size="xs"
           className="min-w-16"
         />
-        <span className="ui-font text-text-lighter text-xs">per page</span>
+        <span className="ui-font ui-text-sm text-text-lighter">per page</span>
       </div>
 
       <div className="flex items-center gap-1">
-        <button
+        <Button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="ui-font px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
+          variant="ghost"
+          size="xs"
+          className="ui-text-sm text-text-lighter hover:text-text disabled:opacity-50"
         >
           ← Prev
-        </button>
+        </Button>
 
         <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
           <Input
@@ -85,18 +88,20 @@ export default function Pagination({
             onBlur={handlePageInputBlur}
             min={1}
             max={totalPages}
-            className="ui-font h-6 w-12 px-1 py-0 text-center text-xs"
+            className="ui-font ui-text-sm h-6 w-12 px-1 py-0 text-center"
           />
-          <span className="ui-font text-text-lighter text-xs">/ {totalPages}</span>
+          <span className="ui-font ui-text-sm text-text-lighter">/ {totalPages}</span>
         </form>
 
-        <button
+        <Button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="ui-font px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
+          variant="ghost"
+          size="xs"
+          className="ui-text-sm text-text-lighter hover:text-text disabled:opacity-50"
         >
           Next →
-        </button>
+        </Button>
       </div>
     </div>
   );

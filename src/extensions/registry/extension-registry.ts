@@ -341,6 +341,7 @@ class ExtensionRegistry {
    * Get formatter configuration for a file
    */
   getFormatterForFile(filePath: string): {
+    name: string;
     command: string;
     args: string[];
     env?: Record<string, string>;
@@ -370,6 +371,7 @@ class ExtensionRegistry {
     }
 
     return {
+      name: formatterConfig.name || "prettier",
       command: resolvedCommand,
       args: formatterConfig.args || [],
       env: formatterConfig.env,
@@ -382,6 +384,7 @@ class ExtensionRegistry {
    * Get formatter for a language ID
    */
   getFormatterForLanguage(languageId: string): {
+    name: string;
     command: string;
     args: string[];
     env?: Record<string, string>;
@@ -409,6 +412,7 @@ class ExtensionRegistry {
     }
 
     return {
+      name: formatterConfig.name || "prettier",
       command: resolvedCommand,
       args: formatterConfig.args || [],
       env: formatterConfig.env,

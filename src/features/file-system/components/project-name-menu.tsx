@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const ProjectNameMenu = () => {
@@ -16,13 +16,13 @@ export const ProjectNameMenu = () => {
       {
         id: "open-folder",
         label: "Open Folder in New Tab",
-        icon: <FolderOpen size={12} />,
+        icon: <FolderOpen />,
         onClick: () => handleOpenFolder(),
       },
       {
         id: "collapse-folders",
         label: "Collapse All Folders",
-        icon: <PanelTopClose size={12} />,
+        icon: <PanelTopClose />,
         onClick: () => handleCollapseAllFolders(),
       },
     ];
@@ -36,7 +36,7 @@ export const ProjectNameMenu = () => {
       .map((folder: RecentFolder) => ({
         id: `recent-${folder.path}`,
         label: folder.name,
-        icon: <ClockIcon size={12} />,
+        icon: <ClockIcon />,
         onClick: () => openRecentFolder(folder.path),
       }));
 

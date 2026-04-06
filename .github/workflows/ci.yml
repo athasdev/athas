@@ -14,7 +14,7 @@ concurrency:
 jobs:
   bun:
     if: github.repository == 'athasdev/athas'
-    name: Bun — typecheck, lint
+    name: Bun — typecheck, frontend check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.2
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -35,11 +35,8 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run typecheck
-        run: bun typecheck
-
-      - name: Run biome check
-        run: bun check
+      - name: Run frontend checks
+        run: bash scripts/check-frontend.sh
 
   rust:
     if: github.repository == 'athasdev/athas'
@@ -64,8 +61,5 @@ jobs:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           version: 1.0
 
-      - name: Check formatting
-        run: cargo fmt --check --all
-
-      - name: Check
-        run: cargo check --workspace
+      - name: Run Rust checks
+        run: bash scripts/check-rust.sh

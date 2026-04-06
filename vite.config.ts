@@ -2,19 +2,23 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { codeInspectorPlugin } from "code-inspector-plugin";
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 
 const host = process.env.TAURI_DEV_HOST;
+const isVitest = Boolean(process.env.VITEST);
+const enableCodeInspector = process.env.VITE_CODE_INSPECTOR === "true";
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [
-    codeInspectorPlugin({
-      bundler: "vite",
-    }),
+    !isVitest && enableCodeInspector
+      ? codeInspectorPlugin({
+          bundler: "vite",
+        })
+      : null,
     react(),
     tailwindcss(),
-  ],
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -42,4 +46,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**", "**/interceptor/**"],
     },
   },
-}));
+});

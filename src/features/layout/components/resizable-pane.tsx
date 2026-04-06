@@ -1,14 +1,13 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
 const MIN_PANE_WIDTH = 50;
-const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
 
 interface ResizablePaneProps {
   children: React.ReactNode;
@@ -52,8 +51,7 @@ export function ResizablePane({
   const getMaxWidth = useCallback(() => {
     const windowWidth = getViewportWidth();
     const MIN_MAIN_CONTENT_WIDTH = 360; // Keep editor area readable on smaller windows
-    const isCompactAiOverlay = windowWidth < AI_CHAT_OVERLAY_BREAKPOINT;
-    const shouldAccountForAiChat = settings.isAIChatVisible && !isCompactAiOverlay;
+    const shouldAccountForAiChat = settings.isAIChatVisible;
 
     // Calculate available space accounting for both sidebars and minimum main content
     if (widthKey === "sidebarWidth" && shouldAccountForAiChat) {
@@ -115,6 +113,9 @@ export function ResizablePane({
       const startWidth = width;
       let currentWidth = startWidth;
       let collapseRequested = false;
+      let rafId: number | null = null;
+
+      const paneEl = paneRef.current;
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaX = position === "right" ? startX - e.clientX : e.clientX - startX;
@@ -130,14 +131,21 @@ export function ResizablePane({
             collapseThreshold,
           })
         ) {
-          // Keep this sticky once user intentionally pushes past minimum.
           collapseRequested = true;
         }
         currentWidth = clampWidth(rawWidth);
-        setWidth(currentWidth);
+
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          if (paneEl) {
+            paneEl.style.width = `${currentWidth}px`;
+          }
+        });
       };
 
       const handleMouseUp = () => {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        setWidth(currentWidth);
         setIsResizing(false);
         if (collapseRequested) {
           onCollapse?.();
@@ -164,6 +172,7 @@ export function ResizablePane({
       collapsible,
       collapseThreshold,
       onCollapse,
+      getMinWidth,
     ],
   );
 
@@ -173,7 +182,7 @@ export function ResizablePane({
       ref={paneRef}
       style={{ width: hidden ? "0px" : `${width}px` }}
       className={cn(
-        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg transition-[width] duration-150",
+        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
         hidden && "pointer-events-none",
         className,
       )}
@@ -200,15 +209,14 @@ export function ResizablePane({
       {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
       <div
         className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden",
-          hidden ? "py-0" : "py-2",
+          "flex min-h-0 flex-1 flex-col overflow-hidden py-0",
           !hidden && (position === "left" ? "pl-2" : "pr-2"),
         )}
       >
         <div
           className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg",
-            !hidden && "rounded-2xl",
+            "flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
+            !hidden && "rounded-lg",
           )}
         >
           {children}

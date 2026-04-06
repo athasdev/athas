@@ -1,0 +1,54 @@
+[package]
+name = "agent-client-protocol"
+authors = ["Zed <hi@zed.dev>"]
+version = "0.9.2"
+edition = "2024"
+license = "Apache-2.0"
+description = "A protocol for standardizing communication between code editors and AI coding agents"
+repository = "https://github.com/agentclientprotocol/rust-sdk"
+homepage = "https://github.com/agentclientprotocol/rust-sdk"
+documentation = "https://docs.rs/agent-client-protocol"
+readme = "README.md"
+keywords = ["agent", "client", "protocol", "ai", "editor"]
+categories = ["development-tools", "api-bindings"]
+
+[features]
+unstable = [
+  "unstable_cancel_request",
+  "unstable_session_config_options",
+  "unstable_session_fork",
+  "unstable_session_info_update",
+  "unstable_session_list",
+  "unstable_session_model",
+  "unstable_session_resume",
+]
+unstable_cancel_request = ["agent-client-protocol-schema/unstable_cancel_request"]
+unstable_session_config_options = ["agent-client-protocol-schema/unstable_session_config_options"]
+unstable_session_fork = ["agent-client-protocol-schema/unstable_session_fork"]
+unstable_session_info_update = ["agent-client-protocol-schema/unstable_session_info_update"]
+unstable_session_list = ["agent-client-protocol-schema/unstable_session_list"]
+unstable_session_model = ["agent-client-protocol-schema/unstable_session_model"]
+unstable_session_resume = ["agent-client-protocol-schema/unstable_session_resume"]
+
+[dependencies]
+agent-client-protocol-schema.workspace = true
+anyhow.workspace = true
+async-broadcast.workspace = true
+async-trait.workspace = true
+derive_more.workspace = true
+futures.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+env_logger.workspace = true
+futures-util.workspace = true
+piper.workspace = true
+pretty_assertions.workspace = true
+rustyline.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+
+[lints]
+workspace = true
