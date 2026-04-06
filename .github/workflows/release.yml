@@ -141,19 +141,20 @@ jobs:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
           WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
-          WINDOWS_TIMESTAMP_USE_TSP: ${{ secrets.WINDOWS_TIMESTAMP_USE_TSP }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)) {
-            throw "Missing WINDOWS_CERTIFICATE secret."
-          }
-
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
-            throw "Missing WINDOWS_CERTIFICATE_PASSWORD secret."
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE) -or
+              [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            Write-Host "Windows signing secrets not configured, skipping code signing."
+            "WINDOWS_SIGNING_SKIP=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
           }
 
           New-Item -ItemType Directory -Force -Path certificate | Out-Null
           Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
           certutil -decode certificate/tempCert.txt certificate/certificate.pfx
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to decode Windows certificate from base64."
+          }
 
           $securePassword = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
           $importedCertificates = Import-PfxCertificate `
@@ -178,16 +179,10 @@ jobs:
             "WINDOWS_TIMESTAMP_URL=$($env:WINDOWS_TIMESTAMP_URL)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
 
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TIMESTAMP_USE_TSP)) {
-            "WINDOWS_TIMESTAMP_USE_TSP=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          } else {
-            "WINDOWS_TIMESTAMP_USE_TSP=$($env:WINDOWS_TIMESTAMP_USE_TSP)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          }
-
           Remove-Item -Recurse -Force certificate
 
       - name: Prepare Tauri Windows signing (Windows only)
-        if: matrix.os == 'windows'
+        if: matrix.os == 'windows' && env.WINDOWS_SIGNING_SKIP != 'true'
         run: node scripts/windows/prepare-tauri-signing.mjs
 
       - uses: tauri-apps/tauri-action@v0
