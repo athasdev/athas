@@ -155,4 +155,15 @@ export async function initializeExtensionStoreBootstrap(params: {
   await loadAvailableExtensions();
   await loadInstalledExtensions();
   await checkForUpdates();
+
+  // Periodic update check (every 6 hours)
+  const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      await loadAvailableExtensions();
+      await checkForUpdates();
+    } catch (error) {
+      console.debug("Periodic extension update check failed:", error);
+    }
+  }, CHECK_INTERVAL_MS);
 }

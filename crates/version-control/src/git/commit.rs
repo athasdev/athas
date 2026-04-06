@@ -58,6 +58,11 @@ fn _git_log(repo_path: String, limit: Option<u32>, skip: Option<u32>) -> Result<
       commits.push(GitCommit {
          hash: oid.to_string(),
          message: commit.summary().unwrap_or("").to_string(),
+         description: commit
+            .body()
+            .map(str::trim)
+            .filter(|body| !body.is_empty())
+            .map(str::to_string),
          author: author.name().unwrap_or("Unknown").to_string(),
          date: time,
       });

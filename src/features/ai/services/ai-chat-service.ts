@@ -38,22 +38,27 @@ export const getChatCompletionStream = async (
   outputStyle: OutputStyle = "default",
   onImageChunk?: (data: string, mediaType: string) => void,
   onResourceChunk?: (uri: string, name: string | null) => void,
+  chatId?: string,
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
     if (isAcpAgent(agentId)) {
-      const handler = new AcpStreamHandler(agentId, {
-        onChunk,
-        onComplete,
-        onError,
-        onNewMessage,
-        onToolUse,
-        onToolComplete,
-        onPermissionRequest,
-        onEvent: onAcpEvent,
-        onImageChunk,
-        onResourceChunk,
-      });
+      const handler = new AcpStreamHandler(
+        agentId,
+        {
+          onChunk,
+          onComplete,
+          onError,
+          onNewMessage,
+          onToolUse,
+          onToolComplete,
+          onPermissionRequest,
+          onEvent: onAcpEvent,
+          onImageChunk,
+          onResourceChunk,
+        },
+        chatId,
+      );
       await handler.start(userMessage, context);
       return;
     }

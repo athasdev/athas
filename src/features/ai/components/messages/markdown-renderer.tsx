@@ -1,7 +1,10 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { ChevronDown, ChevronRight, Terminal } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
+import { useAIChatStore } from "@/features/ai/store/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";
 import {
   fetchHighlightQuery,
@@ -344,6 +347,13 @@ function CodeBlock({
 // Error Block Component
 function ErrorBlock({ errorData }: { errorData: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRestartingSession, setIsRestartingSession] = useState(false);
+  const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const setChatAcpSessionId = useAIChatStore((state) => state.setChatAcpSessionId);
+  const setAvailableSlashCommands = useAIChatStore((state) => state.setAvailableSlashCommands);
+  const setSessionModeState = useAIChatStore((state) => state.setSessionModeState);
+  const setSessionConfigOptions = useAIChatStore((state) => state.setSessionConfigOptions);
 
   const lines = errorData.split("\n");
   const title =
@@ -368,6 +378,49 @@ function ErrorBlock({ errorData }: { errorData: string }) {
       .trim() || "";
   const summary = title || message || "Error";
   const normalizedDetails = details && details !== message ? details : "";
+  const isAuthRequired = code === "AUTH_REQUIRED";
+
+  const suggestedCommand = useMemo(() => {
+    const normalizedText = `${summary} ${message} ${normalizedDetails}`.toLowerCase();
+
+    if (normalizedText.includes("claude code")) {
+      return "claude auth login";
+    }
+    if (normalizedText.includes("codex")) {
+      return "codex";
+    }
+    if (normalizedText.includes("gemini")) {
+      return "gemini";
+    }
+    if (normalizedText.includes("opencode")) {
+      return "opencode";
+    }
+    if (normalizedText.includes("qwen")) {
+      return "qwen";
+    }
+    if (normalizedText.includes("kimi")) {
+      return "kimi";
+    }
+
+    return null;
+  }, [summary, message, normalizedDetails]);
+
+  const handleRestartAgentSession = async () => {
+    setIsRestartingSession(true);
+    try {
+      await invoke("stop_acp_agent");
+      if (currentChatId) {
+        setChatAcpSessionId(currentChatId, null);
+      }
+      setAvailableSlashCommands([]);
+      setSessionModeState(null, []);
+      setSessionConfigOptions([]);
+    } catch (error) {
+      console.error("Failed to restart ACP agent session:", error);
+    } finally {
+      setIsRestartingSession(false);
+    }
+  };
 
   return (
     <div className="my-1 rounded-lg border border-red-500/25 bg-red-500/6 px-2.5 py-2">
@@ -388,6 +441,52 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           </Button>
         )}
       </div>
+      {isAuthRequired && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            onClick={() => void handleRestartAgentSession()}
+            disabled={isRestartingSession}
+            className="h-auto gap-1.5"
+          >
+            <Terminal size={12} />
+            {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
+          </Button>
+          {suggestedCommand ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              onClick={() =>
+                openTerminalBuffer({
+                  command: suggestedCommand,
+                  name: suggestedCommand,
+                })
+              }
+              className="h-auto gap-1.5"
+            >
+              <Terminal size={12} />
+              Open Login Terminal
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
+              className="h-auto gap-1.5"
+            >
+              <Terminal size={12} />
+              Open Terminal
+            </Button>
+          )}
+          <span className="text-[11px] text-red-200/70">
+            Complete login in the agent CLI, then retry.
+          </span>
+        </div>
+      )}
       {normalizedDetails && isExpanded && (
         <pre className="editor-font mt-2 overflow-x-auto rounded border border-red-500/20 bg-red-950/20 p-2 text-[11px] text-red-100/85">
           {(() => {

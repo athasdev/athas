@@ -189,7 +189,12 @@ async fn write_acp_wrapper(
 
    let wrapper_contents = match agent.install_runtime {
       Some(AgentRuntime::Node) => {
-         let node_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Node)
+         let managed_root = app_handle
+            .path()
+            .app_data_dir()
+            .map(|dir| dir.join("runtimes"))
+            .map_err(|e| format!("Failed to resolve runtime directory: {}", e))?;
+         let node_path = RuntimeManager::get_runtime(Some(&managed_root), RuntimeType::Node)
             .await
             .map_err(|e| e.to_string())?;
          let entrypoint = ToolInstaller::get_lsp_launch_path(app_handle, tool_config)

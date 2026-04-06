@@ -573,6 +573,8 @@ const TerminalTabBar = ({
     if (trimmed.length > 28) return false;
     if (trimmed.includes("@")) return false;
     if (trimmed.includes("/") || trimmed.includes("\\")) return false;
+    // Reject raw ANSI escape sequences and control characters
+    if (/[\x1b\x9b\x00-\x08\x0e-\x1f]/.test(trimmed)) return false;
     return true;
   };
   const getTerminalDisplayName = (terminal: Terminal) => {

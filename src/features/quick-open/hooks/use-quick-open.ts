@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce, useDebouncedCallback } from "use-debounce";
+import { editorAPI } from "@/features/editor/extensions/api";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
+import { type SymbolItem, useSymbolSearch } from "./use-symbol-search";
 
 export const useQuickOpen = () => {
   const isQuickOpenVisible = useUIState((state) => state.isQuickOpenVisible);
@@ -21,6 +24,10 @@ export const useQuickOpen = () => {
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const [previewFilePath, setPreviewFilePath] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { centerCursorInViewport } = useCenterCursor();
+
+  // Detect symbol mode (query starts with @)
+  const isSymbolMode = query.startsWith("@");
 
   const onClose = useCallback(() => {
     setIsQuickOpenVisible(false);
@@ -36,7 +43,37 @@ export const useQuickOpen = () => {
 
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
     files,
-    debouncedQuery,
+    isSymbolMode ? "" : debouncedQuery,
+  );
+
+  // Symbol search (only active in @ mode)
+  const { symbols, isLoading: isLoadingSymbols } = useSymbolSearch(query, isSymbolMode);
+
+  const handleSymbolSelect = useCallback(
+    (symbol: SymbolItem) => {
+      onClose();
+
+      // Navigate to symbol position
+      setTimeout(() => {
+        const lines = editorAPI.getLines();
+        let offset = 0;
+        for (let i = 0; i < symbol.line; i++) {
+          offset += (lines[i]?.length || 0) + 1;
+        }
+        offset += symbol.character;
+
+        editorAPI.setCursorPosition({
+          line: symbol.line,
+          column: symbol.character,
+          offset,
+        });
+
+        requestAnimationFrame(() => {
+          centerCursorInViewport(symbol.line);
+        });
+      }, 50);
+    },
+    [onClose, centerCursorInViewport],
   );
 
   const handleItemSelect = useCallback(
@@ -59,11 +96,30 @@ export const useQuickOpen = () => {
     [openBufferFiles, recentFilesInResults, otherFiles],
   );
 
+  // In symbol mode, keyboard nav operates on symbols; in file mode, on files
+  const symbolSelectAdapter = useCallback(
+    (path: string) => {
+      const index = symbols.findIndex((s) => `${s.name}:${s.line}` === path);
+      if (index >= 0) handleSymbolSelect(symbols[index]);
+    },
+    [symbols, handleSymbolSelect],
+  );
+
+  const symbolResultsAsFiles = useMemo(
+    () =>
+      symbols.map((s) => ({
+        name: s.name,
+        path: `${s.name}:${s.line}`,
+        isDir: false,
+      })),
+    [symbols],
+  );
+
   const { selectedIndex, setSelectedIndex, scrollContainerRef } = useKeyboardNavigation({
     isVisible: isQuickOpenVisible,
-    allResults,
+    allResults: isSymbolMode ? symbolResultsAsFiles : allResults,
     onClose,
-    onSelect: handleItemSelect,
+    onSelect: isSymbolMode ? symbolSelectAdapter : handleItemSelect,
   });
 
   const handleItemHover = useCallback(
@@ -114,8 +170,13 @@ export const useQuickOpen = () => {
     selectedIndex,
     handleItemSelect,
     handleItemHover,
+    setSelectedIndex,
     previewFilePath,
     rootFolderPath: rootFolderPath || loaderRootFolder,
-    showPreview: quickOpenPreview,
+    showPreview: quickOpenPreview && !isSymbolMode,
+    isSymbolMode,
+    symbols,
+    isLoadingSymbols,
+    handleSymbolSelect,
   };
 };

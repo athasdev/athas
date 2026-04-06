@@ -1,6 +1,7 @@
 import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -14,7 +15,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
 import ChatHistoryDropdown from "../history/sidebar";
-import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
+import { AgentSelector } from "../selectors/agent-selector";
 
 function EditableChatTitle({
   title,
@@ -94,34 +95,36 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
   const chats = useAIChatStore((state) => state.chats);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const switchToChat = useAIChatStore((state) => state.switchToChat);
 
   const { openSettingsDialog } = useUIState();
-  const currentChat = getCurrentChat();
-  const currentAgentId = useAIChatStore((state) => state.getCurrentAgentId());
+  const currentChat = chats.find((chat) => chat.id === currentChatId);
+  const currentAgentId = currentChat?.agentId ?? selectedAgentId;
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
+  const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;
 
   return (
     <div className={cn("relative z-[10020]", paneHeaderClassName())}>
       <div className="min-w-0 flex-1">
-        {currentChatId ? (
-          <EditableChatTitle
-            title={currentChat ? currentChat.title : "New Chat"}
-            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
-          />
-        ) : (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
-              <ProviderIcon providerId={currentAgentId} size={12} />
-            </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
+            <ProviderIcon providerId={currentHeaderIconId} size={12} />
+          </span>
+          {currentChatId ? (
+            <EditableChatTitle
+              title={currentChat ? currentChat.title : "New Chat"}
+              onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
+            />
+          ) : (
             <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
@@ -139,7 +142,7 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
           </Button>
         </Tooltip>
 
-        <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
+        <AgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
       </div>
 
       <ChatHistoryDropdown

@@ -141,10 +141,6 @@ export function WebViewer({
     navigateTo(currentUrl, false);
   }, [currentUrl, navigateTo]);
 
-  const handleHome = useCallback(() => {
-    navigateTo(initialUrl);
-  }, [initialUrl, navigateTo]);
-
   const handleUrlSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -325,6 +321,14 @@ export function WebViewer({
         });
 
         if (shortcut) {
+          // Handle global shortcuts by dispatching custom events
+          if (shortcut.startsWith("global:")) {
+            const globalShortcut = shortcut.replace("global:", "");
+            window.dispatchEvent(new CustomEvent("global-shortcut", { detail: globalShortcut }));
+            return;
+          }
+
+          // Handle web-viewer specific shortcuts
           switch (shortcut) {
             case "focus-url":
               handleFocusUrlBar();
@@ -352,7 +356,6 @@ export function WebViewer({
               handleResetZoom();
               break;
             case "escape":
-              // Return focus to main app by focusing the URL bar then blurring
               handleFocusUrlBar();
               break;
           }
@@ -380,7 +383,7 @@ export function WebViewer({
   ]);
 
   return (
-    <div className="flex h-full flex-col bg-primary-bg">
+    <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
       <WebViewerToolbar
         canGoBack={canGoBack}
         canGoForward={canGoForward}
@@ -396,7 +399,6 @@ export function WebViewer({
         onCopyUrl={handleCopyUrl}
         onGoBack={handleGoBack}
         onGoForward={handleGoForward}
-        onHome={handleHome}
         onInputUrlChange={setInputUrl}
         onOpenDevTools={handleOpenDevTools}
         onOpenExternal={handleOpenExternal}
@@ -408,9 +410,9 @@ export function WebViewer({
         onZoomOut={handleZoomOut}
       />
 
-      <div ref={containerRef} className="relative flex-1">
+      <div ref={containerRef} className="relative flex-1 overflow-hidden">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary-bg">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
             <RefreshCw className="animate-spin text-text-lighter" />
           </div>
         )}

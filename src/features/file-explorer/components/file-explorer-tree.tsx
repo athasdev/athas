@@ -16,6 +16,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { getRelativePath } from "@/utils/path-helpers";
 import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
@@ -41,8 +42,8 @@ interface FileExplorerTreeProps {
   activePath?: string;
   updateActivePath?: (path: string) => void;
   rootFolderPath?: string;
-  onFileSelect: (path: string, isDir: boolean) => void;
-  onFileOpen?: (path: string, isDir: boolean) => void;
+  onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
+  onFileOpen?: (path: string, isDir: boolean) => void | Promise<void>;
   onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
@@ -167,6 +168,7 @@ function FileExplorerTreeComponent({
   );
 
   const gitStatusClassLookup = useMemo(() => {
+    const startedAt = performance.now();
     if (!gitStatus || !settings.showGitStatusInFileTree)
       return null as null | {
         files: Map<string, string>;
@@ -209,6 +211,12 @@ function FileExplorerTreeComponent({
       }
     }
 
+    frontendTrace("info", "file-tree", "gitStatusClassLookup:computed", {
+      gitFiles: gitStatus.files.length,
+      filesMapSize: files.size,
+      directoriesMapSize: directories.size,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+    });
     return { files, directories };
   }, [gitStatus, settings.showGitStatusInFileTree]);
 
@@ -228,6 +236,7 @@ function FileExplorerTreeComponent({
   );
 
   const filteredFiles = useMemo(() => {
+    const startedAt = performance.now();
     const process = (items: FileEntry[]): FileEntry[] =>
       items
         .filter(
@@ -239,7 +248,13 @@ function FileExplorerTreeComponent({
           children: item.children ? process(item.children) : undefined,
         }));
 
-    return process(files);
+    const result = process(files);
+    frontendTrace("info", "file-tree", "filteredFiles:computed", {
+      rootItems: files.length,
+      filteredRootItems: result.length,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+    });
+    return result;
   }, [files, isGitIgnored, isUserHidden]);
 
   useFileExplorerSync({
@@ -521,6 +536,13 @@ function FileExplorerTreeComponent({
     return { path, isDir, file };
   };
 
+  const toggleDirectory = useCallback(
+    async (path: string) => {
+      await Promise.resolve(onFileSelect(path, true));
+    },
+    [onFileSelect],
+  );
+
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
       const t = getTargetItem(e.target);
@@ -536,12 +558,14 @@ function FileExplorerTreeComponent({
         fileOpenBenchmark.ensureStarted(t.path, "explorer-click");
         fileOpenBenchmark.mark(t.path, "explorer-click");
       }
-      onFileSelect(t.path, t.isDir);
       if (t.isDir) {
+        void toggleDirectory(t.path);
         updateActivePath?.(t.path);
+      } else {
+        void Promise.resolve(onFileSelect(t.path, false));
       }
     },
-    [onFileSelect, updateActivePath, pathToFile],
+    [onFileSelect, toggleDirectory, updateActivePath, pathToFile],
   );
 
   const handleContainerDoubleClick = useCallback(
@@ -554,7 +578,7 @@ function FileExplorerTreeComponent({
         fileOpenBenchmark.ensureStarted(t.path, "explorer-double-click");
         fileOpenBenchmark.mark(t.path, "explorer-double-click");
       }
-      onFileOpen?.(t.path, t.isDir);
+      void Promise.resolve(onFileOpen?.(t.path, t.isDir));
       if (t.isDir) {
         updateActivePath?.(t.path);
       }
@@ -573,8 +597,15 @@ function FileExplorerTreeComponent({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, file: FileEntry) => {
-      if (e.key === "Enter") finishInlineEditing(file, editingValue);
-      else if (e.key === "Escape") cancelInlineEditing(file);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        finishInlineEditing(file, editingValue);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelInlineEditing(file);
+      }
     },
     [editingValue],
   );
@@ -667,9 +698,7 @@ function FileExplorerTreeComponent({
         const current = visibleRows[curIndex]?.file;
         const isDir = visibleRows[curIndex]?.file.isDir;
 
-        const toggle = (path: string) => useFileTreeStore.getState().toggleFolder(path);
         const clipboardActions = useFileClipboardStore.getState().actions;
-
         const mod = e.metaKey || e.ctrlKey;
         if (mod && current) {
           if (e.key === "c") {
@@ -700,10 +729,6 @@ function FileExplorerTreeComponent({
             e.preventDefault();
             e.stopPropagation();
             setContextMenu(null);
-            updateActivePath?.("");
-            if (document.activeElement instanceof HTMLElement) {
-              document.activeElement.blur();
-            }
             containerRef.current?.focus();
             break;
           }
@@ -750,7 +775,7 @@ function FileExplorerTreeComponent({
             if (isDir) {
               const expanded = useFileTreeStore.getState().isExpanded(current.path);
               if (!expanded) {
-                toggle(current.path);
+                void toggleDirectory(current.path);
               } else {
                 const child = visibleRows[curIndex + 1];
                 if (child && child.depth === visibleRows[curIndex].depth + 1) {
@@ -765,7 +790,7 @@ function FileExplorerTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
-              toggle(current.path);
+              void toggleDirectory(current.path);
             } else {
               const sep = current.path.includes("\\") ? "\\" : "/";
               const parentPath = current.path.split(sep).slice(0, -1).join(sep);
@@ -781,9 +806,9 @@ function FileExplorerTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir) {
-              toggle(current.path);
+              void toggleDirectory(current.path);
             } else {
-              onFileOpen?.(current.path, false);
+              void Promise.resolve(onFileOpen?.(current.path, false));
             }
             break;
           }

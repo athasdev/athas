@@ -2,6 +2,11 @@ import type { LucideIcon } from "lucide-react";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef } from "react";
+import {
+  controlFieldIconSizes,
+  controlFieldSizeVariants,
+  controlFieldSurfaceVariants,
+} from "@/ui/control-field";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
@@ -21,16 +26,13 @@ const inputVariants = cva(
   {
     variants: {
       variant: {
-        default: cn(
-          "rounded-lg border border-border bg-secondary-bg text-text transition-[border-color,box-shadow,background-color]",
-          "focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35",
-        ),
-        ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
+        default: "",
+        ghost: "",
       },
       size: {
-        xs: "h-6 ui-text-sm",
-        sm: "h-7 ui-text-sm",
-        md: "h-8 ui-text-md",
+        xs: "",
+        sm: "",
+        md: "",
       },
       hasLeftIcon: {
         true: "",
@@ -74,9 +76,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const iconSizes = {
-    xs: 12,
-    sm: 12,
-    md: 14,
+    xs: controlFieldIconSizes.xs,
+    sm: controlFieldIconSizes.sm,
+    md: controlFieldIconSizes.md,
   };
 
   const iconPositions = {
@@ -97,7 +99,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     return (
       <input
         ref={ref}
-        className={cn(inputVariants({ size, variant, hasLeftIcon, hasRightIcon }), className)}
+        className={cn(
+          controlFieldSurfaceVariants({ variant }),
+          controlFieldSizeVariants({ size }),
+          inputVariants({ size, variant, hasLeftIcon, hasRightIcon }),
+          className,
+        )}
         {...props}
       />
     );
@@ -113,7 +120,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       )}
       <input
         ref={ref}
-        className={cn(inputVariants({ size, variant, hasLeftIcon, hasRightIcon }), className)}
+        className={cn(
+          controlFieldSurfaceVariants({ variant }),
+          controlFieldSizeVariants({ size }),
+          inputVariants({ size, variant, hasLeftIcon, hasRightIcon }),
+          className,
+        )}
         {...props}
       />
       {RightIcon && (

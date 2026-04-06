@@ -16,36 +16,49 @@ import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
 interface FileMentionDropdownProps {
+  files: FileEntry[];
   onSelect: (file: FileEntry) => void;
 }
 
 const MAX_RESULTS = 20;
+const ATTACHED_DROPDOWN_GAP = -1;
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
+  files,
   onSelect,
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fallbackFiles, setFallbackFiles] = useState<FileEntry[]>([]);
 
   const { rootFolderPath } = useProjectStore();
   const { getAllProjectFiles } = useFileSystemStore();
   const { mentionState, hideMention } = useAIChatStore();
   const { position, selectedIndex } = mentionState;
-
-  // Pre-filtered file list, refreshed when dropdown mounts
-  const [fileItems, setFileItems] = useState<Array<{ name: string; path: string }>>([]);
+  const effectiveFiles = files.length > 0 ? files : fallbackFiles;
+  const fileItems = useMemo(
+    () => effectiveFiles.map((file) => ({ name: file.name, path: file.path })),
+    [effectiveFiles],
+  );
 
   useEffect(() => {
+    if (files.length > 0) {
+      setFallbackFiles([]);
+      return;
+    }
+
+    let cancelled = false;
+
     getAllProjectFiles().then((allFiles) => {
-      const filtered: Array<{ name: string; path: string }> = [];
-      for (const file of allFiles) {
-        if (!file.isDir && !shouldIgnoreFile(file.path)) {
-          filtered.push({ name: file.name, path: file.path });
-        }
-      }
-      setFileItems(filtered);
+      if (cancelled) return;
+
+      setFallbackFiles(allFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)));
     });
-  }, [getAllProjectFiles]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [files, getAllProjectFiles]);
 
   useEffect(() => {
     setSearchTerm(mentionState.search || "");
@@ -91,14 +104,14 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   }, [selectedIndex]);
 
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(360, window.innerWidth - 16);
+    const dropdownWidth = Math.min(Math.max(position.width, 280), window.innerWidth - 16);
     const dropdownHeight = Math.min(
-      filteredFiles.length * 26 + 60,
+      filteredFiles.length * 34 + 64,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
     );
     const padding = 8;
 
-    let { top, left } = position;
+    let { left } = position;
 
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
@@ -107,19 +120,19 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       left = padding;
     }
 
-    if (top + dropdownHeight > window.innerHeight - padding) {
-      top = Math.max(padding, top - dropdownHeight - 12);
-    }
-    if (top < padding) {
-      top = padding;
-    }
+    const attachedAboveTop = position.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
+    const attachedBelowTop = position.bottom + ATTACHED_DROPDOWN_GAP;
+    const top =
+      attachedAboveTop >= padding
+        ? attachedAboveTop
+        : Math.min(attachedBelowTop, window.innerHeight - dropdownHeight - padding);
 
     return {
       top: Math.max(padding, top),
       left: Math.max(padding, left),
       width: dropdownWidth,
     };
-  }, [position.top, position.left, filteredFiles.length]);
+  }, [position.bottom, position.left, position.top, position.width, filteredFiles.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -154,7 +167,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
+      className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-t-2xl rounded-b-xl border border-border/70 bg-primary-bg/98 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm"
       style={{
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
         width: `${adjustedPosition.width}px`,
@@ -165,21 +178,21 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       role="listbox"
       aria-label="File suggestions"
     >
-      <div className="bg-secondary-bg px-2 py-2">
+      <div className="border-border/50 border-b bg-primary-bg/92 px-2 py-2">
         <Input
           type="text"
           placeholder="Search files..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          variant="ghost"
+          variant="default"
           leftIcon={Search}
-          className="w-full"
+          className="w-full border-border/60 bg-secondary-bg/85"
           aria-label="Search files"
         />
       </div>
 
       <div
-        className="items-container min-h-0 flex-1 overflow-y-auto p-1.5"
+        className="items-container min-h-0 flex-1 overflow-y-auto bg-primary-bg/96 p-1.5"
         role="listbox"
         aria-label="File list"
       >
@@ -192,7 +205,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
             onClick={() => handleFileClick(file)}
             className={cn(
               "h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
-              "focus:outline-none focus:ring-1 focus:ring-accent/50",
+              "focus:outline-none focus:ring-1 focus:ring-border-strong/35",
               index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
             )}
             role="option"

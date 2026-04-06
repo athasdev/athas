@@ -81,6 +81,7 @@
         "tree-sitter-cpp": "^0.23.0",
         "tree-sitter-css": "^0.23.0",
         "tree-sitter-dart": "^1.0.0",
+        "tree-sitter-diff": "github:the-mikedavis/tree-sitter-diff",
         "tree-sitter-elisp": "^1.0.0",
         "tree-sitter-elixir": "^0.3.0",
         "tree-sitter-go": "^0.23.0",
@@ -99,6 +100,7 @@
         "tree-sitter-rust": "^0.23.0",
         "tree-sitter-scala": "^0.23.0",
         "tree-sitter-solidity": "^1.0.0",
+        "tree-sitter-svelte": "0.11.0",
         "tree-sitter-swift": "^0.6.0",
         "tree-sitter-systemrdl": "^0.8.0",
         "tree-sitter-toml": "^0.5.0",
@@ -1129,6 +1131,8 @@
 
     "tree-sitter-dart": ["tree-sitter-dart@1.0.0", "", { "dependencies": { "nan": "^2.15.0" } }, "sha512-Ve5YMPJjjGW9LEsO+MngAOibQsw5obFp+bUT41pvwdcXWRwJImOWs3eaPi6AubEiBmc09qvhdvxeIXvxlhMnug=="],
 
+    "tree-sitter-diff": ["tree-sitter-diff@github:the-mikedavis/tree-sitter-diff#2520c3f", { "dependencies": { "node-addon-api": "^8.0.0", "node-gyp-build": "^4.8.1" }, "peerDependencies": { "tree-sitter": "^0.21.1" } }, "tree-sitter-grammars-tree-sitter-diff-2520c3f"],
+
     "tree-sitter-elisp": ["tree-sitter-elisp@1.6.1", "", { "dependencies": { "node-addon-api": "^8.0.0", "node-gyp-build": "^4.8.4" }, "peerDependencies": { "tree-sitter": "^0.25.0" } }, "sha512-ALJ50YOuqu2Z/qKyQMh3RT5OhQmTRc2K/4MZzPdd1eKyFdKPaYpG0ZmPyovNTXyW14Qn63SgY960el55wLwy8Q=="],
 
     "tree-sitter-elixir": ["tree-sitter-elixir@0.3.5", "", { "dependencies": { "node-addon-api": "^7.1.0", "node-gyp-build": "^4.8.0" }, "peerDependencies": { "tree-sitter": "^0.21.0" } }, "sha512-xozQMvYK0aSolcQZAx2d84Xe/YMWFuRPYFlLVxO01bM2GITh5jyiIp0TqPCQa8754UzRAI7A83hZmfiYub5TZQ=="],
@@ -1164,6 +1168,8 @@
     "tree-sitter-scala": ["tree-sitter-scala@0.23.4", "", { "dependencies": { "node-addon-api": "^8.2.2", "node-gyp-build": "^4.8.2" }, "peerDependencies": { "tree-sitter": "^0.21.1" }, "optionalPeers": ["tree-sitter"] }, "sha512-bNUt7ccJVNRXbPno79XEdbECmO8RabVMUgki4oYmndbvOGKqVWTAjaw2lJRENX0NR5tbMPoSfeoX0uJV/15NrA=="],
 
     "tree-sitter-solidity": ["tree-sitter-solidity@1.2.13", "", { "dependencies": { "node-addon-api": "^8.2.2", "node-gyp-build": "^4.8.2", "yarn": "^1.22.21" }, "peerDependencies": { "tree-sitter": "^0.25.0" } }, "sha512-nO2AbcAuz2Qba8JnPNe/3FVjRRvGY3ApxSJ8UPIzfynJm4PYCMbBoXxxbprvMgjCbGYR/ZrHGIPKzXV7zBa+lQ=="],
+
+    "tree-sitter-svelte": ["tree-sitter-svelte@0.11.0", "", { "dependencies": { "nan": "^2.17.0" } }, "sha512-HqhbQ6Q4wMMGe2akVpcoVbhAoSO3Wf5/n0JYIP/9XGlF6kG46lU0II3MNVZANpBk8O90vM9OEKyD/EGrECvxbA=="],
 
     "tree-sitter-swift": ["tree-sitter-swift@0.6.0", "", { "dependencies": { "node-addon-api": "^8.0.0", "node-gyp-build": "^4.8.0", "tree-sitter-cli": "^0.23", "which": "2.0.2" }, "peerDependencies": { "tree-sitter": "^0.21.1" } }, "sha512-9vOJZes4/UFjBr4COHtp6ZHVuZYwfChSQbpneXQog04dAstfx5px3ybVX2cN+ylvLqsvVpmXLpidxxgF2rDQ7A=="],
 
@@ -1326,6 +1332,8 @@
     "tree-sitter-cpp/node-addon-api": ["node-addon-api@8.6.0", "", {}, "sha512-gBVjCaqDlRUk0EwoPNKzIr9KkS9041G/q31IBShPs1Xz6UTA+EXdZADbzqAJQrpDRq71CIMnOP5VMut3SL0z5Q=="],
 
     "tree-sitter-css/node-addon-api": ["node-addon-api@8.6.0", "", {}, "sha512-gBVjCaqDlRUk0EwoPNKzIr9KkS9041G/q31IBShPs1Xz6UTA+EXdZADbzqAJQrpDRq71CIMnOP5VMut3SL0z5Q=="],
+
+    "tree-sitter-diff/node-addon-api": ["node-addon-api@8.6.0", "", {}, "sha512-gBVjCaqDlRUk0EwoPNKzIr9KkS9041G/q31IBShPs1Xz6UTA+EXdZADbzqAJQrpDRq71CIMnOP5VMut3SL0z5Q=="],
 
     "tree-sitter-elisp/node-addon-api": ["node-addon-api@8.6.0", "", {}, "sha512-gBVjCaqDlRUk0EwoPNKzIr9KkS9041G/q31IBShPs1Xz6UTA+EXdZADbzqAJQrpDRq71CIMnOP5VMut3SL0z5Q=="],
 

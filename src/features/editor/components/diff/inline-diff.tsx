@@ -168,7 +168,7 @@ function InlineDiffComponent({
     }
   };
 
-  const topPosition = (lineNumber + 1) * lineHeight + 8;
+  const topPosition = (lineNumber + 1) * lineHeight;
 
   const handleRevert = () => {
     if (!onRevert) return;
@@ -187,7 +187,7 @@ function InlineDiffComponent({
         top: `${topPosition}px`,
         left: 0,
         right: 0,
-        zIndex: 20,
+        pointerEvents: "auto",
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

@@ -79,6 +79,7 @@
     --editor-font-family: var(--font-mono);
     --app-ui-font-size: 14px;
     --app-ui-scale: 1;
+    --ui-text-xs: calc(var(--app-ui-font-size) * 0.79);
     --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
     --ui-text-md: var(--app-ui-font-size);
     --ui-text-lg: calc(var(--app-ui-font-size) * 1.14);

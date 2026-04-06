@@ -37,6 +37,8 @@ export function useChatActions() {
     hasProviderApiKey: useAIChatStore((state) => state.hasProviderApiKey),
     getCurrentChat: useAIChatStore((state) => state.getCurrentChat),
     getCurrentMessages: useAIChatStore((state) => state.getCurrentMessages),
+    getChatById: useAIChatStore((state) => state.getChatById),
+    getMessagesForChat: useAIChatStore((state) => state.getMessagesForChat),
     getCurrentAgentId: useAIChatStore((state) => state.getCurrentAgentId),
     switchToChat: useAIChatStore((state) => state.switchToChat),
     addMessageToQueue: useAIChatStore((state) => state.addMessageToQueue),

@@ -507,15 +507,13 @@ pub fn git_diff_file_with_content(
          lines = create_diff_lines(&old_lines, &new_lines);
       } else if !content.is_empty() {
          // New file
-         let mut line_num = 1u32;
-         for line in content.lines() {
+         for (index, line) in content.lines().enumerate() {
             lines.push(GitDiffLine {
                line_type: DiffLineType::Added,
                content: line.to_string(),
                old_line_number: None,
-               new_line_number: Some(line_num),
+               new_line_number: Some(index as u32 + 1),
             });
-            line_num += 1;
          }
       }
    }

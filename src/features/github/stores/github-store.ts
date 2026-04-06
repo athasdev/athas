@@ -9,8 +9,9 @@ import type {
   PullRequestFile,
 } from "../types/github";
 
-const PR_LIST_CACHE_TTL_MS = 30_000;
+const PR_LIST_CACHE_TTL_MS = 5 * 60_000;
 const PR_DETAILS_CACHE_TTL_MS = 120_000;
+const AUTH_CACHE_TTL_MS = 2 * 60_000;
 
 interface PRListCacheEntry {
   fetchedAt: number;
@@ -73,6 +74,7 @@ const initialState: GitHubState = {
 };
 
 let prsRequestSeq = 0;
+let authCheckedAt = 0;
 const prDetailsRequestSeqByKey: Record<string, number> = {};
 const prContentRequestSeqByKey: Record<string, number> = {};
 const prDetailsInFlightByKey: Record<string, Promise<void> | undefined> = {};
@@ -156,6 +158,10 @@ export const useGitHubStore = create(
   combine(initialState, (set, get) => ({
     actions: {
       checkAuth: async () => {
+        if (authCheckedAt && isFresh(authCheckedAt, AUTH_CACHE_TTL_MS)) {
+          return;
+        }
+
         try {
           const isAuth = await invoke<boolean>("github_check_cli_auth");
           if (isAuth) {
@@ -164,8 +170,10 @@ export const useGitHubStore = create(
           } else {
             set({ isAuthenticated: false, currentUser: null });
           }
+          authCheckedAt = Date.now();
         } catch {
           set({ isAuthenticated: false, currentUser: null });
+          authCheckedAt = Date.now();
         }
       },
 
@@ -253,6 +261,53 @@ export const useGitHubStore = create(
           console.error("Failed to checkout PR:", err);
           throw err;
         }
+      },
+
+      prefetchPR: async (repoPath: string, prNumber: number) => {
+        const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
+        const cached = get().prDetailsCache[cacheKey];
+        const hasFreshDetails =
+          cached?.details && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS);
+
+        if (hasFreshDetails) {
+          return;
+        }
+
+        if (prDetailsInFlightByKey[cacheKey]) {
+          await prDetailsInFlightByKey[cacheKey];
+          return;
+        }
+
+        const requestId = (prDetailsRequestSeqByKey[cacheKey] ?? 0) + 1;
+        prDetailsRequestSeqByKey[cacheKey] = requestId;
+
+        const run = (async () => {
+          try {
+            const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
+              repoPath,
+              prNumber,
+            });
+            const details = normalizePullRequestDetails(detailsResponse);
+
+            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
+
+            set((state) => ({
+              prDetailsCache: {
+                ...state.prDetailsCache,
+                [cacheKey]: {
+                  ...state.prDetailsCache[cacheKey],
+                  fetchedAt: Date.now(),
+                  details,
+                },
+              },
+            }));
+          } finally {
+            delete prDetailsInFlightByKey[cacheKey];
+          }
+        })();
+
+        prDetailsInFlightByKey[cacheKey] = run;
+        await run;
       },
 
       selectPR: async (repoPath: string, prNumber: number, options?: { force?: boolean }) => {

@@ -14,6 +14,12 @@ export const defaultKeymaps: Keybinding[] = [
     when: "!terminalFocus",
   },
   {
+    key: "cmd+n",
+    command: "workbench.newTab",
+    source: "default",
+    when: "!terminalFocus",
+  },
+  {
     key: "cmd+s",
     command: "file.save",
     source: "default",
@@ -34,9 +40,9 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
   {
     key: "cmd+n",
-    command: "file.new",
+    command: "terminal.new",
     source: "default",
-    when: "!terminalFocus",
+    when: "terminalFocus",
   },
   { key: "cmd+o", command: "file.open", source: "default" },
   // Note: cmd+p is handled by the global keyboard shortcuts to avoid race conditions with command context

@@ -47,9 +47,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenuItem shortcut="Ctrl+Shift+N" onClick={() => handleClickEmit("menu_new_window")}>
             New Window
           </MenuItem>
-          <MenuItem shortcut="Ctrl+N" onClick={() => handleClickEmit("menu_new_file")}>
-            New File
-          </MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_new_file")}>New File</MenuItem>
           <MenuItem shortcut="Ctrl+O" onClick={() => handleClickEmit("menu_open_folder")}>
             Open Folder
           </MenuItem>

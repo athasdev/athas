@@ -286,6 +286,7 @@ async function main() {
       "rust",
       "scala",
       "solidity",
+      "svelte",
       "sql",
       "swift",
       "systemrdl",

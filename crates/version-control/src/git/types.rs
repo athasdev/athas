@@ -29,6 +29,7 @@ pub struct GitFile {
 pub struct GitCommit {
    pub hash: String,
    pub message: String,
+   pub description: Option<String>,
    pub author: String,
    pub date: String,
 }

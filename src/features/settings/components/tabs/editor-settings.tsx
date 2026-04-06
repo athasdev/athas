@@ -204,7 +204,7 @@ export const EditorSettings = () => {
               )
             }
             className="w-48"
-            size="sm"
+            size="xs"
             variant="secondary"
           />
         </SettingRow>
@@ -224,7 +224,7 @@ export const EditorSettings = () => {
               onChange={(e) => updateSetting("customEditorCommand", e.target.value)}
               placeholder="micro $FILE"
               className="w-48"
-              size="sm"
+              size="xs"
             />
           </SettingRow>
         )}

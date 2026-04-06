@@ -453,9 +453,15 @@ class EditorAPIImpl implements EditorAPI {
       // Restore content
       bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
 
+      if (this.textareaRef) {
+        this.textareaRef.value = entry.content;
+      }
+
       // Restore cursor position if available
       if (entry.cursorPosition) {
         this.setCursorPosition(entry.cursorPosition);
+      } else if (this.textareaRef) {
+        this.textareaRef.selectionStart = this.textareaRef.selectionEnd = 0;
       }
 
       // Restore selection if it existed
@@ -484,9 +490,15 @@ class EditorAPIImpl implements EditorAPI {
       // Restore content
       bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
 
+      if (this.textareaRef) {
+        this.textareaRef.value = entry.content;
+      }
+
       // Restore cursor position if available
       if (entry.cursorPosition) {
         this.setCursorPosition(entry.cursorPosition);
+      } else if (this.textareaRef) {
+        this.textareaRef.selectionStart = this.textareaRef.selectionEnd = 0;
       }
 
       // Restore selection if it existed

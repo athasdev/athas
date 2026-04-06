@@ -9,6 +9,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git-types";
 import { useGitHubStore } from "@/features/github/stores/github-store";
+import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
@@ -127,7 +128,9 @@ function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
       </div>
 
       <div className="border-t border-border/60 bg-secondary-bg/80 px-4 py-2">
-        <div className="truncate text-xs font-medium text-text">{buffer.name}</div>
+        <div className="truncate text-xs font-medium text-text">
+          {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
+        </div>
         <div className="truncate text-[11px] text-text-lighter">{buffer.path}</div>
       </div>
     </div>

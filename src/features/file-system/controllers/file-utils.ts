@@ -118,6 +118,16 @@ export const isPdfFile = (path: string): boolean => {
  */
 export const isBinaryFile = (path: string): boolean => {
   const lowerPath = path.toLowerCase();
+  const binarySuffixes = [
+    ".tar.gz",
+    ".tgz",
+    ".tar.bz2",
+    ".tbz2",
+    ".tar.xz",
+    ".txz",
+    ".tar.zst",
+    ".tzst",
+  ];
   const binaryExtensions = [
     ".wasm",
     ".exe",
@@ -151,7 +161,39 @@ export const isBinaryFile = (path: string): boolean => {
     ".dmg",
     ".msi",
   ];
+  if (binarySuffixes.some((suffix) => lowerPath.endsWith(suffix))) {
+    return true;
+  }
   return binaryExtensions.some((ext) => lowerPath.endsWith(ext));
+};
+
+/**
+ * Best-effort binary sniffing for files with unknown extensions.
+ * Treat null bytes and a high ratio of control bytes as unsupported for the text editor.
+ */
+export const isBinaryContent = (data: Uint8Array, sampleSize = 8192): boolean => {
+  const limit = Math.min(data.length, sampleSize);
+  if (limit === 0) return false;
+
+  let suspiciousBytes = 0;
+
+  for (let i = 0; i < limit; i++) {
+    const byte = data[i];
+
+    if (byte === 0) {
+      return true;
+    }
+
+    const isPrintableAscii = byte >= 0x20 && byte <= 0x7e;
+    const isCommonWhitespace = byte === 0x09 || byte === 0x0a || byte === 0x0d || byte === 0x0c;
+    const isLikelyUtf8Lead = byte >= 0xc2;
+
+    if (!isPrintableAscii && !isCommonWhitespace && !isLikelyUtf8Lead) {
+      suspiciousBytes++;
+    }
+  }
+
+  return suspiciousBytes / limit > 0.3;
 };
 
 /**

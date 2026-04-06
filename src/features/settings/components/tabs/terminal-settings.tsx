@@ -135,7 +135,7 @@ export const TerminalSettings = () => {
               )
             }
             className="w-56"
-            size="sm"
+            size="xs"
             variant="secondary"
           />
         </SettingRow>
@@ -160,7 +160,7 @@ export const TerminalSettings = () => {
               )
             }
             className="w-56"
-            size="sm"
+            size="xs"
             variant="secondary"
             searchable
           />
@@ -303,7 +303,7 @@ export const TerminalSettings = () => {
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
               className="w-64"
-              size="sm"
+              size="xs"
               variant="secondary"
               searchable
               placeholder="Select font..."
@@ -408,7 +408,7 @@ export const TerminalSettings = () => {
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
             className="w-32"
-            size="sm"
+            size="xs"
             variant="secondary"
           />
         </SettingRow>

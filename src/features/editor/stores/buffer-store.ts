@@ -25,6 +25,8 @@ import {
   isVirtualContent,
   shouldStartLsp,
 } from "@/features/panes/types/pane-content";
+import { createWorkspaceSessionSaveQueue } from "@/features/editor/stores/workspace-session-save-queue";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -189,38 +191,54 @@ const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
-let saveSessionTimer: NodeJS.Timeout | null = null;
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
-const saveSessionToStore = (_buffers: PaneContent[], _activeBufferId: string | null) => {
-  if (saveSessionTimer) clearTimeout(saveSessionTimer);
-  saveSessionTimer = setTimeout(() => {
-    const { buffers, activeBufferId } = useBufferStore.getState();
-    saveSessionToStoreImmediate(buffers, activeBufferId);
-    saveSessionTimer = null;
-  }, SAVE_SESSION_DEBOUNCE_MS);
+const sessionSaveQueue = createWorkspaceSessionSaveQueue(
+  (
+    projectPath: string,
+    payload: {
+      buffers: PaneContent[];
+      activeBufferId: string | null;
+    },
+  ) => {
+    saveSessionToStoreImmediate(projectPath, payload.buffers, payload.activeBufferId);
+  },
+  SAVE_SESSION_DEBOUNCE_MS,
+);
+
+const saveSessionToStore = (buffers: PaneContent[], activeBufferId: string | null) => {
+  const rootFolderPath = useProjectStore.getState().rootFolderPath;
+
+  if (!rootFolderPath) return;
+
+  sessionSaveQueue.schedule(rootFolderPath, {
+    buffers,
+    activeBufferId,
+  });
 };
 
-const saveSessionToStoreImmediate = (buffers: PaneContent[], activeBufferId: string | null) => {
-  import("@/features/file-system/controllers/store").then(({ useFileSystemStore }) => {
-    const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+const saveSessionToStoreImmediate = (
+  projectPath: string,
+  buffers: PaneContent[],
+  activeBufferId: string | null,
+) => {
+  const persistableBuffers = buffers
+    .filter((b) => isPersistableContent(b))
+    .map((b) => ({
+      path: b.path,
+      name: b.name,
+      isPinned: b.isPinned,
+    }));
 
-    if (!rootFolderPath) return;
+  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  const activeBufferPath =
+    activeBuffer && isPersistableContent(activeBuffer) ? activeBuffer.path : null;
 
-    const persistableBuffers = buffers
-      .filter((b) => isPersistableContent(b))
-      .map((b) => ({
-        path: b.path,
-        name: b.name,
-        isPinned: b.isPinned,
-      }));
+  useSessionStore.getState().saveSession(projectPath, persistableBuffers, activeBufferPath);
+};
 
-    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-    const activeBufferPath =
-      activeBuffer && isPersistableContent(activeBuffer) ? activeBuffer.path : null;
-
-    useSessionStore.getState().saveSession(rootFolderPath, persistableBuffers, activeBufferPath);
-  });
+export const clearQueuedWorkspaceSessionSave = (projectPath: string) => {
+  sessionSaveQueue.clear(projectPath);
 };
 
 /**
@@ -904,10 +922,30 @@ export const useBufferStore = createSelectors(
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  state.buffers = state.buffers.map((b) => {
+                    if (b.id !== existing.id) {
+                      return {
+                        ...b,
+                        isActive: false,
+                      };
+                    }
+
+                    if (spec.type === "diff" && b.type === "diff") {
+                      return {
+                        ...b,
+                        isActive: true,
+                        name: spec.name,
+                        content: spec.content,
+                        savedContent: spec.content,
+                        diffData: spec.diffData,
+                      };
+                    }
+
+                    return {
+                      ...b,
+                      isActive: true,
+                    };
+                  });
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -1228,6 +1266,7 @@ export const useBufferStore = createSelectors(
               isActive: b.id === bufferId,
             }));
           });
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         showNewTabView: () => {
@@ -1469,6 +1508,7 @@ export const useBufferStore = createSelectors(
               isActive: b.id === nextBufferId,
             }));
           });
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         switchToPreviousBuffer: () => {
@@ -1499,6 +1539,7 @@ export const useBufferStore = createSelectors(
               isActive: b.id === prevBufferId,
             }));
           });
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         getActiveBuffer: (): PaneContent | null => {

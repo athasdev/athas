@@ -158,6 +158,16 @@ export function EditorStylesheet() {
           border-radius: 0 !important;
         }
 
+        .folded-preview-line {
+          cursor: pointer;
+          color: var(--color-text-lighter);
+          transition: color 120ms ease;
+        }
+
+        .folded-preview-line:hover {
+          color: var(--color-text);
+        }
+
         /* Git gutter decorations */
         .editor-gutter {
           position: relative;
@@ -314,6 +324,87 @@ export function EditorStylesheet() {
             --tooltip-text: #ffffff;
             --tooltip-border: rgba(0, 0, 0, 0.1);
           }
+        }
+
+        body.selection-scope-active * {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+        }
+
+        body.selection-scope-active [data-selection-scope-active="true"],
+        body.selection-scope-active [data-selection-scope-active="true"] * {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+        }
+
+        .diff-accordion-line {
+          display: flex;
+          align-items: center;
+          min-height: 100%;
+          padding: 2px 10px 8px 0;
+        }
+
+        .diff-accordion-card {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          min-height: calc(100% - 4px);
+          border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          border-left: none;
+          border-radius: 0 10px 10px 0;
+          background: color-mix(in srgb, var(--color-secondary-bg, #1f1f1f) 84%, white 16%);
+          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
+          padding: 0 12px;
+          color: var(--color-text, #d4d4d4);
+        }
+
+        .diff-accordion-gutter-line {
+          display: flex;
+          align-items: stretch;
+        }
+
+        .diff-accordion-gutter-card {
+          position: absolute;
+          inset: 2px -1px 8px 10px;
+          border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          border-right: none;
+          border-radius: 10px 0 0 10px;
+          background: color-mix(in srgb, var(--color-secondary-bg, #1f1f1f) 84%, white 16%);
+          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
+          pointer-events: none;
+        }
+
+        .diff-accordion-chevron,
+        .diff-accordion-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: var(--color-text, #d4d4d4);
+        }
+
+        .diff-accordion-name {
+          color: var(--git-added, #2ea043);
+          font-weight: 500;
+          flex-shrink: 0;
+        }
+
+        .diff-accordion-path {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: var(--color-text-lighter, rgba(255, 255, 255, 0.65));
+        }
+
+        .diff-accordion-count {
+          margin-left: auto;
+          flex-shrink: 0;
+          color: var(--color-text-lighter, rgba(255, 255, 255, 0.65));
+          font-size: 0.9em;
         }
       `}
     </style>

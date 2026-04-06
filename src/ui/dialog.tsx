@@ -8,7 +8,7 @@ import { cn } from "@/utils/cn";
 interface DialogProps {
   children: ReactNode;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
   icon?: React.ForwardRefExoticComponent<
     Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
@@ -86,7 +86,7 @@ const Dialog = ({
             >
               <div className="flex items-center gap-2">
                 {Icon && <Icon className="text-text-lighter" />}
-                <DialogPrimitive.Title className="ui-font ui-text-md font-medium text-text">
+                <DialogPrimitive.Title className="min-w-0 ui-font ui-text-md font-medium text-text">
                   {title}
                 </DialogPrimitive.Title>
               </div>

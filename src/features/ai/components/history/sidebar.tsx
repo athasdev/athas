@@ -1,10 +1,9 @@
-import { Check, Search, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Search, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";
-import { Button } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
-import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { ProviderIcon } from "../icons/provider-icons";
 
@@ -18,8 +17,6 @@ interface ChatHistoryDropdownProps {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
-const DROPDOWN_WIDTH = 340;
-
 export default function ChatHistoryDropdown({
   isOpen,
   onClose,
@@ -29,116 +26,215 @@ export default function ChatHistoryDropdown({
   onDeleteChat,
   triggerRef,
 }: ChatHistoryDropdownProps) {
-  const searchRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const filteredChats = useMemo(() => {
-    if (!searchQuery.trim()) return chats;
-    return chats.filter((chat) => chat.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return chats;
+    return chats.filter((chat) => {
+      const titleMatch = chat.title.toLowerCase().includes(query);
+      const providerMatch = (chat.agentId ?? "custom").toLowerCase().includes(query);
+      return titleMatch || providerMatch;
+    });
   }, [chats, searchQuery]);
 
+  const handleClose = useCallback(() => {
+    onClose();
+    triggerRef.current?.focus();
+  }, [onClose, triggerRef]);
+
   useEffect(() => {
-    if (isOpen) {
-      setSearchQuery("");
-      setTimeout(() => searchRef.current?.focus(), 0);
-    }
+    if (!isOpen) return;
+    setSearchQuery("");
+    setSelectedIndex(0);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case "Escape":
+          event.preventDefault();
+          handleClose();
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          setSelectedIndex((prev) => Math.min(prev + 1, filteredChats.length - 1));
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          setSelectedIndex((prev) => Math.max(prev - 1, 0));
+          break;
+        case "Enter":
+          if (filteredChats[selectedIndex]) {
+            event.preventDefault();
+            onSwitchToChat(filteredChats[selectedIndex].id);
+            handleClose();
+          }
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [filteredChats, handleClose, isOpen, onSwitchToChat, selectedIndex]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!resultsRef.current || filteredChats.length === 0) return;
+    const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement | undefined;
+    selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [filteredChats.length, selectedIndex]);
+
   return (
-    <Dropdown
-      isOpen={isOpen}
-      anchorRef={triggerRef}
-      anchorAlign="end"
-      onClose={onClose}
-      className="flex flex-col overflow-hidden rounded-2xl p-0"
-      style={{ width: `${DROPDOWN_WIDTH}px` }}
-    >
-      <div className="bg-secondary-bg px-2 py-2">
-        <Input
-          ref={searchRef}
-          type="text"
-          placeholder="Search chats..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          leftIcon={Search}
-          variant="ghost"
-          className="w-full"
-        />
-      </div>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <AnimatePresence>
+        {isOpen && (
+          <DialogPrimitive.Portal forceMount>
+            <div className="fixed inset-0 z-[10030] flex items-start justify-center px-4 pt-16 sm:pt-24">
+              <DialogPrimitive.Overlay asChild>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+                />
+              </DialogPrimitive.Overlay>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-        {chats.length === 0 ? (
-          <div className="p-3 text-center text-text-lighter text-xs italic">No chat history</div>
-        ) : filteredChats.length === 0 ? (
-          <div className="p-3 text-center text-text-lighter text-xs italic">
-            No chats match "{searchQuery}"
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {filteredChats.map((chat) => (
-              <div
-                key={chat.id}
-                className={cn(
-                  "group flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-hover",
-                  chat.id === currentChatId && "bg-selected",
-                )}
-              >
-                <div className="flex shrink-0 items-center">
-                  {chat.id === currentChatId ? (
-                    <Check className="text-success" />
-                  ) : (
-                    <ProviderIcon
-                      providerId={chat.agentId || "custom"}
-                      size={12}
-                      className="text-text-lighter"
+              <DialogPrimitive.Content asChild>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97, y: 10 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative flex max-h-[75vh] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-border/40 bg-primary-bg/95 shadow-2xl focus:outline-none"
+                >
+                  <div className="flex items-center gap-3 border-b border-border/30 px-5 py-4">
+                    <Search className="size-4 text-text-lighter" />
+                    <input
+                      ref={inputRef}
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Find past chats..."
+                      className="flex-1 bg-transparent text-sm text-text placeholder-text-lighter outline-none"
                     />
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="rounded-full p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                      aria-label="Close chat history"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    onSwitchToChat(chat.id);
-                    onClose();
-                  }}
-                  className="h-auto min-w-0 flex-1 justify-start flex-col items-start gap-0.5 px-0 py-0 text-left hover:bg-transparent"
-                >
-                  <span
-                    className={cn(
-                      "block w-full truncate text-left text-xs",
-                      chat.id === currentChatId
-                        ? "font-medium text-text"
-                        : "text-text-lighter hover:text-text",
-                    )}
+                  <div
+                    ref={resultsRef}
+                    className="custom-scrollbar-thin flex-1 overflow-y-auto p-2"
                   >
-                    {chat.title}
-                  </span>
-                  <span className="block w-full select-none text-left text-[10px] text-text-lighter">
-                    {getRelativeTime(chat.lastMessageAt)}
-                  </span>
-                </Button>
+                    {chats.length === 0 ? (
+                      <div className="py-12 text-center text-sm text-text-lighter">
+                        No chat history yet
+                      </div>
+                    ) : filteredChats.length === 0 ? (
+                      <div className="py-12 text-center text-sm text-text-lighter">
+                        No chats match "{searchQuery}"
+                      </div>
+                    ) : (
+                      filteredChats.map((chat, index) => {
+                        const isCurrent = chat.id === currentChatId;
+                        const isSelected = index === selectedIndex;
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteChat(chat.id, e);
-                  }}
-                  className="ml-auto rounded text-text-lighter opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
-                  title="Delete chat"
-                  aria-label="Delete chat"
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            ))}
-          </div>
+                        return (
+                          <div
+                            key={chat.id}
+                            onClick={() => {
+                              onSwitchToChat(chat.id);
+                              handleClose();
+                            }}
+                            onMouseEnter={() => setSelectedIndex(index)}
+                            className={cn(
+                              "group relative mb-0.5 flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3 transition-colors",
+                              isSelected ? "bg-hover/80" : "hover:bg-hover/40",
+                              isCurrent && "bg-accent/5 hover:bg-accent/10",
+                            )}
+                          >
+                            {isCurrent && (
+                              <div className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-accent/60" />
+                            )}
+
+                            <div className="mt-0.5 flex shrink-0 items-center justify-center">
+                              {isCurrent ? (
+                                <Check className="size-4 text-accent" />
+                              ) : (
+                                <ProviderIcon
+                                  providerId={chat.agentId || "custom"}
+                                  size={13}
+                                  className="text-text-lighter"
+                                />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={cn(
+                                    "truncate text-[13px] font-medium transition-colors",
+                                    isCurrent ? "text-accent" : "text-text",
+                                  )}
+                                >
+                                  {chat.title}
+                                </span>
+                                <span className="shrink-0 text-[10px] whitespace-nowrap text-text-lighter">
+                                  {getRelativeTime(chat.lastMessageAt)}
+                                </span>
+                              </div>
+
+                              <div className="mt-1 flex items-center gap-2 text-[11px] text-text-lighter">
+                                <span className="opacity-80">
+                                  {(chat.agentId || "custom").replace(/-/g, " ")}
+                                </span>
+                                {isCurrent && (
+                                  <>
+                                    <span className="opacity-30">&bull;</span>
+                                    <span className="opacity-80">Current chat</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onDeleteChat(chat.id, event);
+                              }}
+                              className="ml-2 flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                              aria-label={`Delete ${chat.title}`}
+                              title="Delete chat"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              </DialogPrimitive.Content>
+            </div>
+          </DialogPrimitive.Portal>
         )}
-      </div>
-    </Dropdown>
+      </AnimatePresence>
+    </DialogPrimitive.Root>
   );
 }

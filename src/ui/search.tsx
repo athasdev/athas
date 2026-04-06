@@ -31,6 +31,7 @@ interface SearchPopoverProps {
   placeholder: string;
   inputRef?: RefObject<HTMLInputElement | null>;
   matchLabel?: string | null;
+  matchTone?: "default" | "warning";
   onNext?: () => void;
   onPrevious?: () => void;
   canNavigate?: boolean;
@@ -98,6 +99,7 @@ export function SearchPopover({
   placeholder,
   inputRef,
   matchLabel,
+  matchTone = "default",
   onNext,
   onPrevious,
   canNavigate = true,
@@ -138,7 +140,14 @@ export function SearchPopover({
         </div>
 
         {matchLabel && (
-          <span className="ui-font ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
+          <span
+            className={cn(
+              "ui-font ui-text-sm shrink-0",
+              matchTone === "warning" ? "text-amber-400" : "text-text-lighter",
+            )}
+          >
+            {matchLabel}
+          </span>
         )}
 
         {extraActions}

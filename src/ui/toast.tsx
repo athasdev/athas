@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { CircleAlert, CircleCheck, CircleQuestionMark, CircleX, X } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleQuestionMark, CircleX, Copy, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -109,8 +109,16 @@ export const ToastContainer = () => {
             </p>
 
             <button
+              onClick={() => navigator.clipboard.writeText(item.message)}
+              className="shrink-0 rounded p-0.5 transition-colors hover:bg-hover"
+              aria-label="Copy message"
+            >
+              <Copy className="text-text-lighter" />
+            </button>
+            <button
               onClick={() => toast.dismiss(item.id)}
               className="shrink-0 rounded p-0.5 transition-colors hover:bg-hover"
+              aria-label="Dismiss"
             >
               <X className="text-text-lighter" />
             </button>

@@ -31,6 +31,19 @@ export async function requestInlineEdit(
   request: InlineEditRequest,
   options?: { useByok?: boolean },
 ): Promise<{ editedText: string }> {
+  const normalizedRequest = {
+    ...request,
+    model: request.model.trim(),
+    beforeSelection: request.beforeSelection,
+    selectedText: request.selectedText,
+    afterSelection: request.afterSelection || "",
+    instruction: request.instruction?.trim() || DEFAULT_INLINE_EDIT_INSTRUCTION,
+  };
+
+  if (!normalizedRequest.model) {
+    throw new InlineEditError("No inline edit model selected.", 400);
+  }
+
   const token = await getAuthToken();
   if (!token) {
     throw new InlineEditError("Not authenticated", 401);
@@ -51,11 +64,7 @@ export async function requestInlineEdit(
       Authorization: `Bearer ${token}`,
       ...(byokKey ? { [BYOK_HEADER]: byokKey } : {}),
     },
-    body: JSON.stringify({
-      ...request,
-      afterSelection: request.afterSelection || "",
-      instruction: request.instruction?.trim() || DEFAULT_INLINE_EDIT_INSTRUCTION,
-    }),
+    body: JSON.stringify(normalizedRequest),
   });
 
   let body: unknown = null;
@@ -66,7 +75,7 @@ export async function requestInlineEdit(
   }
 
   if (!response.ok) {
-    const message =
+    let message =
       body &&
       typeof body === "object" &&
       "error" in body &&

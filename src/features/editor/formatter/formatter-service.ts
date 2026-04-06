@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { logger } from "@/features/editor/utils/logger";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 
 export interface FormatOptions {
   filePath: string;
@@ -40,7 +41,7 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
     logger.debug("FormatterService", `Formatting ${filePath} with ${formatterConfig.command}`);
 
     const language = languageId || getLanguageIdFromPath(filePath) || "plaintext";
-    const formatterName = getFormatterName(formatterConfig.command);
+    const formatterName = formatterConfig.name;
 
     // Get workspace folder (if available)
     const workspaceFolder = getWorkspaceFolder(filePath);
@@ -110,31 +111,16 @@ export function isFormattingAvailable(filePath: string, languageId?: string): bo
 }
 
 /**
- * Extract formatter name from command path
- * TODO: This should come from extension manifest instead
- */
-function getFormatterName(command: string): string {
-  const commandLower = command.toLowerCase();
-
-  if (commandLower.includes("prettier")) return "prettier";
-  if (commandLower.includes("rustfmt")) return "rustfmt";
-  if (commandLower.includes("gofmt")) return "gofmt";
-  if (commandLower.includes("eslint")) return "eslint";
-
-  // Default to prettier for unknown formatters
-  return "prettier";
-}
-
-/**
  * Get workspace folder from file path
  */
 function getWorkspaceFolder(filePath: string): string | undefined {
-  // Try to get workspace folder from file system store
-  // For now, use the directory containing the file
-  // TODO: Get actual workspace root from file system store
-  const parts = filePath.split("/");
-  if (parts.length > 1) {
-    return parts.slice(0, -1).join("/");
+  const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+  if (rootFolderPath) return rootFolderPath;
+
+  // Fallback to file's directory if no project is open
+  const lastSlash = filePath.lastIndexOf("/");
+  if (lastSlash > 0) {
+    return filePath.slice(0, lastSlash);
   }
   return undefined;
 }

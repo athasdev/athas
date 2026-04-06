@@ -1,56 +1,101 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { AlertCircle, Download, Sparkles, Terminal as TerminalIcon, X } from "lucide-react";
+import {
+  AlertCircle,
+  Download,
+  Puzzle,
+  Settings2,
+  Sparkles,
+  Terminal as TerminalIcon,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dropdown } from "@/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { toast } from "@/ui/toast";
-import Select from "@/ui/select";
-import {
-  beginDesktopAuthSession,
-  DesktopAuthError,
-  waitForDesktopAuthToken,
-} from "@/features/window/services/auth-api";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import {
-  type AutocompleteModel,
-  fetchAutocompleteModels,
-} from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 
-const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
-  { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
-  { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
-  { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
-  { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-];
+type AutocompleteUsageSummary = {
+  periodStart: string;
+  periodEnd: string;
+  budgetCents: number;
+  reservedCents: number;
+  spendCents: number;
+  remainingCents: number;
+  requestsCount: number;
+  promptTokens: number;
+  completionTokens: number;
+  maxRequestCostCents: number;
+};
+
+function extractAutocompleteUsage(subscription: unknown): AutocompleteUsageSummary | null {
+  if (!subscription || typeof subscription !== "object") return null;
+
+  const container = subscription as Record<string, unknown>;
+  const autocomplete =
+    container.autocomplete && typeof container.autocomplete === "object"
+      ? (container.autocomplete as Record<string, unknown>)
+      : null;
+  const usageCandidate = autocomplete?.usage;
+
+  if (!usageCandidate || typeof usageCandidate !== "object") return null;
+
+  const usage = usageCandidate as Record<string, unknown>;
+  if (
+    typeof usage.periodStart !== "string" ||
+    typeof usage.periodEnd !== "string" ||
+    typeof usage.budgetCents !== "number" ||
+    typeof usage.spendCents !== "number"
+  ) {
+    return null;
+  }
+
+  return usage as unknown as AutocompleteUsageSummary;
+}
+
+function formatUsdFromCents(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function formatUsageDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
 
 const AiUsageStatusIndicator = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [autocompleteModels, setAutocompleteModels] = useState<AutocompleteModel[]>(
-    DEFAULT_AUTOCOMPLETE_MODELS,
-  );
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
-  const handleAuthCallback = useAuthStore((state) => state.handleAuthCallback);
-  const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
   const hasOpenRouterKey = useAIChatStore(
     (state) => state.providerApiKeys.get("openrouter") || false,
   );
+  const { signIn, isSigningIn } = useDesktopSignIn({
+    onSuccess: () => setIsOpen(false),
+  });
   const uiState = useUIState();
   const hasBlockingModalOpen = useUIState(
     (state) =>
@@ -76,6 +121,14 @@ const AiUsageStatusIndicator = () => {
     return "Free";
   })();
   const usesByok = isAuthenticated && !isPro;
+  const autocompleteUsage = extractAutocompleteUsage(subscription);
+  const usageProgress =
+    autocompleteUsage && autocompleteUsage.budgetCents > 0
+      ? Math.min(
+          100,
+          Math.max(0, (autocompleteUsage.spendCents / autocompleteUsage.budgetCents) * 100),
+        )
+      : 0;
 
   const modeLabel = (() => {
     if (!isAuthenticated) return "Guest";
@@ -94,27 +147,15 @@ const AiUsageStatusIndicator = () => {
     return "text-emerald-400";
   })();
 
-  const loadModelOptions = async () => {
-    setIsLoadingModels(true);
-    try {
-      const models = await fetchAutocompleteModels();
-      if (models.length > 0) {
-        setAutocompleteModels(models);
-        if (!models.some((model) => model.id === aiAutocompleteModelId)) {
-          updateSetting("aiAutocompleteModelId", models[0].id);
-        }
-      } else {
-        setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
-      }
-    } catch {
-      setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
-    } finally {
-      setIsLoadingModels(false);
-    }
+  const refreshAll = async () => {
+    await checkAllProviderApiKeys();
   };
 
-  const refreshAll = async () => {
-    await Promise.all([checkAllProviderApiKeys(), loadModelOptions()]);
+  const openBillingDashboard = async () => {
+    const apiBase = import.meta.env.VITE_API_URL || "https://athas.dev";
+    const billingUrl = new URL("/dashboard/billing", apiBase).toString();
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(billingUrl);
   };
 
   useEffect(() => {
@@ -132,28 +173,7 @@ const AiUsageStatusIndicator = () => {
   }, [hasBlockingModalOpen, isOpen]);
 
   const handleSignIn = async () => {
-    setIsSigningIn(true);
-    try {
-      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession();
-      await openUrl(loginUrl);
-      toast.info("Complete sign-in in your browser. Waiting for confirmation...");
-
-      const token = await waitForDesktopAuthToken(sessionId, pollSecret);
-      await handleAuthCallback(token);
-      toast.success("Signed in successfully!");
-      setIsOpen(false);
-    } catch (error) {
-      if (error instanceof DesktopAuthError && error.code === "endpoint_unavailable") {
-        toast.error(
-          "Desktop sign-in endpoint is unavailable on this server. Please use the local dev www server.",
-        );
-      } else {
-        const message = error instanceof Error ? error.message : "Authentication failed.";
-        toast.error(message);
-      }
-    } finally {
-      setIsSigningIn(false);
-    }
+    await signIn();
   };
 
   return (
@@ -161,7 +181,13 @@ const AiUsageStatusIndicator = () => {
       <Button
         ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const nextOpen = !isOpen;
+          setIsOpen(nextOpen);
+          if (nextOpen) {
+            void refreshAll();
+          }
+        }}
         variant="secondary"
         size="xs"
         className={cn(
@@ -184,28 +210,27 @@ const AiUsageStatusIndicator = () => {
         className="w-[320px] overflow-hidden rounded-xl p-0"
       >
         <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/55 px-3 py-2.5">
-          <span className="ui-font ui-text-md font-medium text-text">AI</span>
+          <div className="flex items-center gap-2">
+            <span className="ui-font ui-text-md font-medium text-text">AI</span>
+            {isPro ? (
+              <Badge variant="accent" shape="pill" size="compact" className="text-emerald-300">
+                Pro
+              </Badge>
+            ) : null}
+          </div>
           <div className="flex items-center gap-1.5">
-            <Button
-              onClick={() => {
-                void refreshAll();
-              }}
-              variant="secondary"
-              size="xs"
-              className="ui-text-sm h-6 px-2 text-text-lighter"
-            >
-              Refresh
-            </Button>
             <Button
               onClick={() => {
                 setIsOpen(false);
                 uiState.openSettingsDialog("ai");
               }}
               variant="secondary"
-              size="xs"
-              className="ui-text-sm h-6 px-2 text-text-lighter"
+              size="icon-sm"
+              className="px-0 text-text-lighter"
+              aria-label="Open AI settings"
+              title="AI Settings"
             >
-              AI Settings
+              <Settings2 />
             </Button>
             <Button
               onClick={() => setIsOpen(false)}
@@ -232,36 +257,44 @@ const AiUsageStatusIndicator = () => {
           </div>
         ) : (
           <>
-            <div className="border-border/60 border-b p-2.5">
-              <div className="flex items-center justify-between">
-                <span className="ui-text-sm text-text-lighter">Plan</span>
-                <span className="ui-text-sm font-medium text-text">{planLabel}</span>
+            <button
+              type="button"
+              onClick={() => void openBillingDashboard()}
+              className="border-border/60 block w-full border-b p-2.5 text-left transition-colors hover:bg-hover/40"
+            >
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="ui-text-sm text-text-lighter">Usage</span>
+                <span className="ui-text-xs text-text-lighter/70">Current period</span>
               </div>
-              <div className="mt-1 flex items-center justify-between">
-                <span className="ui-text-sm text-text-lighter">Mode</span>
-                <span className={cn("ui-text-sm font-medium", modeToneClass)}>{modeLabel}</span>
-              </div>
-            </div>
-            <div className="p-2.5">
-              <label
-                htmlFor="footer-ai-model-select"
-                className="ui-text-sm mb-1 block text-text-lighter"
-              >
-                Model
-              </label>
-              <Select
-                id="footer-ai-model-select"
-                value={aiAutocompleteModelId}
-                onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                options={autocompleteModels.map((model) => ({
-                  value: model.id,
-                  label: model.name,
-                }))}
-                disabled={isLoadingModels}
-                size="sm"
-                className="focus:border-accent focus:ring-accent/30"
-              />
-            </div>
+              {autocompleteUsage ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="ui-text-sm text-text-lighter">Hosted autocomplete</span>
+                    <span className="ui-text-sm font-medium text-text">
+                      {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
+                      {formatUsdFromCents(autocompleteUsage.budgetCents)}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
+                    <div
+                      className="h-full rounded-full bg-emerald-400/90 transition-[width] duration-200"
+                      style={{ width: `${usageProgress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="ui-text-xs text-text-lighter/70">
+                      {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
+                      {formatUsageDate(autocompleteUsage.periodEnd)}
+                    </span>
+                    <span className="ui-text-xs text-text-lighter/70">
+                      Resets {formatUsageDate(autocompleteUsage.periodEnd)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="ui-text-sm text-text-lighter/80">Usage unavailable</div>
+              )}
+            </button>
           </>
         )}
       </Dropdown>
@@ -278,6 +311,7 @@ const Footer = () => {
   const { actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
 
+  const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
@@ -357,6 +391,20 @@ const Footer = () => {
           >
             <AlertCircle />
             {diagnosticsCount > 0 && <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>}
+          </Button>
+        )}
+        {/* Extension updates indicator */}
+        {extensionUpdatesCount > 0 && (
+          <Button
+            onClick={() => uiState.openSettingsDialog("extensions")}
+            variant="secondary"
+            size="xs"
+            className="rounded-md bg-primary-bg/40 px-2 text-blue-400"
+            style={{ minHeight: 0, minWidth: 0 }}
+            title={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
+          >
+            <Puzzle />
+            <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
           </Button>
         )}
         {/* Update indicator */}

@@ -198,9 +198,23 @@ const TerminalContainer = ({
   const handleTabClose = useCallback(
     (terminalId: string, event?: React.MouseEvent) => {
       event?.stopPropagation();
+
+      // Find which terminal will become active after closing
+      const currentIndex = terminals.findIndex((t) => t.id === terminalId);
+      const remaining = terminals.filter((t) => t.id !== terminalId);
+
       closeTerminal(terminalId);
+
+      // Focus next terminal if we closed the active one
+      if (terminalId === activeTerminalId && remaining.length > 0) {
+        const nextIndex = currentIndex < remaining.length ? currentIndex : currentIndex - 1;
+        const nextTerminal = remaining[nextIndex];
+        if (nextTerminal) {
+          focusNewTerminal(nextTerminal.id);
+        }
+      }
     },
-    [closeTerminal],
+    [terminals, activeTerminalId, closeTerminal, focusNewTerminal],
   );
 
   const handleTabPin = useCallback(
@@ -331,17 +345,30 @@ const TerminalContainer = ({
     };
   }, [registerTerminalFocus, clearTerminalFocus, focusActiveTerminal]);
 
-  // Listen for close-active-terminal event from native menu
+  // Listen for close-active-terminal event from native menu / keybinding
   useEffect(() => {
     const handleCloseActiveTerminal = () => {
-      if (activeTerminalId) {
-        closeTerminal(activeTerminalId);
+      if (!activeTerminalId) return;
+
+      // Find which terminal will become active after closing
+      const currentIndex = terminals.findIndex((t) => t.id === activeTerminalId);
+      const remaining = terminals.filter((t) => t.id !== activeTerminalId);
+
+      closeTerminal(activeTerminalId);
+
+      if (remaining.length > 0) {
+        // Focus the next terminal (same logic as reducer)
+        const nextIndex = currentIndex < remaining.length ? currentIndex : currentIndex - 1;
+        const nextTerminal = remaining[nextIndex];
+        if (nextTerminal) {
+          focusNewTerminal(nextTerminal.id);
+        }
       }
     };
 
     window.addEventListener("close-active-terminal", handleCloseActiveTerminal);
     return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
-  }, [activeTerminalId, closeTerminal]);
+  }, [activeTerminalId, terminals, closeTerminal, focusNewTerminal]);
 
   // Store pending commands for terminals that are initializing
   const pendingCommandsRef = useRef<Map<string, string>>(new Map());
@@ -604,7 +631,7 @@ const TerminalContainer = ({
     >
       {/* Vertical-only actions header */}
       {isVertical && (
-        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 bg-primary-bg px-1.5 py-1">
+        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 rounded-t-lg bg-primary-bg px-1.5 py-1">
           <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
             <Button
               type="button"
@@ -674,7 +701,7 @@ const TerminalContainer = ({
 
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-primary-bg",
             isVertical &&
               (tabSidebarPosition === "left"
                 ? "rounded-tl-lg border-border/60 border-t border-l"

@@ -1,9 +1,8 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { useGitStore } from "../stores/git-store";
+import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
 interface GitCommitHistoryProps {
   isCollapsed: boolean;
@@ -26,10 +25,15 @@ const CommitItem = memo(({ commit, onViewCommitDiff }: CommitItemProps) => {
   return (
     <div
       onClick={handleCommitClick}
-      className="ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-hover"
+      className="ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 hover:bg-hover"
     >
       <div className="truncate text-inherit text-text leading-tight">{commit.message}</div>
-      <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
+      {commit.description && (
+        <div className="ui-text-sm mt-1 line-clamp-2 whitespace-pre-wrap text-text-lighter">
+          {commit.description}
+        </div>
+      )}
+      <div className="ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
         <span className="truncate">{commit.author}</span>
         <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
       </div>
@@ -150,31 +154,29 @@ const GitCommitHistory = ({
           showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
         )}
       >
-        {showHeader && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="sticky top-0 z-20 w-full shrink-0 justify-start gap-1 rounded-none border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm"
-            onClick={onToggle}
-          >
-            {isCollapsed ? <ChevronRight /> : <ChevronDown />}
-            <span className="ui-text-sm font-medium text-text">History</span>
-            <div className="flex-1" />
-            <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{commits.length}</span>
-          </Button>
-        )}
+        <div className="shrink-0 px-1 py-1">
+          {showHeader ? (
+            <GitSidebarSectionHeader
+              title="History"
+              collapsible
+              isCollapsed={isCollapsed}
+              onToggle={onToggle}
+            />
+          ) : (
+            <GitSidebarSectionHeader title="History" />
+          )}
+        </div>
 
         {!isCollapsed && (
           <div
             className={cn(
-              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll p-1",
+              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll px-1 pb-1",
               showHeader ? "bg-primary-bg/70" : "bg-transparent",
             )}
             ref={scrollContainerRef}
           >
             {commits.length === 0 ? (
-              <div className="ui-text-sm px-2.5 py-1.5 text-text-lighter italic">No commits</div>
+              <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No commits</div>
             ) : (
               <>
                 {commits.map((commit) => (

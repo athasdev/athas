@@ -212,7 +212,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
       xtermRef.current = terminal;
       addonsRef.current = addons;
-      fitTerminal(12);
+
+      // Fit synchronously after open so terminal.rows/cols reflect the actual container size
+      // before we create the PTY with those dimensions
+      addons.fitAddon.fit();
 
       const existingSession = getSession(sessionId);
       if (existingSession?.connectionId) {
@@ -260,6 +263,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       });
       setIsInitialized(true);
       isInitializingRef.current = false;
+
+      // Re-fit after connection is established so onResize can notify the PTY
+      fitTerminal(3);
 
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {

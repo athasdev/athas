@@ -1,30 +1,44 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Activity, AlertCircle, RefreshCw } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, AlertCircle } from "lucide-react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { WorkflowRunListItem } from "../types/github";
+import {
+  GITHUB_ACTION_DETAILS_TTL_MS,
+  GITHUB_ACTION_LIST_TTL_MS,
+  githubActionDetailsCache,
+  githubActionListCache,
+} from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
-import { cn } from "@/utils/cn";
-
-const WORKFLOW_RUN_LIST_CACHE_TTL_MS = 30_000;
-const workflowRunListCache = new Map<string, { fetchedAt: number; runs: WorkflowRunListItem[] }>();
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
   isActive: boolean;
   onSelect: () => void;
+  onPrefetch: () => void;
 }
 
-const WorkflowRunRow = memo(({ run, isActive, onSelect }: WorkflowRunRowProps) => (
+const WorkflowRunRow = memo(({ run, isActive, onSelect, onPrefetch }: WorkflowRunRowProps) => (
   <Button
     onClick={onSelect}
+    onMouseEnter={onPrefetch}
+    onFocus={onPrefetch}
     variant="ghost"
     size="sm"
     active={isActive}
-    className="h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left"
+    className="h-auto w-full min-w-0 items-start justify-start rounded-xl px-3 py-2.5 text-left"
   >
     <div className="grid size-5 shrink-0 place-content-center rounded-full bg-secondary-bg text-text-lighter">
       <Activity className="size-3.5" />
@@ -48,7 +62,11 @@ const WorkflowRunRow = memo(({ run, isActive, onSelect }: WorkflowRunRowProps) =
 
 WorkflowRunRow.displayName = "WorkflowRunRow";
 
-const GitHubActionsView = memo(() => {
+interface GitHubActionsViewProps {
+  refreshNonce?: number;
+}
+
+const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
@@ -64,6 +82,7 @@ const GitHubActionsView = memo(() => {
   const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const deferredRuns = useDeferredValue(runs);
 
   const fetchRuns = useCallback(
     async (force = false) => {
@@ -74,23 +93,38 @@ const GitHubActionsView = memo(() => {
         return;
       }
 
-      const cached = workflowRunListCache.get(repoPath);
-      if (cached && !force && Date.now() - cached.fetchedAt < WORKFLOW_RUN_LIST_CACHE_TTL_MS) {
-        setRuns(cached.runs);
+      const cached = githubActionListCache.getFreshValue(repoPath, GITHUB_ACTION_LIST_TTL_MS);
+      if (cached && !force) {
+        startTransition(() => setRuns(cached));
         setError(null);
         setIsLoading(false);
         return;
+      }
+
+      const stale = githubActionListCache.getSnapshot(repoPath)?.value;
+      if (stale && !force) {
+        startTransition(() => setRuns(stale));
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const nextRuns = await invoke<WorkflowRunListItem[]>("github_list_workflow_runs", {
+        const nextRuns = await githubActionListCache.load(
           repoPath,
-        });
-        workflowRunListCache.set(repoPath, { fetchedAt: Date.now(), runs: nextRuns });
-        setRuns(nextRuns);
+          () => invoke<WorkflowRunListItem[]>("github_list_workflow_runs", { repoPath }),
+          { force, ttlMs: GITHUB_ACTION_LIST_TTL_MS },
+        );
+        startTransition(() => setRuns(nextRuns));
+
+        for (const run of nextRuns.slice(0, 3)) {
+          const cacheKey = `${repoPath}::${run.databaseId}`;
+          void githubActionDetailsCache.load(
+            cacheKey,
+            () => invoke("github_get_workflow_run_details", { repoPath, runId: run.databaseId }),
+            { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
+          );
+        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -101,14 +135,36 @@ const GitHubActionsView = memo(() => {
   );
 
   useEffect(() => {
-    void checkAuth();
+    const timeoutId = window.setTimeout(() => {
+      void checkAuth();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [checkAuth]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      void fetchRuns();
-    }
+    if (!isAuthenticated) return;
+
+    let timeoutId: number | null = null;
+    const frameId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        void fetchRuns();
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [fetchRuns, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && refreshNonce > 0) {
+      void fetchRuns(true);
+    }
+  }, [fetchRuns, isAuthenticated, refreshNonce]);
 
   if (!isAuthenticated) {
     return (
@@ -122,44 +178,51 @@ const GitHubActionsView = memo(() => {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <div className="ui-text-sm text-text">Actions</div>
-        <Button
-          onClick={() => void fetchRuns(true)}
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Refresh workflow runs"
-        >
-          <RefreshCw className={cn(isLoading && "animate-spin")} />
-        </Button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+    <div className="min-h-0 flex-1 overflow-hidden">
+      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
           <div className="flex items-center gap-2 px-2 py-3 text-error">
             <AlertCircle className="size-4" />
             <p className="ui-text-sm">{error}</p>
           </div>
-        ) : runs.length === 0 && !isLoading ? (
+        ) : deferredRuns.length === 0 && !isLoading ? (
           <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
             <Activity className="size-4" />
             <p className="ui-text-sm">No workflow runs</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {runs.map((run) => (
+          <div className="space-y-1 overflow-x-hidden">
+            {deferredRuns.map((run) => (
               <WorkflowRunRow
                 key={run.databaseId}
                 run={run}
                 isActive={activeRunId === run.databaseId}
+                onPrefetch={() => {
+                  if (!repoPath) return;
+                  const cacheKey = `${repoPath}::${run.databaseId}`;
+                  void githubActionDetailsCache.load(
+                    cacheKey,
+                    () =>
+                      invoke("github_get_workflow_run_details", {
+                        repoPath,
+                        runId: run.databaseId,
+                      }),
+                    { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
+                  );
+                }}
                 onSelect={() =>
-                  openGitHubActionBuffer({
-                    runId: run.databaseId,
-                    repoPath: repoPath ?? undefined,
-                    title:
-                      run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`,
-                    url: run.url,
+                  startTransition(() => {
+                    openGitHubActionBuffer({
+                      runId: run.databaseId,
+                      repoPath: repoPath ?? undefined,
+                      title:
+                        run.displayTitle ||
+                        run.name ||
+                        run.workflowName ||
+                        `Run #${run.databaseId}`,
+                      url: run.url,
+                    });
                   })
                 }
               />

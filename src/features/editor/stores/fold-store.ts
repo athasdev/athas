@@ -1,10 +1,12 @@
 import { create } from "zustand";
+import { logger } from "@/features/editor/utils/logger";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-interface FoldRegion {
+export interface FoldRegion {
   startLine: number;
   endLine: number;
   indentLevel: number;
+  kind?: "generic" | "diff-file" | "diff-hunk";
 }
 
 interface FileFoldState {
@@ -28,7 +30,33 @@ interface FoldState {
   };
 }
 
-function detectFoldRegions(content: string): FoldRegion[] {
+function detectDiffFoldRegions(content: string): FoldRegion[] {
+  const lines = content.split(/\r?\n/);
+  const regions: FoldRegion[] = [];
+  const fileStarts: number[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("\uE000ATHAS_DIFF_FILE ")) {
+      fileStarts.push(i);
+    }
+  }
+
+  for (let i = 0; i < fileStarts.length; i++) {
+    const startLine = fileStarts[i];
+    const endLine = (fileStarts[i + 1] ?? lines.length) - 1;
+    if (endLine > startLine) {
+      regions.push({ startLine, endLine, indentLevel: 0, kind: "diff-file" });
+    }
+  }
+
+  return regions;
+}
+
+function detectFoldRegions(filePath: string, content: string): FoldRegion[] {
+  if (filePath.endsWith(".diff") || filePath.startsWith("diff-editor://")) {
+    return detectDiffFoldRegions(content);
+  }
+
   const lines = content.split(/\r?\n/);
   const regions: FoldRegion[] = [];
   const stack: Array<{
@@ -73,6 +101,7 @@ function detectFoldRegions(content: string): FoldRegion[] {
           startLine: region.startLine,
           endLine: lastMeaningfulLine,
           indentLevel: region.indentLevel,
+          kind: "generic",
         });
       }
     }
@@ -96,6 +125,7 @@ function detectFoldRegions(content: string): FoldRegion[] {
         startLine: region.startLine,
         endLine: lastMeaningfulLine,
         indentLevel: region.indentLevel,
+        kind: "generic",
       });
     }
   }
@@ -109,7 +139,7 @@ export const useFoldStore = createSelectors(
 
     actions: {
       computeFoldRegions: (filePath, content) => {
-        const regions = detectFoldRegions(content);
+        const regions = detectFoldRegions(filePath, content);
         set((state) => {
           const newMap = new Map(state.foldsByFile);
           const existing = newMap.get(filePath);
@@ -122,6 +152,9 @@ export const useFoldStore = createSelectors(
       },
 
       toggleFold: (filePath, lineNumber) => {
+        const start = performance.now();
+        let action: "fold" | "unfold" | "noop" = "noop";
+
         set((state) => {
           const newMap = new Map(state.foldsByFile);
           const fileState = newMap.get(filePath);
@@ -130,10 +163,12 @@ export const useFoldStore = createSelectors(
           const newCollapsed = new Set(fileState.collapsedLines);
           if (newCollapsed.has(lineNumber)) {
             newCollapsed.delete(lineNumber);
+            action = "unfold";
           } else {
             const isFoldable = fileState.regions.some((r) => r.startLine === lineNumber);
             if (isFoldable) {
               newCollapsed.add(lineNumber);
+              action = "fold";
             }
           }
 
@@ -143,6 +178,11 @@ export const useFoldStore = createSelectors(
           });
           return { foldsByFile: newMap };
         });
+
+        logger.info(
+          "FoldStore",
+          `${action} toggle for ${filePath}:${lineNumber + 1} took ${(performance.now() - start).toFixed(2)}ms`,
+        );
       },
 
       foldAll: (filePath) => {

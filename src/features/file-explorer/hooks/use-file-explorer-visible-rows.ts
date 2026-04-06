@@ -1,14 +1,12 @@
 import { useEffect, useMemo, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
+import {
+  buildVisibleFileTreeRows,
+  type VisibleFileTreeRow,
+} from "@/features/file-explorer/lib/visible-file-tree-rows";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import type { FileEntry } from "@/features/file-system/types/app";
-
-export interface VisibleRow {
-  file: FileEntry;
-  depth: number;
-  isExpanded: boolean;
-}
 
 interface UseFileExplorerVisibleRowsOptions {
   files: FileEntry[];
@@ -24,20 +22,7 @@ export function useFileExplorerVisibleRows({
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
 
   const visibleRows = useMemo(() => {
-    const rows: VisibleRow[] = [];
-
-    const walk = (items: FileEntry[], depth: number) => {
-      for (const item of items) {
-        const isExpanded = item.isDir && expandedPaths.has(item.path);
-        rows.push({ file: item, depth, isExpanded });
-        if (item.isDir && isExpanded && item.children) {
-          walk(item.children, depth + 1);
-        }
-      }
-    };
-
-    walk(files, 0);
-    return rows;
+    return buildVisibleFileTreeRows(files, expandedPaths);
   }, [expandedPaths, files]);
 
   const rowVirtualizer = useVirtualizer({
@@ -63,3 +48,5 @@ export function useFileExplorerVisibleRows({
 
   return { visibleRows, rowVirtualizer };
 }
+
+export type VisibleRow = VisibleFileTreeRow;

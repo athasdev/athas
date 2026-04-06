@@ -72,7 +72,7 @@ export const FileTreeSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="File Explorer Filters">
+      <Section title="Filters">
         <SettingRow
           label="Hidden File Patterns"
           description="Files matching these glob patterns will be hidden from the file tree"

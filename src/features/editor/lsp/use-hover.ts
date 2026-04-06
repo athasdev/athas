@@ -30,6 +30,8 @@ export const useHover = ({
         return;
       }
 
+      actions.setIsHovering(true);
+
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
@@ -114,32 +116,35 @@ export const useHover = ({
 
               if (content.trim()) {
                 const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;
-                const tooltipHeight = EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT;
                 const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
+                const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
 
-                let tooltipX = clientX + 15;
-                let tooltipY = clientY + 15;
+                const gap = 6;
+                const maxTooltipHeight = EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT;
+                let tooltipX = clientX;
+                const lineTop = rect.top + paddingTop + clampedLine * lineHeight - scrollTop;
+                const spaceAbove = lineTop - margin;
+                const spaceBelow = window.innerHeight - (lineTop + lineHeight) - margin;
+                let opensUpward = spaceAbove >= Math.min(maxTooltipHeight, spaceBelow);
 
-                if (tooltipX + tooltipWidth > window.innerWidth - margin) {
-                  tooltipX = clientX - tooltipWidth - 15;
+                let tooltipY: number;
+                if (opensUpward) {
+                  tooltipY = lineTop - gap;
+                } else {
+                  tooltipY = lineTop + lineHeight + gap;
                 }
 
-                if (tooltipY + tooltipHeight > window.innerHeight - margin) {
-                  tooltipY = clientY - tooltipHeight - 15;
-                }
-
+                // Clamp horizontally
                 tooltipX = Math.max(
                   margin,
                   Math.min(tooltipX, window.innerWidth - tooltipWidth - margin),
                 );
-                tooltipY = Math.max(
-                  margin,
-                  Math.min(tooltipY, window.innerHeight - tooltipHeight - margin),
-                );
+                tooltipY = Math.max(margin, tooltipY);
 
                 actions.setHoverInfo({
                   content: content.trim(),
                   position: { top: tooltipY, left: tooltipX },
+                  opensUpward,
                 });
               }
             }
@@ -149,7 +154,15 @@ export const useHover = ({
         }
       }, EDITOR_CONSTANTS.HOVER_TOOLTIP_DELAY);
     },
-    [getHover, isLanguageSupported, filePath, fontSize, charWidth, actions.setHoverInfo],
+    [
+      getHover,
+      isLanguageSupported,
+      filePath,
+      fontSize,
+      charWidth,
+      actions.setHoverInfo,
+      actions.setIsHovering,
+    ],
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -159,7 +172,7 @@ export const useHover = ({
       clearTimeout(hoverTimeoutRef.current);
     }
     setTimeout(() => {
-      const tooltipHovered = document.querySelector(".hover-tooltip:hover") !== null;
+      const tooltipHovered = document.querySelector(".editor-overlay-card:hover") !== null;
       if (!useEditorUIStore.getState().isHovering && !tooltipHovered) {
         actions.setHoverInfo(null);
       }
@@ -167,7 +180,6 @@ export const useHover = ({
   }, [actions.setIsHovering, actions.setHoverInfo]);
 
   const handleMouseEnter = useCallback(() => {
-    hoverRequestIdRef.current += 1;
     actions.setIsHovering(true);
   }, [actions.setIsHovering]);
 

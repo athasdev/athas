@@ -29,6 +29,13 @@ const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
     { parentType: "script_element", contentType: "raw_text", language: "javascript" },
     { parentType: "style_element", contentType: "raw_text", language: "css" },
   ],
+  svelte: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+    { parentType: "*", contentType: "raw_text_await", language: "javascript" },
+    { parentType: "*", contentType: "raw_text_each", language: "javascript" },
+    { parentType: "*", contentType: "raw_text_expr", language: "javascript" },
+  ],
   markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
 };
 
@@ -38,20 +45,20 @@ const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
 function findInjectionNodes(
   rootNode: Node,
   rules: InjectionRule[],
-): Array<{ rule: InjectionRule; node: Node }> {
-  const results: Array<{ rule: InjectionRule; node: Node }> = [];
+): Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> {
+  const results: Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> = [];
 
   function walk(node: Node) {
     for (const rule of rules) {
       if (rule.parentType === "*") {
         if (node.type === rule.contentType) {
-          results.push({ rule, node });
+          results.push({ rule, node, parentNode: null });
         }
       } else if (node.type === rule.parentType) {
         for (let i = 0; i < node.childCount; i++) {
           const child = node.child(i);
           if (child && child.type === rule.contentType) {
-            results.push({ rule, node: child });
+            results.push({ rule, node: child, parentNode: node });
           }
         }
       }
@@ -64,6 +71,40 @@ function findInjectionNodes(
 
   walk(rootNode);
   return results;
+}
+
+function resolveInjectedLanguage(
+  source: string,
+  parentLanguageId: string,
+  rule: InjectionRule,
+  node: Node,
+  parentNode: Node | null,
+): string {
+  if (rule.parentType !== "script_element" || !parentNode) {
+    return rule.language;
+  }
+
+  const openingTag = source.slice(parentNode.startIndex, node.startIndex);
+  const langMatch = openingTag.match(/\blang\s*=\s*["']([^"']+)["']/i);
+  const lang = langMatch?.[1]?.trim().toLowerCase();
+
+  if (!lang) {
+    return rule.language;
+  }
+
+  if (lang === "ts" || lang === "typescript") {
+    return "typescript";
+  }
+
+  if (lang === "js" || lang === "javascript") {
+    return "javascript";
+  }
+
+  if (parentLanguageId === "svelte" && (lang === "tsx" || lang === "jsx")) {
+    return lang === "tsx" ? "typescriptreact" : "javascriptreact";
+  }
+
+  return rule.language;
 }
 
 /**
@@ -314,14 +355,21 @@ export async function tokenizeCodeWithTree(
     if (injectionRules) {
       const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
 
-      for (const { rule, node } of injectionNodes) {
+      for (const { rule, node, parentNode } of injectionNodes) {
         try {
           const embeddedContent = content.substring(node.startIndex, node.endIndex);
           if (!embeddedContent.trim()) continue;
 
-          const wasmPath = getDefaultParserWasmUrl(rule.language);
-          const subTokens = await tokenizeCode(embeddedContent, rule.language, {
-            languageId: rule.language,
+          const embeddedLanguageId = resolveInjectedLanguage(
+            content,
+            languageId,
+            rule,
+            node,
+            parentNode,
+          );
+          const wasmPath = getDefaultParserWasmUrl(embeddedLanguageId);
+          const subTokens = await tokenizeCode(embeddedContent, embeddedLanguageId, {
+            languageId: embeddedLanguageId,
             wasmPath,
           });
 

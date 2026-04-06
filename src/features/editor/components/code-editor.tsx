@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -12,15 +12,25 @@ import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
+import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
+import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
+import RenameInput from "../lsp/rename-input";
+import SemanticTokensOverlay from "../lsp/semantic-tokens-overlay";
+import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
+import { useCodeLens } from "../lsp/use-code-lens";
+import { useInlayHints } from "../lsp/use-inlay-hints";
+import { useRename } from "../lsp/use-rename";
+import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
 import { EditorStylesheet } from "./stylesheet";
-import Breadcrumb from "./toolbar/breadcrumb";
+import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
 
 interface CodeEditorProps {
@@ -33,6 +43,11 @@ interface CodeEditorProps {
   bufferId?: string;
   isActiveSurface?: boolean;
   showToolbar?: boolean;
+  readOnly?: boolean;
+  breadcrumbProps?: BreadcrumbProps;
+  scrollable?: boolean;
+  backgroundLayer?: ReactNode;
+  onReadonlySurfaceClick?: (position: { line: number; column: number }) => void;
 }
 
 export interface CodeEditorRef {
@@ -42,6 +57,7 @@ export interface CodeEditorRef {
 
 interface GoToLineEventDetail {
   line?: number;
+  column?: number;
   path?: string;
 }
 
@@ -52,6 +68,11 @@ const CodeEditor = ({
   bufferId: propBufferId,
   isActiveSurface = true,
   showToolbar = true,
+  readOnly = false,
+  breadcrumbProps,
+  scrollable = true,
+  backgroundLayer,
+  onReadonlySurfaceClick,
 }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,6 +91,7 @@ const CodeEditor = ({
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
+  const isFindVisible = useUIState((state) => state.isFindVisible);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
@@ -79,7 +101,7 @@ const CodeEditor = ({
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
-  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer;
+  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -140,6 +162,27 @@ const CodeEditor = ({
     fontSize: zoomedFontSize,
   });
 
+  // Rename symbol support
+  const rename = useRename(enableInteractiveServices ? filePath : undefined);
+
+  // Inlay hints
+  const inlayHints = useInlayHints(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
+
+  // Code lens
+  const codeLenses = useCodeLens(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
+
+  // Semantic tokens
+  const semanticTokens = useSemanticTokens(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
+
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!enableInteractiveServices) return;
@@ -160,7 +203,7 @@ const CodeEditor = ({
   // Handle go-to-line events (from search results, diagnostics, vim, etc.)
   useEffect(() => {
     if (!isActiveSurface) return;
-    const goToLine = (lineNumber: number) => {
+    const goToLine = (lineNumber: number, columnNumber?: number) => {
       if (!editorRef.current) return false;
 
       const textarea = editorRef.current.querySelector("textarea");
@@ -176,11 +219,17 @@ const CodeEditor = ({
       // Convert to 0-indexed line number and clamp to valid range
       const targetLine = Math.max(0, Math.min(lineNumber - 1, lines.length - 1));
 
+      const targetColumn = Math.max(
+        0,
+        Math.min((columnNumber ?? 1) - 1, lines[targetLine]?.length ?? 0),
+      );
+
       // Calculate character offset for the target line
       let offset = 0;
       for (let i = 0; i < targetLine; i++) {
         offset += lines[i].length + 1;
       }
+      offset += targetColumn;
 
       // Set cursor position in textarea
       textarea.selectionStart = offset;
@@ -198,7 +247,7 @@ const CodeEditor = ({
       const { setCursorPosition } = useEditorStateStore.getState().actions;
       setCursorPosition({
         line: targetLine,
-        column: 0,
+        column: targetColumn,
         offset: offset,
       });
 
@@ -207,13 +256,14 @@ const CodeEditor = ({
 
     const handleGoToLine = (event: CustomEvent<GoToLineEventDetail>) => {
       const lineNumber = event.detail?.line;
+      const columnNumber = event.detail?.column;
       const targetPath = event.detail?.path;
       if (targetPath && targetPath !== filePath) return;
       if (!lineNumber) return;
 
       // Try immediately, then retry if content not ready yet
-      if (!goToLine(lineNumber)) {
-        setTimeout(() => goToLine(lineNumber), 150);
+      if (!goToLine(lineNumber, columnNumber)) {
+        setTimeout(() => goToLine(lineNumber, columnNumber), 150);
       }
     };
 
@@ -229,7 +279,7 @@ const CodeEditor = ({
       clearTimeout(searchTimerRef.current);
     }
 
-    if (!enableInteractiveServices) {
+    if (!enableInteractiveServices || !isFindVisible) {
       setSearchMatches([]);
       setCurrentMatchIndex(-1);
       return;
@@ -263,6 +313,7 @@ const CodeEditor = ({
     };
   }, [
     enableInteractiveServices,
+    isFindVisible,
     searchQuery,
     searchOptions,
     value,
@@ -309,7 +360,7 @@ const CodeEditor = ({
       <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
-        {showToolbar && settings.coreFeatures.breadcrumbs && <Breadcrumb />}
+        {showToolbar && settings.coreFeatures.breadcrumbs && <Breadcrumb {...breadcrumbProps} />}
 
         {/* Find Bar */}
         {showToolbar && enableInteractiveServices && <FindBar />}
@@ -331,6 +382,61 @@ const CodeEditor = ({
           {/* Completion Dropdown */}
           {enableInteractiveServices && <CompletionDropdown />}
 
+          {/* Semantic Tokens */}
+          {enableInteractiveServices && semanticTokens.length > 0 && (
+            <SemanticTokensOverlay
+              tokens={semanticTokens}
+              content={value}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
+
+          {/* Code Lens */}
+          {enableInteractiveServices && codeLenses.length > 0 && (
+            <CodeLensOverlay
+              lenses={codeLenses}
+              fontSize={zoomedFontSize}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
+
+          {/* Inlay Hints */}
+          {enableInteractiveServices && inlayHints.length > 0 && (
+            <InlayHintsOverlay
+              hints={inlayHints}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
+
+          {/* Signature Help */}
+          {enableInteractiveServices && <SignatureHelpTooltip />}
+
+          {/* Rename Input */}
+          {enableInteractiveServices && rename.renameState && (
+            <RenameInput
+              symbol={rename.renameState.symbol}
+              line={rename.renameState.line}
+              column={rename.renameState.column}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              inputRef={rename.inputRef}
+              onSubmit={(newName) => void rename.executeRename(newName)}
+              onCancel={rename.cancelRename}
+            />
+          )}
+
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">
             {showMarkdownPreview ? (
@@ -344,6 +450,10 @@ const CodeEditor = ({
                 bufferId={activeBufferId ?? undefined}
                 isActiveSurface={isActiveSurface}
                 isPreviewMode={isPreviewBuffer}
+                readOnly={readOnly}
+                scrollable={scrollable}
+                backgroundLayer={backgroundLayer}
+                onReadonlySurfaceClick={onReadonlySurfaceClick}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={

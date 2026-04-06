@@ -14,6 +14,7 @@ export interface GitStatus {
 export interface GitCommit {
   hash: string;
   message: string;
+  description?: string;
   author: string;
   date: string;
 }

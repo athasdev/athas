@@ -5,7 +5,10 @@ mod node;
 pub use bun::BunRuntime;
 pub use node::NodeRuntime;
 use serde::{Deserialize, Serialize};
-use std::{fmt, path::PathBuf};
+use std::{
+   fmt,
+   path::{Path, PathBuf},
+};
 
 /// Supported runtime types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,13 +26,13 @@ pub struct RuntimeManager;
 
 impl RuntimeManager {
    /// Get a JS runtime, preferring Bun over Node
-   pub async fn get_js_runtime(app_handle: &tauri::AppHandle) -> Result<PathBuf, RuntimeError> {
-      if let Ok(bun) = BunRuntime::get_or_install(app_handle).await {
+   pub async fn get_js_runtime(managed_root: Option<&Path>) -> Result<PathBuf, RuntimeError> {
+      if let Ok(bun) = BunRuntime::get_or_install(managed_root).await {
          log::info!("Using Bun as JS runtime");
          return Ok(bun.binary_path().clone());
       }
 
-      if let Ok(node) = NodeRuntime::get_or_install(app_handle).await {
+      if let Ok(node) = NodeRuntime::get_or_install(managed_root).await {
          log::info!("Falling back to Node.js as JS runtime");
          return Ok(node.binary_path().clone());
       }
@@ -41,16 +44,16 @@ impl RuntimeManager {
 
    /// Get runtime by type
    pub async fn get_runtime(
-      app_handle: &tauri::AppHandle,
+      managed_root: Option<&Path>,
       runtime_type: RuntimeType,
    ) -> Result<PathBuf, RuntimeError> {
       match runtime_type {
          RuntimeType::Bun => {
-            let runtime = BunRuntime::get_or_install(app_handle).await?;
+            let runtime = BunRuntime::get_or_install(managed_root).await?;
             Ok(runtime.binary_path().clone())
          }
          RuntimeType::Node => {
-            let runtime = NodeRuntime::get_or_install(app_handle).await?;
+            let runtime = NodeRuntime::get_or_install(managed_root).await?;
             Ok(runtime.binary_path().clone())
          }
          RuntimeType::Python => Self::detect_python(),
@@ -61,12 +64,12 @@ impl RuntimeManager {
 
    /// Get runtime status by type
    pub async fn get_status(
-      app_handle: &tauri::AppHandle,
+      managed_root: Option<&Path>,
       runtime_type: RuntimeType,
    ) -> RuntimeStatus {
       match runtime_type {
-         RuntimeType::Bun => BunRuntime::get_status(app_handle).await,
-         RuntimeType::Node => NodeRuntime::get_status(app_handle).await,
+         RuntimeType::Bun => BunRuntime::get_status(managed_root).await,
+         RuntimeType::Node => NodeRuntime::get_status(managed_root).await,
          RuntimeType::Python => {
             if Self::detect_python().is_ok() {
                RuntimeStatus::SystemAvailable

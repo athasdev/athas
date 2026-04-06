@@ -16,6 +16,14 @@ use zip::ZipArchive;
 pub struct ToolInstaller;
 
 impl ToolInstaller {
+   fn get_runtime_root(app_handle: &tauri::AppHandle) -> Result<PathBuf, ToolError> {
+      app_handle
+         .path()
+         .app_data_dir()
+         .map(|dir| dir.join("runtimes"))
+         .map_err(|e| ToolError::ConfigError(e.to_string()))
+   }
+
    fn configured_command_name(config: &ToolConfig) -> &str {
       config.command.as_deref().unwrap_or(&config.name)
    }
@@ -259,7 +267,8 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let bun_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Bun)
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let bun_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Bun)
          .await
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
@@ -312,7 +321,8 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let node_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Node)
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let node_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Node)
          .await
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
@@ -370,7 +380,8 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let python_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Python)
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let python_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Python)
          .await
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
@@ -436,7 +447,8 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let go_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Go)
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let go_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Go)
          .await
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
@@ -475,7 +487,8 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let cargo_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Rust)
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let cargo_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Rust)
          .await
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 

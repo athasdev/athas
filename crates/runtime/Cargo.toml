@@ -9,6 +9,5 @@ log = "0.4"
 reqwest = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 tar = "0.4"
-tauri = { version = "2", features = ["test"] }
 which = "7.0"
 zip = "2.2"

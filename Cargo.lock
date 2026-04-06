@@ -627,6 +627,7 @@ dependencies = [
  "async-trait",
  "athas-terminal",
  "log",
+ "rusqlite",
  "serde",
  "serde_json",
  "tauri",
@@ -703,7 +704,6 @@ dependencies = [
  "notify",
  "notify-debouncer-mini",
  "serde",
- "tauri",
 ]
 
 [[package]]
@@ -728,7 +728,6 @@ dependencies = [
  "reqwest",
  "serde",
  "tar",
- "tauri",
  "which",
  "zip 2.4.2",
 ]

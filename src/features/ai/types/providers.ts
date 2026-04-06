@@ -11,6 +11,7 @@ interface Model {
   id: string;
   name: string;
   maxTokens: number;
+  proOnly?: boolean;
 }
 
 // CLI Agents that use Agent Client Protocol (ACP)
@@ -118,6 +119,12 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
+        id: "gpt-5.4",
+        name: "GPT-5.4",
+        maxTokens: 500000,
+        proOnly: true,
+      },
+      {
         id: "gpt-5.2",
         name: "GPT-5.2",
         maxTokens: 400000,
@@ -209,6 +216,12 @@ export const AI_PROVIDERS: ModelProvider[] = [
         id: "anthropic/claude-haiku-4.5",
         name: "Claude Haiku 4.5",
         maxTokens: 200000,
+      },
+      {
+        id: "openai/gpt-5.4",
+        name: "GPT-5.4",
+        maxTokens: 500000,
+        proOnly: true,
       },
       {
         id: "openai/gpt-5.2",

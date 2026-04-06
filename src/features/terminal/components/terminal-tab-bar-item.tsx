@@ -97,6 +97,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
+        labelPosition={orientation === "vertical" ? "start" : "center"}
         className={cn(
           orientation === "vertical"
             ? "w-full max-w-none justify-start pr-5 pl-2"

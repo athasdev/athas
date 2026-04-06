@@ -8,6 +8,7 @@ import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
 } from "@/features/file-system/controllers/file-watcher-store";
+import { useOnboardingStore } from "@/features/onboarding/store";
 import { useLspInitialization } from "@/features/editor/hooks/use-lsp-initialization";
 import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
 import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
@@ -25,6 +26,7 @@ import {
 
 export function useAppBootstrap() {
   const initializeWhatsNew = useWhatsNewStore((state) => state.initialize);
+  const initializeOnboarding = useOnboardingStore((state) => state.initialize);
 
   usePlatformSetup();
   useFontLoading();
@@ -43,6 +45,10 @@ export function useAppBootstrap() {
   useEffect(() => {
     void initializeWhatsNew();
   }, [initializeWhatsNew]);
+
+  useEffect(() => {
+    void initializeOnboarding();
+  }, [initializeOnboarding]);
 
   useEffect(() => {
     void initializeFileWatcherListener();

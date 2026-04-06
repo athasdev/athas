@@ -56,6 +56,9 @@ export interface ExtensionManifest {
   // Activation events
   activationEvents?: string[];
 
+  // UI contributions (sidebar views, toolbar actions, menus)
+  contributes?: UIContributions;
+
   // Entry point (for custom extension code)
   main?: string;
 
@@ -82,6 +85,7 @@ export type ExtensionCategory =
   | "Theme"
   | "Keymaps"
   | "Snippets"
+  | "UI"
   | "Other";
 
 export interface LanguageContribution {
@@ -351,4 +355,32 @@ export interface PlatformPackage {
 
   // Platform-specific checksum
   checksum: string;
+}
+
+export interface UIContributions {
+  sidebarViews?: SidebarViewContribution[];
+  toolbarActions?: ToolbarActionContribution[];
+  commands?: CommandContribution[];
+  menus?: MenuContribution[];
+}
+
+export interface SidebarViewContribution {
+  id: string;
+  title: string;
+  icon: string;
+  when?: string;
+}
+
+export interface ToolbarActionContribution {
+  id: string;
+  title: string;
+  icon: string;
+  command: string;
+  position: "left" | "right";
+  when?: string;
+}
+
+export interface MenuContribution {
+  id: string;
+  items: Array<{ command: string; group?: string; when?: string }>;
 }

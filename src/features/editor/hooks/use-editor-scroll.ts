@@ -17,6 +17,7 @@ interface UseEditorScrollOptions {
   autocompleteCompletionRef: RefObject<HTMLDivElement | null>;
   inlineEditOverlayRef: RefObject<HTMLDivElement | null>;
   gitBlameRef: RefObject<HTMLDivElement | null>;
+  inlineDiffRef: RefObject<HTMLDivElement | null>;
   setEditorScrollTop: (top: number) => void;
   handleViewportScroll: (scrollTop: number, totalLines: number) => void;
 }
@@ -34,6 +35,7 @@ export function useEditorScroll({
   autocompleteCompletionRef,
   inlineEditOverlayRef,
   gitBlameRef,
+  inlineDiffRef,
   setEditorScrollTop,
   handleViewportScroll,
 }: UseEditorScrollOptions) {
@@ -102,6 +104,9 @@ export function useEditorScroll({
           if (gitBlameRef.current) {
             gitBlameRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
+          if (inlineDiffRef.current) {
+            inlineDiffRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
 
           const now = performance.now();
           if (now - lastStoreScrollUpdateRef.current >= SCROLL_STATE_UPDATE_INTERVAL_MS) {
@@ -136,6 +141,7 @@ export function useEditorScroll({
       autocompleteCompletionRef,
       inlineEditOverlayRef,
       gitBlameRef,
+      inlineDiffRef,
       setEditorScrollTop,
     ],
   );

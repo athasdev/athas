@@ -27,7 +27,7 @@ export type GitHubEntityLink = GitHubPullRequestLink | GitHubIssueLink | GitHubA
 export function parseGitHubEntityLink(value: string): GitHubEntityLink | null {
   try {
     const url = new URL(value);
-    if (url.hostname !== "github.com") return null;
+    if (!isGitHubHost(url.hostname)) return null;
 
     const segments = url.pathname.split("/").filter(Boolean);
     if (segments.length < 4) return null;
@@ -68,6 +68,10 @@ export function parseGitHubEntityLink(value: string): GitHubEntityLink | null {
   } catch {
     return null;
   }
+}
+
+function isGitHubHost(hostname: string): boolean {
+  return hostname === "github.com" || hostname === "www.github.com";
 }
 
 export function parseSelectedFilePathFromPRBufferPath(path: string): string | null {

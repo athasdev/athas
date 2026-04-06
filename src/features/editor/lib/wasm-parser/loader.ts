@@ -198,6 +198,23 @@ class WasmParserLoader {
     return query;
   }
 
+  private ensureValidWasmBytes(languageId: string, wasmPath: string, wasmBytes: Uint8Array): void {
+    const hasWasmHeader =
+      wasmBytes.length >= 4 &&
+      wasmBytes[0] === 0x00 &&
+      wasmBytes[1] === 0x61 &&
+      wasmBytes[2] === 0x73 &&
+      wasmBytes[3] === 0x6d;
+
+    if (hasWasmHeader) {
+      return;
+    }
+
+    throw new Error(
+      `Invalid WASM payload for ${languageId} from ${wasmPath} (missing wasm header)`,
+    );
+  }
+
   /**
    * Compile highlight query with compatibility rewrites for parser/query mismatches.
    */
@@ -560,6 +577,7 @@ class WasmParserLoader {
 
           const arrayBuffer = await response.arrayBuffer();
           wasmBytes = new Uint8Array(arrayBuffer);
+          this.ensureValidWasmBytes(languageId, wasmPath, wasmBytes);
 
           // Cache for future use
           try {
@@ -591,6 +609,7 @@ class WasmParserLoader {
 
           const arrayBuffer = await response.arrayBuffer();
           wasmBytes = new Uint8Array(arrayBuffer);
+          this.ensureValidWasmBytes(languageId, wasmPath, wasmBytes);
 
           // Also fetch highlight query from local path if not provided
           if (!queryText) {

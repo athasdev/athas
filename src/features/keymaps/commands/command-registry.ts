@@ -1,12 +1,12 @@
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { isMac } from "@/utils/platform";
@@ -29,7 +29,7 @@ const fileCommands: Command[] = [
     id: "workbench.newTab",
     title: "New Tab",
     category: "File",
-    keybinding: "cmd+t",
+    keybinding: "cmd+n",
     execute: () => {
       if (useKeymapStore.getState().contexts.terminalFocus) return;
       useBufferStore.getState().actions.showNewTabView();
@@ -117,7 +117,6 @@ const fileCommands: Command[] = [
     id: "file.new",
     title: "New File",
     category: "File",
-    keybinding: "cmd+n",
     execute: () => {
       if (useKeymapStore.getState().contexts.terminalFocus) return;
 
@@ -638,6 +637,9 @@ const navigationCommands: Command[] = [
     keybinding: "shift+F12",
     execute: async () => {
       const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+      const { useReferencesStore } = await import("@/features/references/stores/references-store");
+      const { readFileContent } =
+        await import("@/features/file-system/controllers/file-operations");
 
       const lspClient = LspClient.getInstance();
       const bufferStore = useBufferStore.getState();
@@ -646,6 +648,21 @@ const navigationCommands: Command[] = [
 
       if (!activeBuffer?.path) return;
 
+      // Get the symbol name under cursor for display
+      const lines = editorAPI.getLines();
+      const currentLine = lines[cursorPosition.line] || "";
+      const wordMatch = currentLine.slice(0, cursorPosition.column + 1).match(/[\w$]+$/);
+      const wordEnd = currentLine.slice(cursorPosition.column).match(/^[\w$]*/);
+      const symbol = (wordMatch?.[0] || "") + (wordEnd?.[0]?.slice(1) || "");
+
+      const referencesActions = useReferencesStore.getState().actions;
+      referencesActions.setIsLoading(true);
+
+      // Open the references panel
+      const uiState = useUIState.getState();
+      uiState.setBottomPaneActiveTab("references");
+      uiState.setIsBottomPaneVisible(true);
+
       const references = await lspClient.getReferences(
         activeBuffer.path,
         cursorPosition.line,
@@ -653,8 +670,69 @@ const navigationCommands: Command[] = [
       );
 
       if (references && references.length > 0) {
-        console.log(`Found ${references.length} references:`, references);
+        // Collect file contents for line context
+        const fileContentsCache = new Map<string, string[]>();
+
+        // Get content from open buffers first, then read from disk
+        for (const ref of references) {
+          const filePath = ref.uri.replace("file://", "");
+          if (fileContentsCache.has(filePath)) continue;
+
+          const buffer = bufferStore.buffers.find((b) => b.path === filePath);
+          if (buffer && "content" in buffer && typeof buffer.content === "string") {
+            fileContentsCache.set(filePath, buffer.content.split("\n"));
+          } else {
+            try {
+              const content = await readFileContent(filePath);
+              fileContentsCache.set(filePath, content.split("\n"));
+            } catch {
+              fileContentsCache.set(filePath, []);
+            }
+          }
+        }
+
+        const converted = references.map((ref) => {
+          const filePath = ref.uri.replace("file://", "");
+          const fileLines = fileContentsCache.get(filePath) || [];
+          return {
+            filePath,
+            line: ref.range.start.line,
+            column: ref.range.start.character,
+            endLine: ref.range.end.line,
+            endColumn: ref.range.end.character,
+            lineContent: fileLines[ref.range.start.line] || "",
+          };
+        });
+
+        referencesActions.setReferences(
+          {
+            symbol: symbol || "symbol",
+            filePath: activeBuffer.path,
+            line: cursorPosition.line,
+            column: cursorPosition.column,
+          },
+          converted,
+        );
+      } else {
+        referencesActions.setReferences(
+          {
+            symbol: symbol || "symbol",
+            filePath: activeBuffer.path,
+            line: cursorPosition.line,
+            column: cursorPosition.column,
+          },
+          [],
+        );
       }
+    },
+  },
+  {
+    id: "editor.renameSymbol",
+    title: "Rename Symbol",
+    category: "Navigation",
+    keybinding: "F2",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("editor-rename-symbol"));
     },
   },
   {

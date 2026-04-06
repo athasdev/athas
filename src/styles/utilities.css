@@ -79,6 +79,10 @@
   font-size: var(--ui-text-sm);
 }
 
+.ui-text-xs {
+  font-size: var(--ui-text-xs);
+}
+
 .ui-text-md {
   font-size: var(--ui-text-md);
 }

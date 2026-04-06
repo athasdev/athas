@@ -77,7 +77,7 @@ src/
 - Group related components, hooks, and utils into feature-based folders (e.g. `src/features/editor/[components,types,utils,config,constants,etc.])
 - Use `src/` for shared, generic components used across multiple features (e.g. `src/components`, `src/hooks`, `src/utils`, etc.)
 - Use `src/extensions/` for extension-specific code (e.g. themes, plugins, etc.)
-- New feature code should follow the canonical structure documented in `docs/contributing.mdx`
+- New feature code should follow the canonical structure documented in the contributing docs (hosted in the www repo)
 - Prefer `src/features/[feature]/{components,hooks,services,api,adapters,stores,state,selectors,contexts,types,constants,utils,tests}`
 - Do not add new feature-specific logic to global folders unless it is genuinely shared across multiple features
 - Do not leave feature logic scattered in `src/features/[feature]/` root when an appropriate subfolder exists
@@ -86,9 +86,8 @@ src/
 
 ### Documentation
 
-- Update relevant documentation files when adding new features or making significant changes
+- User-facing documentation lives in the **www** repo (`www/docs/`), not in this repo
+- Update relevant documentation in the www repo when adding new features or making significant changes
 - Documentation should be clear and concise, focusing on usage and examples
-- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage, except for `docs/contributing/`
+- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage
 - Use markdown format for documentation files with proper headings, lists, and code blocks
-- Documentation is stored in the same repository as the codebase for easy access and versioning (e.g. `docs/` folder or README files in relevant directories)
-- Directories should not contain README files, all documentation should be centralized in a `docs/` folders- Documents that concern developers should be stored in `docs/contributing/`

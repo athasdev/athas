@@ -26,8 +26,11 @@ fn _git_status(repo_path: String) -> Result<GitStatus> {
    let mut status_opts = git2::StatusOptions::new();
    status_opts
       .include_untracked(true)
+      .recurse_untracked_dirs(false)
       .include_ignored(false)
-      .include_unmodified(false);
+      .include_unmodified(false)
+      .renames_head_to_index(false)
+      .renames_index_to_workdir(false);
 
    let statuses = repo
       .statuses(Some(&mut status_opts))

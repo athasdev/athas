@@ -10,6 +10,7 @@ interface GitIndicatorsProps {
   onIndicatorClick?: (lineNumber: number, type: "added" | "modified" | "deleted") => void;
   startLine: number;
   endLine: number;
+  hiddenLines?: Set<number>;
 }
 
 function GitIndicatorsComponent({
@@ -17,6 +18,7 @@ function GitIndicatorsComponent({
   onIndicatorClick,
   startLine,
   endLine,
+  hiddenLines,
 }: GitIndicatorsProps) {
   const decorations = useEditorDecorationsStore((state) => state.decorations);
 
@@ -87,6 +89,7 @@ function GitIndicatorsComponent({
     // Iterate only the viewport lines, checking against the Sets
     // This is O(ViewportLines) which is much faster than O(TotalDecorations) during scroll
     for (let lineNum = startLine; lineNum < endLine; lineNum++) {
+      if (hiddenLines?.has(lineNum)) continue;
       if (allGitDecorations.added.has(lineNum)) {
         result.push(renderIndicator(lineNum, "added"));
       } else if (allGitDecorations.modified.has(lineNum)) {
@@ -97,7 +100,7 @@ function GitIndicatorsComponent({
     }
 
     return result;
-  }, [allGitDecorations, lineHeight, startLine, endLine, onIndicatorClick]);
+  }, [allGitDecorations, lineHeight, startLine, endLine, onIndicatorClick, hiddenLines]);
 
   return (
     <div

@@ -1,6 +1,8 @@
 use crate::{RuntimeError, RuntimeStatus, downloader};
-use std::{path::PathBuf, process::Command};
-use tauri::Manager;
+use std::{
+   path::{Path, PathBuf},
+   process::Command,
+};
 
 /// Node.js version to download if system version is not available
 pub const NODE_VERSION: &str = "22.5.1";
@@ -20,7 +22,7 @@ impl NodeRuntime {
    /// 1. Check system PATH for Node.js >= 22.0.0
    /// 2. Check if Athas-managed Node.js exists
    /// 3. Download Node.js from nodejs.org
-   pub async fn get_or_install(app_handle: &tauri::AppHandle) -> Result<Self, RuntimeError> {
+   pub async fn get_or_install(managed_root: Option<&Path>) -> Result<Self, RuntimeError> {
       // 1. Check system PATH
       if let Ok(runtime) = Self::detect_system().await {
          log::info!("Using system Node.js at {:?}", runtime.binary_path);
@@ -28,7 +30,7 @@ impl NodeRuntime {
       }
 
       // 2. Check if already downloaded
-      let managed_dir = Self::get_managed_dir(app_handle)?;
+      let managed_dir = Self::get_managed_dir(managed_root)?;
       if let Ok(runtime) = Self::from_managed_path(&managed_dir) {
          log::info!("Using Athas-managed Node.js at {:?}", runtime.binary_path);
          return Ok(runtime);
@@ -36,18 +38,18 @@ impl NodeRuntime {
 
       // 3. Download and install
       log::info!("No suitable Node.js found, downloading v{}", NODE_VERSION);
-      Self::download_and_install(app_handle).await
+      Self::download_and_install(managed_root).await
    }
 
    /// Get runtime status without installing
-   pub async fn get_status(app_handle: &tauri::AppHandle) -> RuntimeStatus {
+   pub async fn get_status(managed_root: Option<&Path>) -> RuntimeStatus {
       // Check system first
       if Self::detect_system().await.is_ok() {
          return RuntimeStatus::SystemAvailable;
       }
 
       // Check managed installation
-      if let Ok(managed_dir) = Self::get_managed_dir(app_handle)
+      if let Ok(managed_dir) = Self::get_managed_dir(managed_root)
          && Self::from_managed_path(&managed_dir).is_ok()
       {
          return RuntimeStatus::ManagedInstalled;
@@ -57,8 +59,8 @@ impl NodeRuntime {
    }
 
    /// Get the Node.js version if installed
-   pub async fn get_version(app_handle: &tauri::AppHandle) -> Option<String> {
-      if let Ok(runtime) = Self::get_or_install(app_handle).await
+   pub async fn get_version(managed_root: Option<&Path>) -> Option<String> {
+      if let Ok(runtime) = Self::get_or_install(managed_root).await
          && let Ok(version) = runtime.check_version().await
       {
          return Some(format!("{}.{}.{}", version.0, version.1, version.2));
@@ -101,8 +103,8 @@ impl NodeRuntime {
    }
 
    /// Download Node.js and install it
-   async fn download_and_install(app_handle: &tauri::AppHandle) -> Result<Self, RuntimeError> {
-      let managed_dir = Self::get_managed_dir(app_handle)?;
+   async fn download_and_install(managed_root: Option<&Path>) -> Result<Self, RuntimeError> {
+      let managed_dir = Self::get_managed_dir(managed_root)?;
 
       // Remove existing installation if present
       if managed_dir.exists() {
@@ -117,13 +119,11 @@ impl NodeRuntime {
    }
 
    /// Get the directory where managed Node.js is stored
-   fn get_managed_dir(app_handle: &tauri::AppHandle) -> Result<PathBuf, RuntimeError> {
-      let data_dir = app_handle
-         .path()
-         .app_data_dir()
-         .map_err(|e| RuntimeError::PathError(e.to_string()))?;
-
-      Ok(data_dir.join("runtimes").join("node"))
+   fn get_managed_dir(managed_root: Option<&Path>) -> Result<PathBuf, RuntimeError> {
+      let root = managed_root.ok_or_else(|| {
+         RuntimeError::PathError("managed runtime root not configured".to_string())
+      })?;
+      Ok(root.join("node"))
    }
 
    /// Check Node.js version by running `node --version`

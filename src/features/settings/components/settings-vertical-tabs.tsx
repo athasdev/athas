@@ -1,18 +1,9 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  PenTool,
-  Search,
-  Settings2,
-  Shield,
-  Sparkles,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, PenTool, Settings2, Shield, Sparkles } from "lucide-react";
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
-import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface SettingsVerticalTabsProps {
@@ -39,6 +30,7 @@ const tabGroups: TabGroup[] = [
     icon: Settings2,
     items: [
       { id: "general", label: "General" },
+      { id: "account", label: "Account" },
       { id: "appearance", label: "Appearance" },
       { id: "features", label: "Features" },
     ],
@@ -84,7 +76,6 @@ function getGroupIdForTab(tab: SettingsTab) {
 export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVerticalTabsProps) => {
   const searchQuery = useSettingsStore((state) => state.search.query);
   const searchResults = useSettingsStore((state) => state.search.results);
-  const setSearchQuery = useSettingsStore((state) => state.setSearchQuery);
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
   const [expandedGroups, setExpandedGroups] = React.useState<string[]>(() => {
@@ -146,19 +137,6 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
 
   return (
     <div className="flex h-full flex-col">
-      {/* Search Input */}
-      <div className="p-3">
-        <Input
-          type="text"
-          placeholder="Search settings..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          leftIcon={Search}
-          size="sm"
-        />
-      </div>
-
-      {/* Tabs */}
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {visibleGroups.length > 0 ? (
           visibleGroups.map((group) => {

@@ -51,7 +51,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         mentionState: {
           active: false,
-          position: { top: 0, left: 0 },
+          position: { top: 0, bottom: 0, left: 0, width: 0 },
           search: "",
           startIndex: 0,
           selectedIndex: 0,
@@ -59,7 +59,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         slashCommandState: {
           active: false,
-          position: { top: 0, left: 0 },
+          position: { top: 0, bottom: 0, left: 0, width: 0 },
           search: "",
           selectedIndex: 0,
         },
@@ -566,7 +566,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.mentionState = {
               active: false,
-              position: { top: 0, left: 0 },
+              position: { top: 0, bottom: 0, left: 0, width: 0 },
               search: "",
               startIndex: 0,
               selectedIndex: 0,
@@ -644,7 +644,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.slashCommandState = {
               active: false,
-              position: { top: 0, left: 0 },
+              position: { top: 0, bottom: 0, left: 0, width: 0 },
               search: "",
               selectedIndex: 0,
             };
@@ -729,11 +729,32 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }),
 
         changeSessionConfigOption: async (configId, value) => {
+          const previousOptions = get().sessionConfigOptions;
+
+          set((state) => {
+            state.sessionConfigOptions = state.sessionConfigOptions.map((option) => {
+              if (option.id !== configId || option.kind.type !== "select") {
+                return option;
+              }
+
+              return {
+                ...option,
+                kind: {
+                  ...option.kind,
+                  currentValue: value,
+                },
+              };
+            });
+          });
+
           try {
             const { invoke } = await import("@tauri-apps/api/core");
             await invoke("set_acp_session_config_option", { args: { configId, value } });
           } catch (error) {
             console.error("Failed to change session config option:", error);
+            set((state) => {
+              state.sessionConfigOptions = previousOptions;
+            });
           }
         },
 
@@ -857,6 +878,17 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         getCurrentMessages: () => {
           const state = get();
           const chat = state.chats.find((chat) => chat.id === state.currentChatId);
+          return chat?.messages || [];
+        },
+
+        getChatById: (chatId) => {
+          const state = get();
+          return state.chats.find((chat) => chat.id === chatId);
+        },
+
+        getMessagesForChat: (chatId) => {
+          const state = get();
+          const chat = state.chats.find((item) => item.id === chatId);
           return chat?.messages || [];
         },
       }),

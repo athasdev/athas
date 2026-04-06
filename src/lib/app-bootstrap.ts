@@ -1,12 +1,14 @@
 import { enableMapSet } from "immer";
+import { initializeIconThemes } from "@/extensions/icon-themes/icon-theme-initializer";
 import { extensionLoader } from "@/extensions/loader/extension-loader";
 import { initializeExtensionStore } from "@/extensions/registry/extension-store";
-import { initializeIconThemes } from "@/extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { initializeWasmTokenizer } from "@/features/editor/lib/wasm-parser/wasm-parser-api";
 import { initializeKeymaps } from "@/features/keymaps/init";
 import { ensureStartupAppearanceApplied } from "@/features/settings/lib/appearance-bootstrap";
 import { initializeSettingsStore } from "@/features/settings/store";
+import { initializeHeartbeat } from "@/features/telemetry/services/heartbeat";
+import { initializeUIExtensions } from "@/extensions/ui/services/ui-extension-initializer";
 
 let appBootstrapPromise: Promise<void> | null = null;
 
@@ -30,6 +32,8 @@ export function initializeAppBootstrap(): Promise<void> {
     initializeWasmTokenizer(),
     extensionLoader.initialize(),
     initializeExtensionStore(),
+    initializeHeartbeat(),
+    initializeUIExtensions(),
   ]).then((results) => {
     const bootstrapSteps = [
       "settings store",
@@ -37,6 +41,8 @@ export function initializeAppBootstrap(): Promise<void> {
       "wasm tokenizer",
       "extension loader",
       "extension store",
+      "heartbeat",
+      "ui extensions",
     ] as const;
 
     results.forEach((result, index) => {

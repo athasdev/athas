@@ -1,6 +1,7 @@
 import type React from "react";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
 
 export interface ToolCall {
   id?: string;
@@ -33,6 +34,7 @@ export interface Message {
   toolCalls?: ToolCall[];
   images?: ImageContent[];
   resources?: ResourceContent[];
+  ui?: GenerativeUIComponent[];
 }
 
 // Agent types for AI chat

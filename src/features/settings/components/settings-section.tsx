@@ -12,13 +12,13 @@ interface SectionProps {
 
 export default function Section({ title, description, children, className }: SectionProps) {
   return (
-    <div className={cn("px-1 py-1", className)}>
-      <div className="mb-3">
+    <section className={cn("px-1 py-1", className)} data-settings-section={title}>
+      <div className="sticky top-[-16px] z-10 mb-3 bg-primary-bg/95 px-1 py-2 backdrop-blur-sm">
         <h4 className="ui-font ui-text-md text-text">{title}</h4>
         {description && <p className="ui-font ui-text-sm text-text-lighter">{description}</p>}
       </div>
       <div className="space-y-2.5">{children}</div>
-    </div>
+    </section>
   );
 }
 
