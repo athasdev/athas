@@ -1,8 +1,9 @@
-import { Monitor, Moon, Palette, Sun, Upload } from "lucide-react";
+import { Monitor, Moon, Palette, Settings, Sun, Upload } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Command, {
@@ -28,7 +29,7 @@ interface ThemeSelectorProps {
   currentTheme?: string;
 }
 
-const getThemeIcon = (category: string, _isDark?: boolean): React.ReactNode => {
+const getThemeIcon = (category: string): React.ReactNode => {
   switch (category) {
     case "System":
       return <Monitor />;
@@ -64,7 +65,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
           name: theme.name,
           description: theme.description,
           category: theme.category,
-          icon: getThemeIcon(theme.category, theme.isDark),
+          icon: getThemeIcon(theme.category),
         }),
       );
       setThemes(themeInfos);
@@ -214,8 +215,21 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
             variant="ghost"
             size="xs"
             className="shrink-0 gap-1 px-2"
+            aria-label="Upload theme"
           >
             <Upload />
+          </Button>
+          <Button
+            onClick={() => {
+              onClose();
+              useUIState.getState().openSettingsDialog("appearance");
+            }}
+            variant="ghost"
+            size="xs"
+            className="shrink-0 gap-1 px-2"
+            aria-label="Open appearance settings"
+          >
+            <Settings />
           </Button>
         </div>
       </CommandHeader>
@@ -238,7 +252,6 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 }}
                 onMouseEnter={() => {
                   setSelectedIndex(index);
-                  applyPreviewTheme(theme.id);
                 }}
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
@@ -247,9 +260,9 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>
-                    {isCurrent && !isSelected && (
-                      <Badge variant="accent" className="px-1 py-0.5">
-                        current
+                    {isCurrent && (
+                      <Badge variant="accent" size="compact">
+                        Current
                       </Badge>
                     )}
                   </div>

@@ -75,7 +75,7 @@ impl AgentRegistry {
             .with_description("Alibaba Qwen Code")
             .with_args(vec!["--acp"])
             .with_install(AgentRuntime::Node, "@qwen-code/qwen-code")
-            .with_install_command("qwen-code"),
+            .with_install_command("qwen"),
       );
 
       Self {
@@ -91,7 +91,7 @@ impl AgentRegistry {
 
    pub fn list_all(&self) -> Vec<AgentConfig> {
       let mut agents: Vec<_> = self.agents.values().cloned().collect();
-      agents.sort_by(|left, right| left.name.cmp(&right.name));
+      agents.sort_by_key(|agent| agent.name.clone());
       agents
    }
 

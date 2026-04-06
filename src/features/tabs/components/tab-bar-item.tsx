@@ -1,6 +1,7 @@
 import {
   Activity,
   Database,
+  GitBranch,
   GitPullRequest,
   Globe,
   MessageSquare,
@@ -16,6 +17,8 @@ import type { PaneContent } from "@/features/panes/types/pane-content";
 import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
+import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
+import type { GitDiff } from "@/features/git/types/git-types";
 
 interface TabBarItemProps {
   buffer: PaneContent;
@@ -52,6 +55,18 @@ const TabBarItem = memo(function TabBarItem({
   handleTabPin,
 }: TabBarItemProps) {
   const [faviconError, setFaviconError] = useState(false);
+
+  const getDiffIconName = () => {
+    if (buffer.type !== "diff") return buffer.name;
+    if (buffer.path === "diff://working-tree/all-files") return null;
+
+    const diffData = buffer.diffData;
+    if (diffData && !("files" in diffData)) {
+      return getDiffFileName(diffData);
+    }
+
+    return displayName;
+  };
 
   // Reset favicon error when favicon URL changes
   useEffect(() => {
@@ -125,6 +140,8 @@ const TabBarItem = memo(function TabBarItem({
         <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
             <Package className="text-text-lighter" />
+          ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
+            <GitBranch className="text-text-lighter" />
           ) : buffer.type === "terminal" ? (
             <Terminal className="text-text-lighter" />
           ) : buffer.type === "agent" ? (
@@ -168,7 +185,7 @@ const TabBarItem = memo(function TabBarItem({
             <Activity className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
-              fileName={buffer.name}
+              fileName={getDiffIconName() ?? buffer.name}
               isDir={false}
               className="text-text-lighter"
               size={12}
@@ -197,5 +214,14 @@ const TabBarItem = memo(function TabBarItem({
     </>
   );
 });
+
+function isMultiFileDiff(diffData: GitDiff | MultiFileDiff | undefined): diffData is MultiFileDiff {
+  return Boolean(diffData && "files" in diffData);
+}
+
+function getDiffFileName(diff: GitDiff): string {
+  const filePath = diff.new_path || diff.old_path || diff.file_path || "";
+  return filePath.split("/").pop() || filePath || "diff";
+}
 
 export default TabBarItem;

@@ -46,11 +46,12 @@ export const InlineEditModelSelector = ({
       options={options}
       onChange={onChange}
       disabled={disabled || isLoading}
-      menuClassName="inline-edit-model-selector-menu w-[240px]"
+      menuClassName="inline-edit-model-selector-menu w-[240px] backdrop-blur-none"
       className="max-w-[170px] border-none px-2 text-text"
       size="xs"
       openDirection="auto"
       placeholder={isLoading ? "Loading models..." : "Select model"}
+      aria-label="Inline edit model"
     />
   );
 };

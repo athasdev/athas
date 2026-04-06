@@ -38,6 +38,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const {
     isGitViewActive,
     isGitHubPRsViewActive,
+    activeSidebarView,
     isSidebarVisible,
     setActiveView,
     setIsSidebarVisible,
@@ -308,6 +309,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             </div>
           )}
           <SidebarPaneSelector
+            activeSidebarView={activeSidebarView}
             isGitViewActive={isGitViewActive}
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
@@ -375,6 +377,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
         <div className="pointer-events-auto mr-2">
           <SidebarPaneSelector
+            activeSidebarView={activeSidebarView}
             isGitViewActive={isGitViewActive}
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
@@ -383,15 +386,13 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             compact
           />
         </div>
+      </div>
 
-        {/* Project tabs */}
+      {/* Center - Project tabs */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex h-8 justify-center">
         <div
           data-title-bar-project-tabs="true"
-          className={cn(
-            !settings.nativeMenuBar &&
-              !settings.compactMenuBar &&
-              "-translate-x-1/2 absolute left-1/2",
-          )}
+          className="pointer-events-auto flex h-8 items-center"
         >
           {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
         </div>

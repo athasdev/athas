@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "https://athas.dev";
 const DESKTOP_AUTH_POLL_INTERVAL_MS = 1500;
 const DESKTOP_AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const DESKTOP_SESSION_SECRET_HEADER = "X-Desktop-Session-Secret";
+let authTokenCache: string | null | undefined;
 
 export interface AuthUser {
   id: number;
@@ -37,6 +38,9 @@ export interface SubscriptionInfo {
       updatedAt: string | null;
     } | null;
   };
+  autocomplete?: {
+    usage?: Record<string, unknown> | null;
+  } | null;
 }
 
 export interface EnterprisePolicy {
@@ -73,26 +77,46 @@ export class DesktopAuthError extends Error {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function getApiBaseUnavailableMessage(): string {
+  if (API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1")) {
+    return `Could not reach local auth server at ${API_BASE}. Start the local web app/server first, then try sign-in again.`;
+  }
+
+  return `Could not reach auth server at ${API_BASE}.`;
+}
+
 // Secure token storage via Rust backend
 export const getAuthToken = async (): Promise<string | null> => {
+  if (authTokenCache !== undefined) {
+    return authTokenCache;
+  }
+
   try {
-    return await invoke<string | null>("get_auth_token");
+    authTokenCache = await invoke<string | null>("get_auth_token");
+    return authTokenCache;
   } catch {
+    authTokenCache = null;
     return null;
   }
 };
 
 export const storeAuthToken = async (token: string): Promise<void> => {
+  authTokenCache = token;
   await invoke("store_auth_token", { token });
 };
 
 export const removeAuthToken = async (): Promise<void> => {
+  authTokenCache = null;
   await invoke("remove_auth_token");
 };
 
 // Authenticated API fetch helper
-async function authenticatedFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getAuthToken();
+async function authenticatedFetch(
+  path: string,
+  options: RequestInit = {},
+  tokenOverride?: string,
+): Promise<Response> {
+  const token = tokenOverride ?? (await getAuthToken());
   if (!token) {
     throw new Error("Not authenticated");
   }
@@ -107,8 +131,8 @@ async function authenticatedFetch(path: string, options: RequestInit = {}): Prom
   });
 }
 
-export async function fetchCurrentUser(): Promise<AuthUser> {
-  const response = await authenticatedFetch("/api/auth/me");
+export async function fetchCurrentUser(tokenOverride?: string): Promise<AuthUser> {
+  const response = await authenticatedFetch("/api/auth/me", {}, tokenOverride);
   if (!response.ok) {
     throw new Error(`Failed to fetch user: ${response.status}`);
   }
@@ -116,8 +140,8 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   return data.user;
 }
 
-export async function fetchSubscriptionStatus(): Promise<SubscriptionInfo> {
-  const response = await authenticatedFetch("/api/auth/subscription");
+export async function fetchSubscriptionStatus(tokenOverride?: string): Promise<SubscriptionInfo> {
+  const response = await authenticatedFetch("/api/auth/subscription", {}, tokenOverride);
   if (!response.ok) {
     throw new Error(`Failed to fetch subscription: ${response.status}`);
   }
@@ -157,12 +181,22 @@ export async function beginDesktopAuthSession(): Promise<{
   pollSecret: string;
   loginUrl: string;
 }> {
-  const response = await tauriFetch(`${API_BASE}/api/auth/desktop/session/init`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  let response: Response;
+  try {
+    response = await tauriFetch(`${API_BASE}/api/auth/desktop/session/init`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    throw new DesktopAuthError(
+      "failed",
+      error instanceof Error
+        ? `${getApiBaseUnavailableMessage()} ${error.message}`
+        : getApiBaseUnavailableMessage(),
+    );
+  }
 
   if (response.status === 404) {
     throw new DesktopAuthError(
@@ -242,12 +276,22 @@ export async function waitForDesktopAuthToken(
 
   while (Date.now() < deadline) {
     const url = `${API_BASE}/api/auth/desktop/session?session=${encodeURIComponent(sessionId)}`;
-    const response = await tauriFetch(url, {
-      method: "GET",
-      headers: {
-        [DESKTOP_SESSION_SECRET_HEADER]: pollSecret,
-      },
-    });
+    let response: Response;
+    try {
+      response = await tauriFetch(url, {
+        method: "GET",
+        headers: {
+          [DESKTOP_SESSION_SECRET_HEADER]: pollSecret,
+        },
+      });
+    } catch (error) {
+      throw new DesktopAuthError(
+        "failed",
+        error instanceof Error
+          ? `${getApiBaseUnavailableMessage()} ${error.message}`
+          : getApiBaseUnavailableMessage(),
+      );
+    }
 
     if (response.status === 404) {
       throw new DesktopAuthError(
@@ -295,4 +339,5 @@ export async function waitForDesktopAuthToken(
 export const __test__ = {
   parseDesktopAuthInitResponse,
   parseDesktopAuthPollResponse,
+  getApiBaseUnavailableMessage,
 };

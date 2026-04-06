@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
+#[cfg(target_os = "macos")]
+use tauri::TitleBarStyle;
 use tauri::{AppHandle, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command};
 
 // Counter for generating unique web viewer labels
@@ -85,7 +87,7 @@ pub fn create_app_window_internal(
    );
    let url = build_window_open_url(request.as_ref());
 
-   let window_builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
+   let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
       .title("")
       .inner_size(1200.0, 800.0)
       .min_inner_size(400.0, 400.0)
@@ -95,11 +97,11 @@ pub fn create_app_window_internal(
       .shadow(true);
 
    #[cfg(target_os = "macos")]
-   let window_builder = window_builder
+   let builder = builder
       .hidden_title(true)
-      .title_bar_style(tauri::TitleBarStyle::Overlay);
+      .title_bar_style(TitleBarStyle::Overlay);
 
-   let window = window_builder
+   let window = builder
       .build()
       .map_err(|e| format!("Failed to create app window: {e}"))?;
 
@@ -127,12 +129,41 @@ const SHORTCUT_INTERCEPTOR_SCRIPT: &str = r#"
 
   document.addEventListener('keydown', function(e) {
     const isMod = e.metaKey || e.ctrlKey;
+    const isShift = e.shiftKey;
     let shortcut = null;
 
+    // Global app shortcuts - these should always be forwarded to main app
+    if (isMod && e.key === 'Tab') {
+      shortcut = 'global:switch-tab';
+    } else if (isMod && e.key === 'j') {
+      shortcut = 'global:toggle-terminal';
+    } else if (isMod && e.key === 'b') {
+      shortcut = 'global:toggle-sidebar';
+    } else if (isMod && e.key === 'k') {
+      shortcut = 'global:command-palette';
+    } else if (isMod && e.key === 'p') {
+      shortcut = 'global:quick-open';
+    } else if (isMod && e.key === 'w') {
+      shortcut = 'global:close-tab';
+    } else if (isMod && isShift && e.key === 'T') {
+      shortcut = 'global:reopen-tab';
+    } else if (isMod && e.key === 't') {
+      shortcut = 'global:new-tab';
+    } else if (isMod && e.key === 'n') {
+      shortcut = 'global:new-window';
+    } else if (isMod && isShift && e.key === 'N') {
+      shortcut = 'global:new-private-window';
+    } else if (isMod && e.key === 'f') {
+      shortcut = 'global:find';
+    } else if (isMod && isShift && e.key === 'F') {
+      shortcut = 'global:find-in-files';
+    } else if (isMod && e.key === ',') {
+      shortcut = 'global:settings';
+    }
     // Web viewer specific shortcuts
-    if (isMod && e.key === 'l') {
+    else if (isMod && e.key === 'l') {
       shortcut = 'focus-url';
-    } else if (isMod && e.key === 'r' && !e.shiftKey) {
+    } else if (isMod && e.key === 'r' && !isShift) {
       shortcut = 'refresh';
     } else if (isMod && e.key === '[') {
       shortcut = 'go-back';

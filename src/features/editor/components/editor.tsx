@@ -1,6 +1,15 @@
 import "../styles/overlay-editor.css";
 import { CornerDownLeft, X } from "lucide-react";
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
@@ -10,6 +19,7 @@ import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
@@ -25,15 +35,21 @@ import { useInlineDiff } from "../hooks/use-inline-diff";
 import { useInlineEdit } from "../hooks/use-inline-edit";
 import { usePerformanceMonitor } from "../hooks/use-performance";
 import { useResolvedEditorSettings } from "../hooks/use-resolved-settings";
+import { useSelectionScope } from "../hooks/use-selection-scope";
 import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
+import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { useFoldStore } from "../stores/fold-store";
 import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
-import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transformer";
+import {
+  applyVirtualEdit,
+  calculateActualOffset,
+  transformTokensForFolding,
+} from "../utils/fold-transformer";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
@@ -54,6 +70,10 @@ interface EditorProps {
   bufferId?: string;
   isActiveSurface?: boolean;
   isPreviewMode?: boolean;
+  readOnly?: boolean;
+  scrollable?: boolean;
+  backgroundLayer?: ReactNode;
+  onReadonlySurfaceClick?: (position: { line: number; column: number }) => void;
   className?: string;
   onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: () => void;
@@ -68,6 +88,10 @@ export function Editor({
   bufferId: propBufferId,
   isActiveSurface = true,
   isPreviewMode = false,
+  readOnly = false,
+  scrollable = true,
+  backgroundLayer,
+  onReadonlySurfaceClick,
   className,
   onMouseMove,
   onMouseLeave,
@@ -84,6 +108,7 @@ export function Editor({
   const autocompleteCompletionRef = useRef<HTMLDivElement>(null);
   const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
   const gitBlameRef = useRef<HTMLDivElement>(null);
+  const inlineDiffRef = useRef<HTMLDivElement>(null);
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
@@ -125,6 +150,7 @@ export function Editor({
   const buffer = rawBuffer && isEditorContent(rawBuffer) ? rawBuffer : undefined;
   const content = buffer?.content || "";
   const filePath = buffer?.path;
+  const languageIdOverride = buffer?.languageOverride;
 
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
@@ -136,6 +162,9 @@ export function Editor({
   });
 
   const foldActions = useFoldStore.use.actions();
+  const fileFoldState = useFoldStore((state) =>
+    filePath ? state.foldsByFile.get(filePath) : undefined,
+  );
 
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const minimapScale = useMinimapStore.use.scale();
@@ -166,6 +195,48 @@ export function Editor({
   }, [filePath, content, foldActions, isActiveSurface, isPreviewMode]);
 
   const foldTransform = useFoldTransform(filePath, content);
+  const collapsedSignature = useMemo(() => {
+    if (!fileFoldState) return "";
+    return Array.from(fileFoldState.collapsedLines)
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [fileFoldState]);
+  const previousFoldViewportRef = useRef<{
+    signature: string;
+    mapping: typeof foldTransform.mapping;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) {
+      previousFoldViewportRef.current = {
+        signature: collapsedSignature,
+        mapping: foldTransform.mapping,
+      };
+      return;
+    }
+
+    const previous = previousFoldViewportRef.current;
+    if (previous && previous.signature !== collapsedSignature) {
+      const currentLineHeight = calculateLineHeight(fontSize);
+      const previousTopVirtualLine = Math.max(
+        0,
+        Math.floor(textarea.scrollTop / currentLineHeight),
+      );
+      const anchorActualLine =
+        previous.mapping.virtualToActual.get(previousTopVirtualLine) ?? previousTopVirtualLine;
+      const nextVirtualLine =
+        foldTransform.mapping.actualToVirtual.get(anchorActualLine) ?? anchorActualLine;
+      const intraLineOffset = textarea.scrollTop % currentLineHeight;
+
+      textarea.scrollTop = nextVirtualLine * currentLineHeight + intraLineOffset;
+    }
+
+    previousFoldViewportRef.current = {
+      signature: collapsedSignature,
+      mapping: foldTransform.mapping,
+    };
+  }, [collapsedSignature, foldTransform.mapping, fontSize]);
 
   // Track content area width for word wrap gutter measurement
   useEffect(() => {
@@ -180,9 +251,10 @@ export function Editor({
   }, []);
 
   const hasSyntaxHighlighting = useMemo(() => {
+    if (languageIdOverride) return true;
     if (!filePath) return false;
     return getLanguageId(filePath) !== null;
-  }, [filePath]);
+  }, [filePath, languageIdOverride]);
 
   const contextMenu = useContextMenu();
   const inlineDiff = useInlineDiff(filePath, content);
@@ -207,6 +279,7 @@ export function Editor({
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
   const shouldVirtualizeRendering =
     lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
+  const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
 
   const {
     viewportRange,
@@ -217,13 +290,24 @@ export function Editor({
     lineHeight,
   });
 
-  const { tokens, tokenize, forceFullTokenize, resetForBufferSwitch } = useTokenizer({
-    filePath,
-    bufferId: bufferId || undefined,
-    incremental: true,
-    enabled: hasSyntaxHighlighting && isActiveSurface,
-  });
-  const effectiveTokens = tokens.length > 0 ? tokens : (buffer?.tokens ?? []);
+  const { tokens, tokenizedContent, tokenize, forceFullTokenize, resetForBufferSwitch } =
+    useTokenizer({
+      filePath,
+      bufferId: bufferId || undefined,
+      languageIdOverride,
+      incremental: useIncrementalTokenization,
+      enabled: hasSyntaxHighlighting,
+    });
+  const baseTokens = tokens.length > 0 ? tokens : (buffer?.tokens ?? []);
+  const effectiveTokens = useMemo(() => {
+    if (!foldTransform.hasActiveFolds) return baseTokens;
+    return transformTokensForFolding(
+      content,
+      foldTransform.virtualLines,
+      foldTransform.mapping,
+      baseTokens,
+    );
+  }, [baseTokens, content, foldTransform]);
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -273,6 +357,7 @@ export function Editor({
 
   const handleInput = useCallback(
     (newVirtualContent: string) => {
+      if (readOnly) return;
       if (!bufferId || !inputRef.current) return;
 
       const uiActions = useEditorUIStore.getState().actions;
@@ -314,7 +399,7 @@ export function Editor({
       const timestamp = Date.now();
       useEditorUIStore.getState().actions.setLastInputTimestamp(timestamp);
     },
-    [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange],
+    [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange, readOnly],
   );
 
   const editorOps = useEditorOperations({
@@ -483,6 +568,36 @@ export function Editor({
       if (multiCursorState && multiCursorState.cursors.length > 1) {
         clearSecondaryCursors();
       }
+
+      const selectionStart = inputRef.current.selectionStart;
+      const clickedPosition = calculateCursorPosition(selectionStart, lines);
+      const clickedLine = lines[clickedPosition.line] || "";
+      const accordionMeta = parseDiffAccordionLine(clickedLine);
+
+      if (accordionMeta && filePath) {
+        const actualLine = foldTransform.hasActiveFolds
+          ? (foldTransform.mapping.virtualToActual.get(clickedPosition.line) ??
+            clickedPosition.line)
+          : clickedPosition.line;
+        foldActions.toggleFold(filePath, actualLine);
+        inputRef.current.blur();
+        return;
+      }
+
+      if (filePath && foldTransform.foldMarkers.has(clickedPosition.line)) {
+        const actualLine =
+          foldTransform.mapping.virtualToActual.get(clickedPosition.line) ?? clickedPosition.line;
+        foldActions.toggleFold(filePath, actualLine);
+        inputRef.current.blur();
+        return;
+      }
+
+      if (readOnly && onReadonlySurfaceClick) {
+        onReadonlySurfaceClick({
+          line: clickedPosition.line,
+          column: clickedPosition.column,
+        });
+      }
     },
     [
       bufferId,
@@ -492,6 +607,12 @@ export function Editor({
       enableMultiCursor,
       addCursor,
       clearSecondaryCursors,
+      lines,
+      filePath,
+      foldTransform,
+      foldActions,
+      onReadonlySurfaceClick,
+      readOnly,
     ],
   );
 
@@ -506,7 +627,7 @@ export function Editor({
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
 
   useAutocomplete({
-    enabled: aiCompletionEnabled && !isPreviewMode,
+    enabled: aiCompletionEnabled && !isPreviewMode && !readOnly,
     model: aiAutocompleteModelId,
     filePath: filePath || null,
     languageId: filePath ? getLanguageId(filePath) : null,
@@ -562,11 +683,13 @@ export function Editor({
     autocompleteCompletionRef,
     inlineEditOverlayRef,
     gitBlameRef,
+    inlineDiffRef,
     setEditorScrollTop,
     handleViewportScroll,
   });
 
   useDragScroll(inputRef);
+  useSelectionScope(contentContainerRef, isActiveSurface);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -586,6 +709,35 @@ export function Editor({
     const textarea = inputRef.current;
     if (!textarea) return;
 
+    if (!scrollable) {
+      const handleWheel = (e: WheelEvent) => {
+        const scrollContainer = textarea.closest("[data-diff-stack-scroll-container]");
+        if (!(scrollContainer instanceof HTMLDivElement)) return;
+
+        const canScrollY =
+          (e.deltaY < 0 && scrollContainer.scrollTop > 0) ||
+          (e.deltaY > 0 &&
+            scrollContainer.scrollTop + scrollContainer.clientHeight <
+              scrollContainer.scrollHeight);
+        const canScrollX =
+          (e.deltaX < 0 && scrollContainer.scrollLeft > 0) ||
+          (e.deltaX > 0 &&
+            scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth);
+
+        if (!canScrollY && !canScrollX) return;
+
+        scrollContainer.scrollBy({
+          left: e.deltaX,
+          top: e.deltaY,
+          behavior: "auto",
+        });
+        e.preventDefault();
+      };
+
+      textarea.addEventListener("wheel", handleWheel, { passive: false });
+      return () => textarea.removeEventListener("wheel", handleWheel);
+    }
+
     if (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")) {
       return;
     }
@@ -602,7 +754,7 @@ export function Editor({
 
     textarea.addEventListener("wheel", handleWheel, { passive: false });
     return () => textarea.removeEventListener("wheel", handleWheel);
-  }, []);
+  }, [scrollable]);
 
   // Track viewport height
   useEffect(() => {
@@ -632,7 +784,6 @@ export function Editor({
   const tokenizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isActiveSurface) return;
     if (!buffer?.content || !buffer?.path) return;
 
     if (tokenizeRafRef.current !== null) {
@@ -642,12 +793,21 @@ export function Editor({
       clearTimeout(tokenizeTimeoutRef.current);
     }
 
-    const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
+    const contentToTokenize = buffer.content;
+    const targetViewportRange = useIncrementalTokenization ? viewportRange : undefined;
     const isLargeFile = lines.length >= LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD;
 
-    if (isLargeFile && isScrollingRef.current) {
+    if (
+      !useIncrementalTokenization &&
+      tokens.length > 0 &&
+      tokenizedContent === contentToTokenize
+    ) {
+      return;
+    }
+
+    if (useIncrementalTokenization && isLargeFile && isScrollingRef.current) {
       tokenizeTimeoutRef.current = setTimeout(() => {
-        tokenize(contentToTokenize, viewportRange);
+        tokenize(contentToTokenize, targetViewportRange);
         tokenizeTimeoutRef.current = null;
       }, LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS);
 
@@ -659,7 +819,7 @@ export function Editor({
     }
 
     tokenizeRafRef.current = requestAnimationFrame(() => {
-      tokenize(contentToTokenize, viewportRange);
+      tokenize(contentToTokenize, targetViewportRange);
       tokenizeRafRef.current = null;
     });
 
@@ -672,15 +832,16 @@ export function Editor({
       }
     };
   }, [
-    isActiveSurface,
     bufferId,
     buffer?.path,
     buffer?.content,
+    tokenizedContent,
+    tokens.length,
     tokenize,
-    foldTransform.hasActiveFolds,
-    displayContent,
     lines.length,
-    viewportRange,
+    useIncrementalTokenization,
+    viewportRange?.startLine,
+    viewportRange?.endLine,
     isScrollingRef,
   ]);
 
@@ -697,10 +858,32 @@ export function Editor({
 
       const startPos = calculateCursorPosition(lineStart, lines);
       const endPos = calculateCursorPosition(lineEnd, lines);
+
+      if (foldTransform.hasActiveFolds) {
+        const actualStartLine =
+          foldTransform.mapping.virtualToActual.get(startPos.line) ?? startPos.line;
+        const actualEndLine = foldTransform.mapping.virtualToActual.get(endPos.line) ?? endPos.line;
+
+        const actualStart = {
+          line: actualStartLine,
+          column: startPos.column,
+          offset: calculateActualOffset(actualLines, actualStartLine, startPos.column),
+        };
+        const actualEnd = {
+          line: actualEndLine,
+          column: endPos.column,
+          offset: calculateActualOffset(actualLines, actualEndLine, endPos.column),
+        };
+
+        setCursorPosition(actualStart);
+        setSelection({ start: actualStart, end: actualEnd });
+        return;
+      }
+
       setCursorPosition(startPos);
       setSelection({ start: startPos, end: endPos });
     },
-    [lines, setCursorPosition, setSelection],
+    [lines, foldTransform, actualLines, setCursorPosition, setSelection],
   );
 
   const handleRevertChange = useCallback(
@@ -777,11 +960,13 @@ export function Editor({
         onMouseEnter={onMouseEnter}
         onClick={onClick}
       >
+        {backgroundLayer}
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
             content={displayContent}
             tokens={effectiveTokens}
+            foldMarkers={foldTransform.hasActiveFolds ? foldTransform.foldMarkers : undefined}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -795,7 +980,7 @@ export function Editor({
           content={displayContent}
           filePath={filePath}
           onInput={handleInput}
-          onKeyDown={handleKeyDown}
+          onKeyDown={readOnly ? undefined : handleKeyDown}
           onScroll={handleScroll}
           onSelect={handleCursorChange}
           onClick={handleClick}
@@ -805,6 +990,8 @@ export function Editor({
           lineHeight={lineHeight}
           tabSize={tabSize}
           wordWrap={wordWrap}
+          readOnly={readOnly}
+          scrollable={scrollable}
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />
@@ -822,16 +1009,27 @@ export function Editor({
           <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
             <div
               ref={inlineEditState.inlineEditPopoverRef}
-              className="pointer-events-auto absolute w-[360px] overflow-hidden rounded-lg border border-border/60 bg-primary-bg/95"
+              role="dialog"
+              aria-modal="false"
+              aria-labelledby="inline-edit-title"
+              aria-describedby="inline-edit-description"
+              className="pointer-events-auto absolute w-[360px] overflow-hidden rounded-lg border border-border/60 bg-primary-bg shadow-lg"
               style={{
                 top: `${inlineEditState.popoverPosition.top}px`,
                 left: `${inlineEditState.popoverPosition.left}px`,
               }}
             >
               <div className="px-2 py-1.5">
+                <div className="sr-only">
+                  <div id="inline-edit-title">Inline edit</div>
+                  <div id="inline-edit-description">
+                    Describe the code change, then press Enter to apply or Escape to close.
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <Input
                     ref={inlineEditState.inlineEditInstructionRef}
+                    autoFocus
                     value={inlineEditState.inlineEditInstruction}
                     onChange={(e) => {
                       inlineEditState.setInlineEditInstruction(e.target.value);
@@ -853,6 +1051,13 @@ export function Editor({
                     }}
                     variant="ghost"
                     size="sm"
+                    aria-label="Inline edit instruction"
+                    aria-describedby={
+                      inlineEditState.inlineEditError
+                        ? "inline-edit-description inline-edit-error"
+                        : "inline-edit-description"
+                    }
+                    aria-invalid={inlineEditState.inlineEditError ? true : undefined}
                     className="ui-font h-8 flex-1 bg-transparent px-0 text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
                     placeholder={
                       selection && selection.start.offset !== selection.end.offset
@@ -867,12 +1072,18 @@ export function Editor({
                     onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
                     className="text-text-lighter hover:text-text"
                     aria-label="Close inline edit"
+                    title="Close inline edit (Escape)"
                   >
                     <X />
                   </Button>
                 </div>
                 {inlineEditState.inlineEditError && (
-                  <div className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
+                  <div
+                    id="inline-edit-error"
+                    role="alert"
+                    aria-live="assertive"
+                    className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300"
+                  >
                     {inlineEditState.inlineEditError}
                   </div>
                 )}
@@ -899,6 +1110,12 @@ export function Editor({
                     onClick={() => void inlineEditState.handleApplyInlineEdit()}
                     disabled={inlineEditState.isInlineEditRunning}
                     className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"
+                    aria-label={
+                      inlineEditState.isInlineEditRunning
+                        ? "Applying inline edit"
+                        : "Apply inline edit"
+                    }
+                    title="Apply inline edit (Enter)"
                   >
                     <CornerDownLeft />
                     {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}
@@ -996,16 +1213,27 @@ export function Editor({
         )}
 
         {inlineDiff.state.isOpen && (
-          <InlineDiff
-            lineNumber={inlineDiff.state.lineNumber}
-            type={inlineDiff.state.type}
-            diffLines={inlineDiff.state.diffLines}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-            lineHeight={lineHeight}
-            onClose={inlineDiff.close}
-            onRevert={handleRevertChange}
-          />
+          <div
+            ref={inlineDiffRef}
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 20,
+              padding: `var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom) var(--editor-padding-left)`,
+            }}
+          >
+            <InlineDiff
+              lineNumber={inlineDiff.state.lineNumber}
+              type={inlineDiff.state.type}
+              diffLines={inlineDiff.state.diffLines}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              lineHeight={lineHeight}
+              onClose={inlineDiff.close}
+              onRevert={handleRevertChange}
+            />
+          </div>
         )}
       </div>
 
@@ -1038,6 +1266,15 @@ export function Editor({
             onPaste={editorOps.paste}
             onSelectAll={editorOps.selectAll}
             onDelete={editorOps.deleteSelection}
+            onGoToDefinition={() => {
+              keymapRegistry.executeCommand("editor.goToDefinition");
+            }}
+            onFindReferences={() => {
+              keymapRegistry.executeCommand("editor.goToReferences");
+            }}
+            onRenameSymbol={() => {
+              keymapRegistry.executeCommand("editor.renameSymbol");
+            }}
           />,
           document.body,
         )}

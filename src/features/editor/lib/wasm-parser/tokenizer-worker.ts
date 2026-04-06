@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import type { QueryCapture, Tree } from "web-tree-sitter";
+import type { Node, QueryCapture, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getDefaultParserWasmUrl } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
@@ -17,6 +17,12 @@ interface WorkerSession {
 interface ViewportRangePayload {
   startLine: number;
   endLine: number;
+}
+
+interface InjectionRule {
+  parentType: string;
+  contentType: string;
+  language: string;
 }
 
 interface WarmupMessage {
@@ -59,6 +65,21 @@ interface WorkerErrorResponse {
 type WorkerResponse = WorkerSuccessResponse | WorkerErrorResponse;
 
 const sessions = new Map<string, WorkerSession>();
+
+const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
+  html: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+  ],
+  svelte: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+    { parentType: "*", contentType: "raw_text_await", language: "javascript" },
+    { parentType: "*", contentType: "raw_text_each", language: "javascript" },
+    { parentType: "*", contentType: "raw_text_expr", language: "javascript" },
+  ],
+  markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
+};
 
 const CAPTURE_TO_CLASS: Record<string, string> = {
   keyword: "token-keyword",
@@ -180,6 +201,72 @@ function buildLineStartOffsets(content: string): number[] {
   return offsets;
 }
 
+function findInjectionNodes(
+  rootNode: Node,
+  rules: InjectionRule[],
+): Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> {
+  const results: Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> = [];
+
+  function walk(node: Node) {
+    for (const rule of rules) {
+      if (rule.parentType === "*") {
+        if (node.type === rule.contentType) {
+          results.push({ rule, node, parentNode: null });
+        }
+      } else if (node.type === rule.parentType) {
+        for (let i = 0; i < node.childCount; i++) {
+          const child = node.child(i);
+          if (child && child.type === rule.contentType) {
+            results.push({ rule, node: child, parentNode: node });
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < node.childCount; i++) {
+      const child = node.child(i);
+      if (child) walk(child);
+    }
+  }
+
+  walk(rootNode);
+  return results;
+}
+
+function resolveInjectedLanguage(
+  source: string,
+  parentLanguageId: string,
+  rule: InjectionRule,
+  node: Node,
+  parentNode: Node | null,
+): string {
+  if (rule.parentType !== "script_element" || !parentNode) {
+    return rule.language;
+  }
+
+  const openingTag = source.slice(parentNode.startIndex, node.startIndex);
+  const langMatch = openingTag.match(/\blang\s*=\s*["']([^"']+)["']/i);
+  const lang = langMatch?.[1]?.trim().toLowerCase();
+
+  if (!lang) {
+    return rule.language;
+  }
+
+  if (lang === "ts" || lang === "typescript") {
+    return "typescript";
+  }
+
+  if (lang === "js" || lang === "javascript") {
+    return "javascript";
+  }
+
+  if (parentLanguageId === "svelte" && (lang === "tsx" || lang === "jsx")) {
+    return lang === "tsx" ? "typescriptreact" : "javascriptreact";
+  }
+
+  return rule.language;
+}
+
 async function getLoadedParser(languageId: string): Promise<LoadedParser> {
   if (wasmParserLoader.isLoaded(languageId)) {
     return wasmParserLoader.getParser(languageId);
@@ -205,6 +292,26 @@ async function preloadLanguages(languageIds: string[]): Promise<void> {
       }
     }),
   );
+}
+
+async function tokenizeEmbeddedContent(
+  content: string,
+  languageId: string,
+): Promise<HighlightToken[]> {
+  const loadedParser = await getLoadedParser(languageId);
+  const tree = loadedParser.parser.parse(content);
+
+  if (!tree) {
+    throw new Error(`Failed to parse embedded ${languageId}`);
+  }
+
+  try {
+    return loadedParser.highlightQuery
+      ? toHighlightTokens(loadedParser.highlightQuery.captures(tree.rootNode))
+      : [];
+  } finally {
+    tree.delete();
+  }
 }
 
 function toHighlightTokens(captures: QueryCapture[]): HighlightToken[] {
@@ -331,6 +438,51 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
         ),
       )
     : [];
+
+  const injectionRules = LANGUAGE_INJECTIONS[message.languageId];
+  if (injectionRules) {
+    const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
+
+    for (const { rule, node, parentNode } of injectionNodes) {
+      try {
+        const embeddedContent = normalizedContent.substring(node.startIndex, node.endIndex);
+        if (!embeddedContent.trim()) continue;
+
+        const embeddedLanguageId = resolveInjectedLanguage(
+          normalizedContent,
+          message.languageId,
+          rule,
+          node,
+          parentNode,
+        );
+        const subTokens = await tokenizeEmbeddedContent(embeddedContent, embeddedLanguageId);
+        const startOffset = node.startIndex;
+        const startRow = node.startPosition.row;
+        const startCol = node.startPosition.column;
+
+        for (const token of subTokens) {
+          if (token.startPosition.row === 0) {
+            token.startPosition.column += startCol;
+          }
+          if (token.endPosition.row === 0) {
+            token.endPosition.column += startCol;
+          }
+          token.startPosition.row += startRow;
+          token.endPosition.row += startRow;
+          token.startIndex += startOffset;
+          token.endIndex += startOffset;
+        }
+
+        tokens.push(...subTokens);
+      } catch (error) {
+        logger.warn(
+          "TokenizerWorker",
+          `Failed to tokenize embedded ${rule.language} in ${message.languageId}`,
+          error,
+        );
+      }
+    }
+  }
 
   const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
   nextSession.bufferId = message.bufferId;

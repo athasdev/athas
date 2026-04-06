@@ -26,7 +26,6 @@ interface AcpListeners {
 
 export class AcpStreamHandler {
   private static activeHandler: AcpStreamHandler | null = null;
-  private static lastSessionIdByAgent = new Map<string, string>();
   private listeners: AcpListeners = {};
   private timeout?: NodeJS.Timeout;
   private lastActivityTime = Date.now();
@@ -40,7 +39,21 @@ export class AcpStreamHandler {
   constructor(
     private agentId: string,
     private handlers: AcpHandlers,
+    private chatId?: string,
   ) {}
+
+  static async warmup(agentId: string, chatId: string): Promise<void> {
+    const handler = new AcpStreamHandler(
+      agentId,
+      {
+        onChunk: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      },
+      chatId,
+    );
+    await handler.ensureAgentRunning();
+  }
 
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
@@ -61,24 +74,26 @@ export class AcpStreamHandler {
   private async ensureAgentRunning(): Promise<void> {
     try {
       const status = await invoke<AcpAgentStatus>("get_acp_status");
+      const targetChat = this.getTargetChat();
+      const desiredSessionId =
+        targetChat?.agentId === this.agentId ? (targetChat.acpSessionId ?? null) : null;
+      const shouldRestartForSession =
+        status.running &&
+        status.agentId === this.agentId &&
+        (status.sessionId ?? null) !== desiredSessionId;
 
-      if (!status.running || status.agentId !== this.agentId) {
+      if (!status.running || status.agentId !== this.agentId || shouldRestartForSession) {
         console.log(`Starting agent ${this.agentId}...`);
 
         // Get current workspace path if available
         const workspacePath = this.getWorkspacePath();
-        const currentChat = useAIChatStore.getState().getCurrentChat();
-        const rememberedSessionId =
-          currentChat?.agentId === this.agentId
-            ? currentChat.acpSessionId || AcpStreamHandler.lastSessionIdByAgent.get(this.agentId)
-            : AcpStreamHandler.lastSessionIdByAgent.get(this.agentId);
 
         let startStatus: AcpAgentStatus;
         try {
           startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
             agentId: this.agentId,
             workspacePath,
-            sessionId: rememberedSessionId ?? null,
+            sessionId: desiredSessionId,
           });
         } catch (error) {
           const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
@@ -88,7 +103,7 @@ export class AcpStreamHandler {
             startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
               agentId: this.agentId,
               workspacePath,
-              sessionId: rememberedSessionId ?? null,
+              sessionId: desiredSessionId,
             });
           } else {
             throw error;
@@ -100,9 +115,8 @@ export class AcpStreamHandler {
         }
 
         if (startStatus.sessionId) {
-          AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, startStatus.sessionId);
-          if (currentChat) {
-            useAIChatStore.getState().setChatAcpSessionId(currentChat.id, startStatus.sessionId);
+          if (targetChat) {
+            useAIChatStore.getState().setChatAcpSessionId(targetChat.id, startStatus.sessionId);
           }
         }
 
@@ -120,6 +134,15 @@ export class AcpStreamHandler {
 
   private getWorkspacePath(): string | null {
     return useProjectStore.getState().rootFolderPath ?? null;
+  }
+
+  private getTargetChat() {
+    const store = useAIChatStore.getState();
+    if (this.chatId) {
+      return store.getChatById(this.chatId);
+    }
+
+    return store.getCurrentChat();
   }
 
   private formatStartupError(error: unknown): string {
@@ -140,6 +163,12 @@ export class AcpStreamHandler {
   }
 
   private buildMessage(userMessage: string, context: ContextInfo): string {
+    // ACP slash commands must remain the first token in the prompt.
+    // If we prepend context, agents interpret them as plain text.
+    if (userMessage.trimStart().startsWith("/")) {
+      return userMessage;
+    }
+
     const contextPrompt = buildContextPrompt(context);
     return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
   }
@@ -260,10 +289,9 @@ export class AcpStreamHandler {
     console.log("Agent status changed:", event.status);
 
     if (event.status.running && event.status.sessionId) {
-      AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, event.status.sessionId);
-      const currentChat = useAIChatStore.getState().getCurrentChat();
-      if (currentChat && currentChat.agentId === this.agentId) {
-        useAIChatStore.getState().setChatAcpSessionId(currentChat.id, event.status.sessionId);
+      const targetChat = this.getTargetChat();
+      if (targetChat && targetChat.agentId === this.agentId) {
+        useAIChatStore.getState().setChatAcpSessionId(targetChat.id, event.status.sessionId);
       }
     }
 

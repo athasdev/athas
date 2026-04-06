@@ -49,6 +49,7 @@ interface SettingsActionsParams {
   handleFileSelect: ((path: string, isDir: boolean) => void) | undefined;
   getAppDataDir: () => Promise<string>;
   openWhatsNew: () => void | Promise<void>;
+  openOnboarding: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -62,6 +63,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     handleFileSelect,
     getAppDataDir,
     openWhatsNew,
+    openOnboarding,
     onClose,
   } = params;
 
@@ -124,6 +126,17 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       action: () => {
         onClose();
         void openWhatsNew();
+      },
+    },
+    {
+      id: "open-onboarding",
+      label: "Help: Open Onboarding",
+      description: "Open the onboarding flow again",
+      icon: <Sparkles />,
+      category: "Settings",
+      action: () => {
+        onClose();
+        void openOnboarding();
       },
     },
     {

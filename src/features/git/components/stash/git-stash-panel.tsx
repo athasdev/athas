@@ -1,10 +1,11 @@
-import { ChevronDown, ChevronRight, Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, dropStash, popStash } from "../../api/git-stash-api";
 import { useGitStore } from "../../stores/git-store";
+import GitSidebarSectionHeader from "../git-sidebar-section-header";
 
 interface GitStashPanelProps {
   isCollapsed: boolean;
@@ -84,48 +85,47 @@ const GitStashPanel = ({
           showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
         )}
       >
-        {showHeader && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="sticky top-0 z-20 flex h-auto w-full shrink-0 justify-start gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
-            onClick={onToggle}
-          >
-            {isCollapsed ? <ChevronRight /> : <ChevronDown />}
-            <span className="ui-text-sm font-medium text-text">Stashes</span>
-            <div className="flex-1" />
-            {stashes.length > 0 && (
-              <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{stashes.length}</span>
-            )}
-          </Button>
-        )}
+        <div className="shrink-0 px-1 py-1">
+          {showHeader ? (
+            <GitSidebarSectionHeader
+              title="Stashes"
+              collapsible
+              isCollapsed={isCollapsed}
+              onToggle={onToggle}
+            />
+          ) : (
+            <GitSidebarSectionHeader title="Stashes" />
+          )}
+        </div>
 
         {!isCollapsed && (
           <div
             className={cn(
-              "scrollbar-none min-h-0 flex-1 overflow-y-scroll p-1",
+              "scrollbar-none min-h-0 flex-1 overflow-y-scroll px-1 pb-1",
               showHeader ? "bg-primary-bg/70" : "bg-transparent",
             )}
           >
             {stashes.length === 0 ? (
-              <div className="ui-text-sm px-2.5 py-1.5 text-text-lighter italic">No stashes</div>
+              <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No stashes</div>
             ) : (
               stashes.map((stash) => (
                 <div
                   key={stash.index}
                   onClick={() => handleStashClick(stash.index)}
-                  className="group mb-1 flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
+                  className="group relative mb-1 cursor-pointer rounded-xl px-2.5 py-2.5 transition-colors hover:bg-hover/80"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-inherit text-text" title={stash.message}>
+                  <div className="min-w-0 pr-2 sm:pr-24">
+                    <div
+                      className="ui-text-sm truncate leading-tight text-text"
+                      title={stash.message}
+                    >
                       {stash.message || "Stashed changes"}
                     </div>
-                    <div className="ui-text-sm text-text-lighter">
+                    <div className="ui-text-sm mt-1 text-text-lighter">
                       {formatRelativeDate(stash.date)}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-border/60 bg-primary-bg/92 p-0.5 opacity-100 shadow-sm backdrop-blur-sm transition-all sm:pointer-events-none sm:translate-x-1 sm:opacity-0 sm:group-hover:pointer-events-auto sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
                     <Button
                       type="button"
                       onClick={(e) => handleApplyStash(stash.index, e)}

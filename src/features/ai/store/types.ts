@@ -27,6 +27,13 @@ export interface PastedImage {
   size: number;
 }
 
+export interface InlineDropdownPosition {
+  top: number;
+  bottom: number;
+  left: number;
+  width: number;
+}
+
 export interface AIChatState {
   // Single session state
   chats: Chat[];
@@ -59,7 +66,7 @@ export interface AIChatState {
   // Mention state
   mentionState: {
     active: boolean;
-    position: { top: number; left: number };
+    position: InlineDropdownPosition;
     search: string;
     startIndex: number;
     selectedIndex: number;
@@ -68,7 +75,7 @@ export interface AIChatState {
   // Slash command state
   slashCommandState: {
     active: boolean;
-    position: { top: number; left: number };
+    position: InlineDropdownPosition;
     search: string;
     selectedIndex: number;
   };
@@ -146,21 +153,17 @@ export interface AIChatActions {
   setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
 
   // Mention actions
-  showMention: (
-    position: { top: number; left: number },
-    search: string,
-    startIndex: number,
-  ) => void;
+  showMention: (position: InlineDropdownPosition, search: string, startIndex: number) => void;
   hideMention: () => void;
   updateSearch: (search: string) => void;
-  updatePosition: (position: { top: number; left: number }) => void;
+  updatePosition: (position: InlineDropdownPosition) => void;
   selectNext: () => void;
   selectPrevious: () => void;
   setSelectedIndex: (index: number) => void;
   getFilteredFiles: (allFiles: FileEntry[]) => FileEntry[];
 
   // Slash command actions
-  showSlashCommands: (position: { top: number; left: number }, search: string) => void;
+  showSlashCommands: (position: InlineDropdownPosition, search: string) => void;
   hideSlashCommands: () => void;
   updateSlashCommandSearch: (search: string) => void;
   selectNextSlashCommand: () => void;
@@ -191,4 +194,6 @@ export interface AIChatActions {
   // Helper getters
   getCurrentChat: () => Chat | undefined;
   getCurrentMessages: () => Message[];
+  getChatById: (chatId: string) => Chat | undefined;
+  getMessagesForChat: (chatId: string) => Message[];
 }

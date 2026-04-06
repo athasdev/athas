@@ -236,7 +236,7 @@ const GitBranchManager = ({
         size="sm"
         className={
           compact
-            ? dropdownTriggerClassName("ui-text-sm max-w-44")
+            ? dropdownTriggerClassName("ui-text-sm")
             : "ui-font ui-text-sm flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 font-medium text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
         }
       >
@@ -251,13 +251,14 @@ const GitBranchManager = ({
         anchorSide={placement === "up" ? "top" : "bottom"}
         onClose={() => setIsDropdownOpen(false)}
         className="flex flex-col overflow-hidden rounded-2xl p-0"
+        menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
         style={{
           width: `min(${dropdownWidth}px, calc(100vw - 16px))`,
           maxWidth: "calc(100vw - 16px)",
           maxHeight: compact ? "240px" : "280px",
         }}
       >
-        <div className="flex items-center justify-between bg-secondary-bg/75 px-2.5 py-2">
+        <div className="flex shrink-0 items-center justify-between bg-secondary-bg/75 px-2.5 py-2">
           <div className="flex min-w-0 items-center gap-1.5">
             <GitBranch className="shrink-0 text-text-lighter" />
             <span className="ui-text-sm truncate font-medium text-text">{currentBranch}</span>
@@ -313,7 +314,7 @@ const GitBranchManager = ({
         </div>
 
         {showCreate && (
-          <div className="border-border/60 border-t px-2.5 py-2">
+          <div className="shrink-0 border-border/60 border-t px-2.5 py-2">
             <div className="flex gap-1.5">
               <Input
                 ref={createInputRef}
@@ -347,7 +348,7 @@ const GitBranchManager = ({
         )}
 
         {showSearch && (
-          <div className="px-2 py-1">
+          <div className="shrink-0 px-2 py-1">
             <Input
               ref={searchInputRef}
               id="branch-search"

@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import ApiKeyModal from "@/features/ai/components/api-key-modal";
+import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
@@ -51,7 +51,9 @@ const AIChat = memo(function AIChat({
   const { showToast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const shouldAutoScrollRef = useRef(true);
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
   >([]);
@@ -146,8 +148,21 @@ const AIChat = memo(function AIChat({
     chatActions.deleteChat(chatId);
   };
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((force = false) => {
+    if (!force && !shouldAutoScrollRef.current) {
+      return;
+    }
+
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 48;
   }, []);
 
   const buildContext = async (agentId: string): Promise<ContextInfo> => {
@@ -239,25 +254,26 @@ const AIChat = memo(function AIChat({
       messageId: string,
       mutate: (currentMessage: Message | undefined) => Partial<Message>,
     ) => {
-      const currentMessages = chatActions.getCurrentMessages();
+      const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
       const currentMessage = currentMessages.find((message) => message.id === messageId);
       chatActions.updateMessage(chatId, messageId, mutate(currentMessage));
     },
-    [chatActions.getCurrentMessages, chatActions.updateMessage],
+    [chatActions.updateMessage],
   );
 
   const processMessage = async (messageContent: string) => {
-    const currentAgentId = chatActions.getCurrentAgentId();
+    const store = useAIChatStore.getState();
+    const currentAgentId = store.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
     // For ACP agents (Claude Code, etc.), we don't need an API key
     // For Custom API, we need an API key to be set
-    if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+    if (!messageContent.trim() || (!isAcp && !store.hasApiKey)) return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
-    let chatId = chatState.currentChatId;
+    let chatId = store.currentChatId;
     if (!chatId) {
-      chatId = chatActions.ensureChatForAgent(chatActions.getCurrentAgentId());
+      chatId = chatActions.createNewChat(currentAgentId);
     }
 
     const { processedMessage } = await parseMentionsAndLoadFiles(
@@ -285,7 +301,7 @@ const AIChat = memo(function AIChat({
     chatActions.addMessage(chatId, userMessage);
     chatActions.addMessage(chatId, assistantMessage);
 
-    const currentMessages = chatActions.getCurrentMessages();
+    const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
     if (currentMessages.length === 2) {
       const title =
         userMessage.content.length > 50
@@ -297,10 +313,12 @@ const AIChat = memo(function AIChat({
     chatActions.setIsTyping(true);
     chatActions.setStreamingMessageId(assistantMessageId);
 
-    requestAnimationFrame(scrollToBottom);
+    requestAnimationFrame(() => scrollToBottom(true));
 
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
+    let acpProducedStateOnlyUpdate = false;
+    let acpCommandResultLabel: string | null = null;
 
     try {
       // Handle direct ACP UI intents locally so they are always reliable.
@@ -333,7 +351,9 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const conversationContext = currentMessages
+      const conversationContext = useAIChatStore
+        .getState()
+        .getMessagesForChat(chatId)
         .filter((msg) => msg.role !== "system")
         .map((msg) => ({
           role: msg.role as "user" | "assistant",
@@ -356,11 +376,11 @@ const AIChat = memo(function AIChat({
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             content: (currentMessage?.content || "") + chunk,
           }));
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom());
         },
         () => {
           const currentMessage = chatActions
-            .getCurrentMessages()
+            .getMessagesForChat(chatId)
             .find((message) => message.id === currentAssistantMessageId);
           const hasVisibleResponse = Boolean(
             currentMessage?.content?.trim() ||
@@ -370,6 +390,23 @@ const AIChat = memo(function AIChat({
           );
 
           if (!hasVisibleResponse && isAcpAgent(currentAgentId)) {
+            if (acpProducedStateOnlyUpdate) {
+              const slashCommand = messageContent.trim().match(/^\/([^\s]+)/)?.[1];
+              const fallbackContent =
+                acpCommandResultLabel ||
+                (slashCommand ? `Applied \`/${slashCommand}\`.` : "Session updated.");
+
+              updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+                content: fallbackContent,
+                isStreaming: false,
+              }));
+              chatActions.setIsTyping(false);
+              chatActions.setStreamingMessageId(null);
+              abortControllerRef.current = null;
+              processQueuedMessages();
+              return;
+            }
+
             const fallbackMessage = `${AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "Agent"} did not return a visible response. Try sending the message again.`;
             updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
               content: `[ERROR_BLOCK]
@@ -380,10 +417,6 @@ details: The agent session started, but no content, tool output, or resource was
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
-            showToast({
-              message: fallbackMessage,
-              type: "error",
-            });
             chatActions.setIsTyping(false);
             chatActions.setStreamingMessageId(null);
             abortControllerRef.current = null;
@@ -444,10 +477,38 @@ details: The agent session started, but no content, tool output, or resource was
             }
           }
 
+          const isAcpAuthError =
+            isAcpAgent(currentAgentId) &&
+            (mainError.includes("Authentication required") ||
+              errorDetails.includes("Authentication required"));
+
+          if (isAcpAuthError) {
+            errorTitle = "Authentication Required";
+            errorCode = "AUTH_REQUIRED";
+            const agentName =
+              AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "This agent";
+            errorMessage = `${agentName} needs external authentication before it can accept prompts.`;
+
+            if (
+              mainError.includes("Method not implemented") ||
+              errorDetails.includes("Method not implemented")
+            ) {
+              errorDetails =
+                "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again.";
+            } else if (!errorDetails) {
+              errorDetails =
+                "Complete authentication in the underlying CLI/adapter, then try again.";
+            }
+          }
+
           if (canReconnect) {
             errorTitle = "Connection Lost";
             errorCode = "RECONNECT";
           }
+
+          const shouldSuppressToast =
+            isAcpAgent(currentAgentId) &&
+            (mainError.includes("did not return any response") || errorCode === "RECONNECT");
 
           const formattedError = `[ERROR_BLOCK]
 title: ${errorTitle}
@@ -460,10 +521,12 @@ details: ${errorDetails || mainError}
             content: currentMessage?.content || formattedError,
             isStreaming: false,
           }));
-          showToast({
-            message: errorMessage,
-            type: "error",
-          });
+          if (!shouldSuppressToast) {
+            showToast({
+              message: errorMessage,
+              type: "error",
+            });
+          }
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
           abortControllerRef.current = null;
@@ -483,7 +546,7 @@ details: ${errorDetails || mainError}
           chatActions.addMessage(chatId, newAssistantMessage);
           currentAssistantMessageId = newMessageId;
           chatActions.setStreamingMessageId(newMessageId);
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom(true));
         },
         (toolName: string, toolInput?: any, toolId?: string) => {
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
@@ -560,6 +623,10 @@ details: ${errorDetails || mainError}
             case "prompt_complete":
               break; // Not useful to show
             case "session_mode_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = event.modeState.currentModeId
+                ? `Mode set to \`${event.modeState.currentModeId}\`.`
+                : "Session mode updated.";
               if (event.modeState.currentModeId) {
                 appendAcpEvent({
                   kind: "mode",
@@ -570,6 +637,11 @@ details: ${errorDetails || mainError}
               }
               break;
             case "config_options_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel =
+                event.configOptions.length === 1
+                  ? "Session option updated."
+                  : "Session options updated.";
               appendAcpEvent({
                 kind: "status",
                 label: "Session options updated",
@@ -578,6 +650,10 @@ details: ${errorDetails || mainError}
               });
               break;
             case "session_info_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = event.title
+                ? `Session title updated to "${event.title}".`
+                : "Session metadata updated.";
               if (event.title) {
                 appendAcpEvent({
                   kind: "status",
@@ -588,6 +664,8 @@ details: ${errorDetails || mainError}
               }
               break;
             case "current_mode_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = `Mode set to \`${event.currentModeId}\`.`;
               appendAcpEvent({
                 kind: "mode",
                 label: "Mode changed",
@@ -596,6 +674,8 @@ details: ${errorDetails || mainError}
               });
               break;
             case "slash_commands_update":
+              acpProducedStateOnlyUpdate = true;
+              acpCommandResultLabel = "Slash commands refreshed.";
               break; // Not useful to show
             case "plan_update": {
               const summary =
@@ -633,14 +713,15 @@ details: ${errorDetails || mainError}
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             images: [...(currentMessage?.images || []), { data, mediaType }],
           }));
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom());
         },
         (uri: string, name: string | null) => {
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             resources: [...(currentMessage?.resources || []), { uri, name }],
           }));
-          requestAnimationFrame(scrollToBottom);
+          requestAnimationFrame(() => scrollToBottom());
         },
+        chatId,
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -732,7 +813,11 @@ details: ${errorDetails || mainError}
         </div>
       ) : (
         <>
-          <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto"
+          >
             <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
           </div>
 
@@ -796,7 +881,7 @@ details: ${errorDetails || mainError}
             onStopStreaming={stopStreaming}
           />
 
-          <ApiKeyModal
+          <ProviderApiKeyModal
             isOpen={chatState.apiKeyModalState.isOpen}
             onClose={() => chatActions.setApiKeyModalState({ isOpen: false, providerId: null })}
             providerId={chatState.apiKeyModalState.providerId || ""}

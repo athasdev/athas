@@ -70,7 +70,7 @@ const DiffHunkHeader = memo(
       <div
         className={cn(
           "group flex cursor-pointer items-center justify-between border-border border-b",
-          "bg-primary-bg px-3 py-0.5 text-[11px] leading-4 hover:bg-hover",
+          "bg-primary-bg px-3 py-1 ui-text-sm leading-5 hover:bg-hover",
         )}
         onClick={onToggleCollapse}
       >
@@ -92,7 +92,7 @@ const DiffHunkHeader = memo(
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-[10px]">
+          <div className="ui-text-sm flex items-center gap-1">
             {additions > 0 && <span className="text-git-added">+{additions}</span>}
             {deletions > 0 && <span className="text-git-deleted">-{deletions}</span>}
           </div>
@@ -110,7 +110,7 @@ const DiffHunkHeader = memo(
               aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
             >
               {isStaged ? <Minus /> : <Plus />}
-              <span className="text-[10px]">{isStaged ? "Unstage" : "Stage"}</span>
+              <span className="text-[11px]">{isStaged ? "Unstage" : "Stage"}</span>
             </button>
           )}
         </div>

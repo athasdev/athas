@@ -1,10 +1,11 @@
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
+import Switch from "@/ui/switch";
 import Section, { SettingRow } from "../settings-section";
 
 export const AdvancedSettings = () => {
-  const { resetToDefaults } = useSettingsStore();
+  const { settings, updateSetting, resetToDefaults } = useSettingsStore();
   const { showToast } = useToast();
 
   const handleResetSettings = () => {
@@ -20,13 +21,26 @@ export const AdvancedSettings = () => {
 
   return (
     <div className="space-y-4">
+      <Section title="Telemetry">
+        <SettingRow
+          label="Usage Analytics"
+          description="Send anonymous usage data (app version, platform) to help improve Athas. No personal data is collected."
+        >
+          <Switch
+            checked={settings.telemetry}
+            onChange={(checked) => updateSetting("telemetry", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Data">
         <SettingRow label="Reset Settings" description="Reset all settings to their default values">
           <Button
             variant="outline"
             size="xs"
             onClick={handleResetSettings}
-            className="text-red-500 hover:bg-red-500/10"
+            className="text-error hover:bg-error/10"
           >
             Reset
           </Button>

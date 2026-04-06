@@ -7,6 +7,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useTerminalTheme } from "@/features/terminal/hooks/use-terminal-theme";
 import { useProjectStore } from "@/features/window/stores/project-store";
@@ -21,8 +22,25 @@ interface ExternalEditorTerminalProps {
   onEditorExit?: () => void;
 }
 
+function sanitizeTerminalTitle(rawTitle: string): string {
+  let result = "";
+
+  for (const char of rawTitle) {
+    const code = char.charCodeAt(0);
+
+    if ((code >= 0 && code <= 31) || code === 127 || code === 155) {
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result.trim();
+}
+
 export const ExternalEditorTerminal = ({
   filePath,
+  fileName,
   terminalConnectionId,
   onEditorExit,
 }: ExternalEditorTerminalProps) => {
@@ -39,6 +57,27 @@ export const ExternalEditorTerminal = ({
   const { rootFolderPath } = useProjectStore();
   const { settings } = useSettingsStore();
   const { getTerminalTheme } = useTerminalTheme();
+
+  const updateExternalEditorBufferTitle = useCallback(
+    (title: string) => {
+      const trimmed = title.trim();
+      if (!trimmed || trimmed === "Default Terminal") return;
+
+      const buffers = useBufferStore.getState().buffers;
+      const buffer = buffers.find(
+        (item) =>
+          item.type === "externalEditor" && item.terminalConnectionId === terminalConnectionId,
+      );
+
+      if (!buffer || buffer.name === trimmed) return;
+
+      useBufferStore.getState().actions.updateBuffer({
+        ...buffer,
+        name: trimmed,
+      });
+    },
+    [terminalConnectionId],
+  );
 
   const getEditorCommand = useCallback(
     (path: string): string => {
@@ -124,6 +163,13 @@ export const ExternalEditorTerminal = ({
       invoke("terminal_write", { id: terminalConnectionId, data }).catch((e) => {
         console.error("Failed to write to external editor terminal:", e);
       });
+    });
+
+    terminal.onTitleChange((rawTitle) => {
+      const title = sanitizeTerminalTitle(rawTitle);
+
+      if (!title || title === fileName) return;
+      updateExternalEditorBufferTitle(title);
     });
 
     terminal.onKey(({ domEvent }) => {
@@ -222,8 +268,10 @@ export const ExternalEditorTerminal = ({
     getTerminalTheme,
     terminalConnectionId,
     filePath,
+    fileName,
     getEditorCommand,
     onEditorExit,
+    updateExternalEditorBufferTitle,
   ]);
 
   useEffect(() => {

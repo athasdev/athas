@@ -1,9 +1,12 @@
 import { Folder, GitBranch, GitPullRequest, Search } from "lucide-react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
+import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
+import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { Tabs, type TabsItem } from "@/ui/tabs";
 import type { SidebarView } from "./sidebar-pane-utils";
 
 interface SidebarPaneSelectorProps {
+  activeSidebarView: SidebarView;
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   coreFeatures: CoreFeaturesState;
@@ -13,6 +16,7 @@ interface SidebarPaneSelectorProps {
 }
 
 export const SidebarPaneSelector = ({
+  activeSidebarView,
   isGitViewActive,
   isGitHubPRsViewActive,
   coreFeatures,
@@ -21,7 +25,8 @@ export const SidebarPaneSelector = ({
   compact = false,
 }: SidebarPaneSelectorProps) => {
   const tooltipSide = compact ? "bottom" : "right";
-  const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive;
+  const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const extensionViews = useExtensionViews();
 
   const items: TabsItem[] = [
     {
@@ -89,6 +94,22 @@ export const SidebarPaneSelector = ({
           } satisfies TabsItem,
         ]
       : []),
+    ...Array.from(extensionViews.values()).map(
+      (view) =>
+        ({
+          id: view.id,
+          icon: <DynamicIcon name={view.icon} />,
+          isActive: activeSidebarView === view.id,
+          onClick: () => onViewChange(view.id),
+          role: "tab",
+          ariaLabel: view.title,
+          className: compact ? undefined : "w-8 rounded-md",
+          tooltip: {
+            content: view.title,
+            side: tooltipSide,
+          },
+        }) satisfies TabsItem,
+    ),
   ];
 
   return (

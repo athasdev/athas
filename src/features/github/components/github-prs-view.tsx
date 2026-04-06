@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   AlertCircle,
+  Activity,
   Check,
   ChevronDown,
   Copy,
@@ -8,18 +9,31 @@ import {
   FolderOpen,
   GitBranch,
   GitPullRequest,
+  MessageSquare,
   RefreshCw,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button, buttonVariants } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
+import { paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
+import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
@@ -27,6 +41,8 @@ import { useGitHubStore } from "../stores/github-store";
 import type { PRFilter, PullRequest } from "../types/github";
 import GitHubActionsView from "./github-actions-view";
 import GitHubIssuesView from "./github-issues-view";
+import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
+import { githubActionListCache, githubIssueListCache } from "../utils/github-data-cache";
 
 const filterLabels: Record<PRFilter, string> = {
   all: "All PRs",
@@ -45,52 +61,64 @@ interface PRListItemProps {
   pr: PullRequest;
   isActive: boolean;
   onSelect: () => void;
+  onPrefetch: () => void;
   onContextMenu: (event: React.MouseEvent, pr: PullRequest) => void;
 }
 
-const PRListItem = memo(({ pr, isActive, onSelect, onContextMenu }: PRListItemProps) => {
-  return (
-    <Button
-      onClick={onSelect}
-      onContextMenu={(event) => onContextMenu(event, pr)}
-      variant="ghost"
-      size="sm"
-      className={cn(
-        "h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left hover:bg-hover/70",
-        isActive && "bg-hover/80 text-text",
-      )}
-    >
-      <img
-        src={
-          pr.author.avatarUrl ||
-          `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=40`
-        }
-        alt={pr.author.login}
-        className="size-5 shrink-0 self-start rounded-full bg-secondary-bg"
-        loading="lazy"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="ui-text-sm truncate text-text leading-4">{pr.title}</div>
-        <div className="ui-text-sm mt-1 text-text-lighter">{`#${pr.number} by ${pr.author.login}`}</div>
-        <div className="mt-1">
-          <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 font-mono text-text-lighter">
-            <span className="min-w-0 truncate">{pr.baseRef}</span>
-            <span className="shrink-0 px-1">&larr;</span>
-            <span className="min-w-0 truncate">{pr.headRef}</span>
-          </span>
+const PRListItem = memo(
+  ({ pr, isActive, onSelect, onPrefetch, onContextMenu }: PRListItemProps) => {
+    return (
+      <Button
+        onClick={onSelect}
+        onMouseEnter={onPrefetch}
+        onFocus={onPrefetch}
+        onContextMenu={(event) => onContextMenu(event, pr)}
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left hover:bg-hover/70",
+          isActive && "bg-hover/80 text-text",
+        )}
+      >
+        <img
+          src={
+            pr.author.avatarUrl ||
+            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=40`
+          }
+          alt={pr.author.login}
+          className="size-5 shrink-0 self-start rounded-full bg-secondary-bg"
+          loading="lazy"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="ui-text-sm truncate text-text leading-4">{pr.title}</div>
+          <div className="ui-text-sm mt-1 text-text-lighter">{`#${pr.number} by ${pr.author.login}`}</div>
+          <div className="mt-1">
+            <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 font-mono text-text-lighter">
+              <span className="min-w-0 truncate">{pr.baseRef}</span>
+              <span className="shrink-0 px-1">&larr;</span>
+              <span className="min-w-0 truncate">{pr.headRef}</span>
+            </span>
+          </div>
         </div>
-      </div>
-    </Button>
-  );
-});
+      </Button>
+    );
+  },
+);
 
 PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const { prs, isLoading, error, currentFilter, isAuthenticated } = useGitHubStore();
-  const { fetchPRs, setFilter, checkAuth, setActiveRepoPath, openPRInBrowser, checkoutPR } =
-    useGitHubStore().actions;
+  const {
+    fetchPRs,
+    setFilter,
+    checkAuth,
+    setActiveRepoPath,
+    openPRInBrowser,
+    checkoutPR,
+    prefetchPR,
+  } = useGitHubStore().actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRepoPaths = useRepositoryStore.use.workspaceRepoPaths();
   const manualRepoPath = useRepositoryStore.use.manualRepoPath();
@@ -106,12 +134,15 @@ const GitHubPRsView = memo(() => {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const { openPRBuffer } = useBufferStore.use.actions();
   const settings = useSettingsStore((state) => state.settings);
+  const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
+  const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRepoMenuOpen, setIsRepoMenuOpen] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<GitHubSidebarSection>("pull-requests");
+  const [sectionRefreshNonce, setSectionRefreshNonce] = useState(0);
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const repoTriggerRef = useRef<HTMLButtonElement>(null);
   const prContextMenu = useContextMenu<PullRequest>();
@@ -121,6 +152,7 @@ const GitHubPRsView = memo(() => {
     const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
     return activeBuffer?.type === "pullRequest" ? activeBuffer.prNumber : null;
   }, [activeBufferId, buffers]);
+  const deferredPrs = useDeferredValue(prs);
   const availableSections = useMemo(
     () =>
       [
@@ -132,8 +164,14 @@ const GitHubPRsView = memo(() => {
   );
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (isGitHubPRsViewActive) {
+      const timeoutId = window.setTimeout(() => {
+        void checkAuth();
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [checkAuth, isGitHubPRsViewActive]);
 
   useEffect(() => {
     if (availableSections.length === 0) return;
@@ -141,10 +179,6 @@ const GitHubPRsView = memo(() => {
       setActiveSection(availableSections[0]);
     }
   }, [activeSection, availableSections]);
-
-  useEffect(() => {
-    void syncWorkspaceRepositories(rootFolderPath ?? null);
-  }, [rootFolderPath, syncWorkspaceRepositories]);
 
   useEffect(() => {
     setRepoSelectionError(null);
@@ -156,16 +190,60 @@ const GitHubPRsView = memo(() => {
   }, [activeRepoPath, setActiveRepoPath]);
 
   useEffect(() => {
-    if (activeRepoPath && isAuthenticated) {
-      fetchPRs(activeRepoPath);
+    if (isRepoMenuOpen && rootFolderPath) {
+      void syncWorkspaceRepositories(rootFolderPath);
     }
-  }, [activeRepoPath, isAuthenticated, currentFilter, fetchPRs]);
+  }, [isRepoMenuOpen, rootFolderPath, syncWorkspaceRepositories]);
+
+  useEffect(() => {
+    if (!isGitHubPRsViewActive || !effectiveRepoPath || !isAuthenticated) return;
+
+    let timeoutId: number | null = null;
+    const frameId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        void fetchPRs(effectiveRepoPath);
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [effectiveRepoPath, fetchPRs, isAuthenticated, isGitHubPRsViewActive, currentFilter]);
+
+  useEffect(() => {
+    if (!effectiveRepoPath || !isGitHubPRsViewActive || activeSection !== "pull-requests") return;
+
+    for (const pr of prs.slice(0, 3)) {
+      void prefetchPR(effectiveRepoPath, pr.number);
+    }
+  }, [activeSection, effectiveRepoPath, isGitHubPRsViewActive, prefetchPR, prs]);
 
   const handleRefresh = useCallback(() => {
-    if (activeRepoPath) {
-      void fetchPRs(activeRepoPath, { force: true });
+    if (effectiveRepoPath) {
+      void fetchPRs(effectiveRepoPath, { force: true });
     }
-  }, [activeRepoPath, fetchPRs]);
+  }, [effectiveRepoPath, fetchPRs]);
+
+  const handleRefreshActiveSection = useCallback(() => {
+    if (!effectiveRepoPath) return;
+
+    if (activeSection === "issues") {
+      githubIssueListCache.clear(effectiveRepoPath);
+      setSectionRefreshNonce((value) => value + 1);
+      return;
+    }
+
+    if (activeSection === "actions") {
+      githubActionListCache.clear(effectiveRepoPath);
+      setSectionRefreshNonce((value) => value + 1);
+      return;
+    }
+
+    void fetchPRs(effectiveRepoPath, { force: true });
+  }, [activeSection, effectiveRepoPath, fetchPRs]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
@@ -206,11 +284,13 @@ const GitHubPRsView = memo(() => {
 
   const handleSelectPR = useCallback(
     (pr: PullRequest) => {
-      openPRBuffer(pr.number, {
-        title: pr.title,
-        authorAvatarUrl:
-          pr.author.avatarUrl ||
-          `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+      startTransition(() => {
+        openPRBuffer(pr.number, {
+          title: pr.title,
+          authorAvatarUrl:
+            pr.author.avatarUrl ||
+            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+        });
       });
     },
     [openPRBuffer],
@@ -240,8 +320,8 @@ const GitHubPRsView = memo(() => {
           label: "Open on GitHub",
           icon: <ExternalLink />,
           onClick: () => {
-            if (activeRepoPath) {
-              void openPRInBrowser(activeRepoPath, selectedPR.number);
+            if (effectiveRepoPath) {
+              void openPRInBrowser(effectiveRepoPath, selectedPR.number);
             }
           },
         },
@@ -250,8 +330,8 @@ const GitHubPRsView = memo(() => {
           label: "Checkout Branch",
           icon: <GitBranch />,
           onClick: () => {
-            if (activeRepoPath) {
-              void checkoutPR(activeRepoPath, selectedPR.number);
+            if (effectiveRepoPath) {
+              void checkoutPR(effectiveRepoPath, selectedPR.number);
             }
           },
         },
@@ -265,6 +345,31 @@ const GitHubPRsView = memo(() => {
         },
       ]
     : [];
+
+  const allSectionTabs: Array<{
+    id: GitHubSidebarSection;
+    label: string;
+    icon: typeof GitPullRequest;
+  }> = [
+    {
+      id: "pull-requests",
+      label: "Pull Requests",
+      icon: GitPullRequest,
+    },
+    {
+      id: "issues",
+      label: "Issues",
+      icon: MessageSquare,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      icon: Activity,
+    },
+  ];
+  const sectionTabs = allSectionTabs.filter((tab) =>
+    availableSections.includes(tab.id),
+  ) as typeof allSectionTabs;
 
   const renderRepoOption = (
     repoPath: string,
@@ -318,26 +423,6 @@ const GitHubPRsView = memo(() => {
 
   return (
     <div className="ui-font flex h-full select-none flex-col gap-2 p-2">
-      <div className="flex flex-wrap items-center gap-1 px-0.5 py-0.5">
-        {availableSections.map((section) => (
-          <Button
-            key={section}
-            type="button"
-            variant="ghost"
-            size="xs"
-            active={activeSection === section}
-            onClick={() => setActiveSection(section)}
-            className="rounded-md px-2"
-          >
-            {section === "pull-requests"
-              ? "Pull Requests"
-              : section === "issues"
-                ? "Issues"
-                : "Actions"}
-          </Button>
-        ))}
-      </div>
-
       {availableSections.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-4 text-center">
           <p className="ui-text-sm text-text-lighter">
@@ -346,31 +431,68 @@ const GitHubPRsView = memo(() => {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">
+          <TabsList
+            variant="segmented"
+            className={cn(
+              "grid h-auto shrink-0 border-border/60 bg-secondary-bg/40",
+              sectionTabs.length === 1
+                ? "grid-cols-1"
+                : sectionTabs.length === 2
+                  ? "grid-cols-2"
+                  : "grid-cols-3",
+            )}
+          >
+            {sectionTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isSelected = activeSection === tab.id;
+
+              return (
+                <Tab
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => setActiveSection(tab.id)}
+                  isActive={isSelected}
+                  size="md"
+                  variant="segmented"
+                  contentLayout="stacked"
+                  className="h-auto min-h-12 min-w-0 px-1 py-1.5 whitespace-normal transition-colors"
+                >
+                  <div className="relative flex items-center justify-center">
+                    <Icon strokeWidth={2.2} />
+                  </div>
+                  <span className="ui-text-sm text-center leading-none">{tab.label}</span>
+                </Tab>
+              );
+            })}
+          </TabsList>
+
+          <div className={paneHeaderClassName("justify-between rounded-lg")}>
             <div>
-              {activeSection === "pull-requests" ? (
-                <Tooltip content="Filter pull requests" side="bottom">
-                  <Button
-                    ref={filterTriggerRef}
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    variant="ghost"
-                    size="sm"
-                    className={dropdownTriggerClassName("ui-text-sm")}
-                  >
-                    <GitPullRequest className="shrink-0" />
-                    <span className="truncate">{filterLabels[currentFilter]}</span>
-                    <ChevronDown />
-                  </Button>
-                </Tooltip>
-              ) : (
-                <span className="ui-text-sm px-1 text-text">
-                  {activeSection === "issues" ? "Open Issues" : "Workflow Runs"}
-                </span>
-              )}
+              <Tooltip content="Filter pull requests" side="bottom">
+                <Button
+                  ref={filterTriggerRef}
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  variant="ghost"
+                  size="sm"
+                  disabled={activeSection !== "pull-requests"}
+                  className={dropdownTriggerClassName("ui-text-sm")}
+                >
+                  <GitPullRequest className="shrink-0" />
+                  <span className="truncate">
+                    {activeSection === "pull-requests"
+                      ? filterLabels[currentFilter]
+                      : activeSection === "issues"
+                        ? "Issues"
+                        : "Actions"}
+                  </span>
+                  {activeSection === "pull-requests" ? <ChevronDown /> : null}
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex min-w-0 items-center gap-1.5">
               <div>
-                <Tooltip content={activeRepoPath ?? "Select repository"} side="bottom">
+                <Tooltip content={effectiveRepoPath ?? "Select repository"} side="bottom">
                   <Button
                     ref={repoTriggerRef}
                     onClick={() =>
@@ -388,27 +510,40 @@ const GitHubPRsView = memo(() => {
                   >
                     <FolderOpen className="shrink-0" />
                     <span className="truncate">
-                      {activeRepoPath ? getFolderName(activeRepoPath) : "Select Repo"}
+                      {effectiveRepoPath ? getFolderName(effectiveRepoPath) : "Select Repo"}
                     </span>
                     <ChevronDown />
                   </Button>
                 </Tooltip>
               </div>
 
-              {activeSection === "pull-requests" && (
-                <Tooltip content="Refresh pull requests" side="bottom">
-                  <Button
-                    onClick={handleRefresh}
-                    disabled={isLoading || !activeRepoPath}
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-text-lighter"
-                    aria-label="Refresh pull requests"
-                  >
-                    <RefreshCw className={isLoading ? "animate-spin" : ""} />
-                  </Button>
-                </Tooltip>
-              )}
+              <Tooltip
+                content={
+                  activeSection === "pull-requests"
+                    ? "Refresh pull requests"
+                    : activeSection === "issues"
+                      ? "Refresh issues"
+                      : "Refresh workflow runs"
+                }
+                side="bottom"
+              >
+                <Button
+                  onClick={handleRefreshActiveSection}
+                  disabled={isLoading || !effectiveRepoPath}
+                  variant="ghost"
+                  size="icon-sm"
+                  className={cn(paneIconButtonClassName(), "size-6", "disabled:opacity-50")}
+                  aria-label={
+                    activeSection === "pull-requests"
+                      ? "Refresh pull requests"
+                      : activeSection === "issues"
+                        ? "Refresh issues"
+                        : "Refresh workflow runs"
+                  }
+                >
+                  <RefreshCw className={isLoading ? "animate-spin" : ""} />
+                </Button>
+              </Tooltip>
             </div>
           </div>
 
@@ -513,82 +648,91 @@ const GitHubPRsView = memo(() => {
             </div>
           </Dropdown>
 
-          <div className="scrollbar-hidden flex-1 overflow-y-auto">
-            {!activeRepoPath ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="ui-font flex flex-col items-center text-center">
-                  <span className="ui-text-sm text-text-lighter">No repository selected</span>
-                  <Button
-                    onClick={() => void handleSelectRepository()}
-                    variant="ghost"
-                    size="xs"
-                    className="ui-text-sm mt-1.5 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-                  >
-                    Browse Repository
-                  </Button>
-                </div>
-              </div>
-            ) : activeSection === "issues" ? (
-              <GitHubIssuesView />
-            ) : activeSection === "actions" ? (
-              <GitHubActionsView />
-            ) : error ? (
-              <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
-                <AlertCircle className="mb-2 text-error" />
-                {isRepoError ? (
-                  <>
-                    <p className="ui-text-sm text-error">Repository is not a Git repository</p>
-                    <p className="ui-text-sm mt-1 text-text-lighter">
-                      Select another folder that contains a `.git` repository.
-                    </p>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {activeSection === "pull-requests" && (
+              <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
+            )}
+            <div className="scrollbar-hidden min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+              {!effectiveRepoPath ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="ui-font flex flex-col items-center text-center">
+                    <span className="ui-text-sm text-text-lighter">No repository selected</span>
                     <Button
                       onClick={() => void handleSelectRepository()}
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 rounded-lg"
+                      variant="ghost"
+                      size="xs"
+                      className="ui-text-sm mt-1.5 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
                     >
                       Browse Repository
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <p className="ui-text-sm text-error">{error}</p>
-                    <Button
-                      onClick={handleRefresh}
-                      variant="ghost"
-                      size="xs"
-                      className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-                    >
-                      Try again
-                    </Button>
-                  </>
-                )}
-                {repoSelectionError && (
-                  <p className="ui-text-sm mt-2 text-error/80">{repoSelectionError}</p>
-                )}
-              </div>
-            ) : isLoading && prs.length === 0 ? (
-              <div className="flex items-center justify-center p-4">
-                <RefreshCw className="animate-spin text-text-lighter" />
-              </div>
-            ) : prs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-4 text-center">
-                <GitPullRequest className="mb-2 text-text-lighter" />
-                <p className="ui-text-sm text-text-lighter">No pull requests</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {prs.map((pr) => (
-                  <PRListItem
-                    key={pr.number}
-                    pr={pr}
-                    isActive={activePRNumber === pr.number}
-                    onSelect={() => handleSelectPR(pr)}
-                    onContextMenu={handlePRContextMenu}
-                  />
-                ))}
-              </div>
-            )}
+                  </div>
+                </div>
+              ) : activeSection === "issues" ? (
+                <GitHubIssuesView refreshNonce={sectionRefreshNonce} />
+              ) : activeSection === "actions" ? (
+                <GitHubActionsView refreshNonce={sectionRefreshNonce} />
+              ) : error ? (
+                <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">
+                  <AlertCircle className="mb-2 text-error" />
+                  {isRepoError ? (
+                    <>
+                      <p className="ui-text-sm text-error">Repository is not a Git repository</p>
+                      <p className="ui-text-sm mt-1 text-text-lighter">
+                        Select another folder that contains a `.git` repository.
+                      </p>
+                      <Button
+                        onClick={() => void handleSelectRepository()}
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 rounded-lg"
+                      >
+                        Browse Repository
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="ui-text-sm text-error">{error}</p>
+                      <Button
+                        onClick={handleRefresh}
+                        variant="ghost"
+                        size="xs"
+                        className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+                      >
+                        Try again
+                      </Button>
+                    </>
+                  )}
+                  {repoSelectionError && (
+                    <p className="ui-text-sm mt-2 text-error/80">{repoSelectionError}</p>
+                  )}
+                </div>
+              ) : isLoading && deferredPrs.length === 0 ? (
+                <div className="flex items-center justify-center p-4">
+                  <RefreshCw className="animate-spin text-text-lighter" />
+                </div>
+              ) : deferredPrs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-4 text-center">
+                  <GitPullRequest className="mb-2 text-text-lighter" />
+                  <p className="ui-text-sm text-text-lighter">No pull requests</p>
+                </div>
+              ) : (
+                <div className="space-y-2 overflow-x-hidden">
+                  {deferredPrs.map((pr) => (
+                    <PRListItem
+                      key={pr.number}
+                      pr={pr}
+                      isActive={activePRNumber === pr.number}
+                      onSelect={() => handleSelectPR(pr)}
+                      onPrefetch={() => {
+                        if (!effectiveRepoPath) return;
+                        void prefetchPR(effectiveRepoPath, pr.number);
+                      }}
+                      onContextMenu={handlePRContextMenu}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

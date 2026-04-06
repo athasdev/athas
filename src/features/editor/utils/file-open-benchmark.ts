@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { frontendTrace } from "@/utils/frontend-trace";
 
 interface FileOpenBenchmarkSession {
   path: string;
@@ -32,6 +33,12 @@ function formatDuration(duration: number): string {
   return `${duration.toFixed(1)}ms`;
 }
 
+function shortPath(path: string): string {
+  const normalized = path.replace(/[\\/]+$/, "");
+  const parts = normalized.split(/[\\/]/);
+  return parts[parts.length - 1] || path;
+}
+
 function pushMark(session: FileOpenBenchmarkSession, label: string, detail?: string): void {
   session.marks.push({
     label,
@@ -40,17 +47,36 @@ function pushMark(session: FileOpenBenchmarkSession, label: string, detail?: str
   });
 }
 
-function summarize(session: FileOpenBenchmarkSession): string {
+function summarize(session: FileOpenBenchmarkSession) {
   let previousAt = session.startedAt;
 
   const phases = session.marks.map((mark) => {
     const duration = mark.at - previousAt;
     previousAt = mark.at;
-    return `${mark.label}=${formatDuration(duration)}${mark.detail ? ` (${mark.detail})` : ""}`;
+    return {
+      label: mark.label,
+      duration,
+      detail: mark.detail,
+    };
   });
 
   const total = previousAt - session.startedAt;
-  return `${phases.join(" | ")} | total=${formatDuration(total)}`;
+  return {
+    phases,
+    total,
+    text: `${shortPath(session.path)} ${phases
+      .map(
+        (phase) =>
+          `${phase.label}=${formatDuration(phase.duration)}${phase.detail ? ` (${phase.detail})` : ""}`,
+      )
+      .join(" | ")} | total=${formatDuration(total)}`,
+  };
+}
+
+function getBenchmarkLevel(total: number): "info" | "warn" | "error" {
+  if (total >= 800) return "error";
+  if (total >= 250) return "warn";
+  return "info";
 }
 
 export const fileOpenBenchmark = {
@@ -89,7 +115,17 @@ export const fileOpenBenchmark = {
     if (!session) return;
 
     pushMark(session, label, detail);
-    logger.info("FileOpenBenchmark", `${path} -> ${summarize(session)}`);
+    const summary = summarize(session);
+    const level = getBenchmarkLevel(summary.total);
+    logger.info("FileOpenBenchmark", summary.text);
+    frontendTrace(level, "bench:file-open", shortPath(path), {
+      totalMs: Math.round(summary.total * 100) / 100,
+      phases: summary.phases.map((phase) => ({
+        label: phase.label,
+        durationMs: Math.round(phase.duration * 100) / 100,
+        detail: phase.detail ?? null,
+      })),
+    });
     sessions.delete(path);
   },
 

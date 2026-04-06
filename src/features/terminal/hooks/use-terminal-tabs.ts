@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import type {
   PersistedTerminal,
   Terminal,
@@ -6,62 +7,10 @@ import type {
   TerminalState,
 } from "@/features/terminal/types/terminal";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
-
-const PERSISTENCE_KEY = "terminal-sessions";
-const PERSISTENCE_ENABLED_KEY = "terminal-persistence-enabled";
-
-const isPersistenceEnabled = (): boolean => {
-  try {
-    const enabled = localStorage.getItem(PERSISTENCE_ENABLED_KEY);
-    return enabled === null || enabled === "true"; // Default to true
-  } catch {
-    return true;
-  }
-};
-
-const saveTerminalsToStorage = (terminals: Terminal[]) => {
-  if (!isPersistenceEnabled()) return;
-
-  try {
-    const persistedTerminals: PersistedTerminal[] = terminals.map((t) => ({
-      id: t.id,
-      name: t.name,
-      currentDirectory: t.currentDirectory,
-      isPinned: t.isPinned || false,
-      shell: t.shell,
-      profileId: t.profileId,
-      title: t.title,
-      remoteConnectionId: t.remoteConnectionId,
-    }));
-    localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(persistedTerminals));
-  } catch (error) {
-    console.error("Failed to save terminals to storage:", error);
-  }
-};
-
-const loadTerminalsFromStorage = (): PersistedTerminal[] => {
-  if (!isPersistenceEnabled()) return [];
-
-  try {
-    const stored = localStorage.getItem(PERSISTENCE_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored);
-  } catch (error) {
-    console.error("Failed to load terminals from storage:", error);
-    return [];
-  }
-};
-
-export const setTerminalPersistence = (enabled: boolean) => {
-  try {
-    localStorage.setItem(PERSISTENCE_ENABLED_KEY, String(enabled));
-    if (!enabled) {
-      localStorage.removeItem(PERSISTENCE_KEY);
-    }
-  } catch (error) {
-    console.error("Failed to update persistence setting:", error);
-  }
-};
+import {
+  loadWorkspaceTerminalsFromStorage,
+  saveWorkspaceTerminalsToStorage,
+} from "@/features/terminal/lib/terminal-session-storage";
 
 const generateTerminalId = (name: string): string => {
   return `terminal_${name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
@@ -261,14 +210,20 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
 };
 
 export const useTerminalTabs = () => {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const rootFolderPathRef = useRef(rootFolderPath);
   const [state, dispatch] = useReducer(terminalReducer, {
     terminals: [],
     activeTerminalId: null,
   });
 
+  useEffect(() => {
+    rootFolderPathRef.current = rootFolderPath;
+  }, [rootFolderPath]);
+
   // Save terminals to storage whenever state changes
   useEffect(() => {
-    saveTerminalsToStorage(state.terminals);
+    saveWorkspaceTerminalsToStorage(rootFolderPathRef.current, state.terminals);
   }, [state.terminals]);
 
   // Listen for global workspace reset event
@@ -397,8 +352,8 @@ export const useTerminalTabs = () => {
   );
 
   const getPersistedTerminals = useCallback((): PersistedTerminal[] => {
-    return loadTerminalsFromStorage();
-  }, []);
+    return loadWorkspaceTerminalsFromStorage(rootFolderPath);
+  }, [rootFolderPath]);
 
   const restoreTerminalsFromPersisted = useCallback((persistedTerminals: PersistedTerminal[]) => {
     persistedTerminals.forEach((pt) => {

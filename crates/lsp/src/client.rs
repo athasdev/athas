@@ -15,7 +15,7 @@ use std::{
    },
    thread,
 };
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
@@ -45,7 +45,12 @@ impl LspClient {
          // JS-based server requires Node.js runtime
          let node_path = if let Some(ref handle) = app_handle {
             // Get Node.js runtime asynchronously
-            let runtime = NodeRuntime::get_or_install(handle)
+            let managed_root = handle
+               .path()
+               .app_data_dir()
+               .map(|dir| dir.join("runtimes"))
+               .context("Failed to resolve runtime directory for JS-based language server")?;
+            let runtime = NodeRuntime::get_or_install(Some(&managed_root))
                .await
                .context("Failed to get Node.js runtime for JS-based language server")?;
             runtime.binary_path().clone()
@@ -134,6 +139,7 @@ impl LspClient {
       });
 
       // Stdout reader thread
+      let app_handle_crash = app_handle.clone();
       thread::spawn(move || {
          let mut reader = BufReader::new(stdout);
          loop {
@@ -143,8 +149,23 @@ impl LspClient {
             // Read headers
             loop {
                line.clear();
-               if reader.read_line(&mut line).is_err() {
-                  return;
+               match reader.read_line(&mut line) {
+                  Ok(0) => {
+                     // EOF — server process has exited
+                     log::warn!("LSP server stdout closed (server crashed or exited)");
+                     if let Some(ref app) = app_handle_crash {
+                        let _ = app.emit("lsp://server-crashed", json!({}));
+                     }
+                     return;
+                  }
+                  Err(e) => {
+                     log::error!("Error reading LSP stdout: {}", e);
+                     if let Some(ref app) = app_handle_crash {
+                        let _ = app.emit("lsp://server-crashed", json!({ "error": e.to_string() }));
+                     }
+                     return;
+                  }
+                  Ok(_) => {}
                }
 
                if line == "\r\n" || line == "\n" {
@@ -169,6 +190,10 @@ impl LspClient {
             // Read content
             let mut content = vec![0u8; content_length];
             if reader.read_exact(&mut content).is_err() {
+               log::warn!("LSP server stdout read error (server may have crashed)");
+               if let Some(ref app) = app_handle_crash {
+                  let _ = app.emit("lsp://server-crashed", json!({}));
+               }
                return;
             }
 
@@ -204,7 +229,11 @@ impl LspClient {
       Ok((client, child))
    }
 
-   pub async fn initialize(&self, root_uri: Url) -> Result<()> {
+   pub async fn initialize(
+      &self,
+      root_uri: Url,
+      initialization_options: Option<Value>,
+   ) -> Result<()> {
       log::info!("Initializing LSP server with root_uri: {}", root_uri);
 
       // Build client capabilities with text document sync and diagnostics support
@@ -231,11 +260,90 @@ impl LspClient {
             dynamic_registration: Some(true),
             content_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
          }),
+         signature_help: Some(SignatureHelpClientCapabilities {
+            dynamic_registration: Some(true),
+            signature_information: Some(SignatureInformationSettings {
+               documentation_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
+               parameter_information: Some(ParameterInformationSettings {
+                  label_offset_support: Some(true),
+               }),
+               active_parameter_support: Some(true),
+            }),
+            context_support: Some(true),
+         }),
          definition: Some(GotoCapability {
             dynamic_registration: Some(true),
             link_support: Some(true),
          }),
+         semantic_tokens: Some(SemanticTokensClientCapabilities {
+            dynamic_registration: Some(true),
+            requests: SemanticTokensClientCapabilitiesRequests {
+               full: Some(SemanticTokensFullOptions::Bool(true)),
+               range: Some(true),
+            },
+            token_types: vec![
+               SemanticTokenType::NAMESPACE,
+               SemanticTokenType::TYPE,
+               SemanticTokenType::CLASS,
+               SemanticTokenType::ENUM,
+               SemanticTokenType::INTERFACE,
+               SemanticTokenType::STRUCT,
+               SemanticTokenType::TYPE_PARAMETER,
+               SemanticTokenType::PARAMETER,
+               SemanticTokenType::VARIABLE,
+               SemanticTokenType::PROPERTY,
+               SemanticTokenType::ENUM_MEMBER,
+               SemanticTokenType::EVENT,
+               SemanticTokenType::FUNCTION,
+               SemanticTokenType::METHOD,
+               SemanticTokenType::MACRO,
+               SemanticTokenType::KEYWORD,
+               SemanticTokenType::MODIFIER,
+               SemanticTokenType::COMMENT,
+               SemanticTokenType::STRING,
+               SemanticTokenType::NUMBER,
+               SemanticTokenType::REGEXP,
+               SemanticTokenType::OPERATOR,
+               SemanticTokenType::DECORATOR,
+            ],
+            token_modifiers: vec![
+               SemanticTokenModifier::DECLARATION,
+               SemanticTokenModifier::DEFINITION,
+               SemanticTokenModifier::READONLY,
+               SemanticTokenModifier::STATIC,
+               SemanticTokenModifier::DEPRECATED,
+               SemanticTokenModifier::ABSTRACT,
+               SemanticTokenModifier::ASYNC,
+               SemanticTokenModifier::MODIFICATION,
+               SemanticTokenModifier::DOCUMENTATION,
+               SemanticTokenModifier::DEFAULT_LIBRARY,
+            ],
+            formats: vec![TokenFormat::RELATIVE],
+            overlapping_token_support: Some(false),
+            multiline_token_support: Some(true),
+            server_cancel_support: Some(false),
+            augments_syntax_tokens: Some(true),
+         }),
+         inlay_hint: Some(InlayHintClientCapabilities {
+            dynamic_registration: Some(true),
+            resolve_support: None,
+         }),
+         document_symbol: Some(DocumentSymbolClientCapabilities {
+            dynamic_registration: Some(true),
+            symbol_kind: None,
+            hierarchical_document_symbol_support: Some(true),
+            tag_support: None,
+         }),
          references: Some(DynamicRegistrationClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
+         rename: Some(RenameClientCapabilities {
+            dynamic_registration: Some(true),
+            prepare_support: Some(true),
+            prepare_support_default_behavior: None,
+            honors_change_annotations: Some(false),
+         }),
+         code_lens: Some(CodeLensClientCapabilities {
             dynamic_registration: Some(true),
          }),
          code_action: Some(CodeActionClientCapabilities {
@@ -261,6 +369,7 @@ impl LspClient {
          process_id: Some(std::process::id()),
          #[allow(deprecated)]
          root_uri: Some(root_uri),
+         initialization_options,
          capabilities: ClientCapabilities {
             text_document: Some(text_document_capabilities),
             workspace: Some(WorkspaceClientCapabilities {
@@ -466,11 +575,66 @@ impl LspClient {
       self.request::<request::GotoDefinition>(params).await
    }
 
+   pub async fn text_document_code_lens(
+      &self,
+      params: CodeLensParams,
+   ) -> Result<Option<Vec<CodeLens>>> {
+      self.request::<request::CodeLensRequest>(params).await
+   }
+
    pub async fn text_document_code_action(
       &self,
       params: CodeActionParams,
    ) -> Result<Option<CodeActionResponse>> {
       self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn text_document_semantic_tokens_full(
+      &self,
+      params: SemanticTokensParams,
+   ) -> Result<Option<SemanticTokensResult>> {
+      self
+         .request::<request::SemanticTokensFullRequest>(params)
+         .await
+   }
+
+   pub async fn text_document_inlay_hint(
+      &self,
+      params: InlayHintParams,
+   ) -> Result<Option<Vec<InlayHint>>> {
+      self.request::<request::InlayHintRequest>(params).await
+   }
+
+   pub async fn text_document_document_symbol(
+      &self,
+      params: DocumentSymbolParams,
+   ) -> Result<Option<DocumentSymbolResponse>> {
+      self.request::<request::DocumentSymbolRequest>(params).await
+   }
+
+   pub async fn text_document_signature_help(
+      &self,
+      params: SignatureHelpParams,
+   ) -> Result<Option<SignatureHelp>> {
+      self.request::<request::SignatureHelpRequest>(params).await
+   }
+
+   pub async fn text_document_references(
+      &self,
+      params: ReferenceParams,
+   ) -> Result<Option<Vec<Location>>> {
+      self.request::<request::References>(params).await
+   }
+
+   pub async fn text_document_rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+      self.request::<request::Rename>(params).await
+   }
+
+   pub async fn text_document_prepare_rename(
+      &self,
+      params: TextDocumentPositionParams,
+   ) -> Result<Option<PrepareRenameResponse>> {
+      self.request::<request::PrepareRenameRequest>(params).await
    }
 
    pub async fn workspace_execute_command(

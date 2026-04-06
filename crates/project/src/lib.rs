@@ -7,7 +7,6 @@ use std::{
    sync::{Arc, Mutex},
    time::{Duration, SystemTime},
 };
-use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct FileChangeEvent {
@@ -23,8 +22,12 @@ pub enum FileChangeType {
    Deleted,
 }
 
+pub trait FileChangeEmitter: Send + Sync {
+   fn emit_file_change(&self, event: &FileChangeEvent);
+}
+
 pub struct FileWatcher {
-   app_handle: AppHandle,
+   emitter: Arc<dyn FileChangeEmitter>,
    debouncer: Arc<Mutex<Option<Debouncer<notify::RecommendedWatcher>>>>,
    watched_paths: Arc<Mutex<HashSet<PathBuf>>>,
    watched_directories: Arc<Mutex<HashSet<PathBuf>>>,
@@ -32,9 +35,9 @@ pub struct FileWatcher {
 }
 
 impl FileWatcher {
-   pub fn new(app_handle: AppHandle) -> Self {
+   pub fn new(emitter: Arc<dyn FileChangeEmitter>) -> Self {
       Self {
-         app_handle,
+         emitter,
          debouncer: Arc::new(Mutex::new(None)),
          watched_paths: Arc::new(Mutex::new(HashSet::new())),
          watched_directories: Arc::new(Mutex::new(HashSet::new())),
@@ -43,6 +46,14 @@ impl FileWatcher {
    }
 
    pub async fn watch_path(&self, path: String) -> Result<()> {
+      self.watch_path_with_mode(path, true).await
+   }
+
+   pub async fn watch_project_root(&self, path: String) -> Result<()> {
+      self.watch_path_with_mode(path, false).await
+   }
+
+   async fn watch_path_with_mode(&self, path: String, recursive: bool) -> Result<()> {
       let path_buf = PathBuf::from(&path);
 
       if !path_buf.exists() {
@@ -55,7 +66,7 @@ impl FileWatcher {
       }
 
       self.ensure_debouncer_initialized()?;
-      self.setup_path_watching(&path_buf, &mut watched_paths)?;
+      self.setup_path_watching(&path_buf, &mut watched_paths, recursive)?;
 
       // Emit an "Opened" event for clarity in the app UI
       let change_event = FileChangeEvent {
@@ -66,7 +77,7 @@ impl FileWatcher {
          "[FileWatcher] Emitting opened event for: {}",
          change_event.path
       );
-      let _ = self.app_handle.emit("file-changed", &change_event);
+      self.emitter.emit_file_change(&change_event);
 
       Ok(())
    }
@@ -83,7 +94,7 @@ impl FileWatcher {
    }
 
    fn create_debouncer(&self) -> Result<Debouncer<notify::RecommendedWatcher>> {
-      let app_handle = self.app_handle.clone();
+      let emitter = Arc::clone(&self.emitter);
       let watched_paths = self.watched_paths.clone();
       let watched_directories = self.watched_directories.clone();
       let known_files = self.known_files.clone();
@@ -94,7 +105,7 @@ impl FileWatcher {
             if let Ok(events) = result {
                Self::handle_events(
                   events,
-                  &app_handle,
+                  emitter.as_ref(),
                   &watched_paths,
                   &watched_directories,
                   &known_files,
@@ -106,7 +117,7 @@ impl FileWatcher {
 
    fn handle_events(
       events: Vec<notify_debouncer_mini::DebouncedEvent>,
-      app_handle: &AppHandle,
+      emitter: &dyn FileChangeEmitter,
       watched_paths: &Arc<Mutex<HashSet<PathBuf>>>,
       watched_directories: &Arc<Mutex<HashSet<PathBuf>>>,
       known_files: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
@@ -133,7 +144,7 @@ impl FileWatcher {
                change_event.path,
                change_event.event_type
             );
-            let _ = app_handle.emit("file-changed", &change_event);
+            emitter.emit_file_change(&change_event);
          }
       }
    }
@@ -193,13 +204,14 @@ impl FileWatcher {
       &self,
       path_buf: &PathBuf,
       watched_paths: &mut HashSet<PathBuf>,
+      recursive: bool,
    ) -> Result<()> {
       let mut debouncer_guard = self.debouncer.lock().unwrap();
       let debouncer = debouncer_guard
          .as_mut()
          .context("Debouncer should be initialized")?;
 
-      let recursive_mode = if path_buf.is_dir() {
+      let recursive_mode = if path_buf.is_dir() && recursive {
          RecursiveMode::Recursive
       } else {
          RecursiveMode::NonRecursive

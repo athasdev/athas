@@ -6,6 +6,7 @@ import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import type { IssueDetails } from "../types/github";
+import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/pr-viewer-utils";
 import { CommentItem } from "./comment-item";
 import GitHubMarkdown from "./github-markdown";
@@ -16,19 +17,21 @@ interface GitHubIssueViewerProps {
   bufferId: string;
 }
 
-const ISSUE_CACHE_TTL_MS = 120_000;
-const issueCache = new Map<string, { fetchedAt: number; details: IssueDetails }>();
-
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
   const buffers = useBufferStore.use.buffers();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const [details, setDetails] = useState<IssueDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [visibleCommentCount, setVisibleCommentCount] = useState(8);
   const buffer = buffers.find((item) => item.id === bufferId);
   const issueBaseUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
     [details?.url],
+  );
+  const visibleComments = useMemo(
+    () => details?.comments.slice(0, visibleCommentCount) ?? [],
+    [details?.comments, visibleCommentCount],
   );
 
   const fetchIssue = useCallback(
@@ -40,23 +43,32 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       }
 
       const cacheKey = `${repoPath}::${issueNumber}`;
-      const cached = issueCache.get(cacheKey);
-      if (cached && !force && Date.now() - cached.fetchedAt < ISSUE_CACHE_TTL_MS) {
-        setDetails(cached.details);
+      const cached = githubIssueDetailsCache.getFreshValue(cacheKey, GITHUB_ISSUE_DETAILS_TTL_MS);
+      if (cached && !force) {
+        setDetails(cached);
         setError(null);
         setIsLoading(false);
         return;
+      }
+
+      const stale = githubIssueDetailsCache.getSnapshot(cacheKey)?.value;
+      if (stale && !force) {
+        setDetails(stale);
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const nextDetails = await invoke<IssueDetails>("github_get_issue_details", {
-          repoPath,
-          issueNumber,
-        });
-        issueCache.set(cacheKey, { fetchedAt: Date.now(), details: nextDetails });
+        const nextDetails = await githubIssueDetailsCache.load(
+          cacheKey,
+          () =>
+            invoke<IssueDetails>("github_get_issue_details", {
+              repoPath,
+              issueNumber,
+            }),
+          { force, ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
+        );
         setDetails(nextDetails);
         setError(null);
       } catch (nextError) {
@@ -94,6 +106,41 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       url: details.url,
     });
   }, [buffer, details, updateBuffer]);
+
+  useEffect(() => {
+    setVisibleCommentCount(8);
+  }, [details?.number]);
+
+  useEffect(() => {
+    const totalComments = details?.comments.length ?? 0;
+    if (totalComments <= visibleCommentCount) return;
+
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const schedule = idleApi.requestIdleCallback;
+
+    const revealMore = () => {
+      if (cancelled) return;
+      setVisibleCommentCount((current) => Math.min(current + 12, totalComments));
+    };
+
+    if (typeof schedule === "function") {
+      const idleId = schedule(revealMore, { timeout: 200 });
+      return () => {
+        cancelled = true;
+        idleApi.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(revealMore, 16);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [details?.comments.length, visibleCommentCount]);
 
   const handleOpenInBrowser = useCallback(() => {
     if (!details?.url) {
@@ -219,7 +266,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
 
             <div className="space-y-1">
               {details.comments.length > 0 ? (
-                details.comments.map((comment, index) => (
+                visibleComments.map((comment, index) => (
                   <CommentItem
                     key={`${comment.author.login}-${comment.createdAt}-${index}`}
                     comment={comment}
@@ -233,6 +280,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   <p className="ui-font ui-text-sm">No comments</p>
                 </div>
               )}
+              {details.comments.length > visibleComments.length ? (
+                <div className="px-1 py-2 text-text-lighter">
+                  <p className="ui-font ui-text-sm">
+                    Loading {details.comments.length - visibleComments.length} more comments...
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}

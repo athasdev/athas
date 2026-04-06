@@ -13,6 +13,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useSettingsStore } from "@/features/settings/store";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
@@ -20,8 +21,8 @@ interface ViewActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
   isBottomPaneVisible: boolean;
   setIsBottomPaneVisible: (v: boolean) => void;
-  bottomPaneActiveTab: "terminal" | "diagnostics";
-  setBottomPaneActiveTab: (tab: "terminal" | "diagnostics") => void;
+  bottomPaneActiveTab: BottomPaneTab;
+  setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
   isFindVisible: boolean;
   setIsFindVisible: (v: boolean) => void;
   settings: {

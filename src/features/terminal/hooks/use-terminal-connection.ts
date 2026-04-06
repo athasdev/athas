@@ -177,8 +177,16 @@ export function useTerminalConnection({
     );
 
     disposables.push(
-      terminal.onTitleChange((title) => {
-        updateSession(sessionId, { title });
+      terminal.onTitleChange((rawTitle) => {
+        // Strip ANSI escape sequences and control characters from title
+        const title = rawTitle
+          .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
+          .replace(/\x1b\][^\x07]*\x07/g, "")
+          .replace(/[\x00-\x1f\x7f\x9b]/g, "")
+          .trim();
+        if (title) {
+          updateSession(sessionId, { title });
+        }
       }),
     );
 

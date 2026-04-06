@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { calculateTotalGutterWidth } from "../../utils/gutter";
 import { DiagnosticIndicators } from "./diagnostic-indicators";
@@ -63,6 +64,7 @@ function GutterComponent({
 
   const totalWidth = calculateTotalGutterWidth(totalLines);
   const totalContentHeight = totalLines * lineHeight + GUTTER_PADDING * 2;
+  const isDiffAccordionBuffer = filePath?.startsWith("diff-editor://") ?? false;
 
   // When word wrap is on, use flow-based gutter that syncs scrollTop directly
   const useFlowGutter = wordWrap && !!lines && !!contentWidth && contentWidth > 0;
@@ -112,17 +114,7 @@ function GutterComponent({
 
     const syncScroll = () => {
       const scrollTop = textarea.scrollTop;
-
-      if (useFlowGutter) {
-        // Flow gutter: sync scrollTop directly — heights match the textarea
-        scrollTopRef.current = scrollTop;
-      } else {
-        // Absolute gutter: scale to compensate for height differences
-        const textareaScrollHeight = textarea.scrollHeight;
-        const scrollRatio =
-          textareaScrollHeight > 0 ? totalContentHeight / textareaScrollHeight : 1;
-        scrollTopRef.current = scrollTop * scrollRatio;
-      }
+      scrollTopRef.current = scrollTop;
 
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
@@ -159,7 +151,7 @@ function GutterComponent({
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [textareaRef, totalLines, lineHeight, virtualize, totalContentHeight, useFlowGutter]);
+  }, [textareaRef, totalLines, lineHeight, virtualize, useFlowGutter]);
 
   const computedViewport = useMemo(() => {
     if (!virtualize) {
@@ -186,6 +178,46 @@ function GutterComponent({
   const textWidth = contentWidth
     ? contentWidth - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT - EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT
     : 0;
+  const accordionLineSet = useMemo(() => {
+    const result = new Set<number>();
+    if (!isDiffAccordionBuffer || !lines) return result;
+
+    lines.forEach((line, index) => {
+      if (parseDiffAccordionLine(line)) {
+        result.add(index);
+      }
+    });
+
+    return result;
+  }, [isDiffAccordionBuffer, lines]);
+
+  const accordionGutterDecorations = useMemo(() => {
+    if (!isDiffAccordionBuffer || !lines || useFlowGutter) return null;
+
+    const items = [];
+    for (let i = computedViewport.startLine; i < computedViewport.endLine; i++) {
+      const meta = parseDiffAccordionLine(lines[i] || "");
+      if (!meta) continue;
+
+      items.push(
+        <div
+          key={`accordion-gutter-${i}`}
+          className="diff-accordion-gutter-line"
+          style={{
+            position: "absolute",
+            top: `${i * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
+            left: 0,
+            width: `${totalWidth}px`,
+            height: `${lineHeight}px`,
+          }}
+        >
+          <div className="diff-accordion-gutter-card" />
+        </div>,
+      );
+    }
+
+    return items;
+  }, [isDiffAccordionBuffer, lines, useFlowGutter, computedViewport, lineHeight, totalWidth]);
 
   return (
     <div
@@ -215,9 +247,11 @@ function GutterComponent({
             textWidth={textWidth}
             onLineClick={onLineClick}
             foldMapping={foldMapping}
+            filePath={filePath}
           />
         ) : (
           <>
+            {accordionGutterDecorations}
             <GitIndicators
               lineHeight={lineHeight}
               fontSize={fontSize}
@@ -225,6 +259,7 @@ function GutterComponent({
               onIndicatorClick={onGitIndicatorClick}
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
+              hiddenLines={accordionLineSet}
             />
 
             <DiagnosticIndicators
@@ -234,10 +269,11 @@ function GutterComponent({
               fontFamily={fontFamily}
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
+              hiddenLines={accordionLineSet}
             />
 
             <FoldIndicators
-              filePath={filePath}
+              filePath={isDiffAccordionBuffer ? undefined : filePath}
               lineHeight={lineHeight}
               fontSize={fontSize}
               foldMapping={foldMapping}
@@ -254,6 +290,7 @@ function GutterComponent({
               foldMapping={foldMapping}
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
+              hiddenLines={accordionLineSet}
             />
           </>
         )}

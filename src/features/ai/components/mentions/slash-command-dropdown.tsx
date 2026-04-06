@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { Button } from "@/ui/button";
+import { dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 
 interface SlashCommandDropdownProps {
   onSelect: (command: SlashCommand) => void;
 }
+
+const ATTACHED_DROPDOWN_GAP = -1;
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   onSelect,
@@ -39,19 +41,14 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   // Adjust position
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(360, window.innerWidth - 16);
+    const dropdownWidth = Math.min(Math.max(position.width, 260), window.innerWidth - 16);
     const dropdownHeight = Math.min(
       filteredCommands.length * 40 + 16,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
     );
     const padding = 8;
 
-    let { top, left } = position;
-
-    if (top < padding) {
-      top = 100;
-      left = Math.max(padding, left);
-    }
+    let { left } = position;
 
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
@@ -60,20 +57,19 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       left = padding;
     }
 
-    // Prefer below input; if there isn't enough room, open above it.
-    if (top + dropdownHeight > window.innerHeight - padding) {
-      top = Math.max(padding, top - dropdownHeight - 12);
-    }
-    if (top < padding) {
-      top = padding;
-    }
+    const attachedAboveTop = position.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
+    const attachedBelowTop = position.bottom + ATTACHED_DROPDOWN_GAP;
+    const top =
+      attachedAboveTop >= padding
+        ? attachedAboveTop
+        : Math.min(attachedBelowTop, window.innerHeight - dropdownHeight - padding);
 
     return {
       top: Math.max(padding, top),
       left: Math.max(padding, left),
       width: dropdownWidth,
     };
-  }, [position.top, position.left, filteredCommands.length]);
+  }, [position.bottom, position.left, position.top, position.width, filteredCommands.length]);
 
   // Handle outside clicks
   useEffect(() => {
@@ -105,7 +101,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-md border border-border bg-secondary-bg shadow-lg"
+      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-t-2xl rounded-b-xl border border-border/70 bg-primary-bg/98 p-1.5 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm"
       style={{
         zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
@@ -118,38 +114,39 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       aria-label="Slash command suggestions"
     >
       {filteredCommands.length > 0 ? (
-        <div className="items-container py-1" role="listbox" aria-label="Command list">
+        <div className="items-container space-y-1" role="listbox" aria-label="Command list">
           {filteredCommands.map((command, index) => (
-            <Button
+            <button
               key={command.name}
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={() => onSelect(command)}
               className={cn(
-                "h-auto w-full justify-start items-start gap-2 px-3 py-2 text-left",
-                "focus:outline-none focus:ring-1 focus:ring-accent/50",
+                dropdownItemClassName(),
+                "w-full items-start rounded-xl px-2.5 py-2 text-left",
+                "focus:outline-none focus:ring-1 focus:ring-border-strong/35",
                 index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
             >
-              <Command className="mt-0.5 shrink-0 text-text-lighter" />
+              <Command size={12} className="mt-0.5 shrink-0 text-text-lighter" />
               <div className="min-w-0 flex-1">
-                <div className="font-medium text-text">/{command.name}</div>
-                <div className="truncate text-[10px] text-text-lighter">{command.description}</div>
+                <div className="truncate font-medium text-[11px] text-text">/{command.name}</div>
+                <div className="truncate pt-0.5 text-[10px] text-text-lighter">
+                  {command.description}
+                </div>
                 {command.input?.hint && (
                   <div className="mt-0.5 truncate text-[10px] text-text-lighter opacity-60">
                     {command.input.hint}
                   </div>
                 )}
               </div>
-            </Button>
+            </button>
           ))}
         </div>
       ) : (
-        <div className="px-3 py-2.5 text-text-lighter text-xs">
+        <div className="px-2.5 py-2 text-text-lighter text-xs">
           {availableSlashCommands.length > 0 ? (
             <>
               <div className="font-medium text-text">No matching slash commands</div>

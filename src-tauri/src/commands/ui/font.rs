@@ -37,7 +37,7 @@ fn get_system_fonts_sync() -> Vec<FontInfo> {
       })
       .collect();
 
-   fonts.sort_by(|a, b| a.family.cmp(&b.family));
+   fonts.sort_by_key(|font| font.family.clone());
    fonts
 }
 

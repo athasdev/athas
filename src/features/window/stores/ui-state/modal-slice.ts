@@ -268,7 +268,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
 
   openSettingsDialog: (tab?: SettingsTab) =>
-    set({
+    set((state) => ({
       isSettingsDialogVisible: true,
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
@@ -278,6 +278,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isBranchManagerVisible: false,
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,
-      settingsInitialTab: tab || "general",
-    }),
+      settingsInitialTab: tab || state.settingsInitialTab,
+    })),
 });

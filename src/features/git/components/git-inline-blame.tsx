@@ -6,6 +6,7 @@ import { useEventListener } from "usehooks-ts";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useOverlayManager } from "@/features/editor/hooks/use-overlay-manager";
 import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
+import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -36,6 +37,8 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
   const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
   const POPOVER_MARGIN = 8;
+
+  useSelectionScope(popoverRef, showCard);
 
   const clearHideTimeout = useCallback(() => {
     if (hideTimeoutRef.current) {
@@ -266,9 +269,9 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed min-w-92 rounded-lg border border-border bg-primary-bg"
+            className="editor-overlay-card fixed min-w-92"
             style={{
-              zIndex: EDITOR_CONSTANTS.Z_INDEX.GIT_BLAME,
+              zIndex: EDITOR_CONSTANTS.Z_INDEX.TOOLTIP,
               left: `${position.x}px`,
               top: `${position.y}px`,
             }}

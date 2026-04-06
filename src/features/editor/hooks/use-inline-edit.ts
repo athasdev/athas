@@ -68,6 +68,7 @@ export function useInlineEdit({
   const inlineEditToolbarActions = useInlineEditToolbarStore.use.actions();
   const inlineEditPopoverRef = useRef<HTMLDivElement>(null);
   const inlineEditInstructionRef = useRef<HTMLInputElement>(null);
+  const focusRestoreRef = useRef<HTMLElement | null>(null);
 
   const [inlineEditInstruction, setInlineEditInstruction] = useState("");
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
@@ -93,14 +94,47 @@ export function useInlineEdit({
   useEffect(() => {
     if (!inlineEditVisible) {
       setInlineEditError(null);
+      const restoreTarget = focusRestoreRef.current;
+      focusRestoreRef.current = null;
+      if (restoreTarget && document.contains(restoreTarget)) {
+        requestAnimationFrame(() => restoreTarget.focus());
+      }
       return;
     }
+
+    focusRestoreRef.current = document.activeElement as HTMLElement | null;
     setInlineEditInstruction("");
     setInlineEditError(null);
-    requestAnimationFrame(() => {
-      inlineEditInstructionRef.current?.focus();
-      inlineEditInstructionRef.current?.select();
-    });
+
+    let cancelled = false;
+    let attempt = 0;
+
+    const focusInstructionInput = () => {
+      if (cancelled) return;
+
+      const input = inlineEditInstructionRef.current;
+      if (!input) {
+        if (attempt < 4) {
+          attempt += 1;
+          requestAnimationFrame(focusInstructionInput);
+        }
+        return;
+      }
+
+      input.focus({ preventScroll: true });
+      input.select();
+
+      if (document.activeElement !== input && attempt < 4) {
+        attempt += 1;
+        requestAnimationFrame(focusInstructionInput);
+      }
+    };
+
+    requestAnimationFrame(focusInstructionInput);
+
+    return () => {
+      cancelled = true;
+    };
   }, [inlineEditVisible]);
 
   useEffect(() => {
@@ -192,6 +226,11 @@ export function useInlineEdit({
     const endOffset = targetRange.end.offset;
     const selectedText = buffer.content.slice(startOffset, endOffset);
 
+    if (!aiAutocompleteModelId.trim()) {
+      toast.error("Please select an inline edit model.");
+      return;
+    }
+
     if (!isAuthenticated) {
       toast.error("Please sign in to use inline edit.");
       return;
@@ -223,8 +262,8 @@ export function useInlineEdit({
       }
     }
 
-    const beforeSelection = buffer.content.slice(0, startOffset);
-    const afterSelection = buffer.content.slice(endOffset);
+    const beforeSelection = buffer.content.slice(Math.max(0, startOffset - 12000), startOffset);
+    const afterSelection = buffer.content.slice(endOffset, endOffset + 12000);
 
     setInlineEditError(null);
     setIsInlineEditRunning(true);

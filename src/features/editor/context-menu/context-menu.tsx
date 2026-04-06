@@ -10,6 +10,7 @@ import {
   FileText,
   Indent,
   Outdent,
+  PenLine,
   RotateCcw,
   Scissors,
   Search,
@@ -33,6 +34,9 @@ interface EditorContextMenuProps {
   onSelectAll?: () => void;
   onFind?: () => void;
   onGoToLine?: () => void;
+  onGoToDefinition?: () => void;
+  onFindReferences?: () => void;
+  onRenameSymbol?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
   onIndent?: () => void;
@@ -55,6 +59,9 @@ const EditorContextMenu = ({
   onSelectAll,
   onFind,
   onGoToLine,
+  onGoToDefinition,
+  onFindReferences,
+  onRenameSymbol,
   onDelete,
   onDuplicate,
   onIndent,
@@ -180,6 +187,28 @@ const EditorContextMenu = ({
       onClick: () => onToggleCase?.(),
     },
     { id: "sep-4", label: "", separator: true, onClick: () => {} },
+    {
+      id: "go-to-definition",
+      label: "Go to Definition",
+      icon: <Code />,
+      keybinding: <Keybinding keys={["F12"]} className="opacity-60" />,
+      onClick: () => onGoToDefinition?.(),
+    },
+    {
+      id: "find-references",
+      label: "Find All References",
+      icon: <Search />,
+      keybinding: <Keybinding keys={["Shift", "F12"]} className="opacity-60" />,
+      onClick: () => onFindReferences?.(),
+    },
+    {
+      id: "rename-symbol",
+      label: "Rename Symbol",
+      icon: <PenLine />,
+      keybinding: <Keybinding keys={["F2"]} className="opacity-60" />,
+      onClick: () => onRenameSymbol?.(),
+    },
+    { id: "sep-5", label: "", separator: true, onClick: () => {} },
     {
       id: "find",
       label: "Find",

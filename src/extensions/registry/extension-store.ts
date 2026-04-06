@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
+import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
 import {
   findExtensionForFile,
@@ -60,8 +61,10 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           // Load language extensions from packager (all installable from server)
+          const packagedExtensions = getPackagedLanguageExtensions();
+          const fallbackExtensions = getFullExtensions();
           const extensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
-            getPackagedLanguageExtensions(),
+            packagedExtensions.length > 0 ? packagedExtensions : fallbackExtensions,
           );
 
           // Check which extensions are installed

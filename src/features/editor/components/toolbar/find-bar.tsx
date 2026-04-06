@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import {
@@ -18,6 +19,9 @@ const FindBar = () => {
   const replaceQuery = useEditorUIStore.use.replaceQuery();
   const isReplaceVisible = useEditorUIStore.use.isReplaceVisible();
   const searchOptions = useEditorUIStore.use.searchOptions();
+  const selection = useEditorStateStore((state) => state.selection);
+  const editorValue = useEditorStateStore((state) => state.value);
+  const editorRef = useEditorStateStore((state) => state.editorRef);
   const {
     setSearchQuery,
     searchNext,
@@ -30,9 +34,16 @@ const FindBar = () => {
   } = useEditorUIStore.use.actions();
 
   const isVisible = isFindVisible;
-  const onClose = () => setIsFindVisible(false);
+  const onClose = () => {
+    setIsFindVisible(false);
+    const textarea = editorRef?.current?.querySelector("textarea");
+    if (textarea instanceof HTMLTextAreaElement) {
+      textarea.focus();
+    }
+  };
   const currentMatch = currentMatchIndex + 1;
   const totalMatches = searchMatches.length;
+  const hasNoResults = Boolean(searchQuery) && totalMatches === 0;
   const onSearch = (direction: "next" | "previous") => {
     if (direction === "next") {
       searchNext();
@@ -42,21 +53,58 @@ const FindBar = () => {
   };
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const wasVisibleRef = useRef(false);
+
+  const getSelectedSearchText = () => {
+    if (!selection) return "";
+
+    const startOffset = Math.min(selection.start.offset, selection.end.offset);
+    const endOffset = Math.max(selection.start.offset, selection.end.offset);
+
+    if (startOffset === endOffset) return "";
+
+    const selectedText = editorValue.slice(startOffset, endOffset);
+    if (!selectedText || selectedText.includes("\n")) return "";
+
+    return selectedText;
+  };
 
   // Focus input when find bar becomes visible
   useEffect(() => {
-    if (isVisible && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (!isVisible) {
+      wasVisibleRef.current = false;
+      return;
     }
-  }, [isVisible]);
 
-  // Global Cmd+F handler to toggle find bar even when input is focused
+    if (!wasVisibleRef.current) {
+      const selectedText = getSelectedSearchText();
+      if (selectedText && selectedText !== searchQuery) {
+        setSearchQuery(selectedText);
+      }
+      wasVisibleRef.current = true;
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }
+  }, [isVisible, searchQuery, selection, editorValue, setSearchQuery]);
+
+  // Global find navigation shortcuts while the popover is open
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         onClose();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          searchPrevious();
+        } else {
+          searchNext();
+        }
       }
     };
 
@@ -66,7 +114,7 @@ const FindBar = () => {
         document.removeEventListener("keydown", handleGlobalKeyDown);
       };
     }
-  }, [isVisible, onClose]);
+  }, [isVisible, onClose, searchNext, searchPrevious]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -76,6 +124,10 @@ const FindBar = () => {
       } else {
         onSearch("next");
       }
+    } else if (e.key === "Tab" && isReplaceVisible) {
+      e.preventDefault();
+      replaceInputRef.current?.focus();
+      replaceInputRef.current?.select();
     } else if (e.key === "Escape") {
       e.preventDefault();
       onClose();
@@ -90,6 +142,14 @@ const FindBar = () => {
       } else {
         replaceNext();
       }
+    } else if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      inputRef.current?.focus();
+      inputRef.current?.select();
     } else if (e.key === "Escape") {
       e.preventDefault();
       onClose();
@@ -111,8 +171,13 @@ const FindBar = () => {
           placeholder="Find in file..."
           inputRef={inputRef}
           matchLabel={
-            searchQuery ? (totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0") : null
+            searchQuery
+              ? totalMatches > 0
+                ? `${currentMatch}/${totalMatches}`
+                : "No results"
+              : null
           }
+          matchTone={hasNoResults ? "warning" : "default"}
           onNext={() => onSearch("next")}
           onPrevious={() => onSearch("previous")}
           canNavigate={Boolean(searchQuery) && totalMatches > 0}

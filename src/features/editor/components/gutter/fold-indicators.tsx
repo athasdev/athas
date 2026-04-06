@@ -1,8 +1,10 @@
 import { memo, useCallback, useMemo } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useFoldStore } from "../../stores/fold-store";
 
 interface LineMapping {
+  actualToVirtual: Map<number, number>;
   virtualToActual: Map<number, number>;
 }
 
@@ -45,13 +47,12 @@ function FoldIndicatorsComponent({
     for (const region of fileState.regions) {
       let virtualLine = region.startLine;
       if (foldMapping) {
-        const mapped = foldMapping.virtualToActual.get(region.startLine);
+        const mapped = foldMapping.actualToVirtual.get(region.startLine);
         if (mapped !== undefined) virtualLine = mapped;
       }
 
       if (virtualLine >= startLine && virtualLine < endLine) {
         const isCollapsed = fileState.collapsedLines.has(region.startLine);
-
         result.push(
           <button
             key={region.startLine}
@@ -59,27 +60,44 @@ function FoldIndicatorsComponent({
             style={{
               position: "absolute",
               top: `${virtualLine * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
-              left: 0,
-              right: 0,
+              left: "0px",
+              right: "0px",
               height: `${lineHeight}px`,
-              lineHeight: `${lineHeight}px`,
-              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               cursor: "pointer",
-              color: isCollapsed
-                ? "var(--accent, #569cd6)"
-                : "var(--text-light, rgba(255, 255, 255, 0.5))",
-              opacity: isCollapsed ? 1 : 0.7,
-              fontSize: `${fontSize * 0.85}px`,
+              color: "var(--color-text-lighter, #8b93a1)",
+              opacity: 1,
               userSelect: "none",
-              background: "none",
-              border: "none",
+              background: "transparent",
+              border: "1px solid transparent",
+              borderRadius: "6px",
               padding: 0,
             }}
             onClick={() => handleFoldClick(region.startLine)}
             aria-label={isCollapsed ? "Expand fold" : "Collapse fold"}
             aria-expanded={!isCollapsed}
+            title={
+              region.kind === "diff-file"
+                ? isCollapsed
+                  ? "Expand file diff"
+                  : "Collapse file diff"
+                : region.kind === "diff-hunk"
+                  ? isCollapsed
+                    ? "Expand hunk"
+                    : "Collapse hunk"
+                  : isCollapsed
+                    ? "Expand fold"
+                    : "Collapse fold"
+            }
+            className="transition-colors hover:bg-hover/40 hover:text-text"
           >
-            {isCollapsed ? "›" : "⌄"}
+            {isCollapsed ? (
+              <ChevronRight size={14} strokeWidth={2} />
+            ) : (
+              <ChevronDown size={14} strokeWidth={2} />
+            )}
           </button>,
         );
       }
@@ -101,7 +119,7 @@ function FoldIndicatorsComponent({
     <div
       style={{
         position: "relative",
-        width: "16px",
+        width: "18px",
       }}
     >
       {indicators}

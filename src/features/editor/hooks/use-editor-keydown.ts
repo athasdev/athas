@@ -1,5 +1,7 @@
 import { type RefObject, useCallback } from "react";
+import { editorAPI } from "../extensions/api";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import { useEditorAppStore } from "../stores/editor-app-store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { useLspStore } from "../lsp/lsp-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
@@ -95,6 +97,29 @@ export function useEditorKeyDown({
         e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph);
       const isInlineEditShortcut =
         (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "i";
+
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        void useEditorAppStore.getState().actions.handleSave();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+
+        if (e.shiftKey) {
+          editorAPI.redo();
+        } else {
+          editorAPI.undo();
+        }
+        return;
+      }
+
+      if (e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        editorAPI.redo();
+        return;
+      }
 
       if (isInlineEditShortcut) {
         e.preventDefault();

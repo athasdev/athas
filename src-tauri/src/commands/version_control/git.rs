@@ -1,8 +1,41 @@
 use athas_version_control::git as git_backend;
+use std::{path::Path, time::Instant};
+
+fn short_repo_path(path: &str) -> String {
+   Path::new(path)
+      .file_name()
+      .and_then(|name| name.to_str())
+      .unwrap_or(path)
+      .to_string()
+}
 
 #[tauri::command]
 pub fn git_status(repo_path: String) -> Result<git_backend::GitStatus, String> {
-   git_backend::git_status(repo_path)
+   let started_at = Instant::now();
+   let short = short_repo_path(&repo_path);
+   log::info!("[git] git_status:start {}", short);
+   let result = git_backend::git_status(repo_path.clone());
+
+   match &result {
+      Ok(status) => {
+         log::info!(
+            "[git] git_status:end {} {}ms files={}",
+            short,
+            started_at.elapsed().as_millis(),
+            status.files.len()
+         );
+      }
+      Err(error) => {
+         log::error!(
+            "[git] git_status:error {} {}ms {}",
+            short,
+            started_at.elapsed().as_millis(),
+            error
+         );
+      }
+   }
+
+   result
 }
 
 #[tauri::command]

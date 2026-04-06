@@ -74,20 +74,24 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       });
       try {
         await storeAuthToken(token);
-        const user = await fetchCurrentUser();
-        const subscription = await fetchSubscriptionStatus();
+        const user = await fetchCurrentUser(token);
+        const subscription = await fetchSubscriptionStatus(token);
         set((state) => {
           state.user = user;
           state.subscription = subscription;
           state.isAuthenticated = true;
           state.isLoading = false;
         });
-      } catch {
+      } catch (error) {
         await removeAuthToken();
         set((state) => {
+          state.user = null;
+          state.subscription = null;
+          state.isAuthenticated = false;
           state.error = "Authentication failed. Please try again.";
           state.isLoading = false;
         });
+        throw error;
       }
     },
 

@@ -2,80 +2,13 @@ import type { SettingSearchRecord } from "../types/search";
 import { IS_MAC } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
-  // General Settings
-  {
-    id: "editor-auto-save",
-    tab: "editor",
-    section: "Saving",
-    label: "Auto Save",
-    description: "Automatically save files when editing",
-    keywords: ["save", "automatic", "files"],
-  },
-  {
-    id: "general-quick-open-file-limit",
-    tab: "general",
-    section: "File Management",
-    label: "Quick Open File Limit",
-    description: "Maximum files to index for quick file search. Increase for large monorepos.",
-    keywords: [
-      "quick",
-      "open",
-      "file",
-      "limit",
-      "search",
-      "quick",
-      "open",
-      "monorepo",
-      "index",
-      "cmd p",
-    ],
-  },
-  {
-    id: "general-open-settings",
-    tab: "general",
-    section: "Quick Access",
-    label: "Open Settings",
-    description: "Keyboard shortcut to open settings",
-    keywords: ["keyboard", "shortcut", "settings"],
-  },
-  {
-    id: "general-toggle-sidebar",
-    tab: "general",
-    section: "Quick Access",
-    label: "Toggle Sidebar",
-    description: "Show or hide the sidebar",
-    keywords: ["keyboard", "shortcut", "sidebar", "toggle"],
-  },
-  {
-    id: "general-zoom-in",
-    tab: "general",
-    section: "Quick Access",
-    label: "Zoom In",
-    description: "Increase zoom level",
-    keywords: ["keyboard", "shortcut", "zoom", "increase"],
-  },
-  {
-    id: "general-zoom-out",
-    tab: "general",
-    section: "Quick Access",
-    label: "Zoom Out",
-    description: "Decrease zoom level",
-    keywords: ["keyboard", "shortcut", "zoom", "decrease"],
-  },
-  {
-    id: "general-reset-zoom",
-    tab: "general",
-    section: "Quick Access",
-    label: "Reset Zoom",
-    description: "Reset zoom to 100%",
-    keywords: ["keyboard", "shortcut", "zoom", "reset"],
-  },
+  // Enterprise Settings
   {
     id: "enterprise-managed-mode",
     tab: "enterprise",
     section: "Enterprise Controls",
-    label: "Managed Enterprise Mode",
-    description: "Enable organization-managed controls in the desktop app",
+    label: "Managed Mode",
+    description: "Enforce enterprise policy controls in the desktop app",
     keywords: ["enterprise", "managed", "policy", "organization", "admin"],
   },
   {
@@ -83,8 +16,32 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "enterprise",
     section: "Enterprise Controls",
     label: "Require Extension Allowlist",
-    description: "Block extension installs unless explicitly approved",
+    description: "Only approved extension IDs can be installed or updated",
     keywords: ["enterprise", "extensions", "allowlist", "policy", "security"],
+  },
+  {
+    id: "enterprise-allow-byok",
+    tab: "enterprise",
+    section: "Enterprise Controls",
+    label: "Allow BYOK Autocomplete",
+    description: "Allow user-provided OpenRouter keys for autocomplete",
+    keywords: ["enterprise", "byok", "openrouter", "autocomplete", "api", "key"],
+  },
+  {
+    id: "enterprise-ai-completion",
+    tab: "enterprise",
+    section: "Enterprise Controls",
+    label: "Enable AI Autocomplete",
+    description: "Enable inline AI completion for enterprise users",
+    keywords: ["enterprise", "ai", "autocomplete", "completion"],
+  },
+  {
+    id: "enterprise-ai-chat",
+    tab: "enterprise",
+    section: "Enterprise Controls",
+    label: "Enable AI Chat",
+    description: "Enable AI chat panel for enterprise users",
+    keywords: ["enterprise", "ai", "chat", "panel"],
   },
   {
     id: "enterprise-extension-allowlist-entries",
@@ -96,6 +53,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
 
   // Editor Settings
+  {
+    id: "editor-auto-save",
+    tab: "editor",
+    section: "Saving",
+    label: "Auto Save",
+    description: "Automatically save files when editing",
+    keywords: ["save", "automatic", "files"],
+  },
   {
     id: "editor-font-family",
     tab: "editor",
@@ -173,7 +138,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "file-tree-hidden-file-patterns",
     tab: "file-explorer",
-    section: "File Explorer Filters",
+    section: "Filters",
     label: "Hidden File Patterns",
     description: "Files matching these glob patterns will be hidden from the file tree",
     keywords: ["hidden", "files", "patterns", "glob", "filter", "exclude"],
@@ -181,7 +146,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "file-tree-hidden-directory-patterns",
     tab: "file-explorer",
-    section: "File Explorer Filters",
+    section: "Filters",
     label: "Hidden Directory Patterns",
     description: "Directories matching these glob patterns will be hidden from the file tree",
     keywords: ["hidden", "directories", "folders", "patterns", "glob", "filter", "exclude"],
@@ -259,7 +224,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["git", "compact", "badges", "status", "dense"],
   },
   {
-    id: "layout-show-github-pull-requests",
+    id: "appearance-show-github-pull-requests",
     tab: "appearance",
     section: "Layout",
     label: "Show GitHub Pull Requests",
@@ -267,7 +232,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["github", "sidebar", "pull requests", "prs", "visibility"],
   },
   {
-    id: "layout-show-github-issues",
+    id: "appearance-show-github-issues",
     tab: "appearance",
     section: "Layout",
     label: "Show GitHub Issues",
@@ -275,7 +240,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["github", "sidebar", "issues", "visibility"],
   },
   {
-    id: "layout-show-github-actions",
+    id: "appearance-show-github-actions",
     tab: "appearance",
     section: "Layout",
     label: "Show GitHub Actions",
@@ -409,6 +374,23 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show right-side file preview in quick open and global search",
     keywords: ["quick", "open", "preview", "file", "global", "search"],
   },
+  {
+    id: "appearance-title-bar-project-mode",
+    tab: "appearance",
+    section: "Layout",
+    label: "Title Bar Project Mode",
+    description: "Show project tabs or a single window-style title in the custom title bar",
+    keywords: ["title", "bar", "project", "tabs", "window", "mode"],
+  },
+  {
+    id: "appearance-open-folders-new-window",
+    tab: "appearance",
+    section: "Layout",
+    label: "Open Projects In New Window",
+    description:
+      "When the current window already has a project, opening another folder uses a separate window",
+    keywords: ["open", "folder", "project", "new", "window", "separate"],
+  },
 
   // Database Settings
   {
@@ -449,28 +431,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
 
   // AI Settings
   {
-    id: "ai-provider",
+    id: "ai-provider-model",
     tab: "ai",
-    section: "Provider & Model",
-    label: "Provider",
-    description: "Choose your AI service provider",
-    keywords: ["ai", "provider", "llm", "service"],
-  },
-  {
-    id: "ai-model",
-    tab: "ai",
-    section: "Provider & Model",
-    label: "Model",
-    description: "Select the AI model to use",
-    keywords: ["ai", "model", "llm"],
-  },
-  {
-    id: "ai-api-keys",
-    tab: "ai",
-    section: "API Keys",
-    label: "API Keys",
-    description: "Configure API keys for AI providers",
-    keywords: ["api", "key", "authentication", "credentials"],
+    section: "Athas Agent",
+    label: "Provider & Model",
+    description: "Choose the provider and model used by Athas Agent",
+    keywords: ["ai", "provider", "model", "llm", "service", "agent"],
   },
   {
     id: "ai-ollama-endpoint",
@@ -481,19 +447,19 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ollama", "endpoint", "url", "local", "lan", "cloud", "host", "port"],
   },
   {
-    id: "ai-auto-open-files",
+    id: "ai-default-session-mode",
     tab: "ai",
-    section: "Behavior",
-    label: "Auto Open Read Files",
-    description: "Automatically open files in the editor when AI reads them",
-    keywords: ["ai", "auto", "open", "read", "files", "editor"],
+    section: "Agent Defaults",
+    label: "Default Session Mode",
+    description: "Default mode for ACP agent sessions",
+    keywords: ["ai", "session", "mode", "default", "agent", "acp"],
   },
   {
     id: "ai-autocomplete",
     tab: "ai",
     section: "Autocomplete",
     label: "AI Completion",
-    description: "Enable AI autocomplete in the editor",
+    description: "Enable AI autocomplete while typing",
     keywords: ["ai", "autocomplete", "completion", "openrouter"],
   },
   {
@@ -501,16 +467,16 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "ai",
     section: "Autocomplete",
     label: "Autocomplete Model",
-    description: "Choose the OpenRouter model used for autocomplete",
+    description: "Choose any OpenRouter model for autocomplete",
     keywords: ["ai", "model", "autocomplete", "openrouter"],
   },
   {
-    id: "ai-autocomplete-byok",
+    id: "ai-clear-chats",
     tab: "ai",
-    section: "Autocomplete",
-    label: "Autocomplete BYOK",
-    description: "Use your own OpenRouter API key for autocomplete on the free plan",
-    keywords: ["ai", "autocomplete", "byok", "openrouter", "api key", "free"],
+    section: "Chat History",
+    label: "Clear All Chats",
+    description: "Permanently delete all chat history",
+    keywords: ["ai", "chat", "clear", "delete", "history"],
   },
 
   // Keyboard Settings
@@ -742,8 +708,40 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "File path navigation breadcrumbs in editor",
     keywords: ["breadcrumbs", "navigation", "path"],
   },
+  {
+    id: "features-github",
+    tab: "features",
+    section: "Features",
+    label: "GitHub Integration",
+    description: "Pull requests, issues, and GitHub features",
+    keywords: ["github", "pull", "requests", "issues", "integration"],
+  },
+  {
+    id: "features-persistent-commands",
+    tab: "features",
+    section: "Features",
+    label: "Persistent Commands",
+    description: "The last used commands appear at the top of the command palette",
+    keywords: ["persistent", "commands", "recent", "command", "palette"],
+  },
 
   // Terminal Settings
+  {
+    id: "terminal-default-shell",
+    tab: "terminal",
+    section: "Launch",
+    label: "Default Shell",
+    description: "Fallback shell when a terminal profile does not override it",
+    keywords: ["terminal", "shell", "default", "bash", "zsh", "fish"],
+  },
+  {
+    id: "terminal-default-profile",
+    tab: "terminal",
+    section: "Launch",
+    label: "Default Profile",
+    description: "Used by the terminal toolbar button and Cmd+T when the terminal is focused",
+    keywords: ["terminal", "profile", "default", "launch"],
+  },
   {
     id: "terminal-font-family",
     tab: "terminal",
@@ -817,6 +815,22 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show open buffers as a horizontally scrollable carousel in the main view",
     keywords: ["tabs", "buffers", "carousel", "scroll", "horizontal", "trackpad", "main view"],
   },
+  {
+    id: "editor-external-editor",
+    tab: "editor",
+    section: "External Editor",
+    label: "Default Editor",
+    description: "Open files in an external terminal editor instead of the built-in editor",
+    keywords: ["external", "editor", "neovim", "vim", "helix", "nano", "emacs", "terminal"],
+  },
+  {
+    id: "editor-custom-editor-command",
+    tab: "editor",
+    section: "External Editor",
+    label: "Custom Command",
+    description: "Command to run for custom external editor",
+    keywords: ["custom", "command", "editor", "external"],
+  },
 
   // Extensions Settings
   {
@@ -836,5 +850,13 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Reset Settings",
     description: "Reset all settings to defaults",
     keywords: ["reset", "settings", "defaults", "restore"],
+  },
+  {
+    id: "advanced-telemetry",
+    tab: "advanced",
+    section: "Telemetry",
+    label: "Usage Analytics",
+    description: "Send anonymous usage data to help improve Athas",
+    keywords: ["telemetry", "analytics", "tracking", "privacy", "usage", "data"],
   },
 ];

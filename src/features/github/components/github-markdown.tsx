@@ -1,5 +1,5 @@
 import "../styles/github-markdown.css";
-import { memo, useCallback, useMemo } from "react";
+import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { parseGitHubEntityLink } from "../utils/github-link-utils";
@@ -15,13 +15,18 @@ interface GitHubMarkdownProps {
 const MARKDOWN_RENDER_CACHE_LIMIT = 100;
 const markdownRenderCache = new Map<string, string>();
 
-function getCachedRenderedMarkdown(content: string): string {
+function getRenderedMarkdownSnapshot(content: string): string | null {
   const cached = markdownRenderCache.get(content);
-  if (cached) {
-    markdownRenderCache.delete(content);
-    markdownRenderCache.set(content, cached);
-    return cached;
-  }
+  if (!cached) return null;
+
+  markdownRenderCache.delete(content);
+  markdownRenderCache.set(content, cached);
+  return cached;
+}
+
+function getCachedRenderedMarkdown(content: string): string {
+  const cached = getRenderedMarkdownSnapshot(content);
+  if (cached) return cached;
 
   const rendered = stripRedundantBreaks(parseMarkdown(content));
   markdownRenderCache.set(content, rendered);
@@ -52,8 +57,46 @@ const GitHubMarkdown = memo(
       () => normalizeGitHubMarkdown(content, issueBaseUrl),
       [content, issueBaseUrl],
     );
-    const renderedHtml = useMemo(() => {
-      return getCachedRenderedMarkdown(normalizedContent);
+    const [renderedHtml, setRenderedHtml] = useState<string | null>(() =>
+      getRenderedMarkdownSnapshot(normalizedContent),
+    );
+
+    useEffect(() => {
+      const cached = getRenderedMarkdownSnapshot(normalizedContent);
+      if (cached) {
+        setRenderedHtml(cached);
+        return;
+      }
+
+      setRenderedHtml(null);
+
+      let cancelled = false;
+      const idleApi = window as Window & {
+        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
+      const schedule = idleApi.requestIdleCallback;
+
+      const render = () => {
+        const nextHtml = getCachedRenderedMarkdown(normalizedContent);
+        if (!cancelled) {
+          setRenderedHtml(nextHtml);
+        }
+      };
+
+      if (typeof schedule === "function") {
+        const idleId = schedule(render, { timeout: 200 });
+        return () => {
+          cancelled = true;
+          idleApi.cancelIdleCallback?.(idleId);
+        };
+      }
+
+      const timeoutId = window.setTimeout(render, 0);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timeoutId);
+      };
     }, [normalizedContent]);
 
     const handleClick = useCallback(
@@ -70,25 +113,31 @@ const GitHubMarkdown = memo(
         event.preventDefault();
 
         if (entityLink.kind === "pullRequest") {
-          openPRBuffer(entityLink.number);
-          return;
-        }
-
-        if (entityLink.kind === "issue") {
-          openGitHubIssueBuffer({
-            issueNumber: entityLink.number,
-            repoPath,
-            title: `Issue #${entityLink.number}`,
-            url: entityLink.url,
+          startTransition(() => {
+            openPRBuffer(entityLink.number);
           });
           return;
         }
 
-        openGitHubActionBuffer({
-          runId: entityLink.runId,
-          repoPath,
-          title: `Run #${entityLink.runId}`,
-          url: entityLink.url,
+        if (entityLink.kind === "issue") {
+          startTransition(() => {
+            openGitHubIssueBuffer({
+              issueNumber: entityLink.number,
+              repoPath,
+              title: `Issue #${entityLink.number}`,
+              url: entityLink.url,
+            });
+          });
+          return;
+        }
+
+        startTransition(() => {
+          openGitHubActionBuffer({
+            runId: entityLink.runId,
+            repoPath,
+            title: `Run #${entityLink.runId}`,
+            url: entityLink.url,
+          });
         });
       },
       [openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer, repoPath],
@@ -99,10 +148,13 @@ const GitHubMarkdown = memo(
         className={`markdown-preview github-markdown ${className ?? ""}`.trim()}
         onClick={handleClick}
       >
-        <div
-          className={`markdown-content ${contentClassName ?? ""}`.trim()}
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
-        />
+        <div className={`markdown-content ${contentClassName ?? ""}`.trim()}>
+          {renderedHtml !== null ? (
+            <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
+          ) : (
+            <div className="whitespace-pre-wrap break-words">{normalizedContent}</div>
+          )}
+        </div>
       </div>
     );
   },

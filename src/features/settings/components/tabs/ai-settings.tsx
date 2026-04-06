@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AIModelSelector } from "@/features/ai/components/selectors/ai-model-selector";
+import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionConfigOption, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -21,6 +21,7 @@ import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-p
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
+const NO_DEFAULT_SESSION_MODE = "__none__";
 
 const DEFAULT_AUTOCOMPLETE_MODELS = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
@@ -135,8 +136,7 @@ export const AISettings = () => {
       } else {
         setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
       }
-    } catch (error) {
-      console.error("Failed to fetch autocomplete models:", error);
+    } catch {
       setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
       setAutocompleteModelError("Could not load model list. Showing defaults.");
     } finally {
@@ -179,7 +179,7 @@ export const AISettings = () => {
             settings.aiModelId !== getDefaultSetting("aiModelId")
           }
         >
-          <AIModelSelector
+          <ProviderModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
             onProviderChange={(id) => handleProviderChange(id)}
@@ -204,13 +204,13 @@ export const AISettings = () => {
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={Globe}
-                className={cn("w-56", ollamaStatus === "error" && "border-red-500/60")}
+                className={cn("w-56", ollamaStatus === "error" && "border-error/60")}
               />
               {ollamaStatus === "checking" && (
                 <RefreshCw className="animate-spin text-text-lighter" />
               )}
-              {ollamaStatus === "ok" && <CheckCircle className="text-green-500" />}
-              {ollamaStatus === "error" && <AlertCircle className="text-red-400" />}
+              {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
+              {ollamaStatus === "error" && <AlertCircle className="text-error" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
                   type="button"
@@ -226,7 +226,7 @@ export const AISettings = () => {
             </div>
           </SettingRow>
           {ollamaStatus === "error" && (
-            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-red-400">
+            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-error">
               <AlertCircle className="shrink-0" />
               <span>Could not connect. Check that Ollama is running at this address.</span>
             </div>
@@ -261,15 +261,20 @@ export const AISettings = () => {
             canReset={settings.aiDefaultSessionMode !== getDefaultSetting("aiDefaultSessionMode")}
           >
             <Select
-              value={settings.aiDefaultSessionMode || ""}
+              value={settings.aiDefaultSessionMode || NO_DEFAULT_SESSION_MODE}
               options={[
-                { value: "", label: "None" },
+                { value: NO_DEFAULT_SESSION_MODE, label: "None" },
                 ...availableModes.map((mode) => ({
                   value: mode.id,
                   label: mode.name,
                 })),
               ]}
-              onChange={(value) => updateSetting("aiDefaultSessionMode", value)}
+              onChange={(value) =>
+                updateSetting(
+                  "aiDefaultSessionMode",
+                  value === NO_DEFAULT_SESSION_MODE ? "" : value,
+                )
+              }
               size="xs"
               variant="secondary"
             />
@@ -356,7 +361,7 @@ export const AISettings = () => {
           </div>
         </SettingRow>
         {autocompleteModelError && (
-          <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-red-500">
+          <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
             <AlertCircle />
             <span>{autocompleteModelError}</span>
           </div>
@@ -395,7 +400,7 @@ export const AISettings = () => {
               }
             }}
             disabled={isClearingChats}
-            className="gap-1.5 text-red-500 hover:bg-red-500/10"
+            className="gap-1.5 text-error hover:bg-error/10"
           >
             <Trash2 />
             {isClearingChats ? "Clearing..." : "Clear All"}

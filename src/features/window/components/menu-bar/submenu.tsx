@@ -21,13 +21,13 @@ const Submenu = ({ title, children, disabled = false }: Props) => {
       {/* Submenu trigger */}
       <button
         className={cn(
-          "ui-font ui-text-sm flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-text transition-colors hover:bg-hover",
+          "ui-font ui-text-sm flex w-full cursor-pointer items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-text transition-colors hover:bg-hover",
           disabled && "cursor-not-allowed text-text-lighter",
         )}
         disabled={disabled}
       >
-        <span>{title}</span>
-        <ChevronRight className="ml-2" />
+        <span className="min-w-0 flex-1 truncate whitespace-nowrap">{title}</span>
+        <ChevronRight className="ml-2 shrink-0" />
       </button>
 
       {/* Submenu content */}

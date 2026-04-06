@@ -80,7 +80,8 @@ export interface Settings {
     | "theme"
     | "icon-theme"
     | "snippet"
-    | "database";
+    | "database"
+    | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree
@@ -100,4 +101,6 @@ export interface Settings {
   gitLastPanelMode: "changes" | "stash" | "history" | "worktrees";
   enableInlineGitBlame: boolean;
   enableGitGutter: boolean;
+  // Telemetry
+  telemetry: boolean;
 }

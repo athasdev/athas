@@ -1,7 +1,29 @@
 import { create } from "zustand";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { getGitLog } from "../api/git-commits-api";
 import { getGitStatus } from "../api/git-status-api";
 import type { GitCommit, GitStash, GitStatus } from "../types/git-types";
+
+const MAX_WORKSPACE_GIT_STATUS_FILES = 200;
+
+function toWorkspaceGitStatus(status: GitStatus | null): GitStatus | null {
+  if (!status) return null;
+  if (status.files.length <= MAX_WORKSPACE_GIT_STATUS_FILES) return status;
+
+  console.info("[workspace-git] truncating workspace git status", {
+    totalFiles: status.files.length,
+    keptFiles: MAX_WORKSPACE_GIT_STATUS_FILES,
+  });
+  frontendTrace("warn", "workspace-git", "truncate", {
+    totalFiles: status.files.length,
+    keptFiles: MAX_WORKSPACE_GIT_STATUS_FILES,
+  });
+
+  return {
+    ...status,
+    files: status.files.slice(0, MAX_WORKSPACE_GIT_STATUS_FILES),
+  };
+}
 
 interface GitState {
   gitStatus: GitStatus | null;
@@ -105,7 +127,7 @@ export const useGitStore = create<GitState>((set, get) => ({
       }
 
       set({
-        workspaceGitStatus: status,
+        workspaceGitStatus: toWorkspaceGitStatus(status),
       });
     },
 
@@ -138,7 +160,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     setGitStatus: (status) => set({ gitStatus: status }),
     setWorkspaceGitStatus: (status, repoPath) =>
       set({
-        workspaceGitStatus: status,
+        workspaceGitStatus: toWorkspaceGitStatus(status),
         currentWorkspaceRepoPath: repoPath,
       }),
     setCommits: (commits) => set({ commits }),

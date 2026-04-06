@@ -35,11 +35,8 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run typecheck
-        run: bun typecheck
-
-      - name: Run frontend check
-        run: bun check
+      - name: Run frontend checks
+        run: bash scripts/check-frontend.sh
 
   rust:
     if: github.repository == 'athasdev/athas'
@@ -64,8 +61,5 @@ jobs:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           version: 1.0
 
-      - name: Check formatting
-        run: cargo fmt --check --all
-
-      - name: Check
-        run: cargo check --workspace
+      - name: Run Rust checks
+        run: bash scripts/check-rust.sh

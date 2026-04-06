@@ -5,6 +5,7 @@ import { useQuickOpen } from "../hooks/use-quick-open";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";
 import { FileListItem } from "./file-list-item";
+import { SymbolListItem } from "./symbol-list-item";
 
 const QuickOpen = () => {
   const {
@@ -24,9 +25,14 @@ const QuickOpen = () => {
     selectedIndex,
     handleItemSelect,
     handleItemHover,
+    setSelectedIndex,
     previewFilePath,
     rootFolderPath,
     showPreview,
+    isSymbolMode,
+    symbols,
+    isLoadingSymbols,
+    handleSymbolSelect,
   } = useQuickOpen();
 
   if (!isVisible) {
@@ -51,15 +57,21 @@ const QuickOpen = () => {
           ref={inputRef}
           value={query}
           onChange={setQuery}
-          placeholder="Type to search files..."
+          placeholder={isSymbolMode ? "Type to filter symbols..." : "Type to search files..."}
           className="ui-font"
         />
-        <FileCountBadge
-          totalFiles={files.length}
-          resultCount={totalResults}
-          hasQuery={!!debouncedQuery}
-          isLoading={isLoadingFiles}
-        />
+        {isSymbolMode ? (
+          <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+            {isLoadingSymbols ? "..." : `${symbols.length} symbols`}
+          </span>
+        ) : (
+          <FileCountBadge
+            totalFiles={files.length}
+            resultCount={totalResults}
+            hasQuery={!!debouncedQuery}
+            isLoading={isLoadingFiles}
+          />
+        )}
       </CommandHeader>
 
       <div className="flex min-h-0 flex-1">
@@ -70,7 +82,26 @@ const QuickOpen = () => {
           )}
         >
           <CommandList ref={scrollContainerRef}>
-            {!hasResults ? (
+            {isSymbolMode ? (
+              symbols.length === 0 ? (
+                <div className="flex items-center justify-center p-4 text-text-lighter">
+                  <span className="ui-font ui-text-sm">
+                    {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
+                  </span>
+                </div>
+              ) : (
+                symbols.map((symbol, index) => (
+                  <SymbolListItem
+                    key={`${symbol.name}:${symbol.line}`}
+                    symbol={symbol}
+                    index={index}
+                    isSelected={index === selectedIndex}
+                    onClick={handleSymbolSelect}
+                    onMouseEnter={(idx) => setSelectedIndex(idx)}
+                  />
+                ))
+              )
+            ) : !hasResults ? (
               <EmptyState
                 isLoadingFiles={isLoadingFiles}
                 isIndexing={isIndexing}

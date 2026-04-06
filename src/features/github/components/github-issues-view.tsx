@@ -1,30 +1,47 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, MessageSquare, RefreshCw } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { AlertCircle, MessageSquare } from "lucide-react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
+import {
+  GITHUB_ISSUE_DETAILS_TTL_MS,
+  GITHUB_ISSUE_LIST_TTL_MS,
+  githubIssueDetailsCache,
+  githubIssueListCache,
+} from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-
-const ISSUE_LIST_CACHE_TTL_MS = 30_000;
-const issueListCache = new Map<string, { fetchedAt: number; issues: IssueListItem[] }>();
 
 interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
+  onPrefetch: () => void;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect }: IssueListItemProps) => (
+const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch }: IssueListItemProps) => (
   <Button
     onClick={onSelect}
+    onMouseEnter={onPrefetch}
+    onFocus={onPrefetch}
     variant="ghost"
     size="sm"
     active={isActive}
-    className={cn("h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left")}
+    className={cn(
+      "h-auto w-full min-w-0 items-start justify-start rounded-xl px-3 py-2.5 text-left",
+    )}
   >
     <img
       src={
@@ -44,7 +61,11 @@ const IssueRow = memo(({ issue, isActive, onSelect }: IssueListItemProps) => (
 
 IssueRow.displayName = "IssueRow";
 
-const GitHubIssuesView = memo(() => {
+interface GitHubIssuesViewProps {
+  refreshNonce?: number;
+}
+
+const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
@@ -60,6 +81,7 @@ const GitHubIssuesView = memo(() => {
   const [issues, setIssues] = useState<IssueListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const deferredIssues = useDeferredValue(issues);
 
   const fetchIssues = useCallback(
     async (force = false) => {
@@ -70,21 +92,39 @@ const GitHubIssuesView = memo(() => {
         return;
       }
 
-      const cached = issueListCache.get(repoPath);
-      if (cached && !force && Date.now() - cached.fetchedAt < ISSUE_LIST_CACHE_TTL_MS) {
-        setIssues(cached.issues);
+      const cached = githubIssueListCache.getFreshValue(repoPath, GITHUB_ISSUE_LIST_TTL_MS);
+      if (cached && !force) {
+        startTransition(() => setIssues(cached));
         setError(null);
         setIsLoading(false);
         return;
+      }
+
+      const stale = githubIssueListCache.getSnapshot(repoPath)?.value;
+      if (stale && !force) {
+        startTransition(() => setIssues(stale));
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const nextIssues = await invoke<IssueListItem[]>("github_list_issues", { repoPath });
-        issueListCache.set(repoPath, { fetchedAt: Date.now(), issues: nextIssues });
-        setIssues(nextIssues);
+        const nextIssues = await githubIssueListCache.load(
+          repoPath,
+          () => invoke<IssueListItem[]>("github_list_issues", { repoPath }),
+          { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
+        );
+        startTransition(() => setIssues(nextIssues));
+
+        // Warm a few likely-next issue details so opening is near-instant.
+        for (const issue of nextIssues.slice(0, 3)) {
+          const cacheKey = `${repoPath}::${issue.number}`;
+          void githubIssueDetailsCache.load(
+            cacheKey,
+            () => invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
+            { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
+          );
+        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -95,14 +135,36 @@ const GitHubIssuesView = memo(() => {
   );
 
   useEffect(() => {
-    void checkAuth();
+    const timeoutId = window.setTimeout(() => {
+      void checkAuth();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [checkAuth]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      void fetchIssues();
-    }
+    if (!isAuthenticated) return;
+
+    let timeoutId: number | null = null;
+    const frameId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        void fetchIssues();
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [fetchIssues, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && refreshNonce > 0) {
+      void fetchIssues(true);
+    }
+  }, [fetchIssues, isAuthenticated, refreshNonce]);
 
   if (!isAuthenticated) {
     return (
@@ -116,46 +178,47 @@ const GitHubIssuesView = memo(() => {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <div className="ui-text-sm text-text">Issues</div>
-        <Button
-          onClick={() => void fetchIssues(true)}
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Refresh issues"
-        >
-          <RefreshCw className={cn(isLoading && "animate-spin")} />
-        </Button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+    <div className="min-h-0 flex-1 overflow-hidden">
+      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
           <div className="flex items-center gap-2 px-2 py-3 text-error">
             <AlertCircle className="size-4" />
             <p className="ui-text-sm">{error}</p>
           </div>
-        ) : issues.length === 0 && !isLoading ? (
+        ) : deferredIssues.length === 0 && !isLoading ? (
           <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
             <MessageSquare className="size-4" />
             <p className="ui-text-sm">No open issues</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {issues.map((issue) => (
+          <div className="space-y-1 overflow-x-hidden">
+            {deferredIssues.map((issue) => (
               <IssueRow
                 key={issue.number}
                 issue={issue}
                 isActive={activeIssueNumber === issue.number}
+                onPrefetch={() => {
+                  if (!repoPath) return;
+                  const cacheKey = `${repoPath}::${issue.number}`;
+                  void githubIssueDetailsCache.load(
+                    cacheKey,
+                    () =>
+                      invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
+                    { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
+                  );
+                }}
                 onSelect={() =>
-                  openGitHubIssueBuffer({
-                    issueNumber: issue.number,
-                    repoPath: repoPath ?? undefined,
-                    title: issue.title,
-                    authorAvatarUrl:
-                      issue.author.avatarUrl ||
-                      `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
-                    url: issue.url,
+                  startTransition(() => {
+                    openGitHubIssueBuffer({
+                      issueNumber: issue.number,
+                      repoPath: repoPath ?? undefined,
+                      title: issue.title,
+                      authorAvatarUrl:
+                        issue.author.avatarUrl ||
+                        `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+                      url: issue.url,
+                    });
                   })
                 }
               />

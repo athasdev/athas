@@ -3,7 +3,11 @@ import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
 import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-import { buttonVariants, type ButtonVariant } from "@/ui/button";
+import {
+  controlFieldIconSizes,
+  controlFieldSizeVariants,
+  controlFieldSurfaceVariants,
+} from "@/ui/control-field";
 import { cn } from "@/utils/cn";
 
 export interface SelectOption {
@@ -21,28 +25,28 @@ export interface SelectProps {
   menuClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
-  variant?: Extract<ButtonVariant, "ghost" | "secondary" | "outline">;
+  variant?: "default" | "ghost" | "secondary" | "outline";
   searchable?: boolean;
   openDirection?: "up" | "down" | "auto";
   leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
   id?: string;
   title?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   "aria-label"?: AriaAttributes["aria-label"];
 }
 
-const sizeClasses = {
-  xs: "h-7 px-2.5 py-1",
-  sm: "h-8 px-3 py-1.5",
-  md: "h-9 px-3 py-1.5",
-};
-
 const selectTriggerVariants = cva(
-  "ui-font inline-flex w-fit items-center justify-between gap-2 whitespace-nowrap text-text transition-all duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  "ui-font inline-flex w-fit min-w-0 items-center justify-between gap-2 whitespace-nowrap",
   {
     variants: {
-      size: sizeClasses,
+      size: {
+        xs: "px-2",
+        sm: "px-2",
+        md: "px-3",
+      },
       withIcon: {
-        true: "pl-2",
+        true: "",
         false: "",
       },
     },
@@ -62,13 +66,13 @@ const selectItemVariants = cva(
 );
 
 const selectSearchInputVariants = cva(
-  "ui-font ui-text-sm w-full rounded-lg bg-primary-bg/70 py-2 pr-3 pl-8 text-text placeholder-text-lighter focus:outline-none",
+  "ui-font ui-text-sm w-full rounded-lg border border-border bg-secondary-bg py-2 pr-3 pl-8 text-text placeholder-text-lighter outline-none focus:border-border-strong focus:ring-1 focus:ring-border-strong/35",
 );
 
 const iconSizes = {
-  xs: 10,
-  sm: 12,
-  md: 14,
+  xs: controlFieldIconSizes.xs,
+  sm: controlFieldIconSizes.sm,
+  md: controlFieldIconSizes.md,
 };
 
 function filterSelectOptions(options: SelectOption[], searchQuery: string) {
@@ -143,11 +147,21 @@ export default function Select({
   leftIcon,
   id,
   title,
+  open: openProp,
+  onOpenChange,
   "aria-label": ariaLabel,
 }: SelectProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const open = openProp ?? uncontrolledOpen;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (openProp === undefined) {
+      setUncontrolledOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  };
 
   useEffect(() => {
     if (open && searchable) {
@@ -164,12 +178,10 @@ export default function Select({
   const filteredOptions = searchable ? filterSelectOptions(options, searchQuery) : options;
   const triggerIcon = renderTriggerIcon(leftIcon, size);
   const resolvedTriggerClassName = cn(
+    controlFieldSurfaceVariants({ variant }),
+    controlFieldSizeVariants({ size }),
     selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
-    buttonVariants({
-      variant,
-      size,
-    }),
-    "focus:ring-1 focus:ring-accent/20",
+    "w-full justify-between text-left",
     className,
   );
 
@@ -179,7 +191,7 @@ export default function Select({
         value={value}
         onValueChange={onChange}
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
       >
         <SelectPrimitive.Trigger
           id={id}

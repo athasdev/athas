@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/ui/button";
 import type { Commit } from "../types/pr-viewer";
@@ -42,6 +43,46 @@ export function PRActivityPanel({
   contentError,
   onRetry,
 }: PRActivityPanelProps) {
+  const [visibleActivityCount, setVisibleActivityCount] = useState(12);
+  const visibleActivityItems = useMemo(
+    () => activityItems.slice(0, visibleActivityCount),
+    [activityItems, visibleActivityCount],
+  );
+
+  useEffect(() => {
+    setVisibleActivityCount(12);
+  }, [activityItems]);
+
+  useEffect(() => {
+    if (activityItems.length <= visibleActivityCount) return;
+
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const schedule = idleApi.requestIdleCallback;
+
+    const revealMore = () => {
+      if (cancelled) return;
+      setVisibleActivityCount((current) => Math.min(current + 12, activityItems.length));
+    };
+
+    if (typeof schedule === "function") {
+      const idleId = schedule(revealMore, { timeout: 200 });
+      return () => {
+        cancelled = true;
+        idleApi.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(revealMore, 16);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [activityItems.length, visibleActivityCount]);
+
   return (
     <div className="min-w-0 space-y-5">
       {body ? (
@@ -82,7 +123,7 @@ export function PRActivityPanel({
           </div>
         ) : (
           <div className="space-y-1">
-            {activityItems.map((item) =>
+            {visibleActivityItems.map((item) =>
               item.type === "comment" ? (
                 <CommentItem
                   key={item.id}
@@ -99,6 +140,11 @@ export function PRActivityPanel({
                 />
               ),
             )}
+            {activityItems.length > visibleActivityItems.length ? (
+              <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
+                {`Loading ${activityItems.length - visibleActivityItems.length} more activity items...`}
+              </div>
+            ) : null}
           </div>
         )}
       </div>

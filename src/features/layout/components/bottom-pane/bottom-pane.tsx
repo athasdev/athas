@@ -8,6 +8,7 @@ import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import DiagnosticsPane from "../../../diagnostics/components/diagnostics-pane";
 import type { Diagnostic } from "../../../diagnostics/types/diagnostics";
+import ReferencesPane from "../../../references/components/references-pane";
 
 interface BottomPaneProps {
   diagnostics: Diagnostic[];
@@ -116,11 +117,17 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
               isFullScreen={isFullScreen}
             />
           </div>
-        ) : bottomPaneActiveTab !== "terminal" && bottomPaneActiveTab !== "diagnostics" ? (
-          <div className="flex h-full items-center justify-center text-text-lighter">
-            <span className="text-sm">No available panels</span>
-          </div>
         ) : null}
+
+        {/* References Pane */}
+        {bottomPaneActiveTab === "references" && (
+          <div className="h-full">
+            <ReferencesPane
+              onFullScreen={() => setIsFullScreen(!isFullScreen)}
+              isFullScreen={isFullScreen}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

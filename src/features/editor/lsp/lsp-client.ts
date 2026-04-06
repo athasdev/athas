@@ -57,6 +57,7 @@ export class LspClient {
 
   private constructor() {
     this.setupDiagnosticsListener();
+    this.setupCrashListener();
   }
 
   /**
@@ -178,6 +179,26 @@ export class LspClient {
     }
   }
 
+  private async setupCrashListener() {
+    try {
+      await listen("lsp://server-crashed", () => {
+        logger.warn("LSPClient", "LSP server crashed, attempting auto-restart");
+        const { actions } = useLspStore.getState();
+        actions.setLspError("Language server crashed");
+
+        // Auto-restart all tracked servers after a short delay
+        setTimeout(() => {
+          this.restartAllTrackedServers().catch((error) => {
+            logger.error("LSPClient", "Failed to auto-restart LSP servers:", error);
+          });
+        }, 2000);
+      });
+      logger.debug("LSPClient", "Crash listener setup complete");
+    } catch (error) {
+      logger.error("LSPClient", "Failed to setup crash listener:", error);
+    }
+  }
+
   async start(workspacePath: string, filePath?: string): Promise<void> {
     try {
       logger.debug("LSPClient", "Starting LSP with workspace:", workspacePath);
@@ -186,6 +207,7 @@ export class LspClient {
       let serverPath: string | undefined;
       let serverArgs: string[] | undefined;
       let languageId: string | undefined;
+      let initOptions: Record<string, unknown> | undefined;
 
       if (filePath) {
         const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
@@ -193,6 +215,7 @@ export class LspClient {
         serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
         serverArgs = extensionRegistry.getLspServerArgs(filePath);
         languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+        initOptions = extensionRegistry.getLspInitializationOptions(filePath);
 
         logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
@@ -229,6 +252,7 @@ export class LspClient {
         workspacePath,
         serverPath,
         serverArgs,
+        initializationOptions: initOptions || null,
       });
 
       // Track this language server
@@ -287,6 +311,7 @@ export class LspClient {
       const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
       const serverArgs = extensionRegistry.getLspServerArgs(filePath);
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+      const initializationOptions = extensionRegistry.getLspInitializationOptions(filePath);
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
@@ -328,6 +353,7 @@ export class LspClient {
           workspacePath,
           serverPath,
           serverArgs,
+          initializationOptions: initializationOptions || null,
         });
       } catch (error) {
         // If backend call fails, remove from tracking
@@ -551,6 +577,127 @@ export class LspClient {
     }
   }
 
+  async getSemanticTokens(filePath: string): Promise<
+    {
+      line: number;
+      startChar: number;
+      length: number;
+      tokenType: number;
+      tokenModifiers: number;
+    }[]
+  > {
+    try {
+      return await invoke("lsp_get_semantic_tokens", { filePath });
+    } catch (error) {
+      logger.error("LSPClient", "LSP semantic tokens error:", error);
+      return [];
+    }
+  }
+
+  async getCodeLens(filePath: string): Promise<
+    {
+      line: number;
+      title: string;
+      command?: string;
+    }[]
+  > {
+    try {
+      return await invoke("lsp_get_code_lens", { filePath });
+    } catch (error) {
+      logger.error("LSPClient", "LSP code lens error:", error);
+      return [];
+    }
+  }
+
+  async getInlayHints(
+    filePath: string,
+    startLine: number,
+    endLine: number,
+  ): Promise<
+    {
+      line: number;
+      character: number;
+      label: string;
+      kind?: string;
+      paddingLeft: boolean;
+      paddingRight: boolean;
+    }[]
+  > {
+    try {
+      return await invoke("lsp_get_inlay_hints", {
+        filePath,
+        startLine,
+        endLine,
+      });
+    } catch (error) {
+      logger.error("LSPClient", "LSP inlay hints error:", error);
+      return [];
+    }
+  }
+
+  async getDocumentSymbols(filePath: string): Promise<
+    {
+      name: string;
+      kind: string;
+      detail?: string;
+      line: number;
+      character: number;
+      endLine: number;
+      endCharacter: number;
+      containerName?: string;
+    }[]
+  > {
+    try {
+      logger.debug("LSPClient", `Getting document symbols for ${filePath}`);
+      const symbols = await invoke<
+        {
+          name: string;
+          kind: string;
+          detail?: string;
+          line: number;
+          character: number;
+          endLine: number;
+          endCharacter: number;
+          containerName?: string;
+        }[]
+      >("lsp_get_document_symbols", { filePath });
+      logger.debug("LSPClient", `Got ${symbols.length} document symbols`);
+      return symbols;
+    } catch (error) {
+      logger.error("LSPClient", "LSP document symbols error:", error);
+      return [];
+    }
+  }
+
+  async getSignatureHelp(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<{
+    signatures: {
+      label: string;
+      documentation?: { kind: string; value: string } | string;
+      parameters?: {
+        label: string | [number, number];
+        documentation?: { kind: string; value: string } | string;
+      }[];
+      activeParameter?: number;
+    }[];
+    activeSignature?: number;
+    activeParameter?: number;
+  } | null> {
+    try {
+      return await invoke("lsp_get_signature_help", {
+        filePath,
+        line,
+        character,
+      });
+    } catch (error) {
+      logger.error("LSPClient", "LSP signature help error:", error);
+      return null;
+    }
+  }
+
   async getReferences(
     filePath: string,
     line: number,
@@ -587,6 +734,52 @@ export class LspClient {
       return references;
     } catch (error) {
       logger.error("LSPClient", "LSP references error:", error);
+      return null;
+    }
+  }
+
+  async rename(
+    filePath: string,
+    line: number,
+    character: number,
+    newName: string,
+  ): Promise<{
+    changes?: Record<
+      string,
+      {
+        range: {
+          start: { line: number; character: number };
+          end: { line: number; character: number };
+        };
+        newText: string;
+      }[]
+    >;
+  } | null> {
+    try {
+      logger.debug("LSPClient", `Renaming at ${filePath}:${line}:${character} to "${newName}"`);
+      const result = await invoke<{
+        changes?: Record<
+          string,
+          {
+            range: {
+              start: { line: number; character: number };
+              end: { line: number; character: number };
+            };
+            newText: string;
+          }[]
+        >;
+      } | null>("lsp_rename", {
+        filePath,
+        line,
+        character,
+        newName,
+      });
+      if (result) {
+        logger.debug("LSPClient", `Rename result: ${JSON.stringify(result)}`);
+      }
+      return result;
+    } catch (error) {
+      logger.error("LSPClient", "LSP rename error:", error);
       return null;
     }
   }

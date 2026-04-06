@@ -151,7 +151,7 @@ pub fn install_cli_command() -> Result<String, String> {
 # Athas CLI launcher
 
 if [ $# -eq 0 ]; then
-    ATHAS_BIN=$(command -v athas-code 2>/dev/null || find /opt /usr/local -name "athas-code" -type f 2>/dev/null | head -1)
+    ATHAS_BIN=$(command -v /usr/bin/athas 2>/dev/null || command -v athas 2>/dev/null || find /opt /usr/local /usr/bin -name "athas" -type f 2>/dev/null | head -1)
     if [ -n "$ATHAS_BIN" ] && [ -x "$ATHAS_BIN" ]; then
         "$ATHAS_BIN" &
     else
@@ -327,7 +327,7 @@ pub fn get_cli_install_command() -> Result<String, String> {
    Ok(r#"mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'EOF'
 #!/bin/bash
 if [ $# -eq 0 ]; then
-    ATHAS_BIN=$(command -v athas-code 2>/dev/null || find /opt /usr/local -name "athas-code" -type f 2>/dev/null | head -1)
+    ATHAS_BIN=$(command -v /usr/bin/athas 2>/dev/null || command -v athas 2>/dev/null || find /opt /usr/local /usr/bin -name "athas" -type f 2>/dev/null | head -1)
     if [ -n "$ATHAS_BIN" ] && [ -x "$ATHAS_BIN" ]; then
         "$ATHAS_BIN" &
     else

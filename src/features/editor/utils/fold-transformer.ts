@@ -1,7 +1,10 @@
-interface FoldRegion {
-  startLine: number;
-  endLine: number;
-}
+import type { FoldRegion } from "../stores/fold-store";
+import type { Token } from "./html";
+import { buildLineOffsetMap } from "./html";
+import {
+  createCollapsedDiffAccordionLine,
+  parseDiffAccordionLine,
+} from "@/features/git/utils/diff-editor-content";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;
@@ -14,6 +17,28 @@ interface TransformResult {
   virtualLines: string[];
   mapping: LineMapping;
   foldMarkers: Map<number, number>;
+}
+
+function createCollapsedLinePreview(
+  lineContent: string,
+  hiddenCount: number,
+  kind?: FoldRegion["kind"],
+): string {
+  if (kind === "diff-file") {
+    const meta = parseDiffAccordionLine(lineContent);
+    if (meta) {
+      return createCollapsedDiffAccordionLine(meta, hiddenCount);
+    }
+  }
+
+  const suffix =
+    kind === "diff-file"
+      ? ` ... ${hiddenCount} lines hidden in file`
+      : kind === "diff-hunk"
+        ? ` ... ${hiddenCount} lines hidden in hunk`
+        : ` ... ${hiddenCount} lines hidden`;
+
+  return `${lineContent}${suffix}`;
 }
 
 export function transformContentForFolding(
@@ -29,11 +54,11 @@ export function transformContentForFolding(
   const foldMarkers = new Map<number, number>();
 
   const hiddenLines = new Set<number>();
-  const collapsedRegions: FoldRegion[] = [];
+  const collapsedRegions = new Map<number, FoldRegion>();
 
   for (const region of foldRegions) {
     if (collapsedLines.has(region.startLine)) {
-      collapsedRegions.push(region);
+      collapsedRegions.set(region.startLine, region);
       for (let i = region.startLine + 1; i <= region.endLine; i++) {
         hiddenLines.add(i);
       }
@@ -48,12 +73,12 @@ export function transformContentForFolding(
       continue;
     }
 
-    const collapsedRegion = collapsedRegions.find((r) => r.startLine === actualLine);
+    const collapsedRegion = collapsedRegions.get(actualLine);
 
     if (collapsedRegion) {
       const lineContent = actualLines[actualLine];
       const hiddenCount = collapsedRegion.endLine - collapsedRegion.startLine;
-      virtualLines.push(lineContent);
+      virtualLines.push(createCollapsedLinePreview(lineContent, hiddenCount, collapsedRegion.kind));
 
       foldMarkers.set(virtualLineIndex, hiddenCount);
       foldedRanges.push({
@@ -214,4 +239,65 @@ export function getActualLineNumbersForGutter(mapping: LineMapping): number[] {
   }
 
   return result;
+}
+
+/**
+ * Remap tokens from actual content offsets into folded virtual content offsets.
+ * This avoids re-tokenizing on fold toggle and keeps syntax highlighting stable.
+ */
+export function transformTokensForFolding(
+  actualContent: string,
+  virtualLines: string[],
+  mapping: LineMapping,
+  tokens: Token[],
+): Token[] {
+  if (tokens.length === 0) return [];
+
+  const actualLines = actualContent.split("\n");
+  const actualLineOffsets = buildLineOffsetMap(actualContent);
+  const virtualContent = virtualLines.join("\n");
+  const virtualLineOffsets = buildLineOffsetMap(virtualContent);
+  const transformed: Token[] = [];
+  let tokenIndex = 0;
+
+  for (let virtualLine = 0; virtualLine < virtualLines.length; virtualLine++) {
+    const actualLine = mapping.virtualToActual.get(virtualLine);
+    if (actualLine === undefined) continue;
+
+    const actualLineContent = actualLines[actualLine] ?? "";
+    const actualLineStart = actualLineOffsets[actualLine] ?? 0;
+    const actualLineEnd = actualLineStart + actualLineContent.length;
+    const virtualLineContent = virtualLines[virtualLine] ?? "";
+    const virtualLineStart = virtualLineOffsets[virtualLine] ?? 0;
+    const maxVirtualContentLength = Math.min(virtualLineContent.length, actualLineContent.length);
+
+    while (tokenIndex < tokens.length && tokens[tokenIndex].end <= actualLineStart) {
+      tokenIndex++;
+    }
+
+    let currentTokenIndex = tokenIndex;
+    while (currentTokenIndex < tokens.length) {
+      const token = tokens[currentTokenIndex];
+      if (token.start >= actualLineEnd) break;
+
+      const startInLine = Math.max(0, token.start - actualLineStart);
+      const endInLine = Math.min(actualLineContent.length, token.end - actualLineStart);
+      const clampedEndInVirtual = Math.min(endInLine, maxVirtualContentLength);
+
+      if (startInLine >= clampedEndInVirtual) {
+        currentTokenIndex++;
+        continue;
+      }
+
+      transformed.push({
+        start: virtualLineStart + startInLine,
+        end: virtualLineStart + clampedEndInVirtual,
+        class_name: token.class_name,
+      });
+
+      currentTokenIndex++;
+    }
+  }
+
+  return transformed;
 }

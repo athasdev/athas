@@ -13,6 +13,7 @@ import {
 } from "@/features/git/api/git-status-api";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { useOnboardingStore } from "@/features/onboarding/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
@@ -82,6 +83,7 @@ const CommandPalette = () => {
   const gitStore = useGitStore();
   const { showToast } = useToast();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
+  const openOnboarding = useOnboardingStore((state) => state.openPreview);
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -148,6 +150,7 @@ const CommandPalette = () => {
       handleFileSelect,
       getAppDataDir: appDataDir,
       openWhatsNew,
+      openOnboarding,
       onClose,
     }),
     ...createNavigationActions({

@@ -1,28 +1,16 @@
 use super::{
    client::LspClient,
    config::{LspRegistry, LspSettings},
-   utils,
+   manager_state::{LspInstance, WorkspaceClients},
+   manager_support, utils,
 };
 use anyhow::{Context, Result, bail};
 use lsp_types::*;
 use std::{
-   collections::HashMap,
-   path::PathBuf,
-   process::Child,
-   sync::{Arc, Mutex},
+   path::{Path, PathBuf},
    time::Instant,
 };
 use tauri::{AppHandle, Manager as TauriManager};
-
-struct LspInstance {
-   client: LspClient,
-   child: Child,
-   server_name: String,
-   ref_count: usize,
-   files: Vec<PathBuf>,
-}
-
-type WorkspaceClients = Arc<Mutex<HashMap<(PathBuf, String), LspInstance>>>;
 
 pub struct LspManager {
    // Map (workspace path, language) to their LSP clients with reference counting
@@ -35,7 +23,7 @@ pub struct LspManager {
 impl LspManager {
    pub fn new(app_handle: AppHandle) -> Self {
       Self {
-         workspace_clients: Arc::new(Mutex::new(HashMap::new())),
+         workspace_clients: WorkspaceClients::new(),
          registry: LspRegistry::new(),
          app_handle,
          settings: LspSettings::default(),
@@ -94,6 +82,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for workspace: {:?}", workspace_path);
 
@@ -139,15 +128,14 @@ impl LspManager {
       .await?;
 
       // Initialize the client
-      client.initialize(root_uri).await?;
+      client
+         .initialize(root_uri, initialization_options.clone())
+         .await?;
 
       // Check if LSP already running for this workspace+language
-      let workspace_key = (workspace_path.clone(), server_name.clone());
       if self
          .workspace_clients
-         .lock()
-         .unwrap()
-         .contains_key(&workspace_key)
+         .contains_workspace_server(&workspace_path, &server_name)
       {
          log::info!(
             "LSP '{}' already running for workspace: {:?}",
@@ -157,8 +145,9 @@ impl LspManager {
          return Ok(());
       }
 
-      self.workspace_clients.lock().unwrap().insert(
-         workspace_key,
+      self.workspace_clients.insert(
+         workspace_path,
+         server_name.clone(),
          LspInstance {
             client,
             child,
@@ -181,6 +170,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for file: {:?}", file_path);
 
@@ -206,25 +196,19 @@ impl LspManager {
          )
       };
 
-      let workspace_key = (workspace_path.clone(), server_name.clone());
-
       // Check if LSP already running for this workspace+language
+      if let Some(ref_count) =
+         self
+            .workspace_clients
+            .track_file(&workspace_path, &server_name, &file_path)
       {
-         let mut clients = self.workspace_clients.lock().unwrap();
-         if let Some(instance) = clients.get_mut(&workspace_key) {
-            // Increment ref count and add file to tracking
-            instance.ref_count += 1;
-            if !instance.files.contains(&file_path) {
-               instance.files.push(file_path.clone());
-            }
-            log::info!(
-               "Reusing existing LSP '{}' for file (ref_count: {})",
-               server_name,
-               instance.ref_count
-            );
-            return Ok(());
-         }
-      } // Lock is automatically dropped here
+         log::info!(
+            "Reusing existing LSP '{}' for file (ref_count: {})",
+            server_name,
+            ref_count
+         );
+         return Ok(());
+      }
 
       let root_uri = Url::from_file_path(&workspace_path)
          .map_err(|_| anyhow::anyhow!("Invalid workspace path"))?;
@@ -238,11 +222,14 @@ impl LspManager {
       .await?;
 
       // Initialize the client
-      client.initialize(root_uri).await?;
+      client
+         .initialize(root_uri, initialization_options.clone())
+         .await?;
 
       // Store the new instance
-      self.workspace_clients.lock().unwrap().insert(
-         workspace_key,
+      self.workspace_clients.insert(
+         workspace_path,
+         server_name.clone(),
          LspInstance {
             client,
             child,
@@ -260,99 +247,14 @@ impl LspManager {
    /// This will decrement the reference count and shutdown the server if it reaches 0
    pub fn stop_lsp_for_file(&self, file_path: &PathBuf) -> Result<()> {
       log::info!("Stopping LSP for file: {:?}", file_path);
-
-      let mut clients = self.workspace_clients.lock().unwrap();
-
-      // Find the LSP instance that contains this file
-      let mut to_remove: Option<(PathBuf, String)> = None;
-
-      for (key, instance) in clients.iter_mut() {
-         if instance.files.contains(file_path) {
-            // Remove file from tracking
-            instance.files.retain(|f| f != file_path);
-            instance.ref_count = instance.ref_count.saturating_sub(1);
-
-            log::info!(
-               "Decremented ref_count for LSP '{}' (now: {})",
-               instance.server_name,
-               instance.ref_count
-            );
-
-            // If ref count reaches 0, mark for removal
-            if instance.ref_count == 0 {
-               log::info!(
-                  "LSP '{}' ref_count reached 0, shutting down",
-                  instance.server_name
-               );
-               to_remove = Some(key.clone());
-            }
-
-            break;
-         }
-      }
-
-      // Shutdown and remove the instance if ref count reached 0
-      if let Some(key) = to_remove
-         && let Some(mut instance) = clients.remove(&key)
-      {
-         log::info!("Shutting down LSP '{}'", instance.server_name);
-         let _ = instance.child.kill();
-      }
-
+      self.workspace_clients.stop_file(file_path);
       Ok(())
    }
 
    pub fn get_client_for_file(&self, file_path: &str) -> Option<LspClient> {
-      let path = PathBuf::from(file_path);
-      let file_ext = path.extension().and_then(|e| e.to_str());
-      let clients = self.workspace_clients.lock().unwrap();
-
-      log::debug!(
-         "get_client_for_file: looking for client for {} (ext: {:?})",
-         file_path,
-         file_ext
-      );
-
-      // First pass: find a server that has opened a file with the same extension
-      // This ensures we route to the correct server (e.g., TypeScript for .tsx files)
-      for ((workspace_path, server_name), instance) in clients.iter() {
-         if path.starts_with(workspace_path) {
-            let has_matching_ext = instance
-               .files
-               .iter()
-               .any(|f| f.extension() == path.extension());
-
-            log::debug!(
-               "  checking server '{}': has_matching_ext={}",
-               server_name,
-               has_matching_ext
-            );
-
-            if has_matching_ext {
-               log::info!(
-                  "get_client_for_file: selected server '{}' for {} (matched extension)",
-                  server_name,
-                  file_path
-               );
-               return Some(instance.client.clone());
-            }
-         }
-      }
-
-      // Second pass: check if this exact file is tracked by any server
-      for ((workspace_path, server_name), instance) in clients.iter() {
-         if path.starts_with(workspace_path) && instance.files.contains(&path) {
-            log::info!(
-               "get_client_for_file: selected server '{}' for {} (exact file match)",
-               server_name,
-               file_path
-            );
-            return Some(instance.client.clone());
-         }
-      }
-
-      log::warn!("get_client_for_file: no client found for {}", file_path);
-      None
+      self
+         .workspace_clients
+         .get_client_for_file(&PathBuf::from(file_path))
    }
 
    pub async fn get_completions(
@@ -422,7 +324,7 @@ impl LspManager {
       };
 
       let text_document = TextDocumentIdentifier {
-         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+         uri: manager_support::text_document_identifier(file_path)?.uri,
       };
 
       let params = HoverParams {
@@ -436,11 +338,7 @@ impl LspManager {
       match client.text_document_hover(params).await {
          Ok(value) => Ok(value),
          Err(error) => {
-            let message = error.to_string();
-            if message.contains("-32601")
-               || message.contains("Method not found")
-               || message.contains("Unhandled method textDocument/hover")
-            {
+            if manager_support::is_unsupported_method(&error, "textDocument/hover") {
                log::debug!("Hover method is not supported by this language server");
                return Ok(None);
             }
@@ -460,7 +358,7 @@ impl LspManager {
       };
 
       let text_document = TextDocumentIdentifier {
-         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+         uri: manager_support::text_document_identifier(file_path)?.uri,
       };
 
       let params = GotoDefinitionParams {
@@ -475,12 +373,276 @@ impl LspManager {
       match client.text_document_definition(params).await {
          Ok(value) => Ok(value),
          Err(error) => {
-            let message = error.to_string();
-            if message.contains("-32601")
-               || message.contains("Method not found")
-               || message.contains("Unhandled method textDocument/definition")
-            {
+            if manager_support::is_unsupported_method(&error, "textDocument/definition") {
                log::debug!("Definition method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_semantic_tokens(
+      &self,
+      file_path: &str,
+   ) -> Result<Option<SemanticTokensResult>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = SemanticTokensParams {
+         text_document,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_semantic_tokens_full(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/semanticTokens") {
+               log::debug!("SemanticTokens method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_inlay_hints(
+      &self,
+      file_path: &str,
+      start_line: u32,
+      end_line: u32,
+   ) -> Result<Option<Vec<InlayHint>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = InlayHintParams {
+         text_document,
+         range: Range {
+            start: Position {
+               line: start_line,
+               character: 0,
+            },
+            end: Position {
+               line: end_line,
+               character: 0,
+            },
+         },
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_inlay_hint(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/inlayHint") {
+               log::debug!("InlayHint method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_document_symbols(
+      &self,
+      file_path: &str,
+   ) -> Result<Option<DocumentSymbolResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = DocumentSymbolParams {
+         text_document,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_document_symbol(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/documentSymbol") {
+               log::debug!("DocumentSymbol method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_signature_help(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<SignatureHelp>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = SignatureHelpParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         context: None,
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_signature_help(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/signatureHelp") {
+               log::debug!("SignatureHelp method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_references(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<Vec<Location>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = ReferenceParams {
+         text_document_position: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         context: ReferenceContext {
+            include_declaration: true,
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_references(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/references") {
+               log::debug!("References method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn rename(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+      new_name: String,
+   ) -> Result<Option<WorkspaceEdit>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = RenameParams {
+         text_document_position: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         new_name,
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_rename(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/rename") {
+               log::debug!("Rename method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn prepare_rename(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<PrepareRenameResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = TextDocumentPositionParams {
+         text_document,
+         position: Position { line, character },
+      };
+
+      match client.text_document_prepare_rename(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/prepareRename") {
+               log::debug!("PrepareRename method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_code_lens(&self, file_path: &str) -> Result<Option<Vec<CodeLens>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = CodeLensParams {
+         text_document,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_code_lens(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/codeLens") {
+               log::debug!("CodeLens method is not supported by this language server");
                return Ok(None);
             }
             Err(error)
@@ -498,7 +660,7 @@ impl LspManager {
       };
 
       let text_document = TextDocumentIdentifier {
-         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+         uri: manager_support::text_document_identifier(file_path)?.uri,
       };
 
       let params = CodeActionParams {
@@ -517,11 +679,7 @@ impl LspManager {
          Ok(Some(actions)) => Ok(actions),
          Ok(None) => Ok(vec![]),
          Err(error) => {
-            let message = error.to_string();
-            if message.contains("-32601")
-               || message.contains("Method not found")
-               || message.contains("Unhandled method textDocument/codeAction")
-            {
+            if manager_support::is_unsupported_method(&error, "textDocument/codeAction") {
                log::debug!("CodeAction method is not supported by this language server");
                return Ok(vec![]);
             }
@@ -544,20 +702,15 @@ impl LspManager {
 
       match action {
          CodeActionOrCommand::Command(command) => {
-            let params = ExecuteCommandParams {
-               command: command.command,
-               arguments: command.arguments.unwrap_or_default(),
-               work_done_progress_params: Default::default(),
-            };
+            let params = manager_support::execute_command_params(
+               command.command,
+               command.arguments.unwrap_or_default(),
+            );
 
             match client.workspace_execute_command(params).await {
                Ok(_) => Ok((true, None)),
                Err(error) => {
-                  let message = error.to_string();
-                  if message.contains("-32601")
-                     || message.contains("Method not found")
-                     || message.contains("Unhandled method workspace/executeCommand")
-                  {
+                  if manager_support::is_unsupported_method(&error, "workspace/executeCommand") {
                      return Ok((
                         false,
                         Some("Server does not support workspace/executeCommand".to_string()),
@@ -580,20 +733,15 @@ impl LspManager {
             }
 
             if let Some(command) = code_action.command {
-               let params = ExecuteCommandParams {
-                  command: command.command,
-                  arguments: command.arguments.unwrap_or_default(),
-                  work_done_progress_params: Default::default(),
-               };
+               let params = manager_support::execute_command_params(
+                  command.command,
+                  command.arguments.unwrap_or_default(),
+               );
 
                match client.workspace_execute_command(params).await {
                   Ok(_) => Ok((true, None)),
                   Err(error) => {
-                     let message = error.to_string();
-                     if message.contains("-32601")
-                        || message.contains("Method not found")
-                        || message.contains("Unhandled method workspace/executeCommand")
-                     {
+                     if manager_support::is_unsupported_method(&error, "workspace/executeCommand") {
                         return Ok((
                            false,
                            Some("Server does not support workspace/executeCommand".to_string()),
@@ -624,8 +772,7 @@ impl LspManager {
 
       let params = DidOpenTextDocumentParams {
          text_document: TextDocumentItem {
-            uri: Url::from_file_path(file_path)
-               .map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+            uri: manager_support::text_document_identifier(file_path)?.uri,
             language_id: language_id.unwrap_or_else(|| self.get_language_id_for_file(file_path)),
             version: 1,
             text: content,
@@ -650,8 +797,7 @@ impl LspManager {
 
       let params = DidChangeTextDocumentParams {
          text_document: VersionedTextDocumentIdentifier {
-            uri: Url::from_file_path(file_path)
-               .map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+            uri: manager_support::text_document_identifier(file_path)?.uri,
             version,
          },
          content_changes: vec![TextDocumentContentChangeEvent {
@@ -673,49 +819,18 @@ impl LspManager {
          .context("No LSP client for this file")?;
 
       let params = DidCloseTextDocumentParams {
-         text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(file_path)
-               .map_err(|_| anyhow::anyhow!("Invalid file path"))?,
-         },
+         text_document: manager_support::text_document_identifier(file_path)?,
       };
 
       client.text_document_did_close(params)
    }
 
    pub fn shutdown(&self) {
-      let mut clients = self.workspace_clients.lock().unwrap();
-      for ((workspace, server_name), mut instance) in clients.drain() {
-         log::info!(
-            "Shutting down LSP '{}' for workspace {:?}",
-            server_name,
-            workspace
-         );
-         let _ = instance.child.kill();
-      }
+      self.workspace_clients.shutdown_all();
    }
 
-   pub fn shutdown_workspace(&self, workspace_path: &PathBuf) -> Result<()> {
-      let mut clients = self.workspace_clients.lock().unwrap();
-
-      // Find all LSP servers for this workspace (all languages)
-      let keys_to_remove: Vec<_> = clients
-         .keys()
-         .filter(|(ws, _)| ws == workspace_path)
-         .cloned()
-         .collect();
-
-      for key in keys_to_remove {
-         if let Some(mut instance) = clients.remove(&key) {
-            log::info!(
-               "Shutting down LSP '{}' for workspace {:?}",
-               instance.server_name,
-               workspace_path
-            );
-            instance.child.kill()?;
-         }
-      }
-
-      Ok(())
+   pub fn shutdown_workspace(&self, workspace_path: &Path) -> Result<()> {
+      Ok(self.workspace_clients.shutdown_workspace(workspace_path)?)
    }
 
    fn get_language_id_for_file(&self, file_path: &str) -> String {

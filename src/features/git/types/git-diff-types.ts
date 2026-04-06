@@ -26,6 +26,7 @@ export interface ImageContainerProps {
 
 export interface DiffHeaderProps {
   fileName?: string;
+  title?: string;
   diff?: GitDiff;
   viewMode?: "unified" | "split";
   onViewModeChange?: (mode: "unified" | "split") => void;
@@ -38,6 +39,7 @@ export interface DiffHeaderProps {
   showWhitespace: boolean;
   onShowWhitespaceChange: (show: boolean) => void;
   onClose?: () => void;
+  showDisplayControls?: boolean;
 }
 
 export interface DiffHunkHeaderProps {
@@ -54,6 +56,8 @@ export interface DiffHunkHeaderProps {
 export interface DiffLineProps {
   line: GitDiffLine;
   viewMode: "unified" | "split";
+  splitSide?: "left" | "right";
+  wordWrap: boolean;
   showWhitespace: boolean;
   fontSize: number;
   lineHeight: number;
@@ -69,6 +73,7 @@ export interface TextDiffViewerProps {
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
   isInMultiFileView?: boolean;
+  isEmbeddedInScrollView?: boolean;
 }
 
 export interface ImageDiffViewerProps {
@@ -79,11 +84,19 @@ export interface ImageDiffViewerProps {
 }
 
 export interface MultiFileDiff {
+  title?: string;
   commitHash: string;
+  commitMessage?: string;
+  commitDescription?: string;
+  commitAuthor?: string;
+  commitDate?: string;
   files: GitDiff[];
   totalFiles: number;
   totalAdditions: number;
   totalDeletions: number;
+  fileKeys?: string[];
+  initiallyExpandedFileKey?: string;
+  isLoading?: boolean;
 }
 
 export interface MultiFileDiffViewerProps {
@@ -92,6 +105,7 @@ export interface MultiFileDiffViewerProps {
 }
 
 export interface FileDiffSummary {
+  key: string;
   fileName: string;
   filePath: string;
   status: "added" | "deleted" | "modified" | "renamed";

@@ -19,12 +19,22 @@ export function useMenuEventsWrapper() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
+  const isTerminalFocused = () => {
+    const activeElement = document.activeElement as HTMLElement | null;
+    return activeElement?.closest(".terminal-container") !== null;
+  };
 
   useMenuEvents({
     onNewWindow: () => {
       void createAppWindow();
     },
-    onNewFile: fileSystemStore.handleCreateNewFile,
+    onNewFile: () => {
+      if (isTerminalFocused()) {
+        window.dispatchEvent(new CustomEvent("terminal-new"));
+        return;
+      }
+      void fileSystemStore.handleCreateNewFile();
+    },
     onOpenFolder: fileSystemStore.handleOpenFolder,
     onCloseFolder: fileSystemStore.closeFolder,
     onSave: handleSave,
@@ -187,7 +197,7 @@ GitHub: https://github.com/athasdev/athas`;
       const helpText = `Athas Help - Keyboard Shortcuts
 
 File:
-• Ctrl+N (Cmd+N): New File
+• Ctrl+N (Cmd+N): New Tab
 • Ctrl+O (Cmd+O): Open Folder
 • Ctrl+S (Cmd+S): Save
 • Ctrl+Shift+S (Cmd+Shift+S): Save As

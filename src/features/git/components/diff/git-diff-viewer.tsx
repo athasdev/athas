@@ -1,26 +1,16 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useDiffData } from "../../hooks/use-git-diff-data";
-import { useDiffViewState } from "../../hooks/use-git-diff-view";
 import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff-types";
-import DiffHeader from "./git-diff-header";
+import GitDiffEditorStack from "./git-diff-editor-stack";
+import GitDiffEditorSurface from "./git-diff-editor-surface";
 import ImageDiffViewer from "./git-diff-image";
-import MultiFileDiffViewer from "./git-diff-multi-file";
-import TextDiffViewer from "./git-diff-text";
 
 function isMultiFileDiff(data: any): data is MultiFileDiff {
   return data && "files" in data && Array.isArray(data.files);
 }
 
-const DiffViewer = memo(({ onStageHunk, onUnstageHunk }: DiffViewerProps) => {
-  const { diff, rawDiffData, filePath, isStaged, isLoading, error } = useDiffData();
-  const { viewMode, showWhitespace, setViewMode, setShowWhitespace } = useDiffViewState();
-
-  const handleShowWhitespaceChange = useCallback(
-    (show: boolean) => {
-      setShowWhitespace(show);
-    },
-    [setShowWhitespace],
-  );
+const DiffViewer = memo((_props: DiffViewerProps) => {
+  const { diff, rawDiffData, filePath, isLoading, error } = useDiffData();
 
   const multiFileDiff = useMemo(() => {
     if (rawDiffData && isMultiFileDiff(rawDiffData)) {
@@ -30,7 +20,7 @@ const DiffViewer = memo(({ onStageHunk, onUnstageHunk }: DiffViewerProps) => {
   }, [rawDiffData]);
 
   if (multiFileDiff) {
-    return <MultiFileDiffViewer multiDiff={multiFileDiff} onClose={() => {}} />;
+    return <GitDiffEditorStack multiDiff={multiFileDiff} />;
   }
 
   if (isLoading) {
@@ -65,25 +55,13 @@ const DiffViewer = memo(({ onStageHunk, onUnstageHunk }: DiffViewerProps) => {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
-      <DiffHeader
-        fileName={fileName}
+      <GitDiffEditorSurface
+        cacheKey={filePath}
         diff={diff}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showWhitespace={showWhitespace}
-        onShowWhitespaceChange={handleShowWhitespaceChange}
+        breadcrumbProps={{
+          filePathOverride: diff.file_path || filePath,
+        }}
       />
-
-      <div className="flex-1 overflow-auto">
-        <TextDiffViewer
-          diff={diff}
-          isStaged={isStaged}
-          viewMode={viewMode}
-          showWhitespace={showWhitespace}
-          onStageHunk={onStageHunk}
-          onUnstageHunk={onUnstageHunk}
-        />
-      </div>
     </div>
   );
 });

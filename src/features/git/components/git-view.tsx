@@ -2,10 +2,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   Archive,
   Check,
-  ChevronDown,
-  GitFork,
   FolderGit2,
   FolderOpen,
+  GitFork,
   History,
   MoreHorizontal,
   RefreshCw,
@@ -14,10 +13,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import { dropdownTriggerClassName } from "@/ui/dropdown";
-import { PANE_GROUP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
 import { Dropdown } from "@/ui/dropdown";
+import { PANE_GROUP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
 import { Tab, TabsList } from "@/ui/tabs";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { getBranches } from "../api/git-branches-api";
@@ -26,21 +25,21 @@ import { getCommitDiff, getFileDiff, getStashDiff } from "../api/git-diff-api";
 import { resolveRepositoryPath } from "../api/git-repo-api";
 import { getStashes } from "../api/git-stash-api";
 import { getGitStatus } from "../api/git-status-api";
-import { useGitStore } from "../stores/git-store";
 import { useRepositoryStore } from "../stores/git-repository-store";
+import { useGitStore } from "../stores/git-store";
 import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitFile } from "../types/git-types";
-import { countDiffStats } from "../utils/git-diff-helpers";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
+import { countDiffStats } from "../utils/git-diff-helpers";
 import GitActionsMenu from "./git-actions-menu";
 import GitBranchManager from "./git-branch-manager";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
 import GitRemoteManager from "./git-remote-manager";
-import GitStashPanel from "./stash/git-stash-panel";
-import GitStatusPanel from "./status/git-status-panel";
 import GitTagManager from "./git-tag-manager";
 import GitWorktreeManager from "./git-worktree-manager";
+import GitStashPanel from "./stash/git-stash-panel";
+import GitStatusPanel from "./status/git-status-panel";
 
 interface GitViewProps {
   repoPath?: string;
@@ -362,15 +361,91 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       const diff = await getFileDiff(activeRepoPath, actualFilePath, staged);
 
       if (diff && (diff.lines.length > 0 || diff.is_image)) {
-        const encodedPath = encodeURIComponent(actualFilePath);
-        const virtualPath = `diff://${staged ? "staged" : "unstaged"}/${encodedPath}`;
-        const displayName = `${actualFilePath.split("/").pop()} (${
-          staged ? "staged" : "unstaged"
-        })`;
+        const selectedFileKey = `${staged ? "staged" : "unstaged"}:${actualFilePath}`;
+        const { additions, deletions } = countDiffStats([diff]);
 
-        useBufferStore
+        // Open buffer immediately with the clicked file's diff
+        const initialMultiDiff: MultiFileDiff = {
+          title: "Uncommitted Changes",
+          commitHash: "working-tree",
+          files: [diff],
+          totalFiles: 1,
+          totalAdditions: additions,
+          totalDeletions: deletions,
+          fileKeys: [selectedFileKey],
+          initiallyExpandedFileKey: selectedFileKey,
+          isLoading: true,
+        };
+
+        const virtualPath = "diff://working-tree/all-files";
+        const bufferId = useBufferStore
           .getState()
-          .actions.openBuffer(virtualPath, displayName, "", false, undefined, true, true, diff);
+          .actions.openBuffer(
+            virtualPath,
+            "Uncommitted Changes",
+            "",
+            false,
+            undefined,
+            true,
+            true,
+            initialMultiDiff,
+          );
+
+        // Load remaining diffs in the background
+        const repoPath = activeRepoPath;
+        const diffableFiles = (visibleGitFiles ?? []).filter(
+          (entry) => entry.status !== "untracked",
+        );
+        const diffEntries = Array.from(
+          new Map(
+            diffableFiles.map((entry) => [
+              `${entry.staged ? "staged" : "unstaged"}:${entry.path}`,
+              entry,
+            ]),
+          ).entries(),
+        ).filter(([fileKey]) => fileKey !== selectedFileKey);
+
+        if (diffEntries.length > 0) {
+          Promise.all(
+            diffEntries.map(async ([fileKey, entry]) => ({
+              fileKey,
+              diff: await getFileDiff(repoPath, entry.path, entry.staged),
+            })),
+          ).then((diffs) => {
+            const resolvedDiffs = diffs.filter(
+              (
+                entry,
+              ): entry is {
+                fileKey: string;
+                diff: NonNullable<typeof entry.diff>;
+              } => !!entry.diff && (entry.diff.lines.length > 0 || entry.diff.is_image === true),
+            );
+
+            const allDiffs = [{ fileKey: selectedFileKey, diff }, ...resolvedDiffs];
+            const allStats = countDiffStats(allDiffs.map((d) => d.diff));
+            const fullMultiDiff: MultiFileDiff = {
+              title: "Uncommitted Changes",
+              commitHash: "working-tree",
+              files: allDiffs.map((d) => d.diff),
+              totalFiles: allDiffs.length,
+              totalAdditions: allStats.additions,
+              totalDeletions: allStats.deletions,
+              fileKeys: allDiffs.map((d) => d.fileKey),
+              initiallyExpandedFileKey: selectedFileKey,
+              isLoading: false,
+            };
+
+            useBufferStore
+              .getState()
+              .actions.updateBufferContent(bufferId, "", false, fullMultiDiff);
+          });
+        } else {
+          // No other files to load, mark as done
+          useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
+            ...initialMultiDiff,
+            isLoading: false,
+          });
+        }
       } else {
         handleOpenOriginalFile(actualFilePath);
       }
@@ -385,6 +460,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
     try {
       const diffs = await getCommitDiff(activeRepoPath, commitHash);
+      const commit = useGitStore.getState().commits.find((entry) => entry.hash === commitHash);
 
       if (diffs && diffs.length > 0) {
         if (filePath) {
@@ -400,6 +476,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
           const multiDiff: MultiFileDiff = {
             commitHash,
+            commitMessage: commit?.message,
+            commitDescription: commit?.description,
+            commitAuthor: commit?.author,
+            commitDate: commit?.date,
             files: diffs,
             totalFiles: diffs.length,
             totalAdditions: additions,
@@ -625,8 +705,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("justify-between rounded-lg")}>
-          <div className={cn(PANE_GROUP_BASE, "min-w-0")}>
+        <div className={paneHeaderClassName("rounded-lg")}>
+          <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1")}>
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
@@ -634,7 +714,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               compact
             />
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-              <span className="ui-text-sm text-text-lighter">
+              <span className="ui-text-sm shrink-0 text-text-lighter">
                 {gitStatus.ahead > 0 && <span className="text-git-added">↑{gitStatus.ahead}</span>}
                 {gitStatus.behind > 0 && (
                   <span className="text-git-deleted">↓{gitStatus.behind}</span>
@@ -643,7 +723,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               ref={repoTriggerRef}
               onClick={() => {
@@ -657,13 +737,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 setShowGitActionsMenu(false);
               }}
               variant="ghost"
-              size="sm"
-              className={dropdownTriggerClassName("ui-text-sm max-w-40")}
+              size="icon-sm"
+              className={cn(paneIconButtonClassName(), "size-6")}
               title={activeRepoPath}
+              aria-label={`Repository: ${getFolderName(activeRepoPath)}`}
             >
-              <FolderOpen className="shrink-0" />
-              <span className="truncate">{getFolderName(activeRepoPath)}</span>
-              <ChevronDown />
+              <FolderOpen />
             </Button>
             <Button
               onClick={handleManualRefresh}
@@ -680,44 +759,40 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+        <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <TabsList
             variant="segmented"
-            className="grid h-auto shrink-0 grid-cols-4 border-border/60 bg-secondary-bg/40"
+            className="grid h-auto shrink-0 grid-cols-4 border-border/60 bg-secondary-bg/40 p-1"
           >
             {gitTabs.map((tab) => {
               const Icon = tab.icon;
               const isSelected = activeTab === tab.id;
 
               return (
-                <Tab
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isSelected}
-                  onClick={() => setActiveTab(tab.id)}
-                  isActive={isSelected}
-                  size="md"
-                  variant="segmented"
-                  contentLayout="stacked"
-                  className="h-auto min-h-12 min-w-0 px-1 py-1.5 whitespace-normal transition-colors"
-                >
-                  <div className="relative flex items-center justify-center">
-                    <Icon strokeWidth={2.2} />
-                  </div>
-                  <span className="ui-text-sm text-center leading-none">{tab.label}</span>
-                </Tab>
+                <Tooltip key={tab.id} content={tab.label} side="bottom">
+                  <Tab
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() => setActiveTab(tab.id)}
+                    isActive={isSelected}
+                    size="md"
+                    variant="segmented"
+                    contentLayout="stacked"
+                    className="h-full min-h-10 min-w-0 px-2.5 py-2 transition-colors [&>div]:gap-1.5"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <Icon strokeWidth={2.2} />
+                    </div>
+                    <span className="ui-text-sm hidden text-center leading-none @[220px]:block">
+                      {tab.label}
+                    </span>
+                  </Tab>
+                </Tooltip>
               );
             })}
           </TabsList>
 
-          <div
-            className={cn(
-              "min-h-0 flex-1 overflow-hidden",
-              activeTab === "changes"
-                ? ""
-                : "rounded-xl border border-border/60 bg-secondary-bg/20",
-            )}
-          >
+          <div className="min-h-0 flex-1 overflow-hidden">
             {activeTab === "changes" && (
               <div className="h-full overflow-hidden">
                 <GitStatusPanel
@@ -732,7 +807,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             )}
 
             {activeTab === "stash" && (
-              <div className="h-full p-1">
+              <div className="h-full overflow-hidden">
                 <GitStashPanel
                   isCollapsed={false}
                   onToggle={() => {}}
@@ -745,7 +820,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             )}
 
             {activeTab === "history" && (
-              <div className="h-full p-1">
+              <div className="h-full overflow-hidden">
                 <GitCommitHistory
                   isCollapsed={false}
                   onToggle={() => {}}

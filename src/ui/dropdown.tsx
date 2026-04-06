@@ -4,6 +4,7 @@ import {
   type CSSProperties,
   type ReactNode,
   type RefObject,
+  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -25,11 +26,11 @@ export const DROPDOWN_TRIGGER_BASE = cn(
 );
 
 const dropdownRootVariants = cva(
-  "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+  "fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 const dropdownItemVariants = cva(
-  "ui-font ui-text-sm flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
+  "ui-font ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
   {
     variants: {
       disabled: {
@@ -58,6 +59,35 @@ export function dropdownTriggerClassName(className?: string) {
 
 export function dropdownItemClassName(className?: string) {
   return cn(DROPDOWN_ITEM_BASE, className);
+}
+
+function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
+  const root = event.currentTarget;
+  const deltaY = event.deltaY;
+
+  if (deltaY === 0) return;
+
+  let node = event.target instanceof HTMLElement ? event.target : null;
+
+  while (node) {
+    const style = window.getComputedStyle(node);
+    const canScrollY =
+      (style.overflowY === "auto" || style.overflowY === "scroll") &&
+      node.scrollHeight > node.clientHeight;
+
+    if (canScrollY) {
+      const maxScrollTop = node.scrollHeight - node.clientHeight;
+      if ((deltaY < 0 && node.scrollTop > 0) || (deltaY > 0 && node.scrollTop < maxScrollTop)) {
+        return;
+      }
+    }
+
+    if (node === root) break;
+    node = node.parentElement;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 export interface MenuItem {
@@ -99,6 +129,7 @@ export function MenuPopover({
   const node = isOpen ? (
     <motion.div
       ref={menuRef}
+      onWheelCapture={containScrollChain}
       initial={initial}
       animate={animate}
       exit={exit}
@@ -174,9 +205,11 @@ export function MenuItemsList({
             )}
           >
             {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
-            <span className="flex-1">{item.label}</span>
+            <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
             {item.keybinding && (
-              <span className="ui-text-sm shrink-0 text-text-lighter">{item.keybinding}</span>
+              <span className="ui-text-sm ml-8 shrink-0 whitespace-nowrap text-text-lighter">
+                {item.keybinding}
+              </span>
             )}
           </button>
         );
@@ -198,6 +231,7 @@ interface DropdownBaseProps {
   isOpen: boolean;
   onClose: () => void;
   className?: string;
+  menuClassName?: string;
   style?: CSSProperties;
 }
 
@@ -275,7 +309,7 @@ function getViewportBounds() {
 }
 
 export function Dropdown(props: DropdownProps) {
-  const { isOpen, onClose, className, style, searchable, searchPlaceholder } = props;
+  const { isOpen, onClose, className, menuClassName, style, searchable, searchPlaceholder } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -577,7 +611,7 @@ export function Dropdown(props: DropdownProps) {
       exit={{ opacity: 0, scale: 0.95, y: yDir }}
       transition={{ duration: 0.12, ease: "easeOut" }}
     >
-      <div role="menu" onKeyDown={handleKeyDown}>
+      <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (
           <div className="px-1 pb-1">
             <Input

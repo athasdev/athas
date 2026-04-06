@@ -1,16 +1,7 @@
-import {
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Columns2,
-  Rows3,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Columns2, Rows3, Trash2, X } from "lucide-react";
 import { memo } from "react";
+import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { DiffHeaderProps } from "../../types/git-diff-types";
@@ -19,6 +10,7 @@ import { getFileStatus } from "../../utils/git-diff-helpers";
 const DiffHeader = memo(
   ({
     fileName,
+    title,
     diff,
     viewMode,
     onViewModeChange,
@@ -29,6 +21,7 @@ const DiffHeader = memo(
     showWhitespace,
     onShowWhitespaceChange,
     onClose,
+    showDisplayControls = true,
   }: DiffHeaderProps) => {
     const { closeBuffer } = useBufferStore.use.actions();
     const activeBufferId = useBufferStore.use.activeBufferId();
@@ -86,153 +79,120 @@ const DiffHeader = memo(
       );
     };
 
-    const renderFileBreadcrumb = () => {
-      const fullPath = diff?.file_path || fileName || "";
-      if (!fullPath) return null;
-
-      const pathSegments = fullPath.split("/").filter(Boolean);
-      const visibleSegments =
-        pathSegments.length > 4 ? ["...", ...pathSegments.slice(-4)] : pathSegments;
-
-      return (
-        <div className="flex min-w-0 items-center gap-0.5 overflow-hidden" title={fullPath}>
-          <span className="flex size-5 shrink-0 items-center justify-center rounded text-text-lighter">
-            <FileExplorerIcon
-              fileName={pathSegments[pathSegments.length - 1] || fullPath}
-              isDir={false}
-              isExpanded={false}
-              className="text-text-lighter"
-            />
-          </span>
-          {visibleSegments.map((segment, index) => {
-            const isLast = index === visibleSegments.length - 1;
-
-            return (
-              <div key={`${segment}-${index}`} className="flex min-w-0 items-center gap-0.5">
-                {index > 0 && <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" />}
-                <span
-                  className={cn(
-                    "truncate rounded px-1 py-0.5 text-xs",
-                    isLast ? "font-medium text-text" : "text-text-lighter",
-                  )}
-                >
-                  {segment}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      );
-    };
-
-    const isMultiFileView = !!commitHash && !!totalFiles;
+    const isMultiFileView = !!totalFiles;
+    const fullPath = diff?.file_path || fileName || "";
 
     return (
-      <div
-        className={cn(
-          "ui-font sticky top-0 z-10 flex min-h-7 select-none items-center justify-between border-border border-b",
-          "bg-terniary-bg px-3 py-1 text-text text-xs",
-        )}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-text-lighter text-xs">
-          {isMultiFileView ? (
-            <>
-              <span className="rounded px-1.5 py-0.5 font-mono text-[11px] text-text">
-                {commitHash?.substring(0, 7)}
-              </span>
+      <div className="sticky top-0 z-10 border-border border-b">
+        <Breadcrumb
+          filePathOverride={isMultiFileView ? title || "Uncommitted Changes" : fullPath}
+          interactive={!isMultiFileView}
+          showDefaultActions={false}
+          extraLeftContent={
+            isMultiFileView ? (
               <span className="text-text-lighter">
                 {totalFiles} file{totalFiles !== 1 ? "s" : ""}
               </span>
-            </>
-          ) : (
-            <>
-              {renderFileBreadcrumb()}
-              {renderFileStatus()}
-              <div className="flex items-center gap-2 text-[10px]">{renderStats()}</div>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                {renderFileStatus()}
+                <div className="flex items-center gap-2 text-[10px]">{renderStats()}</div>
+              </>
+            )
+          }
+          rightContent={
+            <div className="flex items-center gap-1.5 leading-none">
+              {isMultiFileView && (
+                <>
+                  <Button
+                    onClick={onExpandAll}
+                    variant="ghost"
+                    size="icon-xs"
+                    className={iconButtonClass}
+                    title="Expand all"
+                    aria-label="Expand all files"
+                  >
+                    <ChevronDown />
+                  </Button>
+                  <Button
+                    onClick={onCollapseAll}
+                    variant="ghost"
+                    size="icon-xs"
+                    className={iconButtonClass}
+                    title="Collapse all"
+                    aria-label="Collapse all files"
+                  >
+                    <ChevronUp />
+                  </Button>
+                  <div className="mx-1 h-4 w-px bg-border" />
+                </>
+              )}
 
-        <div className="flex items-center gap-1.5 leading-none">
-          {isMultiFileView && (
-            <>
+              {showDisplayControls && (
+                <>
+                  <Button
+                    onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
+                    variant="ghost"
+                    size="xs"
+                    className={cn(
+                      "flex h-5 items-center gap-1 rounded px-1.5 transition-colors hover:bg-hover hover:text-text",
+                      showWhitespace ? "bg-hover text-text" : "text-text-lighter",
+                    )}
+                    title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+                    aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+                  >
+                    <Trash2 />
+                    {showWhitespace && <Check />}
+                  </Button>
+
+                  {onViewModeChange && (
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        onClick={() => onViewModeChange("unified")}
+                        variant="ghost"
+                        size="icon-xs"
+                        className={cn(
+                          segmentedButtonClass,
+                          viewMode === "unified" && "bg-hover text-text",
+                        )}
+                        title="Unified view"
+                        aria-label="Unified diff view"
+                      >
+                        <Rows3 />
+                      </Button>
+                      <Button
+                        onClick={() => onViewModeChange("split")}
+                        variant="ghost"
+                        size="icon-xs"
+                        className={cn(
+                          segmentedButtonClass,
+                          viewMode === "split" && "bg-hover text-text",
+                        )}
+                        title="Split view"
+                        aria-label="Split diff view"
+                      >
+                        <Columns2 />
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="mx-1 h-4 w-px bg-border" />
+                </>
+              )}
+
               <Button
-                onClick={onExpandAll}
+                onClick={handleClose}
                 variant="ghost"
                 size="icon-xs"
                 className={iconButtonClass}
-                title="Expand all"
-                aria-label="Expand all files"
+                title="Close"
+                aria-label="Close diff view"
               >
-                <ChevronDown />
-              </Button>
-              <Button
-                onClick={onCollapseAll}
-                variant="ghost"
-                size="icon-xs"
-                className={iconButtonClass}
-                title="Collapse all"
-                aria-label="Collapse all files"
-              >
-                <ChevronUp />
-              </Button>
-              <div className="mx-1 h-4 w-px bg-border" />
-            </>
-          )}
-
-          <Button
-            onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
-            variant="ghost"
-            size="xs"
-            className={cn(
-              "flex h-5 items-center gap-1 rounded px-1.5 transition-colors hover:bg-hover hover:text-text",
-              showWhitespace ? "bg-hover text-text" : "text-text-lighter",
-            )}
-            title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-            aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-          >
-            <Trash2 />
-            {showWhitespace && <Check />}
-          </Button>
-
-          {onViewModeChange && (
-            <div className="flex items-center gap-0.5">
-              <Button
-                onClick={() => onViewModeChange("unified")}
-                variant="ghost"
-                size="icon-xs"
-                className={cn(segmentedButtonClass, viewMode === "unified" && "bg-hover text-text")}
-                title="Unified view"
-                aria-label="Unified diff view"
-              >
-                <Rows3 />
-              </Button>
-              <Button
-                onClick={() => onViewModeChange("split")}
-                variant="ghost"
-                size="icon-xs"
-                className={cn(segmentedButtonClass, viewMode === "split" && "bg-hover text-text")}
-                title="Split view"
-                aria-label="Split diff view"
-              >
-                <Columns2 />
+                <X />
               </Button>
             </div>
-          )}
-
-          <div className="mx-1 h-4 w-px bg-border" />
-
-          <Button
-            onClick={handleClose}
-            variant="ghost"
-            size="icon-xs"
-            className={iconButtonClass}
-            title="Close"
-            aria-label="Close diff view"
-          >
-            <X />
-          </Button>
-        </div>
+          }
+        />
       </div>
     );
   },
