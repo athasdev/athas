@@ -819,7 +819,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />
       )}
       <SplitDropOverlay visible={isTabDragOver} onDrop={handleSplitDrop} />
-      {paneBuffers.length > 0 && <TabBar paneId={pane.id} onTabClick={handleTabClick} />}
+      <TabBar paneId={pane.id} onTabClick={handleTabClick} />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {(!activeBuffer || activeBuffer.type === "newTab") && !shouldRenderCarousel && (
           <EmptyEditorState />
