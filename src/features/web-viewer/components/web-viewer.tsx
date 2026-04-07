@@ -24,6 +24,8 @@ export function WebViewer({
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
   const [isLoading, setIsLoading] = useState(!isNewTab);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -155,6 +157,9 @@ export function WebViewer({
         historyRef.current.push(normalizedUrl);
         historyIndexRef.current = historyRef.current.length - 1;
       }
+
+      setCanGoBack(historyIndexRef.current > 0);
+      setCanGoForward(historyIndexRef.current < historyRef.current.length - 1);
     },
     [webviewLabel],
   );
@@ -423,6 +428,8 @@ export function WebViewer({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
       <WebViewerToolbar
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
         copied={copied}
         inputUrl={inputUrl}
         isLoading={isLoading}
@@ -433,6 +440,8 @@ export function WebViewer({
         urlInputRef={urlInputRef}
         zoomLevel={zoomLevel}
         onCopyUrl={handleCopyUrl}
+        onGoBack={handleGoBack}
+        onGoForward={handleGoForward}
         onInputUrlChange={setInputUrl}
         onOpenDevTools={handleOpenDevTools}
         onOpenExternal={handleOpenExternal}

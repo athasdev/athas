@@ -408,7 +408,8 @@ pub async fn poll_webview_metadata(
    webview_label: String,
 ) -> Result<Option<WebviewMetadata>, String> {
    if let Some(webview) = app.get_webview(&webview_label) {
-      // Store metadata in a global variable, then encode it as a hash fragment
+      // Store metadata in a dedicated global (does not touch location.hash
+      // to avoid conflicts with the shortcut polling mechanism).
       webview
          .eval(
             r#"
@@ -417,12 +418,26 @@ pub async fn poll_webview_metadata(
                var icon = '';
                var el = document.querySelector('link[rel~="icon"]') || document.querySelector('link[rel="shortcut icon"]');
                if (el && el.href) { icon = el.href; }
-               window.__ATHAS_PAGE_META__ = t + '\n' + icon;
-               window.location.hash = '__athas_meta_ready';
+               window.__ATHAS_PAGE_META__ = JSON.stringify({t:t,i:icon});
             })();
             "#,
          )
          .map_err(|e| format!("Failed to get metadata: {e}"))?;
+
+      tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+
+      // Read back via a hash round-trip (single step)
+      webview
+         .eval(
+            r#"
+            (function() {
+               var m = window.__ATHAS_PAGE_META__;
+               window.__ATHAS_PAGE_META__ = null;
+               if (m) window.location.hash = '__athas_meta=' + encodeURIComponent(m);
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to read metadata: {e}"))?;
 
       tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
@@ -431,31 +446,7 @@ pub async fn poll_webview_metadata(
          .map_err(|e| format!("Failed to get URL: {e}"))?;
       let hash = url.fragment().unwrap_or("");
 
-      if hash != "__athas_meta_ready" {
-         return Ok(None);
-      }
-
-      // Read the stored metadata
-      webview
-         .eval(
-            r#"
-            (function() {
-               var m = window.__ATHAS_PAGE_META__ || '';
-               window.__ATHAS_PAGE_META__ = null;
-               window.location.hash = '__athas_meta_val=' + encodeURIComponent(m);
-            })();
-            "#,
-         )
-         .map_err(|e| format!("Failed to read metadata: {e}"))?;
-
-      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-      let url2 = webview
-         .url()
-         .map_err(|e| format!("Failed to get URL: {e}"))?;
-      let hash2 = url2.fragment().unwrap_or("");
-
-      if let Some(encoded) = hash2.strip_prefix("__athas_meta_val=") {
+      if let Some(encoded) = hash.strip_prefix("__athas_meta=") {
          webview
             .eval("window.location.hash = '';")
             .map_err(|e| format!("Failed to clear hash: {e}"))?;
@@ -463,18 +454,26 @@ pub async fn poll_webview_metadata(
          let decoded = percent_encoding::percent_decode_str(encoded)
             .decode_utf8()
             .unwrap_or_default();
-         let parts: Vec<&str> = decoded.splitn(2, '\n').collect();
-         let title = parts.first().unwrap_or(&"").to_string();
-         let favicon = parts
-            .get(1)
-            .map(|s| s.to_string())
-            .filter(|s| !s.is_empty());
 
-         if title.is_empty() {
-            return Ok(None);
+         #[derive(Deserialize)]
+         struct Meta {
+            t: String,
+            i: String,
          }
 
-         return Ok(Some(WebviewMetadata { title, favicon }));
+         if let Ok(meta) = serde_json::from_str::<Meta>(&decoded) {
+            if meta.t.is_empty() {
+               return Ok(None);
+            }
+            return Ok(Some(WebviewMetadata {
+               title: meta.t,
+               favicon: if meta.i.is_empty() {
+                  None
+               } else {
+                  Some(meta.i)
+               },
+            }));
+         }
       }
 
       Ok(None)

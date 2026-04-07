@@ -969,13 +969,16 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             </div>
           ) : (
             <>
-              {/* Keep terminal buffers always mounted to preserve PTY sessions.
-                  Active terminal is shown, inactive ones use offscreen positioning
-                  so xterm can still measure its container dimensions. */}
+              {/* Keep terminal and webviewer buffers always mounted to preserve
+                  PTY sessions and embedded webview state. */}
               {paneBuffers
                 .filter(
-                  (b): b is import("../types/pane-content").TerminalContent =>
-                    b.type === "terminal",
+                  (
+                    b,
+                  ): b is
+                    | import("../types/pane-content").TerminalContent
+                    | import("../types/pane-content").WebViewerContent =>
+                    b.type === "terminal" || b.type === "webViewer",
                 )
                 .map((b) => {
                   const isActive = b.id === activeBuffer?.id;
@@ -985,18 +988,30 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                       className="absolute inset-0"
                       style={isActive ? undefined : { visibility: "hidden" }}
                     >
-                      <TerminalTab
-                        sessionId={b.sessionId}
-                        bufferId={b.id}
-                        initialCommand={b.initialCommand}
-                        workingDirectory={b.workingDirectory}
-                        isActive={isActive && isActivePane}
-                        isVisible={isActive}
-                      />
+                      {b.type === "terminal" ? (
+                        <TerminalTab
+                          sessionId={b.sessionId}
+                          bufferId={b.id}
+                          initialCommand={b.initialCommand}
+                          workingDirectory={b.workingDirectory}
+                          isActive={isActive && isActivePane}
+                          isVisible={isActive}
+                        />
+                      ) : (
+                        <WebViewer
+                          url={b.url}
+                          bufferId={b.id}
+                          isActive={isActive && isActivePane}
+                          isVisible={isActive}
+                        />
+                      )}
                     </div>
                   );
                 })}
-              {activeBuffer && activeBuffer.type !== "terminal" && renderActiveBuffer(activeBuffer)}
+              {activeBuffer &&
+                activeBuffer.type !== "terminal" &&
+                activeBuffer.type !== "webViewer" &&
+                renderActiveBuffer(activeBuffer)}
             </>
           )}
         </Suspense>

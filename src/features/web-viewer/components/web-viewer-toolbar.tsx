@@ -1,4 +1,6 @@
 import {
+  ArrowLeft,
+  ArrowRight,
   Check,
   Code2,
   Copy,
@@ -19,6 +21,8 @@ import Input from "@/ui/input";
 import { WebViewerToolbarButton } from "./web-viewer-toolbar-button";
 
 interface WebViewerToolbarProps {
+  canGoBack: boolean;
+  canGoForward: boolean;
   copied: boolean;
   inputUrl: string;
   isLoading: boolean;
@@ -29,6 +33,8 @@ interface WebViewerToolbarProps {
   urlInputRef: RefObject<HTMLInputElement | null>;
   zoomLevel: number;
   onCopyUrl: () => void;
+  onGoBack: () => void;
+  onGoForward: () => void;
   onInputUrlChange: (value: string) => void;
   onOpenDevTools: () => void;
   onOpenExternal: () => void;
@@ -41,6 +47,8 @@ interface WebViewerToolbarProps {
 }
 
 export function WebViewerToolbar({
+  canGoBack,
+  canGoForward,
   copied,
   inputUrl,
   isLoading,
@@ -51,6 +59,8 @@ export function WebViewerToolbar({
   urlInputRef,
   zoomLevel,
   onCopyUrl,
+  onGoBack,
+  onGoForward,
   onInputUrlChange,
   onOpenDevTools,
   onOpenExternal,
@@ -66,6 +76,27 @@ export function WebViewerToolbar({
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
+      <div className="flex items-center gap-0.5">
+        <WebViewerToolbarButton
+          onClick={onGoBack}
+          disabled={!canGoBack}
+          title="Go back"
+          aria-label="Go back"
+        >
+          <ArrowLeft />
+        </WebViewerToolbarButton>
+        <WebViewerToolbarButton
+          onClick={onGoForward}
+          disabled={!canGoForward}
+          title="Go forward"
+          aria-label="Go forward"
+        >
+          <ArrowRight />
+        </WebViewerToolbarButton>
+      </div>
+
+      <div className="mx-1.5 h-5 w-px bg-border" />
+
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <div className="relative flex flex-1 items-center">
           <div

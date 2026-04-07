@@ -171,6 +171,7 @@ export function useEmbeddedWebview({
     resizeObserver.observe(containerRef.current);
 
     window.addEventListener("resize", scheduleUpdatePosition);
+    document.addEventListener("fullscreenchange", scheduleUpdatePosition);
     for (const parent of getScrollParents(containerRef.current)) {
       scrollParents.push(parent);
       parent.addEventListener("scroll", scheduleUpdatePosition, { passive: true });
@@ -184,6 +185,7 @@ export function useEmbeddedWebview({
       }
       resizeObserver.disconnect();
       window.removeEventListener("resize", scheduleUpdatePosition);
+      document.removeEventListener("fullscreenchange", scheduleUpdatePosition);
       for (const parent of scrollParents) {
         parent.removeEventListener("scroll", scheduleUpdatePosition);
       }
@@ -206,14 +208,30 @@ export function useEmbeddedWebview({
     let lastOverlayState = false;
 
     const checkForOverlay = () => {
-      // Check if any modal/dialog/context menu is open
-      // Only hide for overlays that actually cover the webview
-      // Exclude small dropdowns and tooltips
+      // Only hide the webview for overlays that actually cover it.
+      // Full-screen dialogs always overlap:
       const hasDialog = document.querySelector('[role="dialog"][data-state="open"]');
-      const hasMenu = document.querySelector('[role="menu"]');
-      const hasContextMenu = document.querySelector('.context-menu:not([style*="display: none"])');
+      if (hasDialog) return true;
 
-      return !!(hasDialog || hasMenu || hasContextMenu);
+      // For menus and context menus, check if they visually overlap the webview container
+      const container = containerRef.current;
+      if (!container) return false;
+      const containerRect = container.getBoundingClientRect();
+
+      const overlays = document.querySelectorAll(
+        '[role="menu"], .context-menu:not([style*="display: none"])',
+      );
+      for (const overlay of overlays) {
+        const overlayRect = overlay.getBoundingClientRect();
+        const overlaps =
+          overlayRect.right > containerRect.left &&
+          overlayRect.left < containerRect.right &&
+          overlayRect.bottom > containerRect.top &&
+          overlayRect.top < containerRect.bottom;
+        if (overlaps) return true;
+      }
+
+      return false;
     };
 
     const updateVisibility = (shouldHide: boolean) => {
