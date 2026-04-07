@@ -39,6 +39,7 @@ athas-ai = { path = "../crates/ai" }
 athas-github = { path = "../crates/github" }
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
+percent-encoding = "2"
 lsp-types = { version = "0.95", features = ["proposed"] }
 portable-pty = "0.9"
 regex = "1.10"

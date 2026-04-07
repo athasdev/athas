@@ -45,28 +45,22 @@ export function WebViewer({
   });
   const security = getWebViewerSecurity(currentUrl);
 
-  // Update buffer with title and favicon when URL changes
+  // Set initial buffer title from hostname, then poll for real page metadata
   useEffect(() => {
     if (!currentUrl || !bufferId) return;
 
     const buffer = buffers.find((b) => b.id === bufferId);
-    if (!buffer) return;
+    if (!buffer || buffer.type !== "webViewer") return;
 
     try {
       const urlObj = new URL(currentUrl);
       const hostname = urlObj.hostname;
-
-      // Truncate hostname for display (max 30 chars)
       let title = hostname;
       if (title.length > 30) {
         title = `${title.substring(0, 27)}...`;
       }
-
-      // Try to get favicon
       const faviconUrl = `${urlObj.origin}/favicon.ico`;
 
-      // Update buffer with new title and favicon
-      if (buffer.type !== "webViewer") return;
       updateBuffer({
         ...buffer,
         name: title,
@@ -78,6 +72,55 @@ export function WebViewer({
       // Invalid URL, ignore
     }
   }, [currentUrl, bufferId, buffers, updateBuffer]);
+
+  // Poll page metadata (title, favicon) from the embedded webview
+  useEffect(() => {
+    if (!webviewLabel || !bufferId || !isActive || !isVisible) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    const pollMetadata = async () => {
+      if (cancelled || attempts >= maxAttempts) return;
+      attempts++;
+
+      try {
+        const meta = await invoke<{ title: string; favicon: string | null } | null>(
+          "poll_webview_metadata",
+          { webviewLabel },
+        );
+        if (cancelled || !meta) return;
+
+        const buffer = buffers.find((b) => b.id === bufferId);
+        if (!buffer || buffer.type !== "webViewer") return;
+
+        let displayTitle = meta.title;
+        if (displayTitle.length > 30) {
+          displayTitle = `${displayTitle.substring(0, 27)}...`;
+        }
+
+        updateBuffer({
+          ...buffer,
+          name: displayTitle,
+          title: meta.title,
+          ...(meta.favicon ? { favicon: meta.favicon } : {}),
+        });
+      } catch {
+        // Webview may not be ready yet
+      }
+    };
+
+    // Poll a few times after page load to catch title updates
+    const timer = setTimeout(pollMetadata, 1000);
+    const timer2 = setTimeout(pollMetadata, 3000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
+  }, [webviewLabel, bufferId, currentUrl, isActive, isVisible, buffers, updateBuffer]);
 
   // Auto-focus URL input for new tabs
   useEffect(() => {
@@ -385,8 +428,6 @@ export function WebViewer({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
       <WebViewerToolbar
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
         copied={copied}
         inputUrl={inputUrl}
         isLoading={isLoading}
@@ -397,8 +438,6 @@ export function WebViewer({
         urlInputRef={urlInputRef}
         zoomLevel={zoomLevel}
         onCopyUrl={handleCopyUrl}
-        onGoBack={handleGoBack}
-        onGoForward={handleGoForward}
         onInputUrlChange={setInputUrl}
         onOpenDevTools={handleOpenDevTools}
         onOpenExternal={handleOpenExternal}

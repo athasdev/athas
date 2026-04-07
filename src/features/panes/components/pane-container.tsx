@@ -968,7 +968,36 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               )}
             </div>
           ) : (
-            activeBuffer && renderActiveBuffer(activeBuffer)
+            <>
+              {/* Keep terminal buffers always mounted to preserve PTY sessions.
+                  Active terminal is shown, inactive ones use offscreen positioning
+                  so xterm can still measure its container dimensions. */}
+              {paneBuffers
+                .filter(
+                  (b): b is import("../types/pane-content").TerminalContent =>
+                    b.type === "terminal",
+                )
+                .map((b) => {
+                  const isActive = b.id === activeBuffer?.id;
+                  return (
+                    <div
+                      key={b.id}
+                      className="absolute inset-0"
+                      style={isActive ? undefined : { visibility: "hidden" }}
+                    >
+                      <TerminalTab
+                        sessionId={b.sessionId}
+                        bufferId={b.id}
+                        initialCommand={b.initialCommand}
+                        workingDirectory={b.workingDirectory}
+                        isActive={isActive && isActivePane}
+                        isVisible={isActive}
+                      />
+                    </div>
+                  );
+                })}
+              {activeBuffer && activeBuffer.type !== "terminal" && renderActiveBuffer(activeBuffer)}
+            </>
           )}
         </Suspense>
       </div>

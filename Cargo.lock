@@ -576,6 +576,7 @@ dependencies = [
  "nucleo",
  "nucleo-matcher",
  "objc",
+ "percent-encoding",
  "portable-pty",
  "rand 0.8.5",
  "redis",

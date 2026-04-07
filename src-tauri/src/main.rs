@@ -139,6 +139,7 @@ fn main() {
          open_webview_devtools,
          set_webview_zoom,
          poll_webview_shortcut,
+         poll_webview_metadata,
          // File watcher commands
          start_watching,
          stop_watching,

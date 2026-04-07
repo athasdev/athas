@@ -6,8 +6,37 @@ use std::{
 };
 use tauri::{AppHandle, Manager};
 
+/// Resolve the `gh` binary, checking well-known install locations that may be
+/// absent from the restricted PATH inherited by bundled .app launches.
+fn resolve_gh_binary() -> String {
+   // First check if `gh` is already on PATH
+   if let Ok(paths) = env::var("PATH") {
+      for dir in env::split_paths(&paths) {
+         if dir.join("gh").exists() {
+            return "gh".to_string();
+         }
+      }
+   }
+
+   // Common install locations (Homebrew Apple Silicon, Homebrew Intel, Nix)
+   let candidates = [
+      "/opt/homebrew/bin/gh",
+      "/usr/local/bin/gh",
+      "/run/current-system/sw/bin/gh",
+   ];
+
+   for path in &candidates {
+      if Path::new(path).exists() {
+         return path.to_string();
+      }
+   }
+
+   // Fall back to bare name and let the OS try
+   "gh".to_string()
+}
+
 pub(crate) fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {
-   let mut command = Command::new("gh");
+   let mut command = Command::new(resolve_gh_binary());
 
    if let Some(dir) = repo_dir {
       command.current_dir(dir);

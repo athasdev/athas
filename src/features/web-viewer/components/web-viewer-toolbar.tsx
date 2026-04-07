@@ -1,6 +1,4 @@
 import {
-  ArrowLeft,
-  ArrowRight,
   Check,
   Code2,
   Copy,
@@ -21,8 +19,6 @@ import Input from "@/ui/input";
 import { WebViewerToolbarButton } from "./web-viewer-toolbar-button";
 
 interface WebViewerToolbarProps {
-  canGoBack: boolean;
-  canGoForward: boolean;
   copied: boolean;
   inputUrl: string;
   isLoading: boolean;
@@ -33,8 +29,6 @@ interface WebViewerToolbarProps {
   urlInputRef: RefObject<HTMLInputElement | null>;
   zoomLevel: number;
   onCopyUrl: () => void;
-  onGoBack: () => void;
-  onGoForward: () => void;
   onInputUrlChange: (value: string) => void;
   onOpenDevTools: () => void;
   onOpenExternal: () => void;
@@ -47,8 +41,6 @@ interface WebViewerToolbarProps {
 }
 
 export function WebViewerToolbar({
-  canGoBack,
-  canGoForward,
   copied,
   inputUrl,
   isLoading,
@@ -59,8 +51,6 @@ export function WebViewerToolbar({
   urlInputRef,
   zoomLevel,
   onCopyUrl,
-  onGoBack,
-  onGoForward,
   onInputUrlChange,
   onOpenDevTools,
   onOpenExternal,
@@ -76,27 +66,6 @@ export function WebViewerToolbar({
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
-      <div className="flex items-center gap-0.5">
-        <WebViewerToolbarButton
-          onClick={onGoBack}
-          disabled={!canGoBack}
-          title="Go back"
-          aria-label="Go back"
-        >
-          <ArrowLeft />
-        </WebViewerToolbarButton>
-        <WebViewerToolbarButton
-          onClick={onGoForward}
-          disabled={!canGoForward}
-          title="Go forward"
-          aria-label="Go forward"
-        >
-          <ArrowRight />
-        </WebViewerToolbarButton>
-      </div>
-
-      <div className="mx-1.5 h-5 w-px bg-border" />
-
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <div className="relative flex flex-1 items-center">
           <div
@@ -158,7 +127,10 @@ export function WebViewerToolbar({
           {showZoomPopover && (
             <>
               <div className="fixed inset-0 z-[9998]" onClick={() => setShowZoomPopover(false)} />
-              <div className="absolute top-full right-0 z-[9999] mt-1 flex items-center gap-1 rounded-lg border border-border bg-secondary-bg p-1.5 shadow-lg">
+              <div
+                role="menu"
+                className="absolute top-full right-0 z-[9999] mt-1 flex items-center gap-1 rounded-lg border border-border bg-secondary-bg p-1.5 shadow-lg"
+              >
                 <WebViewerToolbarButton
                   onClick={onZoomOut}
                   disabled={zoomLevel <= 0.25}

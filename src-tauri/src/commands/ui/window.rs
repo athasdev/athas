@@ -396,6 +396,93 @@ pub async fn set_webview_zoom(
    }
 }
 
+#[derive(Serialize)]
+pub struct WebviewMetadata {
+   pub title: String,
+   pub favicon: Option<String>,
+}
+
+#[command]
+pub async fn poll_webview_metadata(
+   app: tauri::AppHandle,
+   webview_label: String,
+) -> Result<Option<WebviewMetadata>, String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      // Store metadata in a global variable, then encode it as a hash fragment
+      webview
+         .eval(
+            r#"
+            (function() {
+               var t = document.title || '';
+               var icon = '';
+               var el = document.querySelector('link[rel~="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+               if (el && el.href) { icon = el.href; }
+               window.__ATHAS_PAGE_META__ = t + '\n' + icon;
+               window.location.hash = '__athas_meta_ready';
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to get metadata: {e}"))?;
+
+      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+      let url = webview
+         .url()
+         .map_err(|e| format!("Failed to get URL: {e}"))?;
+      let hash = url.fragment().unwrap_or("");
+
+      if hash != "__athas_meta_ready" {
+         return Ok(None);
+      }
+
+      // Read the stored metadata
+      webview
+         .eval(
+            r#"
+            (function() {
+               var m = window.__ATHAS_PAGE_META__ || '';
+               window.__ATHAS_PAGE_META__ = null;
+               window.location.hash = '__athas_meta_val=' + encodeURIComponent(m);
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to read metadata: {e}"))?;
+
+      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+      let url2 = webview
+         .url()
+         .map_err(|e| format!("Failed to get URL: {e}"))?;
+      let hash2 = url2.fragment().unwrap_or("");
+
+      if let Some(encoded) = hash2.strip_prefix("__athas_meta_val=") {
+         webview
+            .eval("window.location.hash = '';")
+            .map_err(|e| format!("Failed to clear hash: {e}"))?;
+
+         let decoded = percent_encoding::percent_decode_str(encoded)
+            .decode_utf8()
+            .unwrap_or_default();
+         let parts: Vec<&str> = decoded.splitn(2, '\n').collect();
+         let title = parts.first().unwrap_or(&"").to_string();
+         let favicon = parts
+            .get(1)
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty());
+
+         if title.is_empty() {
+            return Ok(None);
+         }
+
+         return Ok(Some(WebviewMetadata { title, favicon }));
+      }
+
+      Ok(None)
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
 #[command]
 pub async fn poll_webview_shortcut(
    app: tauri::AppHandle,
