@@ -3,7 +3,7 @@
 - Commits should have the first character uppercased
 - Do not prefix unused variables with an underscore, delete them instead
 - Do not use emojis in commit messages, logs, or documentation
-- Never change the .rules file unless the user specifically asks for it
+- Never change the AGENTS.md file unless the user specifically asks for it
 - Avoid unnecessary comments in UI components (keep code self-explanatory)
 - Avoid unnecessary `cn(...)` calls: use it only for conditional or merged class names; do not wrap static strings
 - Always use bun.
@@ -30,16 +30,19 @@ This project uses Zustand for state management with specific patterns:
 All theme colors are defined as CSS variables following this structure:
 
 **Variable Naming Convention:**
+
 - Use semantic names without prefixes: `--primary-bg`, `--text`, `--accent`
 - No `--tw-` prefix (this was removed during standardization)
 - Variables are defined in `:root` with system theme fallbacks via `@media (prefers-color-scheme: dark)`
 
 **Tailwind Integration:**
+
 - CSS variables map to Tailwind colors via `@theme inline` directive
 - Use pattern: `--color-{name}: var(--{name})`
 - Enables utilities like `bg-primary-bg`, `text-text`, `border-border`
 
 **Theme System:**
+
 - All themes (including built-ins) are defined in JSON files in `src/extensions/themes/builtin/`
 - Themes override CSS variables via the Theme Registry
 - No CSS classes for themes - pure variable-based theming
