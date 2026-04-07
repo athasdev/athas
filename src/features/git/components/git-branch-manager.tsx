@@ -236,13 +236,13 @@ const GitBranchManager = ({
         size="sm"
         className={
           compact
-            ? dropdownTriggerClassName("ui-text-sm")
+            ? dropdownTriggerClassName("ui-text-sm shrink overflow-hidden")
             : "ui-font ui-text-sm flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 font-medium text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
         }
       >
         <GitBranch className="shrink-0" />
-        <span className="truncate">{currentBranch}</span>
-        <ChevronDown />
+        <span className="min-w-0 truncate">{currentBranch}</span>
+        <ChevronDown className="shrink-0" />
       </Button>
 
       <Dropdown
