@@ -7,6 +7,7 @@
 - Avoid unnecessary comments in UI components (keep code self-explanatory)
 - Avoid unnecessary `cn(...)` calls: use it only for conditional or merged class names; do not wrap static strings
 - Always use bun.
+- PR descriptions should be simple, natural language, no headers or sections, just a few bullet points describing what changed and why.
 
 ## Zustand
 

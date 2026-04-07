@@ -1,3 +1,7 @@
+/**
+ * Format a Unix timestamp (seconds) to a relative time string.
+ * Returns "3 hours ago", "2 days ago", "last month", etc.
+ */
 export const formatRelativeTime = (timestamp: number) => {
   const date = new Date(timestamp * 1000);
   const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
@@ -10,6 +14,10 @@ export const formatRelativeTime = (timestamp: number) => {
   return rtf.format(-Math.round(diff / 2592000), "month");
 };
 
+/**
+ * Format a Unix timestamp (seconds) to a locale date-time string.
+ * Returns "YYYY-MM-DD HH:MM" (e.g., "2024-01-20 14:30").
+ */
 export const formatDate = (timestamp: number) => {
   return new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -24,7 +32,8 @@ export const formatDate = (timestamp: number) => {
 };
 
 /**
- * Format a date string to a short date format (e.g., "Jan 20, 2024").
+ * Format a date string to a short date format.
+ * Returns "Jan 20, 2024" style output.
  */
 export const formatShortDate = (dateString: string | Date): string => {
   const date = new Date(dateString);
