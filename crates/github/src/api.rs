@@ -1,28 +1,50 @@
 use crate::{
-   cli::{get_github_username, gh_command},
+   cli::{get_github_username, gh_command, resolve_gh_binary},
    models::{
       IssueDetails, IssueListItem, PullRequest, PullRequestComment, PullRequestDetails,
       PullRequestFile, WorkflowRunDetails, WorkflowRunListItem,
    },
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::AppHandle;
 
-pub fn github_check_cli_auth(app: AppHandle) -> Result<bool, String> {
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GitHubCliStatus {
+   Authenticated,
+   NotAuthenticated,
+   NotInstalled,
+}
+
+pub fn github_check_cli_status(app: AppHandle) -> Result<GitHubCliStatus, String> {
+   let binary = resolve_gh_binary();
+   let exe_name = if cfg!(target_os = "windows") {
+      "gh.exe"
+   } else {
+      "gh"
+   };
+
+   // If resolve returned the bare name, check if it's actually reachable
+   if binary == exe_name
+      && std::process::Command::new(&binary)
+         .arg("--version")
+         .output()
+         .is_err()
+   {
+      return Ok(GitHubCliStatus::NotInstalled);
+   }
+
    let output = gh_command(&app, None)
       .args(["auth", "status"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
 
-   if !output.status.success() {
-      let stderr = String::from_utf8_lossy(&output.stderr);
-      if !stderr.trim().is_empty() {
-         log::warn!("GitHub CLI auth check failed: {}", stderr.trim());
-      }
+   if output.status.success() {
+      Ok(GitHubCliStatus::Authenticated)
+   } else {
+      Ok(GitHubCliStatus::NotAuthenticated)
    }
-
-   Ok(output.status.success())
 }
 
 pub fn github_list_prs(

@@ -29,6 +29,8 @@ interface PRDetailsCacheEntry {
   contentFetchedAt?: number;
 }
 
+type GitHubCliStatus = "authenticated" | "notAuthenticated" | "notInstalled";
+
 interface GitHubState {
   prs: PullRequest[];
   currentFilter: PRFilter;
@@ -36,6 +38,7 @@ interface GitHubState {
   error: string | null;
   activeRepoPath: string | null;
   isAuthenticated: boolean;
+  cliStatus: GitHubCliStatus;
   currentUser: string | null;
   // Selected PR state
   selectedPRNumber: number | null;
@@ -58,6 +61,7 @@ const initialState: GitHubState = {
   error: null,
   activeRepoPath: null,
   isAuthenticated: false,
+  cliStatus: "notAuthenticated" as GitHubCliStatus,
   currentUser: null,
   // Selected PR state
   selectedPRNumber: null,
@@ -163,16 +167,16 @@ export const useGitHubStore = create(
         }
 
         try {
-          const isAuth = await invoke<boolean>("github_check_cli_auth");
-          if (isAuth) {
+          const status = await invoke<GitHubCliStatus>("github_check_cli_auth");
+          if (status === "authenticated") {
             const user = await invoke<string>("github_get_current_user");
-            set({ isAuthenticated: true, currentUser: user, error: null });
+            set({ isAuthenticated: true, cliStatus: status, currentUser: user, error: null });
           } else {
-            set({ isAuthenticated: false, currentUser: null });
+            set({ isAuthenticated: false, cliStatus: status, currentUser: null });
           }
           authCheckedAt = Date.now();
         } catch {
-          set({ isAuthenticated: false, currentUser: null });
+          set({ isAuthenticated: false, cliStatus: "notInstalled", currentUser: null });
           authCheckedAt = Date.now();
         }
       },

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Activity, AlertCircle } from "lucide-react";
+import { GitHubCliStatusMessage } from "./github-cli-status";
 import {
   memo,
   startTransition,
@@ -168,11 +169,8 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-center">
-        <div className="space-y-2">
-          <AlertCircle className="mx-auto text-text-lighter" />
-          <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
-        </div>
+      <div className="flex h-full items-center justify-center p-4">
+        <GitHubCliStatusMessage />
       </div>
     );
   }

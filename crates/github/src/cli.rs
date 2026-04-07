@@ -34,7 +34,7 @@ fn user_shell_path() -> Option<&'static str> {
 
 /// Find the `gh` binary. On bundled apps the inherited PATH is minimal,
 /// so we resolve the full PATH from the user's login shell first.
-fn resolve_gh_binary() -> String {
+pub(crate) fn resolve_gh_binary() -> String {
    let exe = if cfg!(target_os = "windows") {
       "gh.exe"
    } else {

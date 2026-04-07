@@ -15,8 +15,10 @@ where
 }
 
 #[tauri::command]
-pub async fn github_check_cli_auth(app: tauri::AppHandle) -> Result<bool, String> {
-   run_blocking(move || athas_github::github_check_cli_auth(app)).await
+pub async fn github_check_cli_auth(
+   app: tauri::AppHandle,
+) -> Result<athas_github::GitHubCliStatus, String> {
+   run_blocking(move || athas_github::github_check_cli_status(app)).await
 }
 
 #[tauri::command]

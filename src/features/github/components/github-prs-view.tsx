@@ -1,4 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { GitHubCliStatusMessage } from "./github-cli-status";
 import {
   AlertCircle,
   Activity,
@@ -401,22 +402,7 @@ const GitHubPRsView = memo(() => {
         <div className="flex items-center justify-between px-0.5 py-0.5">
           <span className="ui-text-sm font-medium text-text">GitHub</span>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
-          <AlertCircle className="mb-2 text-text-lighter" />
-          <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
-          <p className="ui-text-sm mt-1 text-text-lighter">
-            Run <code className="rounded bg-hover px-1 py-0.5">gh auth login</code> in terminal
-          </p>
-          <Button
-            onClick={() => void checkAuth()}
-            variant="ghost"
-            size="xs"
-            className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-            aria-label="Retry authentication check"
-          >
-            Retry
-          </Button>
-        </div>
+        <GitHubCliStatusMessage />
       </div>
     );
   }
