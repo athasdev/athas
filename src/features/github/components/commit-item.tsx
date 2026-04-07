@@ -1,3 +1,4 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Copy, ExternalLink } from "lucide-react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
@@ -61,7 +62,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
           {commit.url && (
             <Tooltip content="Open commit on GitHub" side="top">
               <Button
-                onClick={() => window.open(commit.url, "_blank", "noopener,noreferrer")}
+                onClick={() => commit.url && void openUrl(commit.url)}
                 variant="ghost"
                 size="icon-xs"
                 className="rounded text-text-lighter"

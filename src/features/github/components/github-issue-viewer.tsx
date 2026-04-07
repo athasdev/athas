@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Copy, ExternalLink, MessageSquare, RefreshCw } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -147,7 +148,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       toast.error("Issue link is not available.");
       return;
     }
-    window.open(details.url, "_blank", "noopener,noreferrer");
+    void openUrl(details.url);
   }, [details?.url]);
 
   const handleCopyIssueLink = useCallback(() => {
