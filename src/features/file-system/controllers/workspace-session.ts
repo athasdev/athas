@@ -1,7 +1,14 @@
+import type { BufferSession } from "@/features/window/stores/session-store";
+
 export interface WorkspaceSessionBuffer {
+  type: BufferSession["type"];
   path: string;
   name: string;
   isPinned: boolean;
+  sessionId?: string;
+  initialCommand?: string;
+  workingDirectory?: string;
+  remoteConnectionId?: string;
 }
 
 export interface WorkspaceSessionSnapshot {
@@ -15,8 +22,12 @@ export interface WorkspaceRestorePlan {
   remainingBuffers: WorkspaceSessionBuffer[];
 }
 
+type WorkspaceRestoreSession = Pick<WorkspaceSessionSnapshot, "activeBufferPath"> & {
+  buffers: BufferSession[];
+};
+
 export const buildWorkspaceRestorePlan = (
-  session: WorkspaceSessionSnapshot | null | undefined,
+  session: WorkspaceRestoreSession | null | undefined,
 ): WorkspaceRestorePlan => {
   if (!session || session.buffers.length === 0) {
     return {

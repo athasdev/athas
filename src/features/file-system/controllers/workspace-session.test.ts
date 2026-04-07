@@ -6,9 +6,9 @@ describe("buildWorkspaceRestorePlan", () => {
     const plan = buildWorkspaceRestorePlan({
       activeBufferPath: "/next/src/app.ts",
       buffers: [
-        { path: "/next/README.md", name: "README.md", isPinned: false },
-        { path: "/next/src/app.ts", name: "app.ts", isPinned: true },
-        { path: "/next/src/lib.ts", name: "lib.ts", isPinned: false },
+        { type: "editor", path: "/next/README.md", name: "README.md", isPinned: false },
+        { type: "editor", path: "/next/src/app.ts", name: "app.ts", isPinned: true },
+        { type: "editor", path: "/next/src/lib.ts", name: "lib.ts", isPinned: false },
       ],
     });
 
@@ -23,8 +23,8 @@ describe("buildWorkspaceRestorePlan", () => {
     const plan = buildWorkspaceRestorePlan({
       activeBufferPath: "/next/src/missing.ts",
       buffers: [
-        { path: "/next/src/first.ts", name: "first.ts", isPinned: false },
-        { path: "/next/src/second.ts", name: "second.ts", isPinned: false },
+        { type: "editor", path: "/next/src/first.ts", name: "first.ts", isPinned: false },
+        { type: "editor", path: "/next/src/second.ts", name: "second.ts", isPinned: false },
       ],
     });
 
@@ -38,5 +38,34 @@ describe("buildWorkspaceRestorePlan", () => {
       initialBuffer: null,
       remainingBuffers: [],
     });
+  });
+
+  it("keeps terminal tabs restorable with their saved metadata", () => {
+    const plan = buildWorkspaceRestorePlan({
+      activeBufferPath: "terminal://terminal-tab-1",
+      buffers: [
+        {
+          type: "terminal",
+          path: "terminal://terminal-tab-1",
+          name: "Claude Code",
+          isPinned: false,
+          sessionId: "terminal-tab-1",
+          workingDirectory: "/next",
+          initialCommand: "claude",
+        },
+        { type: "editor", path: "/next/src/app.ts", name: "app.ts", isPinned: false },
+      ],
+    });
+
+    expect(plan.initialBuffer).toEqual({
+      type: "terminal",
+      path: "terminal://terminal-tab-1",
+      name: "Claude Code",
+      isPinned: false,
+      sessionId: "terminal-tab-1",
+      workingDirectory: "/next",
+      initialCommand: "claude",
+    });
+    expect(plan.remainingBuffers.map((buffer) => buffer.path)).toEqual(["/next/src/app.ts"]);
   });
 });

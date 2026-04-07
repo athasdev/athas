@@ -16,17 +16,18 @@ import type {
   EditorContent,
   OpenContentSpec,
   PaneContent,
+  TerminalContent,
   TokenEntry,
 } from "@/features/panes/types/pane-content";
 import {
   isEditorContent,
   isEditableContent,
-  isPersistableContent,
   isVirtualContent,
   shouldStartLsp,
 } from "@/features/panes/types/pane-content";
 import { createWorkspaceSessionSaveQueue } from "@/features/editor/stores/workspace-session-save-queue";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import type { BufferSession } from "@/features/window/stores/session-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -217,22 +218,48 @@ const saveSessionToStore = (buffers: PaneContent[], activeBufferId: string | nul
   });
 };
 
+const serializeBufferForSession = (buffer: PaneContent): BufferSession | null => {
+  if (buffer.type === "editor" && !buffer.isVirtual) {
+    return {
+      type: "editor",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+    };
+  }
+
+  if (buffer.type === "terminal") {
+    return {
+      type: "terminal",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+      sessionId: buffer.sessionId,
+      initialCommand: buffer.initialCommand,
+      workingDirectory: buffer.workingDirectory,
+      remoteConnectionId: buffer.remoteConnectionId,
+    };
+  }
+
+  return null;
+};
+
 const saveSessionToStoreImmediate = (
   projectPath: string,
   buffers: PaneContent[],
   activeBufferId: string | null,
 ) => {
   const persistableBuffers = buffers
-    .filter((b) => isPersistableContent(b))
-    .map((b) => ({
-      path: b.path,
-      name: b.name,
-      isPinned: b.isPinned,
-    }));
+    .map(serializeBufferForSession)
+    .filter((buffer): buffer is BufferSession => buffer !== null);
 
   const activeBuffer = buffers.find((b) => b.id === activeBufferId);
   const activeBufferPath =
-    activeBuffer && isPersistableContent(activeBuffer) ? activeBuffer.path : null;
+    activeBuffer &&
+    ((activeBuffer.type === "editor" && !activeBuffer.isVirtual) ||
+      activeBuffer.type === "terminal")
+      ? activeBuffer.path
+      : null;
 
   useSessionStore.getState().saveSession(projectPath, persistableBuffers, activeBufferPath);
 };
@@ -269,13 +296,14 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
         tokens: [],
       };
     case "terminal":
+      const sessionId = spec.sessionId ?? id.replace("buffer_", "");
       return {
         ...base,
         type: "terminal",
-        path: `terminal://${id}`,
+        path: spec.path ?? `terminal://${sessionId}`,
         name: spec.name ?? "Terminal",
         isPreview: false,
-        sessionId: id.replace("buffer_", ""),
+        sessionId,
         initialCommand: spec.command,
         workingDirectory: spec.workingDirectory,
         remoteConnectionId: spec.remoteConnectionId,
@@ -562,8 +590,8 @@ export const useBufferStore = createSelectors(
             case "terminal": {
               const terminalCount = buffers.filter((b) => b.type === "terminal").length;
               const terminalNumber = terminalCount + 1;
-              const sessionId = `terminal-tab-${Date.now()}`;
-              const path = `terminal://${sessionId}`;
+              const sessionId = spec.sessionId ?? `terminal-tab-${Date.now()}`;
+              const path = spec.path ?? `terminal://${sessionId}`;
               const displayName = spec.name ?? `Terminal ${terminalNumber}`;
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
@@ -577,9 +605,9 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, {
                 ...spec,
                 name: displayName,
-              });
-              // Override the auto-generated sessionId with our specific one
-              (newBuffer as PaneContent & { sessionId: string }).sessionId = sessionId;
+                sessionId,
+                path,
+              }) as TerminalContent;
               newBuffer.path = path;
               newBuffer.name = displayName;
 
@@ -589,6 +617,7 @@ export const useBufferStore = createSelectors(
               });
 
               syncBufferToPane(newBuffer.id);
+              saveSessionToStore(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 

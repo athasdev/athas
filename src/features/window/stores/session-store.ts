@@ -6,12 +6,26 @@ import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-interface BufferSession {
+interface EditorBufferSession {
+  type: "editor";
   id?: string;
   path: string;
   name: string;
   isPinned: boolean;
 }
+
+interface TerminalBufferSession {
+  type: "terminal";
+  path: string;
+  name: string;
+  isPinned: boolean;
+  sessionId: string;
+  initialCommand?: string;
+  workingDirectory?: string;
+  remoteConnectionId?: string;
+}
+
+export type BufferSession = EditorBufferSession | TerminalBufferSession;
 
 interface ProjectSession {
   projectPath: string;

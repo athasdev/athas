@@ -23,6 +23,7 @@ import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import type { BufferSession } from "@/features/window/stores/session-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import {
   persistCurrentProjectUiState,
@@ -63,6 +64,7 @@ import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platfor
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 import { buildWorkspaceRestorePlan } from "./workspace-session";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 
 const logWorkspaceOpenStep = (
   phase: "start" | "end" | "error",
@@ -129,6 +131,33 @@ const readPersistedTerminalSessions = (workspacePath: string | undefined) => {
 
 const readPersistedAiWorkspaceSession = () =>
   useAIChatStore.getState().getWorkspaceSessionSnapshot(useBufferStore.getState().buffers);
+
+const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => {
+  if (buffer.type === "editor" && !buffer.isVirtual) {
+    return {
+      type: "editor",
+      id: buffer.id,
+      name: buffer.name,
+      path: buffer.path,
+      isPinned: buffer.isPinned,
+    };
+  }
+
+  if (buffer.type === "terminal") {
+    return {
+      type: "terminal",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+      sessionId: buffer.sessionId,
+      initialCommand: buffer.initialCommand,
+      workingDirectory: buffer.workingDirectory,
+      remoteConnectionId: buffer.remoteConnectionId,
+    };
+  }
+
+  return null;
+};
 
 const reconnectRemoteConnection = async (connectionId: string) => {
   const connection = await connectionStore.getConnection(connectionId);
@@ -351,6 +380,24 @@ export const useFileSystemStore = createSelectors(
 
           // Restore buffers
           for (const buffer of buffersToRestore) {
+            if (buffer.type === "terminal") {
+              const restoredBufferId = bufferActions.openContent({
+                type: "terminal",
+                name: buffer.name,
+                command: buffer.initialCommand,
+                workingDirectory: buffer.workingDirectory,
+                remoteConnectionId: buffer.remoteConnectionId,
+                sessionId: buffer.sessionId,
+                path: buffer.path,
+              });
+
+              if (buffer.isPinned) {
+                bufferActions.handleTabPin(restoredBufferId);
+              }
+
+              continue;
+            }
+
             frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
               projectPath,
               bufferPath: buffer.path,
@@ -1856,12 +1903,9 @@ export const useFileSystemStore = createSelectors(
             clearQueuedWorkspaceSessionSave(currentRootPath);
             useSessionStore.getState().saveSession(
               currentRootPath,
-              currentBuffers.map((buffer) => ({
-                id: buffer.id,
-                name: buffer.name,
-                path: buffer.path,
-                isPinned: buffer.isPinned,
-              })),
+              currentBuffers
+                .map(serializeWorkspaceBuffer)
+                .filter((buffer): buffer is BufferSession => buffer !== null),
               activeBuffer?.path || null,
               readPersistedTerminalSessions(currentRootPath),
               readPersistedAiWorkspaceSession(),
@@ -2058,12 +2102,9 @@ export const useFileSystemStore = createSelectors(
           clearQueuedWorkspaceSessionSave(tab.path);
           useSessionStore.getState().saveSession(
             tab.path,
-            buffers.map((b) => ({
-              id: b.id,
-              name: b.name,
-              path: b.path,
-              isPinned: b.isPinned,
-            })),
+            buffers
+              .map(serializeWorkspaceBuffer)
+              .filter((buffer): buffer is BufferSession => buffer !== null),
             activeBuffer?.path || null,
             readPersistedTerminalSessions(tab.path),
             readPersistedAiWorkspaceSession(),

@@ -287,6 +287,8 @@ export type OpenContentSpec =
       command?: string;
       workingDirectory?: string;
       remoteConnectionId?: string;
+      sessionId?: string;
+      path?: string;
     }
   | { type: "agent"; sessionId?: string }
   | { type: "webViewer"; url: string }
