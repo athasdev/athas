@@ -87,13 +87,6 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       }
       return;
     }
-
-    if (selectedFilePath !== null) {
-      setSelectedFilePath(null);
-    }
-    if (activeTab === "files") {
-      setActiveTab("activity");
-    }
   }, [activeTab, prBuffer?.path, selectedFilePath]);
 
   useEffect(() => {
@@ -318,8 +311,11 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
     if (repoPath) {
       try {
         await checkoutPR(repoPath, prNumber);
+        toast.success(`Checked out PR #${prNumber}`);
+        window.dispatchEvent(new CustomEvent("git-status-updated"));
       } catch (err) {
         console.error("Failed to checkout PR:", err);
+        toast.error(err instanceof Error ? err.message : `Failed to checkout PR #${prNumber}`);
       }
     }
   }, [repoPath, prNumber, checkoutPR]);
@@ -437,7 +433,6 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       : pr.mergeable === "CONFLICTING"
         ? "Has conflicts"
         : "No checks reported";
-  const changesSummary = `${changedFilesCount} files +${pr.additions} -${pr.deletions}`;
   const reviewSummary =
     pr.reviewDecision === "CHANGES_REQUESTED"
       ? "changes requested"
@@ -469,7 +464,9 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       <PRViewerHeader
         pr={pr}
         activeView={activeTab}
-        changesSummary={changesSummary}
+        changedFilesCount={changedFilesCount}
+        additions={pr.additions}
+        deletions={pr.deletions}
         checksSummary={checksSummary}
         reviewerLogins={reviewerLogins}
         reviewSummary={reviewSummary}

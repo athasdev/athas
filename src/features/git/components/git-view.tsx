@@ -762,7 +762,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <TabsList
             variant="segmented"
-            className="grid h-auto shrink-0 grid-cols-4 border-border/60 bg-secondary-bg/40 p-1"
+            className="grid h-auto shrink-0 grid-cols-4 gap-1 rounded-xl border-border/60 bg-secondary-bg/40 p-1"
           >
             {gitTabs.map((tab) => {
               const Icon = tab.icon;
@@ -778,7 +778,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     size="md"
                     variant="segmented"
                     contentLayout="stacked"
-                    className="h-full min-h-10 min-w-0 px-2.5 py-2 transition-colors [&>div]:gap-1.5"
+                    className="h-full min-h-10 min-w-0 rounded-lg px-2.5 py-2 transition-colors [&>div]:gap-1.5"
                   >
                     <div className="relative flex items-center justify-center">
                       <Icon strokeWidth={2.2} />

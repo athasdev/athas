@@ -16,7 +16,9 @@ import type { PullRequestDetails } from "../types/github";
 interface PRViewerHeaderProps {
   pr: PullRequestDetails;
   activeView: "activity" | "files";
-  changesSummary: string;
+  changedFilesCount: number;
+  additions: number;
+  deletions: number;
   checksSummary: string;
   reviewerLogins: string[];
   reviewSummary: string | null;
@@ -47,7 +49,9 @@ function OverviewField({ icon, children }: OverviewFieldProps) {
 export function PRViewerHeader({
   pr,
   activeView,
-  changesSummary,
+  changedFilesCount,
+  additions,
+  deletions,
   checksSummary,
   reviewerLogins,
   reviewSummary,
@@ -154,13 +158,15 @@ export function PRViewerHeader({
             variant="ghost"
             size="sm"
             active={activeView === "files"}
-            className="h-auto min-w-0 rounded-md px-1.5 py-1 text-left"
+            className="ui-text-sm h-auto min-w-0 rounded-md px-1.5 py-1 text-left"
           >
             <span className="shrink-0 text-text-lighter">
               <FileCode2 />
             </span>
             <span className="text-text-lighter">Changes</span>
-            <span className="text-text-light">{changesSummary}</span>
+            <span className="text-text-light">{changedFilesCount} files</span>
+            <span className="text-git-added">+{additions}</span>
+            <span className="text-git-deleted">-{deletions}</span>
           </Button>
 
           <OverviewField icon={<Check />}>
