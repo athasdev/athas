@@ -423,11 +423,11 @@ function ErrorBlock({ errorData }: { errorData: string }) {
   };
 
   return (
-    <div className="my-1 rounded-lg border border-red-500/25 bg-red-500/6 px-2.5 py-2">
+    <div className="my-1 rounded-lg border border-error/25 bg-error/8 px-2.5 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <span className="text-red-300/85">Error</span>
-        <span className="text-red-100/95">{summary}</span>
-        {code ? <span className="text-red-200/55">({code})</span> : null}
+        <span className="font-medium text-error">Error</span>
+        <span className="text-text">{summary}</span>
+        {code ? <span className="text-text-lighter">({code})</span> : null}
         {normalizedDetails && (
           <Button
             type="button"

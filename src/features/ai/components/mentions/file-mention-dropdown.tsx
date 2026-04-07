@@ -20,7 +20,7 @@ interface FileMentionDropdownProps {
   onSelect: (file: FileEntry) => void;
 }
 
-const MAX_RESULTS = 20;
+const MAX_RESULTS = 10;
 const ATTACHED_DROPDOWN_GAP = -1;
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
@@ -169,7 +169,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       transition={{ duration: 0.15, ease: "easeOut" }}
       className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-t-2xl rounded-b-xl border border-border/70 bg-primary-bg/98 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm"
       style={{
-        maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
+        maxHeight: "220px",
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,

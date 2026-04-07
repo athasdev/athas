@@ -796,7 +796,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         shouldKeepListeningRef.current = false;
-        toast.error("Microphone permission was denied.");
+        toast.error(
+          "Microphone access failed. Check System Settings → Privacy & Security → Microphone.",
+        );
         return;
       }
 
