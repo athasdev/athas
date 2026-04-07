@@ -71,6 +71,11 @@ export function EmptyEditorState() {
     setIsDatabaseConnectionVisible(true);
   }, [setIsDatabaseConnectionVisible]);
 
+  const handleNewFile = useCallback(() => {
+    const id = `untitled-${Date.now()}`;
+    openBuffer(id, "Untitled", "", false, undefined, false, true);
+  }, [openBuffer]);
+
   const handleOpenFile = useCallback(async () => {
     try {
       const selected = await open({
@@ -143,6 +148,12 @@ export function EmptyEditorState() {
   const getContextMenuItems = useCallback((): ContextMenuItem[] => {
     return [
       {
+        id: "new-file",
+        label: "New File",
+        icon: <Plus />,
+        onClick: handleNewFile,
+      },
+      {
         id: "open-folder",
         label: "Open Folder",
         icon: <FolderOpen />,
@@ -181,6 +192,7 @@ export function EmptyEditorState() {
       },
     ];
   }, [
+    handleNewFile,
     handleOpenFolder,
     handleOpenFile,
     handleOpenTerminal,
@@ -190,6 +202,12 @@ export function EmptyEditorState() {
   ]);
 
   const actions: ActionItem[] = [
+    {
+      id: "new-file",
+      label: "New File",
+      icon: <Plus className="text-text-light" />,
+      action: handleNewFile,
+    },
     {
       id: "folder",
       label: "Open Folder",

@@ -1,4 +1,11 @@
-import { ArrowLeft, ArrowRight, Maximize2, Minimize2, SplitSquareHorizontal } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  SplitSquareHorizontal,
+} from "lucide-react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -46,8 +53,14 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const pendingClose = useBufferStore.use.pendingClose();
   const paneRoot = usePaneStore.use.root();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { moveBufferToPane, addBufferToPane, setActivePane, splitPane, togglePaneFullscreen } =
-    usePaneStore.use.actions();
+  const {
+    moveBufferToPane,
+    addBufferToPane,
+    setActivePane,
+    splitPane,
+    closePane,
+    togglePaneFullscreen,
+  } = usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
   const pane = paneId ? findPaneGroup(paneRoot, paneId) : null;
@@ -73,6 +86,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const canGoBack = jumpListActions.canGoBack();
   const canGoForward = jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
+  const isInSplit = paneRoot.type === "split";
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -872,6 +886,20 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 pl-0.5">
+          {paneId && isInSplit && (
+            <Tooltip content="Close Split" side="bottom">
+              <Button
+                type="button"
+                onClick={() => closePane(paneId)}
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 rounded-lg text-text-lighter"
+                aria-label="Close split pane"
+              >
+                <PanelLeftClose />
+              </Button>
+            </Tooltip>
+          )}
           {paneId && activeBufferId && (
             <Tooltip content="Split Editor" side="bottom">
               <Button
