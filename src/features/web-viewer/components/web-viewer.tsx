@@ -24,8 +24,6 @@ export function WebViewer({
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
   const [isLoading, setIsLoading] = useState(!isNewTab);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,9 +155,6 @@ export function WebViewer({
         historyRef.current.push(normalizedUrl);
         historyIndexRef.current = historyRef.current.length - 1;
       }
-
-      setCanGoBack(historyIndexRef.current > 0);
-      setCanGoForward(historyIndexRef.current < historyRef.current.length - 1);
     },
     [webviewLabel],
   );
