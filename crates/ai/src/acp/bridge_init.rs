@@ -149,6 +149,12 @@ fn spawn_agent_process(
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
 
+   // Augment PATH with user's shell PATH for bundled app launches
+   if let Some(shell_path) = super::config::user_shell_path() {
+      let current = std::env::var("PATH").unwrap_or_default();
+      cmd.env("PATH", format!("{current}:{shell_path}"));
+   }
+
    let uses_npx_codex_adapter = binary.ends_with("npx")
       && config
          .args

@@ -3,12 +3,34 @@ use std::{
    collections::HashMap,
    env, fs,
    path::{Path, PathBuf},
+   process::Command,
+   sync::OnceLock,
    time::Instant,
 };
 use tauri::{AppHandle, Manager};
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;
+
+/// Get the user's login shell PATH. Bundled apps inherit a minimal PATH,
+/// so we source the full one from the user's shell and cache it.
+pub(crate) fn user_shell_path() -> Option<&'static str> {
+   static CACHED: OnceLock<Option<String>> = OnceLock::new();
+   CACHED
+      .get_or_init(|| {
+         if cfg!(target_os = "windows") {
+            return None;
+         }
+         let shell = env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+         let output = Command::new(&shell)
+            .args(["-ilc", "echo $PATH"])
+            .output()
+            .ok()?;
+         let path = String::from_utf8(output.stdout).ok()?.trim().to_string();
+         if path.is_empty() { None } else { Some(path) }
+      })
+      .as_deref()
+}
 
 /// Registry of known ACP-compatible agents
 #[derive(Clone)]
@@ -195,9 +217,15 @@ fn find_binary(binary_name: &str) -> Option<PathBuf> {
 
    let mut candidates: Vec<PathBuf> = Vec::new();
 
-   // PATH entries
+   // PATH entries from the current process
    if let Some(paths) = env::var_os("PATH") {
       candidates.extend(env::split_paths(&paths));
+   }
+
+   // Bundled apps inherit a restricted PATH. Source the user's login shell
+   // to get the full PATH (cached for the process lifetime).
+   if let Some(shell_path) = user_shell_path() {
+      candidates.extend(env::split_paths(&std::ffi::OsString::from(shell_path)));
    }
 
    // Common global bin locations
