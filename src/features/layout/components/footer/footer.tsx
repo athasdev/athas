@@ -20,6 +20,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
@@ -152,7 +153,7 @@ const AiUsageStatusIndicator = () => {
   };
 
   const openBillingDashboard = async () => {
-    const apiBase = import.meta.env.VITE_API_URL || "https://athas.dev";
+    const apiBase = getApiBase();
     const billingUrl = new URL("/dashboard/billing", apiBase).toString();
     const { openUrl } = await import("@tauri-apps/plugin-opener");
     await openUrl(billingUrl);

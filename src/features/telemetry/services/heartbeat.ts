@@ -2,8 +2,9 @@ import { getVersion } from "@tauri-apps/api/app";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { arch, platform } from "@tauri-apps/plugin-os";
 import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
+import { getApiBase } from "@/utils/api-base";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://athas.dev";
+const API_BASE = getApiBase();
 const HEARTBEAT_DELAY = 10_000;
 const HEARTBEAT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STORE_KEY_DEVICE_ID = "telemetry_device_id";

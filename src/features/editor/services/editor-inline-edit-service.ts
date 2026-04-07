@@ -1,8 +1,9 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getAuthToken } from "@/features/window/services/auth-api";
+import { getApiBase } from "@/utils/api-base";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://athas.dev";
+const API_BASE = getApiBase();
 const OPENROUTER_PROVIDER_ID = "openrouter";
 const BYOK_HEADER = "X-OpenRouter-Api-Key";
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";

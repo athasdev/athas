@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { __test__ as apiBaseTest } from "@/utils/api-base";
 import { __test__ } from "../services/auth-api";
 
 describe("auth-api desktop auth parsers", () => {
@@ -41,5 +42,11 @@ describe("auth-api desktop auth parsers", () => {
   it("rejects invalid desktop auth poll response", () => {
     expect(__test__.parseDesktopAuthPollResponse({ status: "ready", token: "" })).toBeNull();
     expect(__test__.parseDesktopAuthPollResponse({ status: "unknown" })).toBeNull();
+  });
+
+  it("detects local api base URLs", () => {
+    expect(apiBaseTest.isLocalApiBase("http://localhost:3000")).toBe(true);
+    expect(apiBaseTest.isLocalApiBase("http://127.0.0.1:3000")).toBe(true);
+    expect(apiBaseTest.isLocalApiBase("https://athas.dev")).toBe(false);
   });
 });

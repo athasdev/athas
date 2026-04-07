@@ -1,7 +1,8 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { getAuthToken } from "@/features/window/services/auth-api";
+import { getApiBase } from "@/utils/api-base";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://athas.dev";
+const API_BASE = getApiBase();
 
 export type UIExtensionContributionType = "sidebar" | "toolbar" | "command";
 
