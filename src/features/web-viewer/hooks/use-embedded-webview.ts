@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
 
 interface UseEmbeddedWebviewOptions {
@@ -29,6 +29,7 @@ export function useEmbeddedWebview({
   const lastBoundsRef = useRef<string | null>(null);
   const lastVisibilityRef = useRef<boolean | null>(null);
   const overlayHiddenRef = useRef(false);
+  const createdLabelRef = useRef<string | null>(null);
 
   const setWebviewVisible = useCallback(async (label: string, visible: boolean) => {
     if (lastVisibilityRef.current === visible) return;
@@ -81,19 +82,34 @@ export function useEmbeddedWebview({
     if (webviewLabel || !initialUrl) return;
 
     let mounted = true;
-    let createdLabel: string | null = null;
 
     const createWebview = async () => {
-      const container = containerRef.current;
-      if (!container) return;
+      let rect: DOMRect | null = null;
 
-      const rect = container.getBoundingClientRect();
+      for (let attempt = 0; attempt < 10 && mounted; attempt++) {
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => resolve());
+        });
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        const nextRect = container.getBoundingClientRect();
+        if (nextRect.width > 0 && nextRect.height > 0) {
+          rect = nextRect;
+          break;
+        }
+      }
+
+      if (!rect) return;
 
       // Clamp coordinates to viewport to prevent overflow
       const clampedX = Math.max(0, rect.left);
       const clampedY = Math.max(0, rect.top);
       const clampedWidth = Math.min(rect.width, window.innerWidth - clampedX);
       const clampedHeight = Math.min(rect.height, window.innerHeight - clampedY);
+
+      if (clampedWidth <= 0 || clampedHeight <= 0) return;
 
       try {
         const label = await invoke<string>("create_embedded_webview", {
@@ -109,7 +125,7 @@ export function useEmbeddedWebview({
           return;
         }
 
-        createdLabel = label;
+        createdLabelRef.current = label;
         lastBoundsRef.current = null;
         lastVisibilityRef.current = null;
         overlayHiddenRef.current = false;
@@ -126,8 +142,10 @@ export function useEmbeddedWebview({
 
     return () => {
       mounted = false;
-      if (createdLabel) {
-        void invoke("close_embedded_webview", { webviewLabel: createdLabel }).catch(console.error);
+      const label = createdLabelRef.current;
+      createdLabelRef.current = null;
+      if (label) {
+        void invoke("close_embedded_webview", { webviewLabel: label }).catch(console.error);
       }
       lastBoundsRef.current = null;
       lastVisibilityRef.current = null;
@@ -247,7 +265,7 @@ export function useEmbeddedWebview({
     webviewLabel,
   ]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!webviewLabel) return;
     void syncWebviewVisibility(webviewLabel);
   }, [syncWebviewVisibility, webviewLabel]);

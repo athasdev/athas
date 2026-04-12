@@ -164,7 +164,8 @@ export function parseMarkdown(content: string): string {
       processedLines.push(`<li>${processInline(line.replace(/^\s*[-*+]\s/, ""), footnotes)}</li>`);
     } else if (isOrderedListLine(line)) {
       if (!inOrderedList) {
-        processedLines.push("<ol>");
+        const startNum = line.match(/^\s*(\d+)\.\s/)?.[1] || "1";
+        processedLines.push(`<ol start="${startNum}">`);
         inOrderedList = true;
       }
       processedLines.push(`<li>${processInline(line.replace(/^\s*\d+\.\s/, ""), footnotes)}</li>`);
