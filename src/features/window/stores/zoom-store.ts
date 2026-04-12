@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-const ZOOM_LEVELS = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
+const EDITOR_ZOOM_LEVELS = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
+const TERMINAL_ZOOM_LEVELS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 const DEFAULT_ZOOM = 1.0;
 
 type ZoomType = "editor" | "terminal";
@@ -25,6 +26,9 @@ interface ZoomActions {
 
 export const useZoomStore = createSelectors(
   create<ZoomState>()((set, get) => {
+    const getZoomLevels = (type: ZoomType) =>
+      type === "terminal" ? TERMINAL_ZOOM_LEVELS : EDITOR_ZOOM_LEVELS;
+
     const showZoomIndicatorTemporarily = (type: ZoomType) => {
       const state = get();
 
@@ -49,10 +53,11 @@ export const useZoomStore = createSelectors(
       zoomIndicatorTimeout: null,
       actions: {
         zoomIn: (type: ZoomType) => {
+          const zoomLevels = getZoomLevels(type);
           const current = get()[`${type}ZoomLevel`];
-          const currentIndex = ZOOM_LEVELS.findIndex((level) => level >= current);
-          const nextIndex = Math.min(currentIndex + 1, ZOOM_LEVELS.length - 1);
-          const newZoom = ZOOM_LEVELS[nextIndex];
+          const currentIndex = zoomLevels.findIndex((level) => level >= current);
+          const nextIndex = Math.min(currentIndex + 1, zoomLevels.length - 1);
+          const newZoom = zoomLevels[nextIndex];
           if (newZoom !== current) {
             set({ [`${type}ZoomLevel`]: newZoom });
             showZoomIndicatorTemporarily(type);
@@ -60,10 +65,11 @@ export const useZoomStore = createSelectors(
         },
 
         zoomOut: (type: ZoomType) => {
+          const zoomLevels = getZoomLevels(type);
           const current = get()[`${type}ZoomLevel`];
-          const currentIndex = ZOOM_LEVELS.findIndex((level) => level >= current);
+          const currentIndex = zoomLevels.findIndex((level) => level >= current);
           const prevIndex = Math.max(currentIndex - 1, 0);
-          const newZoom = ZOOM_LEVELS[prevIndex];
+          const newZoom = zoomLevels[prevIndex];
 
           if (newZoom !== current) {
             set({ [`${type}ZoomLevel`]: newZoom });

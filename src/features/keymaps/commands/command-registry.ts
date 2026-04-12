@@ -391,6 +391,28 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "workbench.showFiles",
+    title: "Show Files",
+    category: "View",
+    keybinding: "cmd+shift+e",
+    execute: () => {
+      const state = useUIState.getState();
+      state.setActiveView("files");
+      state.setIsSidebarVisible(true);
+    },
+  },
+  {
+    id: "workbench.showGit",
+    title: "Show Git",
+    category: "View",
+    keybinding: "cmd+shift+g",
+    execute: () => {
+      const state = useUIState.getState();
+      state.setActiveView("git");
+      state.setIsSidebarVisible(true);
+    },
+  },
+  {
     id: "workbench.showProjectSearch",
     title: "Project Search",
     category: "View",

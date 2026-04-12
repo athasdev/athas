@@ -9,6 +9,7 @@ import { groupLinesIntoHunks } from "../../utils/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {
   getContentColor,
+  getGutterBackground,
   getLineBackground,
   getSplitLineMeta,
   renderDiffLineContent,
@@ -42,13 +43,13 @@ function SplitDiffCodePanel({
 
   return (
     <div className="flex min-w-0 flex-1">
-      <div className="w-11 shrink-0 border-border border-r bg-primary-bg">
+      <div className="w-11 shrink-0 border-border border-r">
         {lines.map((line, index) => {
           const meta = getSplitLineMeta(line, side);
           return (
             <div
               key={`${side}-gutter-${index}`}
-              className="select-none px-2 py-0.5 text-right text-text-lighter tabular-nums"
+              className={`select-none px-2 py-0.5 text-right text-text-lighter tabular-nums ${getGutterBackground(meta.isVisible ? meta.diffType : "")}`}
               style={{
                 fontSize: `${fontSize}px`,
                 lineHeight: `${lineHeight}px`,

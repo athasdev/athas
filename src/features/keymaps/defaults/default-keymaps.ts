@@ -191,6 +191,16 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
   },
   {
+    key: "cmd+shift+e",
+    command: "workbench.showFiles",
+    source: "default",
+  },
+  {
+    key: "cmd+shift+g",
+    command: "workbench.showGit",
+    source: "default",
+  },
+  {
     key: "cmd+shift+h",
     command: "workbench.showProjectSearch",
     source: "default",
@@ -221,6 +231,7 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
   },
   { key: "cmd+=", command: "workbench.zoomIn", source: "default" },
+  { key: "cmd+shift+=", command: "workbench.zoomIn", source: "default" },
   { key: "cmd+-", command: "workbench.zoomOut", source: "default" },
   { key: "cmd+0", command: "workbench.zoomReset", source: "default" },
 
