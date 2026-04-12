@@ -84,6 +84,7 @@ export interface Settings {
     | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
+  bufferCarouselFocusOnHover: boolean;
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];

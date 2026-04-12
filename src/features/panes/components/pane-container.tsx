@@ -215,6 +215,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
+  const carouselFocusOnHover = useSettingsStore(
+    (state) => state.settings.bufferCarouselFocusOnHover,
+  );
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isTabDragOver, setIsTabDragOver] = useState(false);
@@ -321,9 +324,16 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       const card = viewport.querySelector<HTMLElement>(`[data-buffer-card-id="${bufferId}"]`);
       if (!card) return;
 
-      const viewportRect = viewport.getBoundingClientRect();
-      const cardRect = card.getBoundingClientRect();
-      const targetLeft = card.offsetLeft - (viewportRect.width - cardRect.width) / 2;
+      const cardLeft = card.offsetLeft;
+      const cardRight = cardLeft + card.offsetWidth;
+      const viewLeft = viewport.scrollLeft;
+      const viewRight = viewLeft + viewport.clientWidth;
+
+      // Already fully visible -- nothing to do
+      if (cardLeft >= viewLeft && cardRight <= viewRight) return;
+
+      // Center the card in the viewport
+      const targetLeft = cardLeft - (viewport.clientWidth - card.offsetWidth) / 2;
 
       viewport.scrollTo({
         left: Math.max(0, targetLeft),
@@ -643,12 +653,19 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   const handleCarouselCardActivate = useCallback(
     (bufferId: string) => {
+      if (!carouselFocusOnHover) return;
       if (draggedCarouselBufferId || isCarouselResizing) return;
       if (bufferId === pane.activeBufferId) return;
       suppressAutoCenterRef.current = true;
       handleTabClick(bufferId);
     },
-    [draggedCarouselBufferId, handleTabClick, isCarouselResizing, pane.activeBufferId],
+    [
+      carouselFocusOnHover,
+      draggedCarouselBufferId,
+      handleTabClick,
+      isCarouselResizing,
+      pane.activeBufferId,
+    ],
   );
 
   const handleCarouselCardDragStart = useCallback(
@@ -932,6 +949,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         <BufferPreviewCard buffer={buffer} />
                       )}
                     </div>
+                    {!isActiveBuffer && (
+                      <div className="pointer-events-none absolute inset-0 z-10 bg-primary-bg/40 transition-opacity duration-200" />
+                    )}
                     <div
                       className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-accent/20"
                       onMouseDown={handleCarouselResizeStart}

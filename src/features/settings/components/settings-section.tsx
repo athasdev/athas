@@ -1,6 +1,7 @@
-import { RotateCcw } from "lucide-react";
+import { Info, RotateCcw } from "lucide-react";
 import type React from "react";
 import { Button } from "@/ui/button";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 interface SectionProps {
@@ -36,6 +37,7 @@ export default function Section({ title, description, children, className }: Sec
 interface SettingRowProps {
   label: string;
   description?: string;
+  info?: string;
   children: React.ReactNode;
   className?: string;
   onReset?: () => void;
@@ -46,6 +48,7 @@ interface SettingRowProps {
 export function SettingRow({
   label,
   description,
+  info,
   children,
   className,
   onReset,
@@ -57,6 +60,11 @@ export function SettingRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <div className="ui-font ui-text-sm text-text">{label}</div>
+          {info && (
+            <Tooltip content={info} side="right">
+              <Info className="size-3.5 cursor-help text-text-lighter transition-colors hover:text-text" />
+            </Tooltip>
+          )}
           {onReset && canReset && (
             <Button
               type="button"

@@ -89,6 +89,7 @@ export const defaultSettings: Settings = {
   extensionsActiveTab: "all",
   maxOpenTabs: 100,
   horizontalTabScroll: false,
+  bufferCarouselFocusOnHover: false,
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],

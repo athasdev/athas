@@ -151,6 +151,7 @@ export const EditorSettings = () => {
         <SettingRow
           label="Buffer Carousel"
           description="Show open buffers as a horizontally scrollable carousel in the main view"
+          info="Replaces the default stacked-tab layout with a side-by-side card strip. Scroll or swipe between buffers, drag to reorder, and resize cards with the edge handle."
           onReset={() =>
             updateSetting("horizontalTabScroll", getDefaultSetting("horizontalTabScroll"))
           }
@@ -162,6 +163,29 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
+
+        {settings.horizontalTabScroll && (
+          <SettingRow
+            label="Focus Buffer on Hover"
+            description="Automatically activate a buffer card when the pointer enters it"
+            onReset={() =>
+              updateSetting(
+                "bufferCarouselFocusOnHover",
+                getDefaultSetting("bufferCarouselFocusOnHover"),
+              )
+            }
+            canReset={
+              settings.bufferCarouselFocusOnHover !==
+              getDefaultSetting("bufferCarouselFocusOnHover")
+            }
+          >
+            <Switch
+              checked={settings.bufferCarouselFocusOnHover}
+              onChange={(checked) => updateSetting("bufferCarouselFocusOnHover", checked)}
+              size="sm"
+            />
+          </SettingRow>
+        )}
       </Section>
 
       <Section title="Saving">
