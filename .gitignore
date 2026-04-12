@@ -78,3 +78,7 @@ src/extensions/bundled/*/grammars/*.wasm
 
 # local codex settings
 src-tauri/.claude/settings.local.json
+
+# local scratch dirs
+.pi/
+.tmp/
