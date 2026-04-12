@@ -197,6 +197,43 @@ export const AISettings = () => {
   };
 
   const providers = getAvailableProviders();
+  const currentProvider = getProviderById(settings.aiProviderId);
+  const currentProviderModels =
+    dynamicModels[settings.aiProviderId] || currentProvider?.models || [];
+  const modelOptions = useMemo(
+    () =>
+      currentProviderModels.map((model) => ({
+        value: model.id,
+        label: model.name,
+      })),
+    [currentProviderModels],
+  );
+  const apiKeyProviders = useMemo(
+    () => providers.filter((provider) => provider.requiresApiKey),
+    [providers],
+  );
+  const apiKeyProviderOptions = useMemo(
+    () =>
+      apiKeyProviders.map((provider) => ({
+        value: provider.id,
+        label: provider.name,
+      })),
+    [apiKeyProviders],
+  );
+  const selectedApiKeyProvider = useMemo(
+    () => getProviderById(selectedApiKeyProviderId) ?? apiKeyProviders[0],
+    [apiKeyProviders, selectedApiKeyProviderId],
+  );
+  const selectedApiKeyProviderHasKey = selectedApiKeyProvider
+    ? hasProviderApiKey(selectedApiKeyProvider.id)
+    : false;
+
+  useEffect(() => {
+    if (apiKeyProviders.length === 0) return;
+    if (!apiKeyProviders.some((provider) => provider.id === selectedApiKeyProviderId)) {
+      setSelectedApiKeyProviderId(apiKeyProviders[0].id);
+    }
+  }, [apiKeyProviders, selectedApiKeyProviderId]);
 
   const handleProviderChange = (newProviderId: string, preferredModelId?: string) => {
     const nextSelection = resolveProviderModelSelection(newProviderId, preferredModelId);
