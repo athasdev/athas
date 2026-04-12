@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { IDisposable, Terminal as XtermTerminal } from "@xterm/xterm";
 import { useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { createInitialCommandDispatcher } from "../lib/initial-command-dispatcher";
 import { parseOSC7 } from "../utils/osc-parser";
 import { useTerminalWriteBuffer } from "./use-terminal-write-buffer";
 
@@ -38,12 +39,12 @@ export function useTerminalConnection({
 }: UseTerminalConnectionOptions) {
   const currentConnectionIdRef = useRef<string | null>(null);
   const currentInputLineRef = useRef("");
-  const initialCommandSentForConnectionRef = useRef<string | null>(null);
   const onTerminalExitRef = useRef(onTerminalExit);
   const explicitExitRequestedRef = useRef(false);
   const lastExitInfoRef = useRef<{ exitCode?: number | null; signal?: string | null } | null>(null);
   const outputBufferRef = useRef("");
   const outputFlushFrameRef = useRef<number | null>(null);
+  const initialCommandDispatcherRef = useRef(createInitialCommandDispatcher());
   const { write, flush } = useTerminalWriteBuffer({
     getConnectionId: () => currentConnectionIdRef.current,
     writeChunk: async (activeConnectionId, data) => {
@@ -217,6 +218,7 @@ export function useTerminalConnection({
 
     const unlistenOutput = listen(`pty-output-${connectionId}`, (event) => {
       const data = event.payload as { data: string };
+      initialCommandDispatcherRef.current.notifyOutput(connectionId);
       outputBufferRef.current += data.data;
       scheduleOutputFlush();
     });
@@ -285,14 +287,16 @@ export function useTerminalConnection({
 
   useEffect(() => {
     if (!initialCommand || !connectionId) return;
-    if (initialCommandSentForConnectionRef.current === connectionId) return;
 
-    initialCommandSentForConnectionRef.current = connectionId;
-    const timeoutId = window.setTimeout(() => {
-      write(`${initialCommand}\n`);
-    }, 300);
+    initialCommandDispatcherRef.current.arm({
+      connectionId,
+      command: initialCommand,
+      send: write,
+    });
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      initialCommandDispatcherRef.current.disarm(connectionId);
+    };
   }, [connectionId, initialCommand, write]);
 
   return {

@@ -371,9 +371,6 @@ const TerminalContainer = ({
     return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
   }, [activeTerminalId, terminals, closeTerminal, focusNewTerminal]);
 
-  // Store pending commands for terminals that are initializing
-  const pendingCommandsRef = useRef<Map<string, string>>(new Map());
-
   // Listen for create-terminal-with-command event (used by agent install buttons)
   useEffect(() => {
     const handleCreateTerminalWithCommand = (event: Event) => {
@@ -393,12 +390,10 @@ const TerminalContainer = ({
       const newTerminalId = createTerminal({
         name: terminalName,
         currentDirectory,
+        initialCommand: command,
       });
 
       if (newTerminalId) {
-        // Store the pending command
-        pendingCommandsRef.current.set(newTerminalId, `${command}\n`);
-
         // Focus the terminal after creation
         setTimeout(() => {
           const terminalRef = terminalSessionRefs.current.get(newTerminalId);
@@ -419,32 +414,6 @@ const TerminalContainer = ({
     setBottomPaneActiveTab,
     setIsBottomPaneVisible,
   ]);
-
-  // Listen for terminal-ready events to execute pending commands
-  useEffect(() => {
-    const handleTerminalReady = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        terminalId: string;
-        connectionId: string;
-      }>;
-      const { terminalId, connectionId } = customEvent.detail;
-
-      const pendingCommand = pendingCommandsRef.current.get(terminalId);
-      if (pendingCommand && connectionId) {
-        // Small delay to ensure shell prompt is ready
-        setTimeout(() => {
-          invoke("terminal_write", {
-            id: connectionId,
-            data: pendingCommand,
-          }).catch(() => {});
-          pendingCommandsRef.current.delete(terminalId);
-        }, 300);
-      }
-    };
-
-    window.addEventListener("terminal-ready", handleTerminalReady);
-    return () => window.removeEventListener("terminal-ready", handleTerminalReady);
-  }, []);
 
   useEffect(() => {
     const handleTerminalOpenSearch = () => {
