@@ -83,3 +83,42 @@ export const updateToolCompletionAcpEvent = (
       : event,
   );
 };
+
+export const refreshRunningAcpEvent = (
+  previousEvents: ChatAcpEvent[],
+  activityId: string,
+): ChatAcpEvent[] => {
+  const now = new Date();
+  return previousEvents.map((event) =>
+    event.id === activityId
+      ? {
+          ...event,
+          timestamp: now,
+        }
+      : event,
+  );
+};
+
+export const updateAcpEventState = (
+  previousEvents: ChatAcpEvent[],
+  activityId: string,
+  {
+    detail,
+    state,
+  }: {
+    detail?: string;
+    state: ChatAcpEvent["state"];
+  },
+): ChatAcpEvent[] => {
+  const now = new Date();
+  return previousEvents.map((event) =>
+    event.id === activityId
+      ? {
+          ...event,
+          detail: detail ? truncateDetail(detail) : event.detail,
+          state,
+          timestamp: now,
+        }
+      : event,
+  );
+};

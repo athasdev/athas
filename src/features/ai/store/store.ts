@@ -840,7 +840,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         getWorkspaceSessionSnapshot: (buffers) => {
           const state = get();
           const selectedBufferPaths = buffers
-            .filter((buffer) => state.selectedBufferIds.has(buffer.id))
+            .filter(
+              (buffer) =>
+                state.selectedBufferIds.has(buffer.id) &&
+                (!("type" in buffer) || buffer.type !== "agent"),
+            )
             .map((buffer) => buffer.path);
 
           return {
@@ -855,7 +859,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         restoreWorkspaceSession: (snapshot, buffers) => {
           const selectedBufferIds = new Set(
             buffers
-              .filter((buffer) => snapshot?.selectedBufferPaths.includes(buffer.path))
+              .filter(
+                (buffer) =>
+                  snapshot?.selectedBufferPaths.includes(buffer.path) &&
+                  (!("type" in buffer) || buffer.type !== "agent"),
+              )
               .map((buffer) => buffer.id),
           );
 

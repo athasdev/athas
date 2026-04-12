@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useAIChatStore } from "@/features/ai/store/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
@@ -58,6 +59,7 @@ export function EmptyEditorState() {
   }, [openTerminalBuffer]);
 
   const handleOpenAgent = useCallback(() => {
+    useAIChatStore.getState().createNewChat();
     openAgentBuffer();
   }, [openAgentBuffer]);
 

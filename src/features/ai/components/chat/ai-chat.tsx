@@ -3,11 +3,14 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
 import {
   appendChatAcpEvent,
+  refreshRunningAcpEvent,
   type ChatAcpEventInput,
   completeThinkingAcpEvents,
   truncateDetail,
+  updateAcpEventState,
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
+import { isContextEligibleBuffer } from "@/features/ai/lib/context-buffers";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
@@ -65,6 +68,7 @@ const AIChat = memo(function AIChat({
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
   const activeToolEventIdsRef = useRef<Map<string, string>>(new Map());
+  const activeThinkingEventIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -81,6 +85,7 @@ const AIChat = memo(function AIChat({
   useEffect(() => {
     setAcpEvents([]);
     activeToolEventIdsRef.current.clear();
+    activeThinkingEventIdRef.current = null;
   }, [chatState.currentChatId]);
 
   useEffect(() => {
@@ -146,6 +151,17 @@ const AIChat = memo(function AIChat({
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
 
+  const completeThinkingEvent = useCallback(
+    (state: ChatAcpEvent["state"] = "success", detail = "completed") => {
+      const activeThinkingEventId = activeThinkingEventIdRef.current;
+      if (!activeThinkingEventId) return;
+
+      setAcpEvents((prev) => updateAcpEventState(prev, activeThinkingEventId, { detail, state }));
+      activeThinkingEventIdRef.current = null;
+    },
+    [],
+  );
+
   // Agent availability is now handled dynamically by the model-provider-selector component
   // No need to check Claude Code status on mount
 
@@ -173,7 +189,7 @@ const AIChat = memo(function AIChat({
 
   const buildContext = async (agentId: string): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter(
-      (buffer) => buffer.type !== "agent" && chatState.selectedBufferIds.has(buffer.id),
+      (buffer) => chatState.selectedBufferIds.has(buffer.id) && isContextEligibleBuffer(buffer),
     );
 
     // Build active buffer context, including web viewer content if applicable
@@ -372,6 +388,7 @@ const AIChat = memo(function AIChat({
       if (isAcp) {
         setAcpEvents([]);
         activeToolEventIdsRef.current.clear();
+        activeThinkingEventIdRef.current = null;
       }
 
       await getChatCompletionStream(
@@ -408,6 +425,7 @@ const AIChat = memo(function AIChat({
                 content: fallbackContent,
                 isStreaming: false,
               }));
+              completeThinkingEvent();
               chatActions.setIsTyping(false);
               chatActions.setStreamingMessageId(null);
               abortControllerRef.current = null;
@@ -425,6 +443,7 @@ details: The agent session started, but no content, tool output, or resource was
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
+            completeThinkingEvent("error", "failed");
             chatActions.setIsTyping(false);
             chatActions.setStreamingMessageId(null);
             abortControllerRef.current = null;
@@ -435,6 +454,7 @@ details: The agent session started, but no content, tool output, or resource was
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             isStreaming: false,
           });
+          completeThinkingEvent();
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
           setAcpEvents((prev) => completeThinkingAcpEvents(prev));
@@ -536,6 +556,7 @@ details: ${errorDetails || mainError}
               type: "error",
             });
           }
+          completeThinkingEvent("error", "failed");
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
           abortControllerRef.current = null;
@@ -597,22 +618,33 @@ details: ${errorDetails || mainError}
             event.type === "user_message_chunk" ||
             event.type === "session_complete"
           ) {
+            if (event.type === "content_chunk") {
+              completeThinkingEvent();
+            } else if (event.type === "session_complete") {
+              completeThinkingEvent();
+            }
             return;
           }
           switch (event.type) {
             case "thought_chunk": {
-              if (event.isComplete) {
-                setAcpEvents((prev) => completeThinkingAcpEvents(prev));
-              } else {
-                appendAcpEvent({
-                  kind: "thinking",
-                  label: "Thinking",
-                  state: "running",
-                });
+              const activeThinkingEventId = activeThinkingEventIdRef.current;
+              if (activeThinkingEventId) {
+                setAcpEvents((prev) => refreshRunningAcpEvent(prev, activeThinkingEventId));
+                break;
               }
+
+              const thinkingEventId = `thinking-${Date.now()}`;
+              activeThinkingEventIdRef.current = thinkingEventId;
+              appendAcpEvent({
+                id: thinkingEventId,
+                kind: "thinking",
+                label: "Thinking",
+                state: "running",
+              });
               break;
             }
             case "tool_start": {
+              completeThinkingEvent();
               const activityId = `tool-${event.toolId}`;
               activeToolEventIdsRef.current.set(event.toolId, activityId);
               appendAcpEvent({
@@ -634,6 +666,7 @@ details: ${errorDetails || mainError}
             case "permission_request":
               break; // Handled separately with permission UI
             case "prompt_complete":
+              completeThinkingEvent();
               break; // Not useful to show
             case "session_mode_update":
               acpProducedStateOnlyUpdate = true;
@@ -689,6 +722,7 @@ details: ${errorDetails || mainError}
             case "status_changed":
               break; // internal state sync
             case "error":
+              completeThinkingEvent("error", "failed");
               appendAcpEvent({
                 kind: "error",
                 label: "Agent error",
@@ -722,6 +756,7 @@ details: ${errorDetails || mainError}
         content: "Error: Failed to connect to AI service. Please check your API key and try again.",
         isStreaming: false,
       });
+      completeThinkingEvent("error", "failed");
       chatActions.setIsTyping(false);
       chatActions.setStreamingMessageId(null);
       abortControllerRef.current = null;

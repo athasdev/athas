@@ -42,6 +42,7 @@ import {
   removeProviderApiToken,
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
+import { resolveProviderModelSelection } from "@/features/settings/lib/ai-model-selection";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 const NO_DEFAULT_SESSION_MODE = "__none__";
 
@@ -197,12 +198,10 @@ export const AISettings = () => {
 
   const providers = getAvailableProviders();
 
-  const handleProviderChange = (newProviderId: string) => {
-    const provider = providers.find((p) => p.id === newProviderId);
-    updateSetting("aiProviderId", newProviderId);
-    if (provider && provider.models.length > 0) {
-      updateSetting("aiModelId", provider.models[0].id);
-    }
+  const handleProviderChange = (newProviderId: string, preferredModelId?: string) => {
+    const nextSelection = resolveProviderModelSelection(newProviderId, preferredModelId);
+    updateSetting("aiProviderId", nextSelection.providerId);
+    updateSetting("aiModelId", nextSelection.modelId);
   };
 
   const loadAutocompleteModels = async () => {
@@ -264,7 +263,7 @@ export const AISettings = () => {
           <ProviderModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
-            onProviderChange={(id) => handleProviderChange(id)}
+            onProviderChange={(id, preferredModelId) => handleProviderChange(id, preferredModelId)}
             onModelChange={(id) => updateSetting("aiModelId", id)}
           />
         </SettingRow>

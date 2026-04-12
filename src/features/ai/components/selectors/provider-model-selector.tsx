@@ -47,7 +47,7 @@ import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-p
 interface ProviderModelSelectorProps {
   providerId: string;
   modelId: string;
-  onProviderChange: (id: string) => void;
+  onProviderChange: (id: string, preferredModelId?: string) => void;
   onModelChange: (id: string) => void;
   disabled?: boolean;
 }
@@ -104,6 +104,9 @@ export function ProviderModelSelector({
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
   const { settings, updateSetting } = useSettingsStore();
 
+  const modelIdRef = useRef(modelId);
+  modelIdRef.current = modelId;
+
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -137,7 +140,7 @@ export function ProviderModelSelector({
       const models = await instance.getModels();
       if (models.length > 0) {
         setDynamicModels(providerId, models);
-        if (!models.find((model) => model.id === modelId)) {
+        if (!models.find((model) => model.id === modelIdRef.current)) {
           onModelChange(models[0].id);
         }
       } else {
@@ -153,7 +156,7 @@ export function ProviderModelSelector({
     } finally {
       setIsLoadingModels(false);
     }
-  }, [modelId, onModelChange, providerId, setDynamicModels]);
+  }, [onModelChange, providerId, setDynamicModels]);
 
   useEffect(() => {
     void fetchDynamicModels();
@@ -241,26 +244,41 @@ export function ProviderModelSelector({
     if (!trigger) return;
 
     const rect = trigger.getBoundingClientRect();
+
+    // When portaled into a transformed ancestor (dialog), fixed positioning
+    // is relative to that ancestor rather than the viewport.
+    const container = trigger.closest("[data-dialog-content]");
+    const containerRect = container?.getBoundingClientRect();
+    const offsetX = containerRect?.left ?? 0;
+    const offsetY = containerRect?.top ?? 0;
+    const boundsWidth = containerRect?.width ?? window.innerWidth;
+    const boundsHeight = containerRect?.height ?? window.innerHeight;
+
     const viewportPadding = 8;
+    const localLeft = rect.left - offsetX;
+    const localBottom = rect.bottom - offsetY;
+    const localTop = rect.top - offsetY;
+
     const minWidth = Math.max(rect.width, 300);
-    const maxWidth = Math.min(420, window.innerWidth - viewportPadding * 2);
+    const maxWidth = Math.min(420, boundsWidth - viewportPadding * 2);
     const safeWidth = Math.max(Math.min(minWidth, maxWidth), Math.min(280, maxWidth));
-    const estimatedHeight = 480;
-    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
-    const availableAbove = rect.top - viewportPadding;
-    const openUp =
-      availableBelow < Math.min(estimatedHeight, 240) && availableAbove > availableBelow;
-    const maxHeight = Math.max(
-      160,
-      Math.min(estimatedHeight, openUp ? availableAbove - 6 : availableBelow - 6),
-    );
+
+    const estimatedHeight = 520;
+    const availableBelow = boundsHeight - localBottom - viewportPadding;
+    const availableAbove = localTop - viewportPadding;
+    const openUp = availableBelow < estimatedHeight && availableAbove > availableBelow;
+    const availableSpace = (openUp ? availableAbove : availableBelow) - 6;
+    const minDropdownHeight = 120;
+    const maxHeight = Math.min(estimatedHeight, Math.max(availableSpace, minDropdownHeight));
+
     const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? estimatedHeight;
     const visibleHeight = Math.min(maxHeight, measuredHeight);
+
     const left = Math.max(
       viewportPadding,
-      Math.min(rect.left, window.innerWidth - safeWidth - viewportPadding),
+      Math.min(localLeft, boundsWidth - safeWidth - viewportPadding),
     );
-    const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
+    const top = openUp ? Math.max(viewportPadding, localTop - visibleHeight - 6) : localBottom + 6;
 
     setPosition({ left, top, width: safeWidth, maxHeight });
   }, []);
@@ -313,9 +331,10 @@ export function ProviderModelSelector({
   const handleModelSelect = useCallback(
     (selectedProviderId: string, selectedModelId: string) => {
       if (selectedProviderId !== providerId) {
-        onProviderChange(selectedProviderId);
+        onProviderChange(selectedProviderId, selectedModelId);
+      } else {
+        onModelChange(selectedModelId);
       }
-      onModelChange(selectedModelId);
       setIsOpen(false);
     },
     [onModelChange, onProviderChange, providerId],
@@ -529,7 +548,7 @@ export function ProviderModelSelector({
         </div>
 
         <div
-          className="min-h-0 flex-1 overflow-y-auto p-1.5 [overscroll-behavior:contain]"
+          className="min-h-0 flex-1 overflow-y-auto p-2 [overscroll-behavior:contain]"
           onWheelCapture={(event) => event.stopPropagation()}
         >
           {modelFetchError && (
