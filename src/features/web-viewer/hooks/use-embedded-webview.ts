@@ -78,6 +78,24 @@ export function useEmbeddedWebview({
     [isActive, isVisible, setWebviewVisible],
   );
 
+  const getPhysicalBounds = (rect: DOMRect) => {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+
+    const left = Math.max(0, Math.min(rect.left, viewportWidth));
+    const top = Math.max(0, Math.min(rect.top, viewportHeight));
+    const right = Math.max(left, Math.min(rect.right, viewportWidth));
+    const bottom = Math.max(top, Math.min(rect.bottom, viewportHeight));
+
+    return {
+      x: Math.round(left * dpr),
+      y: Math.round(top * dpr),
+      width: Math.round((right - left) * dpr),
+      height: Math.round((bottom - top) * dpr),
+    };
+  };
+
   useEffect(() => {
     if (webviewLabel || !initialUrl) return;
 
@@ -103,21 +121,17 @@ export function useEmbeddedWebview({
 
       if (!rect) return;
 
-      // Clamp coordinates to viewport to prevent overflow
-      const clampedX = Math.max(0, rect.left);
-      const clampedY = Math.max(0, rect.top);
-      const clampedWidth = Math.min(rect.width, window.innerWidth - clampedX);
-      const clampedHeight = Math.min(rect.height, window.innerHeight - clampedY);
+      const bounds = getPhysicalBounds(rect);
 
-      if (clampedWidth <= 0 || clampedHeight <= 0) return;
+      if (bounds.width <= 0 || bounds.height <= 0) return;
 
       try {
         const label = await invoke<string>("create_embedded_webview", {
           url: initialUrl,
-          x: clampedX,
-          y: clampedY,
-          width: clampedWidth,
-          height: clampedHeight,
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
         });
 
         if (!mounted) {
@@ -203,20 +217,20 @@ export function useEmbeddedWebview({
         return;
       }
 
-      // Clamp coordinates to viewport to prevent overflow
-      const clampedX = Math.max(0, rect.left);
-      const clampedY = Math.max(0, rect.top);
-      const clampedWidth = Math.min(rect.width, window.innerWidth - clampedX);
-      const clampedHeight = Math.min(rect.height, window.innerHeight - clampedY);
+      const bounds = getPhysicalBounds(rect);
 
-      const nextBounds = `${clampedX}:${clampedY}:${clampedWidth}:${clampedHeight}`;
+      if (bounds.width <= 0 || bounds.height <= 0) {
+        return;
+      }
+
+      const nextBounds = `${bounds.x}:${bounds.y}:${bounds.width}:${bounds.height}`;
       if (nextBounds !== lastBounds) {
         lastBounds = nextBounds;
         await resizeWebview(webviewLabel, {
-          x: clampedX,
-          y: clampedY,
-          width: clampedWidth,
-          height: clampedHeight,
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
         });
       }
 

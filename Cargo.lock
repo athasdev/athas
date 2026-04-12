@@ -623,6 +623,7 @@ dependencies = [
  "walkdir",
  "which",
  "window-vibrancy",
+ "wry",
  "zip 2.4.2",
 ]
 

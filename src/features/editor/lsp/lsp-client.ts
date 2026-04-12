@@ -18,6 +18,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
+import { lspStartupNotifier } from "./lsp-startup-reporting";
 
 export interface LspError {
   message: string;
@@ -376,6 +377,7 @@ export class LspClient {
     workspacePath: string,
     options: { forceRetry?: boolean } = {},
   ): Promise<boolean> {
+    let languageId: string | undefined;
     try {
       logger.debug("LSPClient", "Starting LSP for file:", filePath);
 
@@ -384,23 +386,13 @@ export class LspClient {
 
       const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
       const serverArgs = extensionRegistry.getLspServerArgs(filePath);
-      const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+      languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       const initializationOptions = extensionRegistry.getLspInitializationOptions(filePath);
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
-        const message = languageId
-          ? `Language server for ${this.getLanguageDisplayName(languageId)} could not be resolved.`
-          : "No language server is configured for this file.";
-        if (languageId) {
-          logger.warn(
-            "LSPClient",
-            `LSP configured for language '${languageId}' but server binary is missing (file: ${filePath})`,
-          );
-        } else {
-          logger.debug("LSPClient", `No LSP server configured for ${filePath}`);
-        }
-        throw new Error(message);
+        lspStartupNotifier.reportMissingServer({ filePath, languageId });
+        return false;
       }
 
       logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
@@ -456,11 +448,11 @@ export class LspClient {
       }
 
       logger.debug("LSPClient", "LSP started successfully for file:", filePath);
+      lspStartupNotifier.clearForFile(filePath);
       return true;
     } catch (error) {
       logger.error("LSPClient", "Failed to start LSP for file:", error);
-      const { actions } = useLspStore.getState();
-      actions.setLspError(getUserFacingLspErrorMessage(error));
+      lspStartupNotifier.reportStartFailure({ filePath, languageId, error });
       throw error;
     }
   }

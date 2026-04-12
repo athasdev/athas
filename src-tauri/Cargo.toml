@@ -101,3 +101,6 @@ tauri-plugin-window-state = "2"
 [target.'cfg(target_os = "macos")'.dependencies]
 rand = "0.8.5"
 objc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+wry = "0.53.5"

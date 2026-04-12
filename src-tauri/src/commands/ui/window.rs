@@ -1,15 +1,49 @@
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
+#[cfg(target_os = "linux")]
+use std::{cell::RefCell, collections::HashMap};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{
    AppHandle, Emitter, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command,
    webview::PageLoadEvent,
 };
+#[cfg(target_os = "linux")]
+use wry::{
+   Rect as WryRect, WebView as WryWebView, WebViewBuilder as WryWebViewBuilder,
+   dpi::{PhysicalPosition as WryPhysicalPosition, PhysicalSize as WryPhysicalSize},
+};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+#[cfg(target_os = "linux")]
+thread_local! {
+   static LINUX_EMBEDDED_WEBVIEWS: RefCell<HashMap<String, WryWebView>> = RefCell::new(HashMap::new());
+}
+
+#[cfg(target_os = "linux")]
+fn linux_embedded_bounds(x: f64, y: f64, width: f64, height: f64) -> WryRect {
+   WryRect {
+      position: WryPhysicalPosition::new(x.round() as i32, y.round() as i32).into(),
+      size: WryPhysicalSize::new(width.round() as u32, height.round() as u32).into(),
+   }
+}
+
+#[cfg(target_os = "linux")]
+fn with_linux_embedded_webview<T>(
+   label: &str,
+   f: impl FnOnce(&WryWebView) -> Result<T, String>,
+) -> Result<T, String> {
+   LINUX_EMBEDDED_WEBVIEWS.with(|webviews| {
+      let webviews = webviews.borrow();
+      let webview = webviews
+         .get(label)
+         .ok_or_else(|| format!("Webview not found: {label}"))?;
+      f(webview)
+   })
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -318,8 +352,50 @@ pub async fn create_embedded_webview(
 ) -> Result<String, String> {
    let counter = WEB_VIEWER_COUNTER.fetch_add(1, Ordering::SeqCst);
    let webview_label = format!("web-viewer-{counter}");
-
    let parsed_url = normalize_webview_url(&url)?;
+
+   #[cfg(target_os = "linux")]
+   {
+      let parent_window = window.clone();
+      let embedded_label = webview_label.clone();
+      let (tx, rx) = tokio::sync::oneshot::channel();
+
+      window
+         .run_on_main_thread(move || {
+            let result = (|| {
+               let builder = WryWebViewBuilder::new()
+                  .with_url(&parsed_url)
+                  .with_bounds(linux_embedded_bounds(x, y, width, height))
+                  .with_initialization_script(SHORTCUT_INTERCEPTOR_SCRIPT)
+                  .with_devtools(true)
+                  .with_visible(true);
+
+               let webview = builder
+                  .build_as_child(&parent_window)
+                  .map_err(|e| format!("Failed to create embedded webview: {e}"))?;
+
+               LINUX_EMBEDDED_WEBVIEWS.with(|webviews| {
+                  webviews
+                     .borrow_mut()
+                     .insert(embedded_label.clone(), webview);
+               });
+
+               Ok(embedded_label)
+            })();
+
+            let _ = tx.send(result);
+         })
+         .map_err(|e| format!("Failed to schedule embedded webview creation: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview creation channel dropped".to_string())?;
+   }
+
+   let x = x.round() as i32;
+   let y = y.round() as i32;
+   let width = width.round() as u32;
+   let height = height.round() as u32;
 
    let mut webview_builder = WebviewBuilder::new(
       &webview_label,
@@ -365,8 +441,8 @@ pub async fn create_embedded_webview(
    let webview = window
       .add_child(
          webview_builder,
-         tauri::LogicalPosition::new(x, y),
-         tauri::LogicalSize::new(width, height),
+         tauri::PhysicalPosition::new(x, y),
+         tauri::PhysicalSize::new(width, height),
       )
       .map_err(|e| format!("Failed to create embedded webview: {e}"))?;
 
@@ -382,6 +458,22 @@ pub async fn close_embedded_webview(
    app: tauri::AppHandle,
    webview_label: String,
 ) -> Result<(), String> {
+   #[cfg(target_os = "linux")]
+   {
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         LINUX_EMBEDDED_WEBVIEWS.with(|webviews| {
+            webviews.borrow_mut().remove(&webview_label);
+         });
+         let _ = tx.send(Ok(()));
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview close: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview close channel dropped".to_string())?;
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       webview
          .close()
@@ -396,6 +488,25 @@ pub async fn navigate_embedded_webview(
    webview_label: String,
    url: String,
 ) -> Result<(), String> {
+   #[cfg(target_os = "linux")]
+   {
+      let parsed_url = normalize_webview_url(&url)?;
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            webview
+               .load_url(&parsed_url)
+               .map_err(|e| format!("Failed to navigate: {e}"))
+         });
+         let _ = tx.send(result);
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview navigation: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview navigation channel dropped".to_string())?;
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       let parsed_url = normalize_webview_url(&url)?;
 
@@ -425,12 +536,36 @@ pub async fn resize_embedded_webview(
       return Ok(());
    }
 
+   #[cfg(target_os = "linux")]
+   {
+      let bounds = linux_embedded_bounds(x, y, width, height);
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            webview
+               .set_bounds(bounds)
+               .map_err(|e| format!("Failed to set bounds: {e}"))
+         });
+         let _ = tx.send(result);
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview resize: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview resize channel dropped".to_string())?;
+   }
+
+   let x = x.round() as i32;
+   let y = y.round() as i32;
+   let width = width.round() as u32;
+   let height = height.round() as u32;
+
    if let Some(webview) = app.get_webview(&webview_label) {
       webview
-         .set_position(tauri::LogicalPosition::new(x, y))
+         .set_position(tauri::PhysicalPosition::new(x, y))
          .map_err(|e| format!("Failed to set position: {e}"))?;
       webview
-         .set_size(tauri::LogicalSize::new(width, height))
+         .set_size(tauri::PhysicalSize::new(width, height))
          .map_err(|e| format!("Failed to set size: {e}"))?;
    } else {
       return Err(format!("Webview not found: {webview_label}"));
@@ -444,6 +579,24 @@ pub async fn set_webview_visible(
    webview_label: String,
    visible: bool,
 ) -> Result<(), String> {
+   #[cfg(target_os = "linux")]
+   {
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            webview
+               .set_visible(visible)
+               .map_err(|e| format!("Failed to update visibility: {e}"))
+         });
+         let _ = tx.send(result);
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview visibility: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview visibility channel dropped".to_string())?;
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       if visible {
          webview
@@ -465,6 +618,29 @@ pub async fn open_webview_devtools(
    app: tauri::AppHandle,
    webview_label: String,
 ) -> Result<(), String> {
+   #[cfg(target_os = "linux")]
+   {
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         #[cfg(any(debug_assertions, feature = "devtools"))]
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            webview.open_devtools();
+            Ok(())
+         });
+
+         #[cfg(not(any(debug_assertions, feature = "devtools")))]
+         let result: Result<(), String> =
+            Err("Webview devtools are unavailable in release builds".to_string());
+
+         let _ = tx.send(result);
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview devtools: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview devtools channel dropped".to_string())?;
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       #[cfg(any(debug_assertions, feature = "devtools"))]
       {
@@ -561,11 +737,246 @@ pub async fn set_webview_zoom(
    webview_label: String,
    zoom_level: f64,
 ) -> Result<(), String> {
+   #[cfg(target_os = "linux")]
+   {
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            webview
+               .zoom(zoom_level)
+               .map_err(|e| format!("Failed to set zoom: {e}"))
+         });
+         let _ = tx.send(result);
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview zoom: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview zoom channel dropped".to_string())?;
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       webview
          .set_zoom(zoom_level)
          .map_err(|e| format!("Failed to set zoom: {e}"))?;
       Ok(())
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct WebviewMetadata {
+   pub title: String,
+   pub favicon: Option<String>,
+}
+
+#[command]
+pub async fn poll_webview_metadata(
+   app: tauri::AppHandle,
+   webview_label: String,
+) -> Result<Option<WebviewMetadata>, String> {
+   #[cfg(target_os = "linux")]
+   {
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
+
+      app.run_on_main_thread(move || {
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            let tx = tx.clone();
+            webview
+               .evaluate_script_with_callback(
+                  r#"
+                  (() => {
+                     const title = document.title || "";
+                     if (!title) {
+                        return null;
+                     }
+
+                     const iconElement =
+                        document.querySelector('link[rel~="icon"]') ||
+                        document.querySelector('link[rel="shortcut icon"]');
+
+                     return {
+                        title,
+                        favicon: iconElement?.href || null,
+                     };
+                  })()
+                  "#,
+                  move |value: String| {
+                     let parsed = serde_json::from_str::<Option<WebviewMetadata>>(&value)
+                        .map_err(|e| format!("Failed to parse metadata: {e}"));
+                     if let Some(tx) = tx.lock().unwrap().take() {
+                        let _ = tx.send(parsed);
+                     }
+                  },
+               )
+               .map_err(|e| format!("Failed to get metadata: {e}"))
+         });
+
+         if let Err(error) = result {
+            if let Some(tx) = tx.lock().unwrap().take() {
+               let _ = tx.send(Err(error));
+            }
+         }
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview metadata poll: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview metadata channel dropped".to_string())?;
+   }
+
+   if let Some(webview) = app.get_webview(&webview_label) {
+      // Store metadata in a dedicated global (does not touch location.hash
+      // to avoid conflicts with the shortcut polling mechanism).
+      webview
+         .eval(
+            r#"
+            (function() {
+               var t = document.title || '';
+               var icon = '';
+               var el = document.querySelector('link[rel~="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+               if (el && el.href) { icon = el.href; }
+               window.__ATHAS_PAGE_META__ = JSON.stringify({t:t,i:icon});
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to get metadata: {e}"))?;
+
+      tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+
+      // Read back via a hash round-trip (single step)
+      webview
+         .eval(
+            r#"
+            (function() {
+               var m = window.__ATHAS_PAGE_META__;
+               window.__ATHAS_PAGE_META__ = null;
+               if (m) window.location.hash = '__athas_meta=' + encodeURIComponent(m);
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to read metadata: {e}"))?;
+
+      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+      let url = webview
+         .url()
+         .map_err(|e| format!("Failed to get URL: {e}"))?;
+      let hash = url.fragment().unwrap_or("");
+
+      if let Some(encoded) = hash.strip_prefix("__athas_meta=") {
+         webview
+            .eval("window.location.hash = '';")
+            .map_err(|e| format!("Failed to clear hash: {e}"))?;
+
+         let decoded = percent_encoding::percent_decode_str(encoded)
+            .decode_utf8()
+            .unwrap_or_default();
+
+         #[derive(Deserialize)]
+         struct Meta {
+            t: String,
+            i: String,
+         }
+
+         if let Ok(meta) = serde_json::from_str::<Meta>(&decoded) {
+            if meta.t.is_empty() {
+               return Ok(None);
+            }
+            return Ok(Some(WebviewMetadata {
+               title: meta.t,
+               favicon: if meta.i.is_empty() {
+                  None
+               } else {
+                  Some(meta.i)
+               },
+            }));
+         }
+      }
+
+      Ok(None)
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[command]
+pub async fn poll_webview_shortcut(
+   app: tauri::AppHandle,
+   webview_label: String,
+) -> Result<Option<String>, String> {
+   #[cfg(target_os = "linux")]
+   {
+      let (tx, rx) = tokio::sync::oneshot::channel();
+      let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
+
+      app.run_on_main_thread(move || {
+         let result = with_linux_embedded_webview(&webview_label, |webview| {
+            let tx = tx.clone();
+            webview
+               .evaluate_script_with_callback(
+                  "window.__ATHAS_GET_SHORTCUT__ ? window.__ATHAS_GET_SHORTCUT__() : null",
+                  move |value: String| {
+                     let parsed = serde_json::from_str::<Option<String>>(&value)
+                        .map_err(|e| format!("Failed to parse shortcut: {e}"));
+                     if let Some(tx) = tx.lock().unwrap().take() {
+                        let _ = tx.send(parsed);
+                     }
+                  },
+               )
+               .map_err(|e| format!("Failed to get shortcut: {e}"))
+         });
+
+         if let Err(error) = result {
+            if let Some(tx) = tx.lock().unwrap().take() {
+               let _ = tx.send(Err(error));
+            }
+         }
+      })
+      .map_err(|e| format!("Failed to schedule embedded webview shortcut poll: {e}"))?;
+
+      return rx
+         .await
+         .map_err(|_| "Embedded webview shortcut channel dropped".to_string())?;
+   }
+
+   if let Some(webview) = app.get_webview(&webview_label) {
+      // Check if there's a pending shortcut and move it to the URL hash
+      webview
+         .eval(
+            r#"
+            (function() {
+               var s = window.__ATHAS_PENDING_SHORTCUT__;
+               if (s) {
+                  window.__ATHAS_PENDING_SHORTCUT__ = null;
+                  window.location.hash = '__athas_shortcut=' + s;
+               }
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to check shortcut: {e}"))?;
+
+      // Small delay to allow the hash change to take effect
+      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+      // Get the URL and check for shortcut in hash
+      let url = webview
+         .url()
+         .map_err(|e| format!("Failed to get URL: {e}"))?;
+      let hash = url.fragment().unwrap_or("");
+
+      if let Some(shortcut) = hash.strip_prefix("__athas_shortcut=") {
+         // Clear the hash
+         webview
+            .eval("window.location.hash = '';")
+            .map_err(|e| format!("Failed to clear hash: {e}"))?;
+
+         return Ok(Some(shortcut.to_string()));
+      }
+
+      Ok(None)
    } else {
       Err(format!("Webview not found: {webview_label}"))
    }

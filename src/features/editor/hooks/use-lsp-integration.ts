@@ -15,6 +15,7 @@ import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useDefinitionLink } from "@/features/editor/lsp/use-definition-link";
 import { useGoToDefinition } from "@/features/editor/lsp/use-go-to-definition";
 import { useHover } from "@/features/editor/lsp/use-hover";
+import { lspStartupNotifier } from "@/features/editor/lsp/lsp-startup-reporting";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -138,6 +139,7 @@ export const useLspIntegration = ({
 
     if (!workspacePath) {
       console.warn("LSP: Could not determine workspace path for", filePath);
+      lspStartupNotifier.reportMissingWorkspace(filePath);
       return;
     }
 
@@ -184,6 +186,7 @@ export const useLspIntegration = ({
         await lspClient.notifyDocumentOpen(filePath, value);
         // Mark document as opened so changes can be sent
         openedDocumentsRef.current.add(filePath);
+        lspStartupNotifier.clearForFile(filePath);
         logger.debug("LspIntegration", `LSP started and document opened for ${filePath}`);
       } catch (error) {
         console.error("LSP initialization error:", error);
