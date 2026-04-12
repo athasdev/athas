@@ -9,7 +9,7 @@ interface DiffLineBackgroundLayerProps {
 
 const backgroundClassByKind: Record<DiffEditorLineKind, string> = {
   context: "",
-  spacer: "",
+  spacer: "bg-secondary-bg/40",
   added: "bg-git-added/18",
   removed: "bg-git-deleted/18",
 };

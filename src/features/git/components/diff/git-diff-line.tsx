@@ -9,6 +9,8 @@ export const getLineBackground = (type: string) => {
       return "bg-git-added/15";
     case "removed":
       return "bg-git-deleted/15";
+    case "spacer":
+      return "bg-secondary-bg/40";
     default:
       return "";
   }
@@ -20,6 +22,8 @@ export const getGutterBackground = (type: string) => {
       return "bg-git-added/25";
     case "removed":
       return "bg-git-deleted/25";
+    case "spacer":
+      return "bg-secondary-bg/50";
     default:
       return "bg-primary-bg";
   }
@@ -31,6 +35,8 @@ export const getContentColor = (type: string) => {
       return "text-git-added";
     case "removed":
       return "text-git-deleted";
+    case "spacer":
+      return "";
     default:
       return "text-text";
   }
@@ -117,13 +123,15 @@ export function getSplitLineMeta(line: DiffLineProps["line"], splitSide: "left" 
   const isLeft = splitSide === "left";
   const isVisible = isLeft ? line.line_type !== "added" : line.line_type !== "removed";
   const gutterNumber = isLeft ? line.old_line_number : line.new_line_number;
-  const diffType = isLeft
-    ? line.line_type === "removed"
-      ? "removed"
-      : "context"
-    : line.line_type === "added"
-      ? "added"
-      : "context";
+  const diffType = !isVisible
+    ? "spacer"
+    : isLeft
+      ? line.line_type === "removed"
+        ? "removed"
+        : "context"
+      : line.line_type === "added"
+        ? "added"
+        : "context";
 
   return {
     isVisible,
@@ -160,16 +168,7 @@ const DiffLine = memo(
     }, [line.content, tokens, showWhitespace]);
 
     if (viewMode === "split" && splitSide) {
-      const isLeft = splitSide === "left";
-      const isVisible = isLeft ? line.line_type !== "added" : line.line_type !== "removed";
-      const gutterNumber = isLeft ? line.old_line_number : line.new_line_number;
-      const diffType = isLeft
-        ? line.line_type === "removed"
-          ? "removed"
-          : "context"
-        : line.line_type === "added"
-          ? "added"
-          : "context";
+      const { isVisible, gutterNumber, diffType } = getSplitLineMeta(line, splitSide);
 
       return (
         <div className={cn("flex min-w-max", getLineBackground(diffType))} style={rowStyle}>

@@ -184,7 +184,7 @@ export function serializeGitDiffSourceForSplitEditor(
           leftActualLines,
           line.content,
           "context",
-          line.new_line_number ?? line.old_line_number ?? null,
+          line.old_line_number ?? line.new_line_number ?? null,
         );
         pushLine(
           rightLines,

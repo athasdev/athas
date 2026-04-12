@@ -6,8 +6,9 @@ use serde_json::{Value, json};
 use std::{
    collections::HashMap,
    ffi::OsStr,
+   fs,
    io::{BufRead, BufReader, Read, Write},
-   path::PathBuf,
+   path::{Path, PathBuf},
    process::{Child, Command, Stdio},
    sync::{
       Arc, Mutex,
@@ -19,6 +20,14 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
+
+fn is_js_server_path(server_path: &Path) -> bool {
+   fs::canonicalize(server_path)
+      .unwrap_or_else(|_| server_path.to_path_buf())
+      .extension()
+      .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
+      .unwrap_or(false)
+}
 
 #[derive(Clone)]
 pub struct LspClient {
@@ -37,10 +46,7 @@ impl LspClient {
       app_handle: Option<AppHandle>,
    ) -> Result<(Self, Child)> {
       // Check if this is a JavaScript-based language server
-      let is_js_server = server_path
-         .extension()
-         .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
-         .unwrap_or(false);
+      let is_js_server = is_js_server_path(&server_path);
 
       let (command_path, final_args) = if is_js_server {
          // JS-based server requires Node.js runtime
@@ -685,5 +691,59 @@ impl LspClient {
 
    pub fn text_document_did_close(&self, params: DidCloseTextDocumentParams) -> Result<()> {
       self.notify::<notification::DidCloseTextDocument>(params)
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::is_js_server_path;
+   use std::{
+      fs,
+      path::PathBuf,
+      time::{SystemTime, UNIX_EPOCH},
+   };
+
+   fn temp_test_dir(name: &str) -> PathBuf {
+      let unique = SystemTime::now()
+         .duration_since(UNIX_EPOCH)
+         .expect("system time should be after unix epoch")
+         .as_nanos();
+      let dir = std::env::temp_dir().join(format!("athas-lsp-{name}-{unique}"));
+      fs::create_dir_all(&dir).expect("temp test dir should be created");
+      dir
+   }
+
+   #[test]
+   fn detects_direct_js_entrypoints() {
+      let dir = temp_test_dir("direct-js");
+      let entrypoint = dir.join("server.mjs");
+      fs::write(&entrypoint, "console.log('ok');").expect("entrypoint should be written");
+
+      assert!(is_js_server_path(&entrypoint));
+
+      let _ = fs::remove_dir_all(dir);
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn detects_js_entrypoints_through_bin_symlinks() {
+      use std::os::unix::fs::symlink;
+
+      let dir = temp_test_dir("symlink-js");
+      let package_dir = dir.join("typescript-language-server");
+      let bin_dir = dir.join(".bin");
+      fs::create_dir_all(package_dir.join("lib")).expect("package lib dir should be created");
+      fs::create_dir_all(&bin_dir).expect("bin dir should be created");
+
+      let entrypoint = package_dir.join("lib/cli.mjs");
+      fs::write(&entrypoint, "console.log('ok');").expect("entrypoint should be written");
+
+      let bin_link = bin_dir.join("typescript-language-server");
+      symlink("../typescript-language-server/lib/cli.mjs", &bin_link)
+         .expect("bin symlink should be created");
+
+      assert!(is_js_server_path(&bin_link));
+
+      let _ = fs::remove_dir_all(dir);
    }
 }

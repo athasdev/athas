@@ -49,7 +49,7 @@ function SplitDiffCodePanel({
           return (
             <div
               key={`${side}-gutter-${index}`}
-              className={`select-none px-2 py-0.5 text-right text-text-lighter tabular-nums ${getGutterBackground(meta.isVisible ? meta.diffType : "")}`}
+              className={`select-none px-2 py-0.5 text-right text-text-lighter tabular-nums ${getGutterBackground(meta.diffType)}`}
               style={{
                 fontSize: `${fontSize}px`,
                 lineHeight: `${lineHeight}px`,
