@@ -11,11 +11,15 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionConfigOption, SessionMode } from "@/features/ai/types/acp";
-import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
+import {
+  getAvailableProviders,
+  getProviderById,
+  updateAgentStatus,
+} from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
@@ -76,6 +80,9 @@ export const AISettings = () => {
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
+  const dynamicModels = useAIChatStore((state) => state.dynamicModels);
+  const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
+  const [selectedApiKeyProviderId, setSelectedApiKeyProviderId] = useState("openai");
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);

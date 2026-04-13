@@ -38,6 +38,7 @@ interface SettingRowProps {
   label: string;
   description?: string;
   info?: string;
+  infoStyle?: "icon" | "chip";
   children: React.ReactNode;
   className?: string;
   onReset?: () => void;
@@ -49,6 +50,7 @@ export function SettingRow({
   label,
   description,
   info,
+  infoStyle = "icon",
   children,
   className,
   onReset,
@@ -60,9 +62,21 @@ export function SettingRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <div className="ui-font ui-text-sm text-text">{label}</div>
-          {info && (
+          {info && infoStyle === "icon" && (
             <Tooltip content={info} side="right">
               <Info className="size-3.5 cursor-help text-text-lighter transition-colors hover:text-text" />
+            </Tooltip>
+          )}
+          {info && infoStyle === "chip" && (
+            <Tooltip content={info} side="right">
+              <button
+                type="button"
+                className="ui-font ui-text-sm inline-flex cursor-help items-center gap-1 rounded-md border border-border/60 bg-primary-bg/70 px-1.5 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                aria-label={`More info about ${label}`}
+              >
+                <Info className="size-3" />
+                Learn more
+              </button>
             </Tooltip>
           )}
           {onReset && canReset && (

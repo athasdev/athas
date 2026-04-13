@@ -152,6 +152,7 @@ export const EditorSettings = () => {
           label="Buffer Carousel"
           description="Show open buffers as a horizontally scrollable carousel in the main view"
           info="Replaces the default stacked-tab layout with a side-by-side card strip. Scroll or swipe between buffers, drag to reorder, and resize cards with the edge handle."
+          infoStyle="chip"
           onReset={() =>
             updateSetting("horizontalTabScroll", getDefaultSetting("horizontalTabScroll"))
           }

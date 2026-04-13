@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::HashMap};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{
-   AppHandle, Emitter, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command,
+   AppHandle, Emitter, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, Window, command,
    webview::PageLoadEvent,
 };
 #[cfg(target_os = "linux")]
@@ -408,10 +408,10 @@ pub async fn create_embedded_webview(
 
    webview_builder =
       webview_builder.initialization_script(build_webview_bridge_script(&webview_label)?);
-   let app_handle = app.clone();
+   let app_handle = window.app_handle().clone();
    let event_webview_label = webview_label.clone();
    let navigation_webview_label = webview_label.clone();
-   let navigation_app_handle = app.clone();
+   let navigation_app_handle = window.app_handle().clone();
    webview_builder = webview_builder.on_navigation(move |url| {
       let event = EmbeddedWebviewLocationChangeEvent {
          webview_label: navigation_webview_label.clone(),
