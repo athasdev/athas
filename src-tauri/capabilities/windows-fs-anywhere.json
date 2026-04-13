@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "windows-fs-anywhere",
+  "description": "Allow Windows builds to access filesystem paths outside $HOME.",
+  "windows": ["*"],
+  "platforms": ["windows"],
+  "permissions": [
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ],
+      "requireLiteralLeadingDot": false
+    }
+  ]
+}
