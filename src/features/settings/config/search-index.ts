@@ -447,6 +447,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ollama", "endpoint", "url", "local", "lan", "cloud", "host", "port"],
   },
   {
+    id: "ai-ollama-api-key",
+    tab: "ai",
+    section: "Ollama",
+    label: "Ollama API Key",
+    description: "Bearer token for Ollama Cloud (optional for local servers)",
+    keywords: ["ollama", "api", "key", "token", "auth", "cloud", "bearer"],
+  },
+  {
     id: "ai-default-session-mode",
     tab: "ai",
     section: "Agent Defaults",

@@ -71,12 +71,18 @@ export function getProvider(providerId: string): AIProvider | undefined {
   return providers.get(providerId);
 }
 
-export function setOllamaBaseUrl(baseUrl: string): void {
+function getOllamaProvider(): OllamaProvider | undefined {
   if (providers.size === 0) {
     initializeProviders();
   }
   const ollama = providers.get("ollama");
-  if (ollama instanceof OllamaProvider) {
-    ollama.setBaseUrl(baseUrl);
-  }
+  return ollama instanceof OllamaProvider ? ollama : undefined;
+}
+
+export function setOllamaBaseUrl(baseUrl: string): void {
+  getOllamaProvider()?.setBaseUrl(baseUrl);
+}
+
+export function setOllamaApiKey(apiKey: string | null): void {
+  getOllamaProvider()?.setApiKey(apiKey);
 }

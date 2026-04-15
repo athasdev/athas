@@ -7,8 +7,10 @@ import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
+import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
+import { useSettingsStore } from "@/features/settings/store";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 
@@ -87,6 +89,15 @@ export const getChatCompletionStream = async (
     const apiKey = await getProviderApiToken(providerId);
     if (!apiKey && provider.requiresApiKey) {
       throw new Error(`${provider.name} API key not found`);
+    }
+
+    // Ollama Cloud requires auth even though the provider config marks the
+    // key as optional (since local Ollama doesn't need one).
+    if (providerId === "ollama" && !apiKey) {
+      const ollamaBaseUrl = useSettingsStore.getState().settings.ollamaBaseUrl;
+      if (ollamaBaseUrl && isOllamaCloudUrl(ollamaBaseUrl)) {
+        throw new Error("Ollama Cloud requires an API key. Add one in Settings → AI → Ollama.");
+      }
     }
 
     const contextPrompt = buildContextPrompt(context);

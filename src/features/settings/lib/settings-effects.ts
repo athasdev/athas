@@ -129,6 +129,20 @@ export function syncOllamaBaseUrl(baseUrl: string) {
   );
 }
 
+/**
+ * Pushes the Ollama API key (stored in Tauri's secure storage) into the
+ * singleton provider instance so `getModels`, connection checks, and other
+ * non-streaming calls can authenticate with Ollama Cloud.
+ */
+export async function syncOllamaApiKey() {
+  const [{ setOllamaApiKey }, { getProviderApiToken }] = await Promise.all([
+    import("@/features/ai/services/providers/ai-provider-registry"),
+    import("@/features/ai/services/ai-token-service"),
+  ]);
+  const token = await getProviderApiToken("ollama");
+  setOllamaApiKey(token);
+}
+
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
   void applyTheme(getEffectiveTheme(settings));
@@ -138,6 +152,7 @@ export function applySettingsSideEffects(settings: Settings) {
     stopSystemThemeSync();
   }
   syncOllamaBaseUrl(settings.ollamaBaseUrl);
+  void syncOllamaApiKey();
 }
 
 export function applySettingSideEffect<K extends keyof Settings>(

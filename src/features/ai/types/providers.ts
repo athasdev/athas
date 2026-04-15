@@ -485,7 +485,7 @@ export const AI_PROVIDERS: ModelProvider[] = [
   },
   {
     id: "ollama",
-    name: "Ollama (Local)",
+    name: "Ollama",
     apiUrl: "http://localhost:11434/v1/chat/completions",
     requiresApiKey: false,
     models: [],

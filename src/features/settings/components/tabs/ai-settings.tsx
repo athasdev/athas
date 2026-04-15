@@ -1,5 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Cloud,
+  ExternalLink,
+  Globe,
+  Key,
+  Laptop,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -16,10 +27,21 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
-import { setOllamaBaseUrl } from "@/features/ai/services/providers/ai-provider-registry";
-import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
-
-const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+import {
+  setOllamaApiKey,
+  setOllamaBaseUrl,
+} from "@/features/ai/services/providers/ai-provider-registry";
+import {
+  DEFAULT_OLLAMA_BASE_URL,
+  OLLAMA_CLOUD_BASE_URL,
+  checkOllamaConnection,
+  isOllamaCloudUrl,
+} from "@/features/ai/services/providers/ollama-provider";
+import {
+  getProviderApiToken,
+  removeProviderApiToken,
+  storeProviderApiToken,
+} from "@/features/ai/services/ai-token-service";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 const NO_DEFAULT_SESSION_MODE = "__none__";
 
@@ -59,6 +81,14 @@ export const AISettings = () => {
   const [ollamaStatus, setOllamaStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const ollamaDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Ollama API key state (used for Ollama Cloud; optional for local)
+  const [ollamaApiKeyInput, setOllamaApiKeyInput] = useState("");
+  const [hasStoredOllamaKey, setHasStoredOllamaKey] = useState(false);
+  const [isSavingOllamaKey, setIsSavingOllamaKey] = useState(false);
+
+  const isOllamaCloud = isOllamaCloudUrl(ollamaUrl);
+  const needsApiKey = isOllamaCloud;
+
   useEffect(() => {
     const detectAgents = async () => {
       try {
@@ -81,17 +111,31 @@ export const AISettings = () => {
     return unsubscribe;
   }, []);
 
-  // Sync Ollama base URL on mount
+  // Sync Ollama base URL + API key on mount
   useEffect(() => {
     const url = settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL;
     setOllamaBaseUrl(url);
+    void (async () => {
+      const token = await getProviderApiToken("ollama");
+      setHasStoredOllamaKey(!!token);
+      setOllamaApiKey(token);
+    })();
   }, []);
 
-  const validateOllamaConnection = useCallback(async (url: string) => {
-    setOllamaStatus("checking");
-    const ok = await checkOllamaConnection(url);
-    setOllamaStatus(ok ? "ok" : "error");
-  }, []);
+  const validateOllamaConnection = useCallback(
+    async (url: string, apiKey?: string | null) => {
+      setOllamaStatus("checking");
+      const keyToUse =
+        apiKey !== undefined
+          ? apiKey
+          : hasStoredOllamaKey
+            ? await getProviderApiToken("ollama")
+            : null;
+      const ok = await checkOllamaConnection(url, keyToUse);
+      setOllamaStatus(ok ? "ok" : "error");
+    },
+    [hasStoredOllamaKey],
+  );
 
   const handleOllamaUrlChange = (value: string) => {
     setOllamaUrl(value);
@@ -102,7 +146,7 @@ export const AISettings = () => {
       const trimmed = value.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
       updateSetting("ollamaBaseUrl", trimmed);
       setOllamaBaseUrl(trimmed);
-      validateOllamaConnection(trimmed);
+      void validateOllamaConnection(trimmed);
     }, 600);
   };
 
@@ -110,7 +154,45 @@ export const AISettings = () => {
     setOllamaUrl(DEFAULT_OLLAMA_BASE_URL);
     updateSetting("ollamaBaseUrl", DEFAULT_OLLAMA_BASE_URL);
     setOllamaBaseUrl(DEFAULT_OLLAMA_BASE_URL);
-    validateOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
+    void validateOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
+  };
+
+  const handleUseOllamaCloud = () => {
+    setOllamaUrl(OLLAMA_CLOUD_BASE_URL);
+    updateSetting("ollamaBaseUrl", OLLAMA_CLOUD_BASE_URL);
+    setOllamaBaseUrl(OLLAMA_CLOUD_BASE_URL);
+    void validateOllamaConnection(OLLAMA_CLOUD_BASE_URL);
+  };
+
+  const handleSaveOllamaApiKey = async () => {
+    const trimmed = ollamaApiKeyInput.trim();
+    if (!trimmed) return;
+    setIsSavingOllamaKey(true);
+    try {
+      await storeProviderApiToken("ollama", trimmed);
+      setOllamaApiKey(trimmed);
+      setHasStoredOllamaKey(true);
+      setOllamaApiKeyInput("");
+      showToast({ message: "Ollama API key saved", type: "success" });
+      void validateOllamaConnection(ollamaUrl, trimmed);
+    } catch {
+      showToast({ message: "Failed to save Ollama API key", type: "error" });
+    } finally {
+      setIsSavingOllamaKey(false);
+    }
+  };
+
+  const handleRemoveOllamaApiKey = async () => {
+    try {
+      await removeProviderApiToken("ollama");
+      setOllamaApiKey(null);
+      setHasStoredOllamaKey(false);
+      setOllamaApiKeyInput("");
+      showToast({ message: "Ollama API key removed", type: "success" });
+      void validateOllamaConnection(ollamaUrl, null);
+    } catch {
+      showToast({ message: "Failed to remove Ollama API key", type: "error" });
+    }
   };
 
   const providers = getAvailableProviders();
@@ -190,6 +272,30 @@ export const AISettings = () => {
 
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
+          <SettingRow label="Mode" description="Run Ollama locally or use Ollama Cloud">
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant={isOllamaCloud ? "secondary" : "default"}
+                size="xs"
+                onClick={handleResetOllamaUrl}
+                className="gap-1.5"
+              >
+                <Laptop />
+                Local
+              </Button>
+              <Button
+                type="button"
+                variant={isOllamaCloud ? "default" : "secondary"}
+                size="xs"
+                onClick={handleUseOllamaCloud}
+                className="gap-1.5"
+              >
+                <Cloud />
+                Cloud
+              </Button>
+            </div>
+          </SettingRow>
           <SettingRow
             label="Endpoint"
             description="Base URL for Ollama API (local, LAN, or cloud)"
@@ -225,10 +331,74 @@ export const AISettings = () => {
               )}
             </div>
           </SettingRow>
+          <SettingRow
+            label="API Key"
+            description={
+              needsApiKey
+                ? "Required for Ollama Cloud — create one at ollama.com/settings/keys"
+                : "Optional — only needed if your Ollama server requires authentication"
+            }
+          >
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="password"
+                value={ollamaApiKeyInput}
+                onChange={(e) => setOllamaApiKeyInput(e.target.value)}
+                placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
+                spellCheck={false}
+                leftIcon={Key}
+                className={cn("w-56", needsApiKey && !hasStoredOllamaKey && "border-warning/60")}
+                autoComplete="off"
+                disabled={isSavingOllamaKey}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                onClick={handleSaveOllamaApiKey}
+                disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
+              >
+                {isSavingOllamaKey ? "Saving…" : "Save"}
+              </Button>
+              {hasStoredOllamaKey && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={handleRemoveOllamaApiKey}
+                  title="Remove saved API key"
+                  aria-label="Remove Ollama API key"
+                  className="text-error hover:bg-error/10"
+                >
+                  <Trash2 />
+                </Button>
+              )}
+            </div>
+          </SettingRow>
+          {needsApiKey && !hasStoredOllamaKey && (
+            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-text-lighter">
+              <AlertCircle className="shrink-0 text-warning" />
+              <span>
+                Ollama Cloud requires an API key.{" "}
+                <a
+                  href="https://ollama.com/settings/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-link hover:underline"
+                >
+                  Get one here <ExternalLink className="size-3" />
+                </a>
+              </span>
+            </div>
+          )}
           {ollamaStatus === "error" && (
             <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-error">
               <AlertCircle className="shrink-0" />
-              <span>Could not connect. Check that Ollama is running at this address.</span>
+              <span>
+                {isOllamaCloud
+                  ? "Could not reach Ollama Cloud. Verify your API key and internet connection."
+                  : "Could not connect. Check that Ollama is running at this address."}
+              </span>
             </div>
           )}
         </Section>
