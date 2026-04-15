@@ -5,6 +5,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { useFffSearch } from "./use-fff-search";
 import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
@@ -35,10 +36,14 @@ export const useGlobalSearch = () => {
     rootFolderPath: loaderRootFolder,
   } = useFileLoader(isGlobalSearchVisible);
 
+  // Rust-side fuzzy search with frecency + git ranking (only when visible)
+  const { hits: fffHits } = useFffSearch(debouncedQuery, isGlobalSearchVisible);
+
   // Search and categorize files
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
     files,
     debouncedQuery,
+    fffHits,
   );
 
   // Handle file selection

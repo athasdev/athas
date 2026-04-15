@@ -60,6 +60,7 @@ import {
   isPdfFile,
 } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
+import { fffSetWorkspace, fffTrackAccess } from "@/features/global-search/lib/rust-api/search";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
@@ -273,6 +274,10 @@ export const useFileSystemStore = createSelectors(
             logWorkspaceOpenStep("start", "setProjectRoot", selected);
             await useFileWatcherStore.getState().setProjectRoot(selected);
             logWorkspaceOpenStep("end", "setProjectRoot", selected, watcherStartedAt);
+
+            fffSetWorkspace(selected).catch((error) => {
+              console.error("[fff] set_workspace failed:", error);
+            });
 
             const gitStatusStartedAt = performance.now();
             logWorkspaceOpenStep("start", "getGitStatus", selected);
@@ -530,6 +535,10 @@ export const useFileSystemStore = createSelectors(
             await useFileWatcherStore.getState().setProjectRoot(path);
             logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
 
+            fffSetWorkspace(path).catch((error) => {
+              console.error("[fff] set_workspace failed:", error);
+            });
+
             const gitStatusStartedAt = performance.now();
             logWorkspaceOpenStep("start", "getGitStatus", path);
             const gitStatus = await getGitStatus(path);
@@ -658,6 +667,12 @@ export const useFileSystemStore = createSelectors(
         if (isDir) {
           await get().toggleFolder(path);
           return;
+        }
+
+        if (!isPreview) {
+          fffTrackAccess(path).catch((error) => {
+            console.error("[fff] track_access failed:", error);
+          });
         }
 
         fileOpenBenchmark.ensureStarted(path, isPreview ? "preview" : "definite");
