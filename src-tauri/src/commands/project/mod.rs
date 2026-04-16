@@ -1,5 +1,6 @@
 pub mod clipboard;
 pub mod fs;
+mod path_guard;
 pub mod remote;
 pub mod remote_credentials;
 pub mod watcher;

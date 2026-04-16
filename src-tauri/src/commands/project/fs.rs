@@ -1,3 +1,4 @@
+use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
 use serde::Serialize;
 use std::{fs, path::Path};
 use tauri::command;
@@ -5,24 +6,30 @@ use walkdir::WalkDir;
 
 #[command]
 pub fn open_file_external(path: String) -> Result<(), String> {
+   // Canonicalize and confine to $HOME so the platform opener cannot be
+   // invoked on system locations or on a scheme-like string that would be
+   // interpreted as a URL by xdg-open.
+   let resolved = require_path_under_home(&path)?;
+   let resolved_str = resolved.to_string_lossy().to_string();
+
    #[cfg(target_os = "macos")]
    {
       std::process::Command::new("open")
-         .arg(&path)
+         .arg(&resolved_str)
          .spawn()
          .map_err(|e| e.to_string())?;
    }
    #[cfg(target_os = "windows")]
    {
       std::process::Command::new("cmd")
-         .args(["/C", "start", "", &path])
+         .args(["/C", "start", "", &resolved_str])
          .spawn()
          .map_err(|e| e.to_string())?;
    }
    #[cfg(target_os = "linux")]
    {
       std::process::Command::new("xdg-open")
-         .arg(&path)
+         .arg(&resolved_str)
          .spawn()
          .map_err(|e| e.to_string())?;
    }
@@ -41,7 +48,11 @@ pub fn get_symlink_info(
    path: String,
    workspace_root: Option<String>,
 ) -> Result<SymlinkInfo, String> {
-   let file_path = Path::new(&path);
+   // Require the symlink container itself to live under $HOME. We intentionally
+   // inspect symlink_metadata of the raw path (not the canonical target) so the
+   // caller can still discover symlinks that point outside the scope.
+   let file_path_buf = require_symlink_container_under_home(&path)?;
+   let file_path = file_path_buf.as_path();
 
    // Use symlink_metadata to get info without following the symlink
    let metadata =
@@ -94,8 +105,10 @@ pub fn get_symlink_info(
 
 #[command]
 pub fn rename_file(source_path: String, target_path: String) -> Result<(), String> {
-   let source = Path::new(&source_path);
-   let target = Path::new(&target_path);
+   let source_buf = require_path_under_home(&source_path)?;
+   let target_buf = require_path_under_home(&target_path)?;
+   let source = source_buf.as_path();
+   let target = target_buf.as_path();
 
    if !source.exists() {
       return Err("Source path does not exist".to_string());
@@ -112,8 +125,10 @@ pub fn rename_file(source_path: String, target_path: String) -> Result<(), Strin
 
 #[command]
 pub fn move_file(source_path: String, target_path: String) -> Result<(), String> {
-   let source = Path::new(&source_path);
-   let target = Path::new(&target_path);
+   let source_buf = require_path_under_home(&source_path)?;
+   let target_buf = require_path_under_home(&target_path)?;
+   let source = source_buf.as_path();
+   let target = target_buf.as_path();
 
    // Validate source exists
    if !source.exists() {
