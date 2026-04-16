@@ -1,4 +1,5 @@
 pub mod editorconfig;
+mod exec_guard;
 pub mod format;
 pub mod lint;
 pub mod search;

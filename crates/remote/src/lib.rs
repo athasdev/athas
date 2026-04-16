@@ -130,7 +130,7 @@ pub async fn ssh_create_file(connection_id: String, file_path: String) -> Result
       .ok_or("Connection not found")?;
 
    let command = format!(
-      "mkdir -p $(dirname {0}) && : > {0}",
+      "mkdir -p \"$(dirname {0})\" && : > {0}",
       shell_quote(&file_path)
    );
    exec_remote_command(session, &command).map(|_| ())
@@ -184,7 +184,7 @@ pub async fn ssh_rename_path(
       .ok_or("Connection not found")?;
 
    let command = format!(
-      "mkdir -p $(dirname {target}) && mv {source} {target}",
+      "mkdir -p \"$(dirname {target})\" && mv {source} {target}",
       source = shell_quote(&source_path),
       target = shell_quote(&target_path),
    );
@@ -206,7 +206,7 @@ pub async fn ssh_copy_path(
 
    let copy_flag = if is_directory { "-R" } else { "" };
    let command = format!(
-      "mkdir -p $(dirname {target}) && cp {flag} {source} {target}",
+      "mkdir -p \"$(dirname {target})\" && cp {flag} {source} {target}",
       flag = copy_flag,
       source = shell_quote(&source_path),
       target = shell_quote(&target_path),

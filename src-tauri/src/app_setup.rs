@@ -1,5 +1,5 @@
 use crate::{
-   commands::{self, FileClipboard, ThemeCache},
+   commands::{self, FffSearchState, FileClipboard, ThemeCache},
    file_events::TauriFileChangeEmitter,
    menu,
    terminal::ManagedTerminalManager as TerminalManager,
@@ -69,6 +69,7 @@ fn register_managed_state(app: &mut tauri::App<Wry>) {
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(Arc::new(ConnectionManager::new()));
+   app.manage(FffSearchState::new());
 }
 
 fn emit_cli_open_requests(app: &tauri::App<Wry>) {

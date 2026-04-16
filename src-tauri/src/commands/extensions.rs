@@ -25,12 +25,16 @@ fn validate_extension_id(extension_id: &str) -> Result<(), String> {
    Ok(())
 }
 
+fn is_allowed_extension_host(host: &str) -> bool {
+   host == "athas.dev" || host.ends_with(".athas.dev")
+}
+
 fn validate_extension_download_url(input: &str) -> Result<(), String> {
    let parsed = Url::parse(input).map_err(|_| "Invalid extension download URL".to_string())?;
    let host = parsed.host_str().unwrap_or_default();
    match parsed.scheme() {
       "https" => {
-         if !cfg!(debug_assertions) && !host.ends_with("athas.dev") {
+         if !cfg!(debug_assertions) && !is_allowed_extension_host(host) {
             return Err("Extension download host is not allowed".to_string());
          }
       }
@@ -431,5 +435,17 @@ mod tests {
       if cfg!(debug_assertions) {
          assert!(validate_extension_download_url("http://localhost:3000/test.tar.gz").is_ok());
       }
+   }
+
+   #[test]
+   fn test_is_allowed_extension_host_rejects_suffix_spoofing() {
+      assert!(is_allowed_extension_host("athas.dev"));
+      assert!(is_allowed_extension_host("cdn.athas.dev"));
+      assert!(is_allowed_extension_host("a.b.athas.dev"));
+      // Suffix-match spoofing attempts must be rejected.
+      assert!(!is_allowed_extension_host("evilathas.dev"));
+      assert!(!is_allowed_extension_host("athas.dev.attacker.example"));
+      assert!(!is_allowed_extension_host("not-athas.dev"));
+      assert!(!is_allowed_extension_host(""));
    }
 }

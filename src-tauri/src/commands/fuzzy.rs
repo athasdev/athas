@@ -1,8 +1,11 @@
+use athas_fff_search::{FffSearch, FffSearchHit};
 use nucleo_matcher::{
    Config, Matcher, Utf32Str,
    pattern::{Atom, AtomKind, CaseMatching, Normalization},
 };
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use tauri::{AppHandle, Manager, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FuzzyMatchItem {
@@ -196,4 +199,61 @@ pub fn filter_completions(request: CompletionFilterRequest) -> Vec<FilteredCompl
    filtered.truncate(50);
 
    filtered
+}
+
+pub struct FffSearchState(pub std::sync::OnceLock<FffSearch>);
+
+impl FffSearchState {
+   pub fn new() -> Self {
+      Self(std::sync::OnceLock::new())
+   }
+
+   fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
+      if let Some(fff) = self.0.get() {
+         return Ok(fff);
+      }
+
+      let data_dir = app
+         .path()
+         .app_data_dir()
+         .map_err(|e| format!("app_data_dir: {e}"))?;
+      let db_path: PathBuf = data_dir.join("fff-frecency.lmdb");
+      let fff = FffSearch::new(db_path).map_err(|e| format!("fff init: {e}"))?;
+      let _ = self.0.set(fff);
+      Ok(self.0.get().unwrap())
+   }
+}
+
+#[tauri::command]
+pub fn fff_set_workspace(
+   app: AppHandle,
+   state: State<'_, FffSearchState>,
+   base_path: String,
+) -> Result<(), String> {
+   let fff = state.get_or_init(&app)?;
+   fff.set_workspace(std::path::Path::new(&base_path))
+      .map_err(|e| format!("fff set_workspace: {e}"))
+}
+
+#[tauri::command]
+pub fn fff_search_files(
+   app: AppHandle,
+   state: State<'_, FffSearchState>,
+   query: String,
+   limit: Option<usize>,
+) -> Result<Vec<FffSearchHit>, String> {
+   let fff = state.get_or_init(&app)?;
+   fff.search(&query, limit.unwrap_or(100))
+      .map_err(|e| format!("fff search: {e}"))
+}
+
+#[tauri::command]
+pub fn fff_track_access(
+   app: AppHandle,
+   state: State<'_, FffSearchState>,
+   path: String,
+) -> Result<(), String> {
+   let fff = state.get_or_init(&app)?;
+   fff.track_access(std::path::Path::new(&path))
+      .map_err(|e| format!("fff track_access: {e}"))
 }

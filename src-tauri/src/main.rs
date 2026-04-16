@@ -295,6 +295,9 @@ fn main() {
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,
+         fff_set_workspace,
+         fff_search_files,
+         fff_track_access,
          // Search commands
          search_files_content,
          // EditorConfig commands
