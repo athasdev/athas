@@ -1,3 +1,4 @@
+use super::exec_guard::{validate_exec_command, validate_exec_env};
 use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,
@@ -63,6 +64,14 @@ async fn format_with_generic(
    file_path: Option<&str>,
    workspace_folder: Option<&str>,
 ) -> Result<FormatResponse, String> {
+   // Defense-in-depth: reject obviously unsafe extension-supplied exec configs
+   // before the template variables get a chance to be substituted.
+   validate_exec_command(&config.command)
+      .map_err(|e| format!("Invalid formatter config: {}", e))?;
+   if let Some(env) = &config.env {
+      validate_exec_env(env).map_err(|e| format!("Invalid formatter config: {}", e))?;
+   }
+
    // Substitute template variables in command and args
    let command = substitute_variables(&config.command, file_path, workspace_folder);
 

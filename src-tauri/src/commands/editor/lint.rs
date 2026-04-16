@@ -1,3 +1,4 @@
+use super::exec_guard::{validate_exec_command, validate_exec_env};
 use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,
@@ -78,6 +79,25 @@ async fn lint_with_generic(
    file_path: Option<&str>,
    workspace_folder: Option<&str>,
 ) -> Result<LintResponse, String> {
+   // Defense-in-depth: reject obviously unsafe extension-supplied exec configs
+   // before the template variables get a chance to be substituted.
+   if let Err(e) = validate_exec_command(&config.command) {
+      return Ok(LintResponse {
+         diagnostics: vec![],
+         success: false,
+         error: Some(format!("Invalid linter config: {}", e)),
+      });
+   }
+   if let Some(env) = &config.env
+      && let Err(e) = validate_exec_env(env)
+   {
+      return Ok(LintResponse {
+         diagnostics: vec![],
+         success: false,
+         error: Some(format!("Invalid linter config: {}", e)),
+      });
+   }
+
    // Substitute template variables in command and args
    let command = substitute_variables(&config.command, file_path, workspace_folder);
 
