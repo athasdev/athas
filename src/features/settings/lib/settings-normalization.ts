@@ -84,6 +84,12 @@ export function normalizeSettings(settings: Settings): Settings {
   }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
+  if (
+    normalizedSettings.iconTheme === "colorful-material" ||
+    normalizedSettings.iconTheme === "seti"
+  ) {
+    normalizedSettings.iconTheme = "material";
+  }
 
   return normalizedSettings;
 }
@@ -94,6 +100,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 ): Settings[K] {
   if (key === "uiFontSize") {
     return normalizeUiFontSize(value as number) as Settings[K];
+  }
+
+  if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
+    return "material" as Settings[K];
   }
 
   return value;

@@ -22,9 +22,16 @@ import { countDiffStats } from "../utils/git-diff-helpers";
 interface InlineGitBlameProps {
   blameLine: GitBlameLine;
   className?: string;
+  fontSize?: number;
+  lineHeight?: number;
 }
 
-export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) => {
+export const InlineGitBlame = ({
+  blameLine,
+  className,
+  fontSize,
+  lineHeight,
+}: InlineGitBlameProps) => {
   const [showCard, setShowCard] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -33,6 +40,9 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
   const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const documentRef = useRef(document);
   const { settings } = useSettingsStore();
+  const effectiveFontSize = fontSize ?? settings.fontSize;
+  const effectiveLineHeight =
+    lineHeight ?? settings.fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
   const [isCopied, setIsCopied] = useState(false);
   const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
@@ -256,12 +266,19 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
   }, [clearHideTimeout, clearShowTimeout]);
 
   return (
-    <div ref={triggerRef} className="relative inline-flex">
+    <div ref={triggerRef} className="relative flex">
       <div
-        className={cn("ml-2 inline-flex items-center gap-1 ", "text-text-lighter", className)}
-        style={{ fontSize: `${settings.fontSize}px`, whiteSpace: "nowrap" }}
+        className={cn("ml-2 flex items-center gap-1", "text-text-lighter", className)}
+        style={{
+          fontSize: `${effectiveFontSize}px`,
+          lineHeight: 1,
+          verticalAlign: "top",
+          whiteSpace: "nowrap",
+        }}
       >
-        <GitBranch size={settings.fontSize} />
+        <span className="flex shrink-0 items-center">
+          <GitBranch size={effectiveFontSize} />
+        </span>
         <span>{blameLine.author},</span>
         <span>{formatRelativeTime(blameLine.time)}</span>
       </div>

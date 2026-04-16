@@ -12,7 +12,7 @@ interface IconThemeState {
 export const useIconThemeStore = create<IconThemeState>()(
   persist(
     (set, get) => ({
-      currentTheme: "colorful-material",
+      currentTheme: "material",
       setCurrentTheme: (theme: string) => set({ currentTheme: theme }),
       getCurrentThemeDefinition: () => {
         const { currentTheme } = get();

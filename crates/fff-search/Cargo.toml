@@ -1,0 +1,10 @@
+[package]
+name = "athas-fff-search"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+fff-search = "0.5"

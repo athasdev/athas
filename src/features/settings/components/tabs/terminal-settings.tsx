@@ -163,6 +163,7 @@ export const TerminalSettings = () => {
             size="xs"
             variant="secondary"
             searchable
+            searchableTrigger="input"
           />
         </SettingRow>
       </Section>
@@ -306,6 +307,7 @@ export const TerminalSettings = () => {
               size="xs"
               variant="secondary"
               searchable
+              searchableTrigger="input"
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT} side="left">

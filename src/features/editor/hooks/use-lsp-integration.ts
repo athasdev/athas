@@ -6,6 +6,7 @@
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
@@ -55,9 +56,10 @@ export const useLspIntegration = ({
 
   // Get workspace path
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const installedExtensions = useExtensionStore.use.installedExtensions();
 
   // Check if current file is supported
-  const isLspSupported = useMemo(() => isFileSupported(filePath), [filePath]);
+  const isLspSupported = useMemo(() => isFileSupported(filePath), [filePath, installedExtensions]);
 
   // LSP store actions
   const lspActions = useLspStore.use.actions();
@@ -174,7 +176,10 @@ export const useLspIntegration = ({
         // First change will increment to 2
         documentVersionsRef.current.set(filePath, 1);
         // Start LSP server for this file type
-        await lspClient.startForFile(filePath, workspacePath);
+        const started = await lspClient.startForFile(filePath, workspacePath);
+        if (!started) {
+          return;
+        }
         // Notify LSP about document open
         await lspClient.notifyDocumentOpen(filePath, value);
         // Mark document as opened so changes can be sent

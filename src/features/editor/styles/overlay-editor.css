@@ -32,15 +32,6 @@
   word-wrap: break-word;
   user-select: none;
   color: var(--color-text, var(--text, #d4d4d4));
-
-  /* Performance optimizations */
-  contain: layout style paint;
-}
-
-/* Inner content that gets transformed for scroll sync */
-.highlight-layer-content {
-  will-change: transform;
-  transform: translateZ(0);
 }
 
 /* Foreground layer - transparent text, visible caret */
@@ -126,12 +117,28 @@
   color: transparent;
 }
 
+.input-layer.selection-transparent::selection,
+textarea.input-layer.selection-transparent::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+
+.input-layer.selection-transparent::-moz-selection,
+textarea.input-layer.selection-transparent::-moz-selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+
 /* Line structure in highlight layer */
 .highlight-layer-line {
   display: block;
   min-height: 1em;
   line-height: inherit;
   box-sizing: border-box;
+}
+
+.editor-selection-box {
+  background: var(--selection-bg, rgba(173, 214, 255, 0.4));
 }
 
 /* Multi-cursor layer */

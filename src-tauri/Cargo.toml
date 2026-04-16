@@ -37,6 +37,7 @@ athas-extensions = { path = "../crates/extensions" }
 athas-terminal = { path = "../crates/terminal" }
 athas-ai = { path = "../crates/ai" }
 athas-github = { path = "../crates/github" }
+athas-fff-search = { path = "../crates/fff-search" }
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
 percent-encoding = "2"

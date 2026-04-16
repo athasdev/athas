@@ -371,7 +371,11 @@ export class LspClient {
     }
   }
 
-  async startForFile(filePath: string, workspacePath: string): Promise<void> {
+  async startForFile(
+    filePath: string,
+    workspacePath: string,
+    options: { forceRetry?: boolean } = {},
+  ): Promise<boolean> {
     try {
       logger.debug("LSPClient", "Starting LSP for file:", filePath);
 
@@ -385,6 +389,9 @@ export class LspClient {
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
+        const message = languageId
+          ? `Language server for ${this.getLanguageDisplayName(languageId)} could not be resolved.`
+          : "No language server is configured for this file.";
         if (languageId) {
           logger.warn(
             "LSPClient",
@@ -393,19 +400,24 @@ export class LspClient {
         } else {
           logger.debug("LSPClient", `No LSP server configured for ${filePath}`);
         }
-        return;
+        throw new Error(message);
       }
 
       logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
+        if (options.forceRetry) {
+          this.failedLanguageServers.delete(serverKey);
+        }
         if (this.failedLanguageServers.has(serverKey)) {
           logger.debug(
             "LSPClient",
             `Skipping LSP restart for ${languageId} in ${workspacePath} after a previous startup failure`,
           );
-          return;
+          throw new Error(
+            `${this.getLanguageDisplayName(languageId)} language server previously failed to start.`,
+          );
         }
       }
 
@@ -444,6 +456,7 @@ export class LspClient {
       }
 
       logger.debug("LSPClient", "LSP started successfully for file:", filePath);
+      return true;
     } catch (error) {
       logger.error("LSPClient", "Failed to start LSP for file:", error);
       const { actions } = useLspStore.getState();
@@ -535,7 +548,10 @@ export class LspClient {
 
       await this.notifyDocumentClose(filePath);
       await this.stopForFile(filePath);
-      await this.startForFile(filePath, workspacePath);
+      const started = await this.startForFile(filePath, workspacePath, { forceRetry: true });
+      if (!started) {
+        throw new Error("Language server failed to start.");
+      }
       await this.notifyDocumentOpen(filePath, content);
     } catch (error) {
       logger.error("LSPClient", "Failed to restart LSP for file:", error);

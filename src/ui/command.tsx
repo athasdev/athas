@@ -172,7 +172,6 @@ interface CommandItemProps {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   className?: string;
-  [key: string]: any;
 }
 
 export const CommandItem = ({
@@ -183,7 +182,11 @@ export const CommandItem = ({
   onMouseLeave,
   className,
   ...props
-}: CommandItemProps) => (
+}: CommandItemProps &
+  Omit<
+    React.ComponentProps<typeof Button>,
+    "children" | "className" | "onClick" | "onMouseEnter" | "onMouseLeave" | "size" | "variant"
+  >) => (
   <Button
     onClick={onClick}
     onMouseEnter={onMouseEnter}

@@ -2,13 +2,13 @@ import { lazy, Suspense } from "react";
 import { useOnboardingStore } from "@/features/onboarding/store";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
-import { useAppBootstrap } from "@/hooks/use-app-bootstrap";
+import { useAppBootstrap } from "@/bootstrap/use-app-bootstrap";
 
 const OnboardingDialog = lazy(() => import("@/features/onboarding/components/onboarding-dialog"));
 const UpdateDialog = lazy(() => import("@/features/settings/components/update-dialog"));
 
 import { MainLayout } from "./features/layout/components/main-layout";
-import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
+import { ZoomIndicator } from "./features/window/components/zoom-indicator";
 import { ToastContainer } from "./ui/toast";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 

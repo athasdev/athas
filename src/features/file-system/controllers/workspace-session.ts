@@ -5,6 +5,8 @@ export interface WorkspaceSessionBuffer {
   path: string;
   name: string;
   isPinned: boolean;
+  url?: string;
+  zoomLevel?: number;
   sessionId?: string;
   initialCommand?: string;
   workingDirectory?: string;

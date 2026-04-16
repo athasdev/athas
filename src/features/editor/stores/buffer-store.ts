@@ -244,6 +244,17 @@ const serializeBufferForSession = (buffer: PaneContent): BufferSession | null =>
     };
   }
 
+  if (buffer.type === "webViewer") {
+    return {
+      type: "webViewer",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+      url: buffer.url,
+      zoomLevel: buffer.zoomLevel,
+    };
+  }
+
   return null;
 };
 
@@ -260,7 +271,8 @@ const saveSessionToStoreImmediate = (
   const activeBufferPath =
     activeBuffer &&
     ((activeBuffer.type === "editor" && !activeBuffer.isVirtual) ||
-      activeBuffer.type === "terminal")
+      activeBuffer.type === "terminal" ||
+      activeBuffer.type === "webViewer")
       ? activeBuffer.path
       : null;
 
@@ -328,6 +340,7 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
         name: "Web Viewer",
         isPreview: false,
         url: spec.url,
+        zoomLevel: spec.zoomLevel,
       };
     case "newTab":
       return {

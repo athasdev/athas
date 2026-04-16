@@ -12,7 +12,7 @@ import {
   getDataURLSize,
   saveImageToFile,
 } from "@/features/image-editor/utils/image-file-utils";
-import { useResizeObserver } from "@/hooks/use-resize-observer";
+import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";

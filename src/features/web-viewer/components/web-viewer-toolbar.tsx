@@ -14,15 +14,20 @@ import {
   X,
   ZoomIn,
 } from "lucide-react";
-import { useState } from "react";
-import type { RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
+import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 
 interface WebViewerToolbarProps {
   canGoBack: boolean;
   canGoForward: boolean;
+  canOpenDevTools: boolean;
+  canOpenExternal: boolean;
+  canCopyUrl: boolean;
   copied: boolean;
+  devToolsTooltip: string;
+  hasUrlError: boolean;
   inputUrl: string;
   isLoading: boolean;
   isLocalhost: boolean;
@@ -48,7 +53,12 @@ interface WebViewerToolbarProps {
 export function WebViewerToolbar({
   canGoBack,
   canGoForward,
+  canOpenDevTools,
+  canOpenExternal,
+  canCopyUrl,
   copied,
+  devToolsTooltip,
+  hasUrlError,
   inputUrl,
   isLoading,
   isLocalhost,
@@ -72,6 +82,7 @@ export function WebViewerToolbar({
 }: WebViewerToolbarProps) {
   const SecurityIcon = isLocalhost ? Shield : isSecure ? Lock : ShieldAlert;
   const [showZoomPopover, setShowZoomPopover] = useState(false);
+  const zoomButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
@@ -112,7 +123,11 @@ export function WebViewerToolbar({
             value={inputUrl}
             onChange={(e) => onInputUrlChange(e.target.value)}
             placeholder="Enter URL..."
-            className="h-7 w-full rounded-md border-border bg-primary-bg pr-20 pl-8 text-[13px] focus:border-accent focus:ring-accent/30"
+            className={`h-7 w-full rounded-md pr-20 pl-8 text-[13px] focus:ring-accent/30 ${
+              hasUrlError
+                ? "border-error/60 bg-error/5 focus:border-error"
+                : "border-border bg-primary-bg focus:border-accent"
+            }`}
           />
           <div className="absolute right-1.5 flex items-center gap-1">
             <Button
@@ -130,6 +145,7 @@ export function WebViewerToolbar({
               variant="ghost"
               size="icon-xs"
               onClick={onCopyUrl}
+              disabled={!canCopyUrl}
               className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
             >
@@ -146,63 +162,83 @@ export function WebViewerToolbar({
       <div className="mx-1.5 h-5 w-px bg-border" />
 
       <div className="flex items-center gap-0.5">
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setShowZoomPopover(!showZoomPopover)}
-            tooltip="Zoom controls"
-          >
-            <ZoomIn />
-          </Button>
-          {showZoomPopover && (
-            <>
-              <div className="fixed inset-0 z-[9998]" onClick={() => setShowZoomPopover(false)} />
-              <div
-                role="menu"
-                className="absolute top-full right-0 z-[9999] mt-1 flex items-center gap-1 rounded-lg border border-border bg-secondary-bg p-1.5 shadow-lg"
-              >
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={onZoomOut}
-                  disabled={zoomLevel <= 0.25}
-                  tooltip="Zoom out"
-                >
-                  <Minus />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onResetZoom}
-                  className="min-w-[44px] px-1.5 text-[11px] text-text-light"
-                  tooltip="Reset zoom"
-                >
-                  {Math.round(zoomLevel * 100)}%
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={onZoomIn}
-                  disabled={zoomLevel >= 3}
-                  tooltip="Zoom in"
-                >
-                  <Plus />
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
+        <Button
+          ref={zoomButtonRef}
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setShowZoomPopover((open) => !open)}
+          tooltip="Zoom controls"
+        >
+          <ZoomIn />
+        </Button>
+        <Dropdown
+          isOpen={showZoomPopover}
+          anchorRef={zoomButtonRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          onClose={() => setShowZoomPopover(false)}
+          className="w-[144px] overflow-hidden rounded-lg p-1.5"
+        >
+          <div className="space-y-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onZoomIn();
+                setShowZoomPopover(false);
+              }}
+              disabled={zoomLevel >= 3}
+              className={dropdownItemClassName("justify-between")}
+            >
+              <span>Zoom in</span>
+              <Plus className="size-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onZoomOut();
+                setShowZoomPopover(false);
+              }}
+              disabled={zoomLevel <= 0.25}
+              className={dropdownItemClassName("justify-between")}
+            >
+              <span>Zoom out</span>
+              <Minus className="size-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onResetZoom();
+                setShowZoomPopover(false);
+              }}
+              className={dropdownItemClassName("justify-between")}
+            >
+              <span>Reset zoom</span>
+              <span className="text-text-lighter text-xs">{Math.round(zoomLevel * 100)}%</span>
+            </Button>
+          </div>
+        </Dropdown>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={onOpenDevTools}
-          tooltip="Open Developer Tools"
+          disabled={!canOpenDevTools}
+          tooltip={devToolsTooltip}
         >
           <Code2 />
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={onOpenExternal} tooltip="Open in browser">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onOpenExternal}
+          disabled={!canOpenExternal}
+          tooltip="Open in browser"
+        >
           <ExternalLink />
         </Button>
       </div>

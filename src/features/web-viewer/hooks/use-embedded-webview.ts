@@ -1,27 +1,84 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
 
 interface UseEmbeddedWebviewOptions {
   bufferId: string;
-  currentUrl: string;
+  initialUrl: string;
   containerRef: RefObject<HTMLDivElement | null>;
   isActive: boolean;
   isVisible: boolean;
   onLoadStateChange: (isLoading: boolean) => void;
 }
 
+interface UseEmbeddedWebviewResult {
+  error: string | null;
+  webviewLabel: string | null;
+}
+
 export function useEmbeddedWebview({
   bufferId,
-  currentUrl,
+  initialUrl,
   containerRef,
   isActive,
   isVisible,
   onLoadStateChange,
-}: UseEmbeddedWebviewOptions) {
+}: UseEmbeddedWebviewOptions): UseEmbeddedWebviewResult {
+  const [error, setError] = useState<string | null>(null);
   const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
+  const lastBoundsRef = useRef<string | null>(null);
+  const lastVisibilityRef = useRef<boolean | null>(null);
+  const overlayHiddenRef = useRef(false);
+
+  const setWebviewVisible = useCallback(async (label: string, visible: boolean) => {
+    if (lastVisibilityRef.current === visible) return;
+
+    try {
+      await invoke("set_webview_visible", {
+        webviewLabel: label,
+        visible,
+      });
+      lastVisibilityRef.current = visible;
+    } catch (error) {
+      console.error("Failed to update webview visibility:", error);
+    }
+  }, []);
+
+  const resizeWebview = useCallback(
+    async (
+      label: string,
+      bounds: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      },
+    ) => {
+      const nextBounds = `${bounds.x}:${bounds.y}:${bounds.width}:${bounds.height}`;
+      if (lastBoundsRef.current === nextBounds) return;
+
+      try {
+        await invoke("resize_embedded_webview", {
+          webviewLabel: label,
+          ...bounds,
+        });
+        lastBoundsRef.current = nextBounds;
+      } catch (error) {
+        console.error("Failed to resize webview:", error);
+      }
+    },
+    [],
+  );
+
+  const syncWebviewVisibility = useCallback(
+    async (label: string) => {
+      await setWebviewVisible(label, isVisible && isActive && !overlayHiddenRef.current);
+    },
+    [isActive, isVisible, setWebviewVisible],
+  );
 
   useEffect(() => {
-    if (!currentUrl) return;
+    if (webviewLabel || !initialUrl) return;
 
     let mounted = true;
     let createdLabel: string | null = null;
@@ -40,7 +97,7 @@ export function useEmbeddedWebview({
 
       try {
         const label = await invoke<string>("create_embedded_webview", {
-          url: currentUrl,
+          url: initialUrl,
           x: clampedX,
           y: clampedY,
           width: clampedWidth,
@@ -53,10 +110,14 @@ export function useEmbeddedWebview({
         }
 
         createdLabel = label;
+        lastBoundsRef.current = null;
+        lastVisibilityRef.current = null;
+        overlayHiddenRef.current = false;
+        setError(null);
         setWebviewLabel(label);
-        onLoadStateChange(false);
       } catch (error) {
         console.error("Failed to create embedded webview:", error);
+        setError(error instanceof Error ? error.message : "Couldn't create webview.");
         onLoadStateChange(false);
       }
     };
@@ -68,8 +129,11 @@ export function useEmbeddedWebview({
       if (createdLabel) {
         void invoke("close_embedded_webview", { webviewLabel: createdLabel }).catch(console.error);
       }
+      lastBoundsRef.current = null;
+      lastVisibilityRef.current = null;
+      overlayHiddenRef.current = false;
     };
-  }, [bufferId, containerRef, currentUrl, onLoadStateChange]);
+  }, [bufferId, containerRef, initialUrl, onLoadStateChange]);
 
   useEffect(() => {
     if (!webviewLabel || !containerRef.current || !isVisible) return;
@@ -117,14 +181,7 @@ export function useEmbeddedWebview({
 
       // If not in viewport, hide the webview
       if (!isInViewport) {
-        try {
-          await invoke("set_webview_visible", {
-            webviewLabel,
-            visible: false,
-          });
-        } catch (error) {
-          console.error("Failed to hide webview:", error);
-        }
+        await setWebviewVisible(webviewLabel, false);
         return;
       }
 
@@ -135,26 +192,17 @@ export function useEmbeddedWebview({
       const clampedHeight = Math.min(rect.height, window.innerHeight - clampedY);
 
       const nextBounds = `${clampedX}:${clampedY}:${clampedWidth}:${clampedHeight}`;
-      if (nextBounds === lastBounds) return;
-      lastBounds = nextBounds;
-
-      try {
-        await invoke("resize_embedded_webview", {
-          webviewLabel,
+      if (nextBounds !== lastBounds) {
+        lastBounds = nextBounds;
+        await resizeWebview(webviewLabel, {
           x: clampedX,
           y: clampedY,
           width: clampedWidth,
           height: clampedHeight,
         });
-
-        // Make sure it's visible after repositioning
-        await invoke("set_webview_visible", {
-          webviewLabel,
-          visible: true,
-        });
-      } catch (error) {
-        console.error("Failed to resize webview:", error);
       }
+
+      await syncWebviewVisibility(webviewLabel);
     };
 
     const scheduleUpdatePosition = () => {
@@ -190,89 +238,54 @@ export function useEmbeddedWebview({
         parent.removeEventListener("scroll", scheduleUpdatePosition);
       }
     };
-  }, [containerRef, isVisible, webviewLabel]);
+  }, [
+    containerRef,
+    isVisible,
+    resizeWebview,
+    setWebviewVisible,
+    syncWebviewVisibility,
+    webviewLabel,
+  ]);
 
   useEffect(() => {
     if (!webviewLabel) return;
-    void invoke("set_webview_visible", {
-      webviewLabel,
-      visible: isVisible && isActive,
-    }).catch(console.error);
-  }, [isActive, isVisible, webviewLabel]);
+    void syncWebviewVisibility(webviewLabel);
+  }, [syncWebviewVisibility, webviewLabel]);
 
   // Hide webview when modals, context menus, or overlays appear
   useEffect(() => {
     if (!webviewLabel) return;
 
-    let debounceTimer: NodeJS.Timeout | null = null;
+    let animationFrameId: number | null = null;
     let lastOverlayState = false;
-
-    const checkForOverlay = () => {
-      // Only hide the webview for overlays that actually cover it.
-      // Full-screen dialogs always overlap:
-      const hasDialog = document.querySelector('[role="dialog"][data-state="open"]');
-      if (hasDialog) return true;
-
-      // For menus and context menus, check if they visually overlap the webview container
-      const container = containerRef.current;
-      if (!container) return false;
-      const containerRect = container.getBoundingClientRect();
-
-      const overlays = document.querySelectorAll(
-        '[role="menu"], .context-menu:not([style*="display: none"])',
-      );
-      for (const overlay of overlays) {
-        const overlayRect = overlay.getBoundingClientRect();
-        const overlaps =
-          overlayRect.right > containerRect.left &&
-          overlayRect.left < containerRect.right &&
-          overlayRect.bottom > containerRect.top &&
-          overlayRect.top < containerRect.bottom;
-        if (overlaps) return true;
-      }
-
-      return false;
-    };
 
     const updateVisibility = (shouldHide: boolean) => {
       if (shouldHide !== lastOverlayState) {
         lastOverlayState = shouldHide;
-
-        if (shouldHide) {
-          void invoke("set_webview_visible", {
-            webviewLabel,
-            visible: false,
-          }).catch(console.error);
-        } else if (isVisible && isActive) {
-          void invoke("set_webview_visible", {
-            webviewLabel,
-            visible: true,
-          }).catch(console.error);
-        }
+        overlayHiddenRef.current = shouldHide;
+        void syncWebviewVisibility(webviewLabel);
       }
     };
 
     const handleOverlayChange = () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(() => {
-        updateVisibility(checkForOverlay());
-      }, 50);
+      if (animationFrameId !== null) return;
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        updateVisibility(hasOverlayCoveringWebview(containerRef.current));
+      });
     };
 
     const handleContextMenu = () => {
       // Context menu açıldığında hemen gizle
       if (isVisible && isActive) {
-        void invoke("set_webview_visible", {
-          webviewLabel,
-          visible: false,
-        }).catch(console.error);
+        overlayHiddenRef.current = true;
+        void syncWebviewVisibility(webviewLabel);
         lastOverlayState = true;
       }
       // Sonra tekrar kontrol et (menu kapanmış olabilir)
-      setTimeout(() => updateVisibility(checkForOverlay()), 100);
+      window.setTimeout(() => {
+        updateVisibility(hasOverlayCoveringWebview(containerRef.current));
+      }, 100);
     };
 
     // Listen for DOM mutations to detect overlays
@@ -280,8 +293,6 @@ export function useEmbeddedWebview({
     observer.observe(document.body, {
       childList: true,
       subtree: true,
-      attributes: true,
-      attributeFilter: ["role", "data-state"],
     });
 
     // Listen for context menu events
@@ -291,14 +302,14 @@ export function useEmbeddedWebview({
     document.addEventListener("click", handleOverlayChange);
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
       }
       observer.disconnect();
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("click", handleOverlayChange);
     };
-  }, [isActive, isVisible, webviewLabel]);
+  }, [isActive, isVisible, syncWebviewVisibility, webviewLabel]);
 
-  return webviewLabel;
+  return { error, webviewLabel };
 }

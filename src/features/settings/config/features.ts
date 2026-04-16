@@ -2,16 +2,17 @@ import {
   Brain,
   Bug,
   GitBranch,
-  Github,
+  GitPullRequest,
+  Icon,
   MessageSquare,
   Navigation,
   Search,
   Server,
   Terminal as TerminalIcon,
 } from "lucide-react";
-import type { CoreFeature } from "../types/feature";
+import type { CoreFeature, CoreFeaturesState } from "../types/feature";
 
-export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
+export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFeature[] => [
   {
     id: "git",
     name: "Git Integration",
@@ -23,7 +24,7 @@ export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
     id: "github",
     name: "GitHub Integration",
     description: "Pull requests, issues, and GitHub features",
-    icon: Github,
+    icon: GitPullRequest,
     enabled: coreFeatures.github,
   },
   {

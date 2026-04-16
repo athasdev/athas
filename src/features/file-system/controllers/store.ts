@@ -60,6 +60,7 @@ import {
   isPdfFile,
 } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
+import { fffSetWorkspace, fffTrackAccess } from "@/features/global-search/lib/rust-api/search";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
@@ -153,6 +154,17 @@ const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => 
       initialCommand: buffer.initialCommand,
       workingDirectory: buffer.workingDirectory,
       remoteConnectionId: buffer.remoteConnectionId,
+    };
+  }
+
+  if (buffer.type === "webViewer") {
+    return {
+      type: "webViewer",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+      url: buffer.url,
+      zoomLevel: buffer.zoomLevel,
     };
   }
 
@@ -262,6 +274,10 @@ export const useFileSystemStore = createSelectors(
             logWorkspaceOpenStep("start", "setProjectRoot", selected);
             await useFileWatcherStore.getState().setProjectRoot(selected);
             logWorkspaceOpenStep("end", "setProjectRoot", selected, watcherStartedAt);
+
+            fffSetWorkspace(selected).catch((error) => {
+              console.error("[fff] set_workspace failed:", error);
+            });
 
             const gitStatusStartedAt = performance.now();
             logWorkspaceOpenStep("start", "getGitStatus", selected);
@@ -398,6 +414,20 @@ export const useFileSystemStore = createSelectors(
               continue;
             }
 
+            if (buffer.type === "webViewer") {
+              const restoredBufferId = bufferActions.openContent({
+                type: "webViewer",
+                url: buffer.url ?? "about:blank",
+                zoomLevel: buffer.zoomLevel,
+              });
+
+              if (buffer.isPinned) {
+                bufferActions.handleTabPin(restoredBufferId);
+              }
+
+              continue;
+            }
+
             frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
               projectPath,
               bufferPath: buffer.path,
@@ -504,6 +534,10 @@ export const useFileSystemStore = createSelectors(
             logWorkspaceOpenStep("start", "setProjectRoot", path);
             await useFileWatcherStore.getState().setProjectRoot(path);
             logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
+
+            fffSetWorkspace(path).catch((error) => {
+              console.error("[fff] set_workspace failed:", error);
+            });
 
             const gitStatusStartedAt = performance.now();
             logWorkspaceOpenStep("start", "getGitStatus", path);
@@ -633,6 +667,12 @@ export const useFileSystemStore = createSelectors(
         if (isDir) {
           await get().toggleFolder(path);
           return;
+        }
+
+        if (!isPreview) {
+          fffTrackAccess(path).catch((error) => {
+            console.error("[fff] track_access failed:", error);
+          });
         }
 
         fileOpenBenchmark.ensureStarted(path, isPreview ? "preview" : "definite");
@@ -2012,25 +2052,36 @@ export const useFileSystemStore = createSelectors(
 
                 const activeSessionBuffer = restorePlan.initialBuffer;
                 if (activeSessionBuffer) {
-                  const restoreActiveStartedAt = performance.now();
-                  logWorkspaceOpenStep(
-                    "start",
-                    "switchToProject:restoreActiveBuffer",
-                    activeSessionBuffer.path,
-                  );
-                  await get().handleFileSelect(activeSessionBuffer.path, false);
-                  logWorkspaceOpenStep(
-                    "end",
-                    "switchToProject:restoreActiveBuffer",
-                    activeSessionBuffer.path,
-                    restoreActiveStartedAt,
-                  );
-                  if (activeSessionBuffer.isPinned) {
-                    const openedBuffer = useBufferStore
-                      .getState()
-                      .buffers.find((buffer) => buffer.path === activeSessionBuffer.path);
-                    if (openedBuffer && !openedBuffer.isPinned) {
-                      bufferActions.handleTabPin(openedBuffer.id);
+                  if (activeSessionBuffer.type === "webViewer") {
+                    const restoredBufferId = bufferActions.openContent({
+                      type: "webViewer",
+                      url: activeSessionBuffer.url ?? "about:blank",
+                      zoomLevel: activeSessionBuffer.zoomLevel,
+                    });
+                    if (activeSessionBuffer.isPinned) {
+                      bufferActions.handleTabPin(restoredBufferId);
+                    }
+                  } else {
+                    const restoreActiveStartedAt = performance.now();
+                    logWorkspaceOpenStep(
+                      "start",
+                      "switchToProject:restoreActiveBuffer",
+                      activeSessionBuffer.path,
+                    );
+                    await get().handleFileSelect(activeSessionBuffer.path, false);
+                    logWorkspaceOpenStep(
+                      "end",
+                      "switchToProject:restoreActiveBuffer",
+                      activeSessionBuffer.path,
+                      restoreActiveStartedAt,
+                    );
+                    if (activeSessionBuffer.isPinned) {
+                      const openedBuffer = useBufferStore
+                        .getState()
+                        .buffers.find((buffer) => buffer.path === activeSessionBuffer.path);
+                      if (openedBuffer && !openedBuffer.isPinned) {
+                        bufferActions.handleTabPin(openedBuffer.id);
+                      }
                     }
                   }
                 }

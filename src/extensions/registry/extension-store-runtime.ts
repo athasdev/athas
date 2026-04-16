@@ -359,8 +359,6 @@ export function buildRuntimeManifest(
           default: toolPaths.lsp,
         },
       };
-    } else {
-      delete runtimeManifest.lsp;
     }
   }
 
@@ -372,8 +370,6 @@ export function buildRuntimeManifest(
           default: toolPaths.formatter,
         },
       };
-    } else {
-      delete runtimeManifest.formatter;
     }
   }
 
@@ -385,8 +381,6 @@ export function buildRuntimeManifest(
           default: toolPaths.linter,
         },
       };
-    } else {
-      delete runtimeManifest.linter;
     }
   }
 

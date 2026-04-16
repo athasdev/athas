@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { SidebarView } from "@/features/layout/components/sidebar/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { AIWorkspaceSessionSnapshot } from "@/features/ai/store/types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
@@ -25,7 +25,16 @@ interface TerminalBufferSession {
   remoteConnectionId?: string;
 }
 
-export type BufferSession = EditorBufferSession | TerminalBufferSession;
+interface WebViewerBufferSession {
+  type: "webViewer";
+  path: string;
+  name: string;
+  isPinned: boolean;
+  url: string;
+  zoomLevel?: number;
+}
+
+export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;
 
 interface ProjectSession {
   projectPath: string;

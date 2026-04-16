@@ -1,6 +1,7 @@
 import type { EditorAPI } from "@/features/editor/extensions/types";
 import { BaseThemeExtension } from "./base-theme-extension";
 // Import all theme JSON files
+import ayuThemes from "./builtin/ayu.json";
 import athasThemes from "./builtin/athas.json";
 import catppuccinThemes from "./builtin/catppuccin.json";
 import christmasThemes from "./builtin/christmas.json";
@@ -45,6 +46,7 @@ export class ThemeLoader extends BaseThemeExtension {
 
       // Combine all theme files
       const allThemeFiles: ThemeFile[] = [
+        ayuThemes as ThemeFile,
         athasThemes as ThemeFile,
         catppuccinThemes as ThemeFile,
         christmasThemes as ThemeFile,

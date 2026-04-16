@@ -138,8 +138,6 @@ fn main() {
          set_webview_visible,
          open_webview_devtools,
          set_webview_zoom,
-         poll_webview_shortcut,
-         poll_webview_metadata,
          // File watcher commands
          start_watching,
          stop_watching,
@@ -297,6 +295,9 @@ fn main() {
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,
+         fff_set_workspace,
+         fff_search_files,
+         fff_track_access,
          // Search commands
          search_files_content,
          // EditorConfig commands

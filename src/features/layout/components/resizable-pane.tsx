@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
-import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
+import { shouldRequestPaneCollapse } from "../utils/resizable-pane-utils";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 

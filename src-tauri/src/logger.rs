@@ -1,11 +1,13 @@
 use colored::Colorize as _;
 use log::LevelFilter;
 use tauri::{Runtime, plugin::TauriPlugin};
-use tauri_plugin_log::Builder;
+use tauri_plugin_log::{Builder, Target, TargetKind};
 
 /// app logs are written by tauri-plugin-log (path varies by platform/bundle identifier)
 pub fn init<R: Runtime>(level: LevelFilter) -> TauriPlugin<R> {
    Builder::new()
+      .clear_targets()
+      .target(Target::new(TargetKind::LogDir { file_name: None }))
       .level(LevelFilter::Warn) // external crates unrelated to "athas"
       .level_for("athas", level) // current app package target
       .level_for("athas_code", level) // backward-compatible target filter

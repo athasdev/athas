@@ -371,7 +371,7 @@ export const ExtensionsSettings = () => {
     } else if (extension.category === "theme") {
       updateSetting("theme", extension.isInstalled ? "one-dark" : extension.id);
     } else if (extension.category === "icon-theme") {
-      updateSetting("iconTheme", extension.isInstalled ? "colorful-material" : extension.id);
+      updateSetting("iconTheme", extension.isInstalled ? "material" : extension.id);
     }
 
     setTimeout(() => loadAllExtensions(), 100);

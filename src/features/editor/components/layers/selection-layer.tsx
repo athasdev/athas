@@ -197,7 +197,7 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         {selectionBoxes.map((box, index) => (
           <div
             key={index}
-            className="absolute bg-selection-bg"
+            className="editor-selection-box absolute"
             style={{
               top: `${box.top}px`,
               left: `${box.left}px`,

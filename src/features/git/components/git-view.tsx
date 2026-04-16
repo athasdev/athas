@@ -228,9 +228,15 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     if (!settings.autoRefreshGitStatus) return;
 
     let refreshTimeout: NodeJS.Timeout | null = null;
+    type FileExternalChangeDetail = {
+      event_type: string;
+      path: string;
+    };
 
-    const handleFileChange = (event: CustomEvent) => {
-      const { path } = event.detail;
+    const handleFileChange = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+
+      const { path } = event.detail as FileExternalChangeDetail;
 
       if (activeRepoPath && path.startsWith(activeRepoPath)) {
         if (refreshTimeout) {
@@ -243,10 +249,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
     };
 
-    window.addEventListener("file-external-change", handleFileChange as any);
+    window.addEventListener("file-external-change", handleFileChange);
 
     return () => {
-      window.removeEventListener("file-external-change", handleFileChange as any);
+      window.removeEventListener("file-external-change", handleFileChange);
       if (refreshTimeout) {
         clearTimeout(refreshTimeout);
       }

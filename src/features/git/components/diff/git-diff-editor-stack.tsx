@@ -3,7 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   Columns2,
-  GithubIcon,
+  ExternalLink,
   Rows3,
   Trash2,
 } from "lucide-react";
@@ -533,7 +533,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                   className="h-5 gap-1 px-1.5 text-text-lighter ui-text-sm"
                   aria-label="View on GitHub"
                 >
-                  <GithubIcon />
+                  <ExternalLink />
                   View on GitHub
                 </Button>
               </Tooltip>

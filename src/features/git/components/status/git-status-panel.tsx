@@ -11,10 +11,9 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useContextMenu } from "@/hooks/use-context-menu";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { ContextMenu } from "@/ui/context-menu";
+import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,

@@ -1,13 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionConfigOption, SessionMode } from "@/features/ai/types/acp";
-import {
-  getAvailableProviders,
-  getProviderById,
-  updateAgentStatus,
-} from "@/features/ai/types/providers";
+import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
@@ -19,10 +16,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
-import {
-  getProvider,
-  setOllamaBaseUrl,
-} from "@/features/ai/services/providers/ai-provider-registry";
+import { setOllamaBaseUrl } from "@/features/ai/services/providers/ai-provider-registry";
 import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
@@ -59,21 +53,6 @@ export const AISettings = () => {
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
-  const dynamicModels = useAIChatStore((state) => state.dynamicModels);
-  const setDynamicModels = useAIChatStore((state) => state.setDynamicModels);
-  const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
-  const saveApiKey = useAIChatStore((state) => state.saveApiKey);
-  const removeApiKey = useAIChatStore((state) => state.removeApiKey);
-  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
-  const [isLoadingProviderModels, setIsLoadingProviderModels] = useState(false);
-  const [providerModelError, setProviderModelError] = useState<string | null>(null);
-  const [selectedApiKeyProviderId, setSelectedApiKeyProviderId] = useState("openai");
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
-  const [apiKeyStatus, setApiKeyStatus] = useState<{
-    status: "idle" | "success" | "error";
-    message: string;
-  }>({ status: "idle", message: "" });
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -108,10 +87,6 @@ export const AISettings = () => {
     setOllamaBaseUrl(url);
   }, []);
 
-  useEffect(() => {
-    void checkAllProviderApiKeys();
-  }, [checkAllProviderApiKeys]);
-
   const validateOllamaConnection = useCallback(async (url: string) => {
     setOllamaStatus("checking");
     const ok = await checkOllamaConnection(url);
@@ -139,137 +114,14 @@ export const AISettings = () => {
   };
 
   const providers = getAvailableProviders();
-  const currentProvider = getProviderById(settings.aiProviderId);
-  const currentProviderModels =
-    dynamicModels[settings.aiProviderId] || currentProvider?.models || [];
-  const providerOptions = useMemo(
-    () =>
-      providers.map((provider) => ({
-        value: provider.id,
-        label: provider.name,
-      })),
-    [providers],
-  );
-  const modelOptions = useMemo(
-    () =>
-      currentProviderModels.map((model) => ({
-        value: model.id,
-        label: model.name,
-      })),
-    [currentProviderModels],
-  );
-  const apiKeyProviders = useMemo(
-    () => providers.filter((provider) => provider.requiresApiKey),
-    [providers],
-  );
-  const apiKeyProviderOptions = useMemo(
-    () =>
-      apiKeyProviders.map((provider) => ({
-        value: provider.id,
-        label: provider.name,
-      })),
-    [apiKeyProviders],
-  );
-  const selectedApiKeyProvider = useMemo(
-    () => getProviderById(selectedApiKeyProviderId) ?? apiKeyProviders[0],
-    [apiKeyProviders, selectedApiKeyProviderId],
-  );
-  const selectedApiKeyProviderHasKey = selectedApiKeyProvider
-    ? hasProviderApiKey(selectedApiKeyProvider.id)
-    : false;
-
-  useEffect(() => {
-    if (apiKeyProviders.length === 0) return;
-    if (!apiKeyProviders.some((provider) => provider.id === selectedApiKeyProviderId)) {
-      setSelectedApiKeyProviderId(apiKeyProviders[0].id);
-    }
-  }, [apiKeyProviders, selectedApiKeyProviderId]);
 
   const handleProviderChange = (newProviderId: string) => {
     const provider = providers.find((p) => p.id === newProviderId);
     updateSetting("aiProviderId", newProviderId);
-    const nextModels = dynamicModels[newProviderId] || provider?.models || [];
-    if (nextModels.length > 0) {
-      updateSetting("aiModelId", nextModels[0].id);
+    if (provider && provider.models.length > 0) {
+      updateSetting("aiModelId", provider.models[0].id);
     }
   };
-
-  const loadProviderModels = useCallback(async () => {
-    const providerId = settings.aiProviderId;
-    const provider = getProviderById(providerId);
-    const instance = getProvider(providerId);
-
-    setProviderModelError(null);
-
-    if (!provider || !instance?.getModels || provider.requiresApiKey) {
-      return;
-    }
-
-    setIsLoadingProviderModels(true);
-    try {
-      const models = await instance.getModels();
-      if (models.length > 0) {
-        setDynamicModels(providerId, models);
-        if (!models.some((model) => model.id === settings.aiModelId)) {
-          updateSetting("aiModelId", models[0].id);
-        }
-      } else {
-        setDynamicModels(providerId, []);
-        setProviderModelError(
-          providerId === "ollama"
-            ? "No models detected. Please install a model in Ollama."
-            : "No models found for this provider.",
-        );
-      }
-    } catch {
-      setProviderModelError("Failed to load provider models.");
-    } finally {
-      setIsLoadingProviderModels(false);
-    }
-  }, [setDynamicModels, settings.aiModelId, settings.aiProviderId, updateSetting]);
-
-  useEffect(() => {
-    void loadProviderModels();
-  }, [loadProviderModels]);
-
-  const handleSaveProviderApiKey = useCallback(async () => {
-    if (!selectedApiKeyProvider || !apiKeyInput.trim()) {
-      setApiKeyStatus({ status: "error", message: "Enter an API key first." });
-      return;
-    }
-
-    setIsSavingApiKey(true);
-    setApiKeyStatus({ status: "idle", message: "" });
-
-    try {
-      const isValid = await saveApiKey(selectedApiKeyProvider.id, apiKeyInput.trim());
-      if (isValid) {
-        setApiKeyInput("");
-        setApiKeyStatus({ status: "success", message: "API key saved." });
-      } else {
-        setApiKeyStatus({ status: "error", message: "API key validation failed." });
-      }
-    } finally {
-      setIsSavingApiKey(false);
-    }
-  }, [apiKeyInput, saveApiKey, selectedApiKeyProvider]);
-
-  const handleRemoveProviderApiKey = useCallback(async () => {
-    if (!selectedApiKeyProvider) return;
-
-    setIsSavingApiKey(true);
-    setApiKeyStatus({ status: "idle", message: "" });
-
-    try {
-      await removeApiKey(selectedApiKeyProvider.id);
-      setApiKeyInput("");
-      setApiKeyStatus({ status: "success", message: "API key removed." });
-    } catch {
-      setApiKeyStatus({ status: "error", message: "Failed to remove API key." });
-    } finally {
-      setIsSavingApiKey(false);
-    }
-  }, [removeApiKey, selectedApiKeyProvider]);
 
   const loadAutocompleteModels = async () => {
     setIsLoadingAutocompleteModels(true);
@@ -316,8 +168,8 @@ export const AISettings = () => {
           </div>
         ) : null}
         <SettingRow
-          label="Provider"
-          description="Choose the provider used by Athas Agent"
+          label="Provider & Model"
+          description="Choose the provider and model used by Athas Agent"
           onReset={() => {
             updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
             updateSetting("aiModelId", getDefaultSetting("aiModelId"));
@@ -327,53 +179,13 @@ export const AISettings = () => {
             settings.aiModelId !== getDefaultSetting("aiModelId")
           }
         >
-          <Select
-            value={settings.aiProviderId}
-            options={providerOptions}
-            onChange={handleProviderChange}
-            size="xs"
-            variant="secondary"
-            searchable
-            className={SETTINGS_CONTROL_WIDTHS.xwide}
+          <ProviderModelSelector
+            providerId={settings.aiProviderId}
+            modelId={settings.aiModelId}
+            onProviderChange={(id) => handleProviderChange(id)}
+            onModelChange={(id) => updateSetting("aiModelId", id)}
           />
         </SettingRow>
-
-        <SettingRow
-          label="Model"
-          description="Choose the model used by Athas Agent"
-          onReset={() => updateSetting("aiModelId", getDefaultSetting("aiModelId"))}
-          canReset={settings.aiModelId !== getDefaultSetting("aiModelId")}
-        >
-          <div className="flex items-center gap-2">
-            <Select
-              value={settings.aiModelId}
-              options={modelOptions}
-              onChange={(value) => updateSetting("aiModelId", value)}
-              size="xs"
-              variant="secondary"
-              searchable
-              className={SETTINGS_CONTROL_WIDTHS.xwide}
-              disabled={modelOptions.length === 0}
-            />
-            <Button
-              variant="secondary"
-              size="icon-xs"
-              onClick={() => void loadProviderModels()}
-              disabled={isLoadingProviderModels}
-              tooltip="Refresh model list"
-              aria-label="Refresh provider model list"
-            >
-              <RefreshCw className={cn(isLoadingProviderModels && "animate-spin")} />
-            </Button>
-          </div>
-        </SettingRow>
-
-        {providerModelError && (
-          <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
-            <AlertCircle className="shrink-0" />
-            <span>{providerModelError}</span>
-          </div>
-        )}
       </Section>
 
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
@@ -405,7 +217,7 @@ export const AISettings = () => {
                   variant="secondary"
                   size="icon-xs"
                   onClick={handleResetOllamaUrl}
-                  tooltip="Reset to default"
+                  title="Reset to default"
                   aria-label="Reset Ollama URL to default"
                 >
                   <RotateCcw />
@@ -437,96 +249,6 @@ export const AISettings = () => {
           ))}
         </Section>
       )}
-
-      <Section title="API Keys">
-        {!byokAllowedByPolicy ? (
-          <div className="ui-font ui-text-sm rounded-xl border border-border bg-secondary-bg/60 px-3 py-2 text-text-lighter">
-            Your enterprise policy blocks BYOK for chat providers.
-          </div>
-        ) : (
-          <>
-            <SettingRow label="Provider" description="Choose which provider key to manage">
-              <Select
-                value={selectedApiKeyProvider?.id || ""}
-                options={apiKeyProviderOptions}
-                onChange={(value) => {
-                  setSelectedApiKeyProviderId(value);
-                  setApiKeyInput("");
-                  setApiKeyStatus({ status: "idle", message: "" });
-                }}
-                size="xs"
-                variant="secondary"
-                className={SETTINGS_CONTROL_WIDTHS.default}
-              />
-            </SettingRow>
-
-            <SettingRow
-              label="Add New API Key"
-              description={
-                selectedApiKeyProviderHasKey
-                  ? "This provider already has a saved key. Saving again will replace it."
-                  : "Store a key for the selected provider."
-              }
-            >
-              <div className="flex items-center gap-2">
-                <Input
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(event) => setApiKeyInput(event.target.value)}
-                  placeholder={
-                    selectedApiKeyProvider ? `${selectedApiKeyProvider.name} API key` : "API key"
-                  }
-                  className={SETTINGS_CONTROL_WIDTHS.textWide}
-                  disabled={isSavingApiKey || !selectedApiKeyProvider}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  onClick={() => void handleSaveProviderApiKey()}
-                  disabled={!apiKeyInput.trim() || isSavingApiKey || !selectedApiKeyProvider}
-                >
-                  {isSavingApiKey ? "Saving..." : "Save"}
-                </Button>
-                {selectedApiKeyProviderHasKey && selectedApiKeyProvider ? (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="xs"
-                    onClick={() => void handleRemoveProviderApiKey()}
-                    disabled={isSavingApiKey}
-                  >
-                    Remove
-                  </Button>
-                ) : null}
-              </div>
-            </SettingRow>
-
-            {selectedApiKeyProvider ? (
-              <div className="ui-font ui-text-sm px-1 text-text-lighter">
-                {selectedApiKeyProvider.name}:{" "}
-                {selectedApiKeyProviderHasKey ? "API key saved." : "No API key saved."}
-              </div>
-            ) : null}
-
-            {apiKeyStatus.status !== "idle" ? (
-              <div
-                className={cn(
-                  "ui-font ui-text-sm flex items-center gap-1.5 px-1",
-                  apiKeyStatus.status === "success" ? "text-success" : "text-error",
-                )}
-              >
-                {apiKeyStatus.status === "success" ? (
-                  <CheckCircle className="shrink-0" />
-                ) : (
-                  <AlertCircle className="shrink-0" />
-                )}
-                <span>{apiKeyStatus.message}</span>
-              </div>
-            ) : null}
-          </>
-        )}
-      </Section>
 
       {availableModes.length > 0 && (
         <Section title="Agent Defaults">
@@ -624,6 +346,7 @@ export const AISettings = () => {
               size="xs"
               variant="secondary"
               searchable
+              searchableTrigger="input"
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               disabled={!aiCompletionAllowedByPolicy}
             />
@@ -632,7 +355,7 @@ export const AISettings = () => {
               size="xs"
               onClick={loadAutocompleteModels}
               disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-              tooltip="Refresh model list"
+              title="Refresh model list"
             >
               <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
             </Button>

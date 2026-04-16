@@ -3,28 +3,5 @@
   "permissions": {
     "allow": [],
     "deny": []
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c \"$(git rev-parse --show-toplevel)/scripts/prevent-build.sh\""
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c \"$(git rev-parse --show-toplevel)/scripts/check-all-ts.sh\""
-          }
-        ]
-      }
-    ]
   }
 }

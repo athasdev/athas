@@ -1204,6 +1204,7 @@ export function Editor({
             ref={gitBlameRef}
             filePath={filePath}
             cursorLine={cursorPosition.line}
+            cursorColumn={cursorPosition.column}
             visualCursorLine={visualCursorLine}
             visualContent={displayContent}
             fontSize={fontSize}

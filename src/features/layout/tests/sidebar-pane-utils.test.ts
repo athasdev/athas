@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { getActiveSidebarView, resolveSidebarPaneClick } from "./sidebar-pane-utils";
+import { getActiveSidebarView, resolveSidebarPaneClick } from "../utils/sidebar-pane-utils";
 
 describe("getActiveSidebarView", () => {
   test("defaults to files when no alternate pane is active", () => {

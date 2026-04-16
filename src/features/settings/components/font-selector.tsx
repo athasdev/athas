@@ -103,6 +103,7 @@ export const FontSelector = ({
       size="xs"
       variant="secondary"
       searchable
+      searchableTrigger="input"
     />
   );
 };

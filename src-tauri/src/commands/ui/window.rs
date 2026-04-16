@@ -2,11 +2,30 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
-use tauri::{AppHandle, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command};
+use tauri::{
+   AppHandle, Emitter, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command,
+   webview::PageLoadEvent,
+};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmbeddedWebviewPageLoadEvent {
+   webview_label: String,
+   url: String,
+   event: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmbeddedWebviewLocationChangeEvent {
+   webview_label: String,
+   url: String,
+   navigation_type: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -118,82 +137,175 @@ pub async fn create_app_window(
    create_app_window_internal(&app, request)
 }
 
-/// Keyboard shortcut interceptor for web viewer
-/// Captures app-level shortcuts and stores them for polling
-const SHORTCUT_INTERCEPTOR_SCRIPT: &str = r#"
-(function() {
-  if (window.__ATHAS_SHORTCUTS_LOADED__) return;
-  window.__ATHAS_SHORTCUTS_LOADED__ = true;
+fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
+   let encoded_label = serde_json::to_string(webview_label)
+      .map_err(|e| format!("Failed to serialize webview label: {e}"))?;
 
-  window.__ATHAS_PENDING_SHORTCUT__ = null;
+   Ok(format!(
+      r#"
+(function() {{
+  if (window.__ATHAS_WEBVIEW_BRIDGE_LOADED__) return;
+  window.__ATHAS_WEBVIEW_BRIDGE_LOADED__ = true;
 
-  document.addEventListener('keydown', function(e) {
+  const WEBVIEW_LABEL = {encoded_label};
+
+  function emit(event, payload) {{
+    const invoke = window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke;
+    if (typeof invoke !== 'function') return;
+    void invoke('plugin:event|emit', {{ event, payload }}).catch(() => {{}});
+  }}
+
+  function emitShortcut(shortcut) {{
+    emit('embedded-webview-shortcut', {{
+      webviewLabel: WEBVIEW_LABEL,
+      shortcut
+    }});
+  }}
+
+  function emitLocationChange(navigationType) {{
+    emit('embedded-webview-location-change', {{
+      webviewLabel: WEBVIEW_LABEL,
+      url: window.location.href,
+      navigationType
+    }});
+  }}
+
+  function readMetadata() {{
+    const title = document.title || '';
+    let favicon = null;
+    const icon =
+      document.querySelector('link[rel~="icon"]') ||
+      document.querySelector('link[rel="shortcut icon"]');
+
+    if (icon && icon.href) {{
+      favicon = icon.href;
+    }}
+
+    return {{ title, favicon }};
+  }}
+
+  let lastMetadata = '';
+  let metadataFrame = null;
+
+  function emitMetadata() {{
+    metadataFrame = null;
+    const metadata = readMetadata();
+    if (!metadata.title) return;
+
+    const serialized = JSON.stringify(metadata);
+    if (serialized === lastMetadata) return;
+    lastMetadata = serialized;
+
+    emit('embedded-webview-metadata', {{
+      webviewLabel: WEBVIEW_LABEL,
+      title: metadata.title,
+      favicon: metadata.favicon
+    }});
+  }}
+
+  function scheduleMetadataEmit() {{
+    if (metadataFrame !== null) return;
+    metadataFrame = window.requestAnimationFrame(emitMetadata);
+  }}
+
+  function wrapHistoryMethod(name, navigationType) {{
+    const original = window.history[name];
+    if (typeof original !== 'function') return;
+
+    window.history[name] = function() {{
+      const result = original.apply(this, arguments);
+      scheduleMetadataEmit();
+      emitLocationChange(navigationType);
+      return result;
+    }};
+  }}
+
+  document.addEventListener('keydown', function(e) {{
     const isMod = e.metaKey || e.ctrlKey;
     const isShift = e.shiftKey;
     let shortcut = null;
 
-    // Global app shortcuts - these should always be forwarded to main app
-    if (isMod && e.key === 'Tab') {
+    if (isMod && e.key === 'Tab') {{
       shortcut = 'global:switch-tab';
-    } else if (isMod && e.key === 'j') {
+    }} else if (isMod && e.key === 'j') {{
       shortcut = 'global:toggle-terminal';
-    } else if (isMod && e.key === 'b') {
+    }} else if (isMod && e.key === 'b') {{
       shortcut = 'global:toggle-sidebar';
-    } else if (isMod && e.key === 'k') {
+    }} else if (isMod && e.key === 'k') {{
       shortcut = 'global:command-palette';
-    } else if (isMod && e.key === 'p') {
+    }} else if (isMod && e.key === 'p') {{
       shortcut = 'global:quick-open';
-    } else if (isMod && e.key === 'w') {
+    }} else if (isMod && e.key === 'w') {{
       shortcut = 'global:close-tab';
-    } else if (isMod && isShift && e.key === 'T') {
+    }} else if (isMod && isShift && e.key === 'T') {{
       shortcut = 'global:reopen-tab';
-    } else if (isMod && e.key === 't') {
+    }} else if (isMod && e.key === 't') {{
       shortcut = 'global:new-tab';
-    } else if (isMod && e.key === 'n') {
+    }} else if (isMod && e.key === 'n') {{
       shortcut = 'global:new-window';
-    } else if (isMod && isShift && e.key === 'N') {
+    }} else if (isMod && isShift && e.key === 'N') {{
       shortcut = 'global:new-private-window';
-    } else if (isMod && e.key === 'f') {
+    }} else if (isMod && e.key === 'f') {{
       shortcut = 'global:find';
-    } else if (isMod && isShift && e.key === 'F') {
+    }} else if (isMod && isShift && e.key === 'F') {{
       shortcut = 'global:find-in-files';
-    } else if (isMod && e.key === ',') {
+    }} else if (isMod && e.key === ',') {{
       shortcut = 'global:settings';
-    }
-    // Web viewer specific shortcuts
-    else if (isMod && e.key === 'l') {
+    }} else if (isMod && e.key === 'l') {{
       shortcut = 'focus-url';
-    } else if (isMod && e.key === 'r' && !isShift) {
+    }} else if (isMod && e.key === 'r' && !isShift) {{
       shortcut = 'refresh';
-    } else if (isMod && e.key === '[') {
+    }} else if (isMod && e.key === '[') {{
       shortcut = 'go-back';
-    } else if (isMod && e.key === ']') {
+    }} else if (isMod && e.key === ']') {{
       shortcut = 'go-forward';
-    } else if (isMod && e.key === '=') {
+    }} else if (isMod && e.key === '=') {{
       shortcut = 'zoom-in';
-    } else if (isMod && e.key === '-') {
+    }} else if (isMod && e.key === '-') {{
       shortcut = 'zoom-out';
-    } else if (isMod && e.key === '0') {
+    }} else if (isMod && e.key === '0') {{
       shortcut = 'zoom-reset';
-    } else if (e.key === 'Escape') {
+    }} else if (e.key === 'Escape') {{
       shortcut = 'escape';
-    }
+    }}
 
-    if (shortcut) {
+    if (shortcut) {{
       e.preventDefault();
       e.stopPropagation();
-      window.__ATHAS_PENDING_SHORTCUT__ = shortcut;
-    }
-  }, true);
+      emitShortcut(shortcut);
+    }}
+  }}, true);
 
-  // Helper to get and clear pending shortcut
-  window.__ATHAS_GET_SHORTCUT__ = function() {
-    const s = window.__ATHAS_PENDING_SHORTCUT__;
-    window.__ATHAS_PENDING_SHORTCUT__ = null;
-    return s;
-  };
-})();
-"#;
+  wrapHistoryMethod('pushState', 'push');
+  wrapHistoryMethod('replaceState', 'replace');
+
+  window.addEventListener('popstate', function() {{
+    scheduleMetadataEmit();
+    emitLocationChange('traverse');
+  }});
+
+  window.addEventListener('hashchange', function() {{
+    scheduleMetadataEmit();
+    emitLocationChange('push');
+  }});
+
+  window.addEventListener('load', scheduleMetadataEmit, true);
+  window.addEventListener('pageshow', scheduleMetadataEmit, true);
+  document.addEventListener('DOMContentLoaded', scheduleMetadataEmit, true);
+
+  const metadataObserver = new MutationObserver(scheduleMetadataEmit);
+  metadataObserver.observe(document.documentElement, {{
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['href']
+  }});
+
+  scheduleMetadataEmit();
+}})();
+"#
+   ))
+}
 
 #[command]
 pub async fn create_embedded_webview(
@@ -227,8 +339,34 @@ pub async fn create_embedded_webview(
       ),
    );
 
-   // Inject shortcut interceptor script
-   webview_builder = webview_builder.initialization_script(SHORTCUT_INTERCEPTOR_SCRIPT);
+   webview_builder =
+      webview_builder.initialization_script(build_webview_bridge_script(&webview_label)?);
+   let app_handle = app.clone();
+   let event_webview_label = webview_label.clone();
+   let navigation_webview_label = webview_label.clone();
+   let navigation_app_handle = app.clone();
+   webview_builder = webview_builder.on_navigation(move |url| {
+      let event = EmbeddedWebviewLocationChangeEvent {
+         webview_label: navigation_webview_label.clone(),
+         url: url.to_string(),
+         navigation_type: "navigate".to_string(),
+      };
+
+      let _ = navigation_app_handle.emit("embedded-webview-location-change", event);
+      true
+   });
+   webview_builder = webview_builder.on_page_load(move |_webview, payload| {
+      let event = EmbeddedWebviewPageLoadEvent {
+         webview_label: event_webview_label.clone(),
+         url: payload.url().to_string(),
+         event: match payload.event() {
+            PageLoadEvent::Started => "started".to_string(),
+            PageLoadEvent::Finished => "finished".to_string(),
+         },
+      };
+
+      let _ = app_handle.emit("embedded-webview-page-load", event);
+   });
 
    // Create embedded webview within the main window
    let webview = main_window
@@ -353,30 +491,75 @@ pub async fn open_webview_devtools(
 }
 
 fn normalize_webview_url(url: &str) -> Result<String, String> {
-   let trimmed = url.trim();
-   if trimmed.is_empty() {
+   let sanitized = url
+      .chars()
+      .filter(|ch| !ch.is_control())
+      .collect::<String>()
+      .trim()
+      .to_string();
+
+   if sanitized.is_empty() || sanitized.chars().any(char::is_whitespace) {
       return Err("URL cannot be empty".to_string());
    }
 
-   if trimmed == "about:blank" {
-      return Ok(trimmed.to_string());
+   if sanitized == "about:blank" {
+      return Ok(sanitized);
    }
 
-   let candidate = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
-      trimmed.to_string()
+   let normalized_input = if sanitized.starts_with("//") {
+      format!("https:{sanitized}")
+   } else if sanitized.starts_with(':') {
+      format!("http://localhost{sanitized}")
    } else {
-      let normalized = trimmed.to_lowercase();
-      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
-         format!("http://{trimmed}")
-      } else {
-         format!("https://{trimmed}")
-      }
+      sanitized
+   };
+
+   let candidate = if has_supported_protocol(&normalized_input) {
+      normalized_input
+   } else {
+      format!(
+         "{}{}",
+         infer_webview_protocol(&normalized_input),
+         normalized_input
+      )
    };
 
    let parsed = url::Url::parse(&candidate).map_err(|e| format!("Invalid URL: {e}"))?;
    match parsed.scheme() {
-      "http" | "https" => Ok(candidate),
-      _ => Err("Only http and https URLs are allowed".to_string()),
+      "http" | "https" => Ok(parsed.to_string()),
+      "about" => Ok(parsed.to_string()),
+      _ => Err("Only http, https, and about URLs are allowed".to_string()),
+   }
+}
+
+fn has_supported_protocol(value: &str) -> bool {
+   let Some(protocol_end) = value.find(':') else {
+      return false;
+   };
+
+   let scheme = &value[..protocol_end];
+   !scheme.is_empty()
+      && scheme
+         .chars()
+         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.'))
+}
+
+fn infer_webview_protocol(value: &str) -> &'static str {
+   let normalized = value.to_lowercase();
+
+   if normalized.starts_with("localhost")
+      || normalized.starts_with("127.")
+      || normalized.starts_with("10.")
+      || normalized.starts_with("192.168.")
+      || normalized.starts_with("172.")
+      || normalized.starts_with("[::1]")
+      || normalized.starts_with("::1")
+      || normalized.starts_with("0.0.0.0")
+      || normalized.starts_with(':')
+   {
+      "http://"
+   } else {
+      "https://"
    }
 }
 
@@ -391,137 +574,6 @@ pub async fn set_webview_zoom(
          .set_zoom(zoom_level)
          .map_err(|e| format!("Failed to set zoom: {e}"))?;
       Ok(())
-   } else {
-      Err(format!("Webview not found: {webview_label}"))
-   }
-}
-
-#[derive(Serialize)]
-pub struct WebviewMetadata {
-   pub title: String,
-   pub favicon: Option<String>,
-}
-
-#[command]
-pub async fn poll_webview_metadata(
-   app: tauri::AppHandle,
-   webview_label: String,
-) -> Result<Option<WebviewMetadata>, String> {
-   if let Some(webview) = app.get_webview(&webview_label) {
-      // Store metadata in a dedicated global (does not touch location.hash
-      // to avoid conflicts with the shortcut polling mechanism).
-      webview
-         .eval(
-            r#"
-            (function() {
-               var t = document.title || '';
-               var icon = '';
-               var el = document.querySelector('link[rel~="icon"]') || document.querySelector('link[rel="shortcut icon"]');
-               if (el && el.href) { icon = el.href; }
-               window.__ATHAS_PAGE_META__ = JSON.stringify({t:t,i:icon});
-            })();
-            "#,
-         )
-         .map_err(|e| format!("Failed to get metadata: {e}"))?;
-
-      tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-
-      // Read back via a hash round-trip (single step)
-      webview
-         .eval(
-            r#"
-            (function() {
-               var m = window.__ATHAS_PAGE_META__;
-               window.__ATHAS_PAGE_META__ = null;
-               if (m) window.location.hash = '__athas_meta=' + encodeURIComponent(m);
-            })();
-            "#,
-         )
-         .map_err(|e| format!("Failed to read metadata: {e}"))?;
-
-      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-      let url = webview
-         .url()
-         .map_err(|e| format!("Failed to get URL: {e}"))?;
-      let hash = url.fragment().unwrap_or("");
-
-      if let Some(encoded) = hash.strip_prefix("__athas_meta=") {
-         webview
-            .eval("window.location.hash = '';")
-            .map_err(|e| format!("Failed to clear hash: {e}"))?;
-
-         let decoded = percent_encoding::percent_decode_str(encoded)
-            .decode_utf8()
-            .unwrap_or_default();
-
-         #[derive(Deserialize)]
-         struct Meta {
-            t: String,
-            i: String,
-         }
-
-         if let Ok(meta) = serde_json::from_str::<Meta>(&decoded) {
-            if meta.t.is_empty() {
-               return Ok(None);
-            }
-            return Ok(Some(WebviewMetadata {
-               title: meta.t,
-               favicon: if meta.i.is_empty() {
-                  None
-               } else {
-                  Some(meta.i)
-               },
-            }));
-         }
-      }
-
-      Ok(None)
-   } else {
-      Err(format!("Webview not found: {webview_label}"))
-   }
-}
-
-#[command]
-pub async fn poll_webview_shortcut(
-   app: tauri::AppHandle,
-   webview_label: String,
-) -> Result<Option<String>, String> {
-   if let Some(webview) = app.get_webview(&webview_label) {
-      // Check if there's a pending shortcut and move it to the URL hash
-      webview
-         .eval(
-            r#"
-            (function() {
-               var s = window.__ATHAS_PENDING_SHORTCUT__;
-               if (s) {
-                  window.__ATHAS_PENDING_SHORTCUT__ = null;
-                  window.location.hash = '__athas_shortcut=' + s;
-               }
-            })();
-            "#,
-         )
-         .map_err(|e| format!("Failed to check shortcut: {e}"))?;
-
-      // Small delay to allow the hash change to take effect
-      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-      // Get the URL and check for shortcut in hash
-      let url = webview
-         .url()
-         .map_err(|e| format!("Failed to get URL: {e}"))?;
-      let hash = url.fragment().unwrap_or("");
-
-      if let Some(shortcut) = hash.strip_prefix("__athas_shortcut=") {
-         // Clear the hash
-         webview
-            .eval("window.location.hash = '';")
-            .map_err(|e| format!("Failed to clear hash: {e}"))?;
-
-         return Ok(Some(shortcut.to_string()));
-      }
-
-      Ok(None)
    } else {
       Err(format!("Webview not found: {webview_label}"))
    }

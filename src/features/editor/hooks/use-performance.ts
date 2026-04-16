@@ -11,60 +11,68 @@ export interface PerformanceMetric {
 }
 
 export function usePerformanceMonitor(componentName: string) {
-  const marksRef = useRef<Set<string>>(new Set());
+  const markStacksRef = useRef<Map<string, string[]>>(new Map());
+  const sequenceRef = useRef(0);
 
   const startMeasure = useCallback(
     (metricName: string) => {
-      const markName = `${componentName}:${metricName}:start`;
+      const markName = `${componentName}:${metricName}:start:${sequenceRef.current++}`;
       performance.mark(markName);
-      marksRef.current.add(markName);
+      const metricStack = markStacksRef.current.get(metricName) ?? [];
+      metricStack.push(markName);
+      markStacksRef.current.set(metricName, metricStack);
     },
     [componentName],
   );
 
   const endMeasure = useCallback(
     (metricName: string) => {
-      const startMarkName = `${componentName}:${metricName}:start`;
-      const endMarkName = `${componentName}:${metricName}:end`;
       const measureName = `${componentName}:${metricName}`;
+      const metricStack = markStacksRef.current.get(metricName);
+      const startMarkName = metricStack?.pop();
 
-      if (marksRef.current.has(startMarkName)) {
-        performance.mark(endMarkName);
-        try {
-          performance.measure(measureName, startMarkName, endMarkName);
-          const entries = performance.getEntriesByName(measureName);
-          const lastEntry = entries[entries.length - 1];
-          if (lastEntry) {
-            frontendTrace(
-              lastEntry.duration >= 250 ? "warn" : "info",
-              "bench:perf",
-              `${componentName}:${metricName}`,
-              {
-                durationMs: Math.round(lastEntry.duration * 100) / 100,
+      if (!startMarkName) {
+        return;
+      }
+
+      const endMarkName = `${measureName}:end:${sequenceRef.current++}`;
+
+      performance.mark(endMarkName);
+
+      try {
+        performance.measure(measureName, startMarkName, endMarkName);
+        const entries = performance.getEntriesByName(measureName);
+        const lastEntry = entries[entries.length - 1];
+        if (lastEntry) {
+          frontendTrace(
+            lastEntry.duration >= 250 ? "warn" : "info",
+            "bench:perf",
+            `${componentName}:${metricName}`,
+            {
+              durationMs: Math.round(lastEntry.duration * 100) / 100,
+            },
+          );
+          window.dispatchEvent(
+            new CustomEvent("performance-metric", {
+              detail: {
+                component: componentName,
+                metric: metricName,
+                duration: lastEntry.duration,
+                timestamp: Date.now(),
               },
-            );
-            // Optional: Dispatch event for automated benchmark collection
-            window.dispatchEvent(
-              new CustomEvent("performance-metric", {
-                detail: {
-                  component: componentName,
-                  metric: metricName,
-                  duration: lastEntry.duration,
-                  timestamp: Date.now(),
-                },
-              }),
-            );
-          }
-        } catch (e) {
-          console.warn(`Failed to measure ${measureName}`, e);
+            }),
+          );
+          return lastEntry.duration;
         }
-        // Cleanup marks
+      } catch (e) {
+        console.warn(`Failed to measure ${measureName}`, e);
+      } finally {
         performance.clearMarks(startMarkName);
         performance.clearMarks(endMarkName);
         performance.clearMeasures(measureName);
-        marksRef.current.delete(startMarkName);
-
-        return performance.getEntriesByName(measureName).pop()?.duration;
+        if (metricStack && metricStack.length === 0) {
+          markStacksRef.current.delete(metricName);
+        }
       }
     },
     [componentName],

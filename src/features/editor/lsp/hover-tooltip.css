@@ -5,8 +5,10 @@
 
 .hover-tooltip-content {
   font-family: var(--app-font-family);
-  font-size: 12px;
-  line-height: 1.38;
+  font-size: var(--hover-tooltip-font-size, 14px);
+  line-height: var(--hover-tooltip-line-height, 20px);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .hover-tooltip-content p {
@@ -28,9 +30,10 @@
   padding: 0;
   border-radius: 0;
   font-size: 0.95em;
-  line-height: 1.5;
+  line-height: inherit;
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .hover-tooltip-content.markdown-preview code {

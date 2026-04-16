@@ -4,6 +4,7 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
 import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
+import { extensionRegistry } from "./extension-registry";
 import {
   findExtensionForFile,
   isExtensionAllowedByEnterprisePolicy,
@@ -69,6 +70,19 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
+
+          for (const manifest of extensions) {
+            const existing = extensionRegistry.getExtension(manifest.id);
+            if (existing?.state === "installed") {
+              continue;
+            }
+
+            extensionRegistry.registerExtension(manifest, {
+              isBundled: false,
+              isEnabled: true,
+              state: installed.has(manifest.id) ? "installed" : "not-installed",
+            });
+          }
 
           set((state) => {
             // Add all language extensions as installable

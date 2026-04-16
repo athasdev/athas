@@ -199,16 +199,6 @@ class ExtensionRegistry {
       serverPath = `${extension.path}/${serverPath.substring(2)}`;
     }
 
-    const looksLikeBareCommand =
-      !serverPath.includes("/") && !serverPath.includes("\\") && !serverPath.includes(":");
-    if (looksLikeBareCommand) {
-      logger.warn(
-        "ExtensionRegistry",
-        `Rejecting bare-command LSP path for ${filePath}: ${serverPath}`,
-      );
-      return null;
-    }
-
     if (typeof window !== "undefined" && serverPath.startsWith("/")) {
       logger.debug(
         "ExtensionRegistry",
@@ -251,7 +241,7 @@ class ExtensionRegistry {
    * Check if LSP is supported for a file
    */
   isLspSupported(filePath: string): boolean {
-    return this.getLspServerPath(filePath) !== null;
+    return Boolean(this.getExtensionForFilePath(filePath)?.manifest.lsp);
   }
 
   /**

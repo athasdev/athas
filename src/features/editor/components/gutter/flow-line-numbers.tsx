@@ -1,7 +1,9 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
+import { useFoldStore } from "../../stores/fold-store";
 import { calculateLineNumberWidth, GUTTER_CONFIG } from "../../utils/gutter";
 
 interface LineMapping {
@@ -31,6 +33,8 @@ function FlowLineNumbersComponent({
   filePath,
 }: FlowLineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
+  const foldsByFile = useFoldStore((state) => state.foldsByFile);
+  const foldActions = useFoldStore.use.actions();
   const isDiffAccordionBuffer = filePath?.startsWith("diff-editor://") ?? false;
   const lineNumberWidth = calculateLineNumberWidth(lines.length);
   const lineNumberOffset =
@@ -44,6 +48,16 @@ function FlowLineNumbersComponent({
     }
     return actualCursorLine;
   }, [actualCursorLine, foldMapping]);
+
+  const fileState = filePath ? foldsByFile.get(filePath) : undefined;
+
+  const handleFoldClick = useCallback(
+    (lineNumber: number) => {
+      if (!filePath) return;
+      foldActions.toggleFold(filePath, lineNumber);
+    },
+    [filePath, foldActions],
+  );
 
   return (
     <div
@@ -78,8 +92,54 @@ function FlowLineNumbersComponent({
                 width: `${lineNumberOffset}px`,
                 flexShrink: 0,
                 position: "relative",
+                display: "flex",
               }}
             >
+              {!isDiffAccordionBuffer && (
+                <div
+                  style={{
+                    width: `${GUTTER_CONFIG.GIT_LANE_WIDTH + GUTTER_CONFIG.DIAGNOSTIC_LANE_WIDTH}px`,
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              {!isDiffAccordionBuffer && (
+                <div
+                  style={{
+                    width: `${GUTTER_CONFIG.FOLD_LANE_WIDTH}px`,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {(() => {
+                    const region = fileState?.regions.find(
+                      (candidate) => candidate.startLine === actualLineNumber,
+                    );
+                    if (!region) return null;
+                    const isCollapsed = fileState?.collapsedLines.has(actualLineNumber);
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFoldClick(actualLineNumber);
+                        }}
+                        aria-label={isCollapsed ? "Expand fold" : "Collapse fold"}
+                        aria-expanded={!isCollapsed}
+                        className="flex h-4 w-4 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover/40 hover:text-text"
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight size={14} strokeWidth={2} />
+                        ) : (
+                          <ChevronDown size={14} strokeWidth={2} />
+                        )}
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
               {isAccordionLine ? <div className="diff-accordion-gutter-card" /> : null}
             </div>
 

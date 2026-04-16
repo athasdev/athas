@@ -13,7 +13,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
-import { useResizeObserver } from "@/hooks/use-resize-observer";
+import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";

@@ -54,6 +54,10 @@ export const useSemanticTokens = (filePath: string | undefined, enabled: boolean
 
     const id = ++requestIdRef.current;
     const lspClient = LspClient.getInstance();
+    if (!lspClient.getActiveServerEntryForFile(filePath)) {
+      setTokens([]);
+      return;
+    }
     const result = await lspClient.getSemanticTokens(filePath);
 
     if (id !== requestIdRef.current) return;

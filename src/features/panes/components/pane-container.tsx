@@ -14,7 +14,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { cn } from "@/utils/cn";
-import { EmptyEditorState } from "../../layout/components/empty-editor-state";
+import { EmptyEditorState } from "./empty-editor-state";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
 import { hasTextContent } from "../types/pane-content";

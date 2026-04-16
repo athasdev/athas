@@ -155,7 +155,11 @@ export async function uninstallExtensionLifecycle(params: {
 
     await uninstallLanguageArtifacts(languageIds);
     await unloadLanguageProviders(extensionId, languageIds);
-    extensionRegistry.unregisterExtension(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "not-installed",
+    });
     onLanguageUninstalled();
     return;
   }

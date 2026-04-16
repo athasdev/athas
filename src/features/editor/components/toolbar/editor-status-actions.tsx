@@ -81,7 +81,7 @@ export function EditorStatusActions() {
         return {
           icon: <ZapOff />,
           color: "text-red-400",
-          title: `Language Server Error: ${lspStatus.lastError || "Unknown"}`,
+          title: "Language server issue",
         };
       default:
         return {
@@ -148,7 +148,12 @@ export function EditorStatusActions() {
     if (!activeBuffer?.path || !rootFolderPath) return;
     setIsRestartingCurrent(true);
     try {
-      await lspClient.startForFile(activeBuffer.path, rootFolderPath);
+      const started = await lspClient.startForFile(activeBuffer.path, rootFolderPath, {
+        forceRetry: true,
+      });
+      if (!started) {
+        throw new Error("Language server did not start.");
+      }
       const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
       await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
       toast.success(`Started ${currentFileDisplayName || "language server"}`);
@@ -187,7 +192,12 @@ export function EditorStatusActions() {
       if (rootFolderPath && activeBuffer.path) {
         try {
           await lspClient.notifyDocumentClose(activeBuffer.path);
-          await lspClient.startForFile(activeBuffer.path, rootFolderPath);
+          const started = await lspClient.startForFile(activeBuffer.path, rootFolderPath, {
+            forceRetry: true,
+          });
+          if (!started) {
+            throw new Error("Language server did not start.");
+          }
           const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
           await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
         } catch {
@@ -468,16 +478,11 @@ export function EditorStatusActions() {
               <div className="space-y-2 px-1 py-1">
                 <div className="flex items-center gap-2 text-red-400">
                   <ZapOff />
-                  <span className="text-xs">Connection Error</span>
+                  <span className="text-xs">Language server issue</span>
                 </div>
-                {lspStatus.lastError && (
-                  <div className="rounded-md bg-red-500/10 p-1 text-[10px] text-red-400">
-                    {lspStatus.lastError}
-                  </div>
-                )}
                 <div className="px-0.5 text-[10px] text-text-lighter">
-                  Reinstall the affected language tools from Extensions if the server binary is
-                  missing or failed to launch.
+                  Check notifications for the latest error. Reinstall the affected language tools
+                  from Extensions if the server binary is missing or failed to launch.
                 </div>
               </div>
             ) : (

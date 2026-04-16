@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
+import { shouldRequestPaneCollapse } from "../utils/resizable-pane-utils";
 
 describe("shouldRequestPaneCollapse", () => {
   test("does not collapse when pane is not collapsible", () => {

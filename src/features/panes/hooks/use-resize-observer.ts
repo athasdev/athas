@@ -5,6 +5,7 @@ interface Dimensions {
   height: number;
 }
 
+/** Tracks a pane item's container dimensions so content can scale to fit. */
 export function useResizeObserver(ref: React.RefObject<HTMLElement | null>): Dimensions {
   const [dimensions, setDimensions] = useState<Dimensions>({ width: 0, height: 0 });
 

@@ -16,11 +16,9 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
-import { useContextMenu } from "@/hooks/use-context-menu";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
-import type { ContextMenuItem } from "@/ui/context-menu";
-import { ContextMenu } from "@/ui/context-menu";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Input from "@/ui/input";
 
 interface ActionItem {

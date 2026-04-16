@@ -4,7 +4,7 @@ Thank you for contributing to Athas! Please check existing issues and pull reque
 
 ## Setup
 
-See [setup guides](docs/contributing/setup/) for your platform.
+See [setup guides](https://athas.dev/docs/contributing) for your platform.
 
 Prerequisites:
 
@@ -35,7 +35,3 @@ bun dev
 - Use descriptive commit messages (i.e., "Add autocompletion")
 - One logical change per commit
 - Update documentation if needed
-
-## Documentation
-
-- [Workflow and releasing](docs/contributing/releasing.md)

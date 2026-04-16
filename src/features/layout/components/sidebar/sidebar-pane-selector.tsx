@@ -3,7 +3,7 @@ import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { Tabs, type TabsItem } from "@/ui/tabs";
-import type { SidebarView } from "./sidebar-pane-utils";
+import type { SidebarView } from "../../utils/sidebar-pane-utils";
 
 interface SidebarPaneSelectorProps {
   activeSidebarView: SidebarView;

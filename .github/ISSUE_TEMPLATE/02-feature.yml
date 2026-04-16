@@ -1,7 +1,6 @@
 name: Feature Request
 description: Propose a new capability for Athas
 title: ""
-type: Feature
 body:
   - type: textarea
     id: problem

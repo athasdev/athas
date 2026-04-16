@@ -1,9 +1,8 @@
 import { Copy, GitBranch, GitCommit, GitFork, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useContextMenu } from "@/hooks/use-context-menu";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";

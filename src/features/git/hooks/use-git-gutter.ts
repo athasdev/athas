@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
+import type { Decoration } from "@/features/editor/types/editor";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiff, getFileDiffAgainstContent } from "../api/git-diff-api";
 import type { GitDiff } from "../types/git-types";
@@ -150,7 +151,7 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
       gitDecorationIdsRef.current = [];
     }
 
-    const newDecorations: any[] = [];
+    const newDecorations: Decoration[] = [];
 
     const createDecoration = (lineNumber: number, className: string, content: string = " ") => ({
       type: "gutter" as const,

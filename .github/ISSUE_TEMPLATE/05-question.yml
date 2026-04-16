@@ -1,7 +1,6 @@
 name: Question
 description: Ask for clarification about Athas behavior or usage
 title: ""
-type: Question
 body:
   - type: textarea
     id: question

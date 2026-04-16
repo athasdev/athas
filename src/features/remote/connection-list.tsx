@@ -1,9 +1,7 @@
 import { Edit, FolderOpen, Loader2, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
 import type React from "react";
-import { useContextMenu } from "@/hooks/use-context-menu";
 import { Button } from "@/ui/button";
-import type { ContextMenuItem } from "@/ui/context-menu";
-import { ContextMenu } from "@/ui/context-menu";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection } from "./types";
 

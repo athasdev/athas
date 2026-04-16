@@ -5,8 +5,8 @@ import GitDiffEditorStack from "./git-diff-editor-stack";
 import GitDiffEditorSurface from "./git-diff-editor-surface";
 import ImageDiffViewer from "./git-diff-image";
 
-function isMultiFileDiff(data: any): data is MultiFileDiff {
-  return data && "files" in data && Array.isArray(data.files);
+function isMultiFileDiff(data: unknown): data is MultiFileDiff {
+  return typeof data === "object" && data !== null && "files" in data && Array.isArray(data.files);
 }
 
 const DiffViewer = memo((_props: DiffViewerProps) => {

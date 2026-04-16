@@ -1,6 +1,5 @@
 import type React from "react";
-import { useCallback } from "react";
-import { toast, useToastStore, type Toast } from "@/ui/toast";
+import { type Toast, useToast as useUiToast } from "@/ui/toast";
 
 interface ToastContextType {
   toasts: Toast[];
@@ -13,15 +12,7 @@ interface ToastContextType {
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => children;
 
 export const useToast = (): ToastContextType => {
-  const toasts = useToastStore.use.toasts();
-
-  const showToast = useCallback((value: Omit<Toast, "id">) => toast.show(value), []);
-  const updateToast = useCallback(
-    (id: string, updates: Partial<Omit<Toast, "id">>) => toast.update(id, updates),
-    [],
-  );
-  const dismissToast = useCallback((id: string) => toast.dismiss(id), []);
-  const hasToast = useCallback((id: string) => toast.has(id), []);
+  const { toasts, showToast, updateToast, dismissToast, hasToast } = useUiToast();
 
   return {
     toasts,

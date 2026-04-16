@@ -7,6 +7,7 @@ import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 interface GitBlameLayerProps {
   filePath: string;
   cursorLine: number;
+  cursorColumn: number;
   visualCursorLine: number;
   visualContent: string;
   fontSize: number;
@@ -21,6 +22,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
     {
       filePath,
       cursorLine,
+      cursorColumn,
       visualCursorLine,
       visualContent,
       fontSize,
@@ -38,6 +40,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
 
     const lines = useMemo(() => splitLines(visualContent), [visualContent]);
     const currentLineContent = lines[visualCursorLine] || "";
+    const currentColumnContent = currentLineContent.slice(0, Math.max(0, cursorColumn));
 
     // Reset width when file changes to prevent stale positioning during file switches
     useLayoutEffect(() => {
@@ -49,14 +52,13 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
       if (measureRef.current) {
         setLineContentWidth(measureRef.current.offsetWidth);
       }
-    }, [currentLineContent, fontSize, fontFamily, tabSize, filePath]);
+    }, [currentColumnContent, fontSize, fontFamily, tabSize, filePath]);
 
-    // Calculate position only when we have valid data
-    const shouldShowBlame = !wordWrap && blameLine && lineContentWidth > 0;
+    const shouldShowBlame = !!blameLine && (wordWrap || lineContentWidth > 0);
 
     // Position at absolute content coordinates (scroll handled by container transform)
-    const top = visualCursorLine * lineHeight;
-    const left = lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
+    const top = visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const left = lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + 8;
 
     return (
       <div
@@ -80,7 +82,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
             tabSize,
           }}
         >
-          {currentLineContent}
+          {wordWrap ? currentColumnContent : currentLineContent}
         </span>
 
         {shouldShowBlame && (
@@ -88,11 +90,21 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
             className="pointer-events-auto absolute flex items-center"
             style={{
               top: `${top}px`,
-              left: `${left}px`,
               height: `${lineHeight}px`,
+              ...(wordWrap
+                ? {
+                    left: `${Math.max(
+                      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+                      lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + 8,
+                    )}px`,
+                    maxWidth: `calc(100% - ${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT}px)`,
+                  }
+                : {
+                    left: `${left}px`,
+                  }),
             }}
           >
-            <InlineGitBlame blameLine={blameLine} />
+            <InlineGitBlame blameLine={blameLine} fontSize={fontSize} lineHeight={lineHeight} />
           </div>
         )}
       </div>
