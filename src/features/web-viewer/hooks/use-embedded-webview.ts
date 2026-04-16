@@ -127,6 +127,7 @@ export function useEmbeddedWebview({
     return () => {
       mounted = false;
       if (createdLabel) {
+        setWebviewLabel(null);
         void invoke("close_embedded_webview", { webviewLabel: createdLabel }).catch(console.error);
       }
       lastBoundsRef.current = null;
