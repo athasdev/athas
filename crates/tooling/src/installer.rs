@@ -1,6 +1,7 @@
 use crate::{ToolConfig, ToolError, ToolRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use flate2::read::GzDecoder;
+use futures_util::StreamExt;
 use serde_json::Value;
 use std::{
    fs,
@@ -9,8 +10,32 @@ use std::{
    process::Command,
 };
 use tauri::Manager;
+use url::Url;
 use walkdir::WalkDir;
 use zip::ZipArchive;
+
+/// Maximum size for a direct-binary download. Tool binaries are typically
+/// well under 100 MB; anything larger is almost certainly a misconfiguration
+/// or an attempt to exhaust disk.
+const MAX_BINARY_DOWNLOAD_BYTES: u64 = 100 * 1024 * 1024;
+
+/// Validate that a binary download URL uses an acceptable scheme and host.
+///
+/// Release builds require HTTPS. Debug builds additionally permit `http://`
+/// to `localhost` and `127.0.0.1` for local fixtures and tests.
+fn validate_binary_download_url(input: &str) -> Result<(), ToolError> {
+   let parsed = Url::parse(input)
+      .map_err(|_| ToolError::DownloadFailed(format!("Invalid download URL: {}", input)))?;
+   let host = parsed.host_str().unwrap_or_default();
+   match parsed.scheme() {
+      "https" => Ok(()),
+      "http" if cfg!(debug_assertions) && (host == "localhost" || host == "127.0.0.1") => Ok(()),
+      other => Err(ToolError::DownloadFailed(format!(
+         "Tool download URL must use HTTPS (got scheme {:?})",
+         other
+      ))),
+   }
+}
 
 /// Handles installation of language tools
 pub struct ToolInstaller;
@@ -527,12 +552,19 @@ impl ToolInstaller {
       Self::validate_and_prepare(&bin_path)
    }
 
-   /// Download a binary directly
+   /// Download a binary directly.
+   ///
+   /// Enforces:
+   /// - HTTPS-only URLs (localhost HTTP permitted in debug builds only).
+   /// - A 100 MB streaming size cap, independently of any `Content-Length`.
+   /// - Successful HTTP status.
    async fn download_binary(
       app_handle: &tauri::AppHandle,
       name: &str,
       url: &str,
    ) -> Result<PathBuf, ToolError> {
+      validate_binary_download_url(url)?;
+
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let bin_dir = tools_dir.join("bin");
       std::fs::create_dir_all(&bin_dir)?;
@@ -554,10 +586,27 @@ impl ToolInstaller {
          )));
       }
 
-      let bytes = response
-         .bytes()
-         .await
-         .map_err(|e| ToolError::DownloadFailed(e.to_string()))?;
+      if let Some(content_length) = response.content_length()
+         && content_length > MAX_BINARY_DOWNLOAD_BYTES
+      {
+         return Err(ToolError::DownloadFailed(format!(
+            "Tool download too large: {} bytes (max {})",
+            content_length, MAX_BINARY_DOWNLOAD_BYTES
+         )));
+      }
+
+      let mut stream = response.bytes_stream();
+      let mut bytes: Vec<u8> = Vec::new();
+      while let Some(chunk) = stream.next().await {
+         let chunk = chunk.map_err(|e| ToolError::DownloadFailed(e.to_string()))?;
+         if bytes.len() as u64 + chunk.len() as u64 > MAX_BINARY_DOWNLOAD_BYTES {
+            return Err(ToolError::DownloadFailed(format!(
+               "Tool download exceeded size cap of {} bytes",
+               MAX_BINARY_DOWNLOAD_BYTES
+            )));
+         }
+         bytes.extend_from_slice(&chunk);
+      }
 
       let staging_dir = tempfile::tempdir()
          .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
@@ -700,6 +749,39 @@ impl ToolInstaller {
                .join(Self::node_bin_name(command_name)))
          }
          _ => Self::get_tool_path(app_handle, config),
+      }
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn rejects_non_https_binary_urls() {
+      assert!(validate_binary_download_url("ftp://example.com/tool.tar.gz").is_err());
+      assert!(validate_binary_download_url("file:///etc/passwd").is_err());
+      assert!(validate_binary_download_url("javascript:alert(1)").is_err());
+      assert!(validate_binary_download_url("not a url").is_err());
+   }
+
+   #[test]
+   fn rejects_plain_http_in_release_builds() {
+      let result = validate_binary_download_url("http://example.com/tool.tar.gz");
+      if cfg!(debug_assertions) {
+         // Debug builds reject non-localhost HTTP.
+         assert!(result.is_err());
+      } else {
+         assert!(result.is_err());
+      }
+   }
+
+   #[test]
+   fn accepts_https_and_debug_localhost() {
+      assert!(validate_binary_download_url("https://example.com/tool.tar.gz").is_ok());
+      if cfg!(debug_assertions) {
+         assert!(validate_binary_download_url("http://localhost:3000/tool.tar.gz").is_ok());
+         assert!(validate_binary_download_url("http://127.0.0.1:8080/tool.tar.gz").is_ok());
       }
    }
 }
