@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Maximize2, MenuIcon, Minimize2, Minus, SquareArrowOutUpRight, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -48,6 +48,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   } = useUIState();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -291,8 +292,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <div className="relative">
               <Tooltip content="Menu" side="bottom">
                 <Button
+                  ref={menuButtonRef}
                   onClick={() => {
-                    setMenuBarActiveMenu("File");
+                    setMenuBarActiveMenu((prev) => (prev ? null : "File"));
                   }}
                   variant="secondary"
                   size="icon-sm"
@@ -305,6 +307,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 activeMenu={menuBarActiveMenu}
                 setActiveMenu={setMenuBarActiveMenu}
                 compactFloating
+                anchorRef={menuButtonRef}
               />
             </div>
           )}
@@ -358,8 +361,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           <div className="relative mr-2">
             <Tooltip content="Menu" side="bottom">
               <Button
+                ref={menuButtonRef}
                 onClick={() => {
-                  setMenuBarActiveMenu("File");
+                  setMenuBarActiveMenu((prev) => (prev ? null : "File"));
                 }}
                 variant="secondary"
                 size="icon-sm"
@@ -372,6 +376,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               activeMenu={menuBarActiveMenu}
               setActiveMenu={setMenuBarActiveMenu}
               compactFloating
+              anchorRef={menuButtonRef}
             />
           </div>
         )}

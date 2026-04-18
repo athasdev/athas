@@ -16,9 +16,15 @@ interface Props {
   activeMenu: string | null;
   setActiveMenu: React.Dispatch<React.SetStateAction<string | null>>;
   compactFloating?: boolean;
+  anchorRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
-const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
+const CustomMenuBar = ({
+  activeMenu,
+  setActiveMenu,
+  compactFloating = false,
+  anchorRef,
+}: Props) => {
   const { settings } = useSettingsStore();
   const [themes, setThemes] = useState<ThemeDefinition[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
@@ -198,25 +204,26 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     if (!activeMenu) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const isInsideMenuBar = menuBarRef.current?.contains(target);
+      const isAnchorButton = anchorRef?.current?.contains(target);
+      if (!isInsideMenuBar && !isAnchorButton) {
         setActiveMenu(null);
       }
     };
 
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [activeMenu, setActiveMenu]);
+  }, [activeMenu, setActiveMenu, anchorRef]);
 
-  if (settings.compactMenuBar && !activeMenu) return null;
-
-  return (
+  const menuButtons = (
     <div
       ref={menuBarRef}
       className={cn(
         "z-[10030] flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65 px-0.5 py-0.5",
         settings.compactMenuBar &&
           compactFloating &&
-          "absolute top-[calc(100%+4px)] left-0 rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
+          "absolute top-full left-0 mt-1 rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
         settings.compactMenuBar &&
           !compactFloating &&
           "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
@@ -236,9 +243,18 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           {menuName}
         </Button>
       ))}
-
-      {activeMenu && menus[activeMenu as keyof typeof menus]}
     </div>
+  );
+
+  return (
+    <>
+      {menuButtons}
+      {activeMenu && (
+        <div className="absolute top-full left-0 mt-1 z-[10031] w-max min-w-[180px]">
+          {menus[activeMenu as keyof typeof menus]}
+        </div>
+      )}
+    </>
   );
 };
 
