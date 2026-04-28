@@ -141,6 +141,21 @@ function GutterComponent({
     };
 
     const forwardWheel = (e: WheelEvent) => {
+      const isTextareaScrollable = getComputedStyle(textarea).overflowY !== "hidden";
+      if (!isTextareaScrollable) {
+        const scrollContainer =
+          textarea.closest("[data-editor-outer-scroll]") ??
+          textarea.closest("[data-diff-stack-scroll-container]");
+
+        if (scrollContainer instanceof HTMLDivElement) {
+          scrollContainer.scrollTop += e.deltaY;
+          scrollContainer.scrollLeft += e.deltaX;
+          e.preventDefault();
+        }
+
+        return;
+      }
+
       e.preventDefault();
       textarea.scrollTop += e.deltaY;
       textarea.scrollLeft += e.deltaX;

@@ -7,13 +7,16 @@ import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
 import { TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
+import {
+  CONTENT_SEARCH_INITIAL_RENDER_LIMIT,
+  CONTENT_SEARCH_RENDER_INCREMENT,
+} from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { buildSearchExcerpts } from "../utils/search-excerpts";
 import { replaceAllInSources, replaceNextInSource } from "../utils/source-replace";
 import { SearchExcerptResults } from "./search-excerpt-results";
 
-const MAX_DISPLAYED_MATCHES = 500;
 const MAX_MARKERS = 160;
 const DEFAULT_CONTEXT_LINES = 2;
 const EXPANDED_CONTEXT_LINES = 7;
@@ -22,8 +25,10 @@ const GlobalSearchBuffer = () => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isReplaceVisible, setIsReplaceVisible] = useState(false);
   const [replaceQuery, setReplaceQuery] = useState("");
+  const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
   const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
   const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
   const {
@@ -52,11 +57,11 @@ const GlobalSearchBuffer = () => {
 
   const excerpts = useMemo(
     () =>
-      buildSearchExcerpts(results, rootFolderPath, MAX_DISPLAYED_MATCHES, {
+      buildSearchExcerpts(results, rootFolderPath, visibleMatchLimit, {
         contextLinesByFile,
         sourceContentByPath,
       }),
-    [contextLinesByFile, results, rootFolderPath, sourceContentByPath],
+    [contextLinesByFile, results, rootFolderPath, sourceContentByPath, visibleMatchLimit],
   );
 
   const navigationItems = useMemo(
@@ -210,12 +215,25 @@ const GlobalSearchBuffer = () => {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  useEffect(() => {
+    setVisibleMatchLimit(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
+  }, [debouncedQuery, includeQuery, excludeQuery, searchOptions]);
+
+  const trimmedQuery = query.trim();
+  const trimmedDebouncedQuery = debouncedQuery.trim();
+  const isSearchPending = trimmedQuery.length > 0 && trimmedQuery !== trimmedDebouncedQuery;
+  const showSearching = trimmedQuery.length > 0 && (isSearching || isSearchPending);
   const hasResults = results.length > 0;
   const totalMatches = results.reduce((sum, r) => sum + r.total_matches, 0);
   const displayedCount = navigationItems.length;
   const hasMore = totalMatches > displayedCount;
+  const loadMoreResults = useCallback(() => {
+    setVisibleMatchLimit((limit) =>
+      Math.min(limit + CONTENT_SEARCH_RENDER_INCREMENT, totalMatches),
+    );
+  }, [totalMatches]);
   const resultLabel =
-    debouncedQuery && !isSearching
+    trimmedDebouncedQuery && !showSearching
       ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
       : null;
   const searchOptionsButtons = [
@@ -243,6 +261,27 @@ const GlobalSearchBuffer = () => {
   ];
   const canReplace = Boolean(debouncedQuery && displayedCount > 0);
 
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    const scrollContainer = scrollContainerRef.current;
+    if (!sentinel || !scrollContainer || !hasMore || showSearching) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          loadMoreResults();
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: "640px 0px",
+      },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMoreResults, scrollContainerRef, showSearching]);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border/70 border-b bg-secondary-bg/55 px-3 py-2">
@@ -250,6 +289,8 @@ const GlobalSearchBuffer = () => {
           <SearchReplaceToggle
             isExpanded={isReplaceVisible}
             onToggle={() => setIsReplaceVisible((visible) => !visible)}
+            expandedLabel="Hide details"
+            collapsedLabel="Show details"
           />
           <div className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/65 px-2">
             <MagnifyingGlass className="size-4 shrink-0 text-text-lighter" weight="duotone" />
@@ -288,7 +329,7 @@ const GlobalSearchBuffer = () => {
           ) : null}
         </div>
         {isReplaceVisible ? (
-          <div className="mt-2">
+          <div className="mt-2 space-y-2">
             <SearchReplaceRow
               value={replaceQuery}
               onChange={setReplaceQuery}
@@ -297,22 +338,22 @@ const GlobalSearchBuffer = () => {
               onReplaceAll={replaceAll}
               canReplace={canReplace}
             />
+            <div className="grid grid-cols-2 gap-2">
+              <CommandInput
+                value={includeQuery}
+                onChange={setIncludeQuery}
+                placeholder="Files to include"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
+              <CommandInput
+                value={excludeQuery}
+                onChange={setExcludeQuery}
+                placeholder="Files to exclude"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
+            </div>
           </div>
         ) : null}
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <CommandInput
-            value={includeQuery}
-            onChange={setIncludeQuery}
-            placeholder="Files to include"
-            className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
-          />
-          <CommandInput
-            value={excludeQuery}
-            onChange={setExcludeQuery}
-            placeholder="Files to exclude"
-            className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
-          />
-        </div>
       </div>
 
       <div
@@ -334,13 +375,13 @@ const GlobalSearchBuffer = () => {
           </div>
         ) : null}
 
-        {debouncedQuery && isSearching ? (
+        {showSearching ? (
           <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
             Searching...
           </div>
         ) : null}
 
-        {debouncedQuery && !isSearching && !hasResults && !error ? (
+        {trimmedDebouncedQuery && !showSearching && !hasResults && !error ? (
           <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
             No results found for "{debouncedQuery}"
           </div>
@@ -390,8 +431,8 @@ const GlobalSearchBuffer = () => {
               })}
             </div>
             {hasMore ? (
-              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
-                Showing first {displayedCount} of {totalMatches} results
+              <div ref={loadMoreRef} className="ui-text-sm px-3 py-3 text-center text-text-lighter">
+                Showing {displayedCount} of {totalMatches} results
               </div>
             ) : null}
           </>

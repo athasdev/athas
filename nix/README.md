@@ -1,6 +1,8 @@
 # Nix support
 
 Athas currently provides a Linux development shell through flakes.
+Flake inputs are pinned in `flake.nix` so CI and local shells evaluate the same
+Nixpkgs, flake-utils, and rust-overlay revisions.
 
 ```sh
 nix develop

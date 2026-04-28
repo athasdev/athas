@@ -72,14 +72,30 @@ function walkFiles(dir) {
   return files;
 }
 
-function indexFiles(dir) {
+function normalizedArtifactName(file, name, channel) {
+  const appPrefix = channel === "preview" ? "Athas Preview" : "Athas";
+  const macUpdaterName = `${appPrefix}.app.tar.gz`;
+
+  if (name === macUpdaterName || name === `${macUpdaterName}.sig`) {
+    if (file.includes("/aarch64-apple-darwin/")) {
+      return name.replace(macUpdaterName, `${appPrefix}_aarch64.app.tar.gz`);
+    }
+    if (file.includes("/x86_64-apple-darwin/")) {
+      return name.replace(macUpdaterName, `${appPrefix}_x64.app.tar.gz`);
+    }
+  }
+
+  return name;
+}
+
+function indexFiles(dir, channel) {
   if (!existsSync(dir)) {
     throw new Error(`Directory does not exist: ${dir}`);
   }
 
   const byName = new Map();
   for (const file of walkFiles(dir)) {
-    const name = basename(file);
+    const name = normalizedArtifactName(file, basename(file), channel);
     if (byName.has(name)) {
       throw new Error(`Duplicate artifact filename found: ${name}`);
     }
@@ -207,7 +223,7 @@ function findRequiredAsset(filesByName, required) {
 }
 
 function collectRequiredAssets(dir, version, channel) {
-  const filesByName = indexFiles(dir);
+  const filesByName = indexFiles(dir, channel);
   for (const name of filesByName.keys()) {
     if (forbiddenAssetPatterns(version).some((pattern) => pattern.test(name))) {
       throw new Error(`Unexpected legacy release asset found: ${name}`);
@@ -338,12 +354,15 @@ function writeChecksums(outDir, assets) {
 
 function copyReleaseFiles(outDir, filesByName) {
   mkdirSync(outDir, { recursive: true });
+  let copiedCount = 0;
   for (const [name, path] of filesByName) {
-    if (name === "latest.json" || name === "SHA256SUMS.txt") {
+    if (name === "latest.json" || name === "release-body.md" || name === "SHA256SUMS.txt") {
       continue;
     }
     copyFileSync(path, join(outDir, name));
+    copiedCount += 1;
   }
+  return copiedCount;
 }
 
 async function assemble() {
@@ -359,13 +378,13 @@ async function assemble() {
 
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
-  copyReleaseFiles(outDir, filesByName);
+  const copiedCount = copyReleaseFiles(outDir, filesByName);
   writeFileSync(
     join(outDir, "latest.json"),
     `${JSON.stringify(buildLatestJson({ tag, repo, notes, assets }), null, 2)}\n`,
   );
   writeChecksums(outDir, assets);
-  console.log(`Prepared ${filesByName.size + 2} release files in ${outDir}`);
+  console.log(`Prepared ${copiedCount + 2} release files in ${outDir}`);
 }
 
 function validateLatestJson(latestJson, { tag, repo, assetNames }) {

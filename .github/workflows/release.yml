@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build. Defaults to package.json version."
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,12 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     outputs:
+      tag_name: ${{ steps.release_meta.outputs.tag_name }}
       release_name: ${{ steps.release_meta.outputs.release_name }}
       is_prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -33,12 +39,33 @@ jobs:
         id: release_meta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag || '' }}
         run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ -n "$INPUT_TAG" ]]; then
+              tag="$INPUT_TAG"
+            else
+              version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
+              tag="v${version}"
+            fi
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $tag"
+            exit 1
+          fi
+
+          echo "tag_name=$tag" >> "${GITHUB_OUTPUT}"
+
           bun scripts/release/generate-notes.mjs \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "$tag" \
             --github-output "${GITHUB_OUTPUT}"
           bun scripts/release/generate-notes.mjs \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "$tag" \
             > release-body.md
 
       - name: Upload release metadata
@@ -108,7 +135,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -170,6 +197,16 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
         run: |
+          set -euo pipefail
+
+          if [[ -z "$APPLE_CERTIFICATE" || -z "$APPLE_CERT_PASSWORD" ]]; then
+            echo "APPLE_CODE_SIGNING=false" >> "$GITHUB_ENV"
+            echo "Apple signing certificate secrets are not configured; building unsigned macOS bundles."
+            exit 0
+          fi
+
+          echo "APPLE_CODE_SIGNING=true" >> "$GITHUB_ENV"
+
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -184,6 +221,12 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
           security find-identity -v -p codesigning
 
+      - name: Prepare Tauri macOS signing (macOS only)
+        if: matrix.os == 'macos'
+        env:
+          APPLE_SIGNING_IDENTITY: "${{ secrets.APPLE_SIGNING_IDENTITY || 'Developer ID Application: Mehmet Ozgul (N43BXFX4H4)' }}"
+        run: node scripts/release/macos/prepare-tauri-signing.mjs
+
       - name: Sign bundled macOS binaries (macOS only)
         if: matrix.os == 'macos'
         env:
@@ -191,6 +234,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "${APPLE_CODE_SIGNING:-}" != "true" ]]; then
+            echo "Apple code signing is not configured; skipping bundled binary signing."
+            exit 0
+          fi
 
           if [[ ! -d src/extensions/bundled ]]; then
             exit 0
@@ -340,9 +388,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: ${{ success() && startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ success() && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -363,9 +411,11 @@ jobs:
           merge-multiple: true
 
       - name: Assemble release assets
+        env:
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           bun scripts/release/release-assets.mjs assemble \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "${TAG_NAME}" \
             --repo "${{ github.repository }}" \
             --dir release-artifacts \
             --notes-file release-metadata/release-body.md \
@@ -374,6 +424,7 @@ jobs:
       - name: Create or update draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
           RELEASE_NAME: ${{ needs.release-metadata.outputs.release_name }}
           IS_PRERELEASE: ${{ needs.release-metadata.outputs.is_prerelease }}
         run: |
@@ -382,27 +433,27 @@ jobs:
           release_count="$(gh api "/repos/${{ github.repository }}/releases?per_page=100" \
             --paginate \
             --slurp \
-            --jq "map(.[] | select(.tag_name == \"${GITHUB_REF_NAME}\")) | length")"
+            --jq "map(.[] | select(.tag_name == \"${TAG_NAME}\")) | length")"
 
           if [[ "$release_count" -gt 1 ]]; then
-            echo "Found ${release_count} releases with tag ${GITHUB_REF_NAME}; refusing to upload into ambiguous release state."
+            echo "Found ${release_count} releases with tag ${TAG_NAME}; refusing to upload into ambiguous release state."
             exit 1
           fi
 
-          if gh release view "${GITHUB_REF_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            is_draft="$(gh release view "${GITHUB_REF_NAME}" --repo "${{ github.repository }}" --json isDraft --jq ".isDraft")"
+          if gh release view "${TAG_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            is_draft="$(gh release view "${TAG_NAME}" --repo "${{ github.repository }}" --json isDraft --jq ".isDraft")"
             if [[ "$is_draft" != "true" ]]; then
-              echo "Release ${GITHUB_REF_NAME} is already published; refusing to mutate it."
+              echo "Release ${TAG_NAME} is already published; refusing to mutate it."
               exit 1
             fi
 
-            gh release edit "${GITHUB_REF_NAME}" \
+            gh release edit "${TAG_NAME}" \
               --repo "${{ github.repository }}" \
               --title "${RELEASE_NAME}" \
               --notes-file release-metadata/release-body.md
           else
             create_args=(
-              release create "${GITHUB_REF_NAME}"
+              release create "${TAG_NAME}"
               --repo "${{ github.repository }}"
               --draft
               --target "${GITHUB_SHA}"
@@ -420,8 +471,9 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" \
+          gh release upload "${TAG_NAME}" \
             --repo "${{ github.repository }}" \
             prepared-release/* \
             --clobber
@@ -429,7 +481,8 @@ jobs:
       - name: Validate draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           bun scripts/release/release-assets.mjs verify \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "${TAG_NAME}" \
             --repo "${{ github.repository }}"

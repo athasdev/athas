@@ -113,9 +113,6 @@ const Line = memo<LineProps>(
             </span>
             <span className="diff-accordion-name">{accordionMeta.name}</span>
             <span className="diff-accordion-path">{accordionMeta.path}</span>
-            {accordionMeta.hiddenCount ? (
-              <span className="diff-accordion-count">{accordionMeta.hiddenCount} hidden</span>
-            ) : null}
           </div>
         </div>
       );
@@ -124,7 +121,7 @@ const Line = memo<LineProps>(
     if (foldedCount) {
       return (
         <div className="highlight-layer-line folded-preview-line token-text">
-          {lineContent || `${foldedCount} lines hidden`}
+          {lineContent || "\u00A0"}
         </div>
       );
     }

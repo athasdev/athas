@@ -374,6 +374,61 @@ export function Editor({
     return cursorPosition.line;
   }, [cursorPosition.line, foldTransform]);
 
+  const setEditorCursorPosition = useCallback(
+    (position: Parameters<typeof setCursorPosition>[0]) => {
+      setCursorPosition(position, { ensureVisible: !foldTransform.hasActiveFolds });
+    },
+    [foldTransform.hasActiveFolds, setCursorPosition],
+  );
+
+  const getInputOffsetForPosition = useCallback(
+    (position: Parameters<typeof setCursorPosition>[0]) => {
+      if (!foldTransform.hasActiveFolds) {
+        return Math.min(position.offset, displayContent.length);
+      }
+
+      const mappedVirtualLine =
+        foldTransform.mapping.actualToVirtual.get(position.line) ?? position.line;
+      const virtualLine = Math.min(Math.max(mappedVirtualLine, 0), Math.max(lines.length - 1, 0));
+      const virtualLineText = lines[virtualLine] ?? "";
+      const virtualColumn = Math.min(position.column, virtualLineText.length);
+
+      return Math.min(
+        calculateLineOffset(lines, virtualLine) + virtualColumn,
+        displayContent.length,
+      );
+    },
+    [displayContent.length, foldTransform.hasActiveFolds, foldTransform.mapping, lines],
+  );
+
+  useLayoutEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const previousScrollTop = textarea.scrollTop;
+    const previousScrollLeft = textarea.scrollLeft;
+    const valueChanged = textarea.value !== displayContent;
+
+    if (valueChanged) {
+      textarea.value = displayContent;
+    }
+
+    const selectionStart = selection
+      ? getInputOffsetForPosition(selection.start)
+      : getInputOffsetForPosition(cursorPosition);
+    const selectionEnd = selection ? getInputOffsetForPosition(selection.end) : selectionStart;
+
+    if (textarea.selectionStart !== selectionStart || textarea.selectionEnd !== selectionEnd) {
+      textarea.selectionStart = selectionStart;
+      textarea.selectionEnd = selectionEnd;
+    }
+
+    if (valueChanged) {
+      textarea.scrollTop = previousScrollTop;
+      textarea.scrollLeft = previousScrollLeft;
+    }
+  }, [cursorPosition, displayContent, getInputOffsetForPosition, selection]);
+
   const handleInput = useCallback(
     (newVirtualContent: string) => {
       if (readOnly) return;
@@ -412,13 +467,13 @@ export function Editor({
           actualLine,
           position.column,
         );
-        setCursorPosition({
+        setEditorCursorPosition({
           line: actualLine,
           column: position.column,
           offset: actualOffset,
         });
       } else {
-        setCursorPosition(position);
+        setEditorCursorPosition(position);
       }
 
       const timestamp = Date.now();
@@ -427,7 +482,7 @@ export function Editor({
     [
       bufferId,
       updateBufferContent,
-      setCursorPosition,
+      setEditorCursorPosition,
       content,
       foldTransform,
       onContentChange,
@@ -466,7 +521,7 @@ export function Editor({
       top: number;
       left: number;
     }>,
-    setCursorPosition,
+    setCursorPosition: setEditorCursorPosition,
     setSelection,
     updateBufferContent,
   });
@@ -499,13 +554,13 @@ export function Editor({
     if (foldTransform.hasActiveFolds) {
       const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
       const actualOffset = calculateActualOffset(actualLines, actualLine, position.column);
-      setCursorPosition({
+      setEditorCursorPosition({
         line: actualLine,
         column: position.column,
         offset: actualOffset,
       });
     } else {
-      setCursorPosition(position);
+      setEditorCursorPosition(position);
     }
 
     if (selectionStart !== selectionEnd) {
@@ -556,7 +611,7 @@ export function Editor({
     bufferId,
     lines,
     actualLines,
-    setCursorPosition,
+    setEditorCursorPosition,
     setSelection,
     foldTransform,
     inlineEditState,
@@ -694,7 +749,7 @@ export function Editor({
     handleInput,
     handleApplyInlineEdit: inlineEditState.handleApplyInlineEdit,
     updateBufferContent,
-    setCursorPosition,
+    setCursorPosition: setEditorCursorPosition,
     setSelection,
     enableMultiCursor,
     addCursor,
@@ -748,12 +803,12 @@ export function Editor({
     if (!textarea) return;
 
     if (!scrollable) {
-      const handleWheel = (e: WheelEvent) => {
-        const scrollContainer =
-          textarea.closest("[data-editor-outer-scroll]") ??
-          textarea.closest("[data-diff-stack-scroll-container]");
-        if (!(scrollContainer instanceof HTMLDivElement)) return;
+      const scrollContainer =
+        textarea.closest("[data-editor-outer-scroll]") ??
+        textarea.closest("[data-diff-stack-scroll-container]");
+      if (!(scrollContainer instanceof HTMLDivElement)) return;
 
+      const handleWheel = (e: WheelEvent) => {
         const canScrollY =
           (e.deltaY < 0 && scrollContainer.scrollTop > 0) ||
           (e.deltaY > 0 &&
@@ -766,11 +821,8 @@ export function Editor({
 
         if (!canScrollY && !canScrollX) return;
 
-        scrollContainer.scrollBy({
-          left: e.deltaX,
-          top: e.deltaY,
-          behavior: "auto",
-        });
+        scrollContainer.scrollTop += e.deltaY;
+        scrollContainer.scrollLeft += e.deltaX;
         e.preventDefault();
       };
 
@@ -934,19 +986,19 @@ export function Editor({
           offset: calculateActualOffset(actualLines, actualEndLine, endPos.column),
         };
 
-        setCursorPosition(actualStart);
+        setEditorCursorPosition(actualStart);
         setSelection({ start: actualStart, end: actualEnd });
         return;
       }
 
-      setCursorPosition(startPos);
+      setEditorCursorPosition(startPos);
       setSelection({ start: startPos, end: endPos });
     },
     [
       lines,
       foldTransform,
       actualLines,
-      setCursorPosition,
+      setEditorCursorPosition,
       setSelection,
       useGlobalEditorState,
       onReadonlySurfaceClick,
@@ -1291,6 +1343,7 @@ export function Editor({
         {useGlobalEditorState &&
           filePath &&
           inlineGitBlameEnabled &&
+          !(foldTransform.hasActiveFolds && foldTransform.foldMarkers.has(visualCursorLine)) &&
           !inlineEditState.inlineEditVisible && (
             <GitBlameLayer
               ref={gitBlameRef}

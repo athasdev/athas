@@ -19,26 +19,15 @@ interface TransformResult {
   foldMarkers: Map<number, number>;
 }
 
-function createCollapsedLinePreview(
-  lineContent: string,
-  hiddenCount: number,
-  kind?: FoldRegion["kind"],
-): string {
+function createCollapsedLinePreview(lineContent: string, kind?: FoldRegion["kind"]): string {
   if (kind === "diff-file") {
     const meta = parseDiffAccordionLine(lineContent);
     if (meta) {
-      return createCollapsedDiffAccordionLine(meta, hiddenCount);
+      return createCollapsedDiffAccordionLine(meta);
     }
   }
 
-  const suffix =
-    kind === "diff-file"
-      ? ` ... ${hiddenCount} lines hidden in file`
-      : kind === "diff-hunk"
-        ? ` ... ${hiddenCount} lines hidden in hunk`
-        : ` ... ${hiddenCount} lines hidden`;
-
-  return `${lineContent}${suffix}`;
+  return lineContent;
 }
 
 export function transformContentForFolding(
@@ -78,7 +67,7 @@ export function transformContentForFolding(
     if (collapsedRegion) {
       const lineContent = actualLines[actualLine];
       const hiddenCount = collapsedRegion.endLine - collapsedRegion.startLine;
-      virtualLines.push(createCollapsedLinePreview(lineContent, hiddenCount, collapsedRegion.kind));
+      virtualLines.push(createCollapsedLinePreview(lineContent, collapsedRegion.kind));
 
       foldMarkers.set(virtualLineIndex, hiddenCount);
       foldedRanges.push({

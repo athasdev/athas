@@ -1,19 +1,3 @@
-/* Hide native scrollbar completely */
-.file-tree-container,
-.file-tree-container * {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-.file-tree-container::-webkit-scrollbar,
-.file-tree-container *::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  -webkit-appearance: none !important;
-  appearance: none !important;
-}
-
 /* Enable proper mouse wheel scrolling with horizontal overflow */
 .file-tree-container {
   overflow-y: auto !important;
