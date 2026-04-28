@@ -7,6 +7,8 @@ dist/
 # Optional npm and yarn cache directory
 .npm/
 .yarn/
+.bun-cache/
+.tmp/
 
 # Output of 'npm pack'
 *.tgz
