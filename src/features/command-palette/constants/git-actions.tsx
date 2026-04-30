@@ -1,7 +1,7 @@
 import {
   ArrowUp,
+  Archive,
   ClockCounterClockwise,
-  Eye,
   FolderOpen,
   GitBranch,
   GitCommit,
@@ -52,6 +52,13 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
   const openGitAction = (detail: unknown) => {
     setIsSidebarVisible(true);
     setActiveView("git");
+    onClose();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("athas:git-palette-action", { detail }));
+    }, 0);
+  };
+
+  const openGitCommandSurface = (detail: unknown) => {
     onClose();
     window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent("athas:git-palette-action", { detail }));
@@ -127,9 +134,9 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-view-stashes",
       label: "Git: View Stashes",
       description: "Open stash list",
-      icon: <Eye />,
+      icon: <Archive />,
       category: "Git",
-      action: () => openGitAction({ type: "view-stashes" }),
+      action: () => openGitCommandSurface({ type: "view-stashes" }),
     },
     {
       id: "git-stage-all",

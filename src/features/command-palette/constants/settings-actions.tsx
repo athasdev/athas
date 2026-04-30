@@ -20,6 +20,7 @@ import {
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import type { Settings as AppSettings } from "@/features/settings/store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../models/action.types";
 
 interface SettingsActionsParams {
@@ -60,40 +61,20 @@ const settingsTabCommands = (Object.entries(settingsTabLabels) as Array<[Setting
   .map(([tab, label]) => ({ tab, label }))
   .filter(({ tab }) => tab !== "language");
 
-function normalizeSearchText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
 function getMatchingSettingsRecords(query: string) {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length < 2) return [];
 
-  const normalizedQuery = normalizeSearchText(trimmedQuery);
-  const tokens = normalizedQuery.split(/\s+/);
-
   return settingsSearchIndex
     .map((record) => {
-      const searchableText = normalizeSearchText(
-        [record.label, record.description, record.section, ...(record.keywords || [])].join(" "),
-      );
+      const score = scoreSearchQuery(trimmedQuery, [
+        { value: record.label, weight: 11 },
+        { value: record.description, weight: 1 },
+        { value: record.section, weight: 1 },
+        ...(record.keywords || []).map((keyword) => ({ value: keyword, weight: 6 })),
+      ]);
 
-      let score = 0;
-      for (const token of tokens) {
-        if (!searchableText.includes(token)) {
-          return null;
-        }
-
-        score += 1;
-        if (normalizeSearchText(record.label).includes(token)) {
-          score += 10;
-        }
-        if (record.keywords?.some((keyword) => normalizeSearchText(keyword).includes(token))) {
-          score += 5;
-        }
-      }
+      if (score === 0) return null;
 
       return { record, score };
     })

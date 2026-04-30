@@ -38,6 +38,7 @@ import { SegmentedControl } from "@/ui/segmented-control";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingRow } from "../settings-section";
 
@@ -88,18 +89,22 @@ export const KeyboardSettings = () => {
   );
 
   const filteredCommands = useMemo(() => {
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim();
 
     return commands.filter((command) => {
+      const binding = getKeybindingForCommand(command.id);
       const matchesSearch =
         !query ||
-        command.title.toLowerCase().includes(query) ||
-        command.id.toLowerCase().includes(query) ||
-        command.category?.toLowerCase().includes(query);
+        matchesSearchQuery(query, [
+          command.title,
+          command.id,
+          command.category ?? "",
+          command.description ?? "",
+          binding?.key ?? "",
+          binding?.when ?? "",
+        ]);
 
       if (!matchesSearch) return false;
-
-      const binding = getKeybindingForCommand(command.id);
 
       if (filterType === "all") return true;
       if (filterType === "user") return binding?.source === "user";

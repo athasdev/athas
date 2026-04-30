@@ -11,6 +11,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import Badge from "@/ui/badge";
+import { matchesSearchQuery } from "@/utils/search-match";
 
 interface IconThemeInfo {
   id: string;
@@ -64,9 +65,7 @@ const IconThemeSelector = ({
 
   // Filter themes based on query
   const filteredThemes = themes.filter(
-    (theme) =>
-      theme.name.toLowerCase().includes(query.toLowerCase()) ||
-      theme.description?.toLowerCase().includes(query.toLowerCase()),
+    (theme) => !query.trim() || matchesSearchQuery(query, [theme.name, theme.description ?? ""]),
   );
 
   // Handle keyboard navigation

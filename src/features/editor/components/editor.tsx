@@ -15,6 +15,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { Button } from "@/ui/button";
@@ -114,6 +115,7 @@ export function Editor({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const primaryCursorRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
   const selectionLayerRef = useRef<HTMLDivElement>(null);
@@ -149,6 +151,7 @@ export function Editor({
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
@@ -498,6 +501,7 @@ export function Editor({
     bufferId,
     updateBufferContent,
     handleInput,
+    tabSize,
   });
 
   // Inline edit hook
@@ -768,6 +772,7 @@ export function Editor({
     minimapEnabled,
     switchGuardRef,
     highlightRef,
+    primaryCursorRef,
     multiCursorRef,
     searchHighlightRef,
     selectionLayerRef,
@@ -809,20 +814,32 @@ export function Editor({
       if (!(scrollContainer instanceof HTMLDivElement)) return;
 
       const handleWheel = (e: WheelEvent) => {
+        const isHorizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        const deltaTop = isHorizontalIntent ? 0 : e.deltaY;
+        const deltaLeft =
+          isHorizontalIntent && e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)
+            ? e.deltaY
+            : isHorizontalIntent
+              ? e.deltaX
+              : 0;
         const canScrollY =
-          (e.deltaY < 0 && scrollContainer.scrollTop > 0) ||
-          (e.deltaY > 0 &&
+          (deltaTop < 0 && scrollContainer.scrollTop > 0) ||
+          (deltaTop > 0 &&
             scrollContainer.scrollTop + scrollContainer.clientHeight <
               scrollContainer.scrollHeight);
         const canScrollX =
-          (e.deltaX < 0 && scrollContainer.scrollLeft > 0) ||
-          (e.deltaX > 0 &&
+          (deltaLeft < 0 && scrollContainer.scrollLeft > 0) ||
+          (deltaLeft > 0 &&
             scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth);
 
         if (!canScrollY && !canScrollX) return;
 
-        scrollContainer.scrollTop += e.deltaY;
-        scrollContainer.scrollLeft += e.deltaX;
+        if (canScrollY) {
+          scrollContainer.scrollTop += deltaTop;
+        }
+        if (canScrollX) {
+          scrollContainer.scrollLeft += deltaLeft;
+        }
         e.preventDefault();
       };
 
@@ -1075,6 +1092,7 @@ export function Editor({
 
       <div
         ref={contentContainerRef}
+        data-editor-content-container
         className={`overlay-editor-container relative min-h-0 min-w-0 flex-1 bg-primary-bg ${className || ""}`}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
@@ -1121,6 +1139,7 @@ export function Editor({
         />
         {useGlobalEditorState && !wordWrap && !readOnly && (
           <PrimaryCursorLayer
+            ref={primaryCursorRef}
             cursorPosition={cursorPosition}
             visualLine={visualCursorLine}
             fontSize={fontSize}
@@ -1413,14 +1432,36 @@ export function Editor({
             onPaste={editorOps.paste}
             onSelectAll={editorOps.selectAll}
             onDelete={editorOps.deleteSelection}
+            onFind={() => setIsFindVisible(true)}
+            onGoToLine={() => {
+              void keymapRegistry.executeCommand("editor.goToLine");
+            }}
+            onDuplicate={() => {
+              void keymapRegistry.executeCommand("editor.duplicateLine");
+            }}
+            onIndent={editorOps.indent}
+            onOutdent={editorOps.outdent}
+            onToggleComment={() => {
+              void keymapRegistry.executeCommand("editor.toggleComment");
+            }}
+            onFormat={() => {
+              void keymapRegistry.executeCommand("editor.formatDocument");
+            }}
+            onToggleCase={editorOps.toggleCase}
+            onMoveLineUp={() => {
+              void keymapRegistry.executeCommand("editor.moveLineUp");
+            }}
+            onMoveLineDown={() => {
+              void keymapRegistry.executeCommand("editor.moveLineDown");
+            }}
             onGoToDefinition={() => {
-              keymapRegistry.executeCommand("editor.goToDefinition");
+              void keymapRegistry.executeCommand("editor.goToDefinition");
             }}
             onFindReferences={() => {
-              keymapRegistry.executeCommand("editor.goToReferences");
+              void keymapRegistry.executeCommand("editor.goToReferences");
             }}
             onRenameSymbol={() => {
-              keymapRegistry.executeCommand("editor.renameSymbol");
+              void keymapRegistry.executeCommand("editor.renameSymbol");
             }}
           />,
           document.body,

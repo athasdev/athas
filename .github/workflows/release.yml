@@ -431,9 +431,7 @@ jobs:
           set -euo pipefail
 
           release_count="$(gh api "/repos/${{ github.repository }}/releases?per_page=100" \
-            --paginate \
-            --slurp \
-            --jq "map(.[] | select(.tag_name == \"${TAG_NAME}\")) | length")"
+            --jq "map(select(.tag_name == \"${TAG_NAME}\")) | length")"
 
           if [[ "$release_count" -gt 1 ]]; then
             echo "Found ${release_count} releases with tag ${TAG_NAME}; refusing to upload into ambiguous release state."

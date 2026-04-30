@@ -23,20 +23,29 @@
 
 /* Style the terminal viewport for better appearance */
 .xterm-container .xterm-viewport {
-  /* Keep default background */
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  overscroll-behavior: none;
 }
 
 /* Improve scrollbar styling */
 .xterm-container .xterm-viewport::-webkit-scrollbar {
   width: var(--app-scrollbar-size);
-  background-color: var(--app-scrollbar-track);
+  height: var(--app-scrollbar-size);
+  background: var(--app-scrollbar-track);
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-track {
   background: var(--app-scrollbar-track);
 }
 
+.xterm-container .xterm-viewport::-webkit-scrollbar-corner {
+  background: var(--app-scrollbar-track);
+}
+
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb {
+  min-height: 32px;
   border: var(--app-scrollbar-border-size) solid transparent;
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb);

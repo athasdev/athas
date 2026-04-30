@@ -13,6 +13,7 @@ import {
   ComboboxList,
 } from "@/ui/combobox";
 import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
 import { createStash } from "../api/git-stash-api";
 
@@ -36,7 +37,7 @@ function getFilteredBranches(branches: string[], currentBranch: string, query: s
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return sorted;
 
-  return sorted.filter((branch) => branch.toLowerCase().includes(normalizedQuery));
+  return sorted.filter((branch) => matchesSearchQuery(normalizedQuery, [branch]));
 }
 
 function getCreateBranchName(branches: string[], currentBranch: string, query: string) {

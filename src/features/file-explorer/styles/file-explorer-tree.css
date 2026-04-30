@@ -40,21 +40,31 @@
 }
 
 .file-tree-container .file-tree-item button:hover {
-  background-color: var(--color-hover) !important;
+  background-color: var(--file-tree-hover-bg) !important;
 }
 
-.file-tree-container .file-tree-item button.bg-selected {
+.file-tree-container .file-tree-item button.bg-selected,
+.file-tree-container .file-tree-item button.bg-selected:hover {
   background-color: var(--color-selected) !important;
 }
 
 .file-tree-item {
   position: relative;
+  --file-tree-hover-bg: color-mix(in srgb, var(--color-hover) 68%, transparent);
+  --file-tree-guide-icon-offset: 7px;
   --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
 }
 
 .file-tree-row {
   position: relative;
   isolation: isolate;
+}
+
+.file-tree-row:hover {
+  background-color: var(
+    --file-tree-hover-bg,
+    color-mix(in srgb, var(--color-hover) 68%, transparent)
+  ) !important;
 }
 
 .file-tree-guides {

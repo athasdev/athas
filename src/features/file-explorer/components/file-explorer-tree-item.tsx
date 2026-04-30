@@ -102,7 +102,7 @@ function FileExplorerTreeItemComponent({
             title={target?.name}
             style={
               {
-                left: `${14 + level * indentSize}px`,
+                left: `calc(${14 + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
                 top: startsHere ? "4px" : "0",
                 bottom: endsHere ? "4px" : "0",
               } as React.CSSProperties

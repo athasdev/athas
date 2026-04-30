@@ -1,5 +1,5 @@
 import {
-  Eye,
+  Archive,
   Download,
   FolderOpen,
   GitPullRequest,
@@ -217,7 +217,7 @@ const GitActionsMenu = ({
         {
           id: "view-stashes",
           label: "View Stashes",
-          icon: <Eye />,
+          icon: <Archive />,
           onClick: handleViewStashes,
         },
         { id: "sep-4", label: "", separator: true, onClick: () => {} },

@@ -18,10 +18,27 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
+import {
+  applyWorkspaceEdit,
+  filePathFromUri,
+  isWorkspaceEdit,
+  type WorkspaceEdit,
+} from "./workspace-edit";
 
 export interface LspError {
   message: string;
   code?: string;
+}
+
+interface PrepareRenameResult {
+  range?: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  placeholder?: string;
+  defaultBehavior?: boolean;
+  start?: { line: number; character: number };
+  end?: { line: number; character: number };
 }
 
 function normalizeLspError(error: unknown): LspError {
@@ -75,6 +92,26 @@ function isBenignHoverError(error: unknown): boolean {
     message.includes("column is beyond end of file") ||
     message.includes("no lsp client for this file")
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getCodeActionEdit(actionPayload: unknown): unknown {
+  if (!isRecord(actionPayload)) return null;
+  return actionPayload.edit;
+}
+
+function hasCodeActionCommand(actionPayload: unknown): boolean {
+  return isRecord(actionPayload) && isRecord(actionPayload.command);
+}
+
+function withoutWorkspaceEdit(actionPayload: unknown): unknown {
+  if (!isRecord(actionPayload)) return actionPayload;
+
+  const { edit: _edit, ...commandPayload } = actionPayload;
+  return commandPayload;
 }
 
 export class LspClient {
@@ -219,7 +256,7 @@ export class LspClient {
           logger.debug("LSPClient", `Received diagnostics for ${uri}:`, diagnostics);
 
           // Convert URI to file path
-          const filePath = uri.replace("file://", "");
+          const filePath = filePathFromUri(uri);
 
           // Convert LSP diagnostics to our internal format
           const diagnosticsList = diagnostics || [];
@@ -472,6 +509,7 @@ export class LspClient {
     const displayNames: Record<string, string> = {
       typescript: "TypeScript",
       javascript: "JavaScript",
+      javascriptreact: "JavaScript React",
       rust: "Rust",
       python: "Python",
       go: "Go",
@@ -484,11 +522,27 @@ export class LspClient {
       html: "HTML",
       angular: "Angular Template",
       css: "CSS",
+      dart: "Dart",
+      dockerfile: "Dockerfile",
+      elixir: "Elixir",
       json: "JSON",
+      jsonc: "JSONC",
+      kotlin: "Kotlin",
+      lua: "Lua",
       yaml: "YAML",
+      nix: "Nix",
+      ocaml: "OCaml",
+      scala: "Scala",
+      solidity: "Solidity",
+      svelte: "Svelte",
+      swift: "Swift",
+      terraform: "Terraform",
       toml: "TOML",
+      typescriptreact: "TypeScript React",
       markdown: "Markdown",
       bash: "Bash",
+      vue: "Vue",
+      zig: "Zig",
     };
     return displayNames[languageId] || languageId;
   }
@@ -694,6 +748,7 @@ export class LspClient {
       line: number;
       title: string;
       command?: string;
+      arguments?: unknown[];
     }[]
   > {
     try {
@@ -793,6 +848,15 @@ export class LspClient {
     }
   }
 
+  async getSignatureTriggerCharacters(filePath: string): Promise<string[]> {
+    try {
+      return await invoke<string[]>("lsp_get_signature_trigger_characters", { filePath });
+    } catch (error) {
+      logger.debug("LSPClient", "LSP signature trigger characters unavailable:", error);
+      return [];
+    }
+  }
+
   async getReferences(
     filePath: string,
     line: number,
@@ -838,32 +902,10 @@ export class LspClient {
     line: number,
     character: number,
     newName: string,
-  ): Promise<{
-    changes?: Record<
-      string,
-      {
-        range: {
-          start: { line: number; character: number };
-          end: { line: number; character: number };
-        };
-        newText: string;
-      }[]
-    >;
-  } | null> {
+  ): Promise<WorkspaceEdit | null> {
     try {
       logger.debug("LSPClient", `Renaming at ${filePath}:${line}:${character} to "${newName}"`);
-      const result = await invoke<{
-        changes?: Record<
-          string,
-          {
-            range: {
-              start: { line: number; character: number };
-              end: { line: number; character: number };
-            };
-            newText: string;
-          }[]
-        >;
-      } | null>("lsp_rename", {
+      const result = await invoke<WorkspaceEdit | null>("lsp_rename", {
         filePath,
         line,
         character,
@@ -875,6 +917,23 @@ export class LspClient {
       return result;
     } catch (error) {
       logger.error("LSPClient", "LSP rename error:", error);
+      return null;
+    }
+  }
+
+  async prepareRename(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<PrepareRenameResult | null> {
+    try {
+      return await invoke<PrepareRenameResult | null>("lsp_prepare_rename", {
+        filePath,
+        line,
+        character,
+      });
+    } catch (error) {
+      logger.debug("LSPClient", "LSP prepare rename unavailable:", error);
       return null;
     }
   }
@@ -905,10 +964,25 @@ export class LspClient {
     actionPayload: unknown,
   ): Promise<ApplyDiagnosticCodeActionResult> {
     try {
-      return await invoke<ApplyDiagnosticCodeActionResult>("lsp_apply_code_action", {
+      let appliedEdit = false;
+      const edit = getCodeActionEdit(actionPayload);
+      if (isWorkspaceEdit(edit)) {
+        await applyWorkspaceEdit(edit);
+        appliedEdit = true;
+
+        if (!hasCodeActionCommand(actionPayload)) {
+          return { applied: true };
+        }
+
+        actionPayload = withoutWorkspaceEdit(actionPayload);
+      }
+
+      const result = await invoke<ApplyDiagnosticCodeActionResult>("lsp_apply_code_action", {
         filePath,
         actionPayload,
       });
+
+      return appliedEdit && !result.applied ? { applied: true, reason: result.reason } : result;
     } catch (error) {
       logger.warn("LSPClient", "LSP apply code action failed:", error);
       return {
@@ -944,6 +1018,7 @@ export class LspClient {
   async notifyDocumentClose(filePath: string): Promise<void> {
     try {
       await invoke<void>("lsp_document_close", { filePath });
+      useDiagnosticsStore.getState().actions.clearDiagnostics(filePath);
     } catch (error) {
       logger.error("LSPClient", "LSP document close error:", error);
     }

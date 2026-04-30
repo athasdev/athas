@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
@@ -358,19 +359,17 @@ export function Dropdown(props: DropdownProps) {
   const getFilteredItems = useCallback((): MenuItem[] => {
     const all = getAllItems();
     if (!searchQuery.trim()) return all;
-    const q = searchQuery.toLowerCase();
-    return all.filter((item) => !item.separator && item.label.toLowerCase().includes(q));
+    return all.filter((item) => !item.separator && matchesSearchQuery(searchQuery, [item.label]));
   }, [getAllItems, searchQuery]);
 
   const getFilteredSections = useCallback((): DropdownSection[] => {
     if (!hasSections) return [];
     if (!searchQuery.trim()) return props.sections!;
-    const q = searchQuery.toLowerCase();
     return props
       .sections!.map((section) => ({
         ...section,
         items: section.items.filter(
-          (item) => !item.separator && item.label.toLowerCase().includes(q),
+          (item) => !item.separator && matchesSearchQuery(searchQuery, [item.label]),
         ),
       }))
       .filter((section) => section.items.length > 0);

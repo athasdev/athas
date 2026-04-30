@@ -28,6 +28,7 @@ const GlobalSearchBuffer = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isReplaceVisible, setIsReplaceVisible] = useState(false);
   const [replaceQuery, setReplaceQuery] = useState("");
+  const [canScrollResults, setCanScrollResults] = useState(false);
   const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
   const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
   const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
@@ -227,6 +228,7 @@ const GlobalSearchBuffer = () => {
   const totalMatches = results.reduce((sum, r) => sum + r.total_matches, 0);
   const displayedCount = navigationItems.length;
   const hasMore = totalMatches > displayedCount;
+  const showMarkerRail = hasResults && canScrollResults && markerItems.length > 1;
   const loadMoreResults = useCallback(() => {
     setVisibleMatchLimit((limit) =>
       Math.min(limit + CONTENT_SEARCH_RENDER_INCREMENT, totalMatches),
@@ -281,6 +283,28 @@ const GlobalSearchBuffer = () => {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasMore, loadMoreResults, scrollContainerRef, showSearching]);
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer || !hasResults || showSearching) {
+      setCanScrollResults(false);
+      return;
+    }
+
+    const updateCanScroll = () => {
+      setCanScrollResults(scrollContainer.scrollHeight > scrollContainer.clientHeight + 1);
+    };
+
+    const frame = requestAnimationFrame(updateCanScroll);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateCanScroll);
+    resizeObserver?.observe(scrollContainer);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+    };
+  }, [displayedCount, hasResults, scrollContainerRef, showSearching, totalMatches]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -395,41 +419,49 @@ const GlobalSearchBuffer = () => {
 
         {hasResults ? (
           <>
-            <SearchExcerptResults
-              excerpts={excerpts}
-              selectedItemKey={selectedItemKey}
-              onOpen={handleFileClick}
-              onExpandContext={handleExpandContext}
-              onCollapseContext={handleCollapseContext}
-              isContextExpanded={isContextExpanded}
-            />
-            <div className="pointer-events-none absolute top-0 right-1 bottom-0 w-2">
-              {markerItems.map(({ item, markerIndex }) => {
-                const match = matchIndex.get(item.path);
-                if (!match) return null;
-
-                return (
-                  <button
-                    key={item.path}
-                    type="button"
-                    aria-label={`Result ${markerIndex + 1}`}
-                    className={cn(
-                      "pointer-events-auto absolute right-0 h-1.5 w-1.5 rounded-full bg-text-lighter/45 hover:bg-accent",
-                      selectedItemKey === item.path && "bg-accent",
-                    )}
-                    style={{
-                      top: `${navigationItems.length <= 1 ? 0 : (markerIndex / (navigationItems.length - 1)) * 100}%`,
-                    }}
-                    onClick={() => {
-                      const selectedElement = scrollContainerRef.current?.querySelector(
-                        `[data-excerpt-index="${match.excerptIndex}"]`,
-                      ) as HTMLElement | null;
-                      selectedElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                    }}
-                  />
-                );
-              })}
+            <div className={cn(showMarkerRail && "pr-5")}>
+              <SearchExcerptResults
+                excerpts={excerpts}
+                selectedItemKey={selectedItemKey}
+                onOpen={handleFileClick}
+                onExpandContext={handleExpandContext}
+                onCollapseContext={handleCollapseContext}
+                isContextExpanded={isContextExpanded}
+              />
             </div>
+            {showMarkerRail ? (
+              <div className="pointer-events-none absolute top-2 right-3 bottom-2 w-2 rounded-full bg-secondary-bg/30">
+                {markerItems.map(({ item, markerIndex }) => {
+                  const match = matchIndex.get(item.path);
+                  if (!match) return null;
+                  const markerPercent =
+                    navigationItems.length <= 1
+                      ? 0
+                      : (markerIndex / (navigationItems.length - 1)) * 100;
+
+                  return (
+                    <button
+                      key={item.path}
+                      type="button"
+                      aria-label={`Result ${markerIndex + 1}`}
+                      className={cn(
+                        "pointer-events-auto absolute right-0 h-1 w-1 rounded-full bg-text-lighter/35 hover:bg-accent",
+                        selectedItemKey === item.path && "bg-accent",
+                      )}
+                      style={{
+                        top: `calc(${markerPercent}% - 2px)`,
+                      }}
+                      onClick={() => {
+                        const selectedElement = scrollContainerRef.current?.querySelector(
+                          `[data-excerpt-index="${match.excerptIndex}"]`,
+                        ) as HTMLElement | null;
+                        selectedElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
             {hasMore ? (
               <div ref={loadMoreRef} className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 Showing {displayedCount} of {totalMatches} results

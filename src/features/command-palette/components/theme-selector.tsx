@@ -13,6 +13,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
+import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
   id: string;
@@ -81,9 +82,8 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
   // Filter themes based on query
   const filteredThemes = themes.filter(
     (theme) =>
-      theme.name.toLowerCase().includes(query.toLowerCase()) ||
-      theme.description?.toLowerCase().includes(query.toLowerCase()) ||
-      theme.category.toLowerCase().includes(query.toLowerCase()),
+      !query.trim() ||
+      matchesSearchQuery(query, [theme.name, theme.description ?? "", theme.category]),
   );
 
   // Handle keyboard navigation

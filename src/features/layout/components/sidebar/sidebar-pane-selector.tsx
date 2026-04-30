@@ -44,6 +44,12 @@ export const SidebarPaneSelector = ({
 }: SidebarPaneSelectorProps) => {
   const isVertical = orientation === "vertical";
   const tooltipSide = compact ? "bottom" : isVertical ? "right" : "bottom";
+  const iconClassName = compact ? "size-4" : isVertical ? "size-[18px]" : undefined;
+  const tabClassName = compact
+    ? "min-w-7 [&_svg]:size-4"
+    : isVertical
+      ? "size-9 rounded-lg"
+      : "w-8 rounded-md";
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
@@ -53,12 +59,12 @@ export const SidebarPaneSelector = ({
   const items: TabsItem[] = [
     {
       id: "files",
-      icon: <Folder className={compact ? "size-4" : undefined} weight="duotone" />,
+      icon: <Folder className={iconClassName} weight="duotone" />,
       isActive: isFilesActive,
       onClick: () => onViewChange("files"),
       role: "tab",
       ariaLabel: "Files",
-      className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
+      className: tabClassName,
       tooltip: {
         content: "Files",
         shortcut: "Mod+Shift+E",
@@ -69,11 +75,11 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "search",
-            icon: <MagnifyingGlass className={compact ? "size-4" : undefined} weight="duotone" />,
+            icon: <MagnifyingGlass className={iconClassName} weight="duotone" />,
             isActive: isSearchActive,
             onClick: onSearchClick,
             ariaLabel: "Search",
-            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
+            className: tabClassName,
             tooltip: {
               content: "Search",
               shortcut: "Mod+Shift+F",
@@ -86,12 +92,12 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "git",
-            icon: <GitBranch className={compact ? "size-4" : undefined} weight="duotone" />,
+            icon: <GitBranch className={iconClassName} weight="duotone" />,
             isActive: isGitViewActive,
             onClick: () => onViewChange("git"),
             role: "tab",
             ariaLabel: "Git Source Control",
-            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
+            className: tabClassName,
             tooltip: {
               content: "Source Control",
               shortcut: "Mod+Shift+G",
@@ -104,12 +110,12 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "github-prs",
-            icon: <GitPullRequest className={compact ? "size-4" : undefined} weight="duotone" />,
+            icon: <GitPullRequest className={iconClassName} weight="duotone" />,
             isActive: isGitHubPRsViewActive,
             onClick: () => onViewChange("github-prs"),
             role: "tab",
             ariaLabel: "GitHub Pull Requests",
-            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
+            className: tabClassName,
             tooltip: {
               content: "Pull Requests",
               side: tooltipSide,
@@ -121,12 +127,12 @@ export const SidebarPaneSelector = ({
       (view) =>
         ({
           id: view.id,
-          icon: <DynamicIcon name={view.icon} />,
+          icon: <DynamicIcon name={view.icon} className={iconClassName} />,
           isActive: activeSidebarView === view.id,
           onClick: () => onViewChange(view.id),
           role: "tab",
           ariaLabel: view.title,
-          className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
+          className: tabClassName,
           tooltip: {
             content: view.title,
             side: tooltipSide,
@@ -190,7 +196,7 @@ export const SidebarPaneSelector = ({
       variant={compact ? "segmented" : "default"}
       className={cn(
         compact ? undefined : "gap-0.5 p-1",
-        isVertical && "flex-col items-stretch rounded-none border-0 bg-transparent p-0",
+        isVertical && "flex-col items-center gap-1 rounded-none border-0 bg-transparent p-0",
       )}
     >
       {renderedItems.map((item) => (

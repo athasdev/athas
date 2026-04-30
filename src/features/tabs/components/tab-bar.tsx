@@ -115,6 +115,7 @@ const TabBar = ({
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   const terminalSessions = useTerminalStore((state) => state.sessions);
@@ -417,7 +418,17 @@ const TabBar = ({
     [externalTabClick, handleTabClick, updateActivePath],
   );
 
+  const getClientPoint = (event: Event) => {
+    const candidate = event as Partial<MouseEvent>;
+    if (typeof candidate.clientX === "number" && typeof candidate.clientY === "number") {
+      return { x: candidate.clientX, y: candidate.clientY };
+    }
+    return null;
+  };
+
   const getDragPoint = (event: DragMoveEvent | DragEndEvent) => {
+    if (pointerPointRef.current) return pointerPointRef.current;
+
     const rect = event.active.rect.current.translated ?? event.active.rect.current.initial;
     if (!rect) return dragPointRef.current;
     return {
@@ -446,6 +457,7 @@ const TabBar = ({
       if (!buffer) return;
 
       setDraggedBufferId(buffer.id);
+      pointerPointRef.current = getClientPoint(event.activatorEvent);
       setInternalTabDragData({
         source: "pane",
         bufferId: buffer.id,
@@ -469,8 +481,20 @@ const TabBar = ({
   const resetDrag = useCallback(() => {
     setDraggedBufferId(null);
     dragPointRef.current = null;
+    pointerPointRef.current = null;
     clearInternalTabDragData();
   }, []);
+
+  useEffect(() => {
+    if (!draggedBufferId) return;
+
+    const updatePointerPoint = (event: PointerEvent) => {
+      pointerPointRef.current = { x: event.clientX, y: event.clientY };
+    };
+
+    window.addEventListener("pointermove", updatePointerPoint, true);
+    return () => window.removeEventListener("pointermove", updatePointerPoint, true);
+  }, [draggedBufferId]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {

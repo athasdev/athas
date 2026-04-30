@@ -651,6 +651,17 @@ impl LspClient {
       self.request::<request::SignatureHelpRequest>(params).await
    }
 
+   pub fn signature_help_trigger_characters(&self) -> Vec<String> {
+      self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.signature_help_provider.as_ref())
+         .and_then(|provider| provider.trigger_characters.clone())
+         .unwrap_or_default()
+   }
+
    pub async fn text_document_references(
       &self,
       params: ReferenceParams,

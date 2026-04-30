@@ -73,14 +73,14 @@ export function resolveDropPaneId(point: { x: number; y: number }): string | nul
 }
 
 export function resolveDropTarget(point: { x: number; y: number }) {
-  const element = document.elementFromPoint(point.x, point.y);
-  if (!element) {
+  const elements = document.elementsFromPoint(point.x, point.y);
+  if (elements.length === 0) {
     return { paneId: null, zone: null as InternalDropZone };
   }
 
-  const tabBar = element.closest<HTMLElement>("[data-tab-bar-pane-id]");
-  const paneContainer = element.closest<HTMLElement>("[data-pane-id]");
-  const bottomPaneTarget = element.closest<HTMLElement>("[data-bottom-pane-drop-target]");
+  const tabBar = elements
+    .map((element) => element.closest<HTMLElement>("[data-tab-bar-pane-id]"))
+    .find((element) => Boolean(element?.dataset.tabBarPaneId));
 
   if (tabBar?.dataset.tabBarPaneId) {
     return {
@@ -89,12 +89,20 @@ export function resolveDropTarget(point: { x: number; y: number }) {
     };
   }
 
+  const paneContainer = elements
+    .map((element) => element.closest<HTMLElement>("[data-pane-id]"))
+    .find((element) => Boolean(element?.dataset.paneId));
+
   if (paneContainer?.dataset.paneId) {
     return {
       paneId: paneContainer.dataset.paneId,
       zone: getDropZone(point, paneContainer.getBoundingClientRect()),
     };
   }
+
+  const bottomPaneTarget = elements.find((element) =>
+    Boolean(element.closest<HTMLElement>("[data-bottom-pane-drop-target]")),
+  );
 
   if (bottomPaneTarget) {
     return {

@@ -1,7 +1,7 @@
 use crate::git::{DiffLineType, GitDiff, GitDiffLine, get_blob_base64, is_image_file};
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
-use git2::{Diff, DiffFormat, Oid, Repository};
+use git2::{Diff, DiffFormat, Oid, Repository, Tree};
 use std::{collections::HashMap, path::Path};
 
 pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> {
@@ -739,5 +739,134 @@ pub fn git_commit_diff(
          lines,
       });
    }
+   Ok(results)
+}
+
+pub fn git_ref_diff(
+   repo_path: String,
+   base_ref: String,
+   target_ref: String,
+) -> Result<Vec<GitDiff>, String> {
+   let repo =
+      Repository::open(&repo_path).map_err(|e| format!("Failed to open repository: {e}"))?;
+   let base_commit = repo
+      .revparse_single(&base_ref)
+      .map_err(|e| format!("Failed to find base ref '{base_ref}': {e}"))?
+      .peel_to_commit()
+      .map_err(|e| format!("Failed to peel base ref '{base_ref}' to commit: {e}"))?;
+   let target_commit = repo
+      .revparse_single(&target_ref)
+      .map_err(|e| format!("Failed to find target ref '{target_ref}': {e}"))?
+      .peel_to_commit()
+      .map_err(|e| format!("Failed to peel target ref '{target_ref}' to commit: {e}"))?;
+   let base_tree = base_commit
+      .tree()
+      .map_err(|e| format!("Failed to get base tree: {e}"))?;
+   let target_tree = target_commit
+      .tree()
+      .map_err(|e| format!("Failed to get target tree: {e}"))?;
+
+   git_diff_between_trees(&repo, Some(&base_tree), Some(&target_tree))
+}
+
+fn git_diff_between_trees(
+   repo: &Repository,
+   base_tree: Option<&Tree<'_>>,
+   target_tree: Option<&Tree<'_>>,
+) -> Result<Vec<GitDiff>, String> {
+   let mut diff = repo
+      .diff_tree_to_tree(base_tree, target_tree, None)
+      .map_err(|e| format!("Failed to create ref diff: {e}"))?;
+   let mut diff_lines_by_file = parse_diff_to_file_lines(&mut diff).unwrap_or_default();
+   let mut results: Vec<GitDiff> = Vec::new();
+
+   for delta in diff.deltas() {
+      let old_path = delta
+         .old_file()
+         .path()
+         .map(|p| p.to_string_lossy().into_owned());
+      let new_path = delta
+         .new_file()
+         .path()
+         .map(|p| p.to_string_lossy().into_owned());
+      let file_path = if delta.status() == git2::Delta::Deleted {
+         old_path.clone().unwrap_or_default()
+      } else {
+         new_path
+            .clone()
+            .unwrap_or_else(|| old_path.clone().unwrap_or_default())
+      };
+      let is_image = is_image_file(&file_path);
+      let mut is_binary = false;
+      let mut old_blob_base64 = None;
+      let mut new_blob_base64 = None;
+      let is_new = delta.status() == git2::Delta::Added;
+      let is_deleted = delta.status() == git2::Delta::Deleted;
+      let is_renamed = delta.status() == git2::Delta::Renamed;
+      let lines = if is_image {
+         is_binary = true;
+         let old_oid = delta.old_file().id();
+         let new_oid = delta.new_file().id();
+         if is_new {
+            new_blob_base64 =
+               get_blob_base64(repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
+         } else if is_deleted {
+            let old_blob_oid = base_tree.and_then(|tree| {
+               old_path
+                  .as_ref()
+                  .and_then(|p| tree.get_path(Path::new(p)).ok().map(|e| e.id()))
+            });
+            old_blob_base64 = get_blob_base64(
+               repo,
+               old_blob_oid.or(Some(old_oid)),
+               old_path.as_deref().unwrap_or(""),
+            );
+         } else if is_renamed {
+            let old_blob_oid = base_tree.and_then(|tree| {
+               old_path
+                  .as_ref()
+                  .and_then(|p| tree.get_path(Path::new(p)).ok().map(|e| e.id()))
+            });
+            old_blob_base64 = get_blob_base64(
+               repo,
+               old_blob_oid.or(Some(old_oid)),
+               old_path.as_deref().unwrap_or(""),
+            );
+            new_blob_base64 =
+               get_blob_base64(repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
+         } else {
+            let old_blob_oid = base_tree.and_then(|tree| {
+               old_path
+                  .as_ref()
+                  .and_then(|p| tree.get_path(Path::new(p)).ok().map(|e| e.id()))
+            });
+            old_blob_base64 = get_blob_base64(
+               repo,
+               old_blob_oid.or(Some(old_oid)),
+               old_path.as_deref().unwrap_or(""),
+            );
+            new_blob_base64 =
+               get_blob_base64(repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
+         }
+         Vec::new()
+      } else {
+         diff_lines_by_file.remove(&file_path).unwrap_or_default()
+      };
+
+      results.push(GitDiff {
+         file_path: file_path.clone(),
+         old_path: old_path.clone(),
+         new_path: new_path.clone(),
+         is_new,
+         is_deleted,
+         is_renamed,
+         is_binary,
+         is_image,
+         old_blob_base64,
+         new_blob_base64,
+         lines,
+      });
+   }
+
    Ok(results)
 }

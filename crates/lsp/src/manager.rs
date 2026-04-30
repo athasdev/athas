@@ -601,6 +601,13 @@ impl LspManager {
       }
    }
 
+   pub fn get_signature_help_trigger_characters(&self, file_path: &str) -> Vec<String> {
+      self
+         .get_client_for_file(file_path)
+         .map(|client| client.signature_help_trigger_characters())
+         .unwrap_or_default()
+   }
+
    pub async fn get_references(
       &self,
       file_path: &str,

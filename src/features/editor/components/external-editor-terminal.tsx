@@ -383,7 +383,7 @@ export const ExternalEditorTerminal = ({
     <div className="flex size-full flex-col bg-primary-bg">
       <div
         ref={terminalRef}
-        className={cn("size-full flex-1 overflow-hidden", "focus:outline-none")}
+        className={cn("xterm-container size-full flex-1", "focus:outline-none")}
         style={{ padding: "8px" }}
       />
     </div>

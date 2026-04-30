@@ -74,4 +74,5 @@ pub struct FlatCodeLens {
    pub line: u32,
    pub title: String,
    pub command: Option<String>,
+   pub arguments: Option<Vec<Value>>,
 }

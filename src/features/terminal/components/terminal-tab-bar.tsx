@@ -323,6 +323,7 @@ const TerminalTabBar = ({
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const profileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -495,7 +496,17 @@ const TerminalTabBar = ({
     },
   }));
 
+  const getClientPoint = (event: Event) => {
+    const candidate = event as Partial<MouseEvent>;
+    if (typeof candidate.clientX === "number" && typeof candidate.clientY === "number") {
+      return { x: candidate.clientX, y: candidate.clientY };
+    }
+    return null;
+  };
+
   const getDragPoint = (event: DragMoveEvent | DragEndEvent) => {
+    if (pointerPointRef.current) return pointerPointRef.current;
+
     const rect = event.active.rect.current.translated ?? event.active.rect.current.initial;
     if (!rect) return dragPointRef.current;
     return {
@@ -521,6 +532,7 @@ const TerminalTabBar = ({
   const resetDrag = () => {
     setDraggedTerminalId(null);
     dragPointRef.current = null;
+    pointerPointRef.current = null;
     clearInternalTabDragData();
   };
 
@@ -529,6 +541,7 @@ const TerminalTabBar = ({
     if (!terminal) return;
 
     setDraggedTerminalId(terminal.id);
+    pointerPointRef.current = getClientPoint(event.activatorEvent);
     setInternalTabDragData({
       source: "terminal-panel",
       terminalId: terminal.id,
@@ -603,6 +616,17 @@ const TerminalTabBar = ({
       document.body.style.userSelect = "";
     };
   }, []);
+
+  useEffect(() => {
+    if (!draggedTerminalId) return;
+
+    const updatePointerPoint = (event: PointerEvent) => {
+      pointerPointRef.current = { x: event.clientX, y: event.clientY };
+    };
+
+    window.addEventListener("pointermove", updatePointerPoint, true);
+    return () => window.removeEventListener("pointermove", updatePointerPoint, true);
+  }, [draggedTerminalId]);
 
   useEffect(() => {
     if (

@@ -7,13 +7,22 @@ interface InlayHintsOverlayProps {
   fontSize: number;
   lineHeight: number;
   charWidth: number;
+  contentOffsetLeft: number;
   scrollTop: number;
   viewportHeight: number;
 }
 
 const InlayHintsOverlay = forwardRef(
   (
-    { hints, fontSize, lineHeight, charWidth, scrollTop, viewportHeight }: InlayHintsOverlayProps,
+    {
+      hints,
+      fontSize,
+      lineHeight,
+      charWidth,
+      contentOffsetLeft,
+      scrollTop,
+      viewportHeight,
+    }: InlayHintsOverlayProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
     // Only render hints visible in the viewport (with buffer)
@@ -34,19 +43,21 @@ const InlayHintsOverlay = forwardRef(
       >
         {visibleHints.map((hint) => {
           const top = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + hint.line * lineHeight;
-          const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + hint.character * charWidth;
+          const left =
+            contentOffsetLeft + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + hint.character * charWidth;
 
           return (
             <span
               key={`${hint.line}:${hint.character}:${hint.label}`}
-              className="absolute inline-flex items-center rounded-sm bg-hover/50 editor-font text-text-lighter/70"
+              className="absolute inline-flex items-center rounded-sm border border-border/40 bg-primary-bg/95 editor-font text-text-lighter shadow-sm"
               style={{
                 top: `${top}px`,
                 left: `${left}px`,
                 fontSize: `${fontSize * 0.85}px`,
-                lineHeight: `${lineHeight}px`,
+                lineHeight: `${Math.max(12, lineHeight * 0.78)}px`,
                 paddingLeft: hint.paddingLeft ? "3px" : "1px",
                 paddingRight: hint.paddingRight ? "3px" : "1px",
+                transform: "translateY(12%)",
               }}
             >
               {hint.label}

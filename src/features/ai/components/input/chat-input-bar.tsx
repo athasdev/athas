@@ -33,10 +33,7 @@ import { ContextSelector } from "../selectors/context-selector";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { SkillsCommand } from "../skills/skills-command";
 import { ChatLoadingIndicator } from "../chat/chat-loading-indicator";
-import {
-  chatComposerControlClassName,
-  chatComposerIconButtonClassName,
-} from "./chat-composer-control-styles";
+import { chatComposerIconButtonClassName } from "./chat-composer-control-styles";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -992,7 +989,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     >
       <div
         className={cn(
-          "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-1 transition-[border-radius,background-color,border-color]",
+          "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color]",
           hasAttachedComposerDropdown ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
         )}
       >
@@ -1276,13 +1273,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   setIsSkillsOpen(true);
                 }}
                 variant="ghost"
-                size="xs"
-                className={chatComposerControlClassName("ml-auto w-fit shrink-0 px-2")}
+                size="icon-xs"
+                className={chatComposerIconButtonClassName("ml-auto shrink-0")}
                 tooltip="Skills"
                 aria-label="Skills"
               >
                 <BookOpen />
-                <span>Skills</span>
               </Button>
             </>
           )}

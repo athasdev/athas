@@ -1,15 +1,7 @@
-import {
-  Archive,
-  Check,
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  FileText,
-  Minus,
-  Plus,
-  Trash as Trash2,
-} from "@phosphor-icons/react";
+import { Archive, Check, FileText, Minus, Plus, Trash as Trash2 } from "@phosphor-icons/react";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
@@ -28,6 +20,7 @@ import GitSidebarSectionHeader, {
 } from "../git-sidebar-section-header";
 import { StashMessageModal } from "../stash/git-stash-modal";
 import { GitFileItem } from "./git-status-file-item";
+import "@/features/file-explorer/styles/file-explorer-tree.css";
 
 interface GitFileDiffStats {
   additions: number;
@@ -57,6 +50,7 @@ const SECTION_LABELS = {
   tracked: "Tracked",
   untracked: "Untracked",
 } as const;
+const GIT_TREE_INDENT_SIZE = 12;
 
 const createEmptyStatusGroups = (): Record<StatusGroup, GitFile[]> => ({
   added: [],
@@ -74,6 +68,19 @@ const groupFilesByStatus = (fileList: GitFile[]) => {
   }
 
   return groups;
+};
+
+const dedupeVisibleFilesByPath = (fileList: GitFile[]) => {
+  const filesByPath = new Map<string, GitFile>();
+
+  for (const file of fileList) {
+    const existingFile = filesByPath.get(file.path);
+    if (!existingFile || (!existingFile.staged && file.staged)) {
+      filesByPath.set(file.path, file);
+    }
+  }
+
+  return Array.from(filesByPath.values());
 };
 
 interface GitFolderNode {
@@ -173,7 +180,8 @@ const GitStatusPanel = ({
   );
   const stagedFiles = useMemo(() => displayFiles.filter((f) => f.staged), [displayFiles]);
   const unstagedFiles = useMemo(() => displayFiles.filter((f) => !f.staged), [displayFiles]);
-  const groupedAllFiles = useMemo(() => groupFilesByStatus(displayFiles), [displayFiles]);
+  const visibleFiles = useMemo(() => dedupeVisibleFilesByPath(displayFiles), [displayFiles]);
+  const groupedAllFiles = useMemo(() => groupFilesByStatus(visibleFiles), [visibleFiles]);
   const getDiffStats = (file: GitFile) =>
     fileDiffStats?.[`staged:${file.path}`] ?? fileDiffStats?.[`unstaged:${file.path}`];
 
@@ -370,46 +378,64 @@ const GitStatusPanel = ({
       const folderRows = sortFoldersByName(node.folders.values()).map((folderNode) => {
         const collapseKey = `${section}:${folderNode.fullPath}`;
         const isCollapsed = collapsedFolders.has(collapseKey);
-        const paddingLeft = 14 + depth * 12;
+        const paddingLeft = 14 + depth * GIT_TREE_INDENT_SIZE;
+        const guideLevels = Array.from({ length: depth }, (_, level) => level);
         const folderFiles = collectNodeFiles(folderNode);
         const areAllFolderFilesStaged =
           folderFiles.length > 0 && folderFiles.every((file) => file.staged);
 
         return (
-          <div key={folderNode.fullPath}>
-            <Button
-              type="button"
-              onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
-              variant="ghost"
-              className="ui-font ui-text-sm mx-1 flex min-h-[22px] h-auto w-[calc(100%-8px)] justify-start gap-1.5 rounded-md px-1.5 py-0.5 text-left text-text hover:bg-hover"
-              style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
-            >
-              {isCollapsed ? (
-                <ChevronRight size={12} className="shrink-0 text-text-lighter" />
-              ) : (
-                <ChevronDown size={12} className="shrink-0 text-text-lighter" />
-              )}
-              <span className="truncate leading-none">{folderNode.name}</span>
-              <div className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={areAllFolderFilesStaged}
-                  onChange={(checked) =>
-                    void handleSetFilesStaged(
-                      folderFiles.map((file) => file.path),
-                      checked,
-                    )
-                  }
-                  disabled={isLoading || folderFiles.length === 0}
-                  ariaLabel={
-                    areAllFolderFilesStaged
-                      ? `Unstage folder ${folderNode.name}`
-                      : `Stage folder ${folderNode.name}`
-                  }
-                />
+          <Fragment key={folderNode.fullPath}>
+            <div className="file-tree-item w-full" data-depth={depth}>
+              <div className="file-tree-guides">
+                {guideLevels.map((level) => (
+                  <span
+                    key={level}
+                    className="file-tree-guide"
+                    style={{
+                      left: `calc(${14 + level * GIT_TREE_INDENT_SIZE}px + var(--file-tree-guide-icon-offset, 7px))`,
+                      top: 0,
+                      bottom: 0,
+                    }}
+                  />
+                ))}
               </div>
-            </Button>
-            {!isCollapsed && renderNode(folderNode, depth + 1)}
-          </div>
+              <Button
+                type="button"
+                onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
+                variant="ghost"
+                className="file-tree-row ui-font ui-text-sm mx-1 flex h-6 w-[calc(100%-8px)] justify-start gap-1.5 rounded-md px-1.5 py-1 text-left text-text hover:bg-hover"
+                style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
+              >
+                <FileExplorerIcon
+                  fileName={folderNode.name}
+                  isDir
+                  isExpanded={!isCollapsed}
+                  className="relative z-1 shrink-0 text-text-lighter"
+                  size={14}
+                />
+                <span className="relative z-1 truncate leading-5">{folderNode.name}</span>
+                <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={areAllFolderFilesStaged}
+                    onChange={(checked) =>
+                      void handleSetFilesStaged(
+                        folderFiles.map((file) => file.path),
+                        checked,
+                      )
+                    }
+                    disabled={isLoading || folderFiles.length === 0}
+                    ariaLabel={
+                      areAllFolderFilesStaged
+                        ? `Unstage folder ${folderNode.name}`
+                        : `Stage folder ${folderNode.name}`
+                    }
+                  />
+                </div>
+              </Button>
+            </div>
+            {!isCollapsed ? renderNode(folderNode, depth + 1) : null}
+          </Fragment>
         );
       });
 
@@ -440,14 +466,14 @@ const GitStatusPanel = ({
     return renderNode(rootNode, 0);
   };
 
-  const hasFiles = files.length > 0;
+  const hasFiles = visibleFiles.length > 0;
   const trackedFiles = useMemo(
-    () => displayFiles.filter((file) => file.status !== "untracked"),
-    [displayFiles],
+    () => visibleFiles.filter((file) => file.status !== "untracked"),
+    [visibleFiles],
   );
   const untrackedFiles = useMemo(
-    () => displayFiles.filter((file) => file.status === "untracked"),
-    [displayFiles],
+    () => visibleFiles.filter((file) => file.status === "untracked"),
+    [visibleFiles],
   );
   const groupedTrackedFiles = useMemo(
     () => ({

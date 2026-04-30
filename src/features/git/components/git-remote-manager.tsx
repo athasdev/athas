@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
 import type { GitRemote } from "../types/git-types";
 import GitCommandSurface from "./git-command-surface";
@@ -29,13 +30,8 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   }, [isOpen, repoPath]);
 
   const filteredRemotes = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return remotes;
-    return remotes.filter(
-      (remote) =>
-        remote.name.toLowerCase().includes(normalizedQuery) ||
-        remote.url.toLowerCase().includes(normalizedQuery),
-    );
+    if (!query.trim()) return remotes;
+    return remotes.filter((remote) => matchesSearchQuery(query, [remote.name, remote.url]));
   }, [query, remotes]);
 
   const loadRemotes = async () => {

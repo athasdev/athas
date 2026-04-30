@@ -22,7 +22,6 @@ const DiffHeader = memo(
     diff,
     viewMode,
     onViewModeChange,
-    commitHash,
     totalFiles,
     onExpandAll,
     onCollapseAll,
@@ -95,6 +94,7 @@ const DiffHeader = memo(
         <Breadcrumb
           filePathOverride={isMultiFileView ? title || "Uncommitted Changes" : fullPath}
           interactive={!isMultiFileView}
+          showPath={!isMultiFileView}
           showDefaultActions={false}
           extraLeftContent={
             isMultiFileView ? (
