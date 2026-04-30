@@ -7,7 +7,6 @@ import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 interface GitBlameLayerProps {
   filePath: string;
   cursorLine: number;
-  cursorColumn: number;
   visualCursorLine: number;
   visualContent: string;
   fontSize: number;
@@ -22,7 +21,6 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
     {
       filePath,
       cursorLine,
-      cursorColumn,
       visualCursorLine,
       visualContent,
       fontSize,
@@ -40,7 +38,6 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
 
     const lines = useMemo(() => splitLines(visualContent), [visualContent]);
     const currentLineContent = lines[visualCursorLine] || "";
-    const currentColumnContent = currentLineContent.slice(0, Math.max(0, cursorColumn));
 
     // Reset width when file changes to prevent stale positioning during file switches
     useLayoutEffect(() => {
@@ -52,7 +49,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
       if (measureRef.current) {
         setLineContentWidth(measureRef.current.offsetWidth);
       }
-    }, [currentColumnContent, fontSize, fontFamily, tabSize, filePath]);
+    }, [currentLineContent, fontSize, fontFamily, tabSize, filePath]);
 
     const shouldShowBlame = !!blameLine && (wordWrap || lineContentWidth > 0);
 
@@ -71,41 +68,90 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
           willChange: "transform",
         }}
       >
-        {/* Hidden element to measure actual text width - always rendered */}
-        <span
-          ref={measureRef}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            visibility: "hidden",
-            whiteSpace: "pre",
-            tabSize,
-          }}
-        >
-          {wordWrap ? currentColumnContent : currentLineContent}
-        </span>
-
-        {shouldShowBlame && (
+        {wordWrap ? (
           <div
-            className="pointer-events-auto absolute flex items-center"
             style={{
-              top: `${top}px`,
-              height: `${lineHeight}px`,
-              ...(wordWrap
-                ? {
-                    left: `${Math.max(
-                      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
-                      lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + 8,
-                    )}px`,
-                    maxWidth: `calc(100% - ${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT}px)`,
-                  }
-                : {
-                    left: `${left}px`,
-                  }),
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+              tabSize,
             }}
           >
-            <InlineGitBlame blameLine={blameLine} fontSize={fontSize} lineHeight={lineHeight} />
+            {lines.slice(0, Math.max(0, visualCursorLine)).map((line, index) => (
+              <div
+                key={index}
+                className="highlight-layer-line"
+                style={{
+                  lineHeight: `${lineHeight}px`,
+                  visibility: "hidden",
+                }}
+              >
+                {line || "\u00A0"}
+              </div>
+            ))}
+            {blameLine && (
+              <div className="highlight-layer-line" style={{ lineHeight: `${lineHeight}px` }}>
+                <span aria-hidden="true" style={{ visibility: "hidden" }}>
+                  {currentLineContent}
+                </span>
+                <span
+                  style={{
+                    display: "inline-block",
+                    position: "relative",
+                    width: 0,
+                    height: 0,
+                    verticalAlign: "top",
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      height: `${lineHeight}px`,
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    <InlineGitBlame
+                      blameLine={blameLine}
+                      containerClassName="pointer-events-auto"
+                      fontSize={fontSize}
+                      lineHeight={lineHeight}
+                    />
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
+        ) : (
+          <>
+            {/* Hidden element to measure actual text width - always rendered */}
+            <span
+              ref={measureRef}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                visibility: "hidden",
+                whiteSpace: "pre",
+                tabSize,
+              }}
+            >
+              {currentLineContent}
+            </span>
+
+            {shouldShowBlame && (
+              <div
+                className="pointer-events-auto absolute flex items-center"
+                style={{
+                  top: `${top}px`,
+                  height: `${lineHeight}px`,
+                  left: `${left}px`,
+                }}
+              >
+                <InlineGitBlame blameLine={blameLine} fontSize={fontSize} lineHeight={lineHeight} />
+              </div>
+            )}
+          </>
         )}
       </div>
     );

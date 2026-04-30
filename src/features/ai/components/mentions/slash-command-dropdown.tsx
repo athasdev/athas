@@ -134,12 +134,12 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               tabIndex={index === selectedIndex ? 0 : -1}
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-[11px] text-text">/{command.name}</div>
-                <div className="truncate pt-0.5 text-[10px] text-text-lighter">
+                <div className="ui-text-xs truncate font-medium text-text">/{command.name}</div>
+                <div className="ui-text-xs truncate pt-0.5 text-text-lighter">
                   {command.description}
                 </div>
                 {command.input?.hint && (
-                  <div className="mt-0.5 truncate text-[10px] text-text-lighter opacity-60">
+                  <div className="ui-text-xs mt-0.5 truncate text-text-lighter opacity-60">
                     {command.input.hint}
                   </div>
                 )}
@@ -148,16 +148,16 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
           ))}
         </div>
       ) : (
-        <div className="px-2.5 py-2 text-text-lighter text-xs">
+        <div className="ui-text-xs px-2.5 py-2 text-text-lighter">
           {availableSlashCommands.length > 0 ? (
             <>
               <div className="font-medium text-text">No matching slash commands</div>
-              <div className="mt-0.5 text-[10px] opacity-75">Try a different search after `/`.</div>
+              <div className="ui-text-xs mt-0.5 opacity-75">Try a different search after `/`.</div>
             </>
           ) : (
             <>
               <div className="font-medium text-text">No slash commands available yet</div>
-              <div className="mt-0.5 text-[10px] opacity-75">
+              <div className="ui-text-xs mt-0.5 opacity-75">
                 Start an ACP session to load commands for this agent.
               </div>
             </>

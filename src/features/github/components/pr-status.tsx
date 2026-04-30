@@ -37,28 +37,28 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (failedCount > 0) {
       return {
-        icon: <XCircle className="text-red-500" />,
+        icon: <XCircle className="text-error" />,
         label: `${failedCount} failed`,
-        tone: "text-red-500",
-        badgeClassName: "border-red-500/20 bg-red-500/10 text-red-500",
+        tone: "text-error",
+        badgeClassName: "border-error/20 bg-error/10 text-error",
       };
     }
 
     if (pendingCount > 0) {
       return {
-        icon: <Loader2 className="animate-spin text-yellow-500" />,
+        icon: <Loader2 className="animate-spin text-warning" />,
         label: `${pendingCount} pending`,
-        tone: "text-yellow-500",
-        badgeClassName: "border-yellow-500/20 bg-yellow-500/10 text-yellow-500",
+        tone: "text-warning",
+        badgeClassName: "border-warning/20 bg-warning/10 text-warning",
       };
     }
 
     if (passedCount === checks.length) {
       return {
-        icon: <CheckCircle2 className="text-green-500" />,
+        icon: <CheckCircle2 className="text-success" />,
         label: `${passedCount} checks passed`,
-        tone: "text-green-500",
-        badgeClassName: "border-green-500/20 bg-green-500/10 text-green-500",
+        tone: "text-success",
+        badgeClassName: "border-success/20 bg-success/10 text-success",
       };
     }
 
@@ -98,11 +98,11 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
               className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-hover/60"
             >
               {check.conclusion === "SUCCESS" ? (
-                <CheckCircle2 className="text-green-500" />
+                <CheckCircle2 className="text-success" />
               ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-                <XCircle className="text-red-500" />
+                <XCircle className="text-error" />
               ) : (
-                <Loader2 className="animate-spin text-yellow-500" />
+                <Loader2 className="animate-spin text-warning" />
               )}
               <div className="min-w-0 flex-1">
                 <p className="ui-font ui-text-sm truncate text-text">{check.name ?? "Check"}</p>
@@ -141,36 +141,36 @@ export const MergeStatusBadge = memo(
   ({ mergeStateStatus, mergeable, reviewDecision }: MergeStatusProps) => {
     const getStatusInfo = () => {
       if (mergeable === "CONFLICTING") {
-        return { text: "Has conflicts", color: "text-red-500 bg-red-500/10", icon: AlertCircle };
+        return { text: "Has conflicts", color: "bg-error/10 text-error", icon: AlertCircle };
       }
       if (mergeStateStatus === "BLOCKED") {
         if (reviewDecision === "CHANGES_REQUESTED") {
           return {
             text: "Changes requested",
-            color: "text-red-500 bg-red-500/10",
+            color: "bg-error/10 text-error",
             icon: AlertCircle,
           };
         }
         if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
           return {
             text: "Review required",
-            color: "text-yellow-500 bg-yellow-500/10",
+            color: "bg-warning/10 text-warning",
             icon: AlertCircle,
           };
         }
-        return { text: "Blocked", color: "text-yellow-500 bg-yellow-500/10", icon: AlertCircle };
+        return { text: "Blocked", color: "bg-warning/10 text-warning", icon: AlertCircle };
       }
       if (
         mergeStateStatus === "CLEAN" ||
         mergeStateStatus === "HAS_HOOKS" ||
         mergeStateStatus === "UNSTABLE"
       ) {
-        return { text: "Ready to merge", color: "text-green-500 bg-green-500/10", icon: GitMerge };
+        return { text: "Ready to merge", color: "bg-success/10 text-success", icon: GitMerge };
       }
       if (mergeStateStatus === "BEHIND") {
         return {
           text: "Behind base",
-          color: "text-yellow-500 bg-yellow-500/10",
+          color: "bg-warning/10 text-warning",
           icon: AlertCircle,
         };
       }

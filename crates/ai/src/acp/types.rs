@@ -101,6 +101,99 @@ pub struct AcpPlanEntry {
    pub status: AcpPlanEntryStatus,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpPermissionOptionKind {
+   AllowOnce,
+   AllowAlways,
+   RejectOnce,
+   RejectAlways,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpPermissionOption {
+   pub id: String,
+   pub name: String,
+   pub kind: AcpPermissionOptionKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpPromptCapabilities {
+   pub image: bool,
+   pub audio: bool,
+   pub embedded_context: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpMcpCapabilities {
+   pub http: bool,
+   pub sse: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpAgentCapabilities {
+   pub load_session: bool,
+   pub prompt_capabilities: AcpPromptCapabilities,
+   pub mcp_capabilities: AcpMcpCapabilities,
+   pub session_capabilities: serde_json::Value,
+}
+
+impl From<agent_client_protocol::AgentCapabilities> for AcpAgentCapabilities {
+   fn from(capabilities: agent_client_protocol::AgentCapabilities) -> Self {
+      let session_capabilities =
+         serde_json::to_value(&capabilities.session_capabilities).unwrap_or_default();
+
+      Self {
+         load_session: capabilities.load_session,
+         prompt_capabilities: AcpPromptCapabilities {
+            image: capabilities.prompt_capabilities.image,
+            audio: capabilities.prompt_capabilities.audio,
+            embedded_context: capabilities.prompt_capabilities.embedded_context,
+         },
+         mcp_capabilities: AcpMcpCapabilities {
+            http: capabilities.mcp_capabilities.http,
+            sse: capabilities.mcp_capabilities.sse,
+         },
+         session_capabilities,
+      }
+   }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpToolKind {
+   Read,
+   Edit,
+   Delete,
+   Move,
+   Search,
+   Execute,
+   Think,
+   Fetch,
+   SwitchMode,
+   Other,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpToolCallStatus {
+   Pending,
+   InProgress,
+   Completed,
+   Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpToolCallLocation {
+   pub path: String,
+   pub line: Option<u32>,
+}
+
 /// Configuration for an ACP-compatible agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -172,6 +265,7 @@ pub struct AcpAgentStatus {
    pub session_active: bool,
    pub initialized: bool,
    pub session_id: Option<String>,
+   pub agent_capabilities: Option<AcpAgentCapabilities>,
 }
 
 /// Content block types in ACP messages
@@ -186,9 +280,21 @@ pub enum AcpContentBlock {
       #[serde(rename = "mediaType")]
       media_type: String,
    },
+   Audio {
+      data: String,
+      #[serde(rename = "mediaType")]
+      media_type: String,
+   },
    Resource {
       uri: String,
       name: Option<String>,
+      #[serde(rename = "mimeType")]
+      mime_type: Option<String>,
+      text: Option<String>,
+      blob: Option<String>,
+      title: Option<String>,
+      description: Option<String>,
+      size: Option<i64>,
    },
 }
 
@@ -202,6 +308,9 @@ pub enum UiAction {
    /// Open a terminal with an optional command
    #[serde(rename_all = "camelCase")]
    OpenTerminal { command: Option<String> },
+   /// Set the active Athas chat title
+   #[serde(rename_all = "camelCase")]
+   SetChatTitle { title: String },
 }
 
 /// A selectable value for an ACP session configuration option
@@ -266,6 +375,22 @@ pub enum AcpEvent {
       tool_name: String,
       tool_id: String,
       input: serde_json::Value,
+      kind: AcpToolKind,
+      status: AcpToolCallStatus,
+      locations: Vec<AcpToolCallLocation>,
+   },
+   /// Tool use state updated
+   #[serde(rename_all = "camelCase")]
+   ToolUpdate {
+      session_id: String,
+      tool_id: String,
+      tool_name: Option<String>,
+      input: Option<serde_json::Value>,
+      output: Option<serde_json::Value>,
+      kind: Option<AcpToolKind>,
+      status: Option<AcpToolCallStatus>,
+      locations: Option<Vec<AcpToolCallLocation>>,
+      error: Option<String>,
    },
    /// Tool use completed
    #[serde(rename_all = "camelCase")]
@@ -273,6 +398,8 @@ pub enum AcpEvent {
       session_id: String,
       tool_id: String,
       success: bool,
+      output: Option<serde_json::Value>,
+      error: Option<String>,
    },
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
@@ -281,6 +408,7 @@ pub enum AcpEvent {
       permission_type: String,
       resource: String,
       description: String,
+      options: Vec<AcpPermissionOption>,
    },
    /// Session completed
    #[serde(rename_all = "camelCase")]

@@ -270,7 +270,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
               currentIds.splice(targetIndex, 0, tabId);
             });
           }}
-          className="min-w-0"
+          className="scrollbar-hidden min-w-0 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
         />
         <div className="w-0 overflow-hidden transition-[width,opacity] duration-150 ease-out group-hover:w-6 focus-within:w-6">
           <Button

@@ -1,6 +1,5 @@
 import {
   CheckCircle,
-  Key,
   MagnifyingGlass as Search,
   Trash,
   WarningCircle,
@@ -204,7 +203,7 @@ export function ProviderApiKeyCommand({
                 />
                 <div className="min-w-0">
                   <div className="truncate text-sm text-text">{selectedProvider.name}</div>
-                  <div className="text-[11px] text-text-lighter">
+                  <div className="ui-text-xs text-text-lighter">
                     {hasExistingKey ? "API key saved" : "API key required"}
                   </div>
                 </div>
@@ -277,7 +276,6 @@ export function ProviderApiKeyCommand({
                     disabled={!apiKey.trim() || isValidating || apiKey.startsWith("•")}
                     className={cn(isValidating && "opacity-70")}
                   >
-                    <Key />
                     <span>{isValidating ? "Validating" : "Save key"}</span>
                   </Button>
                 </div>

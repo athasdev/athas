@@ -1,9 +1,10 @@
-import { ArrowSquareOut, CaretRight, Minus, Plus } from "@phosphor-icons/react";
+import { CaretRight, Minus, Plus } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -34,7 +35,8 @@ interface SearchExcerptItemProps {
 }
 
 const EDIT_SYNC_DELAY_MS = 350;
-const EDITOR_PREFETCH_MARGIN = "900px 0px";
+const EDITOR_PREFETCH_MARGIN = "360px 0px";
+const INITIAL_EDITOR_MOUNT_COUNT = 3;
 
 function splitContentBySegments(content: string, segmentCount: number): string[][] | null {
   const lines = splitLines(content);
@@ -172,11 +174,20 @@ function SearchExcerptPreview({
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const lineHeight = calculateLineHeight(fontSize * zoomLevel);
   const lines = useMemo(() => splitLines(content), [content]);
+  const gutterWidth = useMemo(() => {
+    const largestMappedLine = lineNumberMap.reduce<number>(
+      (largest, lineNumber) =>
+        typeof lineNumber === "number" ? Math.max(largest, lineNumber) : largest,
+      0,
+    );
+
+    return calculateTotalGutterWidth(Math.max(lines.length, largestMappedLine));
+  }, [lineNumberMap, lines.length]);
 
   return (
     <div className="overflow-hidden bg-primary-bg" style={{ height }}>
       <div
-        className="py-[10px]"
+        className="py-2"
         style={{
           fontSize: `${fontSize * zoomLevel}px`,
           lineHeight: `${lineHeight}px`,
@@ -189,17 +200,25 @@ function SearchExcerptPreview({
             <button
               key={`${lineIndex}-${mappedLine ?? "gap"}`}
               type="button"
-              className="flex w-full min-w-0 items-start gap-3 px-3 text-left text-text hover:bg-hover/25"
+              className="flex w-full min-w-0 items-start text-left text-text hover:bg-hover/25"
               onDoubleClick={() => {
                 if (mappedLine !== null && mappedLine !== undefined) {
                   onOpenLocation({ line: lineIndex, column: 0 });
                 }
               }}
             >
-              <span className="w-10 shrink-0 select-none text-right text-text-lighter">
+              <span
+                className="shrink-0 select-none border-border border-r pr-3 text-right text-text-lighter"
+                style={{ width: `${gutterWidth}px` }}
+              >
                 {mappedLine ?? ""}
               </span>
-              <span className="min-w-0 flex-1 whitespace-pre text-text">{line}</span>
+              <span
+                className="min-w-0 flex-1 whitespace-pre text-text"
+                style={{ paddingLeft: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px` }}
+              >
+                {line}
+              </span>
             </button>
           );
         })}
@@ -208,7 +227,13 @@ function SearchExcerptPreview({
   );
 }
 
-function SearchExcerptItem({
+function hasSelectedMatch(excerpt: SearchExcerpt, selectedItemKey: string | null) {
+  return Boolean(
+    selectedItemKey && excerpt.matches.some((match) => match.itemKey === selectedItemKey),
+  );
+}
+
+function SearchExcerptItemComponent({
   excerpt,
   index,
   selectedItemKey,
@@ -220,7 +245,7 @@ function SearchExcerptItem({
   const fontSize = useEditorSettingsStore.use.fontSize();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const sectionRef = useRef<HTMLElement | null>(null);
-  const [isNearViewport, setIsNearViewport] = useState(index < 8);
+  const [isNearViewport, setIsNearViewport] = useState(index < INITIAL_EDITOR_MOUNT_COUNT);
   const [currentContent, setCurrentContent] = useState(excerpt.content);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedContentRef = useRef(excerpt.content);
@@ -404,20 +429,6 @@ function SearchExcerptItem({
         <span className="ui-text-xs shrink-0 rounded border border-border/60 bg-primary-bg/70 px-1.5 py-0.5 text-text-lighter">
           {excerpt.matchCount}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          onClick={(event) => {
-            event.stopPropagation();
-            openTarget();
-          }}
-          tooltip="Open source"
-          aria-label="Open source"
-          className="shrink-0 text-text-lighter"
-        >
-          <ArrowSquareOut size={14} />
-        </Button>
         {(onExpandContext || onCollapseContext) && (
           <Button
             type="button"
@@ -454,6 +465,22 @@ function SearchExcerptItem({
     </section>
   );
 }
+
+const SearchExcerptItem = memo(SearchExcerptItemComponent, (prev, next) => {
+  const wasSelected = hasSelectedMatch(prev.excerpt, prev.selectedItemKey);
+  const isSelected = hasSelectedMatch(next.excerpt, next.selectedItemKey);
+
+  return (
+    prev.excerpt === next.excerpt &&
+    prev.index === next.index &&
+    wasSelected === isSelected &&
+    (!wasSelected || prev.selectedItemKey === next.selectedItemKey) &&
+    prev.onOpen === next.onOpen &&
+    prev.onExpandContext === next.onExpandContext &&
+    prev.onCollapseContext === next.onCollapseContext &&
+    prev.isContextExpanded === next.isContextExpanded
+  );
+});
 
 export const SearchExcerptResults = memo(function SearchExcerptResults({
   excerpts,

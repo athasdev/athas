@@ -1,4 +1,5 @@
 import {
+  CaretDoubleUp,
   Clipboard,
   Copy,
   PencilSimple as Edit,
@@ -20,6 +21,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import type { ContextMenuState } from "@/features/file-system/types/app";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { getBaseName, getDirName, getRelativePath } from "@/utils/path-helpers";
@@ -110,6 +112,12 @@ export function useFileExplorerContextMenu({
           label: "Open All Files",
           icon: <FolderOpen />,
           onClick: () => void onOpenAllFilesInDirectory(contextMenu.path),
+        },
+        {
+          id: "collapse-all",
+          label: "Collapse All",
+          icon: <CaretDoubleUp />,
+          onClick: () => useFileTreeStore.getState().collapsePath(contextMenu.path),
         },
         {
           id: "open-terminal",

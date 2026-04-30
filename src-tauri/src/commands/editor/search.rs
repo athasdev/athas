@@ -1,7 +1,11 @@
 use crate::commands::fuzzy::FffSearchState;
 use athas_fff_search::{GrepMode, GrepSearchOptions, parse_grep_query};
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, State};
+
+const INITIAL_SCAN_WAIT_TIMEOUT: Duration = Duration::from_millis(1500);
+const INITIAL_SCAN_WAIT_INTERVAL: Duration = Duration::from_millis(25);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchMatchRange {
@@ -82,6 +86,28 @@ pub fn search_files_content(
 
    state.ensure_workspace(&app, std::path::Path::new(&request.root_path))?;
    let fff = state.get_or_init(&app)?;
+   let wait_started = Instant::now();
+
+   while wait_started.elapsed() < INITIAL_SCAN_WAIT_TIMEOUT {
+      let is_scanning = {
+         let picker_guard = fff
+            .picker
+            .read()
+            .map_err(|e| format!("fff picker read: {e}"))?;
+
+         picker_guard
+            .as_ref()
+            .map(|picker| picker.get_scan_progress().is_scanning)
+            .unwrap_or(false)
+      };
+
+      if !is_scanning {
+         break;
+      }
+
+      std::thread::sleep(INITIAL_SCAN_WAIT_INTERVAL);
+   }
+
    let picker_guard = fff
       .picker
       .read()

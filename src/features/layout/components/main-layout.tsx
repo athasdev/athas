@@ -32,7 +32,7 @@ import CustomTitleBarWithSettings from "../../window/components/custom-title-bar
 import BottomPane from "./bottom-pane/bottom-pane";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
-import { MainSidebar } from "./sidebar/main-sidebar";
+import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
 
 const SIDEBAR_COLLAPSE_THRESHOLD = 48;
 
@@ -97,6 +97,7 @@ export function MainLayout() {
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const showInlineAiChat = settings.isAIChatVisible;
+  const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
 
   useEffect(() => {
     void initializeDebuggerEventBridge();
@@ -243,16 +244,20 @@ export function MainLayout() {
             </div>
           ) : (
             sidebarPosition === "left" && (
-              <ResizablePane
-                position="left"
-                widthKey="sidebarWidth"
-                hidden={!isSidebarVisible}
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                onCollapse={() => setIsSidebarVisible(false)}
-              >
-                <MainSidebar />
-              </ResizablePane>
+              <>
+                {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
+                <ResizablePane
+                  position="left"
+                  widthKey="sidebarWidth"
+                  hidden={!isSidebarVisible}
+                  collapsible
+                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                  edgePadding={!showLeftSidebarTabs}
+                  onCollapse={() => setIsSidebarVisible(false)}
+                >
+                  <MainSidebar showActivityRail={!showLeftSidebarTabs} />
+                </ResizablePane>
+              </>
             )
           )}
 
@@ -266,16 +271,20 @@ export function MainLayout() {
 
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            <ResizablePane
-              position="right"
-              widthKey="sidebarWidth"
-              hidden={!isSidebarVisible}
-              collapsible
-              collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-              onCollapse={() => setIsSidebarVisible(false)}
-            >
-              <MainSidebar />
-            </ResizablePane>
+            <>
+              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
+              <ResizablePane
+                position="right"
+                widthKey="sidebarWidth"
+                hidden={!isSidebarVisible}
+                collapsible
+                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                edgePadding={!showLeftSidebarTabs}
+                onCollapse={() => setIsSidebarVisible(false)}
+              >
+                <MainSidebar showActivityRail={!showLeftSidebarTabs} />
+              </ResizablePane>
+            </>
           ) : (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
               <ResizablePane

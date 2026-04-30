@@ -279,7 +279,7 @@ const ContentGlobalSearch = () => {
               )}
 
               {error && (
-                <div className="ui-text-sm flex h-full items-center justify-center text-center text-red-500">
+                <div className="ui-text-sm flex h-full items-center justify-center text-center text-error">
                   {error}
                 </div>
               )}

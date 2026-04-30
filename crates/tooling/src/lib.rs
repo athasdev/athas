@@ -1,4 +1,5 @@
 mod installer;
+mod platform;
 mod registry;
 mod types;
 

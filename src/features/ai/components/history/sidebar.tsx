@@ -158,8 +158,8 @@ export default function ChatHistoryDropdown({
                   </div>
                 </div>
 
-                <span className="shrink-0 text-[10px] text-text-lighter">{providerLabel}</span>
-                <span className="shrink-0 text-[10px] text-text-lighter">
+                <span className="ui-text-xs shrink-0 text-text-lighter">{providerLabel}</span>
+                <span className="ui-text-xs shrink-0 text-text-lighter">
                   {getRelativeTime(chat.lastMessageAt)}
                 </span>
 
@@ -171,7 +171,7 @@ export default function ChatHistoryDropdown({
                     event.stopPropagation();
                     onDeleteChat(chat.id, event);
                   }}
-                  className="shrink-0 opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
+                  className="shrink-0 opacity-0 transition-opacity hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Delete ${chat.title}`}
                   tooltip="Delete chat"
                 >

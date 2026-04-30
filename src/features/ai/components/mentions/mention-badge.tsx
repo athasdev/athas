@@ -12,11 +12,11 @@ export default function MentionBadge({ fileName, className }: MentionBadgeProps)
     <Badge
       size="sm"
       className={cn(
-        "gap-1 border border-blue-500/30 bg-blue-500/10 px-1.5 text-blue-400 select-none",
+        "gap-1 border border-accent/30 bg-accent/10 px-1.5 text-accent select-none",
         className,
       )}
     >
-      <FileText className="text-blue-500" />
+      <FileText className="text-accent" />
       <span className="max-w-20 truncate">{fileName}</span>
     </Badge>
   );

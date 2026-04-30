@@ -143,7 +143,7 @@ const PasswordPromptDialog = ({
           </div>
         </div>
 
-        {errorMessage && <p className="ui-text-sm text-red-500">{errorMessage}</p>}
+        {errorMessage && <p className="ui-text-sm text-error">{errorMessage}</p>}
       </div>
     </Dialog>
   );

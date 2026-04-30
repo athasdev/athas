@@ -7,11 +7,16 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  createSkillFromMarketplace,
+  hasSkillLocalOverride,
+  isMarketplaceSkillInstalled,
+  loadMarketplaceSkills,
+} from "@/features/ai/lib/skill-library";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-store";
-import type { AIChatSkill } from "@/features/ai/types/skills";
+import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
@@ -31,7 +36,7 @@ interface SkillsCommandProps {
   initialView?: SkillsView;
 }
 
-type SkillsView = "list" | "editor";
+type SkillsView = "list" | "browse" | "editor";
 
 function createSkillId() {
   return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -60,6 +65,8 @@ export function SkillsCommand({
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
+  const [isLoadingMarketplace, setIsLoadingMarketplace] = useState(false);
 
   const skills = useSettingsStore((state) => state.settings.aiSkills);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
@@ -87,6 +94,27 @@ export function SkillsCommand({
       .map((result) => result.skill);
   }, [deferredQuery, skills]);
 
+  const filteredMarketplaceSkills = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim();
+    const sortedSkills = [...marketplaceSkills].sort((a, b) => a.title.localeCompare(b.title));
+
+    if (!normalizedQuery) {
+      return sortedSkills;
+    }
+
+    return sortedSkills
+      .map((skill) => ({
+        skill,
+        score:
+          fuzzyScore(skill.title, normalizedQuery) * 2 +
+          fuzzyScore(skill.description, normalizedQuery) +
+          fuzzyScore(skill.tags.join(" "), normalizedQuery),
+      }))
+      .filter((result) => result.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((result) => result.skill);
+  }, [deferredQuery, marketplaceSkills]);
+
   const resetEditor = useCallback(() => {
     setEditingSkillId(null);
     setTitle("");
@@ -100,7 +128,8 @@ export function SkillsCommand({
   }, [resetEditor]);
 
   const openBrowseSkills = useCallback(() => {
-    void openUrl("https://skills.sh");
+    setView("browse");
+    requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
 
   const openSkillEditor = useCallback((skill: AIChatSkill) => {
@@ -123,6 +152,14 @@ export function SkillsCommand({
     onClose();
   }, [onClose, resetEditor]);
 
+  const handleInstallMarketplaceSkill = useCallback(
+    async (skill: MarketplaceSkill) => {
+      if (isMarketplaceSkillInstalled(skills, skill.id)) return;
+      await updateSetting("aiSkills", [createSkillFromMarketplace(skill), ...skills]);
+    },
+    [skills, updateSetting],
+  );
+
   const handleSave = useCallback(async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
@@ -131,7 +168,26 @@ export function SkillsCommand({
     const nextSkills = editingSkillId
       ? skills.map((skill) =>
           skill.id === editingSkillId
-            ? { ...skill, title: trimmedTitle, content, updatedAt: now }
+            ? (() => {
+                if (skill.source !== "marketplace") {
+                  return { ...skill, title: trimmedTitle, content, updatedAt: now };
+                }
+
+                const upstreamTitle = skill.upstreamTitle ?? skill.title;
+                const upstreamContent = skill.upstreamContent ?? skill.content;
+                const upstreamDescription = skill.upstreamDescription ?? skill.description;
+
+                return {
+                  ...skill,
+                  title: trimmedTitle,
+                  content,
+                  localOverride: trimmedTitle !== upstreamTitle || content !== upstreamContent,
+                  upstreamTitle,
+                  upstreamContent,
+                  upstreamDescription,
+                  updatedAt: now,
+                };
+              })()
             : skill,
         )
       : [
@@ -139,6 +195,7 @@ export function SkillsCommand({
             id: createSkillId(),
             title: trimmedTitle,
             content,
+            source: "local" as const,
             createdAt: now,
             updatedAt: now,
           },
@@ -185,12 +242,14 @@ export function SkillsCommand({
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [deferredQuery]);
+  }, [deferredQuery, view]);
 
   useEffect(() => {
-    if (!isOpen || view !== "list") return;
+    if (!isOpen || (view !== "list" && view !== "browse")) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      const activeItems = view === "browse" ? filteredMarketplaceSkills : filteredSkills;
+
       switch (event.key) {
         case "Escape":
           event.preventDefault();
@@ -199,7 +258,7 @@ export function SkillsCommand({
         case "ArrowDown":
           event.preventDefault();
           setSelectedIndex((current) =>
-            filteredSkills.length === 0 ? 0 : Math.min(current + 1, filteredSkills.length - 1),
+            activeItems.length === 0 ? 0 : Math.min(current + 1, activeItems.length - 1),
           );
           break;
         case "ArrowUp":
@@ -207,9 +266,12 @@ export function SkillsCommand({
           setSelectedIndex((current) => Math.max(current - 1, 0));
           break;
         case "Enter":
-          if (filteredSkills[selectedIndex]) {
+          if (view === "list" && filteredSkills[selectedIndex]) {
             event.preventDefault();
             handleSelectSkill(filteredSkills[selectedIndex]);
+          } else if (view === "browse" && filteredMarketplaceSkills[selectedIndex]) {
+            event.preventDefault();
+            void handleInstallMarketplaceSkill(filteredMarketplaceSkills[selectedIndex]);
           }
           break;
       }
@@ -217,19 +279,41 @@ export function SkillsCommand({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [filteredSkills, handleClose, handleSelectSkill, isOpen, selectedIndex, view]);
+  }, [
+    filteredMarketplaceSkills,
+    filteredSkills,
+    handleClose,
+    handleInstallMarketplaceSkill,
+    handleSelectSkill,
+    isOpen,
+    selectedIndex,
+    view,
+  ]);
 
   useEffect(() => {
-    if (!resultsRef.current || filteredSkills.length === 0) return;
+    if (!isOpen || view !== "browse" || marketplaceSkills.length > 0 || isLoadingMarketplace) {
+      return;
+    }
+
+    setIsLoadingMarketplace(true);
+    void loadMarketplaceSkills()
+      .then(setMarketplaceSkills)
+      .finally(() => setIsLoadingMarketplace(false));
+  }, [isLoadingMarketplace, isOpen, marketplaceSkills.length, view]);
+
+  useEffect(() => {
+    const activeLength =
+      view === "browse" ? filteredMarketplaceSkills.length : filteredSkills.length;
+    if (!resultsRef.current || activeLength === 0) return;
     const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement | undefined;
     selectedElement?.scrollIntoView({ block: "nearest" });
-  }, [filteredSkills.length, selectedIndex]);
+  }, [filteredMarketplaceSkills.length, filteredSkills.length, selectedIndex, view]);
 
   const canSave = title.trim().length > 0;
 
   return (
     <Command isVisible={isOpen} onClose={handleClose}>
-      {view === "list" ? (
+      {view === "list" || view === "browse" ? (
         <>
           <CommandHeader onClose={handleClose}>
             <Search className="shrink-0 text-text-lighter" size={14} />
@@ -237,24 +321,37 @@ export function SkillsCommand({
               ref={inputRef}
               value={query}
               onChange={setQuery}
-              placeholder="Search skills..."
+              placeholder={view === "browse" ? "Search available skills..." : "Search skills..."}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={openNewSkill}
-              className="shrink-0 ui-text-sm"
-            >
-              <Plus />
-              <span>New skill</span>
-            </Button>
+            {view === "list" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={openNewSkill}
+                className="shrink-0 ui-text-sm"
+              >
+                <Plus />
+                <span>New skill</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => setView("list")}
+                className="shrink-0 ui-text-sm"
+              >
+                <span>My skills</span>
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
               size="xs"
               onClick={openBrowseSkills}
               className="shrink-0 ui-text-sm"
+              active={view === "browse"}
             >
               <CloudArrowDown />
               <span>Browse</span>
@@ -262,7 +359,78 @@ export function SkillsCommand({
           </CommandHeader>
 
           <CommandList ref={resultsRef}>
-            {skills.length === 0 ? (
+            {view === "browse" ? (
+              isLoadingMarketplace ? (
+                <CommandEmpty>Loading available skills...</CommandEmpty>
+              ) : marketplaceSkills.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                  <CommandEmpty>No published skills yet</CommandEmpty>
+                  <div className="ui-text-xs max-w-[280px] text-text-lighter">
+                    Published skills will appear here once the Athas skills registry is available.
+                  </div>
+                </div>
+              ) : filteredMarketplaceSkills.length === 0 ? (
+                <CommandEmpty>No available skills match "{query}"</CommandEmpty>
+              ) : (
+                filteredMarketplaceSkills.map((skill, index) => {
+                  const isSelected = selectedIndex === index;
+                  const isInstalled = isMarketplaceSkillInstalled(skills, skill.id);
+
+                  return (
+                    <CommandItem
+                      key={skill.id}
+                      isSelected={isSelected}
+                      onClick={() =>
+                        isInstalled ? undefined : void handleInstallMarketplaceSkill(skill)
+                      }
+                      onMouseEnter={() => setSelectedIndex(index)}
+                      className="group mb-1 px-3 py-2 last:mb-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="truncate text-xs text-text">{skill.title}</div>
+                          {skill.version ? (
+                            <span className="ui-text-xs shrink-0 text-text-lighter">
+                              v{skill.version}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="ui-text-xs mt-0.5 truncate text-text-lighter">
+                          {skill.description}
+                        </div>
+                        {(skill.author || skill.tags.length > 0) && (
+                          <div className="ui-text-xs mt-1 flex flex-wrap items-center gap-1.5 text-text-lighter/80">
+                            {skill.author ? <span>by {skill.author}</span> : null}
+                            {skill.tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded border border-border/60 bg-primary-bg/50 px-1"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant={isInstalled ? "secondary" : "default"}
+                        size="xs"
+                        disabled={isInstalled}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!isInstalled) {
+                            void handleInstallMarketplaceSkill(skill);
+                          }
+                        }}
+                      >
+                        {isInstalled ? "Added" : "Add"}
+                      </Button>
+                    </CommandItem>
+                  );
+                })
+              )
+            ) : skills.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
                 <CommandEmpty>No skills yet</CommandEmpty>
                 <Button type="button" variant="secondary" size="xs" onClick={openNewSkill}>
@@ -280,6 +448,7 @@ export function SkillsCommand({
               filteredSkills.map((skill, index) => {
                 const isSelected = selectedIndex === index;
                 const preview = skill.content.trim().replace(/\s+/g, " ");
+                const hasLocalOverride = hasSkillLocalOverride(skill);
 
                 return (
                   <CommandItem
@@ -291,8 +460,18 @@ export function SkillsCommand({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-xs text-text">{skill.title}</div>
+                      {(skill.source === "marketplace" || hasLocalOverride) && (
+                        <div className="ui-text-xs mt-1 flex items-center gap-1.5 text-text-lighter">
+                          {skill.source === "marketplace" ? <span>Marketplace</span> : null}
+                          {hasLocalOverride ? (
+                            <span className="rounded border border-warning/25 bg-warning/10 px-1 text-warning">
+                              Local override
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
                       {preview && (
-                        <div className="mt-0.5 truncate text-[11px] text-text-lighter">
+                        <div className="ui-text-xs mt-0.5 truncate text-text-lighter">
                           {preview}
                         </div>
                       )}
@@ -320,7 +499,7 @@ export function SkillsCommand({
                         event.stopPropagation();
                         void handleDelete(skill.id);
                       }}
-                      className="opacity-0 hover:bg-red-500/10 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
+                      className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                       tooltip="Delete skill"
                       aria-label={`Delete ${skill.title}`}
                     >
@@ -332,7 +511,7 @@ export function SkillsCommand({
             )}
           </CommandList>
 
-          <div className="border-border border-t px-4 py-2 text-[11px] text-text-lighter">
+          <div className="ui-text-xs border-border border-t px-4 py-2 text-text-lighter">
             {getSyncLabel(syncEnabled, syncStatus)}
           </div>
         </>
@@ -343,6 +522,17 @@ export function SkillsCommand({
               <div className="ui-font ui-text-sm truncate text-text">
                 {editingSkillId ? "Edit skill" : "New skill"}
               </div>
+              {(() => {
+                const editingSkill = skills.find((skill) => skill.id === editingSkillId);
+                if (!editingSkill || editingSkill.source !== "marketplace") return null;
+
+                return (
+                  <div className="ui-text-xs mt-0.5 text-text-lighter">
+                    Marketplace skill
+                    {hasSkillLocalOverride(editingSkill) ? " with local override" : ""}
+                  </div>
+                );
+              })()}
             </div>
           </CommandHeader>
 

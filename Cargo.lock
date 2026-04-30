@@ -546,7 +546,7 @@ dependencies = [
 
 [[package]]
 name = "athas"
-version = "0.4.6-alpha.2"
+version = "0.4.7"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
@@ -799,6 +799,7 @@ dependencies = [
  "url",
  "walkdir",
  "which",
+ "xz2",
  "zip 2.4.2",
 ]
 

@@ -1,4 +1,5 @@
 import { editorAPI } from "@/features/editor/extensions/api";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import {
   buildDebugCommand,
   createGeneratedDebugConfig,
@@ -17,6 +18,7 @@ import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { toast } from "@/ui/toast";
 import { isMac } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 import type { Command } from "../types";
@@ -30,6 +32,44 @@ function getZoomTarget(): "editor" | "terminal" | "webviewer" {
   if (activeBuffer?.type === "webViewer") return "webviewer";
 
   return "editor";
+}
+
+async function formatActiveEditorDocument(): Promise<void> {
+  const bufferStore = useBufferStore.getState();
+  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+
+  if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
+    toast.warning("No editable file to format.");
+    return;
+  }
+
+  const { formatContent, isFormattingAvailable } =
+    await import("@/features/editor/formatter/formatter-service");
+  const languageId = extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language;
+
+  if (!isFormattingAvailable(activeBuffer.path, languageId || undefined)) {
+    toast.warning("No formatter configured for this file type.");
+    return;
+  }
+
+  const result = await formatContent({
+    filePath: activeBuffer.path,
+    content: activeBuffer.content,
+    languageId: languageId || undefined,
+  });
+
+  if (!result.success || result.formattedContent === undefined) {
+    toast.error(result.error || "Formatting failed.");
+    return;
+  }
+
+  if (result.formattedContent === activeBuffer.content) {
+    toast.info("Document is already formatted.");
+    return;
+  }
+
+  bufferStore.actions.updateBufferContent(activeBuffer.id, result.formattedContent, true);
+  toast.success("Document formatted.");
 }
 
 const fileCommands: Command[] = [
@@ -288,7 +328,9 @@ const editCommands: Command[] = [
     title: "Format Document",
     category: "Edit",
     keybinding: "shift+alt+f",
-    execute: () => {},
+    execute: () => {
+      void formatActiveEditorDocument();
+    },
   },
   {
     id: "editor.inlineEdit",
@@ -671,7 +713,16 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+g",
     execute: () => {
-      window.dispatchEvent(new CustomEvent("menu-go-to-line"));
+      const lineText = window.prompt("Go to line");
+      if (!lineText) return;
+
+      const line = Number.parseInt(lineText, 10);
+      if (!Number.isFinite(line) || line < 1) {
+        toast.warning("Enter a valid line number.");
+        return;
+      }
+
+      window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line } }));
     },
   },
   {

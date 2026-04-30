@@ -11,6 +11,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     contextPrompt += `Athas ACP Extension Methods (protocol methods, NOT shell commands):
 - Call \`athas.openWebViewer\` with \`{ "url": "https://..." }\` to open websites inside Athas.
 - Call \`athas.openTerminal\` with \`{ "command": "..." }\` to open a terminal tab in Athas.
+- Call \`athas.setChatTitle\` with \`{ "title": "Short title" }\` to rename the active Athas chat.
 - Do NOT run \`ext_method\` in a terminal.
 - Do NOT use shell/browser commands like \`open https://...\` for "open on web" requests; use \`athas.openWebViewer\` instead.
 
@@ -258,6 +259,7 @@ ACP extension rules:
 - Never run \`ext_method\` in a terminal command.
 - For "open URL/web/site" requests, call \`athas.openWebViewer\` directly instead of suggesting \`open https://...\`.
 - For "open X in terminal" requests (for example lazygit), call \`athas.openTerminal\` with \`{ "command": "X" }\`.
+- For rename/title requests, call \`athas.setChatTitle\` with \`{ "title": "Short title" }\`.
 - Never say Athas extension methods are unavailable or require MCP exposure in this ACP session.
 - After calling an Athas extension method, confirm success and stop; do not retry with shell fallbacks unless user asks.`;
   }

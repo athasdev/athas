@@ -38,6 +38,7 @@ async function setupMenuListeners(handlers: any) {
     currentWindow.listen("menu_redo", () => currentHandlers.current.onRedo()),
     currentWindow.listen("menu_find", () => currentHandlers.current.onFind()),
     currentWindow.listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
+    currentWindow.listen("menu_toggle_comment", () => currentHandlers.current.onToggleComment()),
     currentWindow.listen("menu_command_palette", () => currentHandlers.current.onCommandPalette()),
     currentWindow.listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
     currentWindow.listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
@@ -75,6 +76,7 @@ interface UseMenuEventsProps {
   onRedo: () => void;
   onFind: () => void;
   onFindReplace: () => void;
+  onToggleComment: () => void;
   onCommandPalette: () => void;
   onToggleSidebar: () => void;
   onToggleTerminal: () => void;

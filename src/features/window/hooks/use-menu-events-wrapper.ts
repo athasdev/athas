@@ -176,6 +176,9 @@ export function useMenuEventsWrapper() {
       console.log("Find/Replace mode activated - find bar shown with replace functionality");
       // In a full implementation, this would enable replace input field in the find bar
     },
+    onToggleComment: () => {
+      void keymapRegistry.executeCommand("editor.toggleComment");
+    },
     onCommandPalette: () => uiState.setIsCommandPaletteVisible(true),
     onToggleSidebar: () => uiState.setIsSidebarVisible(!uiState.isSidebarVisible),
     onToggleTerminal: () => {

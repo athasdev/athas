@@ -1,15 +1,20 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { ClockCounterClockwise, FolderSimpleStar, TreeStructure } from "@phosphor-icons/react";
 import {
-  Eye,
+  Archive,
+  ClockCounterClockwise,
+  Download,
   DotsThree as MoreHorizontal,
+  FolderSimpleStar,
   ArrowClockwise as RefreshCw,
+  Trash as Trash2,
+  TreeStructure,
+  Upload,
 } from "@phosphor-icons/react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
+import { CommandEmpty, CommandList } from "@/ui/command";
 import { PANE_GROUP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import {
   EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
@@ -18,11 +23,12 @@ import {
 } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
 import { getGitLog } from "../api/git-commits-api";
-import { getCommitDiff, getFileDiff, getStashDiff } from "../api/git-diff-api";
+import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git-diff-api";
 import { resolveRepositoryPath } from "../api/git-repo-api";
-import { getStashes } from "../api/git-stash-api";
+import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus } from "../api/git-status-api";
 import { useRepositoryStore } from "../stores/git-repository-store";
 import { useGitStore } from "../stores/git-store";
@@ -30,6 +36,7 @@ import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitFile } from "../types/git-types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
+import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
 import GitActionsMenu from "./git-actions-menu";
 import GitBranchManager from "./git-branch-manager";
 import GitCommitHistory from "./git-commit-history";
@@ -90,6 +97,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const wasActiveRef = useRef(isActive);
   const [stashSearchQuery, setStashSearchQuery] = useState("");
+  const [stashActionLoading, setStashActionLoading] = useState<Set<number>>(new Set());
 
   const visibleGitFiles = useMemo(
     () =>
@@ -161,9 +169,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     if (!activeRepoPath) return;
 
     try {
-      const [status, branches] = await Promise.all([
+      const [status, branches, freshStashes] = await Promise.all([
         getGitStatus(activeRepoPath),
         getBranches(activeRepoPath),
+        getStashes(activeRepoPath),
       ]);
 
       await actions.refreshGitData({
@@ -171,6 +180,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         branches,
         repoPath: activeRepoPath,
       });
+      actions.setStashes(freshStashes);
     } catch (error) {
       console.error("Failed to refresh git data:", error);
     }
@@ -610,6 +620,77 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
+  const handleViewTagComparison = async (baseRef: string, targetRef: string, title: string) => {
+    if (!activeRepoPath || !onFileSelect) return;
+
+    try {
+      const diffs = await getRefDiff(activeRepoPath, baseRef, targetRef);
+
+      if (diffs && diffs.length > 0) {
+        const { additions, deletions } = countDiffStats(diffs);
+
+        const multiDiff: MultiFileDiff = {
+          title,
+          repoPath: activeRepoPath,
+          commitHash: `${baseRef}..${targetRef}`,
+          files: diffs,
+          totalFiles: diffs.length,
+          totalAdditions: additions,
+          totalDeletions: deletions,
+        };
+
+        const encodedTitle = encodeURIComponent(title);
+        useBufferStore
+          .getState()
+          .actions.openBuffer(
+            `diff://tag/${encodedTitle}/all-files`,
+            `${title} (${diffs.length} files)`,
+            "",
+            false,
+            undefined,
+            true,
+            true,
+            multiDiff,
+          );
+      } else {
+        alert(`No changes between ${baseRef} and ${targetRef}.`);
+      }
+    } catch (error) {
+      console.error("Error getting tag comparison:", error);
+      alert(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`);
+    }
+  };
+
+  const handleStashListAction = async (
+    action: () => Promise<boolean>,
+    stashIndex: number,
+    actionName: string,
+  ) => {
+    if (!activeRepoPath) return;
+
+    setStashActionLoading((prev) => new Set(prev).add(stashIndex));
+    try {
+      const success = await action();
+      if (success) {
+        if (settings.autoRefreshGitStatus) {
+          await handleManualRefresh();
+        } else {
+          actions.setStashes(await getStashes(activeRepoPath));
+        }
+      } else {
+        console.error(`${actionName} failed`);
+      }
+    } catch (error) {
+      console.error(`${actionName} error:`, error);
+    } finally {
+      setStashActionLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(stashIndex);
+        return next;
+      });
+    }
+  };
+
   const renderActionsButton = () => (
     <PaneIconButton
       onClick={(e) => {
@@ -653,9 +734,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       return stashes;
     }
 
-    return stashes.filter(
-      (stash) =>
-        stash.message.toLowerCase().includes(query) || `stash@{${stash.index}}`.includes(query),
+    return stashes.filter((stash) =>
+      matchesSearchQuery(query, [
+        getStashDisplayTitle(stash.message),
+        getStashPositionLabel(stash.index),
+        `stash ${stash.index + 1}`,
+        `stash@{${stash.index}}`,
+      ]),
     );
   }, [stashSearchQuery, stashes]);
 
@@ -755,14 +840,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               repoPath={activeRepoPath}
               onBranchChange={refreshAfterAction}
             />
-            {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-              <span className="ui-text-sm shrink-0 text-text-lighter">
-                {gitStatus.ahead > 0 && <span className="text-git-added">↑{gitStatus.ahead}</span>}
-                {gitStatus.behind > 0 && (
-                  <span className="text-git-deleted">↓{gitStatus.behind}</span>
-                )}
-              </span>
-            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
@@ -852,6 +929,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             stagedFiles={stagedFiles}
             currentBranch={gitStatus.branch}
             repoPath={activeRepoPath}
+            ahead={gitStatus.ahead}
+            behind={gitStatus.behind}
             onCommitSuccess={refreshAfterAction}
           />
         </div>
@@ -893,29 +972,103 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               {stashSearchQuery.trim() ? "No matching stashes" : "No stashes"}
             </CommandEmpty>
           ) : (
-            filteredStashes.map((stash) => (
-              <CommandItem
-                key={stash.index}
-                className="ui-font h-auto min-h-8 items-start whitespace-normal px-2 py-1.5 leading-normal"
-                onClick={() => {
-                  void handleViewStashDiff(stash.index);
-                  setShowStashList(false);
-                  setStashSearchQuery("");
-                }}
-              >
-                <Eye className="mt-0.5 size-4 shrink-0 text-text-lighter" />
-                <div className="min-w-0 flex-1">
-                  <div className="ui-text-sm text-text">{`stash@{${stash.index}}`}</div>
-                  <div className="ui-text-xs mt-0.5 break-words text-text-lighter">
-                    {stash.message || "Stashed changes"}
+            filteredStashes.map((stash) => {
+              const displayTitle = getStashDisplayTitle(stash.message);
+              const isActionLoading = stashActionLoading.has(stash.index);
+
+              return (
+                <div
+                  key={stash.index}
+                  role="button"
+                  tabIndex={0}
+                  className="group/stash ui-font relative mb-1 flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-hover focus:bg-hover focus:outline-none"
+                  onClick={() => {
+                    void handleViewStashDiff(stash.index);
+                    setShowStashList(false);
+                    setStashSearchQuery("");
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    void handleViewStashDiff(stash.index);
+                    setShowStashList(false);
+                    setStashSearchQuery("");
+                  }}
+                >
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-secondary-bg/70 text-text-lighter">
+                    <Archive className="size-4" />
                   </div>
-                  <div className="ui-text-xs mt-1 inline-flex items-center gap-1 text-text-lighter/80">
-                    <ClockCounterClockwise className="size-3.5" />
-                    {formatRelativeDate(stash.date)}
+                  <div className="min-w-0 flex-1 pr-24">
+                    <div className="ui-text-sm truncate text-text" title={displayTitle}>
+                      {displayTitle}
+                    </div>
+                    <div className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter/80">
+                      <span className="truncate">{formatRelativeDate(stash.date)}</span>
+                      <span className="rounded border border-border/50 px-1 text-[10px] leading-4">
+                        {getStashPositionLabel(stash.index)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-all group-hover/stash:pointer-events-auto group-hover/stash:translate-x-0 group-hover/stash:opacity-100 group-focus-within/stash:pointer-events-auto group-focus-within/stash:translate-x-0 group-focus-within/stash:opacity-100">
+                    <Button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleStashListAction(
+                          () => applyStash(activeRepoPath!, stash.index),
+                          stash.index,
+                          "Apply stash",
+                        );
+                      }}
+                      disabled={isActionLoading}
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-text-lighter disabled:opacity-50"
+                      tooltip="Apply stash"
+                    >
+                      <Download />
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleStashListAction(
+                          () => popStash(activeRepoPath!, stash.index),
+                          stash.index,
+                          "Pop stash",
+                        );
+                      }}
+                      disabled={isActionLoading}
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-text-lighter disabled:opacity-50"
+                      tooltip="Pop stash"
+                    >
+                      <Upload />
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleStashListAction(
+                          () => dropStash(activeRepoPath!, stash.index),
+                          stash.index,
+                          "Drop stash",
+                        );
+                      }}
+                      disabled={isActionLoading}
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+                      tooltip="Drop stash"
+                    >
+                      <Trash2 />
+                    </Button>
                   </div>
                 </div>
-              </CommandItem>
-            ))
+              );
+            })
           )}
         </CommandList>
       </GitCommandSurface>
@@ -932,6 +1085,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         onClose={() => setShowTagManager(false)}
         repoPath={activeRepoPath}
         onRefresh={refreshAfterAction}
+        onViewTagComparison={handleViewTagComparison}
       />
     </>
   );

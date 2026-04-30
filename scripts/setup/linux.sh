@@ -16,7 +16,19 @@ print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 detect_distro() {
-    if command -v apt-get &> /dev/null; then
+    local os_id=""
+    local os_like=""
+
+    if [[ -f /etc/os-release ]]; then
+        os_id="$(. /etc/os-release && echo "${ID:-}")"
+        os_like="$(. /etc/os-release && echo "${ID_LIKE:-}")"
+    fi
+
+    if [[ "$os_id" == "chimera" ]]; then
+        DISTRO="chimera"
+    elif [[ "$os_id" == "alpine" || "$os_like" == *"alpine"* ]]; then
+        DISTRO="alpine"
+    elif command -v apt-get &> /dev/null; then
         DISTRO="ubuntu"
     elif command -v dnf &> /dev/null; then
         DISTRO="fedora"
@@ -26,6 +38,18 @@ detect_distro() {
         DISTRO="opensuse"
     else
         DISTRO="unknown"
+    fi
+}
+
+detect_libc() {
+    LIBC="unknown"
+
+    if ldd --version 2>&1 | grep -qi "musl"; then
+        LIBC="musl"
+    elif ldd --version 2>&1 | grep -Eqi "glibc|GNU libc"; then
+        LIBC="glibc"
+    elif ls /lib/ld-musl-*.so.1 /usr/lib/ld-musl-*.so.1 >/dev/null 2>&1; then
+        LIBC="musl"
     fi
 }
 
@@ -57,6 +81,11 @@ install_system_deps() {
             sudo zypper install -y gcc gcc-c++ make curl wget file libopenssl-devel gtk3-devel webkit2gtk3-devel libsoup3-devel libayatana-appindicator3-devel librsvg-devel pkg-config
             # Deps for git2 and ssh2
             sudo zypper install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
+            ;;
+        "chimera"|"alpine")
+            print_error "$DISTRO uses musl libc. This development setup script does not yet know the correct WebKitGTK/Tauri dependency set for this distribution."
+            print_error "Athas-managed tool downloads must use statically linked binaries or unknown-linux-musl assets on this system."
+            exit 1
             ;;
         *)
             print_error "Unsupported Linux distribution: $DISTRO"
@@ -138,13 +167,15 @@ verify_basic() {
 main() {
     print_status "Starting Athas development environment setup..."
 
-    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+    if [[ "$OSTYPE" != linux* ]]; then
         print_error "This script is designed for Linux only."
         exit 1
     fi
 
     detect_distro
     print_status "Detected distribution: $DISTRO"
+    detect_libc
+    print_status "Detected libc: $LIBC"
 
     install_system_deps
     install_rust

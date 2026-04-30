@@ -1,4 +1,17 @@
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   ArrowLeft,
   ArrowRight,
   ArrowsOut as Maximize2,
@@ -7,8 +20,7 @@ import {
   SplitHorizontal as SplitSquareHorizontal,
 } from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
@@ -34,16 +46,9 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
-import {
-  HORIZONTAL_TAB_DRAG_THRESHOLD,
-  type HorizontalTabPosition,
-  calculateHorizontalTabDropTarget,
-  constrainHorizontalTabDrag,
-} from "../utils/horizontal-tab-drag";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
-import TabDragPreview from "./tab-drag-preview";
 
 interface TabBarProps {
   paneId?: string;
@@ -97,28 +102,7 @@ const TabBar = ({
   const isInSplit = paneRoot.type === "split";
   const isBottomPane = paneId === BOTTOM_PANE_ID;
 
-  // Drag state
-  const [dragState, setDragState] = useState<{
-    isDragging: boolean;
-    draggedIndex: number | null;
-    dropTargetIndex: number | null;
-    startPosition: { x: number; y: number } | null;
-    currentPosition: { x: number; y: number } | null;
-    isOutsideRail: boolean;
-    tabPositions: HorizontalTabPosition[];
-    lastValidDropTarget: number | null;
-    dragDirection: "left" | "right" | null;
-  }>({
-    isDragging: false,
-    draggedIndex: null,
-    dropTargetIndex: null,
-    startPosition: null,
-    currentPosition: null,
-    isOutsideRail: false,
-    tabPositions: [],
-    lastValidDropTarget: null,
-    dragDirection: null,
-  });
+  const [draggedBufferId, setDraggedBufferId] = useState<string | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -130,10 +114,18 @@ const TabBar = ({
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const dragStateRef = useRef(dragState);
+  const dragPointRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   const terminalSessions = useTerminalStore((state) => state.sessions);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+  );
 
   const getDirectoryLabel = useCallback((directory?: string) => {
     if (!directory) return "";
@@ -230,7 +222,7 @@ const TabBar = ({
       const container = tabBarRef.current;
       if (!container) return;
       if (!settings.horizontalTabScroll) return;
-      if (dragStateRef.current.isDragging) return;
+      if (draggedBufferId) return;
       if (e.ctrlKey || e.metaKey) return;
       if (!canScrollTabsHorizontally()) return;
 
@@ -254,12 +246,8 @@ const TabBar = ({
       e.preventDefault();
       container.scrollLeft = nextScrollLeft;
     },
-    [canScrollTabsHorizontally, settings.horizontalTabScroll],
+    [canScrollTabsHorizontally, draggedBufferId, settings.horizontalTabScroll],
   );
-
-  useEffect(() => {
-    dragStateRef.current = dragState;
-  }, [dragState]);
 
   const sortedBuffers = useMemo(() => {
     return [...buffers].sort((a, b) => {
@@ -268,6 +256,11 @@ const TabBar = ({
       return 0;
     });
   }, [buffers]);
+  const sortedBufferIds = useMemo(() => sortedBuffers.map((buffer) => buffer.id), [sortedBuffers]);
+  const draggedBuffer = useMemo(
+    () => sortedBuffers.find((buffer) => buffer.id === draggedBufferId) ?? null,
+    [draggedBufferId, sortedBuffers],
+  );
 
   // Calculate display names for tabs with minimal distinguishing paths
   const displayNames = useMemo(() => {
@@ -331,153 +324,6 @@ const TabBar = ({
       }
     }
   }, [activeBufferId, sortedBuffers]);
-
-  const cacheTabPositions = useCallback((): HorizontalTabPosition[] => {
-    if (!tabBarRef.current) return [];
-    const containerRect = tabBarRef.current.getBoundingClientRect();
-    const positions: HorizontalTabPosition[] = [];
-    tabRefs.current.forEach((tab, index) => {
-      if (tab) {
-        const rect = tab.getBoundingClientRect();
-        const left = rect.left - containerRect.left;
-        const right = rect.right - containerRect.left;
-        positions.push({
-          index,
-          left,
-          right,
-          width: rect.width,
-          center: left + rect.width / 2,
-        });
-      }
-    });
-    return positions;
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      setDragState((prev) => {
-        if (prev.draggedIndex === null || !prev.startPosition) return prev;
-        const pointerPosition = { x: e.clientX, y: e.clientY };
-        const distance = Math.sqrt(
-          (pointerPosition.x - prev.startPosition.x) ** 2 +
-            (pointerPosition.y - prev.startPosition.y) ** 2,
-        );
-        if (!prev.isDragging && distance > HORIZONTAL_TAB_DRAG_THRESHOLD) {
-          const tabPositions = cacheTabPositions();
-          const currentPosition = tabBarRef.current
-            ? constrainHorizontalTabDrag(
-                pointerPosition,
-                prev.startPosition.y,
-                tabBarRef.current.getBoundingClientRect(),
-              ).position
-            : pointerPosition;
-          if (
-            prev.isDragging &&
-            prev.currentPosition?.x === currentPosition.x &&
-            prev.currentPosition?.y === currentPosition.y
-          ) {
-            return prev; // No change
-          }
-          return {
-            ...prev,
-            isDragging: true,
-            currentPosition,
-            isOutsideRail: false,
-            tabPositions,
-            dropTargetIndex: prev.draggedIndex,
-            lastValidDropTarget: prev.draggedIndex,
-          };
-        }
-        if (prev.isDragging) {
-          const tabBar = tabBarRef.current;
-          if (!tabBar) {
-            return prev;
-          }
-          const constrainedDrag = tabBarRef.current
-            ? constrainHorizontalTabDrag(
-                pointerPosition,
-                prev.startPosition.y,
-                tabBar.getBoundingClientRect(),
-              )
-            : { position: pointerPosition, isOutsideRail: false };
-          const currentPosition = constrainedDrag.position;
-          if (constrainedDrag.isOutsideRail) {
-            setInternalTabDragHover(pointerPosition);
-          }
-          const { dropTarget, direction } = calculateHorizontalTabDropTarget(
-            currentPosition.x,
-            tabBar.getBoundingClientRect(),
-            prev.draggedIndex,
-            prev.tabPositions,
-            prev.dropTargetIndex,
-          );
-          if (
-            prev.currentPosition?.x === currentPosition.x &&
-            prev.currentPosition?.y === currentPosition.y &&
-            prev.dropTargetIndex === dropTarget &&
-            prev.dragDirection === direction
-          ) {
-            return prev; // No change
-          }
-          return {
-            ...prev,
-            currentPosition,
-            isOutsideRail: constrainedDrag.isOutsideRail,
-            dropTargetIndex: dropTarget,
-            lastValidDropTarget: dropTarget,
-            dragDirection: direction,
-          };
-        }
-        if (
-          prev.currentPosition?.x === pointerPosition.x &&
-          prev.currentPosition?.y === pointerPosition.y
-        ) {
-          return prev; // No change
-        }
-        return { ...prev, currentPosition: pointerPosition };
-      });
-    },
-    [cacheTabPositions],
-  );
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, index: number) => {
-      if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
-        return;
-      }
-      const buffer = sortedBuffers[index];
-      if (!buffer) return;
-      setInternalTabDragData({
-        source: "pane",
-        bufferId: buffer.id,
-        paneId,
-      });
-      if (externalTabClick) {
-        externalTabClick(buffer.id);
-      } else {
-        handleTabClick(buffer.id);
-      }
-      updateActivePath(buffer.path);
-
-      // Announce tab switch to screen readers
-      setSrAnnouncement(
-        `Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
-      );
-
-      setDragState({
-        isDragging: false,
-        draggedIndex: index,
-        dropTargetIndex: null,
-        startPosition: { x: e.clientX, y: e.clientY },
-        currentPosition: { x: e.clientX, y: e.clientY },
-        isOutsideRail: false,
-        tabPositions: [],
-        lastValidDropTarget: null,
-        dragDirection: null,
-      });
-    },
-    [handleTabClick, externalTabClick, sortedBuffers, updateActivePath],
-  );
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent, index: number) => {
@@ -557,27 +403,111 @@ const TabBar = ({
     cancelPendingClose();
   }, [cancelPendingClose]);
 
-  useEffect(() => {
-    if (dragState.draggedIndex === null) return;
+  const handleTabSelect = useCallback(
+    (buffer: PaneContent) => {
+      if (externalTabClick) {
+        externalTabClick(buffer.id);
+      } else {
+        handleTabClick(buffer.id);
+      }
+      updateActivePath(buffer.path);
+      setSrAnnouncement(
+        `Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
+      );
+    },
+    [externalTabClick, handleTabClick, updateActivePath],
+  );
 
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      handleMouseMove(e);
+  const getClientPoint = (event: Event) => {
+    const candidate = event as Partial<MouseEvent>;
+    if (typeof candidate.clientX === "number" && typeof candidate.clientY === "number") {
+      return { x: candidate.clientX, y: candidate.clientY };
+    }
+    return null;
+  };
+
+  const getDragPoint = (event: DragMoveEvent | DragEndEvent) => {
+    if (pointerPointRef.current) return pointerPointRef.current;
+
+    const rect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+    if (!rect) return dragPointRef.current;
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  };
+
+  const isPointOutsideTabBar = (point: { x: number; y: number }) => {
+    const rect = tabBarRef.current?.getBoundingClientRect();
+    if (!rect) return false;
+
+    const horizontalSlop = 24;
+    const verticalSlop = 64;
+    return (
+      point.x < rect.left - horizontalSlop ||
+      point.x > rect.right + horizontalSlop ||
+      point.y < rect.top - verticalSlop ||
+      point.y > rect.bottom + verticalSlop
+    );
+  };
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const buffer = sortedBuffers.find((item) => item.id === String(event.active.id));
+      if (!buffer) return;
+
+      setDraggedBufferId(buffer.id);
+      pointerPointRef.current = getClientPoint(event.activatorEvent);
+      setInternalTabDragData({
+        source: "pane",
+        bufferId: buffer.id,
+        paneId,
+      });
+      handleTabSelect(buffer);
+    },
+    [handleTabSelect, paneId, sortedBuffers],
+  );
+
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
+    const point = getDragPoint(event);
+    if (!point) return;
+
+    dragPointRef.current = point;
+    if (isPointOutsideTabBar(point)) {
+      setInternalTabDragHover(point);
+    }
+  }, []);
+
+  const resetDrag = useCallback(() => {
+    setDraggedBufferId(null);
+    dragPointRef.current = null;
+    pointerPointRef.current = null;
+    clearInternalTabDragData();
+  }, []);
+
+  useEffect(() => {
+    if (!draggedBufferId) return;
+
+    const updatePointerPoint = (event: PointerEvent) => {
+      pointerPointRef.current = { x: event.clientX, y: event.clientY };
     };
 
-    const handleGlobalMouseUp = () => {
-      const currentState = dragStateRef.current;
-      const draggedBuffer =
-        currentState.draggedIndex !== null ? sortedBuffers[currentState.draggedIndex] : null;
-      const target = currentState.currentPosition
-        ? currentState.isOutsideRail
-          ? resolveDropTarget(currentState.currentPosition)
-          : { paneId: null, zone: null }
-        : { paneId: null, zone: null };
+    window.addEventListener("pointermove", updatePointerPoint, true);
+    return () => window.removeEventListener("pointermove", updatePointerPoint, true);
+  }, [draggedBufferId]);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const activeId = String(event.active.id);
+      const dragged = sortedBuffers.find((buffer) => buffer.id === activeId);
+      const point = getDragPoint(event);
+      const target = point ? resolveDropTarget(point) : { paneId: null, zone: null };
+      const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
 
       if (
-        currentState.isDragging &&
-        draggedBuffer &&
+        dragged &&
         paneId &&
+        isOutsideTabBar &&
         target.paneId &&
         (target.paneId !== paneId || (target.zone && target.zone !== "center"))
       ) {
@@ -592,66 +522,35 @@ const TabBar = ({
         }
 
         setActivePane(destinationPaneId);
-        moveBufferToPane(draggedBuffer.id, paneId, destinationPaneId, preserveEmptySource);
+        moveBufferToPane(dragged.id, paneId, destinationPaneId, preserveEmptySource);
         if (destinationPaneId === BOTTOM_PANE_ID) {
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
         }
-      } else if (
-        currentState.isDragging &&
-        currentState.draggedIndex !== null &&
-        currentState.dropTargetIndex !== null &&
-        reorderBuffers
-      ) {
-        if (currentState.dropTargetIndex !== currentState.draggedIndex) {
-          let adjustedDropTarget = currentState.dropTargetIndex;
-          if (currentState.draggedIndex < currentState.dropTargetIndex) {
-            adjustedDropTarget = currentState.dropTargetIndex - 1;
-          }
-
-          if (adjustedDropTarget !== currentState.draggedIndex) {
-            reorderBuffers(currentState.draggedIndex, adjustedDropTarget);
-
-            const movedBuffer = sortedBuffers[currentState.draggedIndex];
-            if (movedBuffer) {
-              handleTabClick(movedBuffer.id);
-            }
+      } else if (event.over && reorderBuffers) {
+        const oldIndex = sortedBuffers.findIndex((buffer) => buffer.id === activeId);
+        const newIndex = sortedBuffers.findIndex((buffer) => buffer.id === String(event.over?.id));
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          reorderBuffers(oldIndex, newIndex);
+          if (dragged) {
+            handleTabClick(dragged.id);
           }
         }
       }
 
-      setDragState({
-        isDragging: false,
-        draggedIndex: null,
-        dropTargetIndex: null,
-        startPosition: null,
-        currentPosition: null,
-        isOutsideRail: false,
-        tabPositions: [],
-        lastValidDropTarget: null,
-        dragDirection: null,
-      });
-      clearInternalTabDragData();
-    };
-
-    document.addEventListener("mousemove", handleGlobalMouseMove);
-    document.addEventListener("mouseup", handleGlobalMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleGlobalMouseMove);
-      document.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, [
-    dragState.draggedIndex,
-    reorderBuffers,
-    handleTabClick,
-    sortedBuffers,
-    handleMouseMove,
-    moveBufferToPane,
-    paneId,
-    setActivePane,
-    splitPane,
-  ]);
+      resetDrag();
+    },
+    [
+      handleTabClick,
+      moveBufferToPane,
+      paneId,
+      reorderBuffers,
+      resetDrag,
+      setActivePane,
+      sortedBuffers,
+      splitPane,
+    ],
+  );
 
   useEffect(() => {
     tabRefs.current = tabRefs.current.slice(0, sortedBuffers.length);
@@ -743,147 +642,143 @@ const TabBar = ({
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  const { isDragging, draggedIndex, dropTargetIndex, currentPosition } = dragState;
-
   return (
     <>
-      <div
-        ref={tabBarRef}
-        data-tab-bar-pane-id={paneId ?? ""}
-        className="relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1"
-        role="tablist"
-        aria-label="Open files"
-        onWheel={handleWheel}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onDragCancel={resetDrag}
       >
-        <div className="flex shrink-0 items-center gap-0.5">
-          <Button
-            type="button"
-            onClick={handleJumpBack}
-            disabled={!canGoBack}
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0 rounded-lg text-text-lighter"
-            tooltip="Go Back"
-            tooltipSide="bottom"
-            commandId="navigation.goBack"
-            aria-label="Go back to previous location"
-          >
-            <ArrowLeft />
-          </Button>
-          <Button
-            type="button"
-            onClick={handleJumpForward}
-            disabled={!canGoForward}
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0 rounded-lg text-text-lighter"
-            tooltip="Go Forward"
-            tooltipSide="bottom"
-            commandId="navigation.goForward"
-            aria-label="Go forward to next location"
-          >
-            <ArrowRight />
-          </Button>
-        </div>
+        <div
+          ref={tabBarRef}
+          data-tab-bar-pane-id={paneId ?? ""}
+          className="relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1"
+          role="tablist"
+          aria-label="Open files"
+          onWheel={handleWheel}
+        >
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              type="button"
+              onClick={handleJumpBack}
+              disabled={!canGoBack}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              tooltip="Go Back"
+              tooltipSide="bottom"
+              commandId="navigation.goBack"
+              aria-label="Go back to previous location"
+            >
+              <ArrowLeft />
+            </Button>
+            <Button
+              type="button"
+              onClick={handleJumpForward}
+              disabled={!canGoForward}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              tooltip="Go Forward"
+              tooltipSide="bottom"
+              commandId="navigation.goForward"
+              aria-label="Go forward to next location"
+            >
+              <ArrowRight />
+            </Button>
+          </div>
 
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {sortedBuffers.map((buffer, index) => {
-            const isActive = buffer.id === activeBufferId;
-            const isDraggedTab = isDragging && draggedIndex === index;
-            const showDropIndicatorBefore =
-              isDragging && dropTargetIndex === index && draggedIndex !== index;
-            return (
-              <TabBarItem
-                key={buffer.id}
-                buffer={buffer}
-                displayName={getBufferDisplayName(buffer)}
-                index={index}
-                isActive={isActive}
-                isDraggedTab={isDraggedTab}
-                showDropIndicatorBefore={showDropIndicatorBefore}
-                tabRef={(el) => {
-                  tabRefs.current[index] = el;
-                }}
-                onMouseDown={(e) => handleMouseDown(e, index)}
-                onDoubleClick={(e) => handleDoubleClick(e, index)}
-                onContextMenu={(e) => handleContextMenu(e, buffer)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                handleTabClose={(id) => {
-                  handleTabClose(id);
-                  clearPositionCache(id);
-                }}
-                handleTabPin={handleTabPin}
-              />
-            );
-          })}
-
-          {isDragging && dropTargetIndex === sortedBuffers.length && (
-            <div className="relative">
-              <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+          <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
+            <div className="scrollbar-hidden flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]">
+              {sortedBuffers.map((buffer, index) => (
+                <SortableEditorTab
+                  key={buffer.id}
+                  id={buffer.id}
+                  tabRef={(el) => {
+                    tabRefs.current[index] = el;
+                  }}
+                >
+                  <TabBarItem
+                    buffer={buffer}
+                    displayName={getBufferDisplayName(buffer)}
+                    index={index}
+                    isActive={buffer.id === activeBufferId}
+                    isDraggedTab={buffer.id === draggedBufferId}
+                    onClick={() => handleTabSelect(buffer)}
+                    onDoubleClick={(e) => handleDoubleClick(e, index)}
+                    onContextMenu={(e) => handleContextMenu(e, buffer)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    handleTabClose={(id) => {
+                      handleTabClose(id);
+                      clearPositionCache(id);
+                    }}
+                    handleTabPin={handleTabPin}
+                  />
+                </SortableEditorTab>
+              ))}
             </div>
-          )}
-        </div>
+          </SortableContext>
 
-        <div className="flex shrink-0 items-center gap-1 pl-0.5">
-          {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
-            <Button
-              type="button"
-              onClick={() => closePane(paneId)}
-              variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
-              tooltip="Close Split"
-              tooltipSide="bottom"
-              aria-label="Close split pane"
-            >
-              <PanelLeftClose />
-            </Button>
-          )}
-          {paneId && !disablePaneActions && !isBottomPane && activeBufferId && (
-            <Button
-              type="button"
-              onClick={handleSplitActivePane}
-              variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
-              tooltip="Split Editor"
-              tooltipSide="bottom"
-              aria-label="Split editor"
-            >
-              <SplitSquareHorizontal />
-            </Button>
-          )}
-          {paneId && !disablePaneActions && !isBottomPane && (
-            <Button
-              type="button"
-              onClick={handleTogglePaneFullscreen}
-              variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
-              tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
-              tooltipSide="bottom"
-              aria-label="Toggle editor full screen"
-            >
-              {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
-            </Button>
-          )}
-          <div className="flex shrink-0 items-center">
-            <NewTabMenu />
+          <div className="flex shrink-0 items-center gap-1 pl-0.5">
+            {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
+              <Button
+                type="button"
+                onClick={() => closePane(paneId)}
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 rounded-lg text-text-lighter"
+                tooltip="Close Split"
+                tooltipSide="bottom"
+                aria-label="Close split pane"
+              >
+                <PanelLeftClose />
+              </Button>
+            )}
+            {paneId && !disablePaneActions && !isBottomPane && activeBufferId && (
+              <Button
+                type="button"
+                onClick={handleSplitActivePane}
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 rounded-lg text-text-lighter"
+                tooltip="Split Editor"
+                tooltipSide="bottom"
+                aria-label="Split editor"
+              >
+                <SplitSquareHorizontal />
+              </Button>
+            )}
+            {paneId && !disablePaneActions && !isBottomPane && (
+              <Button
+                type="button"
+                onClick={handleTogglePaneFullscreen}
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 rounded-lg text-text-lighter"
+                tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
+                tooltipSide="bottom"
+                aria-label="Toggle editor full screen"
+              >
+                {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+              </Button>
+            )}
+            <div className="flex shrink-0 items-center">
+              <NewTabMenu />
+            </div>
           </div>
         </div>
-      </div>
 
-      {isDragging &&
-        draggedIndex !== null &&
-        currentPosition &&
-        createPortal(
-          <TabDragPreview
-            x={currentPosition.x}
-            y={currentPosition.y}
-            buffer={sortedBuffers[draggedIndex]}
-          />,
-          document.body,
-        )}
+        <DragOverlay dropAnimation={null}>
+          {draggedBuffer ? (
+            <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 text-xs opacity-95 shadow-sm">
+              <span className="max-w-[200px] truncate text-text">{draggedBuffer.name}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <MemoizedTabContextMenu
         isOpen={contextMenu.isOpen}
@@ -961,5 +856,35 @@ const TabBar = ({
     </>
   );
 };
+
+interface SortableEditorTabProps {
+  id: string;
+  children: ReactNode;
+  tabRef: (element: HTMLDivElement | null) => void;
+}
+
+function SortableEditorTab({ id, children, tabRef }: SortableEditorTabProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+
+  return (
+    <div
+      ref={(element) => {
+        setNodeRef(element);
+        tabRef(element);
+      }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={isDragging ? "relative z-10 opacity-40" : "relative"}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default TabBar;

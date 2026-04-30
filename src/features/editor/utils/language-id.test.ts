@@ -6,6 +6,10 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageIdFromPath("/tmp/highlights.scm")).toBe("scheme");
   });
 
+  it("detects nix files", () => {
+    expect(getLanguageIdFromPath("/tmp/flake.nix")).toBe("nix");
+  });
+
   it("detects Angular component templates", () => {
     expect(getLanguageIdFromPath("/tmp/src/app/app.component.html")).toBe("angular");
     expect(getLanguageIdFromPath("/tmp/src/app/app.ng.html")).toBe("angular");

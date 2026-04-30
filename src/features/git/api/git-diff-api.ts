@@ -15,6 +15,7 @@ interface MultiFileDiffCacheEntry {
 const MULTI_FILE_DIFF_CACHE_TTL = 30_000;
 const commitDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 const stashDiffCache = new Map<string, MultiFileDiffCacheEntry>();
+const refDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 
 const getMultiFileDiffCacheEntry = (
   cache: Map<string, MultiFileDiffCacheEntry>,
@@ -168,6 +169,38 @@ export const getCommitDiff = async (
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get commit diff:", error);
+    }
+    return null;
+  }
+};
+
+export const getRefDiff = async (
+  repoPath: string,
+  baseRef: string,
+  targetRef: string,
+): Promise<GitDiff[] | null> => {
+  try {
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return null;
+    }
+
+    const cacheKey = `${resolvedRepoPath}:${baseRef}:${targetRef}`;
+    const cached = getMultiFileDiffCacheEntry(refDiffCache, cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const diffs = await tauriInvoke<GitDiff[]>("git_ref_diff", {
+      repoPath: resolvedRepoPath,
+      baseRef,
+      targetRef,
+    });
+    setMultiFileDiffCacheEntry(refDiffCache, cacheKey, diffs);
+    return diffs;
+  } catch (error) {
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get ref diff:", error);
     }
     return null;
   }

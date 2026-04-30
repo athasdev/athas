@@ -103,9 +103,36 @@ function getArchToken(): "arm64" | "x64" {
   return PLATFORM_ARCH.endsWith("arm64") ? "arm64" : "x64";
 }
 
-function getTargetOsToken(): "apple-darwin" | "unknown-linux-gnu" | "pc-windows-msvc" {
+type TargetOsToken =
+  | "apple-darwin"
+  | "unknown-linux-gnu"
+  | "unknown-linux-musl"
+  | "pc-windows-msvc";
+
+function getLinuxLibcToken(): "gnu" | "musl" | "unknown" {
+  if (NODE_PLATFORM !== "linux") return "unknown";
+
+  if (typeof process !== "undefined") {
+    const override = process.env?.ATHAS_LINUX_LIBC?.toLowerCase();
+    if (override === "musl" || override === "gnu" || override === "glibc") {
+      return override === "musl" ? "musl" : "gnu";
+    }
+
+    const report = process.report?.getReport?.() as
+      | { header?: { glibcVersionRuntime?: string } }
+      | undefined;
+    if (report?.header && "glibcVersionRuntime" in report.header) {
+      return "gnu";
+    }
+  }
+
+  return "unknown";
+}
+
+function getTargetOsToken(): TargetOsToken {
   if (NODE_PLATFORM === "darwin") return "apple-darwin";
   if (NODE_PLATFORM === "win32") return "pc-windows-msvc";
+  if (getLinuxLibcToken() === "musl") return "unknown-linux-musl";
   return "unknown-linux-gnu";
 }
 
@@ -178,6 +205,26 @@ export function resolveToolDownloadUrlForManifest(
     : undefined;
 }
 
+export function resolveToolDownloadUrlForBackend(
+  input: {
+    name?: string;
+    downloadUrl?: string;
+  },
+  _extensionVersion: string,
+): string | undefined {
+  const name = input.name?.trim();
+  if (!name) {
+    return undefined;
+  }
+
+  const knownToolUrl = getKnownToolDownloadUrl(name);
+  if (knownToolUrl) {
+    return knownToolUrl;
+  }
+
+  return input.downloadUrl;
+}
+
 export function resolveToolCommandForManifest(input: { name?: string }): string | undefined {
   const name = input.name?.trim();
   if (name === "pyright") {
@@ -204,7 +251,7 @@ function toBackendToolConfig(
   }
 
   if (!input.runtime) {
-    const downloadUrl = resolveToolDownloadUrlForManifest(input, extensionVersion);
+    const downloadUrl = resolveToolDownloadUrlForBackend(input, extensionVersion);
     const command = resolveToolCommandForManifest(input);
 
     if (!downloadUrl) {
@@ -221,7 +268,7 @@ function toBackendToolConfig(
     };
   }
 
-  const downloadUrl = resolveToolDownloadUrlForManifest(input, extensionVersion);
+  const downloadUrl = resolveToolDownloadUrlForBackend(input, extensionVersion);
   const command = resolveToolCommandForManifest(input);
 
   return {

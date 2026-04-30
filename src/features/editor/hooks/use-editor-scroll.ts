@@ -11,6 +11,7 @@ interface UseEditorScrollOptions {
   minimapEnabled: boolean;
   switchGuardRef: RefObject<number>;
   highlightRef: RefObject<HTMLDivElement | null>;
+  primaryCursorRef: RefObject<HTMLDivElement | null>;
   multiCursorRef: RefObject<HTMLDivElement | null>;
   searchHighlightRef: RefObject<HTMLDivElement | null>;
   selectionLayerRef: RefObject<HTMLDivElement | null>;
@@ -30,6 +31,7 @@ export function useEditorScroll({
   minimapEnabled,
   switchGuardRef,
   highlightRef,
+  primaryCursorRef,
   multiCursorRef,
   searchHighlightRef,
   selectionLayerRef,
@@ -70,6 +72,9 @@ export function useEditorScroll({
 
       if (highlightRef.current) {
         highlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (primaryCursorRef.current) {
+        primaryCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
       }
       if (multiCursorRef.current) {
         multiCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
@@ -141,6 +146,7 @@ export function useEditorScroll({
       minimapEnabled,
       switchGuardRef,
       highlightRef,
+      primaryCursorRef,
       multiCursorRef,
       searchHighlightRef,
       selectionLayerRef,

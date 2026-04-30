@@ -28,6 +28,8 @@ pub enum ToolRuntime {
    Go,
    /// Rust/Cargo
    Rust,
+   /// RubyGems
+   Ruby,
    /// Direct binary download (no runtime needed)
    Binary,
 }

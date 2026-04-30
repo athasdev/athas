@@ -5,66 +5,137 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build. Defaults to package.json version."
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  publish-tauri:
+  release-metadata:
+    runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      tag_name: ${{ steps.release_meta.outputs.tag_name }}
+      release_name: ${{ steps.release_meta.outputs.release_name }}
+      is_prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Generate release metadata
+        id: release_meta
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ -n "$INPUT_TAG" ]]; then
+              tag="$INPUT_TAG"
+            else
+              version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
+              tag="v${version}"
+            fi
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $tag"
+            exit 1
+          fi
+
+          echo "tag_name=$tag" >> "${GITHUB_OUTPUT}"
+
+          bun scripts/release/generate-notes.mjs \
+            --tag "$tag" \
+            --github-output "${GITHUB_OUTPUT}"
+          bun scripts/release/generate-notes.mjs \
+            --tag "$tag" \
+            > release-body.md
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: release-body.md
+          if-no-files-found: error
+
+  build-tauri:
+    needs: release-metadata
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: "macos-latest"
+            artifact: "macos-aarch64"
             os: "macos"
             args: "--target aarch64-apple-darwin"
             target: "aarch64-apple-darwin"
-            include_updater_json: true
+            bundle_path: "target/aarch64-apple-darwin/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "macos-latest"
+            artifact: "macos-x86_64"
             os: "macos"
             args: "--target x86_64-apple-darwin"
             target: "x86_64-apple-darwin"
-            include_updater_json: true
+            bundle_path: "target/x86_64-apple-darwin/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "ubuntu-22.04"
+            artifact: "linux-x86_64"
             os: "linux"
-            args: "--bundles deb,rpm"
+            args: ""
             target: ""
-            include_updater_json: false
+            bundle_path: "target/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "ubuntu-22.04-arm"
+            artifact: "linux-aarch64"
             os: "linux"
-            args: "--bundles deb,rpm"
+            args: ""
             target: ""
-            include_updater_json: false
+            bundle_path: "target/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "windows-latest"
+            artifact: "windows-x86_64"
             os: "windows"
-            args: ""
+            args: "--bundles nsis"
             target: ""
-            include_updater_json: true
+            bundle_path: "target/release/bundle"
             timeout_minutes: 90
             rustflags: ""
           - platform: "windows-latest"
+            artifact: "windows-aarch64"
             os: "windows"
-            args: "--target aarch64-pc-windows-msvc"
+            args: "--target aarch64-pc-windows-msvc --bundles nsis"
             target: "aarch64-pc-windows-msvc"
-            include_updater_json: true
+            bundle_path: "target/aarch64-pc-windows-msvc/release/bundle"
             timeout_minutes: 90
             rustflags: ""
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -83,16 +154,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Generate release metadata
-        id: release_meta
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          bun scripts/release/generate-notes.mjs \
-            --tag "${GITHUB_REF_NAME}" \
-            --github-output "${GITHUB_OUTPUT}"
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -125,19 +186,7 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2 xdg-utils desktop-file-utils libglib2.0-bin squashfs-tools zsync file
-
-      - name: Configure AppImage runtime (Linux only)
-        if: matrix.os == 'linux'
-        run: echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
-
-      - name: Verify Linux packaging tools (Linux only)
-        if: matrix.os == 'linux'
-        run: |
-          command -v xdg-mime
-          command -v desktop-file-validate
-          command -v mksquashfs
-          command -v zsyncmake
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
 
       - name: Install frontend dependencies
         run: bun install --ignore-scripts && bun scripts/postinstall.ts
@@ -148,26 +197,35 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
         run: |
-          # Create variables
+          set -euo pipefail
+
+          if [[ -z "$APPLE_CERTIFICATE" || -z "$APPLE_CERT_PASSWORD" ]]; then
+            echo "APPLE_CODE_SIGNING=false" >> "$GITHUB_ENV"
+            echo "Apple signing certificate secrets are not configured; building unsigned macOS bundles."
+            exit 0
+          fi
+
+          echo "APPLE_CODE_SIGNING=true" >> "$GITHUB_ENV"
+
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
-          # Import certificate from secrets
           echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
 
-          # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$APPLE_CERT_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Verify certificate is available
           security find-identity -v -p codesigning
+
+      - name: Prepare Tauri macOS signing (macOS only)
+        if: matrix.os == 'macos'
+        env:
+          APPLE_SIGNING_IDENTITY: "${{ secrets.APPLE_SIGNING_IDENTITY || 'Developer ID Application: Mehmet Ozgul (N43BXFX4H4)' }}"
+        run: node scripts/release/macos/prepare-tauri-signing.mjs
 
       - name: Sign bundled macOS binaries (macOS only)
         if: matrix.os == 'macos'
@@ -176,6 +234,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "${APPLE_CODE_SIGNING:-}" != "true" ]]; then
+            echo "Apple code signing is not configured; skipping bundled binary signing."
+            exit 0
+          fi
 
           if [[ ! -d src/extensions/bundled ]]; then
             exit 0
@@ -199,11 +262,12 @@ jobs:
         run: |
           if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE) -or
               [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
-            Write-Host "Windows signing secrets not configured, skipping code signing."
-            "WINDOWS_SIGNING_SKIP=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "WINDOWS_AUTHENTICODE_SIGNING=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host "Windows Authenticode signing secrets are not configured; building unsigned Windows installers."
             exit 0
           }
 
+          "WINDOWS_AUTHENTICODE_SIGNING=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           New-Item -ItemType Directory -Force -Path certificate | Out-Null
           Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
           certutil -decode certificate/tempCert.txt certificate/certificate.pfx
@@ -237,74 +301,186 @@ jobs:
           Remove-Item -Recurse -Force certificate
 
       - name: Prepare Tauri Windows signing (Windows only)
-        if: matrix.os == 'windows' && env.WINDOWS_SIGNING_SKIP != 'true'
+        if: matrix.os == 'windows'
         run: node scripts/release/windows/prepare-tauri-signing.mjs
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build Tauri bundles
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_ID: ${{ matrix.os == 'macos' && steps.release_meta.outputs.is_prerelease != 'true' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ matrix.os == 'macos' && steps.release_meta.outputs.is_prerelease != 'true' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ matrix.os == 'macos' && steps.release_meta.outputs.is_prerelease != 'true' && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_ID: ${{ matrix.os == 'macos' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
           NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: ${{ steps.release_meta.outputs.release_name }}
-          releaseBody: ${{ steps.release_meta.outputs.release_body }}
-          releaseDraft: true
-          prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
-          includeUpdaterJson: ${{ matrix.include_updater_json }}
-          args: ${{ matrix.args }}
+        run: |
+          bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
 
-  generate-checksums:
-    needs: publish-tauri
+      - name: Collect Windows user installer (Windows only)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-dist | Out-Null
+          $setup = Get-ChildItem -Recurse -Path "${{ matrix.bundle_path }}" -File -Filter "*-setup.exe" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $setup) {
+            throw "Could not find Windows setup installer."
+          }
+          Copy-Item $setup.FullName release-dist/
+          if (Test-Path "$($setup.FullName).sig") {
+            Copy-Item "$($setup.FullName).sig" release-dist/
+          } else {
+            throw "Could not find updater signature for $($setup.Name)."
+          }
+
+      - name: Build Windows machine installer (Windows only)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $configArgs = @()
+          if ("${{ needs.release-metadata.outputs.is_prerelease }}" -eq "true") {
+            $configArgs += @("--config", "src-tauri/tauri.preview.conf.json")
+          }
+          $configArgs += @(
+            "--config",
+            '{"bundle":{"createUpdaterArtifacts":true,"windows":{"nsis":{"installMode":"perMachine"}}}}'
+          )
+
+          bun tauri bundle ${{ matrix.args }} --bundles nsis @configArgs
+
+          $setup = Get-ChildItem -Recurse -Path "${{ matrix.bundle_path }}" -File -Filter "*-setup.exe" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $setup) {
+            throw "Could not find machine installer."
+          }
+
+          $dest = Join-Path "release-dist" ($setup.Name -replace '-setup\.exe$', '-setup-machine.exe')
+          $destSig = "$dest.sig"
+          Copy-Item $setup.FullName $dest
+          if (Test-Path "$($setup.FullName).sig") {
+            Copy-Item "$($setup.FullName).sig" $destSig
+            Remove-Item "$($setup.FullName).sig" -Force
+          } else {
+            throw "Could not find updater signature for $($setup.Name)."
+          }
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact }}
+          path: |
+            ${{ matrix.bundle_path }}/**/*.dmg
+            ${{ matrix.bundle_path }}/**/*.app.tar.gz
+            ${{ matrix.bundle_path }}/**/*.AppImage
+            ${{ matrix.bundle_path }}/**/*.deb
+            ${{ matrix.bundle_path }}/**/*.rpm
+            ${{ matrix.bundle_path }}/**/*.sig
+            release-dist/*
+          if-no-files-found: error
+
+  assemble-release:
+    needs: [release-metadata, build-tauri]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: ${{ success() && startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ success() && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     steps:
-      - name: Download all release assets
+      - uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Download release metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata
+
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Assemble release assets
+        env:
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
+        run: |
+          bun scripts/release/release-assets.mjs assemble \
+            --tag "${TAG_NAME}" \
+            --repo "${{ github.repository }}" \
+            --dir release-artifacts \
+            --notes-file release-metadata/release-body.md \
+            --out prepared-release
+
+      - name: Create or update draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
+          RELEASE_NAME: ${{ needs.release-metadata.outputs.release_name }}
+          IS_PRERELEASE: ${{ needs.release-metadata.outputs.is_prerelease }}
         run: |
-          mkdir -p artifacts
-          gh release download "${GITHUB_REF_NAME}" \
-            --repo "${{ github.repository }}" \
-            --dir artifacts \
-            --pattern "*.dmg" \
-            --pattern "*.deb" \
-            --pattern "*.rpm" \
-            --pattern "*.AppImage" \
-            --pattern "*.app.tar.gz" \
-            --pattern "*.exe" \
-            --pattern "*.msi"
+          set -euo pipefail
 
-      - name: Generate SHA256 checksums
-        run: |
-          cd artifacts
-          sha256sum * > SHA256SUMS.txt
-          cat SHA256SUMS.txt
+          release_count="$(gh api "/repos/${{ github.repository }}/releases?per_page=100" \
+            --jq "map(select(.tag_name == \"${TAG_NAME}\")) | length")"
 
-      - name: Upload checksums to release
+          if [[ "$release_count" -gt 1 ]]; then
+            echo "Found ${release_count} releases with tag ${TAG_NAME}; refusing to upload into ambiguous release state."
+            exit 1
+          fi
+
+          if gh release view "${TAG_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            is_draft="$(gh release view "${TAG_NAME}" --repo "${{ github.repository }}" --json isDraft --jq ".isDraft")"
+            if [[ "$is_draft" != "true" ]]; then
+              echo "Release ${TAG_NAME} is already published; refusing to mutate it."
+              exit 1
+            fi
+
+            gh release edit "${TAG_NAME}" \
+              --repo "${{ github.repository }}" \
+              --title "${RELEASE_NAME}" \
+              --notes-file release-metadata/release-body.md
+          else
+            create_args=(
+              release create "${TAG_NAME}"
+              --repo "${{ github.repository }}"
+              --draft
+              --target "${GITHUB_SHA}"
+              --title "${RELEASE_NAME}"
+              --notes-file release-metadata/release-body.md
+            )
+
+            if [[ "$IS_PRERELEASE" == "true" ]]; then
+              create_args+=(--prerelease)
+            fi
+
+            gh "${create_args[@]}"
+          fi
+
+      - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" \
+          gh release upload "${TAG_NAME}" \
             --repo "${{ github.repository }}" \
-            artifacts/SHA256SUMS.txt \
+            prepared-release/* \
             --clobber
 
-  publish-release:
-    needs: [publish-tauri, generate-checksums]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    if: ${{ success() && startsWith(github.ref, 'refs/tags/v') }}
-    steps:
-      - name: Publish draft release
+      - name: Validate draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${GITHUB_REF_NAME}" --repo "${{ github.repository }}" --draft=false
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
+        run: |
+          bun scripts/release/release-assets.mjs verify \
+            --tag "${TAG_NAME}" \
+            --repo "${{ github.repository }}"

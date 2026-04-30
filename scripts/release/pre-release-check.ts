@@ -53,7 +53,7 @@ function parseStableVersion(
 }
 
 function parsePrerelease(version: string): { channel: string; number: number } | null {
-  const match = version.match(/-(alpha|beta|rc)\.(\d+)$/);
+  const match = version.match(/-(preview)\.(\d+)$/);
   if (!match) {
     return null;
   }
@@ -62,43 +62,6 @@ function parsePrerelease(version: string): { channel: string; number: number } |
     channel: match[1],
     number: parseInt(match[2]),
   };
-}
-
-const WINDOWS_MSI_PATCH_MULTIPLIER = 1000;
-const WINDOWS_MSI_STABLE_OFFSET = 900;
-const WINDOWS_MSI_CHANNEL_OFFSETS = {
-  alpha: 0,
-  beta: 200,
-  rc: 400,
-} as const;
-
-function getExpectedWindowsMsiVersion(version: string): string | null {
-  const stableVersion = parseStableVersion(version);
-  if (!stableVersion) {
-    return null;
-  }
-
-  if (stableVersion.patch > 64) {
-    return null;
-  }
-
-  const prerelease = parsePrerelease(version);
-  const baseBuild = stableVersion.patch * WINDOWS_MSI_PATCH_MULTIPLIER;
-
-  if (!prerelease) {
-    return `${stableVersion.major}.${stableVersion.minor}.${baseBuild + WINDOWS_MSI_STABLE_OFFSET}`;
-  }
-
-  if (
-    !Object.prototype.hasOwnProperty.call(WINDOWS_MSI_CHANNEL_OFFSETS, prerelease.channel) ||
-    prerelease.number > 199
-  ) {
-    return null;
-  }
-
-  const channelOffset =
-    WINDOWS_MSI_CHANNEL_OFFSETS[prerelease.channel as keyof typeof WINDOWS_MSI_CHANNEL_OFFSETS];
-  return `${stableVersion.major}.${stableVersion.minor}.${baseBuild + channelOffset + prerelease.number}`;
 }
 
 interface CheckResult {
@@ -161,7 +124,13 @@ function formatBytes(bytes: number): string {
 
 async function main() {
   log("\n Release Check\n", "cyan");
-  log("Running full release validation...", "dim");
+  const runFullChecks = process.env.RELEASE_FULL_CHECKS === "1";
+  log(
+    runFullChecks
+      ? "Running full release validation..."
+      : "Running fast release readiness validation...",
+    "dim",
+  );
 
   // Get current version from package.json
   const pkgPath = `${process.cwd()}/package.json`;
@@ -187,19 +156,16 @@ async function main() {
 
   const prerelease = parsePrerelease(currentVersion);
   const { major, minor, patch } = stableVersion;
-  log(`  Next patch:      v${major}.${minor}.${patch + 1}`, "dim");
-  log(`  Next minor:      v${major}.${minor + 1}.0`, "dim");
-  log(`  Next major:      v${major + 1}.0.0`, "dim");
   if (prerelease) {
-    log(
-      `  Continue ${prerelease.channel}: v${major}.${minor}.${patch}-${prerelease.channel}.${prerelease.number + 1}`,
-      "dim",
-    );
-    log(`  Promote to rc:   v${major}.${minor}.${patch}-rc.1`, "dim");
-    log(`  Finalize patch:  v${major}.${minor}.${patch}`, "dim");
+    log(`  Stable patch:    v${major}.${minor}.${patch}`, "dim");
+    log(`  Preview patch:   v${major}.${minor}.${patch}-preview.${prerelease.number + 1}`, "dim");
   } else {
-    log(`  Next beta:       v${major}.${minor}.${patch + 1}-beta.1`, "dim");
-    log(`  Next rc:         v${major}.${minor}.${patch + 1}-rc.1`, "dim");
+    log(`  Stable patch:    v${major}.${minor}.${patch + 1}`, "dim");
+    log(`  Stable minor:    v${major}.${minor + 1}.0`, "dim");
+    log(`  Stable major:    v${major + 1}.0.0`, "dim");
+    log(`  Preview patch:   v${major}.${minor}.${patch + 1}-preview.1`, "dim");
+    log(`  Preview minor:   v${major}.${minor + 1}.0-preview.1`, "dim");
+    log(`  Preview major:   v${major + 1}.0.0-preview.1`, "dim");
   }
 
   header("Git Checks");
@@ -283,26 +249,6 @@ async function main() {
     return { passed: true };
   });
 
-  await runCheck("Windows MSI version stays in sync", async () => {
-    const expectedWindowsMsiVersion = getExpectedWindowsMsiVersion(currentVersion);
-    if (!expectedWindowsMsiVersion) {
-      return {
-        passed: false,
-        message: `Could not derive a Windows MSI version from ${currentVersion}`,
-      };
-    }
-
-    const windowsMsiVersion = tauriConfig.bundle?.windows?.wix?.version;
-    if (windowsMsiVersion !== expectedWindowsMsiVersion) {
-      return {
-        passed: false,
-        message: `tauri.conf.json wix.version (${windowsMsiVersion ?? "missing"}) should be ${expectedWindowsMsiVersion}`,
-      };
-    }
-
-    return { passed: true };
-  });
-
   header("Bundled Assets");
 
   // Check: Tree-sitter parsers are present
@@ -364,153 +310,159 @@ async function main() {
     return { passed: true, message: `${expectedLangs.length} languages` };
   });
 
-  header("Frontend Checks");
+  if (runFullChecks) {
+    header("Frontend Checks");
 
-  // Check: TypeScript
-  await runCheck("TypeScript type check", async () => {
-    const result = await $`bun typecheck`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Type errors found" };
-    }
-    return { passed: true };
-  });
+    // Check: TypeScript
+    await runCheck("TypeScript type check", async () => {
+      const result = await $`bun typecheck`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Type errors found" };
+      }
+      return { passed: true };
+    });
 
-  // Check: Vite+ lint and format
-  await runCheck("Vite+ check", async () => {
-    const result = await $`bunx vp check`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Format, lint, or type errors found" };
-    }
-    return { passed: true };
-  });
+    // Check: Vite+ lint and format
+    await runCheck("Vite+ check", async () => {
+      const result = await $`bunx vp check`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Format, lint, or type errors found" };
+      }
+      return { passed: true };
+    });
 
-  await runCheck("Vite+ test suite", async () => {
-    const result = await $`bunx vp test run`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Tests failed" };
-    }
-    return { passed: true };
-  });
+    await runCheck("Vite+ test suite", async () => {
+      const result = await $`bunx vp test run`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Tests failed" };
+      }
+      return { passed: true };
+    });
 
-  await runCheck("Vite+ build", async () => {
-    const result = await $`bunx vp build`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Frontend build failed" };
-    }
-    return { passed: true };
-  });
+    await runCheck("Vite+ build", async () => {
+      const result = await $`bunx vp build`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Frontend build failed" };
+      }
+      return { passed: true };
+    });
 
-  await runCheck("Frontend bundle size < 80MB", async () => {
-    const distPath = `${process.cwd()}/dist`;
-    const size = getDirSize(distPath);
-    const sizeStr = formatBytes(size);
-    const maxSize = 80 * 1024 * 1024; // 80MB
+    await runCheck("Frontend bundle size < 80MB", async () => {
+      const distPath = `${process.cwd()}/dist`;
+      const size = getDirSize(distPath);
+      const sizeStr = formatBytes(size);
+      const maxSize = 80 * 1024 * 1024; // 80MB
 
-    if (size > maxSize) {
-      return { passed: true, warning: true, message: `${sizeStr} exceeds 80MB threshold` };
-    }
-    return { passed: true, message: sizeStr };
-  });
+      if (size > maxSize) {
+        return { passed: true, warning: true, message: `${sizeStr} exceeds 80MB threshold` };
+      }
+      return { passed: true, message: sizeStr };
+    });
 
-  header("Rust Checks");
+    header("Rust Checks");
 
-  // Check: Cargo fmt
-  await runCheck("Rust formatting", async () => {
-    const result = await $`cargo fmt --check --all`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Formatting issues found" };
-    }
-    return { passed: true };
-  });
+    // Check: Cargo fmt
+    await runCheck("Rust formatting", async () => {
+      const result = await $`cargo fmt --check --all`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Formatting issues found" };
+      }
+      return { passed: true };
+    });
 
-  // Check: Cargo check
-  await runCheck("Cargo check", async () => {
-    const result = await $`cargo check --workspace`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Compilation errors found" };
-    }
-    return { passed: true };
-  });
+    // Check: Cargo check
+    await runCheck("Cargo check", async () => {
+      const result = await $`cargo check --workspace`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Compilation errors found" };
+      }
+      return { passed: true };
+    });
 
-  await runCheck("Cargo check (release)", async () => {
-    const result = await $`cargo check --release -p athas`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Release-profile compilation errors found" };
-    }
-    return { passed: true };
-  });
+    await runCheck("Cargo check (release)", async () => {
+      const result = await $`cargo check --release -p athas`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Release-profile compilation errors found" };
+      }
+      return { passed: true };
+    });
 
-  // Check: Cargo clippy
-  await runCheck("Cargo clippy", async () => {
-    const result = await $`cargo clippy --workspace -- -D warnings`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Clippy warnings found" };
-    }
-    return { passed: true };
-  });
+    // Check: Cargo clippy
+    await runCheck("Cargo clippy", async () => {
+      const result = await $`cargo clippy --workspace -- -D warnings`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Clippy warnings found" };
+      }
+      return { passed: true };
+    });
 
-  await runCheck("Cargo build (release)", async () => {
-    const result = await $`cargo build --release`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      return { passed: false, message: "Release build failed" };
-    }
-    return { passed: true };
-  });
+    await runCheck("Cargo build (release)", async () => {
+      const result = await $`cargo build --release`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Release build failed" };
+      }
+      return { passed: true };
+    });
 
-  header("Security Audits");
+    header("Security Audits");
 
-  // Check: Cargo audit
-  await runCheck("Cargo audit", async () => {
-    // Check if cargo-audit is installed
-    const which = await $`which cargo-audit`.quiet().nothrow();
-    if (which.exitCode !== 0) {
-      return {
-        passed: true,
-        warning: true,
-        message: "cargo-audit not installed (run: cargo install cargo-audit)",
-      };
-    }
+    // Check: Cargo audit
+    await runCheck("Cargo audit", async () => {
+      // Check if cargo-audit is installed
+      const which = await $`which cargo-audit`.quiet().nothrow();
+      if (which.exitCode !== 0) {
+        return {
+          passed: true,
+          warning: true,
+          message: "cargo-audit not installed (run: cargo install cargo-audit)",
+        };
+      }
 
-    // sqlx-mysql currently pulls rsa 0.9.x, and RUSTSEC-2023-0071 has no
-    // fixed upgrade available upstream. Keep the audit actionable by allowing
-    // this one tracked advisory while still failing on newly fixable RustSec
-    // vulnerabilities.
-    const result = await $`cargo audit --no-fetch --ignore RUSTSEC-2023-0071`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      const output = result.stderr.toString();
-      const vulnMatch = output.match(/(\d+) vulnerabilit/);
-      const count = vulnMatch ? vulnMatch[1] : "some";
-      return { passed: true, warning: true, message: `${count} vulnerabilities found` };
-    }
-    return { passed: true };
-  });
+      // sqlx-mysql currently pulls rsa 0.9.x, and RUSTSEC-2023-0071 has no
+      // fixed upgrade available upstream. Keep the audit actionable by allowing
+      // this one tracked advisory while still failing on newly fixable RustSec
+      // vulnerabilities.
+      const result = await $`cargo audit --no-fetch --ignore RUSTSEC-2023-0071`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        const output = result.stderr.toString();
+        const vulnMatch = output.match(/(\d+) vulnerabilit/);
+        const count = vulnMatch ? vulnMatch[1] : "some";
+        return { passed: true, warning: true, message: `${count} vulnerabilities found` };
+      }
+      return { passed: true };
+    });
 
-  // Check: Bun audit
-  await runCheck("Bun audit", async () => {
-    // bun doesn't have native audit, use npm audit with bun's lockfile
-    const result = await $`bunx npm-audit-resolver --json`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      // Try alternative: just run npm audit
-      const npmResult = await $`npm audit --json`.quiet().nothrow();
-      if (npmResult.exitCode !== 0) {
-        try {
-          const audit = JSON.parse(npmResult.stdout.toString());
-          const vulns = audit.metadata?.vulnerabilities || {};
-          const total = (vulns.high || 0) + (vulns.critical || 0);
-          if (total > 0) {
-            return {
-              passed: true,
-              warning: true,
-              message: `${total} high/critical vulnerabilities`,
-            };
+    // Check: Bun audit
+    await runCheck("Bun audit", async () => {
+      // bun doesn't have native audit, use npm audit with bun's lockfile
+      const result = await $`bunx npm-audit-resolver --json`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        // Try alternative: just run npm audit
+        const npmResult = await $`npm audit --json`.quiet().nothrow();
+        if (npmResult.exitCode !== 0) {
+          try {
+            const audit = JSON.parse(npmResult.stdout.toString());
+            const vulns = audit.metadata?.vulnerabilities || {};
+            const total = (vulns.high || 0) + (vulns.critical || 0);
+            if (total > 0) {
+              return {
+                passed: true,
+                warning: true,
+                message: `${total} high/critical vulnerabilities`,
+              };
+            }
+          } catch {
+            return { passed: true, warning: true, message: "Could not parse audit results" };
           }
-        } catch {
-          return { passed: true, warning: true, message: "Could not parse audit results" };
         }
       }
-    }
-    return { passed: true };
-  });
+      return { passed: true };
+    });
+  } else {
+    header("Deferred Checks");
+    warn("Frontend, Rust, and audit checks are skipped by default during release preparation");
+    info("Run bun check for the full local validation suite");
+  }
 
   header("Release Readiness");
 
@@ -528,6 +480,20 @@ async function main() {
 
     if (!hasReleaseWorkflow) {
       return { passed: true, warning: true, message: "No release workflow file found" };
+    }
+
+    return { passed: true };
+  });
+
+  await runCheck("Release asset verifier exists", async () => {
+    const verifierPath = `${process.cwd()}/scripts/release/release-assets.mjs`;
+    if (!(await Bun.file(verifierPath).exists())) {
+      return { passed: false, message: "Missing scripts/release/release-assets.mjs" };
+    }
+
+    const result = await $`bun scripts/release/release-assets.mjs`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Release asset verifier did not print usage successfully" };
     }
 
     return { passed: true };
@@ -578,12 +544,12 @@ async function main() {
       log(`\n  All ${passed} checks passed!\n`, "green");
     }
     log("  Ready to release. Run one of:", "cyan");
-    log("    bun release:patch  # Bug fixes", "dim");
-    log("    bun release:minor  # New features", "dim");
-    log("    bun release:major  # Breaking changes", "dim");
-    log("    bun release:alpha  # Early preview build", "dim");
-    log("    bun release:beta   # Next patch prerelease", "dim");
-    log("    bun release:rc     # Release candidate for current patch\n", "dim");
+    log("    bun release:patch           # Stable patch draft", "dim");
+    log("    bun release:minor           # Stable minor draft", "dim");
+    log("    bun release:major           # Stable major draft", "dim");
+    log("    bun release:preview         # Preview patch draft", "dim");
+    log("    bun release:preview:minor   # Preview minor draft", "dim");
+    log("    bun release:preview:major   # Preview major draft\n", "dim");
     process.exit(0);
   } else {
     log(`\n  ${passed} passed, ${warned} warnings, ${failed} failed\n`, "red");

@@ -17,6 +17,7 @@ import {
   clearInternalTabDragData,
   getInternalTabDragData,
   getInternalTabDragHover,
+  resolveDropTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { cn } from "@/utils/cn";
 import { EmptyEditorState } from "./empty-editor-state";
@@ -297,6 +298,68 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     [pane.id, setActivePane, setActivePaneBuffer],
   );
 
+  const openFileTreeDropInPane = useCallback(
+    async (
+      fileDragData: { path: string; name: string; isDir: boolean },
+      point: { x: number; y: number },
+    ) => {
+      if (fileDragData.isDir) return;
+
+      const target = resolveDropTarget(point);
+      if (target.paneId !== pane.id) return;
+
+      let targetPaneId = pane.id;
+      if (target.zone && target.zone !== "center") {
+        const direction =
+          target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
+        const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
+        const newPaneId = splitPane(pane.id, direction, undefined, placement);
+        if (!newPaneId) return;
+        targetPaneId = newPaneId;
+      }
+
+      setActivePane(targetPaneId);
+
+      try {
+        const content = await readFileContent(fileDragData.path);
+        const existingBuffer = buffers.find((buffer) => buffer.path === fileDragData.path);
+        const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
+
+        if (existingBuffer) {
+          if (!targetPane?.bufferIds.includes(existingBuffer.id)) {
+            addBufferToPane(targetPaneId, existingBuffer.id, true);
+          } else {
+            setActivePaneBuffer(targetPaneId, existingBuffer.id);
+          }
+        } else {
+          const bufferId = openBuffer(
+            fileDragData.path,
+            fileDragData.name,
+            content,
+            false,
+            undefined,
+            false,
+            false,
+          );
+          const nextTargetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
+          if (!nextTargetPane?.bufferIds.includes(bufferId)) {
+            addBufferToPane(targetPaneId, bufferId, true);
+          }
+        }
+
+        const newActivePane = usePaneStore.getState().actions.getActivePane();
+        if (newActivePane?.activeBufferId) {
+          useBufferStore.getState().actions.setActiveBuffer(newActivePane.activeBufferId);
+        }
+      } catch (error) {
+        console.error("Failed to open file from file tree drop:", error);
+      } finally {
+        delete window.__fileDragData;
+      }
+    },
+    [addBufferToPane, buffers, openBuffer, pane.id, setActivePane, setActivePaneBuffer, splitPane],
+  );
+
   const getCarouselWidthBounds = useCallback(() => {
     const viewportWidth = carouselViewportRef.current?.clientWidth ?? window.innerWidth;
     return {
@@ -433,44 +496,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   useEffect(() => {
     const handleFileTreeDrop = async (e: CustomEvent) => {
-      const { path, name, x, y } = e.detail;
-      const container = containerRef.current;
+      const fileDragData = window.__fileDragData;
+      if (!fileDragData) return;
 
-      if (!container) return;
-
-      // Check if this drop is within this pane's bounds
-      const rect = container.getBoundingClientRect();
-      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-        return;
-      }
-
-      // This pane receives the file drop
-      setActivePane(pane.id);
-
-      try {
-        const content = await readFileContent(path);
-        const existingBuffer = buffers.find((b) => b.path === path);
-
-        if (existingBuffer) {
-          if (!pane.bufferIds.includes(existingBuffer.id)) {
-            addBufferToPane(pane.id, existingBuffer.id, true);
-          } else {
-            setActivePaneBuffer(pane.id, existingBuffer.id);
-          }
-        } else {
-          const bufferId = openBuffer(path, name, content, false, undefined, false, false);
-          if (!pane.bufferIds.includes(bufferId)) {
-            addBufferToPane(pane.id, bufferId, true);
-          }
-        }
-        // Sync buffer store
-        const newActivePane = usePaneStore.getState().actions.getActivePane();
-        if (newActivePane?.activeBufferId) {
-          useBufferStore.getState().actions.setActiveBuffer(newActivePane.activeBufferId);
-        }
-      } catch (error) {
-        console.error("Failed to open file from file tree drop:", error);
-      }
+      await openFileTreeDropInPane(fileDragData, { x: e.detail.x, y: e.detail.y });
     };
 
     window.addEventListener(
@@ -483,15 +512,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         handleFileTreeDrop as unknown as EventListener,
       );
     };
-  }, [
-    pane.id,
-    pane.bufferIds,
-    buffers,
-    setActivePane,
-    addBufferToPane,
-    setActivePaneBuffer,
-    openBuffer,
-  ]);
+  }, [openFileTreeDropInPane]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -611,57 +632,17 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   );
 
   // Handle mouse up for file tree drag (which uses mouse events, not HTML5 drag API)
-  const handleMouseUp = useCallback(async () => {
-    const fileDragData = window.__fileDragData;
-    if (!fileDragData || fileDragData.isDir) {
-      return; // Only handle file drops, not directory drops
-    }
-
-    // File tree is dragging a file and user released on this pane
-    setActivePane(pane.id);
-
-    try {
-      const content = await readFileContent(fileDragData.path);
-      const existingBuffer = buffers.find((b) => b.path === fileDragData.path);
-
-      if (existingBuffer) {
-        // Buffer exists, add to this pane if not already there
-        if (!pane.bufferIds.includes(existingBuffer.id)) {
-          addBufferToPane(pane.id, existingBuffer.id, true);
-        } else {
-          setActivePaneBuffer(pane.id, existingBuffer.id);
-        }
-      } else {
-        // Open the file as a new buffer
-        const bufferId = openBuffer(
-          fileDragData.path,
-          fileDragData.name,
-          content,
-          false,
-          undefined,
-          false,
-          false,
-        );
-        // Ensure it's in this pane
-        if (!pane.bufferIds.includes(bufferId)) {
-          addBufferToPane(pane.id, bufferId, true);
-        }
+  const handleMouseUp = useCallback(
+    async (event: React.MouseEvent) => {
+      const fileDragData = window.__fileDragData;
+      if (!fileDragData || fileDragData.isDir) {
+        return; // Only handle file drops, not directory drops
       }
-    } catch (error) {
-      console.error("Failed to open file from file tree:", error);
-    }
 
-    // Clean up global drag data
-    delete window.__fileDragData;
-  }, [
-    pane.id,
-    pane.bufferIds,
-    buffers,
-    setActivePane,
-    addBufferToPane,
-    setActivePaneBuffer,
-    openBuffer,
-  ]);
+      await openFileTreeDropInPane(fileDragData, { x: event.clientX, y: event.clientY });
+    },
+    [openFileTreeDropInPane],
+  );
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {

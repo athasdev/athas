@@ -46,6 +46,16 @@ const BottomPane = () => {
     }
   }, [bottomPaneActiveTab, isBottomPaneVisible]);
 
+  useEffect(() => {
+    if (
+      isBottomPaneVisible &&
+      bottomPaneActiveTab === "buffers" &&
+      bottomPaneBufferIds.length === 0
+    ) {
+      useUIState.getState().setIsBottomPaneVisible(false);
+    }
+  }, [bottomPaneActiveTab, bottomPaneBufferIds.length, isBottomPaneVisible]);
+
   // Resize logic
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

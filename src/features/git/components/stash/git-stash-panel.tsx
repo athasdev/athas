@@ -5,6 +5,7 @@ import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, dropStash, popStash } from "../../api/git-stash-api";
 import { useGitStore } from "../../stores/git-store";
+import { getStashDisplayTitle, getStashPositionLabel } from "../../utils/git-stash-format";
 import GitSidebarSectionHeader from "../git-sidebar-section-header";
 
 interface GitStashPanelProps {
@@ -108,63 +109,70 @@ const GitStashPanel = ({
             {stashes.length === 0 ? (
               <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No stashes</div>
             ) : (
-              stashes.map((stash) => (
-                <div
-                  key={stash.index}
-                  onClick={() => handleStashClick(stash.index)}
-                  className="group relative mb-1 cursor-pointer rounded-xl px-2.5 py-2.5 transition-colors hover:bg-hover/80"
-                >
-                  <div className="min-w-0 pr-2 sm:pr-24">
-                    <div
-                      className="ui-text-sm truncate leading-tight text-text"
-                      title={stash.message}
-                    >
-                      {stash.message || "Stashed changes"}
+              stashes.map((stash) => {
+                const displayTitle = getStashDisplayTitle(stash.message);
+
+                return (
+                  <div
+                    key={stash.index}
+                    onClick={() => handleStashClick(stash.index)}
+                    className="group/stash relative mb-1 cursor-pointer rounded-lg px-2.5 py-2.5 transition-colors hover:bg-hover/80 focus-within:bg-hover/80"
+                  >
+                    <div className="min-w-0 pr-24">
+                      <div
+                        className="ui-text-sm truncate leading-tight text-text"
+                        title={displayTitle}
+                      >
+                        {displayTitle}
+                      </div>
+                      <div className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
+                        <span className="truncate">{formatRelativeDate(stash.date)}</span>
+                        <span className="rounded border border-border/50 px-1 text-[10px] leading-4 text-text-lighter/80">
+                          {getStashPositionLabel(stash.index)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="ui-text-sm mt-1 text-text-lighter">
-                      {formatRelativeDate(stash.date)}
+                    <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-all group-hover/stash:pointer-events-auto group-hover/stash:translate-x-0 group-hover/stash:opacity-100 group-focus-within/stash:pointer-events-auto group-focus-within/stash:translate-x-0 group-focus-within/stash:opacity-100">
+                      <Button
+                        type="button"
+                        onClick={(e) => handleApplyStash(stash.index, e)}
+                        disabled={actionLoading.has(stash.index)}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter disabled:opacity-50"
+                        tooltip="Apply stash"
+                        aria-label="Apply stash"
+                      >
+                        <Download />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(e) => handlePopStash(stash.index, e)}
+                        disabled={actionLoading.has(stash.index)}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter disabled:opacity-50"
+                        tooltip="Pop stash"
+                        aria-label="Pop stash"
+                      >
+                        <Upload />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(e) => handleDropStash(stash.index, e)}
+                        disabled={actionLoading.has(stash.index)}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+                        tooltip="Drop stash"
+                        aria-label="Drop stash"
+                      >
+                        <Trash2 />
+                      </Button>
                     </div>
                   </div>
-                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-border/60 bg-primary-bg/92 p-0.5 opacity-100 shadow-sm backdrop-blur-sm transition-all sm:pointer-events-none sm:translate-x-1 sm:opacity-0 sm:group-hover:pointer-events-auto sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
-                    <Button
-                      type="button"
-                      onClick={(e) => handleApplyStash(stash.index, e)}
-                      disabled={actionLoading.has(stash.index)}
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-text-lighter disabled:opacity-50"
-                      tooltip="Apply stash"
-                      aria-label="Apply stash"
-                    >
-                      <Download />
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={(e) => handlePopStash(stash.index, e)}
-                      disabled={actionLoading.has(stash.index)}
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-text-lighter disabled:opacity-50"
-                      tooltip="Pop stash"
-                      aria-label="Pop stash"
-                    >
-                      <Upload />
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={(e) => handleDropStash(stash.index, e)}
-                      disabled={actionLoading.has(stash.index)}
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
-                      tooltip="Drop stash"
-                      aria-label="Drop stash"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

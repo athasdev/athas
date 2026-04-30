@@ -11,7 +11,8 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
-type ReleaseChannel = "alpha" | "beta" | "rc";
+type ReleaseChannel = "preview";
+type ReleaseBump = "patch" | "minor" | "major";
 const VERSIONED_FILES = [
   "package.json",
   "src-tauri/tauri.conf.json",
@@ -29,19 +30,11 @@ interface ParsedVersion {
   };
 }
 
-const WINDOWS_MSI_PATCH_MULTIPLIER = 1000;
-const WINDOWS_MSI_STABLE_OFFSET = 900;
-const WINDOWS_MSI_CHANNEL_OFFSETS = {
-  alpha: 0,
-  beta: 200,
-  rc: 400,
-} satisfies Record<ReleaseChannel, number>;
-
 function log(message: string, color: keyof typeof colors = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
-function error(message: string) {
+function error(message: string): never {
   log(message, "red");
   process.exit(1);
 }
@@ -55,7 +48,7 @@ function info(message: string) {
 }
 
 function parseVersion(version: string): ParsedVersion {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/);
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(preview)\.(\d+))?$/);
   if (!match) {
     error(`Invalid version format: ${version}`);
   }
@@ -83,35 +76,12 @@ function formatVersion(version: ParsedVersion): string {
   return `${base}-${version.prerelease.channel}.${version.prerelease.number}`;
 }
 
-function getWindowsMsiVersion(version: ParsedVersion): string {
-  if (version.patch > 64) {
-    error("Windows MSI version mapping supports patch versions up to 64");
-  }
-
-  const baseBuild = version.patch * WINDOWS_MSI_PATCH_MULTIPLIER;
-
-  if (!version.prerelease) {
-    return `${version.major}.${version.minor}.${baseBuild + WINDOWS_MSI_STABLE_OFFSET}`;
-  }
-
-  if (version.prerelease.number > 199) {
-    error("Windows MSI version mapping supports prerelease numbers up to 199");
-  }
-
-  const channelOffset = WINDOWS_MSI_CHANNEL_OFFSETS[version.prerelease.channel];
-  return `${version.major}.${version.minor}.${baseBuild + channelOffset + version.prerelease.number}`;
-}
-
 function getReleaseCommitMessage(version: ParsedVersion): string {
   if (version.prerelease) {
-    return `Prepare ${version.prerelease.channel} release`;
+    return "Prepare preview release";
   }
 
   return "Prepare release";
-}
-
-function isReleaseChannel(value: string): value is ReleaseChannel {
-  return value === "alpha" || value === "beta" || value === "rc";
 }
 
 function getStableBase(version: ParsedVersion): ParsedVersion {
@@ -122,10 +92,10 @@ function getStableBase(version: ParsedVersion): ParsedVersion {
   };
 }
 
-function bumpStableBase(version: ParsedVersion, bumpType: string): ParsedVersion {
+function bumpStableBase(version: ParsedVersion, bump: ReleaseBump): ParsedVersion {
   const stable = getStableBase(version);
 
-  switch (bumpType) {
+  switch (bump) {
     case "major":
       return { major: stable.major + 1, minor: 0, patch: 0 };
     case "minor":
@@ -135,46 +105,27 @@ function bumpStableBase(version: ParsedVersion, bumpType: string): ParsedVersion
         return stable;
       }
       return { major: stable.major, minor: stable.minor, patch: stable.patch + 1 };
-    default:
-      if (/^\d+\.\d+\.\d+$/.test(bumpType)) {
-        return parseVersion(bumpType);
-      }
-
-      error(
-        `Invalid bump type: ${bumpType}. Use: patch, minor, major, alpha, beta, rc, or an exact version`,
-      );
-      return stable;
   }
 }
 
 function bumpVersion(currentVersion: string, args: string[]): string {
   const current = parseVersion(currentVersion);
-  const [firstArg, secondArg] = args;
+  const [channel = "stable", bump = "patch"] = args;
 
-  if (!firstArg) {
-    error(
-      "Please specify: patch, minor, major, alpha, beta, rc, or an exact version (e.g. 1.2.3 or 1.2.3-beta.1)",
-    );
+  if (bump !== "patch" && bump !== "minor" && bump !== "major") {
+    error("Invalid release bump. Use: patch, minor, or major");
   }
 
-  if (/^\d+\.\d+\.\d+(?:-(alpha|beta|rc)\.\d+)?$/.test(firstArg)) {
-    return formatVersion(parseVersion(firstArg));
+  const baseVersion = bumpStableBase(current, bump);
+
+  if (channel === "stable") {
+    return formatVersion(baseVersion);
   }
 
-  if (isReleaseChannel(firstArg)) {
-    let baseVersion: ParsedVersion;
-
-    if (secondArg) {
-      baseVersion = bumpStableBase(current, secondArg);
-    } else if (current.prerelease) {
-      baseVersion = getStableBase(current);
-    } else {
-      baseVersion = bumpStableBase(current, "patch");
-    }
-
+  if (channel === "preview") {
     const shouldIncrementExisting =
-      current.prerelease?.channel === firstArg &&
-      !secondArg &&
+      current.prerelease?.channel === "preview" &&
+      bump === "patch" &&
       current.major === baseVersion.major &&
       current.minor === baseVersion.minor &&
       current.patch === baseVersion.patch;
@@ -182,13 +133,13 @@ function bumpVersion(currentVersion: string, args: string[]): string {
     return formatVersion({
       ...baseVersion,
       prerelease: {
-        channel: firstArg,
+        channel: "preview",
         number: shouldIncrementExisting ? current.prerelease.number + 1 : 1,
       },
     });
   }
 
-  return formatVersion(bumpStableBase(current, firstArg));
+  error("Invalid release channel. Use: stable or preview");
 }
 
 async function getCommitsSinceLastTag(): Promise<string[]> {
@@ -226,10 +177,6 @@ async function updateTauriConfig(newVersion: string) {
   const configPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
   const config = JSON.parse(await Bun.file(configPath).text());
   config.version = newVersion;
-  config.bundle ??= {};
-  config.bundle.windows ??= {};
-  config.bundle.windows.wix ??= {};
-  config.bundle.windows.wix.version = getWindowsMsiVersion(parseVersion(newVersion));
   await Bun.write(configPath, `${JSON.stringify(config, null, 2)}\n`);
   success(`Updated tauri.conf.json to v${newVersion}`);
 }
@@ -320,7 +267,7 @@ async function release() {
   } else {
     log("  2. Create a commit with these changes", "yellow");
     log(`  3. Create and push tag v${newVersion}`, "yellow");
-    log("  4. Trigger GitHub Actions to build and release\n", "yellow");
+    log("  4. Trigger GitHub Actions to build a draft release\n", "yellow");
   }
 
   if (parsedNewVersion.prerelease) {
@@ -382,8 +329,16 @@ async function release() {
     success("Pushed tag");
 
     log("\n✨ Release process complete!\n", "green");
-    log(`GitHub Actions will now build and release v${newVersion}`, "cyan");
+    log(`GitHub Actions will now build draft release v${newVersion}`, "cyan");
     log("View the progress at: https://github.com/athasdev/athas/actions\n", "cyan");
+    log(
+      `After the workflow finishes, verify it with: bun release:verify --tag v${newVersion}`,
+      "cyan",
+    );
+    log(
+      `Publish v${newVersion} manually from the GitHub draft release when it looks correct.\n`,
+      "cyan",
+    );
   } finally {
     if (isDryRun) {
       for (const [filePath, contents] of originalFiles) {

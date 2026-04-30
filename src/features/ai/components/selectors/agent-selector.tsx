@@ -374,7 +374,7 @@ export function AgentSelector({
                         disabled={isInstalling}
                         variant="outline"
                         size="xs"
-                        className="h-5 shrink-0 gap-1 rounded-full bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter disabled:cursor-wait disabled:opacity-70"
+                        className="ui-text-xs h-5 shrink-0 gap-1 rounded-full bg-secondary-bg/80 px-2 py-0 text-text-lighter disabled:cursor-wait disabled:opacity-70"
                       >
                         {isInstalling ? (
                           <LoaderCircle size={10} className="animate-spin" />

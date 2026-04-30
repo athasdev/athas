@@ -1,6 +1,9 @@
 use super::{
    client::{AthasAcpClient, PermissionResponse},
-   types::{AcpEvent, AgentConfig, SessionConfigOption, SessionMode, SessionModeState},
+   types::{
+      AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
+      SessionModeState,
+   },
 };
 use acp::Agent;
 use agent_client_protocol as acp;
@@ -19,6 +22,7 @@ pub(super) struct InitializedAcpWorker {
    pub connection: Arc<acp::ClientSideConnection>,
    pub session_id: Option<acp::SessionId>,
    pub auth_method_id: Option<String>,
+   pub agent_capabilities: AcpAgentCapabilities,
    pub process: Child,
    pub io_handle: tokio::task::JoinHandle<()>,
    pub client: Arc<AthasAcpClient>,
@@ -76,6 +80,7 @@ pub(super) async fn initialize_worker(
    .await?;
    let auth_methods = init_response.auth_methods.clone();
    let auth_method_id = auth_methods.first().map(|method| method.id.to_string());
+   let agent_capabilities = init_response.agent_capabilities.into();
 
    let cwd = workspace_path
       .clone()
@@ -107,6 +112,7 @@ pub(super) async fn initialize_worker(
       connection,
       session_id: session_bootstrap.session_id,
       auth_method_id,
+      agent_capabilities,
       process: child,
       io_handle,
       client,
@@ -210,7 +216,8 @@ async fn initialize_connection(
       json!({
          "extensionMethods": [
             { "name": "athas.openWebViewer", "description": "Open a URL in Athas web viewer", "params": { "url": "string" } },
-            { "name": "athas.openTerminal", "description": "Open a terminal tab in Athas", "params": { "command": "string|null" } }
+            { "name": "athas.openTerminal", "description": "Open a terminal tab in Athas", "params": { "command": "string|null" } },
+            { "name": "athas.setChatTitle", "description": "Rename the active Athas chat title", "params": { "title": "string" } }
          ],
          "notes": "Call these via ACP extension methods, not shell commands."
       }),

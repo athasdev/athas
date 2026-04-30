@@ -123,7 +123,7 @@ export function WebViewerToolbar({
             value={inputUrl}
             onChange={(e) => onInputUrlChange(e.target.value)}
             placeholder="Enter URL..."
-            className={`h-7 w-full rounded-md pr-20 pl-8 text-[13px] focus:ring-accent/30 ${
+            className={`ui-text-sm h-7 w-full rounded-md pr-20 pl-8 focus:ring-accent/30 ${
               hasUrlError
                 ? "border-error/60 bg-error/5 focus:border-error"
                 : "border-border bg-primary-bg focus:border-accent"

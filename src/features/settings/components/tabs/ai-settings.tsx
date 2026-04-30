@@ -376,36 +376,34 @@ export const AISettings = () => {
               )}
             </div>
           </SettingRow>
-          {needsApiKey ? (
-            <div className="ui-font ui-text-sm px-1 text-text-lighter">
-              Required for Ollama Cloud. Create one at ollama.com/settings/keys.
-            </div>
-          ) : null}
           {needsApiKey && !hasStoredOllamaKey && (
-            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-text-lighter">
-              <AlertCircle className="shrink-0 text-warning" />
-              <span>
-                Ollama Cloud requires an API key.{" "}
+            <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key.">
+              <div className="flex items-center gap-1.5">
+                <AlertCircle className="shrink-0 text-warning" />
                 <a
                   href="https://ollama.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-link hover:underline"
                 >
-                  Get one here <ExternalLink className="size-3" />
+                  Get key <ExternalLink className="size-3" />
                 </a>
-              </span>
-            </div>
+              </div>
+            </SettingRow>
           )}
           {ollamaStatus === "error" && (
-            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-error">
-              <AlertCircle className="shrink-0" />
-              <span>
-                {isOllamaCloud
+            <SettingRow
+              label="Connection Status"
+              description={
+                isOllamaCloud
                   ? "Could not reach Ollama Cloud. Verify your API key and internet connection."
-                  : "Could not connect. Check that Ollama is running at this address."}
-              </span>
-            </div>
+                  : "Could not connect. Check that Ollama is running at this address."
+              }
+            >
+              <Badge variant="default" size="default">
+                Error
+              </Badge>
+            </SettingRow>
           )}
         </Section>
       )}
@@ -465,87 +463,97 @@ export const AISettings = () => {
         </Section>
       )}
 
-      <SettingRow
-        label="AI Autocomplete"
-        description="Enable AI autocomplete while typing"
-        onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
-        canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
-      >
-        <Switch
-          checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
-          onChange={(checked) => updateSetting("aiCompletion", checked)}
-          disabled={!aiCompletionAllowedByPolicy}
-          size="sm"
-        />
-      </SettingRow>
-      {settings.aiCompletion && (
-        <>
+      <Section title="Autocomplete">
+        <SettingRow
+          label="AI Autocomplete"
+          description="Enable AI autocomplete while typing"
+          onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
+          canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
+        >
+          <Switch
+            checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
+            onChange={(checked) => updateSetting("aiCompletion", checked)}
+            disabled={!aiCompletionAllowedByPolicy}
+            size="sm"
+          />
+        </SettingRow>
+        {settings.aiCompletion && (
+          <>
+            <SettingRow
+              label="Autocomplete Model"
+              description="Choose any OpenRouter model for autocomplete"
+              onReset={() =>
+                updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+              }
+              canReset={
+                settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
+              }
+            >
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="xs"
+                  onClick={loadAutocompleteModels}
+                  disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
+                  title="Refresh model list"
+                >
+                  <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+                </Button>
+                <Select
+                  value={settings.aiAutocompleteModelId}
+                  options={autocompleteModels.map((model) => ({
+                    value: model.id,
+                    label: model.name,
+                  }))}
+                  onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+                  size="xs"
+                  variant="default"
+                  searchable
+                  searchableTrigger="input"
+                  className={SETTINGS_CONTROL_WIDTHS.xwide}
+                  disabled={!aiCompletionAllowedByPolicy}
+                />
+              </div>
+            </SettingRow>
+            {autocompleteModelError && (
+              <SettingRow label="Model List" description={autocompleteModelError}>
+                <Badge variant="default" size="default">
+                  Error
+                </Badge>
+              </SettingRow>
+            )}
+          </>
+        )}
+        {managedPolicy ? (
           <SettingRow
-            label="Autocomplete Model"
-            description="Choose any OpenRouter model for autocomplete"
-            onReset={() =>
-              updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
-            }
-            canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
+            label="Enterprise Policy"
+            description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
           >
-            <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                size="xs"
-                onClick={loadAutocompleteModels}
-                disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-                title="Refresh model list"
-              >
-                <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
-              </Button>
-              <Select
-                value={settings.aiAutocompleteModelId}
-                options={autocompleteModels.map((model) => ({
-                  value: model.id,
-                  label: model.name,
-                }))}
-                onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                size="xs"
-                variant="default"
-                searchable
-                searchableTrigger="input"
-                className={SETTINGS_CONTROL_WIDTHS.xwide}
-                disabled={!aiCompletionAllowedByPolicy}
-              />
-            </div>
+            <Badge variant="default" size="default">
+              Managed
+            </Badge>
           </SettingRow>
-          {autocompleteModelError && (
-            <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
-              <AlertCircle />
-              <span>{autocompleteModelError}</span>
-            </div>
-          )}
-        </>
-      )}
-      {managedPolicy ? (
-        <div className="ui-font ui-text-sm px-1 text-text-lighter">
-          Enterprise policy:{" "}
-          {aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."}{" "}
-          {byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}
-        </div>
-      ) : null}
+        ) : null}
+      </Section>
 
-      <SettingRow label="Clear All Chats" description="Permanently delete all chat history">
-        <TypedConfirmAction
-          actionLabel="Clear All"
-          busyLabel="Clearing..."
-          isBusy={isClearingChats}
-          onConfirm={async () => {
-            setIsClearingChats(true);
-            try {
-              await useAIChatStore.getState().clearAllChats();
-              showToast({ message: "All chats cleared", type: "success" });
-            } finally {
-              setIsClearingChats(false);
-            }
-          }}
-        />
-      </SettingRow>
+      <Section title="Chat History">
+        <SettingRow label="Clear All Chats" description="Permanently delete all chat history">
+          <TypedConfirmAction
+            actionLabel="Clear All"
+            busyLabel="Clearing..."
+            isBusy={isClearingChats}
+            onConfirm={async () => {
+              setIsClearingChats(true);
+              try {
+                await useAIChatStore.getState().clearAllChats();
+                showToast({ message: "All chats cleared", type: "success" });
+              } finally {
+                setIsClearingChats(false);
+              }
+            }}
+          />
+        </SettingRow>
+      </Section>
     </div>
   );
 };

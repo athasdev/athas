@@ -200,7 +200,7 @@ export function AgentLauncher() {
             onToggleOpen={() => setContextOpen((open) => !open)}
           />
           {selectedContextCount > 0 && (
-            <span className="ui-font rounded-full bg-accent/12 px-1.5 py-0.5 text-[10px] text-accent">
+            <span className="ui-font ui-text-xs rounded-full bg-accent/12 px-1.5 py-0.5 text-accent">
               {selectedContextCount}
             </span>
           )}
@@ -224,7 +224,7 @@ export function AgentLauncher() {
               }
             }}
             placeholder="Ask an agent to do something..."
-            className="ui-font h-9 w-full bg-transparent px-1 text-[13px] text-text outline-none placeholder:text-text-lighter"
+            className="ui-font ui-text-sm h-9 w-full bg-transparent px-1 text-text outline-none placeholder:text-text-lighter"
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}

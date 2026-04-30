@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import type { Position } from "../types/editor";
 import { LspClient } from "./lsp-client";
 
 interface SignatureInfo {
@@ -22,21 +22,29 @@ interface SignatureHelpResult {
   activeParameter?: number;
 }
 
-const TRIGGER_CHARS = ["(", ","];
+const DEFAULT_TRIGGER_CHARS = ["(", ","];
 
-export const SignatureHelpTooltip = () => {
+interface SignatureHelpTooltipProps {
+  editorRef: RefObject<HTMLDivElement | null>;
+  filePath: string | undefined;
+  cursorPosition: Position;
+}
+
+export const SignatureHelpTooltip = ({
+  editorRef,
+  filePath,
+  cursorPosition,
+}: SignatureHelpTooltipProps) => {
   const [signatureHelp, setSignatureHelp] = useState<SignatureHelpResult | null>(null);
   const { charWidth, lineHeight } = useEditorLayout();
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
-  const filePath = useEditorStateStore.use.filePath();
   const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
   const requestIdRef = useRef(0);
   const scrollOffsetRef = useRef({ top: 0, left: 0 });
+  const [triggerCharacters, setTriggerCharacters] = useState(DEFAULT_TRIGGER_CHARS);
 
   // Track scroll position
   useEffect(() => {
-    const editorContainer = document.querySelector(".editor-container");
-    const textarea = editorContainer?.querySelector("textarea");
+    const textarea = editorRef.current?.querySelector("textarea");
     if (!textarea) return;
 
     const handleScroll = () => {
@@ -49,6 +57,25 @@ export const SignatureHelpTooltip = () => {
     textarea.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => textarea.removeEventListener("scroll", handleScroll);
+  }, [editorRef, filePath]);
+
+  useEffect(() => {
+    if (!filePath || !extensionRegistry.isLspSupported(filePath)) {
+      setTriggerCharacters(DEFAULT_TRIGGER_CHARS);
+      return;
+    }
+
+    let cancelled = false;
+    const lspClient = LspClient.getInstance();
+
+    lspClient.getSignatureTriggerCharacters(filePath).then((characters) => {
+      if (cancelled) return;
+      setTriggerCharacters(characters.length > 0 ? characters : DEFAULT_TRIGGER_CHARS);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [filePath]);
 
   const fetchSignatureHelp = useCallback(async () => {
@@ -79,22 +106,20 @@ export const SignatureHelpTooltip = () => {
     if (lastInputTimestamp === 0) return;
 
     // Check if the character just typed is a trigger character
-    const lines = document.querySelector(
-      ".editor-container textarea",
-    ) as HTMLTextAreaElement | null;
-    if (!lines) return;
+    const textarea = editorRef.current?.querySelector("textarea");
+    if (!textarea) return;
 
-    const content = lines.value;
+    const content = textarea.value;
     const offset = cursorPosition.offset;
     if (offset <= 0) return;
 
     const charBefore = content[offset - 1];
-    if (TRIGGER_CHARS.includes(charBefore)) {
+    if (triggerCharacters.includes(charBefore)) {
       void fetchSignatureHelp();
     } else if (charBefore === ")") {
       setSignatureHelp(null);
     }
-  }, [lastInputTimestamp, cursorPosition.offset, fetchSignatureHelp]);
+  }, [editorRef, lastInputTimestamp, cursorPosition.offset, fetchSignatureHelp, triggerCharacters]);
 
   // Hide on cursor navigation (no typing)
   useEffect(() => {
@@ -112,7 +137,8 @@ export const SignatureHelpTooltip = () => {
         EDITOR_CONSTANTS.EDITOR_PADDING_TOP +
         cursorPosition.line * lineHeight -
         scrollOffsetRef.current.top -
-        4,
+        lineHeight -
+        8,
       left:
         EDITOR_CONSTANTS.EDITOR_PADDING_LEFT +
         cursorPosition.column * charWidth -
@@ -166,9 +192,8 @@ export const SignatureHelpTooltip = () => {
     <div
       className="absolute z-50 max-w-md rounded-md border border-border/70 bg-secondary-bg px-2.5 py-1.5 shadow-lg"
       style={{
-        bottom: `calc(100% - ${position.top}px)`,
-        left: `${position.left}px`,
-        transform: "translateY(-4px)",
+        top: `${Math.max(4, position.top)}px`,
+        left: `${Math.max(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT, position.left)}px`,
       }}
     >
       <div className="ui-font ui-text-sm editor-font text-text">{renderLabel()}</div>

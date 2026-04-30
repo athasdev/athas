@@ -348,21 +348,21 @@ const ConnectionDialog = ({
         {/* Validation/Test Status */}
         {testStatus !== "idle" && (
           <div
-            className={`ui-text-sm flex items-center gap-2 ${testStatus === "success" ? "text-green-500" : "text-red-500"}`}
+            className={`ui-text-sm flex items-center gap-2 ${testStatus === "success" ? "text-success" : "text-error"}`}
           >
             {testStatus === "success" ? <CheckCircle /> : <AlertCircle />}
             {testMessage}
           </div>
         )}
         {validationStatus === "valid" && (
-          <div className="ui-text-sm flex items-center gap-2 text-green-500">
+          <div className="ui-text-sm flex items-center gap-2 text-success">
             <CheckCircle />
             Connection saved successfully!
           </div>
         )}
 
         {validationStatus === "invalid" && (
-          <div className="ui-text-sm flex items-center gap-2 text-red-500">
+          <div className="ui-text-sm flex items-center gap-2 text-error">
             <AlertCircle />
             {errorMessage}
           </div>

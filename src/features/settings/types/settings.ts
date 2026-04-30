@@ -104,10 +104,16 @@ export interface Settings {
     | "icon-theme"
     | "snippet"
     | "database"
+    | "skill"
     | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree
+  fileTreeIndentSize: number;
+  compactFoldersInFileTree: boolean;
+  fileTreeDensity: "compact" | "default" | "comfortable";
+  showHiddenFilesInFileTree: boolean;
+  showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
   gitChangesFolderView: boolean;

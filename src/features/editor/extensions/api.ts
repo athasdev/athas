@@ -5,7 +5,9 @@ import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorViewStore } from "../stores/view-store";
 import type { Decoration, Position, Range } from "../types/editor";
+import { toggleLineComment, getLineCommentTokenForLanguage } from "../utils/comment-toggle";
 import { logger } from "../utils/logger";
+import { calculateCursorPosition } from "../utils/position";
 import type {
   EditorAPI,
   EditorEvent,
@@ -270,30 +272,24 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   toggleComment(): void {
-    if (!this.textareaRef) return;
+    const textarea = this.textareaRef;
+    if (!textarea) return;
 
-    const content = this.getContent();
-    const selection = useEditorStateStore.getState().selection;
-    const selectionStart = this.textareaRef.selectionStart;
+    const result = toggleLineComment({
+      content: textarea.value,
+      selectionStart: textarea.selectionStart,
+      selectionEnd: textarea.selectionEnd,
+      token: this.getActiveLineCommentToken(),
+    });
 
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
-      const lineEnd = content.indexOf("\n", selectionStart);
-      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
-      const lineContent = content.slice(lineStart, actualLineEnd);
+    textarea.value = result.content;
+    textarea.selectionStart = result.selectionStart;
+    textarea.selectionEnd = result.selectionEnd;
 
-      const isCommented = lineContent.trim().startsWith("//");
-      const newLineContent = isCommented
-        ? lineContent.replace(/^\s*\/\/\s?/, (match) => match.slice(0, -2).slice(0, -1) || "")
-        : lineContent.replace(/^(\s*)/, "$1// ");
+    const inputEvent = new Event("input", { bubbles: true });
+    textarea.dispatchEvent(inputEvent);
 
-      const newContent =
-        content.slice(0, lineStart) + newLineContent + content.slice(actualLineEnd);
-
-      this.textareaRef.value = newContent;
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
-    }
+    this.syncSelectionFromOffsets(result.content, result.selectionStart, result.selectionEnd);
   }
 
   moveLineUp(): void {
@@ -607,6 +603,36 @@ class EditorAPIImpl implements EditorAPI {
 
   getViewportRef(): HTMLDivElement | null {
     return this.viewportRef;
+  }
+
+  private getActiveLineCommentToken(): string {
+    const { activeBufferId, buffers } = useBufferStore.getState();
+    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    const languageId =
+      activeBuffer && "language" in activeBuffer && typeof activeBuffer.language === "string"
+        ? activeBuffer.language
+        : null;
+
+    return getLineCommentTokenForLanguage(languageId);
+  }
+
+  private syncSelectionFromOffsets(content: string, selectionStart: number, selectionEnd: number) {
+    const lines = content.split("\n");
+    const cursor = calculateCursorPosition(selectionStart, lines);
+    const selection =
+      selectionStart === selectionEnd
+        ? undefined
+        : {
+            start: calculateCursorPosition(selectionStart, lines),
+            end: calculateCursorPosition(selectionEnd, lines),
+          };
+
+    this.cursorPosition = cursor;
+    this.selection = selection ?? null;
+    useEditorStateStore.getState().actions.setCursorPosition(cursor);
+    useEditorStateStore.getState().actions.setSelection(selection);
+    this.emit("cursorChange", cursor);
+    this.emit("selectionChange", selection ?? null);
   }
 
   private offsetToPosition(offset: number): Position {

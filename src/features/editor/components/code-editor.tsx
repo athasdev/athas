@@ -1,5 +1,13 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -18,6 +26,7 @@ import { CompletionDropdown } from "../completion/completion-dropdown";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
+import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import { useCodeLens } from "../lsp/use-code-lens";
@@ -66,6 +75,7 @@ interface GoToLineEventDetail {
 }
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
+const LSP_VIEWPORT_LINE_BUFFER = 30;
 
 const CodeEditor = ({
   className,
@@ -90,6 +100,11 @@ const CodeEditor = ({
   const inlayHintsRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
+  const [contentOffsetLeft, setContentOffsetLeft] = useState(0);
+  const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
+    startLine: 0,
+    endLine: 120,
+  });
   const { setRefs, setContent, setFileInfo, setActiveEditorViewKey } =
     useEditorStateStore.use.actions();
   const { setDisabled } = useEditorSettingsStore.use.actions();
@@ -109,6 +124,7 @@ const CodeEditor = ({
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
   const isFindVisible = useUIState((state) => state.isFindVisible);
+  const lspClient = useMemo(() => LspClient.getInstance(), []);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
@@ -122,6 +138,7 @@ const CodeEditor = ({
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
+  const enableInlayHints = enableInteractiveServices && settings.parameterHints;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -202,14 +219,46 @@ const CodeEditor = ({
 
   // Inlay hints
   const inlayHints = useInlayHints(
-    enableInteractiveServices ? filePath : undefined,
-    enableInteractiveServices,
+    enableInlayHints ? filePath : undefined,
+    enableInlayHints,
+    lspVisibleLineRange,
   );
 
   // Code lens
   const codeLenses = useCodeLens(
     enableInteractiveServices ? filePath : undefined,
     enableInteractiveServices,
+  );
+
+  const handleCodeLensExecute = useCallback(
+    (lens: { title: string; command?: string; arguments?: unknown[] }) => {
+      if (!filePath || !lens.command) return;
+
+      void lspClient.applyCodeAction(filePath, {
+        title: lens.title,
+        command: lens.command,
+        arguments: lens.arguments ?? [],
+      });
+    },
+    [filePath, lspClient],
+  );
+
+  const updateLspVisibleLineRange = useCallback(
+    (scrollTop: number, viewportHeight: number) => {
+      const startLine = Math.max(
+        0,
+        Math.floor(scrollTop / zoomedLineHeight) - LSP_VIEWPORT_LINE_BUFFER,
+      );
+      const endLine =
+        Math.ceil((scrollTop + viewportHeight) / zoomedLineHeight) + LSP_VIEWPORT_LINE_BUFFER;
+
+      setLspVisibleLineRange((current) =>
+        current.startLine === startLine && current.endLine === endLine
+          ? current
+          : { startLine, endLine },
+      );
+    },
+    [zoomedLineHeight],
   );
 
   // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
@@ -233,6 +282,7 @@ const CodeEditor = ({
       if (lspScrollRafRef.current !== null) return;
       lspScrollRafRef.current = requestAnimationFrame(() => {
         syncLspOverlayTransform(textarea.scrollTop, textarea.scrollLeft);
+        updateLspVisibleLineRange(textarea.scrollTop, textarea.clientHeight);
         lspScrollRafRef.current = null;
       });
     };
@@ -240,6 +290,7 @@ const CodeEditor = ({
     textarea.addEventListener("scroll", handleScroll, { passive: true });
     // Sync initial position
     syncLspOverlayTransform(textarea.scrollTop, textarea.scrollLeft);
+    updateLspVisibleLineRange(textarea.scrollTop, textarea.clientHeight);
 
     return () => {
       textarea.removeEventListener("scroll", handleScroll);
@@ -248,7 +299,46 @@ const CodeEditor = ({
         lspScrollRafRef.current = null;
       }
     };
-  }, [syncLspOverlayTransform]);
+  }, [syncLspOverlayTransform, updateLspVisibleLineRange]);
+
+  useLayoutEffect(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    const updateContentOffset = () => {
+      const contentContainer = container.querySelector(
+        "[data-editor-content-container]",
+      ) as HTMLElement | null;
+
+      if (!contentContainer) {
+        setContentOffsetLeft(0);
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const contentRect = contentContainer.getBoundingClientRect();
+      const nextOffset = Math.max(0, contentRect.left - containerRect.left);
+      setContentOffsetLeft((current) =>
+        Math.abs(current - nextOffset) < 0.5 ? current : nextOffset,
+      );
+    };
+
+    const frame = requestAnimationFrame(updateContentOffset);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateContentOffset);
+    resizeObserver?.observe(container);
+    const contentContainer = container.querySelector(
+      "[data-editor-content-container]",
+    ) as HTMLElement | null;
+    if (contentContainer) {
+      resizeObserver?.observe(contentContainer);
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+    };
+  }, [activeBufferId, showMarkdownPreview, showHtmlPreview, showCsvPreview]);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -465,24 +555,32 @@ const CodeEditor = ({
               lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
+              onExecute={handleCodeLensExecute}
             />
           )}
 
           {/* Inlay Hints */}
-          {enableInteractiveServices && inlayHints.length > 0 && (
+          {enableInlayHints && inlayHints.length > 0 && (
             <InlayHintsOverlay
               ref={inlayHintsRef}
               hints={inlayHints}
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
+              contentOffsetLeft={contentOffsetLeft}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
             />
           )}
 
           {/* Signature Help */}
-          {enableInteractiveServices && <SignatureHelpTooltip />}
+          {enableInteractiveServices && (
+            <SignatureHelpTooltip
+              editorRef={editorRef}
+              filePath={filePath}
+              cursorPosition={displayCursorPosition}
+            />
+          )}
 
           {/* Rename Input */}
           {enableInteractiveServices && rename.renameState && (

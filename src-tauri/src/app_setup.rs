@@ -171,6 +171,9 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<Wry>, event: tauri::menu::Men
                "find_replace" => {
                   let _ = window.emit("menu_find_replace", ());
                }
+               "toggle_comment" => {
+                  let _ = window.emit("menu_toggle_comment", ());
+               }
                "command_palette" => {
                   let _ = window.emit("menu_command_palette", ());
                }

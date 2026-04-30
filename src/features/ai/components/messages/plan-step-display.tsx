@@ -25,7 +25,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
 
   const statusColor =
     status === "completed"
-      ? "text-green-400"
+      ? "text-success"
       : status === "current"
         ? "text-accent"
         : "text-text-lighter";

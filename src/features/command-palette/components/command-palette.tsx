@@ -32,6 +32,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import Keybinding from "@/ui/keybinding";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
@@ -240,9 +241,8 @@ const CommandPalette = () => {
   // Filter actions based on query
   const filteredActions = allActions.filter(
     (action) =>
-      action.label.toLowerCase().includes(query.toLowerCase()) ||
-      action.description?.toLowerCase().includes(query.toLowerCase()) ||
-      action.category.toLowerCase().includes(query.toLowerCase()),
+      !query.trim() ||
+      matchesSearchQuery(query, [action.label, action.description ?? "", action.category]),
   );
 
   const prioritizedActions = useMemo(() => {

@@ -8,125 +8,90 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  package:
+  readiness:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: "macos-latest"
-            os: "macos"
-            args: "--target aarch64-apple-darwin"
-            target: "aarch64-apple-darwin"
-            timeout_minutes: 60
-            rustflags: ""
-          - platform: "macos-latest"
-            os: "macos"
-            args: "--target x86_64-apple-darwin"
-            target: "x86_64-apple-darwin"
-            timeout_minutes: 60
-            rustflags: ""
-          - platform: "ubuntu-22.04"
-            os: "linux"
-            args: "--bundles deb,rpm"
-            target: ""
-            timeout_minutes: 60
-            rustflags: ""
-          - platform: "ubuntu-22.04-arm"
-            os: "linux"
-            args: "--bundles deb,rpm"
-            target: ""
-            timeout_minutes: 60
-            rustflags: ""
-          - platform: "windows-latest"
-            os: "windows"
-            args: ""
-            target: ""
-            timeout_minutes: 90
-            rustflags: ""
-          - platform: "windows-latest"
-            os: "windows"
-            args: "--target aarch64-pc-windows-msvc"
-            target: "aarch64-pc-windows-msvc"
-            timeout_minutes: 90
-            rustflags: ""
-
-    runs-on: ${{ matrix.platform }}
-    timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Free disk space (Linux only)
-        if: matrix.os == 'linux'
-        run: |
-          echo "Disk usage before cleanup:"
-          df -h
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
-          sudo docker system prune -af || true
-          sudo apt-get clean
-          echo "Disk usage after cleanup:"
-          df -h
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Ensure Rust target is installed
-        if: matrix.target != ''
-        run: rustup target add ${{ matrix.target }}
-
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies (Linux only)
-        if: matrix.os == 'linux'
+      - name: Validate release configuration
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2 xdg-utils desktop-file-utils libglib2.0-bin squashfs-tools zsync file
+          set -euo pipefail
 
-      - name: Configure AppImage runtime (Linux only)
-        if: matrix.os == 'linux'
-        run: echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+          test -f .github/workflows/release.yml
+          test -f src-tauri/tauri.preview.conf.json
+          test -f scripts/release/generate-notes.mjs
+          test -f scripts/release/release-assets.mjs
 
-      - name: Verify Linux packaging tools (Linux only)
-        if: matrix.os == 'linux'
+          bun -e '
+            const config = JSON.parse(await Bun.file("src-tauri/tauri.conf.json").text());
+            const targets = config.bundle?.targets ?? [];
+            const expected = ["app", "appimage", "deb", "dmg", "nsis", "rpm"];
+            if (JSON.stringify(targets) !== JSON.stringify(expected)) {
+              throw new Error(`Unexpected bundle targets: ${JSON.stringify(targets)}`);
+            }
+          '
+
+          version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
+          tag="v${version}"
+
+          bun scripts/release/generate-notes.mjs --tag "$tag" > release-body.md
+          test -s release-body.md
+
+          bun scripts/release/release-assets.mjs
+
+      - name: Validate Rust targets and Zig
         run: |
-          command -v xdg-mime
-          command -v desktop-file-validate
-          command -v mksquashfs
-          command -v zsyncmake
+          set -euo pipefail
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-pc-windows-msvc
+          bun scripts/check-zig.ts
 
-      - name: Install frontend dependencies
-        run: bun install --ignore-scripts && bun scripts/postinstall.ts
+  macos-readiness:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
 
-      - name: Import Apple Certificate (macOS only)
-        if: matrix.os == 'macos'
+      - name: Validate Apple signing and notarization credentials
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          set -euo pipefail
+
+          missing=()
+          [[ -n "$APPLE_CERTIFICATE" ]] || missing+=("APPLE_CERTIFICATE")
+          [[ -n "$APPLE_CERT_PASSWORD" ]] || missing+=("APPLE_CERT_PASSWORD")
+          [[ -n "$APPLE_ID" ]] || missing+=("APPLE_ID")
+          [[ -n "$APPLE_PASSWORD" ]] || missing+=("APPLE_PASSWORD")
+          [[ -n "$APPLE_TEAM_ID" ]] || missing+=("APPLE_TEAM_ID")
+
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            echo "Apple signing/notarization secrets are not fully configured; skipping macOS credential validation."
+            printf 'Missing: %s\n' "${missing[*]}"
+            exit 0
+          fi
+
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -141,30 +106,47 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
           security find-identity -v -p codesigning
 
-      - name: Sign bundled macOS binaries (macOS only)
-        if: matrix.os == 'macos'
+          xcrun notarytool history \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --output-format json \
+            >/dev/null
+
+  windows-readiness:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate Windows signing credentials
+        shell: pwsh
         env:
-          APPLE_SIGNING_IDENTITY: "${{ secrets.APPLE_SIGNING_IDENTITY || 'Developer ID Application: Mehmet Ozgul (N43BXFX4H4)' }}"
-        shell: bash
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
-          set -euo pipefail
-
-          if [[ ! -d src/extensions/bundled ]]; then
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE) -or
+              [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            Write-Host "Windows Authenticode signing secrets are not configured; Windows installers will be built unsigned."
             exit 0
-          fi
+          }
 
-          while IFS= read -r -d '' file_path; do
-            file_type="$(file -b "$file_path" || true)"
-            if [[ "$file_type" == *"Mach-O"* ]]; then
-              echo "Signing bundled binary: $file_path"
-              codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$file_path"
-            fi
-          done < <(find src/extensions/bundled -type f -perm -111 -print0)
+          New-Item -ItemType Directory -Force -Path certificate | Out-Null
+          Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
+          certutil -decode certificate/tempCert.txt certificate/certificate.pfx
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to decode Windows certificate from base64."
+          }
 
-      - name: Run package build
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
-          RUSTFLAGS: ${{ matrix.rustflags }}
-        run: bun tauri build ${{ matrix.args }}
+          $securePassword = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $importedCertificates = Import-PfxCertificate `
+            -FilePath certificate/certificate.pfx `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password $securePassword
+
+          $signingCertificate = $importedCertificates |
+            Where-Object { $_.HasPrivateKey } |
+            Select-Object -First 1
+
+          if (-not $signingCertificate) {
+            throw "Failed to import a Windows signing certificate with a private key."
+          }

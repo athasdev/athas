@@ -4,14 +4,16 @@ import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
-  completeThinkingAcpEvents,
   truncateDetail,
-  updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
-import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
+import {
+  createToolCall,
+  markToolCallComplete,
+  updateToolCall,
+} from "@/features/ai/lib/tool-call-state";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -61,10 +63,10 @@ const AIChat = memo(function AIChat({
       description: string;
       permissionType: string;
       resource: string;
+      options: Extract<AcpEvent, { type: "permission_request" }>["options"];
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
-  const activeToolEventIdsRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (activeBuffer) {
@@ -80,7 +82,6 @@ const AIChat = memo(function AIChat({
   // Clear ACP events when switching chats
   useEffect(() => {
     setAcpEvents([]);
-    activeToolEventIdsRef.current.clear();
   }, [chatState.currentChatId]);
 
   useEffect(() => {
@@ -252,7 +253,6 @@ const AIChat = memo(function AIChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    activeToolEventIdsRef.current.clear();
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
   };
@@ -285,13 +285,14 @@ const AIChat = memo(function AIChat({
       chatId = chatActions.createNewChat(currentAgentId);
     }
 
-    const { processedMessage } = await parseMentionsAndLoadFiles(
+    const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
       messageContent.trim(),
       allProjectFiles,
     );
 
     const latestSettings = useSettingsStore.getState().settings;
     const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
+    context.mentionedFiles = mentionedFiles;
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),
@@ -370,10 +371,9 @@ const AIChat = memo(function AIChat({
           content: msg.content,
         }));
 
-      const enhancedMessage = processedMessage;
+      const enhancedMessage = isAcp ? messageContent.trim() : processedMessage;
       if (isAcp) {
         setAcpEvents([]);
-        activeToolEventIdsRef.current.clear();
       }
 
       await getChatCompletionStream(
@@ -439,7 +439,7 @@ details: The agent session started, but no content, tool output, or resource was
           });
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
-          setAcpEvents((prev) => completeThinkingAcpEvents(prev));
+          setAcpEvents((prev) => prev.filter((event) => event.kind !== "thinking"));
           abortControllerRef.current = null;
           processQueuedMessages();
         },
@@ -559,19 +559,46 @@ details: ${errorDetails || mainError}
           chatActions.setStreamingMessageId(newMessageId);
           requestAnimationFrame(() => scrollToBottom(true));
         },
-        (toolName: string, toolInput?: any, toolId?: string) => {
+        (event) => {
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             isToolUse: true,
-            toolName,
+            toolName: event.toolName,
             toolCalls: [
               ...(currentMessage?.toolCalls || []),
-              createToolCall(toolName, toolInput, toolId),
+              createToolCall(
+                event.toolName,
+                event.input,
+                event.toolId,
+                event.kind,
+                event.status,
+                event.locations,
+              ),
             ],
           }));
         },
-        (toolName: string, toolId?: string) => {
+        (event) => {
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            toolCalls: markToolCallComplete(currentMessage?.toolCalls || [], toolName, toolId),
+            toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
+              id: event.toolId,
+              name: event.toolName,
+              input: event.input,
+              output: event.output,
+              error: event.error,
+              kind: event.kind,
+              status: event.status,
+              locations: event.locations,
+            }),
+          }));
+        },
+        (toolName: string, toolId?: string, output?: unknown, error?: string) => {
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
+            toolCalls: markToolCallComplete(
+              currentMessage?.toolCalls || [],
+              toolName,
+              toolId,
+              output,
+              error,
+            ),
           }));
         },
         (event) => {
@@ -588,6 +615,7 @@ details: ${errorDetails || mainError}
               description: event.description,
               permissionType: event.permissionType,
               resource: event.resource,
+              options: event.options,
             },
           ]);
         },
@@ -602,37 +630,12 @@ details: ${errorDetails || mainError}
             return;
           }
           switch (event.type) {
-            case "thought_chunk": {
-              if (event.isComplete) {
-                setAcpEvents((prev) => completeThinkingAcpEvents(prev));
-              } else {
-                appendAcpEvent({
-                  kind: "thinking",
-                  label: "Thinking",
-                  state: "running",
-                });
-              }
+            case "thought_chunk":
               break;
-            }
-            case "tool_start": {
-              const activityId = `tool-${event.toolId}`;
-              activeToolEventIdsRef.current.set(event.toolId, activityId);
-              appendAcpEvent({
-                id: activityId,
-                kind: "tool",
-                label: event.toolName,
-                detail: "running",
-                state: "running",
-              });
+            case "tool_start":
+            case "tool_update":
+            case "tool_complete":
               break;
-            }
-            case "tool_complete": {
-              const activityId =
-                activeToolEventIdsRef.current.get(event.toolId) ?? `tool-${event.toolId}`;
-              setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, activityId, event.success));
-              activeToolEventIdsRef.current.delete(event.toolId);
-              break;
-            }
             case "permission_request":
               break; // Handled separately with permission UI
             case "prompt_complete":
@@ -800,16 +803,22 @@ details: ${errorDetails || mainError}
   ]);
 
   const currentPermission = permissionQueue[0];
-  const handlePermission = async (approved: boolean) => {
+  const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
     try {
+      const option = currentPermission.options.find((item) => item.id === optionId);
       appendAcpEvent({
         kind: "permission",
         label: "Permission response",
-        detail: approved ? "allow" : "deny",
+        detail: option?.name || (approved ? "allow" : "deny"),
         state: approved ? "success" : "info",
       });
-      await AcpStreamHandler.respondToPermission(currentPermission.requestId, approved);
+      await AcpStreamHandler.respondToPermission(
+        currentPermission.requestId,
+        approved,
+        false,
+        optionId,
+      );
     } finally {
       setPermissionQueue((prev) => prev.slice(1));
     }
@@ -817,7 +826,7 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
+      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
       <ChatHeader onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
@@ -852,7 +861,7 @@ details: ${errorDetails || mainError}
                         Permission
                       </Badge>
                       {permissionQueue.length > 1 ? (
-                        <span className="text-[11px] text-text-lighter">
+                        <span className="ui-text-xs text-text-lighter">
                           {permissionQueue.length - 1} more queued
                         </span>
                       ) : null}
@@ -863,29 +872,38 @@ details: ${errorDetails || mainError}
                     >
                       {currentPermission.description}
                     </div>
-                    <div className="mt-1 text-[11px] text-text-lighter">
+                    <div className="ui-text-xs mt-1 text-text-lighter">
                       Review this request before the agent can continue.
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handlePermission(false)}
-                      className="rounded-full"
-                    >
-                      Deny
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handlePermission(true)}
-                      className="rounded-full"
-                    >
-                      Allow
-                    </Button>
+                    {(currentPermission.options.length > 0
+                      ? currentPermission.options
+                      : [
+                          { id: "reject", name: "Deny", kind: "reject_once" as const },
+                          { id: "allow", name: "Allow", kind: "allow_once" as const },
+                        ]
+                    ).map((option) => {
+                      const approved =
+                        option.kind === "allow_once" || option.kind === "allow_always";
+                      return (
+                        <Button
+                          key={option.id}
+                          type="button"
+                          variant={approved ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() =>
+                            handlePermission(
+                              approved,
+                              currentPermission.options.length > 0 ? option.id : undefined,
+                            )
+                          }
+                          className="rounded-full"
+                        >
+                          {option.name}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

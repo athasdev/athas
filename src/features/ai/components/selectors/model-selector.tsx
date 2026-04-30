@@ -11,10 +11,12 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
 import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
 } from "../input/chat-composer-control-styles";
+import { getSelectorDropdownWidth } from "./selector-dropdown-width";
 
 interface ModelSelectorProps {
   providerId: string;
@@ -44,11 +46,13 @@ export function ModelSelector({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isOpen = open ?? uncontrolledOpen;
   const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
 
   const triggerInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { isPro } = useProFeature();
   const subscription = useAuthStore((state) => state.subscription);
   const { dynamicModels, setDynamicModels } = useAIChatStore();
@@ -150,27 +154,61 @@ export function ModelSelector({
   }, [availableModels, isLoadingModels, modelId, providerId]);
 
   const filteredModels = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
     return availableModels.filter((model) => {
-      if (!normalizedQuery) return true;
-      return (
-        model.name.toLowerCase().includes(normalizedQuery) ||
-        model.id.toLowerCase().includes(normalizedQuery)
-      );
+      return matchesSearchQuery(query, [model.name, model.id]);
     });
   }, [availableModels, query]);
 
-  const firstSelectableModel = filteredModels.find((model) => !(model.proOnly && !isPro));
+  const selectableModelIndexes = useMemo(
+    () =>
+      filteredModels.reduce<number[]>((indexes, model, index) => {
+        if (!(model.proOnly && !isPro)) indexes.push(index);
+        return indexes;
+      }, []),
+    [filteredModels, isPro],
+  );
+  const dropdownWidth = useMemo(
+    () =>
+      getSelectorDropdownWidth({
+        labels: filteredModels.map((model) => model.name),
+        min: isComposer ? 156 : 160,
+        max: isComposer ? 260 : 300,
+        chrome: 58,
+      }),
+    [filteredModels, isComposer],
+  );
+  const openTriggerWidth = useMemo(
+    () =>
+      getSelectorDropdownWidth({
+        labels: [currentModelName],
+        min: isComposer ? 120 : 180,
+        max: isComposer ? 176 : 260,
+        chrome: isComposer ? 24 : 36,
+      }),
+    [currentModelName, isComposer],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const currentIndex = filteredModels.findIndex((model) => model.id === modelId);
+    if (currentIndex >= 0 && selectableModelIndexes.includes(currentIndex)) {
+      setActiveIndex(currentIndex);
+      return;
+    }
+    setActiveIndex(selectableModelIndexes[0] ?? 0);
+  }, [filteredModels, isOpen, modelId, selectableModelIndexes]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    itemRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, isOpen]);
+
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("w-fit max-w-[176px]")
-      : "ui-font w-[min(260px,100%)] justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
+      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
     triggerClassName,
   );
-  const triggerInputWidth = `${Math.min(
-    Math.max(query.length || currentModelName.length, 10),
-    24,
-  )}ch`;
 
   const handleTriggerInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -179,10 +217,44 @@ export function ModelSelector({
       return;
     }
 
-    if (event.key === "Enter" && firstSelectableModel) {
-      event.preventDefault();
-      onChange(firstSelectableModel.id);
-      setOpen(false);
+    if (selectableModelIndexes.length === 0) return;
+
+    const activeSelectableIndex = selectableModelIndexes.indexOf(activeIndex);
+    const currentSelectableIndex = activeSelectableIndex >= 0 ? activeSelectableIndex : 0;
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault();
+        const nextSelectableIndex = Math.min(
+          currentSelectableIndex + 1,
+          selectableModelIndexes.length - 1,
+        );
+        setActiveIndex(selectableModelIndexes[nextSelectableIndex] ?? 0);
+        break;
+      }
+      case "ArrowUp": {
+        event.preventDefault();
+        const nextSelectableIndex = Math.max(currentSelectableIndex - 1, 0);
+        setActiveIndex(selectableModelIndexes[nextSelectableIndex] ?? 0);
+        break;
+      }
+      case "Home":
+        event.preventDefault();
+        setActiveIndex(selectableModelIndexes[0] ?? 0);
+        break;
+      case "End":
+        event.preventDefault();
+        setActiveIndex(selectableModelIndexes[selectableModelIndexes.length - 1] ?? 0);
+        break;
+      case "Enter": {
+        event.preventDefault();
+        const selectedModel =
+          filteredModels[activeIndex] ?? filteredModels[selectableModelIndexes[0] ?? 0];
+        if (!selectedModel || (selectedModel.proOnly && !isPro)) return;
+        onChange(selectedModel.id);
+        setOpen(false);
+        break;
+      }
     }
   };
 
@@ -212,7 +284,7 @@ export function ModelSelector({
             triggerClass,
             "cursor-text text-left outline-none placeholder:text-text",
           )}
-          style={isComposer ? { width: triggerInputWidth } : undefined}
+          style={{ width: openTriggerWidth }}
         />
       ) : (
         <Button
@@ -241,13 +313,16 @@ export function ModelSelector({
         onClose={() => setOpen(false)}
         className={cn(
           isComposer
-            ? chatComposerDropdownClassName("w-[min(320px,calc(100vw-16px))] p-0")
-            : "w-[min(360px,calc(100vw-16px))] overflow-hidden rounded-2xl p-0",
+            ? chatComposerDropdownClassName("min-w-0 p-0")
+            : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
-        style={{ maxHeight: "420px" }}
+        style={{ maxHeight: "280px", minWidth: 0, width: dropdownWidth }}
       >
-        <div className="custom-scrollbar-thin max-h-80 overflow-y-auto p-1.5">
+        <div
+          className="custom-scrollbar-thin max-h-72 overflow-y-auto overscroll-contain p-1"
+          onWheel={(event) => event.stopPropagation()}
+        >
           {modelFetchError && (
             <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter text-xs">
               <WarningCircle className="shrink-0 text-warning" />
@@ -261,20 +336,34 @@ export function ModelSelector({
             filteredModels.map((model) => {
               const isCurrent = model.id === modelId;
               const isLocked = Boolean(model.proOnly && !isPro);
+              const index = filteredModels.indexOf(model);
+              const isActive = activeIndex === index;
 
               return (
                 <button
                   key={model.id}
+                  ref={(node) => {
+                    itemRefs.current[index] = node;
+                  }}
                   type="button"
+                  role="option"
+                  aria-selected={isCurrent}
                   onClick={() => {
                     if (isLocked) return;
                     onChange(model.id);
                     setOpen(false);
                   }}
+                  onMouseEnter={() => {
+                    if (!isLocked) setActiveIndex(index);
+                  }}
+                  onPointerMove={() => {
+                    if (!isLocked) setActiveIndex(index);
+                  }}
                   disabled={isLocked}
                   className={cn(
                     dropdownItemClassName(),
                     "mb-1 min-h-8 gap-2 py-2 text-xs last:mb-0",
+                    isActive && "bg-hover",
                     isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                   )}
                 >

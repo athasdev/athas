@@ -10,7 +10,6 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
 export const FOOTER_LEADING_ITEM_IDS = [
   "branch",
   "terminal",
-  "bottom-tabs",
   "diagnostics",
   "extensions",
   "updates",

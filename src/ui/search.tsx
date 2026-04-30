@@ -231,10 +231,16 @@ export function SearchPopover({
 export function SearchReplaceToggle({
   isExpanded,
   onToggle,
+  expandedLabel = "Hide replace",
+  collapsedLabel = "Show replace",
 }: {
   isExpanded: boolean;
   onToggle: () => void;
+  expandedLabel?: string;
+  collapsedLabel?: string;
 }) {
+  const label = isExpanded ? expandedLabel : collapsedLabel;
+
   return (
     <Button
       type="button"
@@ -242,8 +248,8 @@ export function SearchReplaceToggle({
       variant="ghost"
       size="icon-xs"
       className={searchIconButtonVariants()}
-      tooltip={isExpanded ? "Hide replace" : "Show replace"}
-      aria-label={isExpanded ? "Hide replace" : "Show replace"}
+      tooltip={label}
+      aria-label={label}
     >
       <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
     </Button>

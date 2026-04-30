@@ -1,4 +1,4 @@
-use crate::{ToolConfig, ToolError, ToolRuntime};
+use crate::{ToolConfig, ToolError, ToolRuntime, platform};
 use athas_runtime::{RuntimeManager, RuntimeType, process::configure_background_command};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -6,18 +6,18 @@ use serde_json::Value;
 use std::{
    fs,
    io::Cursor,
-   path::{Path, PathBuf},
+   path::{Component, Path, PathBuf},
    process::Command,
 };
 use tauri::Manager;
 use url::Url;
 use walkdir::WalkDir;
+use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
-/// Maximum size for a direct-binary download. Tool binaries are typically
-/// well under 100 MB; anything larger is almost certainly a misconfiguration
-/// or an attempt to exhaust disk.
-const MAX_BINARY_DOWNLOAD_BYTES: u64 = 100 * 1024 * 1024;
+/// Maximum size for a managed binary tool download. Most single-file tools are
+/// small, but SDK-backed language servers such as Dart include runtime assets.
+const MAX_BINARY_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Validate that a binary download URL uses an acceptable scheme and host.
 ///
@@ -53,7 +53,28 @@ impl ToolInstaller {
       config.command.as_deref().unwrap_or(&config.name)
    }
 
-   fn node_bin_name(name: &str) -> String {
+   fn default_node_bin_name(name: &str) -> String {
+      if cfg!(windows) {
+         format!("{}.cmd", name)
+      } else {
+         name.to_string()
+      }
+   }
+
+   fn node_bin_names(name: &str) -> Vec<String> {
+      if cfg!(windows) {
+         vec![
+            format!("{}.cmd", name),
+            format!("{}.exe", name),
+            format!("{}.ps1", name),
+            name.to_string(),
+         ]
+      } else {
+         vec![name.to_string()]
+      }
+   }
+
+   fn script_bin_name(name: &str) -> String {
       if cfg!(windows) {
          format!("{}.cmd", name)
       } else {
@@ -69,31 +90,121 @@ impl ToolInstaller {
       }
    }
 
-   fn resolve_node_package_entrypoint(
-      package_dir: &Path,
-      package: &str,
+   fn ensure_node_package_manifest(package_dir: &Path) -> Result<(), ToolError> {
+      let package_json = package_dir.join("package.json");
+      if package_json.exists() {
+         return Ok(());
+      }
+
+      fs::write(
+         package_json,
+         "{\n  \"private\": true,\n  \"dependencies\": {}\n}\n",
+      )?;
+      Ok(())
+   }
+
+   fn resolve_node_bin_shim(package_dir: &Path, command_name: &str) -> Option<PathBuf> {
+      let bin_dir = package_dir.join("node_modules").join(".bin");
+      Self::node_bin_names(command_name)
+         .into_iter()
+         .map(|name| bin_dir.join(name))
+         .find(|path| path.exists())
+   }
+
+   fn safe_package_bin_path(package_root: &Path, bin_path: &str) -> Option<PathBuf> {
+      let relative_path = Path::new(bin_path);
+      if relative_path.is_absolute()
+         || relative_path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
+      {
+         return None;
+      }
+
+      Some(package_root.join(relative_path))
+   }
+
+   fn resolve_node_package_entrypoint_from_root(
+      package_root: &Path,
       command_name: &str,
+      allow_first_bin_fallback: bool,
    ) -> Option<PathBuf> {
-      let package_root = package_dir.join("node_modules").join(package);
       let package_json = package_root.join("package.json");
       let package_json_content = fs::read_to_string(package_json).ok()?;
       let package_json_value: Value = serde_json::from_str(&package_json_content).ok()?;
       let bin_field = package_json_value.get("bin")?;
 
       if let Some(single_bin) = bin_field.as_str() {
-         return Some(package_root.join(single_bin));
+         return Self::safe_package_bin_path(package_root, single_bin);
       }
 
       let bins = bin_field.as_object()?;
       if let Some(command_bin) = bins.get(command_name).and_then(|value| value.as_str()) {
-         return Some(package_root.join(command_bin));
+         return Self::safe_package_bin_path(package_root, command_bin);
+      }
+
+      if !allow_first_bin_fallback {
+         return None;
       }
 
       bins
          .values()
          .next()
          .and_then(|value| value.as_str())
-         .map(|first_bin| package_root.join(first_bin))
+         .and_then(|first_bin| Self::safe_package_bin_path(package_root, first_bin))
+   }
+
+   fn resolve_node_package_entrypoint(
+      package_dir: &Path,
+      package: &str,
+      command_name: &str,
+   ) -> Option<PathBuf> {
+      let package_root = package_dir.join("node_modules").join(package);
+      Self::resolve_node_package_entrypoint_from_root(&package_root, command_name, true)
+         .filter(|path| path.exists())
+   }
+
+   fn resolve_node_package_binary(
+      package_dir: &Path,
+      package: &str,
+      command_name: &str,
+   ) -> Option<PathBuf> {
+      if let Some(path) = Self::resolve_node_bin_shim(package_dir, command_name) {
+         return Some(path);
+      }
+
+      if let Some(path) = Self::resolve_node_package_entrypoint(package_dir, package, command_name)
+      {
+         return Some(path);
+      }
+
+      let node_modules_dir = package_dir.join("node_modules");
+      for entry in WalkDir::new(&node_modules_dir)
+         .max_depth(3)
+         .into_iter()
+         .filter_map(|entry| entry.ok())
+         .filter(|entry| {
+            entry.file_type().is_file()
+               && entry.file_name().to_str() == Some("package.json")
+               && !entry
+                  .path()
+                  .components()
+                  .any(|component| matches!(component, Component::Normal(name) if name == ".bin"))
+         })
+      {
+         let Some(package_root) = entry.path().parent() else {
+            continue;
+         };
+
+         if let Some(path) =
+            Self::resolve_node_package_entrypoint_from_root(package_root, command_name, false)
+            && path.exists()
+         {
+            return Some(path);
+         }
+      }
+
+      None
    }
 
    #[cfg(unix)]
@@ -121,7 +232,64 @@ impl ToolInstaller {
       Ok(path.to_path_buf())
    }
 
+   fn validate_existing_binary(path: &Path, config: &ToolConfig) -> Result<(), ToolError> {
+      if path.exists() && matches!(config.runtime, ToolRuntime::Binary) {
+         platform::validate_downloaded_binary(path, &config.name)
+            .map_err(ToolError::InstallationFailed)?;
+      }
+
+      Ok(())
+   }
+
+   fn copy_dir_all(source: &Path, target: &Path) -> Result<(), ToolError> {
+      fs::create_dir_all(target)?;
+
+      for entry in fs::read_dir(source)? {
+         let entry = entry?;
+         let source_path = entry.path();
+         let target_path = target.join(entry.file_name());
+
+         if entry.file_type()?.is_dir() {
+            Self::copy_dir_all(&source_path, &target_path)?;
+         } else {
+            if let Some(parent) = target_path.parent() {
+               fs::create_dir_all(parent)?;
+            }
+            fs::copy(&source_path, &target_path).map_err(|e| {
+               ToolError::InstallationFailed(format!(
+                  "Failed to copy tool file from {:?} to {:?}: {}",
+                  source_path, target_path, e
+               ))
+            })?;
+         }
+      }
+
+      Ok(())
+   }
+
    fn extract_archive(bytes: &[u8], url: &str, target_dir: &Path) -> Result<(), ToolError> {
+      if url.ends_with(".tar.xz") || url.ends_with(".txz") {
+         let decoder = XzDecoder::new(Cursor::new(bytes));
+         let mut archive = tar::Archive::new(decoder);
+         let entries = archive.entries().map_err(|e| {
+            ToolError::InstallationFailed(format!("Failed to read tar.xz entries: {}", e))
+         })?;
+         for entry in entries {
+            let mut entry = entry.map_err(|e| {
+               ToolError::InstallationFailed(format!("Failed to read tar.xz entry: {}", e))
+            })?;
+            let unpacked = entry.unpack_in(target_dir).map_err(|e| {
+               ToolError::InstallationFailed(format!("Failed to unpack tar.xz entry: {}", e))
+            })?;
+            if !unpacked {
+               return Err(ToolError::InstallationFailed(
+                  "Rejected archive entry with invalid path".to_string(),
+               ));
+            }
+         }
+         return Ok(());
+      }
+
       if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
          let decoder = GzDecoder::new(Cursor::new(bytes));
          let mut archive = tar::Archive::new(decoder);
@@ -204,11 +372,16 @@ impl ToolInstaller {
             .and_then(|name| name.to_str())
             .unwrap_or_default();
 
-         if file_name == expected_name || (!cfg!(windows) && file_name == command_name) {
+         if file_name.eq_ignore_ascii_case(&expected_name)
+            || (!cfg!(windows) && file_name.eq_ignore_ascii_case(command_name))
+         {
             return Ok(path);
          }
 
-         if file_name.starts_with(command_name) {
+         if file_name
+            .to_ascii_lowercase()
+            .starts_with(&command_name.to_ascii_lowercase())
+         {
             prefix_matches.push(path.clone());
          }
 
@@ -222,6 +395,50 @@ impl ToolInstaller {
       fallback_files.into_iter().next().ok_or_else(|| {
          ToolError::InstallationFailed("No binary found in downloaded archive".to_string())
       })
+   }
+
+   fn binary_install_dir(app_handle: &tauri::AppHandle, name: &str) -> Result<PathBuf, ToolError> {
+      Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
+   }
+
+   fn install_extracted_binary(
+      staging_dir: &Path,
+      install_dir: &Path,
+      name: &str,
+      command_name: &str,
+   ) -> Result<PathBuf, ToolError> {
+      let source_binary = Self::pick_binary(staging_dir, command_name)?;
+      platform::validate_downloaded_binary(&source_binary, name)
+         .map_err(ToolError::InstallationFailed)?;
+
+      let relative_binary = source_binary.strip_prefix(staging_dir).map_err(|e| {
+         ToolError::InstallationFailed(format!(
+            "Failed to resolve downloaded binary path {:?}: {}",
+            source_binary, e
+         ))
+      })?;
+
+      if install_dir.exists() {
+         fs::remove_dir_all(install_dir)?;
+      }
+      fs::create_dir_all(install_dir)?;
+
+      let installed_binary = if relative_binary == Path::new("downloaded-binary") {
+         let bin_path = install_dir.join(Self::bin_file_name(command_name));
+         fs::copy(&source_binary, &bin_path).map_err(|e| {
+            ToolError::InstallationFailed(format!(
+               "Failed to copy binary from {:?} to {:?}: {}",
+               source_binary, bin_path, e
+            ))
+         })?;
+         bin_path
+      } else {
+         Self::copy_dir_all(staging_dir, install_dir)?;
+         install_dir.join(relative_binary)
+      };
+
+      Self::ensure_executable(&installed_binary)?;
+      Ok(installed_binary)
    }
 
    /// Install a tool based on its configuration
@@ -266,14 +483,28 @@ impl ToolInstaller {
             Self::install_via_cargo(app_handle, package, Self::configured_command_name(config))
                .await
          }
+         ToolRuntime::Ruby => {
+            let package = config
+               .package
+               .as_ref()
+               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
+            Self::install_via_gem(app_handle, package, Self::configured_command_name(config)).await
+         }
          ToolRuntime::Binary => {
             if let Some(url) = config.download_url.as_ref() {
-               Self::download_binary(app_handle, &config.name, url).await
+               Self::download_binary(
+                  app_handle,
+                  &config.name,
+                  Self::configured_command_name(config),
+                  url,
+               )
+               .await
             } else {
-               which::which(&config.name).map_err(|_| {
+               let command_name = Self::configured_command_name(config);
+               which::which(command_name).map_err(|_| {
                   ToolError::NotFound(format!(
                      "{} (not found on PATH and no download URL configured)",
-                     config.name
+                     command_name
                   ))
                })
             }
@@ -304,6 +535,7 @@ impl ToolInstaller {
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let package_dir = tools_dir.join("bun").join(package);
       std::fs::create_dir_all(&package_dir)?;
+      Self::ensure_node_package_manifest(&package_dir)?;
 
       log::info!("Installing {} via Bun to {:?}", package, package_dir);
 
@@ -322,21 +554,10 @@ impl ToolInstaller {
          )));
       }
 
-      // Return the node_modules/.bin path for the configured command.
-      let bin_path = package_dir
-         .join("node_modules")
-         .join(".bin")
-         .join(Self::node_bin_name(command_name));
-      if bin_path.exists() {
-         return Self::validate_and_prepare(&bin_path);
-      }
-
-      // Try resolving via package.json bin field
-      if let Some(entrypoint) =
-         Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
-         && entrypoint.exists()
+      if let Some(binary_path) =
+         Self::resolve_node_package_binary(&package_dir, package, command_name)
       {
-         return Self::validate_and_prepare(&entrypoint);
+         return Self::validate_and_prepare(&binary_path);
       }
 
       Err(ToolError::InstallationFailed(format!(
@@ -359,6 +580,7 @@ impl ToolInstaller {
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let package_dir = tools_dir.join("npm").join(package);
       std::fs::create_dir_all(&package_dir)?;
+      Self::ensure_node_package_manifest(&package_dir)?;
 
       // Get npm path (should be alongside node)
       let npm_path = node_path
@@ -383,20 +605,10 @@ impl ToolInstaller {
          )));
       }
 
-      let bin_path = package_dir
-         .join("node_modules")
-         .join(".bin")
-         .join(Self::node_bin_name(command_name));
-      if bin_path.exists() {
-         return Self::validate_and_prepare(&bin_path);
-      }
-
-      // Try resolving via package.json bin field
-      if let Some(entrypoint) =
-         Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
-         && entrypoint.exists()
+      if let Some(binary_path) =
+         Self::resolve_node_package_binary(&package_dir, package, command_name)
       {
-         return Self::validate_and_prepare(&entrypoint);
+         return Self::validate_and_prepare(&binary_path);
       }
 
       Err(ToolError::InstallationFailed(format!(
@@ -558,6 +770,125 @@ impl ToolInstaller {
       Self::validate_and_prepare(&bin_path)
    }
 
+   fn ruby_wrapper_path(package_dir: &Path, command_name: &str) -> PathBuf {
+      package_dir
+         .join("bin")
+         .join(Self::script_bin_name(command_name))
+   }
+
+   #[cfg(windows)]
+   fn batch_escape_path(path: &Path) -> String {
+      path.to_string_lossy().replace('%', "%%")
+   }
+
+   #[cfg(not(windows))]
+   fn shell_quote_path(path: &Path) -> String {
+      let escaped = path.to_string_lossy().replace('\'', "'\"'\"'");
+      format!("'{escaped}'")
+   }
+
+   fn write_ruby_wrapper(
+      package_dir: &Path,
+      command_name: &str,
+      gem_home: &Path,
+      gem_bin_dir: &Path,
+   ) -> Result<PathBuf, ToolError> {
+      let wrapper_path = Self::ruby_wrapper_path(package_dir, command_name);
+      if let Some(parent) = wrapper_path.parent() {
+         fs::create_dir_all(parent)?;
+      }
+
+      #[cfg(windows)]
+      {
+         let gem_command = gem_bin_dir.join(format!("{}.bat", command_name));
+         if !gem_command.exists() {
+            return Err(ToolError::InstallationFailed(format!(
+               "gem install did not create expected executable: {}",
+               gem_command.display()
+            )));
+         }
+         fs::write(
+            &wrapper_path,
+            format!(
+               "@echo off\r\nset \"GEM_HOME={}\"\r\nset \"GEM_PATH={}\"\r\ncall \"{}\" %*\r\n",
+               Self::batch_escape_path(gem_home),
+               Self::batch_escape_path(gem_home),
+               Self::batch_escape_path(&gem_command)
+            ),
+         )?;
+      }
+
+      #[cfg(not(windows))]
+      {
+         let gem_command = gem_bin_dir.join(command_name);
+         if !gem_command.exists() {
+            return Err(ToolError::InstallationFailed(format!(
+               "gem install did not create expected executable: {}",
+               gem_command.display()
+            )));
+         }
+         fs::write(
+            &wrapper_path,
+            format!(
+               "#!/bin/sh\nexport GEM_HOME={}\nexport GEM_PATH={}\nexec {} \"$@\"\n",
+               Self::shell_quote_path(gem_home),
+               Self::shell_quote_path(gem_home),
+               Self::shell_quote_path(&gem_command)
+            ),
+         )?;
+      }
+
+      Self::validate_and_prepare(&wrapper_path)
+   }
+
+   /// Install a package via RubyGems into an Athas-managed GEM_HOME.
+   async fn install_via_gem(
+      app_handle: &tauri::AppHandle,
+      package: &str,
+      command_name: &str,
+   ) -> Result<PathBuf, ToolError> {
+      let gem_path = which::which("gem").map_err(|_| {
+         ToolError::RuntimeNotAvailable(
+            "RubyGems 'gem' was not found. Install Ruby to use Ruby language tools.".to_string(),
+         )
+      })?;
+
+      let tools_dir = Self::get_tools_dir(app_handle)?;
+      let package_dir = tools_dir.join("ruby").join(package);
+      let gem_home = package_dir.join("gems");
+      let gem_bin_dir = package_dir.join("gem-bin");
+      std::fs::create_dir_all(&gem_home)?;
+      std::fs::create_dir_all(&gem_bin_dir)?;
+
+      log::info!("Installing {} via RubyGems to {:?}", package, gem_home);
+
+      let mut command = Command::new(&gem_path);
+      let output = configure_background_command(&mut command)
+         .args([
+            "install",
+            package,
+            "--install-dir",
+            gem_home.to_string_lossy().as_ref(),
+            "--bindir",
+            gem_bin_dir.to_string_lossy().as_ref(),
+            "--no-document",
+         ])
+         .env("GEM_HOME", &gem_home)
+         .env("GEM_PATH", &gem_home)
+         .output()
+         .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
+
+      if !output.status.success() {
+         let stderr = String::from_utf8_lossy(&output.stderr);
+         return Err(ToolError::InstallationFailed(format!(
+            "gem install failed: {}",
+            stderr
+         )));
+      }
+
+      Self::write_ruby_wrapper(&package_dir, command_name, &gem_home, &gem_bin_dir)
+   }
+
    /// Download a binary directly.
    ///
    /// Enforces:
@@ -567,16 +898,12 @@ impl ToolInstaller {
    async fn download_binary(
       app_handle: &tauri::AppHandle,
       name: &str,
+      command_name: &str,
       url: &str,
    ) -> Result<PathBuf, ToolError> {
       validate_binary_download_url(url)?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let bin_dir = tools_dir.join("bin");
-      std::fs::create_dir_all(&bin_dir)?;
-
-      let bin_name = Self::bin_file_name(name);
-      let bin_path = bin_dir.join(&bin_name);
+      let install_dir = Self::binary_install_dir(app_handle, name)?;
 
       log::info!("Downloading {} from {}", name, url);
 
@@ -617,17 +944,7 @@ impl ToolInstaller {
       let staging_dir = tempfile::tempdir()
          .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
       Self::extract_archive(&bytes, url, staging_dir.path())?;
-
-      let source_binary = Self::pick_binary(staging_dir.path(), name)?;
-      fs::copy(&source_binary, &bin_path).map_err(|e| {
-         ToolError::InstallationFailed(format!(
-            "Failed to copy binary from {:?} to {:?}: {}",
-            source_binary, bin_path, e
-         ))
-      })?;
-      Self::ensure_executable(&bin_path)?;
-
-      Ok(bin_path)
+      Self::install_extracted_binary(staging_dir.path(), &install_dir, name, command_name)
    }
 
    /// Check if a tool is installed
@@ -636,7 +953,12 @@ impl ToolInstaller {
       config: &ToolConfig,
    ) -> Result<bool, ToolError> {
       let path = Self::get_tool_path(app_handle, config)?;
-      Ok(path.exists())
+      if !path.exists() {
+         return Ok(false);
+      }
+
+      Self::validate_existing_binary(&path, config)?;
+      Ok(true)
    }
 
    /// Get the path where a tool would be/is installed
@@ -653,12 +975,16 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Ok(tools_dir
-               .join("bun")
-               .join(package)
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            let package_dir = tools_dir.join("bun").join(package);
+            Ok(
+               Self::resolve_node_package_binary(&package_dir, package, command_name)
+                  .unwrap_or_else(|| {
+                     package_dir
+                        .join("node_modules")
+                        .join(".bin")
+                        .join(Self::default_node_bin_name(command_name))
+                  }),
+            )
          }
          ToolRuntime::Node => {
             let command_name = Self::configured_command_name(config);
@@ -666,12 +992,16 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Ok(tools_dir
-               .join("npm")
-               .join(package)
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            let package_dir = tools_dir.join("npm").join(package);
+            Ok(
+               Self::resolve_node_package_binary(&package_dir, package, command_name)
+                  .unwrap_or_else(|| {
+                     package_dir
+                        .join("node_modules")
+                        .join(".bin")
+                        .join(Self::default_node_bin_name(command_name))
+                  }),
+            )
          }
          ToolRuntime::Python => {
             let bin_name = Self::bin_file_name(Self::configured_command_name(config));
@@ -694,14 +1024,37 @@ impl ToolInstaller {
             let bin_name = Self::bin_file_name(Self::configured_command_name(config));
             Ok(tools_dir.join("cargo").join("bin").join(bin_name))
          }
+         ToolRuntime::Ruby => {
+            let package = config
+               .package
+               .as_ref()
+               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
+            Ok(Self::ruby_wrapper_path(
+               &tools_dir.join("ruby").join(package),
+               Self::configured_command_name(config),
+            ))
+         }
          ToolRuntime::Binary => {
-            let bin_name = Self::bin_file_name(&config.name);
+            let command_name = Self::configured_command_name(config);
+            let bin_name = Self::bin_file_name(command_name);
             if config.download_url.is_none()
-               && let Ok(system_path) = which::which(&config.name)
+               && let Ok(system_path) = which::which(command_name)
             {
+               Self::validate_existing_binary(&system_path, config)?;
                return Ok(system_path);
             }
-            Ok(tools_dir.join("bin").join(bin_name))
+
+            let install_dir = tools_dir.join("binary").join(&config.name);
+            if install_dir.exists()
+               && let Ok(path) = Self::pick_binary(&install_dir, command_name)
+            {
+               Self::validate_existing_binary(&path, config)?;
+               return Ok(path);
+            }
+
+            let legacy_path = tools_dir.join("bin").join(bin_name);
+            Self::validate_existing_binary(&legacy_path, config)?;
+            Ok(legacy_path)
          }
       }
    }
@@ -730,10 +1083,14 @@ impl ToolInstaller {
                return Ok(entrypoint);
             }
 
-            Ok(package_dir
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            Ok(
+               Self::resolve_node_bin_shim(&package_dir, command_name).unwrap_or_else(|| {
+                  package_dir
+                     .join("node_modules")
+                     .join(".bin")
+                     .join(Self::default_node_bin_name(command_name))
+               }),
+            )
          }
          ToolRuntime::Node => {
             let command_name = Self::configured_command_name(config);
@@ -749,10 +1106,14 @@ impl ToolInstaller {
                return Ok(entrypoint);
             }
 
-            Ok(package_dir
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            Ok(
+               Self::resolve_node_bin_shim(&package_dir, command_name).unwrap_or_else(|| {
+                  package_dir
+                     .join("node_modules")
+                     .join(".bin")
+                     .join(Self::default_node_bin_name(command_name))
+               }),
+            )
          }
          _ => Self::get_tool_path(app_handle, config),
       }
@@ -789,5 +1150,229 @@ mod tests {
          assert!(validate_binary_download_url("http://localhost:3000/tool.tar.gz").is_ok());
          assert!(validate_binary_download_url("http://127.0.0.1:8080/tool.tar.gz").is_ok());
       }
+   }
+
+   #[test]
+   fn creates_node_package_manifest_to_anchor_local_installs() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("typescript-language-server");
+      fs::create_dir_all(&package_dir).unwrap();
+
+      ToolInstaller::ensure_node_package_manifest(&package_dir).unwrap();
+
+      let package_json = package_dir.join("package.json");
+      let manifest = fs::read_to_string(package_json).unwrap();
+      assert!(manifest.contains("\"private\": true"));
+      assert!(manifest.contains("\"dependencies\": {}"));
+   }
+
+   #[test]
+   fn preserves_existing_node_package_manifest() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("npm").join("eslint");
+      fs::create_dir_all(&package_dir).unwrap();
+      let package_json = package_dir.join("package.json");
+      fs::write(
+         &package_json,
+         "{ \"private\": true, \"dependencies\": { \"eslint\": \"*\" } }",
+      )
+      .unwrap();
+
+      ToolInstaller::ensure_node_package_manifest(&package_dir).unwrap();
+
+      let manifest = fs::read_to_string(package_json).unwrap();
+      assert!(manifest.contains("\"eslint\": \"*\""));
+   }
+
+   #[test]
+   fn resolves_node_bin_shim_when_present() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("typescript-language-server");
+      let bin_path =
+         package_dir
+            .join("node_modules")
+            .join(".bin")
+            .join(ToolInstaller::default_node_bin_name(
+               "typescript-language-server",
+            ));
+      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+      fs::write(&bin_path, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_binary(
+         &package_dir,
+         "typescript-language-server",
+         "typescript-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(bin_path.as_path()));
+   }
+
+   #[test]
+   fn resolves_scoped_node_package_entrypoint_when_shim_is_missing() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("@vue").join("language-server");
+      let package_root = package_dir
+         .join("node_modules")
+         .join("@vue")
+         .join("language-server");
+      let entrypoint = package_root.join("bin").join("vue-language-server.js");
+      fs::create_dir_all(entrypoint.parent().unwrap()).unwrap();
+      fs::write(
+         package_root.join("package.json"),
+         r#"{
+  "name": "@vue/language-server",
+  "bin": {
+    "vue-language-server": "./bin/vue-language-server.js"
+  }
+}"#,
+      )
+      .unwrap();
+      fs::write(&entrypoint, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_binary(
+         &package_dir,
+         "@vue/language-server",
+         "vue-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));
+   }
+
+   #[test]
+   fn writes_ruby_wrapper_for_managed_gem_executable() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("ruby").join("solargraph");
+      let gem_home = package_dir.join("gems");
+      let gem_bin_dir = package_dir.join("gem-bin");
+      let gem_command = gem_bin_dir.join(if cfg!(windows) {
+         "solargraph.bat"
+      } else {
+         "solargraph"
+      });
+      fs::create_dir_all(gem_command.parent().unwrap()).unwrap();
+      fs::write(&gem_command, "").unwrap();
+
+      let wrapper =
+         ToolInstaller::write_ruby_wrapper(&package_dir, "solargraph", &gem_home, &gem_bin_dir)
+            .unwrap();
+
+      assert_eq!(
+         wrapper,
+         package_dir
+            .join("bin")
+            .join(ToolInstaller::script_bin_name("solargraph"))
+      );
+      let content = fs::read_to_string(wrapper).unwrap();
+      assert!(content.contains("GEM_HOME"));
+      assert!(content.contains(gem_command.to_string_lossy().as_ref()));
+   }
+
+   #[test]
+   fn rejects_ruby_wrapper_when_gem_executable_is_missing() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("ruby").join("solargraph");
+
+      let result = ToolInstaller::write_ruby_wrapper(
+         &package_dir,
+         "solargraph",
+         &package_dir.join("gems"),
+         &package_dir.join("gem-bin"),
+      );
+
+      assert!(matches!(result, Err(ToolError::InstallationFailed(_))));
+   }
+
+   #[test]
+   fn rejects_unsafe_node_package_bin_paths() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_root = temp.path().join("node_modules").join("bad-package");
+
+      assert!(ToolInstaller::safe_package_bin_path(&package_root, "../bad.js").is_none());
+      assert!(ToolInstaller::safe_package_bin_path(&package_root, "/tmp/bad.js").is_none());
+      assert!(
+         ToolInstaller::safe_package_bin_path(&package_root, "./bin/good.js")
+            .unwrap()
+            .ends_with("bin/good.js")
+      );
+   }
+
+   #[test]
+   fn picks_binary_case_insensitively_from_archive() {
+      let temp = tempfile::tempdir().unwrap();
+      let binary = temp.path().join(if cfg!(windows) {
+         "OmniSharp.exe"
+      } else {
+         "OmniSharp"
+      });
+      fs::write(&binary, "").unwrap();
+
+      let picked = ToolInstaller::pick_binary(temp.path(), "omnisharp").unwrap();
+
+      assert_eq!(picked, binary);
+   }
+
+   #[test]
+   fn preserves_binary_archive_layout_when_installing() {
+      let staging = tempfile::tempdir().unwrap();
+      let install = tempfile::tempdir().unwrap();
+      let install_dir = install.path().join("dart");
+      let dart = staging.path().join("dart-sdk").join("bin").join("dart");
+      let snapshot = staging
+         .path()
+         .join("dart-sdk")
+         .join("bin")
+         .join("snapshots")
+         .join("analysis_server.dart.snapshot");
+      fs::create_dir_all(snapshot.parent().unwrap()).unwrap();
+      fs::write(&dart, "").unwrap();
+      fs::write(&snapshot, "").unwrap();
+
+      let installed =
+         ToolInstaller::install_extracted_binary(staging.path(), &install_dir, "dart", "dart")
+            .unwrap();
+
+      assert_eq!(
+         installed,
+         install_dir.join("dart-sdk").join("bin").join("dart")
+      );
+      assert!(
+         install_dir
+            .join("dart-sdk")
+            .join("bin")
+            .join("snapshots")
+            .join("analysis_server.dart.snapshot")
+            .exists()
+      );
+   }
+
+   #[test]
+   fn installs_binary_archive_using_configured_command_name() {
+      let staging = tempfile::tempdir().unwrap();
+      let install = tempfile::tempdir().unwrap();
+      let install_dir = install.path().join("elixir-ls");
+      let launcher = staging.path().join(if cfg!(windows) {
+         "language_server.bat"
+      } else {
+         "language_server.sh"
+      });
+      let launch_script = staging.path().join("launch.sh");
+      fs::write(&launcher, "").unwrap();
+      fs::write(&launch_script, "").unwrap();
+
+      let command_name = if cfg!(windows) {
+         "language_server.bat"
+      } else {
+         "language_server.sh"
+      };
+      let installed = ToolInstaller::install_extracted_binary(
+         staging.path(),
+         &install_dir,
+         "elixir-ls",
+         command_name,
+      )
+      .unwrap();
+
+      assert_eq!(installed, install_dir.join(command_name));
+      assert!(install_dir.join("launch.sh").exists());
    }
 }

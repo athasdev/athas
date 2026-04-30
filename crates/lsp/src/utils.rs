@@ -122,23 +122,25 @@ fn find_managed_binary_in_runtime_tree(root: &Path, binary_name: &str) -> Option
          continue;
       }
 
-      let candidates: Vec<PathBuf> =
-         if root.file_name().and_then(|name| name.to_str()) == Some("python") {
-            platform_binary_names(binary_name)
-               .into_iter()
-               .flat_map(|name| {
-                  [
-                     package_dir.join("bin").join(&name),
-                     package_dir.join("Scripts").join(name),
-                  ]
-               })
-               .collect()
-         } else {
-            platform_binary_names(binary_name)
-               .into_iter()
-               .map(|name| package_dir.join("node_modules").join(".bin").join(name))
-               .collect()
-         };
+      let candidates: Vec<PathBuf> = match root.file_name().and_then(|name| name.to_str()) {
+         Some("python") => platform_binary_names(binary_name)
+            .into_iter()
+            .flat_map(|name| {
+               [
+                  package_dir.join("bin").join(&name),
+                  package_dir.join("Scripts").join(name),
+               ]
+            })
+            .collect(),
+         Some("ruby") => platform_binary_names(binary_name)
+            .into_iter()
+            .map(|name| package_dir.join("bin").join(name))
+            .collect(),
+         _ => platform_binary_names(binary_name)
+            .into_iter()
+            .map(|name| package_dir.join("node_modules").join(".bin").join(name))
+            .collect(),
+      };
 
       if let Some(path) = first_existing(candidates) {
          return Some(path);
@@ -161,7 +163,7 @@ pub fn find_managed_binary(tools_dir: &Path, binary_name: &str) -> Option<PathBu
       return Some(path);
    }
 
-   for runtime_root in ["bun", "npm", "python"] {
+   for runtime_root in ["bun", "npm", "python", "ruby"] {
       if let Some(path) =
          find_managed_binary_in_runtime_tree(&tools_dir.join(runtime_root), binary_name)
       {
@@ -202,6 +204,27 @@ mod tests {
       fs::write(&binary, "").unwrap();
 
       let resolved = find_managed_binary(temp.path(), "typescript-language-server");
+
+      assert_eq!(resolved.as_deref(), Some(binary.as_path()));
+   }
+
+   #[test]
+   fn finds_managed_binary_in_ruby_package_bin() {
+      let temp = tempfile::tempdir().unwrap();
+      let binary = temp
+         .path()
+         .join("ruby")
+         .join("solargraph")
+         .join("bin")
+         .join(if cfg!(windows) {
+            "solargraph.cmd"
+         } else {
+            "solargraph"
+         });
+      fs::create_dir_all(binary.parent().unwrap()).unwrap();
+      fs::write(&binary, "").unwrap();
+
+      let resolved = find_managed_binary(temp.path(), "solargraph");
 
       assert_eq!(resolved.as_deref(), Some(binary.as_path()));
    }

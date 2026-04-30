@@ -4,7 +4,7 @@ use super::{
    bridge_prompt::run_prompt,
    client::{AthasAcpClient, PermissionResponse},
    config::AgentRegistry,
-   types::{AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption},
+   types::{AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption},
 };
 use acp::Agent;
 use agent_client_protocol as acp;
@@ -28,6 +28,7 @@ pub(super) struct AcpWorker {
    io_handle: Option<tokio::task::JoinHandle<()>>,
    client: Option<Arc<AthasAcpClient>>,
    agent_id: Option<String>,
+   agent_capabilities: Option<AcpAgentCapabilities>,
    app_handle: Option<AppHandle>,
 }
 
@@ -41,6 +42,7 @@ impl AcpWorker {
          io_handle: None,
          client: None,
          agent_id: None,
+         agent_capabilities: None,
          app_handle: None,
       }
    }
@@ -78,6 +80,7 @@ impl AcpWorker {
             self.process = None;
             self.client = None;
             self.agent_id = None;
+            self.agent_capabilities = None;
             self.app_handle = None;
 
             bail!("ACP agent process exited: {}", status);
@@ -130,6 +133,7 @@ impl AcpWorker {
       self.io_handle = Some(initialized.io_handle);
       self.client = Some(initialized.client);
       self.agent_id = Some(agent_id.clone());
+      self.agent_capabilities = Some(initialized.agent_capabilities);
       self.app_handle = Some(app_handle.clone());
 
       let status = AcpAgentStatus {
@@ -138,12 +142,13 @@ impl AcpWorker {
          session_active: self.session_id.is_some(),
          initialized: true,
          session_id: self.session_id.as_ref().map(ToString::to_string),
+         agent_capabilities: self.agent_capabilities.clone(),
       };
 
       Ok((status, initialized.permission_sender))
    }
 
-   pub(super) async fn send_prompt(&mut self, prompt: &str) -> Result<()> {
+   pub(super) async fn send_prompt(&mut self, prompt: Vec<serde_json::Value>) -> Result<()> {
       self.ensure_process_alive().await?;
 
       let connection = self
@@ -162,7 +167,6 @@ impl AcpWorker {
          .context("No app handle available")?
          .clone();
       let auth_method_id = self.auth_method_id.clone();
-      let prompt = prompt.to_string();
 
       tokio::task::spawn_local(async move {
          if let Err(err) = run_prompt(
@@ -255,6 +259,7 @@ impl AcpWorker {
       self.auth_method_id = None;
       self.client = None;
       self.agent_id = None;
+      self.agent_capabilities = None;
       self.app_handle = None;
 
       Ok(())
@@ -268,6 +273,7 @@ impl AcpWorker {
             session_active: self.session_id.is_some(),
             initialized: self.connection.is_some(),
             session_id: self.session_id.as_ref().map(ToString::to_string),
+            agent_capabilities: self.agent_capabilities.clone(),
          },
          None => AcpAgentStatus::default(),
       }
@@ -363,13 +369,13 @@ impl AcpAgentBridge {
    }
 
    /// Send a prompt to the active agent
-   pub async fn send_prompt(&self, prompt: &str) -> Result<()> {
+   pub async fn send_prompt(&self, prompt: Vec<serde_json::Value>) -> Result<()> {
       let (response_tx, response_rx) = oneshot::channel();
 
       self
          .command_tx
          .send(AcpCommand::SendPrompt {
-            prompt: prompt.to_string(),
+            prompt,
             response_tx,
          })
          .await
@@ -384,6 +390,7 @@ impl AcpAgentBridge {
       request_id: String,
       approved: bool,
       cancelled: bool,
+      option_id: Option<String>,
    ) -> Result<()> {
       let tx = self.permission_tx.lock().await;
       if let Some(ref sender) = *tx {
@@ -392,6 +399,7 @@ impl AcpAgentBridge {
                request_id,
                approved,
                cancelled,
+               option_id,
             })
             .await
             .ok();

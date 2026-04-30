@@ -9,6 +9,19 @@ interface FileTreeState {
   expandedPaths: Set<string>;
 }
 
+function normalizeTreePath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+function isPathWithinFolder(path: string, folderPath: string): boolean {
+  const normalizedPath = normalizeTreePath(path);
+  const normalizedFolderPath = normalizeTreePath(folderPath);
+
+  return (
+    normalizedPath === normalizedFolderPath || normalizedPath.startsWith(`${normalizedFolderPath}/`)
+  );
+}
+
 export const useFileTreeStore = create(
   immer(
     combine(
@@ -92,6 +105,22 @@ export const useFileTreeStore = create(
           set((state) => {
             state.expandedFolders.clear();
             state.expandedPaths.clear();
+          });
+        },
+
+        collapsePath: (path: string) => {
+          set((state) => {
+            for (const expandedPath of Array.from(state.expandedFolders)) {
+              if (isPathWithinFolder(expandedPath, path)) {
+                state.expandedFolders.delete(expandedPath);
+              }
+            }
+
+            for (const expandedPath of Array.from(state.expandedPaths)) {
+              if (isPathWithinFolder(expandedPath, path)) {
+                state.expandedPaths.delete(expandedPath);
+              }
+            }
           });
         },
 

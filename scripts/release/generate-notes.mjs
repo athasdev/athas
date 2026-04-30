@@ -19,16 +19,15 @@ async function text(command) {
 }
 
 async function getPreviousTag(tag) {
-  try {
-    return await text(`git describe --tags --abbrev=0 ${shellQuote(`${tag}^`)}`);
-  } catch {
-    const tags = await text("git tag --sort=-creatordate --merged HEAD");
-    return tags
-      .split("\n")
-      .map((entry) => entry.trim())
-      .filter(Boolean)
-      .find((entry) => entry !== tag);
-  }
+  const isPreview = /-preview\.\d+$/.test(tag);
+  const tags = await text("git tag --sort=-creatordate --merged HEAD");
+  return tags
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .filter((entry) => entry !== tag)
+    .filter((entry) => /^v\d+\.\d+\.\d+(?:-preview\.\d+)?$/.test(entry))
+    .find((entry) => isPreview || /^v\d+\.\d+\.\d+$/.test(entry));
 }
 
 async function getComparableRevision(tag) {
@@ -40,172 +39,78 @@ async function getComparableRevision(tag) {
   }
 }
 
-async function getCommitSubjects(previousTag, tag) {
+async function getCommits(previousTag, tag) {
   const revision = await getComparableRevision(tag);
   const range = previousTag ? `${previousTag}..${revision}` : revision;
-  const output = await text(`git log ${shellQuote(range)} --pretty=format:%s`);
+  const output = await text(
+    `git log ${shellQuote(range)} --pretty=format:%H%x1f%h%x1f%s%x1f%an%x1f%ae`,
+  );
+
   return output
     .split("\n")
-    .map((subject) => subject.trim())
+    .map((line) => line.trim())
     .filter(Boolean)
-    .filter((subject) => !subject.startsWith("Prepare release"))
-    .filter((subject) => !subject.startsWith("Prepare alpha release"))
-    .filter((subject, index, subjects) => subjects.indexOf(subject) === index);
-}
-
-function includesAny(subjects, patterns) {
-  return subjects.some((subject) => patterns.some((pattern) => pattern.test(subject)));
-}
-
-function categorize(subjects) {
-  const categories = [
-    {
-      title: "Debugger",
-      patterns: [/debug/i, /breakpoint/i, /stack/i, /variables/i],
-    },
-    {
-      title: "AI and agents",
-      patterns: [
-        /\bAI\b/i,
-        /\bagent/i,
-        /\bACP\b/i,
-        /provider/i,
-        /model/i,
-        /Ollama/i,
-        /OpenRouter/i,
-      ],
-    },
-    {
-      title: "Git and GitHub",
-      patterns: [/\bgit\b/i, /GitHub/i, /\bPR\b/i, /branch/i],
-    },
-    {
-      title: "Editor and terminal",
-      patterns: [/editor/i, /terminal/i, /markdown/i, /LSP/i, /language/i, /tab/i],
-    },
-    {
-      title: "Settings and interface",
-      patterns: [
-        /settings/i,
-        /sidebar/i,
-        /selector/i,
-        /dialog/i,
-        /chrome/i,
-        /toast/i,
-        /keybinding/i,
-      ],
-    },
-    {
-      title: "Database, search, and tooling",
-      patterns: [/database/i, /search/i, /SQLite/i, /Postgres/i, /MySQL/i, /tool/i, /CI/i],
-    },
-    {
-      title: "Reliability and release",
-      patterns: [/fix/i, /stabilize/i, /harden/i, /security/i, /release/i, /auth/i, /Windows/i],
-    },
-  ];
-
-  const used = new Set();
-  const grouped = [];
-
-  for (const category of categories) {
-    const items = subjects.filter((subject) => {
-      if (used.has(subject)) return false;
-      return category.patterns.some((pattern) => pattern.test(subject));
+    .map((line) => {
+      const [hash, shortHash, subject, authorName, authorEmail] = line.split("\x1f");
+      return { hash, shortHash, subject, authorName, authorEmail };
     });
-
-    if (items.length > 0) {
-      items.forEach((item) => used.add(item));
-      grouped.push({ title: category.title, items });
-    }
-  }
-
-  const other = subjects.filter((subject) => !used.has(subject));
-  if (other.length > 0) {
-    grouped.push({ title: "Other changes", items: other });
-  }
-
-  return grouped;
 }
 
-function buildHighlights(subjects) {
-  const highlights = [];
-
-  if (includesAny(subjects, [/debug/i, /breakpoint/i, /stack/i, /variables/i])) {
-    highlights.push(
-      "Introduces the new debugger foundation, including launch configurations, adapter sessions, breakpoints, stack frames, variables, console output, and watch expressions.",
-    );
-  }
-
-  if (includesAny(subjects, [/AI/i, /agent/i, /provider/i, /model/i, /Ollama/i, /OpenRouter/i])) {
-    highlights.push(
-      "Refreshes the AI experience with cleaner provider and model controls, new provider/model coverage, ACP agent polish, and more reliable context handling.",
-    );
-  }
-
-  if (includesAny(subjects, [/GitHub/i, /PR/i, /git/i])) {
-    highlights.push(
-      "Improves Git and GitHub workflows with richer issue, pull request, action, diff, branch, and command-palette integrations.",
-    );
-  }
-
-  if (includesAny(subjects, [/settings/i, /sidebar/i, /selector/i, /chrome/i, /keybinding/i])) {
-    highlights.push(
-      "Polishes settings, keybindings, sidebar behavior, selectors, custom chrome, and other high-traffic interface surfaces.",
-    );
-  }
-
-  if (includesAny(subjects, [/search/i, /database/i, /web viewer/i, /terminal/i, /LSP/i])) {
-    highlights.push(
-      "Strengthens core editor workflows across global search, database browsing, embedded webviews, terminal behavior, LSP resolution, and language tooling.",
-    );
-  }
-
-  if (includesAny(subjects, [/security/i, /release/i, /CI/i, /Windows/i])) {
-    highlights.push(
-      "Tightens release readiness with CI, dependency, security, Windows, and release-check improvements.",
-    );
-  }
-
-  return highlights;
+function contributorKey(commit) {
+  return `${commit.authorName} <${commit.authorEmail}>`;
 }
 
-function formatBody(tag, previousTag, subjects) {
-  const highlights = buildHighlights(subjects);
-  const grouped = categorize(subjects);
+function formatBody(tag, previousTag, commits) {
+  const version = tag.replace(/^v/, "");
+  const isPrerelease = /-preview\.\d+$/.test(version);
+  const compareRange = previousTag ? `${previousTag}...${tag}` : tag;
+  const contributors = new Map();
   const lines = [];
+
+  for (const commit of commits) {
+    const key = contributorKey(commit);
+    const entry = contributors.get(key) ?? {
+      name: commit.authorName,
+      email: commit.authorEmail,
+      count: 0,
+    };
+    entry.count += 1;
+    contributors.set(key, entry);
+  }
 
   lines.push(`## Athas ${tag}`);
   lines.push("");
   lines.push(
-    `This alpha release collects the work since ${previousTag ?? "the previous release"} and is intended for early validation before the next stable build.`,
+    isPrerelease
+      ? `Preview release generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`
+      : `Stable release generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`,
   );
   lines.push("");
-
-  if (highlights.length > 0) {
-    lines.push("### Highlights");
-    for (const highlight of highlights) {
-      lines.push(`- ${highlight}`);
-    }
-    lines.push("");
-  }
-
   lines.push("### Changes");
-  for (const group of grouped) {
-    lines.push(`#### ${group.title}`);
-    for (const item of group.items.slice(0, 12)) {
-      lines.push(`- ${item}`);
+  if (commits.length === 0) {
+    lines.push("- No commits found in this range.");
+  } else {
+    for (const commit of commits) {
+      lines.push(`- ${commit.subject} (${commit.shortHash}, ${commit.authorName})`);
     }
-    if (group.items.length > 12) {
-      const label = group.title === "Other changes" ? "items" : "changes";
-      lines.push(`- And ${group.items.length - 12} more ${group.title.toLowerCase()} ${label}.`);
-    }
-    lines.push("");
   }
-
-  lines.push("### Notes");
-  lines.push("- This is a prerelease and may still contain rough edges.");
-  lines.push("- Please report debugger, AI provider, GitHub workflow, and packaging regressions.");
+  lines.push("");
+  lines.push("### Contributors");
+  if (contributors.size === 0) {
+    lines.push("- No contributors found in this range.");
+  } else {
+    const sortedContributors = [...contributors.values()].sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    });
+    for (const contributor of sortedContributors) {
+      lines.push(
+        `- ${contributor.name} (${contributor.count} commit${contributor.count === 1 ? "" : "s"})`,
+      );
+    }
+  }
+  lines.push("");
+  lines.push(`**Full Changelog**: https://github.com/athasdev/athas/compare/${compareRange}`);
 
   return lines.join("\n");
 }
@@ -230,10 +135,10 @@ if (!tag) {
 
 const outputPath = getArg("--github-output");
 const previousTag = await getPreviousTag(tag);
-const subjects = await getCommitSubjects(previousTag, tag);
-const releaseBody = formatBody(tag, previousTag, subjects);
+const commits = await getCommits(previousTag, tag);
+const releaseBody = formatBody(tag, previousTag, commits);
 const version = tag.replace(/^v/, "");
-const isPrerelease = /-(alpha|beta|rc)\.\d+$/.test(version) ? "true" : "false";
+const isPrerelease = /-preview\.\d+$/.test(version) ? "true" : "false";
 const releaseName = `Athas ${tag}`;
 
 if (outputPath) {

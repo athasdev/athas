@@ -8,11 +8,12 @@ interface CodeLensOverlayProps {
   lineHeight: number;
   scrollTop: number;
   viewportHeight: number;
+  onExecute?: (lens: CodeLensItem) => void;
 }
 
 const CodeLensOverlay = forwardRef(
   (
-    { lenses, fontSize, lineHeight, scrollTop, viewportHeight }: CodeLensOverlayProps,
+    { lenses, fontSize, lineHeight, scrollTop, viewportHeight, onExecute }: CodeLensOverlayProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
     // Group lenses by line and only render visible ones
@@ -34,11 +35,7 @@ const CodeLensOverlay = forwardRef(
     if (visibleGroups.size === 0) return null;
 
     return (
-      <div
-        ref={ref}
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{ zIndex: 4 }}
-      >
+      <div ref={ref} className="absolute inset-0 overflow-hidden" style={{ zIndex: 4 }}>
         {Array.from(visibleGroups.entries()).map(([line, items]) => {
           const top = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + line * lineHeight - lineHeight * 0.2;
           const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
@@ -55,9 +52,19 @@ const CodeLensOverlay = forwardRef(
               }}
             >
               {items.map((item, i) => (
-                <span key={`${item.title}-${i}`} className="mr-2 editor-font text-text-lighter/50">
+                <button
+                  key={`${item.title}-${i}`}
+                  type="button"
+                  className="mr-2 cursor-pointer border-none bg-transparent p-0 editor-font text-text-lighter/60 hover:text-text"
+                  disabled={!item.command}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (item.command) onExecute?.(item);
+                  }}
+                >
                   {item.title}
-                </span>
+                </button>
               ))}
             </div>
           );

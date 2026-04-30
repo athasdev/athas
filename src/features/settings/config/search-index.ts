@@ -144,6 +144,46 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
 
   // File Tree Settings
   {
+    id: "file-tree-indent-size",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Indent Size",
+    description: "Pixels per nesting level in the file tree",
+    keywords: ["indent", "indentation", "nesting", "depth", "tree", "file explorer", "spacing"],
+  },
+  {
+    id: "file-tree-show-hidden-files",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Hidden Files",
+    description: "Show dotfiles and hidden directories in the file tree",
+    keywords: ["hidden", "dotfiles", "dotfile", "files", "folders", "directories", "visibility"],
+  },
+  {
+    id: "file-tree-compact-folders",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Compact Folders",
+    description: "Collapse single-child folder chains in the file tree",
+    keywords: ["compact", "folders", "directories", "single child", "collapse", "nested"],
+  },
+  {
+    id: "file-tree-density",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Density",
+    description: "Choose file tree row spacing",
+    keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
+  },
+  {
+    id: "file-tree-show-gitignored-files",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Gitignored Files",
+    description: "Show files matched by .gitignore in the file tree",
+    keywords: ["gitignore", "ignored", "git", "files", "visibility"],
+  },
+  {
     id: "file-tree-hidden-file-patterns",
     tab: "file-explorer",
     section: "Filters",

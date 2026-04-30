@@ -11,7 +11,7 @@ use super::{
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, DocumentSymbolResponse, GotoDefinitionResponse, Hover,
-   Location, SemanticTokensResult, SignatureHelp, WorkspaceEdit,
+   Location, PrepareRenameResponse, SemanticTokensResult, SignatureHelp, WorkspaceEdit,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -289,6 +289,7 @@ pub async fn lsp_get_code_lens(
             line: lens.range.start.line,
             title: cmd.title,
             command: Some(cmd.command),
+            arguments: cmd.arguments,
          })
       })
       .collect())
@@ -369,6 +370,14 @@ pub async fn lsp_get_signature_help(
 }
 
 #[tauri::command]
+pub fn lsp_get_signature_trigger_characters(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+) -> Vec<String> {
+   lsp_manager.get_signature_help_trigger_characters(&file_path)
+}
+
+#[tauri::command]
 pub async fn lsp_get_references(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
@@ -397,6 +406,22 @@ pub async fn lsp_rename(
       .await
       .map_err(|e| {
          log::error!("Failed to rename: {}", e);
+         e.into()
+      })
+}
+
+#[tauri::command]
+pub async fn lsp_prepare_rename(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<PrepareRenameResponse>> {
+   lsp_manager
+      .prepare_rename(&file_path, line, character)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to prepare rename: {}", e);
          e.into()
       })
 }
@@ -433,6 +458,6 @@ pub fn lsp_document_close(lsp_manager: State<'_, LspManager>, file_path: String)
 }
 
 #[tauri::command]
-pub fn lsp_is_language_supported(_file_path: String) -> bool {
-   true
+pub fn lsp_is_language_supported(lsp_manager: State<'_, LspManager>, file_path: String) -> bool {
+   lsp_manager.get_client_for_file(&file_path).is_some()
 }

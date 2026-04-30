@@ -7,6 +7,38 @@ pub fn git_get_stashes(repo_path: String) -> Result<Vec<GitStash>, String> {
    _git_get_stashes(repo_path).into_string_error()
 }
 
+fn clean_stash_subject(subject: &str) -> String {
+   let trimmed = subject.trim();
+   let without_context = if let Some((_, message)) = trimmed.split_once(": ") {
+      if trimmed.starts_with("On ")
+         || trimmed.starts_with("WIP on ")
+         || trimmed.starts_with("index on ")
+      {
+         message
+      } else {
+         trimmed
+      }
+   } else {
+      trimmed
+   };
+
+   let mut message_parts = without_context.splitn(2, ' ');
+   if let Some(first_part) = message_parts.next() {
+      if first_part.len() >= 7
+         && first_part.len() <= 40
+         && first_part.chars().all(|c| c.is_ascii_hexdigit())
+      {
+         return message_parts
+            .next()
+            .unwrap_or(without_context)
+            .trim()
+            .to_string();
+      }
+   }
+
+   without_context.trim().to_string()
+}
+
 fn _git_get_stashes(repo_path: String) -> Result<Vec<GitStash>> {
    let repo_dir = Path::new(&repo_path);
 
@@ -26,14 +58,9 @@ fn _git_get_stashes(repo_path: String) -> Result<Vec<GitStash>> {
       for (index, line) in stash_text.lines().enumerate() {
          let parts: Vec<&str> = line.split('|').collect();
          if parts.len() >= 3 {
-            let message = if parts[1].starts_with("On ") && parts[1].contains(": ") {
-               parts[1].split(": ").nth(1).unwrap_or(parts[1]).to_string()
-            } else {
-               parts[1].to_string()
-            };
             stashes.push(GitStash {
                index,
-               message,
+               message: clean_stash_subject(parts[1]),
                date: parts[2].to_string(),
             });
          }

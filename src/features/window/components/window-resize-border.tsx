@@ -1,4 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { CSSProperties, MouseEvent, PointerEvent } from "react";
 import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
 
 type ResizeDirection =
@@ -14,56 +15,100 @@ type ResizeDirection =
 interface ResizeZone {
   direction: ResizeDirection;
   cursor: string;
-  className: string;
+  edge: "top" | "right" | "bottom" | "left";
+  corner?: "left" | "right";
 }
 
-const EDGE_SIZE = 5;
-const CORNER_SIZE = 10;
+const EDGE_SIZE = IS_LINUX ? 8 : 5;
+const CORNER_SIZE = IS_LINUX ? 16 : 10;
+const SELECTION_LOCK_TIMEOUT_MS = 4000;
+const RESIZE_HANDLE_Z_INDEX = 100_000;
+
+let selectionLockTimeout: number | undefined;
+
+type ResizeHandleStyle = CSSProperties & {
+  WebkitAppRegion?: "no-drag";
+  appRegion?: "no-drag";
+};
 
 const resizeZones: ResizeZone[] = [
-  // Corners (rendered first, higher z-index takes precedence)
+  // Corners get larger hit targets so Linux borderless windows are resizeable
+  // without requiring pixel-perfect pointer placement.
   {
     direction: "NorthWest",
     cursor: "nw-resize",
-    className: `top-0 left-0 w-[${CORNER_SIZE}px] h-[${CORNER_SIZE}px]`,
+    edge: "top",
+    corner: "left",
   },
   {
     direction: "NorthEast",
     cursor: "ne-resize",
-    className: `top-0 right-0 w-[${CORNER_SIZE}px] h-[${CORNER_SIZE}px]`,
+    edge: "top",
+    corner: "right",
   },
   {
     direction: "SouthWest",
     cursor: "sw-resize",
-    className: `bottom-0 left-0 w-[${CORNER_SIZE}px] h-[${CORNER_SIZE}px]`,
+    edge: "bottom",
+    corner: "left",
   },
   {
     direction: "SouthEast",
     cursor: "se-resize",
-    className: `bottom-0 right-0 w-[${CORNER_SIZE}px] h-[${CORNER_SIZE}px]`,
+    edge: "bottom",
+    corner: "right",
   },
   // Edges
   {
     direction: "North",
     cursor: "n-resize",
-    className: `top-0 left-[${CORNER_SIZE}px] right-[${CORNER_SIZE}px] h-[${EDGE_SIZE}px]`,
+    edge: "top",
   },
   {
     direction: "South",
     cursor: "s-resize",
-    className: `bottom-0 left-[${CORNER_SIZE}px] right-[${CORNER_SIZE}px] h-[${EDGE_SIZE}px]`,
+    edge: "bottom",
   },
   {
     direction: "West",
     cursor: "w-resize",
-    className: `left-0 top-[${CORNER_SIZE}px] bottom-[${CORNER_SIZE}px] w-[${EDGE_SIZE}px]`,
+    edge: "left",
   },
   {
     direction: "East",
     cursor: "e-resize",
-    className: `right-0 top-[${CORNER_SIZE}px] bottom-[${CORNER_SIZE}px] w-[${EDGE_SIZE}px]`,
+    edge: "right",
   },
 ];
+
+const releaseSelectionLock = () => {
+  if (selectionLockTimeout !== undefined) {
+    window.clearTimeout(selectionLockTimeout);
+    selectionLockTimeout = undefined;
+  }
+
+  document.documentElement.removeAttribute("data-window-resize-dragging");
+};
+
+const lockSelectionDuringResize = () => {
+  window.getSelection()?.removeAllRanges();
+  document.documentElement.setAttribute("data-window-resize-dragging", "true");
+
+  window.removeEventListener("pointerup", releaseSelectionLock, true);
+  window.removeEventListener("pointercancel", releaseSelectionLock, true);
+  window.removeEventListener("mouseup", releaseSelectionLock, true);
+  window.removeEventListener("blur", releaseSelectionLock, true);
+
+  window.addEventListener("pointerup", releaseSelectionLock, { capture: true, once: true });
+  window.addEventListener("pointercancel", releaseSelectionLock, { capture: true, once: true });
+  window.addEventListener("mouseup", releaseSelectionLock, { capture: true, once: true });
+  window.addEventListener("blur", releaseSelectionLock, { capture: true, once: true });
+
+  if (selectionLockTimeout !== undefined) {
+    window.clearTimeout(selectionLockTimeout);
+  }
+  selectionLockTimeout = window.setTimeout(releaseSelectionLock, SELECTION_LOCK_TIMEOUT_MS);
+};
 
 const handleResizeStart = async (direction: ResizeDirection) => {
   try {
@@ -72,6 +117,76 @@ const handleResizeStart = async (direction: ResizeDirection) => {
   } catch (error) {
     console.error("Failed to start resize dragging:", error);
   }
+};
+
+const prepareResizeEvent = (event: PointerEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>) => {
+  if (event.button !== 0) {
+    return false;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  lockSelectionDuringResize();
+  return true;
+};
+
+const handleResizePointerDown = (
+  event: PointerEvent<HTMLDivElement>,
+  direction: ResizeDirection,
+) => {
+  if (!event.isPrimary || !prepareResizeEvent(event)) {
+    return;
+  }
+
+  void handleResizeStart(direction);
+};
+
+const handleResizeMouseDown = (event: MouseEvent<HTMLDivElement>, direction: ResizeDirection) => {
+  if (typeof window !== "undefined" && "PointerEvent" in window) {
+    return;
+  }
+
+  if (!prepareResizeEvent(event)) {
+    return;
+  }
+
+  void handleResizeStart(direction);
+};
+
+const getResizeZoneStyle = (zone: ResizeZone): ResizeHandleStyle => {
+  const style: ResizeHandleStyle = {
+    position: "fixed",
+    zIndex: RESIZE_HANDLE_Z_INDEX,
+    cursor: zone.cursor,
+    pointerEvents: "auto",
+    touchAction: "none",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    WebkitAppRegion: "no-drag",
+    appRegion: "no-drag",
+  };
+
+  if (zone.corner) {
+    style.width = CORNER_SIZE;
+    style.height = CORNER_SIZE;
+    style[zone.edge] = 0;
+    style[zone.corner] = 0;
+    return style;
+  }
+
+  if (zone.edge === "top" || zone.edge === "bottom") {
+    style.height = EDGE_SIZE;
+    style[zone.edge] = 0;
+    style.left = CORNER_SIZE;
+    style.right = CORNER_SIZE;
+    return style;
+  }
+
+  style.width = EDGE_SIZE;
+  style[zone.edge] = 0;
+  style.top = CORNER_SIZE;
+  style.bottom = CORNER_SIZE;
+  return style;
 };
 
 export const WindowResizeBorder = () => {
@@ -86,60 +201,12 @@ export const WindowResizeBorder = () => {
       {resizeZones.map((zone) => (
         <div
           key={zone.direction}
-          className={`fixed z-[9999] ${zone.className}`}
-          style={{
-            cursor: zone.cursor,
-            // Use inline styles for dynamic sizing since Tailwind can't process template literals
-            ...(zone.direction === "NorthWest" && {
-              width: CORNER_SIZE,
-              height: CORNER_SIZE,
-              top: 0,
-              left: 0,
-            }),
-            ...(zone.direction === "NorthEast" && {
-              width: CORNER_SIZE,
-              height: CORNER_SIZE,
-              top: 0,
-              right: 0,
-            }),
-            ...(zone.direction === "SouthWest" && {
-              width: CORNER_SIZE,
-              height: CORNER_SIZE,
-              bottom: 0,
-              left: 0,
-            }),
-            ...(zone.direction === "SouthEast" && {
-              width: CORNER_SIZE,
-              height: CORNER_SIZE,
-              bottom: 0,
-              right: 0,
-            }),
-            ...(zone.direction === "North" && {
-              height: EDGE_SIZE,
-              top: 0,
-              left: CORNER_SIZE,
-              right: CORNER_SIZE,
-            }),
-            ...(zone.direction === "South" && {
-              height: EDGE_SIZE,
-              bottom: 0,
-              left: CORNER_SIZE,
-              right: CORNER_SIZE,
-            }),
-            ...(zone.direction === "West" && {
-              width: EDGE_SIZE,
-              left: 0,
-              top: CORNER_SIZE,
-              bottom: CORNER_SIZE,
-            }),
-            ...(zone.direction === "East" && {
-              width: EDGE_SIZE,
-              right: 0,
-              top: CORNER_SIZE,
-              bottom: CORNER_SIZE,
-            }),
-          }}
-          onMouseDown={() => handleResizeStart(zone.direction)}
+          aria-hidden="true"
+          role="presentation"
+          style={getResizeZoneStyle(zone)}
+          onPointerDown={(event) => handleResizePointerDown(event, zone.direction)}
+          onMouseDown={(event) => handleResizeMouseDown(event, zone.direction)}
+          onDragStart={(event) => event.preventDefault()}
         />
       ))}
     </>

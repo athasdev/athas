@@ -23,27 +23,38 @@
 
 /* Style the terminal viewport for better appearance */
 .xterm-container .xterm-viewport {
-  /* Keep default background */
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  overscroll-behavior: none;
 }
 
 /* Improve scrollbar styling */
 .xterm-container .xterm-viewport::-webkit-scrollbar {
-  width: 12px;
-  background-color: transparent;
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+  background: var(--app-scrollbar-track);
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-track {
-  border-left: 1px solid var(--color-border);
+  background: var(--app-scrollbar-track);
+}
+
+.xterm-container .xterm-viewport::-webkit-scrollbar-corner {
+  background: var(--app-scrollbar-track);
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb {
-  background-color: var(--color-border);
-  border-radius: 6px;
-  border: 2px solid var(--color-hover);
+  min-height: 32px;
+  border: var(--app-scrollbar-border-size) solid transparent;
+  border-radius: var(--app-scrollbar-radius);
+  background: var(--app-scrollbar-thumb);
+  background-clip: content-box;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-text-lighter);
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: content-box;
 }
 
 /* Terminal cursor improvements */

@@ -70,6 +70,12 @@
           "url": "https://generativelanguage.googleapis.com/**"
         },
         {
+          "url": "http://*"
+        },
+        {
+          "url": "https://*"
+        },
+        {
           "url": "http://localhost:*/**"
         },
         {

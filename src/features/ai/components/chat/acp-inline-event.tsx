@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
+import { ChatActivityLine } from "./chat-activity-line";
 
 interface AcpInlineEventProps {
   event: ChatAcpEvent;
@@ -23,25 +24,36 @@ function getEventIcon(event: ChatAcpEvent) {
 }
 
 export function AcpInlineEvent({ event }: AcpInlineEventProps) {
+  if (event.kind === "thinking") {
+    return null;
+  }
+
   const Icon = getEventIcon(event);
   const text = event.detail ? `${event.label}: ${event.detail}` : event.label;
+  const state =
+    event.state === "error"
+      ? "error"
+      : event.state === "success"
+        ? "success"
+        : event.state === "running"
+          ? "running"
+          : "info";
 
   return (
-    <div className="px-4 py-1.5">
-      <div className="flex items-center gap-2 text-[11px] text-text-lighter">
-        <Icon
-          className={cn(
-            "shrink-0",
-            event.state === "running" && "text-text-lighter/70",
-            event.state === "success" && "text-green-400/75",
-            event.state === "error" && "text-red-400/80",
-            (!event.state || event.state === "info") && "text-text-lighter/70",
-          )}
-        />
-        <div className="min-w-0 truncate">
-          <span className="font-medium text-text/90">{text}</span>
-        </div>
-      </div>
+    <div className="px-4 py-0.5">
+      <ChatActivityLine
+        icon={
+          <Icon
+            size={13}
+            className={cn(
+              event.state === "success" && "text-success/75",
+              event.state === "error" && "text-error/80",
+            )}
+          />
+        }
+        title={text}
+        state={state}
+      />
     </div>
   );
 }

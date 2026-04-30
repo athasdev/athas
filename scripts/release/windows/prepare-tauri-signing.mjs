@@ -8,7 +8,8 @@ const timestampUrl = process.env.WINDOWS_TIMESTAMP_URL?.trim() || "http://time.c
 const digestAlgorithm = process.env.WINDOWS_DIGEST_ALGORITHM?.trim() || "sha256";
 
 if (!certificateThumbprint) {
-  throw new Error("WINDOWS_CERTIFICATE_THUMBPRINT is required to prepare Tauri Windows signing.");
+  console.log("Windows Authenticode signing is not configured; skipping Tauri certificate setup.");
+  process.exit(0);
 }
 
 const tauriConfig = JSON.parse(readFileSync(tauriConfigPath, "utf8"));

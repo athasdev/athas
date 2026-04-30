@@ -6,6 +6,7 @@ export interface CoreFeature {
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   enabled: boolean;
+  status?: "experimental";
 }
 
 export interface CoreFeaturesState {

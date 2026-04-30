@@ -374,11 +374,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             data-title-bar-project-tabs="true"
             className="pointer-events-auto flex h-8 items-center"
           >
-            {titleBarProjectMode === "window" ? (
-              <WindowTitleDisplay />
-            ) : (
-              <ProjectTabs disableReorder />
-            )}
+            {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
           </div>
         </div>
 
@@ -430,11 +426,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           data-title-bar-project-tabs="true"
           className="pointer-events-auto flex h-8 items-center"
         >
-          {titleBarProjectMode === "window" ? (
-            <WindowTitleDisplay />
-          ) : (
-            <ProjectTabs disableReorder />
-          )}
+          {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
         </div>
       </div>
 

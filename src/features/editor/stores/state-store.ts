@@ -151,7 +151,7 @@ interface EditorState {
 
 interface EditorStateActions {
   // Cursor actions
-  setCursorPosition: (position: Position) => void;
+  setCursorPosition: (position: Position, options?: { ensureVisible?: boolean }) => void;
   setSelection: (selection?: Range) => void;
   setDesiredColumn: (column?: number) => void;
   setCursorVisibility: (visible: boolean) => void;
@@ -211,7 +211,7 @@ export const useEditorStateStore = createSelectors(
       // Actions
       actions: {
         // Cursor actions
-        setCursorPosition: (position) => {
+        setCursorPosition: (position, options) => {
           const { activeBufferId } = useBufferStore.getState();
           const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
           const viewKey = activeEditorViewKey ?? activeBufferId;
@@ -219,7 +219,9 @@ export const useEditorStateStore = createSelectors(
             viewStateCache.setCursor(viewKey, position);
           }
           set({ cursorPosition: position });
-          ensureCursorVisible(position);
+          if (options?.ensureVisible !== false) {
+            ensureCursorVisible(position);
+          }
         },
         setSelection: (selection) => set({ selection }),
         setDesiredColumn: (column) => set({ desiredColumn: column }),

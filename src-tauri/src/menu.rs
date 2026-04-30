@@ -202,6 +202,13 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+Option+F"),
       )?)
+      .item(&MenuItem::with_id(
+         app,
+         "toggle_comment",
+         "Toggle Comment",
+         true,
+         Some("CmdOrCtrl+Slash"),
+      )?)
       .separator()
       .item(&MenuItem::with_id(
          app,

@@ -37,8 +37,8 @@ const commandItemVariants = cva(
 const Command = ({ isVisible, children, className, onClose, placement = "top" }: CommandProps) => {
   const containerClassName =
     placement === "bottom"
-      ? "fixed inset-0 z-50 flex items-end justify-center px-4 pb-12"
-      : "fixed inset-0 z-50 flex items-start justify-center pt-16";
+      ? "fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
+      : "fixed inset-0 z-[10060] flex items-start justify-center pt-16";
   const motionY = placement === "bottom" ? 8 : -8;
 
   return (

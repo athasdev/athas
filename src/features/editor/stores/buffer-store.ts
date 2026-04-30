@@ -4,6 +4,7 @@ import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import type { DatabaseType } from "@/features/database/models/provider.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
 import {
   closeNewTabInActivePane,
@@ -156,6 +157,25 @@ const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
+const applyAutoEviction = (
+  buffers: PaneContent[],
+  maxOpenTabs: number,
+  options?: { includePreviews?: boolean },
+): PaneContent[] => {
+  const { buffers: nextBuffers, evictedBuffer } = evictLeastRecentAutoClosableBuffer(
+    buffers,
+    maxOpenTabs,
+    options,
+  );
+
+  if (evictedBuffer) {
+    cleanupBufferHistoryTracking(evictedBuffer.id);
+    removeBufferFromPanes(evictedBuffer.id);
+  }
+
+  return nextBuffers;
+};
+
 /**
  * Run extension checking and LSP logic for a newly opened editor file.
  */
@@ -257,15 +277,15 @@ export const useBufferStore = createSelectors(
               if (shouldBePreview) {
                 const existingPreview = newBuffers.find((b) => b.isPreview);
                 if (existingPreview) {
+                  cleanupBufferHistoryTracking(existingPreview.id);
+                  removeBufferFromPanes(existingPreview.id);
                   newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
                 }
               }
 
-              if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs, {
+                includePreviews: false,
+              });
 
               const id = generateBufferId(spec.path);
               const newBuffer = createPaneContent(id, spec) as EditorContent;
@@ -294,12 +314,23 @@ export const useBufferStore = createSelectors(
               const path = spec.path ?? `terminal://${sessionId}`;
               const displayName = spec.name ?? `Terminal ${terminalNumber}`;
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              const existing = buffers.find(
+                (b) => b.type === "terminal" && b.sessionId === sessionId,
+              );
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
               }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, {
@@ -348,11 +379,7 @@ export const useBufferStore = createSelectors(
               const displayName = `Agent ${agentNumber}`;
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, {
@@ -399,11 +426,7 @@ export const useBufferStore = createSelectors(
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
@@ -485,11 +508,7 @@ export const useBufferStore = createSelectors(
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
@@ -533,11 +552,7 @@ export const useBufferStore = createSelectors(
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
@@ -580,11 +595,7 @@ export const useBufferStore = createSelectors(
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
@@ -622,6 +633,8 @@ export const useBufferStore = createSelectors(
                     logger.error("BufferStore", "Failed to close old external editor terminal:", e);
                   });
                 }
+                cleanupBufferHistoryTracking(existingExternalEditor.id);
+                removeBufferFromPanes(existingExternalEditor.id);
                 newBuffers = newBuffers.filter((b) => b.id !== existingExternalEditor.id);
               }
 
@@ -654,11 +667,7 @@ export const useBufferStore = createSelectors(
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const path =
                 spec.type === "globalSearch" ? "search://global" : "diagnostics://problems";
@@ -717,11 +726,9 @@ export const useBufferStore = createSelectors(
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
-              if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
-                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
-                const lruBuffer = unpinnedBuffers[0];
-                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-              }
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs, {
+                includePreviews: false,
+              });
 
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
@@ -948,12 +955,17 @@ export const useBufferStore = createSelectors(
           // Close terminal session for terminal tab buffers
           if (closedBuffer.type === "terminal") {
             import("@/features/terminal/stores/terminal-store").then(({ useTerminalStore }) => {
-              const session = useTerminalStore.getState().getSession(closedBuffer.sessionId);
+              const terminalStore = useTerminalStore.getState();
+              const session = terminalStore.getSession(closedBuffer.sessionId);
               if (session?.connectionId) {
-                invoke("close_terminal", { id: session.connectionId }).catch((e) => {
+                const closeCommand = session.remoteConnectionId
+                  ? "close_remote_terminal"
+                  : "close_terminal";
+                invoke(closeCommand, { id: session.connectionId }).catch((e) => {
                   logger.error("BufferStore", "Failed to close terminal tab session:", e);
                 });
               }
+              terminalStore.removeSession(closedBuffer.sessionId);
             });
           }
 

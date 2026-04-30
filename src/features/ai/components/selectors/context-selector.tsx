@@ -179,7 +179,10 @@ export function ContextSelector({
               {item.name}
             </span>
             {item.type === "buffer" && item.isDirty && (
-              <span className="text-[8px] text-yellow-500" title="Unsaved changes">
+              <span
+                className="text-[length:calc(var(--ui-text-xs)*0.7)] text-warning"
+                title="Unsaved changes"
+              >
                 ●
               </span>
             )}

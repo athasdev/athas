@@ -2,7 +2,6 @@ import {
   DownloadSimple,
   GearSix,
   PuzzlePiece,
-  Rows,
   Sparkle,
   TerminalWindow,
   WarningCircle,
@@ -31,8 +30,6 @@ import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
-import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
@@ -395,11 +392,6 @@ const Footer = () => {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
-  const bottomRoot = usePaneStore.use.bottomRoot();
-  const bottomPaneBufferCount = getAllPaneGroups(bottomRoot).reduce(
-    (total, pane) => total + pane.bufferIds.length,
-    0,
-  );
   const { rootFolderPath } = useFileSystemStore();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const selectRepository = useRepositoryStore.use.actions().selectRepository;
@@ -486,27 +478,6 @@ const Footer = () => {
               }}
             >
               <TerminalWindow weight="duotone" />
-            </FooterTabControl>
-          ),
-        }
-      : null,
-    bottomPaneBufferCount > 0 || uiState.bottomPaneActiveTab === "buffers"
-      ? {
-          id: "bottom-tabs",
-          label: "Bottom tabs",
-          content: (
-            <FooterTabControl
-              tooltip="Toggle Bottom Tabs"
-              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "buffers"}
-              className={FOOTER_ICON_TAB_CLASS_NAME}
-              onClick={() => {
-                uiState.setBottomPaneActiveTab("buffers");
-                const showingBuffers =
-                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "buffers";
-                uiState.setIsBottomPaneVisible(showingBuffers);
-              }}
-            >
-              <Rows weight="duotone" />
             </FooterTabControl>
           ),
         }

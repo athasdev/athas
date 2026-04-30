@@ -5,6 +5,7 @@ import {
   MagnifyingGlass as Search,
 } from "@phosphor-icons/react";
 import {
+  Brain,
   Database,
   Package,
   PaintBrush,
@@ -20,6 +21,17 @@ import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-stor
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { uiExtensionHost } from "@/extensions/ui/services/ui-extension-host";
+import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
+import {
+  createSkillFromMarketplace,
+  hasMarketplaceSkillUpdate,
+  hasSkillLocalOverride,
+  isMarketplaceSkillInstalled,
+  loadMarketplaceSkills,
+  resetSkillLocalOverride,
+  updateSkillFromMarketplace,
+} from "@/features/ai/lib/skill-library";
+import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
@@ -35,7 +47,7 @@ interface UnifiedExtension {
   id: string;
   name: string;
   description: string;
-  category: "language" | "theme" | "icon-theme" | "database" | "ui";
+  category: "language" | "theme" | "icon-theme" | "database" | "ui" | "skill";
   isInstalled: boolean;
   version?: string;
   extensions?: string[];
@@ -43,6 +55,8 @@ interface UnifiedExtension {
   isMarketplace?: boolean;
   isBundled?: boolean;
   runtimeIssues?: ExtensionRuntimeIssue[];
+  skill?: AIChatSkill;
+  marketplaceSkill?: MarketplaceSkill;
 }
 
 const FILTER_TABS = [
@@ -51,6 +65,7 @@ const FILTER_TABS = [
   { id: "theme", label: "Themes", icon: PaintBrush },
   { id: "icon-theme", label: "Icon Themes", icon: Package },
   { id: "database", label: "Databases", icon: Database },
+  { id: "skill", label: "Skills", icon: Brain },
   { id: "ui", label: "Custom", icon: PuzzlePiece },
 ] as const;
 
@@ -64,6 +79,8 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
       return "Icon Theme";
     case "database":
       return "Database";
+    case "skill":
+      return "Skill";
     case "ui":
       return "Custom";
     default:
@@ -74,18 +91,25 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
 const ExtensionRow = ({
   extension,
   onToggle,
+  onResetOverride,
   onUpdate,
   isInstalling,
   hasUpdate,
+  hasLocalOverride,
   hasRuntimeIssue,
 }: {
   extension: UnifiedExtension;
   onToggle: () => void;
+  onResetOverride?: () => void;
   onUpdate?: () => void;
   isInstalling?: boolean;
   hasUpdate?: boolean;
+  hasLocalOverride?: boolean;
   hasRuntimeIssue?: boolean;
 }) => {
+  const installLabel = extension.category === "skill" ? "Add" : "Install";
+  const uninstallLabel = extension.category === "skill" ? "Remove" : "Uninstall";
+
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
       <div className="min-w-0 flex-1">
@@ -96,6 +120,16 @@ const ExtensionRow = ({
           </Badge>
           {extension.version && (
             <span className="ui-font ui-text-sm text-text-lighter">v{extension.version}</span>
+          )}
+          {hasLocalOverride && (
+            <Badge
+              variant="default"
+              size="compact"
+              shape="pill"
+              className="border-warning/25 bg-warning/10 text-warning"
+            >
+              Local override
+            </Badge>
           )}
         </div>
         <p className="ui-font ui-text-sm text-text-lighter">{extension.description}</p>
@@ -128,10 +162,7 @@ const ExtensionRow = ({
           Built-in
         </Badge>
       ) : isInstalling ? (
-        <div className="flex shrink-0 items-center gap-1.5 text-accent">
-          <RefreshCw className="animate-spin" />
-          <span className="ui-font ui-text-sm">Installing</span>
-        </div>
+        <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
@@ -139,14 +170,24 @@ const ExtensionRow = ({
               {hasRuntimeIssue ? "Reinstall" : "Update"}
             </Button>
           )}
+          {hasLocalOverride && onResetOverride && (
+            <Button
+              onClick={onResetOverride}
+              variant="secondary"
+              size="xs"
+              tooltip="Reset to marketplace version"
+            >
+              Reset
+            </Button>
+          )}
           <Button
             onClick={onToggle}
             variant="danger"
             size="xs"
             className="border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error"
-            tooltip="Uninstall"
+            tooltip={uninstallLabel}
           >
-            Uninstall
+            {uninstallLabel}
           </Button>
         </div>
       ) : (
@@ -155,9 +196,9 @@ const ExtensionRow = ({
           variant="default"
           size="xs"
           className="shrink-0"
-          tooltip="Install"
+          tooltip={installLabel}
         >
-          Install
+          {installLabel}
         </Button>
       )}
     </div>
@@ -170,7 +211,10 @@ export const ExtensionsSettings = () => {
   const setActiveView = useUIState((state) => state.setActiveView);
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
+  const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
   const { showToast } = useToast();
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
@@ -232,6 +276,47 @@ export const ExtensionsSettings = () => {
       version: "1.0.0",
     });
 
+    for (const skill of settings.aiSkills) {
+      const preview = skill.content.trim().replace(/\s+/g, " ").slice(0, 160);
+      const marketplaceSkill =
+        skill.source === "marketplace"
+          ? marketplaceSkills.find(
+              (candidate) => candidate.id === skill.sourceId || candidate.id === skill.id,
+            )
+          : undefined;
+
+      allExtensions.push({
+        id: skill.id,
+        name: skill.title,
+        description: skill.description || preview || "Reusable AI chat instructions",
+        category: "skill",
+        isInstalled: true,
+        version: skill.version || (skill.source === "marketplace" ? undefined : "Local"),
+        publisher: skill.author || (skill.source === "marketplace" ? "Marketplace" : "You"),
+        isMarketplace: skill.source === "marketplace",
+        skill,
+        marketplaceSkill,
+      });
+    }
+
+    for (const skill of marketplaceSkills) {
+      if (isMarketplaceSkillInstalled(settings.aiSkills, skill.id)) {
+        continue;
+      }
+
+      allExtensions.push({
+        id: skill.id,
+        name: skill.title,
+        description: skill.description,
+        category: "skill",
+        isInstalled: false,
+        version: skill.version,
+        publisher: skill.author,
+        isMarketplace: true,
+        marketplaceSkill: skill,
+      });
+    }
+
     for (const [, ext] of availableExtensions) {
       if (ext.manifest.categories.includes("UI")) {
         const isBundled = !ext.manifest.installation;
@@ -269,13 +354,52 @@ export const ExtensionsSettings = () => {
     }
 
     setExtensions(allExtensions);
-  }, [availableExtensions, generatedUIExtensions]);
+  }, [availableExtensions, generatedUIExtensions, marketplaceSkills, settings.aiSkills]);
 
   useEffect(() => {
     loadAllExtensions();
   }, [settings.theme, settings.iconTheme, loadAllExtensions]);
 
+  useEffect(() => {
+    setIsLoadingSkills(true);
+    void loadMarketplaceSkills()
+      .then(setMarketplaceSkills)
+      .finally(() => setIsLoadingSkills(false));
+  }, []);
+
   const handleUpdate = async (extension: UnifiedExtension) => {
+    if (extension.category === "skill") {
+      if (!extension.skill || !extension.marketplaceSkill) return;
+
+      try {
+        const updatedSkill = updateSkillFromMarketplace(
+          extension.skill,
+          extension.marketplaceSkill,
+        );
+        await updateSetting(
+          "aiSkills",
+          settings.aiSkills.map((skill) =>
+            skill.id === extension.skill?.id ? updatedSkill : skill,
+          ),
+        );
+        showToast({
+          message: updatedSkill.localOverride
+            ? `${extension.name} updated, local override kept`
+            : `${extension.name} updated successfully`,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to update ${extension.name}:`, error);
+        showToast({
+          message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          type: "error",
+          duration: 5000,
+        });
+      }
+      return;
+    }
+
     try {
       await updateExtension(extension.id);
       showToast({
@@ -293,7 +417,74 @@ export const ExtensionsSettings = () => {
     }
   };
 
+  const handleResetSkillOverride = async (extension: UnifiedExtension) => {
+    if (extension.category !== "skill" || !extension.skill) return;
+
+    try {
+      await updateSetting(
+        "aiSkills",
+        settings.aiSkills.map((skill) =>
+          skill.id === extension.skill?.id ? resetSkillLocalOverride(skill) : skill,
+        ),
+      );
+      showToast({
+        message: `${extension.name} reset to marketplace version`,
+        type: "success",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error(`Failed to reset ${extension.name}:`, error);
+      showToast({
+        message: `Failed to reset ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        type: "error",
+        duration: 5000,
+      });
+    }
+  };
+
   const handleToggle = async (extension: UnifiedExtension) => {
+    if (extension.category === "skill") {
+      try {
+        if (extension.isInstalled) {
+          const sourceId = extension.skill?.sourceId;
+          await updateSetting(
+            "aiSkills",
+            settings.aiSkills.filter(
+              (skill) => skill.id !== extension.id && (!sourceId || skill.sourceId !== sourceId),
+            ),
+          );
+          showToast({
+            message: `${extension.name} removed successfully`,
+            type: "success",
+            duration: 3000,
+          });
+          return;
+        }
+
+        if (!extension.marketplaceSkill) {
+          return;
+        }
+
+        await updateSetting("aiSkills", [
+          createSkillFromMarketplace(extension.marketplaceSkill),
+          ...settings.aiSkills,
+        ]);
+        showToast({
+          message: `${extension.name} added successfully`,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to update ${extension.name}:`, error);
+        showToast({
+          message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          type: "error",
+          duration: 5000,
+        });
+      }
+      return;
+    }
+
     if (extension.isMarketplace) {
       if (extension.isInstalled) {
         try {
@@ -394,7 +585,7 @@ export const ExtensionsSettings = () => {
       <div className="mb-3">
         <p className="ui-font ui-text-md font-medium text-text">Extensions</p>
         <p className="mt-1 ui-font ui-text-sm text-text-lighter">
-          Install built-in tools, manage marketplace extensions, and generated custom tools.
+          Install built-in tools, manage marketplace extensions, skills, and generated custom tools.
         </p>
       </div>
 
@@ -440,6 +631,26 @@ export const ExtensionsSettings = () => {
         </div>
       )}
 
+      {(settings.extensionsActiveTab === "skill" || settings.extensionsActiveTab === "all") && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            onClick={() => setIsSkillsCommandOpen(true)}
+          >
+            <Plus />
+            New Skill
+          </Button>
+          {isLoadingSkills ? (
+            <div className="ui-text-sm flex items-center gap-1.5 text-text-lighter">
+              <RefreshCw className="animate-spin" />
+              Loading skills
+            </div>
+          ) : null}
+        </div>
+      )}
+
       <div className="flex-1 overflow-auto pr-1.5">
         {filteredExtensions.length === 0 ? (
           <div className="py-8 text-center text-text-lighter">
@@ -451,7 +662,15 @@ export const ExtensionsSettings = () => {
             {filteredExtensions.map((extension) => {
               const extensionFromStore = availableExtensions.get(extension.id);
               const isInstalling = extensionFromStore?.isInstalling || false;
-              const hasUpdate = extensionsWithUpdates.has(extension.id);
+              const hasSkillUpdate = Boolean(
+                extension.skill &&
+                extension.marketplaceSkill &&
+                hasMarketplaceSkillUpdate(extension.skill, extension.marketplaceSkill),
+              );
+              const hasUpdate = extensionsWithUpdates.has(extension.id) || hasSkillUpdate;
+              const hasLocalOverride = extension.skill
+                ? hasSkillLocalOverride(extension.skill)
+                : false;
               const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
 
               return (
@@ -459,9 +678,11 @@ export const ExtensionsSettings = () => {
                   key={extension.id}
                   extension={extension}
                   onToggle={() => handleToggle(extension)}
+                  onResetOverride={() => handleResetSkillOverride(extension)}
                   onUpdate={() => handleUpdate(extension)}
                   isInstalling={isInstalling}
                   hasUpdate={hasUpdate}
+                  hasLocalOverride={hasLocalOverride}
                   hasRuntimeIssue={hasRuntimeIssue}
                 />
               );
@@ -481,6 +702,12 @@ export const ExtensionsSettings = () => {
           <CreateExtensionWizard onClose={() => setShowCreateWizard(false)} />
         </Dialog>
       )}
+      <SkillsCommand
+        isOpen={isSkillsCommandOpen}
+        initialView="editor"
+        onClose={() => setIsSkillsCommandOpen(false)}
+        onSelectSkill={() => setIsSkillsCommandOpen(false)}
+      />
     </div>
   );
 };

@@ -15,6 +15,7 @@ import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
 
 export interface SelectOption {
   value: string;
@@ -87,10 +88,7 @@ const iconSizes = {
 };
 
 function filterSelectOptions(options: SelectOption[], searchQuery: string) {
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  if (!normalizedQuery) return options;
-
-  return options.filter((option) => option.label.toLowerCase().includes(normalizedQuery));
+  return options.filter((option) => matchesSearchQuery(searchQuery, [option.label, option.value]));
 }
 
 function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "md"): ReactNode {

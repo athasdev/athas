@@ -1,0 +1,44 @@
+name: Nix
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/nix.yml"
+      - ".envrc"
+      - "flake.nix"
+      - "flake.lock"
+      - "nix/**"
+  pull_request:
+    paths:
+      - ".github/workflows/nix.yml"
+      - ".envrc"
+      - "flake.nix"
+      - "flake.lock"
+      - "nix/**"
+  workflow_dispatch:
+
+jobs:
+  dev-shell:
+    name: Dev shell
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Validate flake
+        run: nix flake check --no-write-lock-file
+
+      - name: Validate dev tools
+        run: |
+          nix develop --no-write-lock-file --command bash -lc '
+            bun --version
+            node --version
+            rustc --version
+            cargo --version
+            pkg-config --exists javascriptcoregtk-4.1
+            pkg-config --exists libsoup-3.0
+          '

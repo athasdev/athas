@@ -21,6 +21,7 @@ import { countDiffStats } from "../utils/git-diff-helpers";
 
 interface InlineGitBlameProps {
   blameLine: GitBlameLine;
+  containerClassName?: string;
   className?: string;
   fontSize?: number;
   lineHeight?: number;
@@ -28,6 +29,7 @@ interface InlineGitBlameProps {
 
 export const InlineGitBlame = ({
   blameLine,
+  containerClassName,
   className,
   fontSize,
   lineHeight,
@@ -266,7 +268,11 @@ export const InlineGitBlame = ({
   }, [clearHideTimeout, clearShowTimeout]);
 
   return (
-    <div ref={triggerRef} className="relative flex">
+    <div
+      ref={triggerRef}
+      className={cn("relative flex items-center", containerClassName)}
+      style={{ height: `${effectiveLineHeight}px` }}
+    >
       <div
         className={cn("ml-2 flex items-center gap-1", "text-text-lighter", className)}
         style={{

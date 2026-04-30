@@ -277,6 +277,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
           remoteConnectionId: effectiveRemoteConnectionId,
         });
       }
+
+      if (existingSession?.serializedContent) {
+        terminal.write(existingSession.serializedContent);
+      }
+
       setIsInitialized(true);
       isInitializingRef.current = false;
 
@@ -427,12 +432,16 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     return () => {
       if (xtermRef.current) {
+        const serializedContent = addonsRef.current?.serializeAddon.serialize();
+        if (serializedContent && getSession(sessionId)?.connectionId) {
+          updateSession(sessionId, { serializedContent });
+        }
         xtermRef.current.dispose();
         xtermRef.current = null;
         addonsRef.current = null;
       }
     };
-  }, [sessionId]);
+  }, [getSession, sessionId, updateSession]);
 
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;

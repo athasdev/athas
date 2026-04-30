@@ -1,4 +1,10 @@
 import { useCallback } from "react";
+import {
+  indentText,
+  outdentText,
+  type TextOperationResult,
+  toggleCaseText,
+} from "../utils/text-operations";
 
 interface UseEditorOperationsParams {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -6,6 +12,7 @@ interface UseEditorOperationsParams {
   bufferId: string | null;
   updateBufferContent: (bufferId: string, content: string) => void;
   handleInput: (content: string) => void;
+  tabSize: number;
 }
 
 export function useEditorOperations({
@@ -14,7 +21,25 @@ export function useEditorOperations({
   bufferId,
   updateBufferContent,
   handleInput,
+  tabSize,
 }: UseEditorOperationsParams) {
+  const applyTextOperation = useCallback(
+    (result: TextOperationResult) => {
+      if (!inputRef.current) return;
+      const textarea = inputRef.current;
+
+      if (bufferId) {
+        updateBufferContent(bufferId, result.content);
+      }
+
+      textarea.value = result.content;
+      textarea.selectionStart = result.selectionStart;
+      textarea.selectionEnd = result.selectionEnd;
+      handleInput(result.content);
+    },
+    [bufferId, handleInput, inputRef, updateBufferContent],
+  );
+
   const copy = useCallback(() => {
     if (!inputRef.current) return;
     document.execCommand("copy");
@@ -69,11 +94,36 @@ export function useEditorOperations({
     }
   }, [content, bufferId, updateBufferContent, handleInput, inputRef]);
 
+  const indent = useCallback(() => {
+    if (!inputRef.current) return;
+    const textarea = inputRef.current;
+    applyTextOperation(
+      indentText(content, textarea.selectionStart, textarea.selectionEnd, " ".repeat(tabSize)),
+    );
+  }, [applyTextOperation, content, inputRef, tabSize]);
+
+  const outdent = useCallback(() => {
+    if (!inputRef.current) return;
+    const textarea = inputRef.current;
+    applyTextOperation(
+      outdentText(content, textarea.selectionStart, textarea.selectionEnd, tabSize),
+    );
+  }, [applyTextOperation, content, inputRef, tabSize]);
+
+  const toggleCase = useCallback(() => {
+    if (!inputRef.current) return;
+    const textarea = inputRef.current;
+    applyTextOperation(toggleCaseText(content, textarea.selectionStart, textarea.selectionEnd));
+  }, [applyTextOperation, content, inputRef]);
+
   return {
     copy,
     cut,
     paste,
     selectAll,
     deleteSelection,
+    indent,
+    outdent,
+    toggleCase,
   };
 }

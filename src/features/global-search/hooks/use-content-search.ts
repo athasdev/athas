@@ -3,7 +3,7 @@ import { useDebounce } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileSearchResult } from "@/features/global-search/lib/rust-api/search";
 import { searchFilesContent } from "@/features/global-search/lib/rust-api/search";
-import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { CONTENT_SEARCH_BACKEND_LIMIT, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { matchesPathFilters } from "../utils/path-filters";
 
 export interface ContentSearchOptions {
@@ -53,7 +53,7 @@ export const useContentSearch = (isVisible: boolean) => {
         case_sensitive: searchOptions.caseSensitive,
         whole_word: searchOptions.wholeWord,
         use_regex: searchOptions.useRegex,
-        max_results: 500,
+        max_results: CONTENT_SEARCH_BACKEND_LIMIT,
         context_lines: contextLines,
       });
 

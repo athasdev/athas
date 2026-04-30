@@ -61,6 +61,7 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Run and debug files with launch configurations and breakpoints",
     icon: BugBeetle,
     enabled: coreFeatures.debugger,
+    status: "experimental",
   },
   {
     id: "aiChat",

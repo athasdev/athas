@@ -2,6 +2,10 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { moveFile } from "@/features/file-system/controllers/platform";
 import type { FileEntry } from "@/features/file-system/types/app";
+import {
+  setInternalTabDragHover,
+  setInternalTabDragHoverTarget,
+} from "@/features/tabs/utils/internal-tab-drag";
 import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
 
 interface DragState {
@@ -23,9 +27,47 @@ const initialDragState: DragState = {
 export function useFileExplorerDragDrop(
   rootFolderPath: string | undefined,
   onFileMove?: (oldPath: string, newPath: string) => void,
+  onAutoExpandDirectory?: (path: string) => void,
 ) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
+  const autoExpandRef = useRef<{
+    path: string;
+    timeoutId: number;
+  } | null>(null);
+
+  const clearAutoExpand = useCallback(() => {
+    if (!autoExpandRef.current) return;
+    window.clearTimeout(autoExpandRef.current.timeoutId);
+    autoExpandRef.current = null;
+  }, []);
+
+  const clearEditorDropHover = useCallback(() => {
+    setInternalTabDragHoverTarget({ paneId: null, zone: null });
+  }, []);
+
+  const scheduleAutoExpand = useCallback(
+    (path: string, isDir: boolean) => {
+      if (!isDir || path === "__ROOT__" || !onAutoExpandDirectory) {
+        clearAutoExpand();
+        return;
+      }
+
+      if (autoExpandRef.current?.path === path) {
+        return;
+      }
+
+      clearAutoExpand();
+      autoExpandRef.current = {
+        path,
+        timeoutId: window.setTimeout(() => {
+          onAutoExpandDirectory(path);
+          autoExpandRef.current = null;
+        }, 550),
+      };
+    },
+    [clearAutoExpand, onAutoExpandDirectory],
+  );
 
   useEffect(() => {
     if (dragState.isDragging && !dragPreviewRef.current) {
@@ -76,8 +118,12 @@ export function useFileExplorerDragDrop(
       const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
       const fileTreeItem = elementUnder?.closest("[data-file-path]");
       const fileTreeContainer = elementUnder?.closest(".file-tree-container");
+      const editorDropTarget =
+        elementUnder?.closest("[data-pane-container]") ||
+        elementUnder?.closest("[data-tab-bar-pane-id]");
 
       if (fileTreeItem) {
+        clearEditorDropHover();
         const path = fileTreeItem.getAttribute("data-file-path");
         const isDir = fileTreeItem.getAttribute("data-is-dir") === "true";
         const draggedItem = dragState.draggedItem;
@@ -85,31 +131,51 @@ export function useFileExplorerDragDrop(
         if (path && draggedItem && path !== draggedItem.path) {
           const separator = getPathSeparator(draggedItem.path);
           const isDropIntoSelf = draggedItem.isDir && path.startsWith(draggedItem.path + separator);
+          const nextDragOverPath = isDropIntoSelf ? null : path;
+          const nextDragOverIsDir = isDropIntoSelf ? false : isDir;
 
           setDragState((prev) => ({
             ...prev,
-            dragOverPath: isDropIntoSelf ? null : path,
-            dragOverIsDir: isDropIntoSelf ? false : isDir,
+            dragOverPath: nextDragOverPath,
+            dragOverIsDir: nextDragOverIsDir,
           }));
+          if (nextDragOverPath) {
+            scheduleAutoExpand(nextDragOverPath, nextDragOverIsDir);
+          } else {
+            clearAutoExpand();
+          }
         } else {
           setDragState((prev) => ({
             ...prev,
             dragOverPath: null,
             dragOverIsDir: false,
           }));
+          clearAutoExpand();
         }
       } else if (fileTreeContainer) {
+        clearEditorDropHover();
         setDragState((prev) => ({
           ...prev,
           dragOverPath: "__ROOT__",
           dragOverIsDir: true,
         }));
-      } else {
+        clearAutoExpand();
+      } else if (editorDropTarget && dragState.draggedItem && !dragState.draggedItem.isDir) {
+        setInternalTabDragHover({ x: e.clientX, y: e.clientY });
         setDragState((prev) => ({
           ...prev,
           dragOverPath: null,
           dragOverIsDir: false,
         }));
+        clearAutoExpand();
+      } else {
+        clearEditorDropHover();
+        setDragState((prev) => ({
+          ...prev,
+          dragOverPath: null,
+          dragOverIsDir: false,
+        }));
+        clearAutoExpand();
       }
     };
 
@@ -133,6 +199,8 @@ export function useFileExplorerDragDrop(
           }),
         );
         setDragState(initialDragState);
+        clearAutoExpand();
+        clearEditorDropHover();
         return;
       }
 
@@ -144,6 +212,7 @@ export function useFileExplorerDragDrop(
           targetPath = rootFolderPath || "";
           if (!targetPath) {
             setDragState(initialDragState);
+            clearEditorDropHover();
             return;
           }
         }
@@ -164,6 +233,8 @@ export function useFileExplorerDragDrop(
       }
 
       setDragState(initialDragState);
+      clearAutoExpand();
+      clearEditorDropHover();
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -174,8 +245,17 @@ export function useFileExplorerDragDrop(
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("mouseleave", handleMouseUp);
+      clearAutoExpand();
+      clearEditorDropHover();
     };
-  }, [dragState, onFileMove, rootFolderPath]);
+  }, [
+    clearAutoExpand,
+    clearEditorDropHover,
+    dragState,
+    onFileMove,
+    rootFolderPath,
+    scheduleAutoExpand,
+  ]);
 
   const startDrag = useCallback((e: React.MouseEvent, file: FileEntry) => {
     e.preventDefault();

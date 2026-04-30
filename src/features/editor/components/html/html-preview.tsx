@@ -1,7 +1,8 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
+import { buildHtmlPreviewDocument } from "./html-preview-document";
 
 export function HtmlPreview() {
   const buffers = useBufferStore.use.buffers();
@@ -16,50 +17,14 @@ export function HtmlPreview() {
 
   const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
   const sourcePath = sourceBuffer?.path;
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
 
   const [iframeContent, setIframeContent] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Memoize the asset URL for the directory
-  const assetBaseUrl = useMemo(() => {
-    if (!sourcePath) return "";
-
-    // Get directory path
-    const lastSlashIndex = sourcePath.lastIndexOf("/");
-    const dirPath = lastSlashIndex !== -1 ? sourcePath.substring(0, lastSlashIndex) : sourcePath;
-
-    // Convert to Tauri asset URL
-    // convertFileSrc handles the protocol logic (e.g. asset:// or http://asset.localhost)
-    const url = convertFileSrc(dirPath);
-
-    // Ensure it ends with slash for correct base resolution
-    return url.endsWith("/") ? url : `${url}/`;
-  }, [sourcePath]);
-
   useEffect(() => {
-    if (!sourceContent) return;
-
-    let content = sourceContent;
-
-    // Inject <base> tag to allow relative links (CSS/JS/Images) to work
-    if (assetBaseUrl) {
-      const baseTag = `<base href="${assetBaseUrl}">`;
-
-      // Try to inject in head
-      if (content.includes("<head>")) {
-        content = content.replace("<head>", `<head>\n${baseTag}`);
-      } else if (content.includes("<html>")) {
-        content = content.replace("<html>", `<html>\n<head>${baseTag}</head>`);
-      } else {
-        // No head/html tags, just prepend
-        content = `${baseTag}\n${content}`;
-      }
-    }
-
-    // Add script to handle errors and console logs if needed in future
-    // For now keeping it simple with just content rendering
-    setIframeContent(content);
-  }, [sourceContent, assetBaseUrl]);
+    setIframeContent(buildHtmlPreviewDocument(sourceContent, { sourcePath, rootFolderPath }));
+  }, [sourceContent, sourcePath, rootFolderPath]);
 
   if (!sourceBuffer) {
     return (

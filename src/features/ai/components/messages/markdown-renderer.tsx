@@ -428,7 +428,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 
   return (
     <div className="my-1 rounded-lg border border-error/25 bg-error/8 px-2.5 py-2">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <div className="ui-text-xs flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="font-medium text-error">Error</span>
         <span className="text-text">{summary}</span>
         {code ? <span className="text-text-lighter">({code})</span> : null}
@@ -438,7 +438,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
             variant="ghost"
             size="xs"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="h-auto px-1 text-red-200/70 hover:bg-transparent hover:text-red-100"
+            className="h-auto px-1 text-error/70 hover:bg-transparent hover:text-error"
           >
             {isExpanded ? <ChevronDown /> : <ChevronRight />}
             {isExpanded ? "Hide details" : "Details"}
@@ -486,13 +486,13 @@ function ErrorBlock({ errorData }: { errorData: string }) {
               Open Terminal
             </Button>
           )}
-          <span className="text-[11px] text-red-200/70">
+          <span className="ui-text-xs text-error/70">
             Complete login in the agent CLI, then retry.
           </span>
         </div>
       )}
       {normalizedDetails && isExpanded && (
-        <pre className="editor-font mt-2 overflow-x-auto rounded border border-red-500/20 bg-red-950/20 p-2 text-[11px] text-red-100/85">
+        <pre className="ui-text-xs editor-font mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
           {(() => {
             try {
               const parsed = JSON.parse(normalizedDetails);
@@ -510,7 +510,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 // Header classes scaled for sidebar context
 const headerClasses: Record<number, string> = {
   1: "mt-3 mb-1.5 font-semibold text-sm text-text",
-  2: "mt-2.5 mb-1 font-semibold text-[13px] text-text",
+  2: "ui-text-sm mt-2.5 mb-1 font-semibold text-text",
   3: "mt-2 mb-1 font-semibold text-text text-xs",
   4: "mt-2 mb-0.5 font-medium text-text text-xs",
   5: "mt-1.5 mb-0.5 font-medium text-text-light text-xs",

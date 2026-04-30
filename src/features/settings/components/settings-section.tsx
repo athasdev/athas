@@ -38,6 +38,7 @@ export default function Section({ title, description, children, className }: Sec
 
 interface SettingRowProps {
   label: string;
+  labelAccessory?: React.ReactNode;
   description?: string;
   children: React.ReactNode;
   className?: string;
@@ -48,6 +49,7 @@ interface SettingRowProps {
 
 export function SettingRow({
   label,
+  labelAccessory,
   description,
   children,
   className,
@@ -166,6 +168,7 @@ export function SettingRow({
           <div id={labelId} className="ui-font ui-text-sm cursor-default text-text">
             {label}
           </div>
+          {labelAccessory}
           {onReset ? (
             <span className="flex size-5 items-center justify-center">
               <Button

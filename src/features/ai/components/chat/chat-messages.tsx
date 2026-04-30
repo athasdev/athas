@@ -88,37 +88,32 @@ export const ChatMessages = memo(
 
     if (messages.length === 0) {
       return (
-        <div className="flex h-full flex-col justify-end px-4 pb-6 pt-4">
-          <div className="mx-auto w-full max-w-sm rounded-xl border border-dashed border-border/70 bg-secondary-bg/20 p-2.5">
-            {visibleSkills.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {visibleSkills.map((skill) => (
-                  <Button
-                    key={skill.id}
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => handleSkillSelect(skill)}
-                    className="h-6 max-w-full rounded-full border border-dashed border-border/70 bg-primary-bg/35 px-2 text-text-lighter hover:border-border-strong hover:bg-hover/60 hover:text-text"
-                    tooltip={skill.title}
-                    aria-label={`Use skill ${skill.title}`}
-                  >
-                    <span className="min-w-0 truncate">{skill.title}</span>
-                  </Button>
-                ))}
-              </div>
-            ) : (
+        <div className="flex h-full flex-col justify-end px-4 pb-2 pt-4">
+          <div className="mx-auto flex w-full max-w-sm flex-wrap justify-center gap-1.5">
+            {visibleSkills.map((skill) => (
               <Button
+                key={skill.id}
                 type="button"
                 variant="ghost"
                 size="xs"
-                onClick={openNewSkill}
-                className="h-7 w-full justify-center rounded-lg border border-dashed border-border/70 bg-primary-bg/25 text-text-lighter hover:border-border-strong hover:bg-hover/60 hover:text-text"
+                onClick={() => handleSkillSelect(skill)}
+                className="h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
+                tooltip={skill.title}
+                aria-label={`Use skill ${skill.title}`}
               >
-                <Plus />
-                <span>Add skill</span>
+                <span className="min-w-0 truncate">{skill.title}</span>
               </Button>
-            )}
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={openNewSkill}
+              className="h-6 rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/65 hover:border-border-strong hover:bg-transparent hover:text-text"
+            >
+              <Plus size={12} />
+              <span>New skill</span>
+            </Button>
           </div>
           <SkillsCommand
             isOpen={isSkillsOpen}

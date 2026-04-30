@@ -61,6 +61,7 @@ export interface GitTag {
   commit: string;
   message?: string;
   date: string;
+  is_annotated: boolean;
 }
 
 export interface GitWorktree {

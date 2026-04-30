@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import {
   buildRuntimeManifest,
+  resolveToolDownloadUrlForBackend,
   resolveToolCommandForManifest,
   resolveToolDownloadUrlForManifest,
 } from "./extension-store-runtime";
@@ -57,6 +58,21 @@ describe("extension-store runtime manifest", () => {
 
   it("uses the pyright language server executable for the pyright package", () => {
     expect(resolveToolCommandForManifest({ name: "pyright" })).toBe("pyright-langserver");
+  });
+
+  it("defers generic platform URL templates to the Rust backend for libc-aware resolution", () => {
+    const template =
+      "https://athas.dev/extensions/test/test-${targetArch}-${targetOs}.${archiveExt}";
+
+    expect(
+      resolveToolDownloadUrlForBackend(
+        {
+          name: "test-language-server",
+          downloadUrl: template,
+        },
+        "1.0.0",
+      ),
+    ).toBe(template);
   });
 
   it("strips unresolved managed tools from the runtime manifest", () => {

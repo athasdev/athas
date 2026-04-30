@@ -14,6 +14,7 @@ interface ResizablePaneProps {
   position: "left" | "right";
   widthKey: WidthSettingKey;
   className?: string;
+  edgePadding?: boolean;
   hidden?: boolean;
   collapsible?: boolean;
   // Pixels user must push past min width before auto-collapse.
@@ -26,6 +27,7 @@ export function ResizablePane({
   position,
   widthKey,
   className,
+  edgePadding = true,
   hidden = false,
   collapsible = false,
   collapseThreshold = 0,
@@ -208,7 +210,7 @@ export function ResizablePane({
       <div
         className={cn(
           "flex min-h-0 flex-1 flex-col overflow-hidden py-0",
-          !hidden && (position === "left" ? "pl-2" : "pr-2"),
+          edgePadding && !hidden && (position === "left" ? "pl-2" : "pr-2"),
         )}
       >
         <div

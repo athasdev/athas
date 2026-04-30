@@ -31,6 +31,10 @@ interface TerminalContainerProps {
   isFullScreen?: boolean;
 }
 
+interface CloseTerminalOptions {
+  preserveSession?: boolean;
+}
+
 const TerminalContainer = ({
   currentDirectory = "/",
   className = "",
@@ -69,9 +73,23 @@ const TerminalContainer = ({
 
   // Wrapper to add logging and ensure terminal closes properly
   const closeTerminal = useCallback(
-    (terminalId: string) => {
-      console.log("closeTerminal called for terminal:", terminalId);
+    (terminalId: string, options: CloseTerminalOptions = {}) => {
+      const terminalStore = useTerminalStore.getState();
+      const session = terminalStore.getSession(terminalId);
       originalCloseTerminal(terminalId);
+
+      if (options.preserveSession) return;
+
+      if (session?.connectionId) {
+        const closeCommand = session.remoteConnectionId
+          ? "close_remote_terminal"
+          : "close_terminal";
+        void invoke(closeCommand, { id: session.connectionId }).catch((error) => {
+          console.error("Failed to close terminal session:", error);
+        });
+      }
+
+      terminalStore.removeSession(terminalId);
     },
     [originalCloseTerminal],
   );
@@ -485,7 +503,7 @@ const TerminalContainer = ({
       const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
       if (!terminalId) return;
       requestAnimationFrame(() => {
-        closeTerminal(terminalId);
+        closeTerminal(terminalId, { preserveSession: true });
       });
     };
 

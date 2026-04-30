@@ -229,6 +229,8 @@ export const useEditorAppStore = createSelectors(
 
               if (settings.lintOnSave) {
                 const { lintContent } = await import("@/features/editor/linter/linter-service");
+                const { convertLintDiagnostic, useDiagnosticsStore } =
+                  await import("@/features/diagnostics/stores/diagnostics-store");
                 const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
 
                 const lintResult = await lintContent({
@@ -238,9 +240,11 @@ export const useEditorAppStore = createSelectors(
                 });
 
                 if (lintResult.success && lintResult.diagnostics) {
-                  console.log(
-                    `Linting found ${lintResult.diagnostics.length} issues:`,
-                    lintResult.diagnostics,
+                  useDiagnosticsStore.getState().actions.setDiagnostics(
+                    activeBuffer.path,
+                    lintResult.diagnostics.map((diagnostic) =>
+                      convertLintDiagnostic(activeBuffer.path, diagnostic),
+                    ),
                   );
                 }
               }

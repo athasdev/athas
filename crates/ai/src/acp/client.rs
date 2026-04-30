@@ -2,7 +2,8 @@ use super::{
    terminal_state::AcpTerminalState,
    types::{
       AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
-      SessionConfigOption, SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
+      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, SessionConfigOption,
+      SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
 };
 use agent_client_protocol as acp;
@@ -21,6 +22,7 @@ pub struct PermissionResponse {
    pub request_id: String,
    pub approved: bool,
    pub cancelled: bool,
+   pub option_id: Option<String>,
 }
 
 /// Athas ACP Client implementation
@@ -250,12 +252,99 @@ impl AthasAcpClient {
             data: img.data,
             media_type: img.mime_type,
          }),
+         acp::ContentBlock::Audio(audio) => Some(AcpContentBlock::Audio {
+            data: audio.data,
+            media_type: audio.mime_type,
+         }),
          acp::ContentBlock::ResourceLink(link) => Some(AcpContentBlock::Resource {
             uri: link.uri,
             name: Some(link.name),
+            mime_type: link.mime_type,
+            text: None,
+            blob: None,
+            title: link.title,
+            description: link.description,
+            size: link.size,
          }),
+         acp::ContentBlock::Resource(resource) => match resource.resource {
+            acp::EmbeddedResourceResource::TextResourceContents(text) => {
+               Some(AcpContentBlock::Resource {
+                  uri: text.uri,
+                  name: None,
+                  mime_type: text.mime_type,
+                  text: Some(text.text),
+                  blob: None,
+                  title: None,
+                  description: None,
+                  size: None,
+               })
+            }
+            acp::EmbeddedResourceResource::BlobResourceContents(blob) => {
+               Some(AcpContentBlock::Resource {
+                  uri: blob.uri,
+                  name: None,
+                  mime_type: blob.mime_type,
+                  text: None,
+                  blob: Some(blob.blob),
+                  title: None,
+                  description: None,
+                  size: None,
+               })
+            }
+            _ => None,
+         },
          _ => None,
       }
+   }
+
+   fn map_tool_content(content: Vec<acp::ToolCallContent>) -> Option<serde_json::Value> {
+      if content.is_empty() {
+         return None;
+      }
+
+      serde_json::to_value(content).ok()
+   }
+
+   fn map_tool_output(
+      content: Vec<acp::ToolCallContent>,
+      raw_output: Option<serde_json::Value>,
+   ) -> Option<serde_json::Value> {
+      raw_output.or_else(|| Self::map_tool_content(content))
+   }
+
+   fn map_tool_kind(kind: acp::ToolKind) -> AcpToolKind {
+      match kind {
+         acp::ToolKind::Read => AcpToolKind::Read,
+         acp::ToolKind::Edit => AcpToolKind::Edit,
+         acp::ToolKind::Delete => AcpToolKind::Delete,
+         acp::ToolKind::Move => AcpToolKind::Move,
+         acp::ToolKind::Search => AcpToolKind::Search,
+         acp::ToolKind::Execute => AcpToolKind::Execute,
+         acp::ToolKind::Think => AcpToolKind::Think,
+         acp::ToolKind::Fetch => AcpToolKind::Fetch,
+         acp::ToolKind::SwitchMode => AcpToolKind::SwitchMode,
+         _ => AcpToolKind::Other,
+      }
+   }
+
+   fn map_tool_status(status: acp::ToolCallStatus) -> AcpToolCallStatus {
+      match status {
+         acp::ToolCallStatus::Pending => AcpToolCallStatus::Pending,
+         acp::ToolCallStatus::InProgress => AcpToolCallStatus::InProgress,
+         acp::ToolCallStatus::Completed => AcpToolCallStatus::Completed,
+         acp::ToolCallStatus::Failed => AcpToolCallStatus::Failed,
+         _ => AcpToolCallStatus::Pending,
+      }
+   }
+
+   fn map_tool_locations(locations: Vec<acp::ToolCallLocation>) -> Vec<AcpToolCallLocation> {
+      locations
+         .into_iter()
+         .map(|location| AcpToolCallLocation {
+            path: location.path.display().to_string(),
+            line: location.line,
+         })
+         .collect()
    }
 
    pub(crate) fn map_session_config_option(
@@ -321,6 +410,29 @@ impl acp::Client for AthasAcpClient {
          permission_type: "tool_call".to_string(),
          resource: tool_call_id.to_string(),
          description: format!("{} ({})", tool_title, tool_call_id),
+         options: args
+            .options
+            .iter()
+            .map(|option| super::types::AcpPermissionOption {
+               id: option.option_id.to_string(),
+               name: option.name.clone(),
+               kind: match option.kind {
+                  acp::PermissionOptionKind::AllowOnce => {
+                     super::types::AcpPermissionOptionKind::AllowOnce
+                  }
+                  acp::PermissionOptionKind::AllowAlways => {
+                     super::types::AcpPermissionOptionKind::AllowAlways
+                  }
+                  acp::PermissionOptionKind::RejectOnce => {
+                     super::types::AcpPermissionOptionKind::RejectOnce
+                  }
+                  acp::PermissionOptionKind::RejectAlways => {
+                     super::types::AcpPermissionOptionKind::RejectAlways
+                  }
+                  _ => super::types::AcpPermissionOptionKind::RejectOnce,
+               },
+            })
+            .collect(),
       });
 
       // Wait for user response with timeout
@@ -339,6 +451,14 @@ impl acp::Client for AthasAcpClient {
             if response.cancelled {
                return Ok(acp::RequestPermissionResponse::new(
                   acp::RequestPermissionOutcome::Cancelled,
+               ));
+            }
+
+            if let Some(option_id) = response.option_id {
+               return Ok(acp::RequestPermissionResponse::new(
+                  acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(
+                     option_id,
+                  )),
                ));
             }
 
@@ -457,8 +577,14 @@ impl acp::Client for AthasAcpClient {
             });
          }
          acp::SessionUpdate::ToolCall(tool_call) => {
-            // ToolCall has: tool_call_id, title, kind, status, content, etc.
-            // Prefer raw_input; fallback to content serialization for display/debugging
+            let tool_id = tool_call.tool_call_id.to_string();
+            let tool_name = tool_call.title.clone();
+            let status = tool_call.status;
+            let kind = tool_call.kind;
+            let raw_output = tool_call.raw_output.clone();
+            let content = tool_call.content.clone();
+
+            // Prefer raw_input; fallback to content serialization for display/debugging.
             let input = tool_call.raw_input.clone().unwrap_or_else(|| {
                if tool_call.content.is_empty() {
                   serde_json::Value::Null
@@ -468,20 +594,67 @@ impl acp::Client for AthasAcpClient {
             });
 
             self.emit_event(AcpEvent::ToolStart {
-               session_id,
-               tool_name: tool_call.title.clone(),
-               tool_id: tool_call.tool_call_id.to_string(),
+               session_id: session_id.clone(),
+               tool_name,
+               tool_id: tool_id.clone(),
                input,
+               kind: Self::map_tool_kind(kind),
+               status: Self::map_tool_status(status),
+               locations: Self::map_tool_locations(tool_call.locations),
             });
+
+            if matches!(
+               status,
+               acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed
+            ) {
+               self.emit_event(AcpEvent::ToolComplete {
+                  session_id,
+                  tool_id,
+                  success: matches!(status, acp::ToolCallStatus::Completed),
+                  output: Self::map_tool_output(content, raw_output),
+                  error: if matches!(status, acp::ToolCallStatus::Failed) {
+                     Some("Tool call failed".to_string())
+                  } else {
+                     None
+                  },
+               });
+            }
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
-            // Only emit completion for terminal statuses.
-            match update.fields.status {
+            let status = update.fields.status;
+            let raw_output = update.fields.raw_output.clone();
+            let content = update.fields.content.clone().unwrap_or_default();
+            let output = Self::map_tool_output(content.clone(), raw_output.clone());
+            let error = if matches!(status, Some(acp::ToolCallStatus::Failed)) {
+               Some("Tool call failed".to_string())
+            } else {
+               None
+            };
+
+            self.emit_event(AcpEvent::ToolUpdate {
+               session_id: session_id.clone(),
+               tool_id: update.tool_call_id.to_string(),
+               tool_name: update.fields.title.clone(),
+               input: update.fields.raw_input.clone(),
+               output: output.clone(),
+               kind: update.fields.kind.map(Self::map_tool_kind),
+               status: status.map(Self::map_tool_status),
+               locations: update
+                  .fields
+                  .locations
+                  .clone()
+                  .map(Self::map_tool_locations),
+               error: error.clone(),
+            });
+
+            match status {
                Some(acp::ToolCallStatus::Completed) => {
                   self.emit_event(AcpEvent::ToolComplete {
                      session_id,
                      tool_id: update.tool_call_id.to_string(),
                      success: true,
+                     output,
+                     error: None,
                   });
                }
                Some(acp::ToolCallStatus::Failed) => {
@@ -489,6 +662,8 @@ impl acp::Client for AthasAcpClient {
                      session_id,
                      tool_id: update.tool_call_id.to_string(),
                      success: false,
+                     output,
+                     error,
                   });
                }
                _ => {}
@@ -942,6 +1117,27 @@ impl acp::Client for AthasAcpClient {
             self.emit_event(AcpEvent::UiAction {
                session_id,
                action: UiAction::OpenTerminal { command },
+            });
+
+            let response = serde_json::json!({ "success": true });
+            Ok(acp::ExtResponse::new(
+               serde_json::value::to_raw_value(&response).unwrap().into(),
+            ))
+         }
+         "athas.setChatTitle" => {
+            let title = params
+               .get("title")
+               .and_then(|v| v.as_str())
+               .map(str::trim)
+               .filter(|title| !title.is_empty())
+               .ok_or_else(|| {
+                  acp::Error::new(-32602, "athas.setChatTitle requires a title".to_string())
+               })?
+               .to_string();
+
+            self.emit_event(AcpEvent::UiAction {
+               session_id,
+               action: UiAction::SetChatTitle { title },
             });
 
             let response = serde_json::json!({ "success": true });

@@ -7,6 +7,7 @@ export interface CodeLensItem {
   line: number;
   title: string;
   command?: string;
+  arguments?: unknown[];
 }
 
 const DEBOUNCE_MS = 1000;

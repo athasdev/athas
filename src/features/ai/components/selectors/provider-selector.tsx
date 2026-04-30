@@ -1,17 +1,16 @@
-import { Check, WarningCircle } from "@phosphor-icons/react";
+import { Check } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
-import { useAIChatStore } from "@/features/ai/store/store";
 import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
-import { useAuthStore } from "@/features/window/stores/auth-store";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
 import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
 } from "../input/chat-composer-control-styles";
+import { getSelectorDropdownWidth } from "./selector-dropdown-width";
 
 interface ProviderSelectorProps {
   providerId: string;
@@ -39,12 +38,13 @@ export function ProviderSelector({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isOpen = open ?? uncontrolledOpen;
   const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const triggerInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
-  const subscription = useAuthStore((state) => state.subscription);
-  const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const providers = getAvailableProviders();
+  const providers = useMemo(() => getAvailableProviders(), []);
   const currentProvider = getProviderById(providerId);
   const isComposer = appearance === "composer";
 
@@ -65,28 +65,47 @@ export function ProviderSelector({
   }, [isOpen]);
 
   const filteredProviders = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return providers.filter((provider) => {
-      if (!normalizedQuery) return true;
-      return (
-        provider.name.toLowerCase().includes(normalizedQuery) ||
-        provider.id.toLowerCase().includes(normalizedQuery)
-      );
-    });
+    return providers.filter((provider) => matchesSearchQuery(query, [provider.name, provider.id]));
   }, [providers, query]);
+  const currentProviderName = currentProvider?.name || providerId;
+  const dropdownWidth = useMemo(
+    () =>
+      getSelectorDropdownWidth({
+        labels: filteredProviders.map((provider) => provider.name),
+        min: isComposer ? 112 : 128,
+        max: isComposer ? 220 : 240,
+        chrome: 62,
+      }),
+    [filteredProviders, isComposer],
+  );
+  const openTriggerWidth = useMemo(
+    () =>
+      getSelectorDropdownWidth({
+        labels: [currentProviderName],
+        min: isComposer ? 96 : 160,
+        max: isComposer ? 128 : 220,
+        chrome: isComposer ? 34 : 48,
+      }),
+    [currentProviderName, isComposer],
+  );
 
-  const firstSelectableProvider = filteredProviders[0];
+  useEffect(() => {
+    if (!isOpen) return;
+    const currentIndex = filteredProviders.findIndex((provider) => provider.id === providerId);
+    setActiveIndex(currentIndex >= 0 ? currentIndex : 0);
+  }, [filteredProviders, isOpen, providerId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    itemRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, isOpen]);
+
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("w-fit max-w-[128px]")
-      : "ui-font w-[min(220px,100%)] justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
+      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
     triggerClassName,
   );
-  const currentProviderName = currentProvider?.name || providerId;
-  const triggerInputWidth = `${Math.min(
-    Math.max(query.length || currentProviderName.length, 8),
-    18,
-  )}ch`;
 
   const handleTriggerInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -95,10 +114,33 @@ export function ProviderSelector({
       return;
     }
 
-    if (event.key === "Enter" && firstSelectableProvider) {
-      event.preventDefault();
-      onChange(firstSelectableProvider.id);
-      setOpen(false);
+    if (filteredProviders.length === 0) return;
+
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        setActiveIndex((index) => Math.min(index + 1, filteredProviders.length - 1));
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        setActiveIndex((index) => Math.max(index - 1, 0));
+        break;
+      case "Home":
+        event.preventDefault();
+        setActiveIndex(0);
+        break;
+      case "End":
+        event.preventDefault();
+        setActiveIndex(filteredProviders.length - 1);
+        break;
+      case "Enter": {
+        event.preventDefault();
+        const selectedProvider = filteredProviders[activeIndex] ?? filteredProviders[0];
+        if (!selectedProvider) return;
+        onChange(selectedProvider.id);
+        setOpen(false);
+        break;
+      }
     }
   };
 
@@ -119,7 +161,7 @@ export function ProviderSelector({
             triggerClass,
             "cursor-text",
           )}
-          style={isComposer ? { width: triggerInputWidth } : undefined}
+          style={{ width: openTriggerWidth }}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={() => triggerInputRef.current?.focus()}
         >
@@ -172,33 +214,41 @@ export function ProviderSelector({
         onClose={() => setOpen(false)}
         className={cn(
           isComposer
-            ? chatComposerDropdownClassName("w-[min(260px,calc(100vw-16px))] p-0")
-            : "w-[min(320px,calc(100vw-16px))] overflow-hidden rounded-2xl p-0",
+            ? chatComposerDropdownClassName("min-w-0 p-0")
+            : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
-        style={{ maxHeight: "360px" }}
+        style={{ maxHeight: "260px", minWidth: 0, width: dropdownWidth }}
       >
-        <div className="custom-scrollbar-thin max-h-72 overflow-y-auto p-1.5">
+        <div
+          ref={listRef}
+          className="custom-scrollbar-thin max-h-64 overflow-y-auto overscroll-contain p-1"
+          onWheel={(event) => event.stopPropagation()}
+        >
           {filteredProviders.map((provider) => {
             const isCurrent = provider.id === providerId;
-            const hasKey = canUseProviderWithoutApiKey({
-              providerId: provider.id,
-              subscription,
-              hasStoredKey: hasProviderApiKey(provider.id),
-              requiresApiKey: provider.requiresApiKey,
-            });
+            const isActive = filteredProviders[activeIndex]?.id === provider.id;
 
             return (
               <button
                 key={provider.id}
+                ref={(node) => {
+                  const index = filteredProviders.findIndex((item) => item.id === provider.id);
+                  if (index >= 0) itemRefs.current[index] = node;
+                }}
                 type="button"
+                role="option"
+                aria-selected={isCurrent}
                 onClick={() => {
                   onChange(provider.id);
                   setOpen(false);
                 }}
+                onMouseEnter={() => setActiveIndex(filteredProviders.indexOf(provider))}
+                onPointerMove={() => setActiveIndex(filteredProviders.indexOf(provider))}
                 className={cn(
                   dropdownItemClassName(),
                   "mb-1 min-h-8 gap-2 py-2 text-xs last:mb-0",
+                  isActive && "bg-hover",
                   isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                 )}
               >
@@ -208,9 +258,6 @@ export function ProviderSelector({
                   className="shrink-0 text-text-lighter"
                 />
                 <span className="min-w-0 flex-1 truncate text-text">{provider.name}</span>
-                {provider.requiresApiKey && !hasKey && (
-                  <WarningCircle className="shrink-0 text-warning" />
-                )}
                 {isCurrent && <Check className="shrink-0 text-accent" />}
               </button>
             );

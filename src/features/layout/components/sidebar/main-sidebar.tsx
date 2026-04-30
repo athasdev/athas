@@ -14,8 +14,11 @@ import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { cn } from "@/utils/cn";
 
-export const MainSidebar = memo(() => {
-  // Get state from stores
+interface MainSidebarProps {
+  showActivityRail?: boolean;
+}
+
+export const SidebarActivityRail = memo(() => {
   const {
     isGitViewActive,
     isGitHubPRsViewActive,
@@ -24,8 +27,42 @@ export const MainSidebar = memo(() => {
     setActiveView,
     setIsSidebarVisible,
   } = useUIState();
-  const extensionViews = useExtensionViews();
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const { settings } = useSettingsStore();
+
+  const handleSidebarViewChange = (view: typeof activeSidebarView) => {
+    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
+      {
+        isSidebarVisible,
+        isGitViewActive,
+        isGitHubPRsViewActive,
+      },
+      view,
+    );
+
+    setActiveView(nextView);
+    setIsSidebarVisible(nextIsSidebarVisible);
+  };
+
+  return (
+    <div className="flex shrink-0 items-start px-1 pt-0 pb-1.5">
+      <SidebarPaneSelector
+        activeSidebarView={activeSidebarView}
+        isGitViewActive={isGitViewActive}
+        isGitHubPRsViewActive={isGitHubPRsViewActive}
+        coreFeatures={settings.coreFeatures}
+        onViewChange={handleSidebarViewChange}
+        onSearchClick={() => openGlobalSearchBuffer()}
+        orientation="vertical"
+      />
+    </div>
+  );
+});
+
+export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) => {
+  // Get state from stores
+  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView } = useUIState();
+  const extensionViews = useExtensionViews();
 
   // file system store
   const setFiles = useFileSystemStore.use.setFiles?.();
@@ -56,37 +93,18 @@ export const MainSidebar = memo(() => {
   const isDebuggerViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
-  const handleSidebarViewChange = (view: typeof activeSidebarView) => {
-    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
-      {
-        isSidebarVisible,
-        isGitViewActive,
-        isGitHubPRsViewActive,
-      },
-      view,
-    );
-
-    setActiveView(nextView);
-    setIsSidebarVisible(nextIsSidebarVisible);
-  };
+  const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
 
   return (
     <div className="flex h-full min-h-0">
-      {showLeftSidebarTabs ? (
-        <div className="flex shrink-0 border-border/70 border-r p-2">
-          <SidebarPaneSelector
-            activeSidebarView={activeSidebarView}
-            isGitViewActive={isGitViewActive}
-            isGitHubPRsViewActive={isGitHubPRsViewActive}
-            coreFeatures={settings.coreFeatures}
-            onViewChange={handleSidebarViewChange}
-            onSearchClick={() => openGlobalSearchBuffer()}
-            orientation="vertical"
-          />
-        </div>
-      ) : null}
+      {shouldRenderActivityRail ? <SidebarActivityRail /> : null}
 
-      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div
+        className={cn(
+          "min-h-0 min-w-0 flex-1 overflow-hidden",
+          shouldRenderActivityRail && "rounded-lg border border-border/70 bg-primary-bg",
+        )}
+      >
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
             <GitView

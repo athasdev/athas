@@ -10,7 +10,11 @@ pub fn git_push(repo_path: String, branch: Option<String>, remote: String) -> Re
    _git_push(repo_path, branch, remote).into_string_error()
 }
 
-fn execute_remote_git_command(repo_dir: &Path, args: &[&str], operation: &str) -> Result<()> {
+pub(crate) fn execute_remote_git_command(
+   repo_dir: &Path,
+   args: &[&str],
+   operation: &str,
+) -> Result<()> {
    let output = Command::new("git")
       .current_dir(repo_dir)
       .env("GIT_TERMINAL_PROMPT", "0")

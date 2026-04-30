@@ -9,7 +9,7 @@ import {
   writeFile as platformWriteFile,
 } from "./platform";
 import { useFileSystemStore } from "./store";
-import { shouldIgnore } from "./utils";
+import { shouldHideFromFileTree } from "./utils";
 
 export async function readFileContent(path: string): Promise<string> {
   try {
@@ -65,8 +65,7 @@ export async function readDirectoryContents(path: string): Promise<FileEntry[]> 
 
     const filteredEntries = (entries as any[]).filter((entry: any) => {
       const name = entry.name || "Unknown";
-      const isDir = entry.is_dir || false;
-      return !shouldIgnore(name, isDir);
+      return !shouldHideFromFileTree(name);
     });
 
     const entriesWithSymlinkInfo = await Promise.all(

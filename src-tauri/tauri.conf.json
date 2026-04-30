@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
-  "version": "0.4.6-alpha.2",
+  "version": "0.4.7",
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bunx vp dev",
@@ -40,7 +40,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "appimage", "deb", "dmg", "nsis", "rpm"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/prod/32x32.png",
@@ -60,18 +60,7 @@
       "providerShortName": null,
       "entitlements": null
     },
-    "linux": {
-      "appimage": {
-        "files": {
-          "/usr/lib/x86_64-linux-gnu/libfreetype.so.6": "/usr/lib/"
-        }
-      }
-    },
-    "windows": {
-      "wix": {
-        "version": "0.4.6002"
-      }
-    }
+    "linux": {}
   },
   "plugins": {
     "deep-link": {

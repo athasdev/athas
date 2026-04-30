@@ -59,7 +59,7 @@ pub fn check_cli_installed() -> Result<bool, String> {
 /// Resolves file/folder arguments to absolute paths and opens them via deep-link URLs.
 fn app_identifier_suffix(app: &AppHandle) -> Option<&'static str> {
    match app.config().identifier.as_str() {
-      "com.code.athas.alpha" => Some("alpha"),
+      "com.code.athas.preview" => Some("preview"),
       "com.code.athas.dev" => Some("dev"),
       _ => None,
    }
@@ -67,7 +67,7 @@ fn app_identifier_suffix(app: &AppHandle) -> Option<&'static str> {
 
 fn deep_link_scheme(app: &AppHandle) -> &'static str {
    match app_identifier_suffix(app) {
-      Some("alpha") => "athas-alpha",
+      Some("preview") => "athas-preview",
       Some("dev") => "athas-dev",
       _ => "athas",
    }
@@ -386,7 +386,7 @@ foreach ($arg in $args) {{
 #[cfg(target_os = "macos")]
 fn macos_app_name(app: &AppHandle) -> &'static str {
    match app_identifier_suffix(app) {
-      Some("alpha") => "Athas Preview",
+      Some("preview") => "Athas Preview",
       Some("dev") => "Athas Dev",
       _ => "Athas",
    }

@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
+import {
+  FILE_TREE_DENSITY_OPTIONS,
+  type FileTreeDensity,
+} from "@/features/file-explorer/lib/file-tree-density";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "../settings-section";
+import NumberInput from "@/ui/number-input";
+import Select from "@/ui/select";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import { controlFieldSurfaceVariants } from "@/ui/control-field";
+import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 
 export const FileTreeSettings = () => {
@@ -38,6 +45,100 @@ export const FileTreeSettings = () => {
 
   return (
     <div className="space-y-4">
+      <Section title="Display">
+        <SettingRow
+          label="Indent Size"
+          description="Pixels per nesting level"
+          onReset={() =>
+            updateSetting("fileTreeIndentSize", getDefaultSetting("fileTreeIndentSize"))
+          }
+          canReset={settings.fileTreeIndentSize !== getDefaultSetting("fileTreeIndentSize")}
+        >
+          <NumberInput
+            min="8"
+            max="32"
+            value={settings.fileTreeIndentSize}
+            onChange={(val) => updateSetting("fileTreeIndentSize", val)}
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
+            size="xs"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Density"
+          description="Choose file tree row spacing"
+          onReset={() => updateSetting("fileTreeDensity", getDefaultSetting("fileTreeDensity"))}
+          canReset={settings.fileTreeDensity !== getDefaultSetting("fileTreeDensity")}
+        >
+          <Select
+            value={settings.fileTreeDensity}
+            options={FILE_TREE_DENSITY_OPTIONS}
+            onChange={(value) => updateSetting("fileTreeDensity", value as FileTreeDensity)}
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="xs"
+            variant="secondary"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Compact Folders"
+          description="Collapse single-child folder chains"
+          onReset={() =>
+            updateSetting("compactFoldersInFileTree", getDefaultSetting("compactFoldersInFileTree"))
+          }
+          canReset={
+            settings.compactFoldersInFileTree !== getDefaultSetting("compactFoldersInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.compactFoldersInFileTree}
+            onChange={(checked) => updateSetting("compactFoldersInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Hidden Files"
+          description="Show dotfiles and hidden directories"
+          onReset={() =>
+            updateSetting(
+              "showHiddenFilesInFileTree",
+              getDefaultSetting("showHiddenFilesInFileTree"),
+            )
+          }
+          canReset={
+            settings.showHiddenFilesInFileTree !== getDefaultSetting("showHiddenFilesInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showHiddenFilesInFileTree}
+            onChange={(checked) => updateSetting("showHiddenFilesInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Gitignored Files"
+          description="Show files matched by .gitignore"
+          onReset={() =>
+            updateSetting(
+              "showGitignoredFilesInFileTree",
+              getDefaultSetting("showGitignoredFilesInFileTree"),
+            )
+          }
+          canReset={
+            settings.showGitignoredFilesInFileTree !==
+            getDefaultSetting("showGitignoredFilesInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showGitignoredFilesInFileTree}
+            onChange={(checked) => updateSetting("showGitignoredFilesInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Filters">
         <SettingRow
           label="Hidden Files"

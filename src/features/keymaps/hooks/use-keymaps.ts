@@ -28,6 +28,7 @@ const NATIVE_MENU_ACCELERATORS = [
   "cmd+q",
   "cmd+f",
   "cmd+alt+f",
+  "cmd+/",
   "cmd+shift+p",
   "cmd+b",
   "cmd+j",

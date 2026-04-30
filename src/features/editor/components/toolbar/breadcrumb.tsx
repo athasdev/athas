@@ -20,6 +20,7 @@ export interface BreadcrumbProps {
   extraLeftContent?: ReactNode;
   showDefaultActions?: boolean;
   interactive?: boolean;
+  showPath?: boolean;
 }
 
 export default function Breadcrumb({
@@ -30,6 +31,7 @@ export default function Breadcrumb({
   extraLeftContent,
   showDefaultActions = true,
   interactive = true,
+  showPath = true,
 }: BreadcrumbProps = {}) {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
@@ -156,7 +158,7 @@ export default function Breadcrumb({
     <>
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
         <div className="ui-font flex min-w-0 items-center gap-2 text-text-lighter text-xs">
-          {showBreadcrumbPath ? (
+          {showPath && showBreadcrumbPath ? (
             <FilePathBreadcrumb filePath={filePath} interactive={interactive} />
           ) : null}
           {extensionActions.left.map((action) => (

@@ -1,5 +1,6 @@
 import type { Diagnostic as LSPDiagnostic } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import type { Diagnostic as LintDiagnostic } from "@/features/editor/linter/linter-service";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { Diagnostic } from "../types/diagnostics";
 
@@ -45,6 +46,28 @@ export function convertLSPDiagnostic(filePath: string, lspDiag: LSPDiagnostic): 
     message: lspDiag.message,
     source: lspDiag.source,
     code: lspDiag.code?.toString(),
+  };
+}
+
+/**
+ * Convert external linter diagnostics into the same 0-based model used by LSP diagnostics.
+ */
+export function convertLintDiagnostic(filePath: string, lintDiag: LintDiagnostic): Diagnostic {
+  const line = Math.max(0, lintDiag.line - 1);
+  const column = Math.max(0, lintDiag.column - 1);
+  const endLine = Math.max(line, (lintDiag.endLine ?? lintDiag.line) - 1);
+  const endColumn = Math.max(column + 1, (lintDiag.endColumn ?? lintDiag.column + 1) - 1);
+
+  return {
+    severity: lintDiag.severity === "hint" ? "info" : lintDiag.severity,
+    filePath,
+    line,
+    column,
+    endLine,
+    endColumn,
+    message: lintDiag.message,
+    source: lintDiag.source ?? "linter",
+    code: lintDiag.code,
   };
 }
 
