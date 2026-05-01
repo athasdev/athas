@@ -11,7 +11,7 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
-type ReleaseChannel = "preview";
+type ReleaseChannel = "alpha" | "preview";
 type ReleaseBump = "patch" | "minor" | "major";
 const VERSIONED_FILES = [
   "package.json",
@@ -48,7 +48,7 @@ function info(message: string) {
 }
 
 function parseVersion(version: string): ParsedVersion {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(preview)\.(\d+))?$/);
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(alpha|preview)\.(\d+))?$/);
   if (!match) {
     error(`Invalid version format: ${version}`);
   }
@@ -78,7 +78,7 @@ function formatVersion(version: ParsedVersion): string {
 
 function getReleaseCommitMessage(version: ParsedVersion): string {
   if (version.prerelease) {
-    return "Prepare preview release";
+    return `Prepare ${version.prerelease.channel} release`;
   }
 
   return "Prepare release";
@@ -122,9 +122,9 @@ function bumpVersion(currentVersion: string, args: string[]): string {
     return formatVersion(baseVersion);
   }
 
-  if (channel === "preview") {
+  if (channel === "alpha" || channel === "preview") {
     const shouldIncrementExisting =
-      current.prerelease?.channel === "preview" &&
+      current.prerelease?.channel === channel &&
       bump === "patch" &&
       current.major === baseVersion.major &&
       current.minor === baseVersion.minor &&
@@ -133,13 +133,13 @@ function bumpVersion(currentVersion: string, args: string[]): string {
     return formatVersion({
       ...baseVersion,
       prerelease: {
-        channel: "preview",
+        channel,
         number: shouldIncrementExisting ? current.prerelease.number + 1 : 1,
       },
     });
   }
 
-  error("Invalid release channel. Use: stable or preview");
+  error("Invalid release channel. Use: stable, alpha, or preview");
 }
 
 async function getCommitsSinceLastTag(): Promise<string[]> {

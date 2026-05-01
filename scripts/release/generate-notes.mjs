@@ -19,15 +19,15 @@ async function text(command) {
 }
 
 async function getPreviousTag(tag) {
-  const isPreview = /-preview\.\d+$/.test(tag);
+  const isPrerelease = /-(?:alpha|preview)\.\d+$/.test(tag);
   const tags = await text("git tag --sort=-creatordate --merged HEAD");
   return tags
     .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean)
     .filter((entry) => entry !== tag)
-    .filter((entry) => /^v\d+\.\d+\.\d+(?:-preview\.\d+)?$/.test(entry))
-    .find((entry) => isPreview || /^v\d+\.\d+\.\d+$/.test(entry));
+    .filter((entry) => /^v\d+\.\d+\.\d+(?:-(?:alpha|preview)\.\d+)?$/.test(entry))
+    .find((entry) => isPrerelease || /^v\d+\.\d+\.\d+$/.test(entry));
 }
 
 async function getComparableRevision(tag) {
@@ -62,7 +62,10 @@ function contributorKey(commit) {
 
 function formatBody(tag, previousTag, commits) {
   const version = tag.replace(/^v/, "");
-  const isPrerelease = /-preview\.\d+$/.test(version);
+  const prereleaseMatch = version.match(/-(alpha|preview)\.\d+$/);
+  const releaseKind = prereleaseMatch
+    ? `${prereleaseMatch[1][0].toUpperCase()}${prereleaseMatch[1].slice(1)} release`
+    : "Stable release";
   const compareRange = previousTag ? `${previousTag}...${tag}` : tag;
   const contributors = new Map();
   const lines = [];
@@ -81,9 +84,7 @@ function formatBody(tag, previousTag, commits) {
   lines.push(`## Athas ${tag}`);
   lines.push("");
   lines.push(
-    isPrerelease
-      ? `Preview release generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`
-      : `Stable release generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`,
+    `${releaseKind} generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`,
   );
   lines.push("");
   lines.push("### Changes");
@@ -138,7 +139,7 @@ const previousTag = await getPreviousTag(tag);
 const commits = await getCommits(previousTag, tag);
 const releaseBody = formatBody(tag, previousTag, commits);
 const version = tag.replace(/^v/, "");
-const isPrerelease = /-preview\.\d+$/.test(version) ? "true" : "false";
+const isPrerelease = /-(?:alpha|preview)\.\d+$/.test(version) ? "true" : "false";
 const releaseName = `Athas ${tag}`;
 
 if (outputPath) {

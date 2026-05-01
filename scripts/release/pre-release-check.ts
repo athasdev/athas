@@ -53,7 +53,7 @@ function parseStableVersion(
 }
 
 function parsePrerelease(version: string): { channel: string; number: number } | null {
-  const match = version.match(/-(preview)\.(\d+)$/);
+  const match = version.match(/-(alpha|preview)\.(\d+)$/);
   if (!match) {
     return null;
   }
@@ -163,6 +163,7 @@ async function main() {
     log(`  Stable patch:    v${major}.${minor}.${patch + 1}`, "dim");
     log(`  Stable minor:    v${major}.${minor + 1}.0`, "dim");
     log(`  Stable major:    v${major + 1}.0.0`, "dim");
+    log(`  Alpha minor:     v${major}.${minor + 1}.0-alpha.1`, "dim");
     log(`  Preview patch:   v${major}.${minor}.${patch + 1}-preview.1`, "dim");
     log(`  Preview minor:   v${major}.${minor + 1}.0-preview.1`, "dim");
     log(`  Preview major:   v${major + 1}.0.0-preview.1`, "dim");
