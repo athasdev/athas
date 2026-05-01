@@ -35,13 +35,9 @@
     "release": "bun scripts/release.ts stable patch",
     "release:stable": "bun scripts/release.ts stable patch",
     "release:preview": "bun scripts/release.ts preview patch",
-    "release:alpha": "bun scripts/release.ts alpha patch",
     "release:patch": "bun scripts/release.ts stable patch",
     "release:minor": "bun scripts/release.ts stable minor",
     "release:major": "bun scripts/release.ts stable major",
-    "release:alpha:patch": "bun scripts/release.ts alpha patch",
-    "release:alpha:minor": "bun scripts/release.ts alpha minor",
-    "release:alpha:major": "bun scripts/release.ts alpha major",
     "release:preview:patch": "bun scripts/release.ts preview patch",
     "release:preview:minor": "bun scripts/release.ts preview minor",
     "release:preview:major": "bun scripts/release.ts preview major"

@@ -44,14 +44,14 @@ function requireArg(name) {
 }
 
 function versionFromTag(tag) {
-  if (!/^v\d+\.\d+\.\d+(?:-(?:alpha|preview)\.\d+)?$/.test(tag)) {
+  if (!/^v\d+\.\d+\.\d+(?:-preview\.\d+)?$/.test(tag)) {
     throw new Error(`Invalid release tag: ${tag}`);
   }
   return tag.slice(1);
 }
 
 function channelFromTag(tag) {
-  return /-(?:alpha|preview)\.\d+$/.test(tag) ? "preview" : "stable";
+  return tag.includes("-preview.") ? "preview" : "stable";
 }
 
 function escapeRegExp(value) {
