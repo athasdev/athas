@@ -2,6 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { extensionInstaller } from "../installer/extension-installer";
+import {
+  activateExtensionContributions,
+  deactivateExtensionContributions,
+} from "../runtime/extension-contribution-runtime";
 import { extensionRegistry } from "./extension-registry";
 import {
   buildRuntimeManifest,
@@ -158,6 +162,7 @@ export async function installExtensionLifecycle(params: {
   });
 
   await reloadInstalledExtensions();
+  await activateExtensionContributions(extensionId, extension.manifest);
   onNonLanguageInstalled();
 }
 
@@ -190,6 +195,7 @@ export async function uninstallExtensionLifecycle(params: {
     return;
   }
 
+  await deactivateExtensionContributions(extensionId, extension.manifest);
   await invoke("uninstall_extension_new", { extensionId });
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
@@ -205,8 +211,13 @@ export async function updateExtensionLifecycle(params: {
 
   const languageIds = extension.manifest.languages?.map((language) => language.id) || [];
 
-  await unloadLanguageProviders(extensionId, languageIds);
-  await uninstallLanguageArtifacts(languageIds);
+  if (languageIds.length > 0) {
+    await unloadLanguageProviders(extensionId, languageIds);
+    await uninstallLanguageArtifacts(languageIds);
+  } else {
+    await deactivateExtensionContributions(extensionId, extension.manifest);
+  }
+
   extensionRegistry.unregisterExtension(extensionId);
 
   clearInstalledStateForUpdate();

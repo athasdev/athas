@@ -14,3 +14,8 @@ export interface IconResult {
   svg?: string;
   component?: React.ReactNode;
 }
+
+export interface IconThemeSource {
+  extensionId: string;
+  isBundled?: boolean;
+}

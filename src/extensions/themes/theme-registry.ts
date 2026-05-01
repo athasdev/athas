@@ -1,16 +1,22 @@
-import type { ThemeDefinition, ThemeRegistryAPI } from "./types";
+import type { ThemeDefinition, ThemeRegistryAPI, ThemeSource } from "./types";
 
 class ThemeRegistry implements ThemeRegistryAPI {
   private themes = new Map<string, ThemeDefinition>();
+  private themeSources = new Map<string, ThemeSource>();
   private currentTheme: string | null = null;
   private changeCallbacks = new Set<(themeId: string) => void>();
   private registryCallbacks = new Set<() => void>();
   private isReady = false;
   private readyCallbacks = new Set<() => void>();
 
-  registerTheme(theme: ThemeDefinition): void {
+  registerTheme(theme: ThemeDefinition, source?: ThemeSource): void {
     console.log("Theme registry: Registering theme", theme.id, theme.name);
     this.themes.set(theme.id, theme);
+    if (source) {
+      this.themeSources.set(theme.id, source);
+    } else {
+      this.themeSources.delete(theme.id);
+    }
     console.log("Theme registry: Total themes after registration:", this.themes.size);
     console.log("Theme registry: All themes:", Array.from(this.themes.keys()));
     this.notifyRegistryChange();
@@ -18,14 +24,37 @@ class ThemeRegistry implements ThemeRegistryAPI {
 
   unregisterTheme(id: string): void {
     this.themes.delete(id);
+    this.themeSources.delete(id);
     if (this.currentTheme === id) {
       this.currentTheme = null;
     }
     this.notifyRegistryChange();
   }
 
+  unregisterThemesByExtension(extensionId: string): void {
+    const themeIds = Array.from(this.themeSources.entries())
+      .filter(([, source]) => source.extensionId === extensionId)
+      .map(([themeId]) => themeId);
+
+    for (const themeId of themeIds) {
+      this.themes.delete(themeId);
+      this.themeSources.delete(themeId);
+      if (this.currentTheme === themeId) {
+        this.currentTheme = null;
+      }
+    }
+
+    if (themeIds.length > 0) {
+      this.notifyRegistryChange();
+    }
+  }
+
   getTheme(id: string): ThemeDefinition | undefined {
     return this.themes.get(id);
+  }
+
+  getThemeSource(id: string): ThemeSource | undefined {
+    return this.themeSources.get(id);
   }
 
   getAllThemes(): ThemeDefinition[] {

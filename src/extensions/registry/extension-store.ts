@@ -6,6 +6,7 @@ import { extensionInstaller } from "../installer/extension-installer";
 import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
 import { loadMarketplaceContributionExtensions } from "../marketplace/marketplace-extensions";
+import { activateExtensionContributions } from "../runtime/extension-contribution-runtime";
 import { extensionRegistry } from "./extension-registry";
 import {
   findExtensionForFile,
@@ -138,6 +139,14 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             indexedDBInstalled,
             availableExtensions,
           });
+
+          await Promise.all(
+            Array.from(installedExtensions.keys()).map(async (extensionId) => {
+              const extension = availableExtensions.get(extensionId);
+              if (!extension) return;
+              await activateExtensionContributions(extensionId, extension.manifest);
+            }),
+          );
 
           set((state) => {
             state.installedExtensions = installedExtensions;
@@ -368,8 +377,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
       updateExtension: async (extensionId: string) => {
         const extension = get().availableExtensions.get(extensionId);
-        if (!extension?.manifest.languages?.[0]) {
-          throw new Error(`Extension ${extensionId} not found or has no languages`);
+        if (!extension) {
+          throw new Error(`Extension ${extensionId} not found`);
         }
 
         if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
