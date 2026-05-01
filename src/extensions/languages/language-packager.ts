@@ -255,6 +255,10 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
 
   for (const [folder, manifest] of Object.entries(manifests)) {
     try {
+      if (!manifest.languages?.length) {
+        continue;
+      }
+
       const syntheticPath = `/extensions/${folder}/extension.json`;
       const entry = convertLanguageManifest(syntheticPath, manifest);
       packagedEntries.push(entry);
