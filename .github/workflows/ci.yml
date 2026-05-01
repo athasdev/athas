@@ -15,7 +15,7 @@ jobs:
   bun:
     if: github.repository == 'athasdev/athas'
     name: Bun — typecheck, frontend check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
   rust:
     if: github.repository == 'athasdev/athas'
     name: Rust — fmt, cargo check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       CARGO_TERM_COLOR: always
     steps:
