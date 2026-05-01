@@ -5,6 +5,7 @@ import { getDatabaseProviderExtensions } from "../database/database-provider-ext
 import { extensionInstaller } from "../installer/extension-installer";
 import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
+import { loadMarketplaceContributionExtensions } from "../marketplace/marketplace-extensions";
 import { extensionRegistry } from "./extension-registry";
 import {
   findExtensionForFile,
@@ -73,10 +74,18 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           const languageExtensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
             packagedExtensions.length > 0 ? packagedExtensions : fallbackExtensions,
           );
-          const extensions: ExtensionManifest[] = [
+          const marketplaceExtensions = await loadMarketplaceContributionExtensions();
+          const extensionById = new Map<string, ExtensionManifest>();
+
+          for (const manifest of [
             ...languageExtensions,
             ...getDatabaseProviderExtensions(),
-          ];
+            ...marketplaceExtensions,
+          ]) {
+            extensionById.set(manifest.id, manifest);
+          }
+
+          const extensions = Array.from(extensionById.values());
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
