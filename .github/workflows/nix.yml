@@ -34,7 +34,7 @@ jobs:
 
       - name: Validate dev tools
         run: |
-          nix develop --no-write-lock-file --command bash -lc '
+          nix develop --no-write-lock-file --command bash -c '
             bun --version
             node --version
             rustc --version
