@@ -260,9 +260,43 @@ export const ExtensionsSettings = () => {
           runtimeIssues: ext.runtimeIssues,
         });
       }
+
+      if (ext.manifest.themes && ext.manifest.themes.length > 0) {
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "theme",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+        });
+      }
+
+      if (ext.manifest.iconThemes && ext.manifest.iconThemes.length > 0) {
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "icon-theme",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+        });
+      }
     }
 
     themeRegistry.getAllThemes().forEach((theme) => {
+      if (themeRegistry.getThemeSource(theme.id)) {
+        return;
+      }
+
       allExtensions.push({
         id: theme.id,
         name: theme.name,
@@ -274,6 +308,10 @@ export const ExtensionsSettings = () => {
     });
 
     iconThemeRegistry.getAllThemes().forEach((iconTheme) => {
+      if (iconThemeRegistry.getThemeSource(iconTheme.id)) {
+        return;
+      }
+
       allExtensions.push({
         id: iconTheme.id,
         name: iconTheme.name,
