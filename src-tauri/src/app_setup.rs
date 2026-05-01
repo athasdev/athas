@@ -6,7 +6,6 @@ use crate::{
    terminal::ManagedTerminalManager as TerminalManager,
 };
 use athas_ai::AcpAgentBridge;
-use athas_database::ConnectionManager;
 use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
@@ -82,7 +81,6 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(DebugManager::new(app.handle().clone()));
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
-   app.manage(Arc::new(ConnectionManager::new()));
    app.manage(FffSearchState::new());
 }
 

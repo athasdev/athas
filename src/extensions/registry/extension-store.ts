@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { getDatabaseProviderExtensions } from "../database/database-provider-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
 import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
@@ -69,9 +70,13 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           // Load language extensions from packager (all installable from server)
           const packagedExtensions = getPackagedLanguageExtensions();
           const fallbackExtensions = getFullExtensions();
-          const extensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
+          const languageExtensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
             packagedExtensions.length > 0 ? packagedExtensions : fallbackExtensions,
           );
+          const extensions: ExtensionManifest[] = [
+            ...languageExtensions,
+            ...getDatabaseProviderExtensions(),
+          ];
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
@@ -186,55 +191,59 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          if (extension.manifest.languages && extension.manifest.languages.length > 0) {
-            await installExtensionLifecycle({
-              extensionId,
-              extension,
-              onProgress: (progress) => {
-                set((state) => {
-                  const ext = state.availableExtensions.get(extensionId);
-                  if (ext) {
-                    ext.installProgress = progress;
-                  }
-                });
-              },
-              onLanguageInstalled: (runtimeManifest, runtimeIssues) => {
-                set((state) => {
-                  const ext = state.availableExtensions.get(extensionId);
-                  if (ext) {
-                    ext.isInstalling = false;
-                    ext.isInstalled = true;
-                    ext.installProgress = 100;
-                    ext.installError = undefined;
-                    ext.manifest = runtimeManifest;
-                    ext.runtimeIssues = runtimeIssues || [];
-                    state.installedExtensions.set(
-                      extensionId,
-                      buildInstalledExtensionMetadata(extensionId, ext),
-                    );
-                  }
-                  state.availableExtensions = new Map(state.availableExtensions);
-                });
-              },
-              onNonLanguageInstalled: () => {
-                set((state) => {
-                  const ext = state.availableExtensions.get(extensionId);
-                  if (ext) {
-                    ext.isInstalling = false;
-                    ext.isInstalled = true;
-                    ext.installProgress = 100;
-                  }
-                });
-              },
-              reloadInstalledExtensions: get().actions.loadInstalledExtensions,
-            });
+          await installExtensionLifecycle({
+            extensionId,
+            extension,
+            onProgress: (progress) => {
+              set((state) => {
+                const ext = state.availableExtensions.get(extensionId);
+                if (ext) {
+                  ext.installProgress = progress;
+                }
+              });
+            },
+            onLanguageInstalled: (runtimeManifest, runtimeIssues) => {
+              set((state) => {
+                const ext = state.availableExtensions.get(extensionId);
+                if (ext) {
+                  ext.isInstalling = false;
+                  ext.isInstalled = true;
+                  ext.installProgress = 100;
+                  ext.installError = undefined;
+                  ext.manifest = runtimeManifest;
+                  ext.runtimeIssues = runtimeIssues || [];
+                  state.installedExtensions.set(
+                    extensionId,
+                    buildInstalledExtensionMetadata(extensionId, ext),
+                  );
+                }
+                state.availableExtensions = new Map(state.availableExtensions);
+              });
+            },
+            onNonLanguageInstalled: () => {
+              set((state) => {
+                const ext = state.availableExtensions.get(extensionId);
+                if (ext) {
+                  ext.isInstalling = false;
+                  ext.isInstalled = true;
+                  ext.installProgress = 100;
+                  ext.installError = undefined;
+                  state.installedExtensions.set(
+                    extensionId,
+                    buildInstalledExtensionMetadata(extensionId, ext),
+                  );
+                }
+                state.availableExtensions = new Map(state.availableExtensions);
+              });
+            },
+            reloadInstalledExtensions: get().actions.loadInstalledExtensions,
+          });
 
-            void recordExtensionLifecycleTelemetry({
-              type: "extension_install",
-              extensionId,
-              version: extension.manifest.version,
-            });
-          }
+          void recordExtensionLifecycleTelemetry({
+            type: "extension_install",
+            extensionId,
+            version: extension.manifest.version,
+          });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
 

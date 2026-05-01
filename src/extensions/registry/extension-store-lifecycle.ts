@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
+import { PLATFORM_ARCH } from "@/utils/platform";
 import { extensionInstaller } from "../installer/extension-installer";
 import { extensionRegistry } from "./extension-registry";
 import {
@@ -9,6 +10,7 @@ import {
   resolveToolPaths,
 } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
+import type { PlatformPackage } from "../types/extension-manifest";
 
 async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {
   if (!extension.manifest.languages?.length) {
@@ -61,6 +63,28 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
       await extensionInstaller.uninstallLanguage(languageId);
     }),
   );
+}
+
+function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage {
+  const installation = extension.manifest.installation;
+  const platformPackage = installation?.platformArch?.[PLATFORM_ARCH];
+  const resolvedPackage =
+    platformPackage ??
+    (installation
+      ? {
+          downloadUrl: installation.downloadUrl,
+          checksum: installation.checksum,
+          size: installation.size,
+        }
+      : undefined);
+
+  if (!resolvedPackage?.downloadUrl) {
+    throw new Error(
+      `No compatible package for ${extension.manifest.displayName} on ${PLATFORM_ARCH}`,
+    );
+  }
+
+  return resolvedPackage;
 }
 
 export async function installExtensionLifecycle(params: {
@@ -124,11 +148,13 @@ export async function installExtensionLifecycle(params: {
     return;
   }
 
+  const extensionPackage = resolveExtensionPackage(extension);
+
   await invoke("install_extension_from_url", {
     extensionId,
-    url: extension.manifest.installation?.downloadUrl,
-    checksum: extension.manifest.installation?.checksum,
-    size: extension.manifest.installation?.size,
+    url: extensionPackage.downloadUrl,
+    checksum: extensionPackage.checksum,
+    size: extensionPackage.size,
   });
 
   await reloadInstalledExtensions();

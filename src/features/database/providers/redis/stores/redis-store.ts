@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -82,7 +82,7 @@ const useRedisStoreBase = create<RedisState & { actions: RedisActions }>()(
         set({ isLoading: true, error: null });
 
         try {
-          const result = (await invoke("redis_scan_keys", {
+          const result = (await invokeDatabaseProvider("redis_scan_keys", {
             connectionId: state.connectionId,
             pattern: scanPattern,
             cursor,
@@ -113,7 +113,7 @@ const useRedisStoreBase = create<RedisState & { actions: RedisActions }>()(
         set({ selectedKey: key, isLoading: true, error: null });
 
         try {
-          const result = (await invoke("redis_get_value", {
+          const result = (await invokeDatabaseProvider("redis_get_value", {
             connectionId,
             key,
           })) as { type: string; value: unknown };
@@ -134,7 +134,7 @@ const useRedisStoreBase = create<RedisState & { actions: RedisActions }>()(
         if (!connectionId) return;
 
         try {
-          await invoke("redis_set_value", {
+          await invokeDatabaseProvider("redis_set_value", {
             connectionId,
             key,
             value,
@@ -152,7 +152,7 @@ const useRedisStoreBase = create<RedisState & { actions: RedisActions }>()(
         if (!connectionId) return;
 
         try {
-          await invoke("redis_delete_key", { connectionId, key });
+          await invokeDatabaseProvider("redis_delete_key", { connectionId, key });
           set((s) => {
             s.keys = s.keys.filter((k) => k.key !== key);
             if (s.selectedKey === key) {
@@ -172,7 +172,7 @@ const useRedisStoreBase = create<RedisState & { actions: RedisActions }>()(
         if (!connectionId) return;
 
         try {
-          const info = (await invoke("redis_get_info", {
+          const info = (await invokeDatabaseProvider("redis_get_info", {
             connectionId,
           })) as Record<string, string>;
           set({ serverInfo: info });

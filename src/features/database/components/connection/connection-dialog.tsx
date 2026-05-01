@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
@@ -21,10 +22,40 @@ interface ConnectionDialogProps {
   onClose: () => void;
 }
 
-const CONNECTION_DB_TYPES: DatabaseType[] = ["sqlite", "postgres", "mysql", "mongodb", "redis"];
+const CONNECTION_DB_TYPES: DatabaseType[] = [
+  "sqlite",
+  "duckdb",
+  "postgres",
+  "mysql",
+  "mongodb",
+  "redis",
+];
+
+function getInstalledDatabaseTypes(
+  availableExtensions: Map<string, { manifest: { databaseProviders?: Array<{ id: string }> } }>,
+  isExtensionInstalled: (extensionId: string) => boolean,
+): DatabaseType[] {
+  const installedTypes = new Set<DatabaseType>();
+
+  for (const [extensionId, extension] of availableExtensions) {
+    if (!isExtensionInstalled(extensionId)) {
+      continue;
+    }
+
+    for (const provider of extension.manifest.databaseProviders ?? []) {
+      if (CONNECTION_DB_TYPES.includes(provider.id as DatabaseType)) {
+        installedTypes.add(provider.id as DatabaseType);
+      }
+    }
+  }
+
+  return CONNECTION_DB_TYPES.filter((type) => installedTypes.has(type));
+}
 
 export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
   const { actions } = useConnectionStore();
+  const availableExtensions = useExtensionStore.use.availableExtensions();
+  const isExtensionInstalled = useExtensionStore.use.actions().isExtensionInstalled;
   const [mode, setMode] = useState<"form" | "string">("form");
   const [dbType, setDbType] = useState<DatabaseType>("sqlite");
   const [name, setName] = useState("");
@@ -50,6 +81,16 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       return () => document.removeEventListener("keydown", handleEscape);
     }
   }, [isOpen, onClose]);
+
+  const installedDbTypes = getInstalledDatabaseTypes(availableExtensions, isExtensionInstalled);
+
+  useEffect(() => {
+    if (!isOpen || installedDbTypes.length === 0 || installedDbTypes.includes(dbType)) {
+      return;
+    }
+
+    handleDbTypeChange(installedDbTypes[0]);
+  }, [dbType, installedDbTypes, isOpen]);
 
   if (!isOpen) return null;
 
@@ -158,7 +199,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       }}
       footer={
         <>
-          {!isFileBased && (
+          {installedDbTypes.length > 0 && !isFileBased && (
             <Button
               type="button"
               variant="ghost"
@@ -176,7 +217,11 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             type="button"
             size="sm"
             onClick={handleConnect}
-            disabled={isConnecting || (isFileBased ? !filePath.trim() : false)}
+            disabled={
+              installedDbTypes.length === 0 ||
+              isConnecting ||
+              (isFileBased ? !filePath.trim() : false)
+            }
             className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
           >
@@ -186,10 +231,16 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         </>
       }
     >
+      {installedDbTypes.length === 0 ? (
+        <div className="rounded-lg border border-border bg-secondary-bg/35 px-3 py-2 text-text-lighter text-sm">
+          Install a database provider from Settings &gt; Extensions to connect to databases.
+        </div>
+      ) : null}
+
       <Select
         value={dbType}
         onChange={(value) => handleDbTypeChange(value as DatabaseType)}
-        options={CONNECTION_DB_TYPES.map((type) => ({
+        options={installedDbTypes.map((type) => ({
           value: type,
           label: PROVIDER_REGISTRY[type].label,
         }))}

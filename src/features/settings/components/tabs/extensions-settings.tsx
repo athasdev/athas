@@ -243,6 +243,23 @@ export const ExtensionsSettings = () => {
           runtimeIssues: ext.runtimeIssues,
         });
       }
+
+      if (ext.manifest.databaseProviders && ext.manifest.databaseProviders.length > 0) {
+        const provider = ext.manifest.databaseProviders[0];
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "database",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          extensions: provider.fileExtensions?.map((item) => item.replace(".", "")),
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+        });
+      }
     }
 
     themeRegistry.getAllThemes().forEach((theme) => {
@@ -265,15 +282,6 @@ export const ExtensionsSettings = () => {
         isInstalled: true,
         version: "1.0.0",
       });
-    });
-
-    allExtensions.push({
-      id: "sqlite-viewer",
-      name: "SQLite Viewer",
-      description: "View and query SQLite databases",
-      category: "database",
-      isInstalled: true,
-      version: "1.0.0",
     });
 
     for (const skill of settings.aiSkills) {

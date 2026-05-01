@@ -108,17 +108,26 @@ impl ExtensionInstaller {
          },
       );
 
-      let checksum = sha256::digest(bytes.as_ref());
-      if checksum != download_info.checksum {
-         anyhow::bail!(
-            "Checksum mismatch for extension {}: expected {}, got {}",
-            extension_id,
-            download_info.checksum,
-            checksum
-         );
+      if !download_info.checksum.is_empty() {
+         let checksum = sha256::digest(bytes.as_ref());
+         if checksum != download_info.checksum {
+            anyhow::bail!(
+               "Checksum mismatch for extension {}: expected {}, got {}",
+               extension_id,
+               download_info.checksum,
+               checksum
+            );
+         }
       }
 
-      log::info!("Checksum verified for extension {}", extension_id);
+      if download_info.checksum.is_empty() {
+         log::info!(
+            "Checksum verification skipped for extension {}",
+            extension_id
+         );
+      } else {
+         log::info!("Checksum verified for extension {}", extension_id);
+      }
 
       // Save to temporary file
       let temp_dir = std::env::temp_dir();

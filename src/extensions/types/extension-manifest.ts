@@ -29,6 +29,9 @@ export interface ExtensionManifest {
   // Language support
   languages?: LanguageContribution[];
 
+  // Database provider sidecars
+  databaseProviders?: DatabaseProviderContribution[];
+
   // LSP configuration
   lsp?: LspConfiguration;
 
@@ -80,6 +83,7 @@ export interface ExtensionManifest {
 
 export type ExtensionCategory =
   | "Language"
+  | "Database"
   | "Linter"
   | "Formatter"
   | "Theme"
@@ -153,6 +157,17 @@ export interface PlatformArchExecutable {
   "linux-x64"?: string;
   "linux-arm64"?: string;
   "win32-x64"?: string;
+}
+
+export type DatabaseProviderId = "sqlite" | "duckdb" | "postgres" | "mysql" | "mongodb" | "redis";
+
+export interface DatabaseProviderContribution {
+  id: DatabaseProviderId;
+  label: string;
+  isFileBased: boolean;
+  defaultPort?: number;
+  fileExtensions?: string[];
+  sidecar: PlatformArchExecutable;
 }
 
 export interface PlatformExecutable {
