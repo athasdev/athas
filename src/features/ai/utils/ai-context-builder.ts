@@ -1,5 +1,40 @@
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
+import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content";
+
+function formatContextPath(path: string, projectRoot?: string) {
+  return projectRoot && path.startsWith(projectRoot) ? path.slice(projectRoot.length + 1) : path;
+}
+
+function formatOpenContextSummary(buffer: PaneContent, projectRoot?: string) {
+  if (buffer.type === "webViewer")
+    return `Web page: ${buffer.title || buffer.name} (${buffer.url})`;
+  if (buffer.type === "terminal") {
+    return `Terminal: ${buffer.name}${buffer.workingDirectory ? ` (${buffer.workingDirectory})` : ""}`;
+  }
+  if (buffer.type === "database") return `Database: ${buffer.name} (${buffer.databaseType})`;
+  if (buffer.type === "pullRequest")
+    return `GitHub pull request: ${buffer.name} (#${buffer.prNumber})`;
+  if (buffer.type === "githubIssue") return `GitHub issue: ${buffer.name} (#${buffer.issueNumber})`;
+  if (buffer.type === "githubAction") return `GitHub action run: ${buffer.name} (#${buffer.runId})`;
+  if (buffer.type === "image") return `Image: ${formatContextPath(buffer.path, projectRoot)}`;
+  if (buffer.type === "pdf") return `PDF: ${formatContextPath(buffer.path, projectRoot)}`;
+  if (buffer.type === "binary")
+    return `Binary file: ${formatContextPath(buffer.path, projectRoot)}`;
+  return `${buffer.name}: ${formatContextPath(buffer.path, projectRoot)}${buffer.type === "editor" && buffer.isDirty ? " [modified]" : ""}`;
+}
+
+function getTextContextPreview(buffer: PaneContent) {
+  if (!hasTextContent(buffer)) return null;
+
+  const lines = buffer.content.split("\n");
+  const preview =
+    lines.length <= 80
+      ? buffer.content
+      : [...lines.slice(0, 50), "... (content truncated) ...", ...lines.slice(-20)].join("\n");
+
+  return `\n\`\`\`text\n${preview}\n\`\`\``;
+}
 
 // Build a comprehensive context prompt for the AI
 export const buildContextPrompt = (context: ContextInfo): string => {
@@ -84,41 +119,31 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     }
   }
 
-  // Other open files
-  if (context.openBuffers && context.openBuffers.length > 1) {
-    const otherFiles = context.openBuffers.filter(
+  // Selected open buffers/resources for context
+  if (context.openBuffers && context.openBuffers.length > 0) {
+    const selectedOpenContexts = context.openBuffers.filter(
       (buffer) => buffer.id !== context.activeBuffer?.id,
     );
 
-    if (otherFiles.length > 0) {
+    if (selectedOpenContexts.length > 0) {
       if (isAcpAgent) {
-        // For Claude Code, list paths relative to project root
-        const filePaths = otherFiles
-          .map((buffer) => {
-            const relativePath =
-              context.projectRoot && buffer.path.startsWith(context.projectRoot)
-                ? buffer.path.slice(context.projectRoot.length + 1)
-                : buffer.path;
-            return `${relativePath}${buffer.type === "editor" && buffer.isDirty ? " [modified]" : ""}`;
-          })
+        const summaries = selectedOpenContexts
+          .map((buffer) => formatOpenContextSummary(buffer, context.projectRoot))
           .slice(0, 10);
 
-        contextPrompt += `\n\nOther open files:\n${filePaths.map((p) => `- ${p}`).join("\n")}`;
-        if (otherFiles.length > 10) {
-          contextPrompt += `\n... and ${otherFiles.length - 10} more`;
+        contextPrompt += `\n\nSelected open context:\n${summaries.map((summary) => `- ${summary}`).join("\n")}`;
+        if (selectedOpenContexts.length > 10) {
+          contextPrompt += `\n... and ${selectedOpenContexts.length - 10} more`;
         }
       } else {
-        // For other providers, keep the original behavior
-        const fileNames = otherFiles
-          .map(
-            (buffer) =>
-              `${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " [modified]" : ""}`,
-          )
-          .slice(0, 10);
+        const summaries = selectedOpenContexts.slice(0, 8).map((buffer) => {
+          const preview = getTextContextPreview(buffer);
+          return `- ${formatOpenContextSummary(buffer, context.projectRoot)}${preview || ""}`;
+        });
 
-        contextPrompt += `\n\nOther open files: ${fileNames.join(", ")}`;
-        if (otherFiles.length > 10) {
-          contextPrompt += ` and ${otherFiles.length - 10} more`;
+        contextPrompt += `\n\nSelected open context:\n${summaries.join("\n")}`;
+        if (selectedOpenContexts.length > 8) {
+          contextPrompt += `\n... and ${selectedOpenContexts.length - 8} more`;
         }
       }
     }

@@ -5,6 +5,7 @@ import {
   Download,
   DotsThree as MoreHorizontal,
   FolderSimpleStar,
+  GitBranch,
   ArrowClockwise as RefreshCw,
   Trash as Trash2,
   TreeStructure,
@@ -22,15 +23,16 @@ import {
   EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
   Tabs,
 } from "@/ui/tabs";
+import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
 import { getGitLog } from "../api/git-commits-api";
 import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git-diff-api";
-import { resolveRepositoryPath } from "../api/git-repo-api";
+import { clearRepositoryDiscoveryCache, resolveRepositoryPath } from "../api/git-repo-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
-import { getGitStatus } from "../api/git-status-api";
+import { getGitStatus, initRepository } from "../api/git-status-api";
 import { useRepositoryStore } from "../stores/git-repository-store";
 import { useGitStore } from "../stores/git-store";
 import type { MultiFileDiff } from "../types/git-diff-types";
@@ -84,6 +86,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
   const [showStashList, setShowStashList] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
+  const [isInitializingRepo, setIsInitializingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [gitActionsMenuAnchor, setGitActionsMenuAnchor] = useState<GitActionsMenuAnchorRect | null>(
     null,
@@ -139,6 +142,40 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setIsSelectingRepo(false);
     }
   }, [setManualRepository]);
+
+  const handleInitializeRepository = useCallback(async () => {
+    const targetPath = repoPath;
+
+    if (!targetPath) {
+      toast.error("Open a folder before initializing a repository.");
+      return;
+    }
+
+    setIsInitializingRepo(true);
+    setRepoSelectionError(null);
+    try {
+      const success = await initRepository(targetPath);
+      if (!success) {
+        const message = "Failed to initialize repository.";
+        setRepoSelectionError(message);
+        toast.error(message);
+        return;
+      }
+
+      clearRepositoryDiscoveryCache();
+      setManualRepository(targetPath);
+      await syncWorkspaceRepositories(targetPath, { force: true });
+      window.dispatchEvent(new CustomEvent("git-status-changed"));
+      toast.success("Repository initialized.");
+    } catch (error) {
+      console.error("Failed to initialize repository:", error);
+      const message = error instanceof Error ? error.message : "Failed to initialize repository.";
+      setRepoSelectionError(message);
+      toast.error(message);
+    } finally {
+      setIsInitializingRepo(false);
+    }
+  }, [repoPath, setManualRepository, syncWorkspaceRepositories]);
 
   const loadInitialGitData = useCallback(async () => {
     if (!activeRepoPath) return;
@@ -732,6 +769,58 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     </Button>
   );
 
+  const renderInitializeRepositoryButton = () => {
+    const canInitializeRepository = Boolean(repoPath);
+
+    return (
+      <Button
+        onClick={() => void handleInitializeRepository()}
+        disabled={!canInitializeRepository || isInitializingRepo}
+        variant="primary"
+        size="sm"
+        className="mt-3"
+        tooltip={
+          canInitializeRepository
+            ? "Initialize Git repository"
+            : "Open a folder before initializing Git"
+        }
+      >
+        <GitBranch />
+        {isInitializingRepo ? "Initializing..." : "Initialize Repository"}
+      </Button>
+    );
+  };
+
+  const renderGitActionsMenu = ({
+    hasGitRepo,
+    onRefresh,
+  }: {
+    hasGitRepo: boolean;
+    onRefresh?: () => void;
+  }) => (
+    <GitActionsMenu
+      isOpen={showGitActionsMenu}
+      anchorRect={gitActionsMenuAnchor}
+      onClose={() => {
+        setShowGitActionsMenu(false);
+        setGitActionsMenuAnchor(null);
+      }}
+      hasGitRepo={hasGitRepo}
+      repoPath={activeRepoPath ?? repoPath}
+      onRefresh={onRefresh}
+      onOpenRemoteManager={() => setShowRemoteManager(true)}
+      onOpenTagManager={() => setShowTagManager(true)}
+      onViewStashes={() => {
+        setShowStashList(true);
+        setStashSearchQuery("");
+      }}
+      onSelectRepository={handleSelectRepository}
+      isSelectingRepository={isSelectingRepo}
+      onInitializeRepository={handleInitializeRepository}
+      isInitializingRepository={isInitializingRepo}
+    />
+  );
+
   const filteredStashes = useMemo(() => {
     const query = stashSearchQuery.trim().toLowerCase();
     if (!query) {
@@ -778,54 +867,65 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   if (!activeRepoPath) {
     return (
-      <div className="flex h-full flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("justify-between rounded-lg")}>
-          <div className="flex items-center gap-2">{renderActionsButton()}</div>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="ui-font flex flex-col items-center text-center">
-            <span className="ui-text-sm text-text-lighter">No repository selected</span>
-            {renderSelectRepositoryButton()}
-            {repoSelectionError && (
-              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
-            )}
+      <>
+        <div className="flex h-full flex-col gap-2 p-2">
+          <div className={paneHeaderClassName("justify-between rounded-lg")}>
+            <div className="flex items-center gap-2">{renderActionsButton()}</div>
+          </div>
+          <div className="flex flex-1 items-center justify-center">
+            <div className="ui-font flex flex-col items-center text-center">
+              <span className="ui-text-sm text-text-lighter">No repository selected</span>
+              {renderInitializeRepositoryButton()}
+              {renderSelectRepositoryButton()}
+              {repoSelectionError && (
+                <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+        {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
+      </>
     );
   }
 
   if (isLoadingGitData && !gitStatus) {
     return (
-      <div className="flex h-full flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("justify-between rounded-lg")}>
-          <div className="flex items-center gap-2">{renderActionsButton()}</div>
-        </div>
-        <div className="flex flex-1 items-center justify-center p-4">
-          <div className="ui-font ui-text-sm text-center text-text-lighter">
-            Loading Git status...
+      <>
+        <div className="flex h-full flex-col gap-2 p-2">
+          <div className={paneHeaderClassName("justify-between rounded-lg")}>
+            <div className="flex items-center gap-2">{renderActionsButton()}</div>
+          </div>
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div className="ui-font ui-text-sm text-center text-text-lighter">
+              Loading Git status...
+            </div>
           </div>
         </div>
-      </div>
+        {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
+      </>
     );
   }
 
   if (!gitStatus) {
     return (
-      <div className="flex h-full flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("justify-between rounded-lg")}>
-          <div className="flex items-center gap-2">{renderActionsButton()}</div>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="ui-font flex flex-col items-center text-center">
-            <span className="ui-text-sm text-text-lighter">Not a Git repository</span>
-            {renderSelectRepositoryButton()}
-            {repoSelectionError && (
-              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
-            )}
+      <>
+        <div className="flex h-full flex-col gap-2 p-2">
+          <div className={paneHeaderClassName("justify-between rounded-lg")}>
+            <div className="flex items-center gap-2">{renderActionsButton()}</div>
+          </div>
+          <div className="flex flex-1 items-center justify-center">
+            <div className="ui-font flex flex-col items-center text-center">
+              <span className="ui-text-sm text-text-lighter">Not a Git repository</span>
+              {renderInitializeRepositoryButton()}
+              {renderSelectRepositoryButton()}
+              {repoSelectionError && (
+                <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+        {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
+      </>
     );
   }
 
@@ -940,25 +1040,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
       </div>
 
-      <GitActionsMenu
-        isOpen={showGitActionsMenu}
-        anchorRect={gitActionsMenuAnchor}
-        onClose={() => {
-          setShowGitActionsMenu(false);
-          setGitActionsMenuAnchor(null);
-        }}
-        hasGitRepo={!!gitStatus}
-        repoPath={activeRepoPath}
-        onRefresh={refreshAfterAction}
-        onOpenRemoteManager={() => setShowRemoteManager(true)}
-        onOpenTagManager={() => setShowTagManager(true)}
-        onViewStashes={() => {
-          setShowStashList(true);
-          setStashSearchQuery("");
-        }}
-        onSelectRepository={handleSelectRepository}
-        isSelectingRepository={isSelectingRepo}
-      />
+      {renderGitActionsMenu({ hasGitRepo: !!gitStatus, onRefresh: refreshAfterAction })}
       <GitCommandSurface
         isOpen={showStashList}
         onClose={() => {

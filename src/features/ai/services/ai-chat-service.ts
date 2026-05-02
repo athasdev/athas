@@ -122,6 +122,7 @@ export const getChatCompletionStream = async (
   onImageChunk?: (data: string, mediaType: string) => void,
   onResourceChunk?: (uri: string, name: string | null) => void,
   chatId?: string,
+  systemPromptOverride?: string,
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
@@ -176,7 +177,8 @@ export const getChatCompletionStream = async (
     }
 
     const contextPrompt = buildContextPrompt(context);
-    const systemPrompt = buildSystemPrompt(contextPrompt, mode, outputStyle);
+    const systemPrompt =
+      systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
 
     // Build messages array with conversation history
     const messages: AIMessage[] = [
@@ -269,4 +271,50 @@ export const getChatCompletionStream = async (
     console.error(`${providerId} streaming chat completion error:`, error);
     onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
   }
+};
+
+export const getQuickQuestionCompletionStream = async (
+  providerId: string,
+  modelId: string,
+  question: string,
+  context: ContextInfo,
+  onChunk: (chunk: string) => void,
+  onComplete: () => void,
+  onError: (error: string, canReconnect?: boolean) => void,
+): Promise<void> => {
+  const contextPrompt = buildContextPrompt(context);
+  const systemPrompt = `You are a lightweight AI question-answering assistant inside Athas.
+
+This is a quick question flow, not an agent session.
+- Answer the user's question directly and concisely.
+- Do not claim you can edit files, open files, run commands, call tools, or take actions.
+- Use the provided editor context only when it is relevant.
+- If the question asks you to change code or perform work, explain the likely answer or next step without saying you performed it.
+
+Current context:
+${contextPrompt}`;
+
+  await getChatCompletionStream(
+    "custom",
+    providerId,
+    modelId,
+    question,
+    context,
+    onChunk,
+    onComplete,
+    onError,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    "chat",
+    "default",
+    undefined,
+    undefined,
+    undefined,
+    systemPrompt,
+  );
 };

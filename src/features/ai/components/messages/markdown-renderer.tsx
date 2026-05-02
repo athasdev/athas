@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
+  Copy,
   TerminalWindow as Terminal,
 } from "@phosphor-icons/react";
 import type React from "react";
@@ -159,6 +160,15 @@ type HighlightSegment = {
 
 const TREE_SITTER_QUERY_CACHE = new Map<string, string>();
 const TREE_SITTER_TOKEN_CACHE = new Map<string, HighlightSegment[]>();
+
+async function copyTextToClipboard(text: string) {
+  try {
+    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+    await writeText(text);
+  } catch {
+    await navigator.clipboard.writeText(text);
+  }
+}
 
 const TREE_SITTER_LANGUAGE_ALIASES: Record<string, string> = {
   csharp: "csharp",
@@ -327,17 +337,31 @@ function CodeBlock({
           {languageLabel && (
             <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
           )}
-          {onApplyCode && code.trim() && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="xs"
-              onClick={() => onApplyCode(code)}
-              className="whitespace-nowrap opacity-0 group-hover:opacity-100"
-              tooltip="Apply this code to current buffer"
-            >
-              Apply
-            </Button>
+          {code.trim() && (
+            <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="rounded"
+                onClick={() => void copyTextToClipboard(code)}
+                tooltip="Copy code"
+              >
+                <Copy className="text-text-lighter" size={12} />
+              </Button>
+              {onApplyCode && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => onApplyCode(code)}
+                  className="h-5 px-1.5 text-[11px]"
+                  tooltip="Apply this code to current buffer"
+                >
+                  Apply
+                </Button>
+              )}
+            </div>
           )}
         </div>
         <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">

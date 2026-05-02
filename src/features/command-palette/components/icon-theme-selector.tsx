@@ -1,15 +1,10 @@
-import { Palette } from "@phosphor-icons/react";
+import { CaretLeft, Palette } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
-import Command, {
-  CommandEmpty,
-  CommandHeader,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/ui/command";
+import { Button } from "@/ui/button";
+import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
 import Badge from "@/ui/badge";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -20,19 +15,21 @@ interface IconThemeInfo {
   icon?: React.ReactNode;
 }
 
-interface IconThemeSelectorProps {
-  isVisible: boolean;
+interface IconThemeSelectorContentProps {
+  isActive: boolean;
+  onBack: () => void;
   onClose: () => void;
   onThemeChange: (theme: string) => void;
   currentTheme?: string;
 }
 
-const IconThemeSelector = ({
-  isVisible,
+export const IconThemeSelectorContent = ({
+  isActive,
+  onBack,
   onClose,
   onThemeChange,
   currentTheme,
-}: IconThemeSelectorProps) => {
+}: IconThemeSelectorContentProps) => {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [initialTheme, setInitialTheme] = useState(currentTheme);
@@ -40,6 +37,8 @@ const IconThemeSelector = ({
   const [themes, setThemes] = useState<IconThemeInfo[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const activeThemeSnapshotRef = useRef<string | undefined>(undefined);
+  const didCommitRef = useRef(false);
 
   // Load icon themes from icon theme registry
   useEffect(() => {
@@ -70,17 +69,36 @@ const IconThemeSelector = ({
 
   // Handle keyboard navigation
   useEffect(() => {
-    if (isVisible) {
-      setInitialTheme(currentTheme);
-      setQuery("");
-      setPreviewTheme(null);
-
-      const initialIndex = themes.findIndex((t) => t.id === currentTheme);
-      setSelectedIndex(initialIndex >= 0 ? initialIndex : 0);
-
-      requestAnimationFrame(() => inputRef.current?.focus());
+    if (!isActive) {
+      if (activeThemeSnapshotRef.current && !didCommitRef.current) {
+        onThemeChange(activeThemeSnapshotRef.current);
+      }
+      activeThemeSnapshotRef.current = undefined;
+      return;
     }
-  }, [isVisible, themes, currentTheme]);
+
+    if (activeThemeSnapshotRef.current !== undefined) return;
+
+    const snapshotTheme = currentTheme;
+    activeThemeSnapshotRef.current = snapshotTheme;
+    didCommitRef.current = false;
+    setInitialTheme(snapshotTheme);
+    setQuery("");
+    setPreviewTheme(null);
+
+    const initialIndex = themes.findIndex((t) => t.id === snapshotTheme);
+    setSelectedIndex(initialIndex >= 0 ? initialIndex : 0);
+
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [isActive, themes, currentTheme, onThemeChange]);
+
+  useEffect(() => {
+    return () => {
+      if (activeThemeSnapshotRef.current && !didCommitRef.current) {
+        onThemeChange(activeThemeSnapshotRef.current);
+      }
+    };
+  }, [onThemeChange]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -95,6 +113,7 @@ const IconThemeSelector = ({
         nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
       } else if (e.key === "Enter") {
         e.preventDefault();
+        didCommitRef.current = true;
         onThemeChange(filteredThemes[selectedIndex].id);
         onClose();
         return;
@@ -122,11 +141,11 @@ const IconThemeSelector = ({
 
   // Reset state when visibility changes
   useEffect(() => {
-    if (isVisible) {
+    if (isActive) {
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
     }
-  }, [isVisible, handleKeyDown]);
+  }, [isActive, handleKeyDown]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -140,18 +159,35 @@ const IconThemeSelector = ({
   }, [selectedIndex]);
 
   const handleClose = useCallback(() => {
+    didCommitRef.current = false;
     if (initialTheme) {
       onThemeChange(initialTheme);
     }
     onClose();
   }, [initialTheme, onThemeChange, onClose]);
 
-  if (!isVisible) return null;
+  const handleBack = useCallback(() => {
+    didCommitRef.current = false;
+    if (initialTheme) {
+      onThemeChange(initialTheme);
+    }
+    onBack();
+  }, [initialTheme, onBack, onThemeChange]);
 
   return (
-    <Command isVisible={isVisible} onClose={handleClose}>
+    <>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="rounded"
+            onClick={handleBack}
+            aria-label="Back to commands"
+          >
+            <CaretLeft className="text-text-lighter" />
+          </Button>
           <CommandInput
             ref={inputRef}
             value={query}
@@ -176,6 +212,7 @@ const IconThemeSelector = ({
                 key={theme.id}
                 data-index={index}
                 onClick={() => {
+                  didCommitRef.current = true;
                   onThemeChange(theme.id);
                   onClose();
                 }}
@@ -211,10 +248,10 @@ const IconThemeSelector = ({
           })
         )}
       </CommandList>
-    </Command>
+    </>
   );
 };
 
-IconThemeSelector.displayName = "IconThemeSelector";
+IconThemeSelectorContent.displayName = "IconThemeSelectorContent";
 
-export default IconThemeSelector;
+export default IconThemeSelectorContent;

@@ -1,11 +1,24 @@
-import { Database, FileText, Plus, X } from "@phosphor-icons/react";
+import {
+  Database,
+  FileText,
+  GitPullRequest,
+  Globe,
+  MagnifyingGlass as Search,
+  PlayCircle,
+  Plus,
+  TerminalWindow,
+  X,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import type { FileItem } from "@/features/global-search/models/types";
 import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import {
   chatComposerDropdownClassName,
@@ -14,6 +27,26 @@ import {
 import { AIFileSelector } from "../mentions/ai-file-selector";
 
 import type { PaneContent } from "@/features/panes/types/pane-content";
+
+function getBufferContextDescription(buffer: PaneContent) {
+  if (buffer.type === "webViewer") return buffer.url;
+  if (buffer.type === "terminal") return buffer.workingDirectory || "Terminal";
+  if (buffer.type === "database") return `${buffer.databaseType} database`;
+  if (buffer.type === "pullRequest") return `Pull request #${buffer.prNumber}`;
+  if (buffer.type === "githubIssue") return `Issue #${buffer.issueNumber}`;
+  if (buffer.type === "githubAction") return `Action run #${buffer.runId}`;
+  return buffer.path;
+}
+
+function getBufferContextIcon(buffer: PaneContent) {
+  if (buffer.type === "webViewer") return <Globe />;
+  if (buffer.type === "terminal") return <TerminalWindow />;
+  if (buffer.type === "database") return <Database />;
+  if (buffer.type === "pullRequest") return <GitPullRequest />;
+  if (buffer.type === "githubIssue") return <FileText />;
+  if (buffer.type === "githubAction") return <PlayCircle />;
+  return <FileExplorerIcon fileName={buffer.name} isDir={false} size={10} />;
+}
 
 interface ContextSelectorProps {
   buffers: PaneContent[];
@@ -40,16 +73,29 @@ export function ContextSelector({
   selectedItemsClassName,
 }: Omit<ContextSelectorProps, "allProjectFiles">) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedContextIndex, setSelectedContextIndex] = useState(0);
+  const [visibleFileResults, setVisibleFileResults] = useState<FileItem[]>([]);
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { rootFolderPath } = useProjectStore();
   const { getAllProjectFiles } = useFileSystemStore();
   const selectableBuffers = useMemo(
-    () => buffers.filter((buffer) => buffer.type !== "agent"),
+    () => buffers.filter((buffer) => buffer.type !== "agent" && buffer.type !== "newTab"),
     [buffers],
   );
+  const filteredContextBuffers = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return selectableBuffers.filter((buffer) => {
+      if (!normalizedSearch) return true;
+      return (
+        buffer.name.toLowerCase().includes(normalizedSearch) ||
+        buffer.path.toLowerCase().includes(normalizedSearch) ||
+        buffer.type.toLowerCase().includes(normalizedSearch) ||
+        getBufferContextDescription(buffer).toLowerCase().includes(normalizedSearch)
+      );
+    });
+  }, [searchTerm, selectableBuffers]);
 
   // Pre-filtered file list (excludes directories + ignored files). Refreshed on each open.
   const [fileItems, setFileItems] = useState<FileEntry[]>([]);
@@ -107,10 +153,34 @@ export function ContextSelector({
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
-      setSelectedIndex(0);
+      setSelectedContextIndex(0);
       setTimeout(() => searchInputRef.current?.focus(), 0);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const totalResults = filteredContextBuffers.length + visibleFileResults.length;
+    if (totalResults === 0) {
+      setSelectedContextIndex(0);
+      return;
+    }
+
+    setSelectedContextIndex((currentIndex) => Math.min(currentIndex, totalResults - 1));
+  }, [filteredContextBuffers.length, visibleFileResults.length]);
+
+  const fileSelectedIndex = Math.max(0, selectedContextIndex - filteredContextBuffers.length);
+
+  const selectCurrentContextResult = () => {
+    if (filteredContextBuffers[selectedContextIndex]) {
+      onToggleBuffer(filteredContextBuffers[selectedContextIndex].id);
+      return;
+    }
+
+    const file = visibleFileResults[fileSelectedIndex];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
 
   return (
     <div className={cn("flex min-w-0 flex-1 items-center gap-1.5", className)}>
@@ -120,8 +190,8 @@ export function ContextSelector({
           variant="ghost"
           size="icon-xs"
           className={chatComposerIconButtonClassName()}
-          tooltip="Add context files"
-          aria-label="Add context files"
+          tooltip="Add context"
+          aria-label="Add context"
           aria-expanded={isOpen}
           aria-haspopup="true"
         >
@@ -134,22 +204,122 @@ export function ContextSelector({
         anchorRef={triggerRef}
         anchorSide="bottom"
         onClose={onToggleOpen}
-        className={chatComposerDropdownClassName("w-[min(300px,calc(100vw-16px))]")}
-        style={{ maxHeight: "238px" }}
+        className={chatComposerDropdownClassName("w-[min(340px,calc(100vw-16px))]")}
+        style={{ maxHeight: "286px" }}
       >
+        <div className="border-border/60 border-b bg-secondary-bg/95 px-1.5 py-1.5">
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search context..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            onKeyDown={(event) => {
+              const totalResults = filteredContextBuffers.length + visibleFileResults.length;
+              if (totalResults === 0) return;
+
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setSelectedContextIndex((currentIndex) =>
+                  Math.min(currentIndex + 1, totalResults - 1),
+                );
+                return;
+              }
+
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setSelectedContextIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+                return;
+              }
+
+              if (event.key === "Home") {
+                event.preventDefault();
+                setSelectedContextIndex(0);
+                return;
+              }
+
+              if (event.key === "End") {
+                event.preventDefault();
+                setSelectedContextIndex(totalResults - 1);
+                return;
+              }
+
+              if (event.key === "Enter" || event.key === "Tab") {
+                event.preventDefault();
+                selectCurrentContextResult();
+              }
+            }}
+            variant="ghost"
+            size="xs"
+            leftIcon={Search}
+            className="w-full"
+            aria-label="Search context"
+          />
+        </div>
         <AIFileSelector
           files={fileItems}
           query={searchTerm}
           onQueryChange={setSearchTerm}
           onSelect={handleFileSelect}
           rootFolderPath={rootFolderPath}
-          selectedIndex={selectedIndex}
-          onSelectedIndexChange={setSelectedIndex}
-          searchInputRef={searchInputRef}
-          emptyLabel={searchTerm ? "No matching files found" : "No files available"}
+          selectedIndex={fileSelectedIndex}
+          onSelectedIndexChange={(index) =>
+            setSelectedContextIndex(filteredContextBuffers.length + index)
+          }
+          onResultsChange={setVisibleFileResults}
+          emptyLabel={searchTerm ? "No matching context found" : "No context available"}
           compact
-          autoFocusSearchInput
-          listClassName="max-h-[176px]"
+          showSearchInput={false}
+          listClassName="max-h-[228px]"
+          leadingContent={
+            filteredContextBuffers.length > 0 ? (
+              <>
+                <div className="ui-text-xs px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
+                  Open
+                </div>
+                {filteredContextBuffers.map((buffer) => {
+                  const index = filteredContextBuffers.indexOf(buffer);
+                  const isSelected = selectedBufferIds.has(buffer.id);
+                  return (
+                    <button
+                      key={buffer.id}
+                      type="button"
+                      data-context-buffer-option
+                      onClick={() => onToggleBuffer(buffer.id)}
+                      onMouseEnter={() => setSelectedContextIndex(index)}
+                      className={cn(
+                        "ui-font flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left text-xs leading-[1.35] transition-colors",
+                        selectedContextIndex === index
+                          ? "bg-selected text-text"
+                          : isSelected
+                            ? "bg-hover/70 text-text"
+                            : "text-text hover:bg-hover focus:bg-hover focus:outline-none",
+                        isSelected && selectedContextIndex !== index
+                          ? "shadow-[inset_0_0_0_1px_var(--color-border)]"
+                          : "",
+                      )}
+                    >
+                      <span className="flex size-3.5 shrink-0 items-center justify-center text-text-lighter [&_svg]:size-3">
+                        {getBufferContextIcon(buffer)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-text">{buffer.name}</span>
+                        <span className="block truncate text-text-lighter/70">
+                          {getBufferContextDescription(buffer)}
+                        </span>
+                      </span>
+                      {isSelected && (
+                        <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 leading-[1.35] text-text-lighter">
+                          added
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </>
+            ) : null
+          }
+          hasLeadingResults={filteredContextBuffers.length > 0}
         />
       </Dropdown>
 

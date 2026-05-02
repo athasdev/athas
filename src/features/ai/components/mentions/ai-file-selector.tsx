@@ -1,5 +1,13 @@
 import { MagnifyingGlass as Search } from "@phosphor-icons/react";
-import { Fragment, useEffect, useId, useMemo, type KeyboardEvent, type RefObject } from "react";
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useMemo,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useDebounce } from "use-debounce";
 import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
@@ -30,6 +38,8 @@ interface AIFileSelectorProps {
   autoFocusSearchInput?: boolean;
   useBackendSearch?: boolean;
   onResultsChange?: (files: FileItem[]) => void;
+  leadingContent?: ReactNode;
+  hasLeadingResults?: boolean;
 }
 
 function flattenFileSearchResults(categorizedFiles: ReturnType<typeof useFileSearch>) {
@@ -73,6 +83,8 @@ export function AIFileSelector({
   autoFocusSearchInput = false,
   useBackendSearch = true,
   onResultsChange,
+  leadingContent,
+  hasLeadingResults = false,
 }: AIFileSelectorProps) {
   const listboxId = useId();
   const [debouncedQuery] = useDebounce(query, 50);
@@ -187,7 +199,8 @@ export function AIFileSelector({
           role="listbox"
           aria-label="File list"
         >
-          {results.length === 0 ? (
+          {leadingContent}
+          {results.length === 0 && !hasLeadingResults ? (
             <CommandEmpty>{emptyLabel}</CommandEmpty>
           ) : (
             results.map(({ file, category, index }, resultIndex) => {
