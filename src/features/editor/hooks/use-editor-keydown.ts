@@ -51,6 +51,7 @@ const LINE_COMMENT_TOKENS: Partial<Record<string, string>> = {
   cpp: "//",
   csharp: "//",
   dart: "//",
+  dotenv: "#",
   elixir: "#",
   go: "//",
   java: "//",

@@ -20,15 +20,27 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
+import {
+  buildEnvTemplateContent,
+  ENV_TEMPLATE_TARGETS,
+  isEnvFileName,
+  normalizeEnvTargetFileName,
+} from "@/features/file-explorer/lib/env-template";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import type { ContextMenuState } from "@/features/file-system/types/app";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { getBaseName, getDirName, getRelativePath } from "@/utils/path-helpers";
+import { toast } from "@/ui/toast";
+import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
 
 interface UseFileExplorerContextMenuOptions {
   rootFolderPath?: string;
-  onFileSelect: (path: string, isDir: boolean) => void;
+  onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
+  onCreateNewFileInDirectory?: (
+    directoryPath: string,
+    fileName: string,
+  ) => void | string | Promise<string | undefined>;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onGenerateImage?: (directoryPath: string) => void;
   onRefreshDirectory?: (path: string) => void;
@@ -44,6 +56,7 @@ interface UseFileExplorerContextMenuOptions {
 export function useFileExplorerContextMenu({
   rootFolderPath,
   onFileSelect,
+  onCreateNewFileInDirectory,
   onCreateNewFolderInDirectory,
   onGenerateImage,
   onRefreshDirectory,
@@ -58,6 +71,73 @@ export function useFileExplorerContextMenu({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const clipboardActions = useFileClipboardStore.getState().actions;
   const clipboard = useFileClipboardStore((state) => state.clipboard);
+
+  const createEnvTemplateFile = useCallback(
+    async (sourcePath: string, targetFileName: string) => {
+      if (!onCreateNewFileInDirectory) return;
+
+      const directoryPath = getDirName(sourcePath);
+      const targetPath = joinPath(directoryPath, targetFileName);
+
+      try {
+        if (targetPath === sourcePath) {
+          toast.error("Choose a different env file name");
+          return;
+        }
+
+        let targetExists = false;
+        try {
+          await readTextFile(targetPath);
+          targetExists = true;
+          const shouldOverwrite = window.confirm(`${targetFileName} already exists. Overwrite it?`);
+          if (!shouldOverwrite) return;
+        } catch {}
+
+        const sourceContent = await readTextFile(sourcePath);
+        const templateContent = buildEnvTemplateContent(sourceContent);
+        const createdPath = targetExists
+          ? targetPath
+          : (await Promise.resolve(onCreateNewFileInDirectory(directoryPath, targetFileName))) ||
+            targetPath;
+
+        await writeFile(createdPath, templateContent);
+
+        const bufferStore = useBufferStore.getState();
+        const createdBuffer = bufferStore.buffers.find((buffer) => buffer.path === createdPath);
+        if (createdBuffer) {
+          bufferStore.actions.updateBufferContent(createdBuffer.id, templateContent, false);
+        }
+
+        onRefreshDirectory?.(directoryPath);
+        toast.success(`Created ${targetFileName}`);
+      } catch (error) {
+        console.error("Failed to create env template file:", error);
+        toast.error(
+          `Failed to create ${targetFileName}`,
+          error instanceof Error ? error.message : undefined,
+        );
+      }
+    },
+    [onCreateNewFileInDirectory, onRefreshDirectory],
+  );
+
+  const promptAndCreateEnvTemplateFile = useCallback(
+    (sourcePath: string) => {
+      const input = window.prompt(
+        "Enter env file name or suffix (for example: staging or .env.staging):",
+      );
+      if (!input) return;
+
+      const targetFileName = normalizeEnvTargetFileName(input);
+      if (!targetFileName) {
+        toast.error("Invalid env file name");
+        return;
+      }
+
+      void createEnvTemplateFile(sourcePath, targetFileName);
+    },
+    [createEnvTemplateFile],
+  );
 
   const handleContextMenu = useCallback((e: React.MouseEvent, filePath: string, isDir: boolean) => {
     e.preventDefault();
@@ -151,6 +231,12 @@ export function useFileExplorerContextMenu({
 
       items.push({ id: "sep-dir", label: "", separator: true, onClick: () => {} });
     } else {
+      const fileName = getBaseName(contextMenu.path, "");
+      const canCreateEnvTemplate =
+        isEnvFileName(fileName) &&
+        !contextMenu.path.startsWith("remote://") &&
+        Boolean(onCreateNewFileInDirectory);
+
       items.push(
         {
           id: "open",
@@ -176,6 +262,23 @@ export function useFileExplorerContextMenu({
           icon: <FileText />,
           onClick: () => onDuplicatePath?.(contextMenu.path),
         },
+        ...(canCreateEnvTemplate
+          ? [
+              { id: "sep-env-template", label: "", separator: true, onClick: () => {} },
+              ...ENV_TEMPLATE_TARGETS.map((target) => ({
+                id: target.id,
+                label: target.label,
+                icon: <FilePlus />,
+                onClick: () => void createEnvTemplateFile(contextMenu.path, target.fileName),
+              })),
+              {
+                id: "env-other",
+                label: "Create Other .env...",
+                icon: <FilePlus />,
+                onClick: () => promptAndCreateEnvTemplateFile(contextMenu.path),
+              },
+            ]
+          : []),
         {
           id: "properties",
           label: "Properties",
@@ -285,7 +388,9 @@ export function useFileExplorerContextMenu({
     clipboard,
     clipboardActions,
     contextMenu,
+    createEnvTemplateFile,
     onCreateNewFolderInDirectory,
+    onCreateNewFileInDirectory,
     onDeleteRequested,
     onDuplicatePath,
     onFileSelect,
@@ -296,6 +401,7 @@ export function useFileExplorerContextMenu({
     onRevealInFinder,
     onStartInlineEditing,
     onUploadFile,
+    promptAndCreateEnvTemplateFile,
     rootFolderPath,
   ]);
 

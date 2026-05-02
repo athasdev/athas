@@ -103,7 +103,7 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
               boxes.push(
                 <div
                   key={`${cursor.id}-selection-${line}`}
-                  className="absolute bg-selection-bg"
+                  className="editor-selection-box absolute"
                   style={{
                     top: `${line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
                     left: `${leftPos}px`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getLanguageIdFromPath } from "./language-id";
+import { getLanguageDisplayName, getLanguageIdFromPath } from "./language-id";
 
 describe("getLanguageIdFromPath", () => {
   it("detects scm files as scheme", () => {
@@ -17,5 +17,12 @@ describe("getLanguageIdFromPath", () => {
 
   it("keeps regular html files as html", () => {
     expect(getLanguageIdFromPath("/tmp/index.html")).toBe("html");
+  });
+
+  it("detects dotenv files", () => {
+    expect(getLanguageIdFromPath("/tmp/.env")).toBe("dotenv");
+    expect(getLanguageIdFromPath("/tmp/.env.local")).toBe("dotenv");
+    expect(getLanguageIdFromPath("/tmp/.env.production.local")).toBe("dotenv");
+    expect(getLanguageDisplayName("dotenv")).toBe("Dotenv");
   });
 });

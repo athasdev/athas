@@ -138,7 +138,18 @@ textarea.input-layer.selection-transparent::-moz-selection {
 }
 
 .editor-selection-box {
-  background: var(--selection-bg, rgba(173, 214, 255, 0.4));
+  background: color-mix(
+    in srgb,
+    var(--selection-bg, rgba(173, 214, 255, 0.44)) 72%,
+    var(--accent, #6a9bcc) 28%
+  );
+  border-radius: 3px;
+}
+
+@supports not (background: color-mix(in srgb, rgba(173, 214, 255, 0.44) 72%, #6a9bcc 28%)) {
+  .editor-selection-box {
+    background: var(--selection-bg, rgba(173, 214, 255, 0.48));
+  }
 }
 
 /* Multi-cursor layer */

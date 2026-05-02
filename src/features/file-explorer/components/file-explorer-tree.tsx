@@ -63,7 +63,10 @@ interface FileExplorerTreeProps {
   rootFolderPath?: string;
   onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
   onFileOpen?: (path: string, isDir: boolean) => void | Promise<void>;
-  onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
+  onCreateNewFileInDirectory: (
+    directoryPath: string,
+    fileName: string,
+  ) => void | string | Promise<string | undefined>;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
   onGenerateImage?: (directoryPath: string) => void;
@@ -516,6 +519,7 @@ function FileExplorerTreeComponent({
   const { setContextMenu, handleContextMenu, contextMenuElement } = useFileExplorerContextMenu({
     rootFolderPath,
     onFileSelect,
+    onCreateNewFileInDirectory,
     onCreateNewFolderInDirectory,
     onGenerateImage,
     onRefreshDirectory,

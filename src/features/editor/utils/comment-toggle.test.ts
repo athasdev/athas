@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { toggleLineComment } from "./comment-toggle";
+import { getLineCommentTokenForLanguage, toggleLineComment } from "./comment-toggle";
 
 describe("toggleLineComment", () => {
   it("keeps the cursor on the same code when commenting a line", () => {
@@ -50,5 +50,9 @@ describe("toggleLineComment", () => {
     });
 
     expect(result.content).toBe("// one\ntwo");
+  });
+
+  it("uses hash comments for dotenv", () => {
+    expect(getLineCommentTokenForLanguage("dotenv")).toBe("#");
   });
 });

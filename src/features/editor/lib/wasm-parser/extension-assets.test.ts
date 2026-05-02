@@ -8,4 +8,14 @@ describe("extension-assets", () => {
       "/tree-sitter/parsers/elisp/highlights.scm",
     );
   });
+
+  it("uses the bash parser with dotenv highlight queries for dotenv", () => {
+    expect(getDefaultParserWasmUrl("dotenv")).toBe("/tree-sitter/parsers/bash/parser.wasm");
+    expect(getHighlightQueryCandidates("dotenv")).toContain(
+      "/tree-sitter/parsers/dotenv/highlights.scm",
+    );
+    expect(getHighlightQueryCandidates("dotenv", "/tree-sitter/parsers/bash/parser.wasm")[0]).toBe(
+      "/tree-sitter/parsers/dotenv/highlights.scm",
+    );
+  });
 });

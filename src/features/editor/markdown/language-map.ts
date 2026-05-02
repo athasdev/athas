@@ -10,6 +10,8 @@ export const LANGUAGE_ALIASES: Record<string, string> = {
   shell: "bash",
   zsh: "bash",
   fish: "bash",
+  env: "dotenv",
+  dotenv: "dotenv",
   yml: "yaml",
   md: "markdown",
   mdx: "markdown",

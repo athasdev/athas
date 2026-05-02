@@ -80,6 +80,10 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   "go.work": "go",
 };
 
+function isEnvFileName(fileName: string): boolean {
+  return fileName === ".env" || fileName.startsWith(".env.");
+}
+
 export function normalizeLanguageId(languageId: string): string {
   switch (languageId) {
     case "jsonc":
@@ -116,6 +120,7 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   html: "HTML",
   css: "CSS",
   diff: "Diff",
+  dotenv: "Dotenv",
   json: "JSON",
   yaml: "YAML",
   toml: "TOML",
@@ -182,6 +187,10 @@ export function getLanguageIdFromPath(filePath: string): string | null {
   }
 
   const fileName = filePath.split("/").pop()?.toLowerCase() || "";
+  if (isEnvFileName(fileName)) {
+    return "dotenv";
+  }
+
   const fromFilename = FILENAME_TO_LANGUAGE[fileName];
   if (fromFilename) {
     return fromFilename;

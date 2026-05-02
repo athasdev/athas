@@ -9,8 +9,17 @@ const QUERY_FOLDER_BY_LANGUAGE: Record<string, string> = {
   scheme: "elisp",
 };
 
+const PARSER_FOLDER_BY_LANGUAGE: Record<string, string> = {
+  ...QUERY_FOLDER_BY_LANGUAGE,
+  dotenv: "bash",
+};
+
 function getQueryFolder(languageId: string): string {
   return QUERY_FOLDER_BY_LANGUAGE[languageId] || languageId;
+}
+
+function getParserFolder(languageId: string): string {
+  return PARSER_FOLDER_BY_LANGUAGE[languageId] || languageId;
 }
 
 function deriveHighlightQueryUrlFromWasm(wasmUrl?: string): string | null {
@@ -30,18 +39,23 @@ function deriveHighlightQueryUrlFromWasm(wasmUrl?: string): string | null {
 }
 
 export function getDefaultParserWasmUrl(languageId: string): string {
-  const folder = getQueryFolder(languageId);
+  const folder = getParserFolder(languageId);
   return `/tree-sitter/parsers/${folder}/parser.wasm`;
 }
 
 export function getHighlightQueryCandidates(languageId: string, wasmUrl?: string): string[] {
-  const folder = getQueryFolder(languageId);
-  const candidates = [
-    deriveHighlightQueryUrlFromWasm(wasmUrl),
-    `/tree-sitter/parsers/${folder}/highlights.scm`,
-  ].filter((candidate): candidate is string => Boolean(candidate && candidate.length > 0));
+  const queryFolder = getQueryFolder(languageId);
+  const parserFolder = getParserFolder(languageId);
+  const localQueryUrl = `/tree-sitter/parsers/${queryFolder}/highlights.scm`;
+  const derivedQueryUrl = deriveHighlightQueryUrlFromWasm(wasmUrl);
+  const candidates =
+    queryFolder === parserFolder
+      ? [derivedQueryUrl, localQueryUrl]
+      : [localQueryUrl, derivedQueryUrl];
 
-  return Array.from(new Set(candidates));
+  return Array.from(
+    new Set(candidates.filter((candidate): candidate is string => Boolean(candidate))),
+  );
 }
 
 export async function fetchHighlightQuery(
