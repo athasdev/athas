@@ -1,17 +1,22 @@
 import type { ThemeDefinition } from "@/extensions/themes/types";
+import {
+  DEFAULT_MONO_FONT_FAMILY,
+  DEFAULT_UI_FONT_FAMILY,
+} from "@/features/settings/config/typography-defaults";
+import { normalizeConfiguredFontFamily } from "./font-family-resolution";
 import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
 
 const DEFAULT_MONO_FALLBACK =
-  '"Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+  '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 const WINDOWS_MONO_FALLBACK =
-  'Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", "Geist Mono Variable", ui-monospace, monospace';
+  '"JetBrains Mono Variable", Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", ui-monospace, monospace';
 
 const DEFAULT_SANS_FALLBACK =
-  '"Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  '"IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const WINDOWS_SANS_FALLBACK =
-  '"Segoe UI", "Geist Variable", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
+  '"IBM Plex Sans Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
 
 const ATHAS_DARK_COLORS: Record<string, string> = {
   "primary-bg": "#141413",
@@ -150,8 +155,8 @@ export interface AppearanceBootstrapCache {
   uiFontSize: number;
 }
 
-const DEFAULT_EDITOR_FONT = "Geist Mono Variable";
-const DEFAULT_UI_FONT = "Geist Variable";
+const DEFAULT_EDITOR_FONT = DEFAULT_MONO_FONT_FAMILY;
+const DEFAULT_UI_FONT = DEFAULT_UI_FONT_FAMILY;
 
 function prefixRecord(prefix: string, value: Record<string, string>): Record<string, string> {
   const result: Record<string, string> = {};
@@ -238,11 +243,11 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
 
   const editorFontFamily =
     typeof record.editorFontFamily === "string"
-      ? record.editorFontFamily
+      ? normalizeConfiguredFontFamily(record.editorFontFamily, DEFAULT_MONO_FONT_FAMILY)
       : DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.editorFontFamily;
   const uiFontFamily =
     typeof record.uiFontFamily === "string"
-      ? record.uiFontFamily
+      ? normalizeConfiguredFontFamily(record.uiFontFamily, DEFAULT_UI_FONT_FAMILY)
       : DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.uiFontFamily;
   const uiFontSize = normalizeUiFontSize(record.uiFontSize);
 
@@ -297,20 +302,11 @@ export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void 
   const monoFallback = isWindowsPlatform() ? WINDOWS_MONO_FALLBACK : DEFAULT_MONO_FALLBACK;
   const sansFallback = isWindowsPlatform() ? WINDOWS_SANS_FALLBACK : DEFAULT_SANS_FALLBACK;
 
-  const editorFontPrimary =
-    isWindowsPlatform() && stripWrappingQuotes(cache.editorFontFamily) === "Geist Mono Variable"
-      ? "Consolas"
-      : cache.editorFontFamily;
-  const uiFontPrimary =
-    isWindowsPlatform() && stripWrappingQuotes(cache.uiFontFamily) === "Geist Variable"
-      ? "Segoe UI"
-      : cache.uiFontFamily;
-
   root.style.setProperty(
     "--editor-font-family",
-    buildFontVariable(editorFontPrimary, monoFallback),
+    buildFontVariable(cache.editorFontFamily, monoFallback),
   );
-  root.style.setProperty("--app-font-family", buildFontVariable(uiFontPrimary, sansFallback));
+  root.style.setProperty("--app-font-family", buildFontVariable(cache.uiFontFamily, sansFallback));
   const normalizedUiFontSize = normalizeUiFontSize(cache.uiFontSize);
   root.style.setProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
   root.style.setProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);
@@ -344,8 +340,14 @@ export function cacheFontsForBootstrap(
   const existing = readAppearanceBootstrapCache() || DEFAULT_APPEARANCE_BOOTSTRAP_CACHE;
   const next: AppearanceBootstrapCache = {
     ...existing,
-    editorFontFamily: editorFontFamily || existing.editorFontFamily,
-    uiFontFamily: uiFontFamily || existing.uiFontFamily,
+    editorFontFamily: normalizeConfiguredFontFamily(
+      editorFontFamily || existing.editorFontFamily,
+      DEFAULT_MONO_FONT_FAMILY,
+    ),
+    uiFontFamily: normalizeConfiguredFontFamily(
+      uiFontFamily || existing.uiFontFamily,
+      DEFAULT_UI_FONT_FAMILY,
+    ),
     uiFontSize: uiFontSize === undefined ? existing.uiFontSize : normalizeUiFontSize(uiFontSize),
   };
   writeAppearanceBootstrapCache(next);

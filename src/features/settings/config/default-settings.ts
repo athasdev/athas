@@ -1,4 +1,16 @@
 import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
+import {
+  DEFAULT_CODE_FONT_SIZE,
+  DEFAULT_MONO_FONT_FAMILY,
+  DEFAULT_TERMINAL_FONT_SIZE,
+  DEFAULT_UI_FONT_FAMILY,
+} from "@/features/settings/config/typography-defaults";
+import {
+  FOOTER_LEADING_ITEM_IDS,
+  FOOTER_TRAILING_ITEM_IDS,
+  HEADER_TRAILING_ITEM_IDS,
+  SIDEBAR_ACTIVITY_ITEM_IDS,
+} from "@/features/layout/config/item-order";
 import type { Settings } from "@/features/settings/types/settings";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
@@ -11,16 +23,17 @@ export const defaultSettings: Settings = {
   sidebarPosition: "left",
   quickOpenPreview: true,
   // Editor
-  fontFamily: "Geist Mono Variable",
-  fontSize: 14,
+  fontFamily: DEFAULT_MONO_FONT_FAMILY,
+  fontSize: DEFAULT_CODE_FONT_SIZE,
+  editorLineHeight: 1.4,
   tabSize: 2,
   wordWrap: false,
   lineNumbers: true,
   showMinimap: false,
   // Terminal
-  terminalFontFamily: "Geist Mono Variable",
-  terminalFontSize: 14,
-  terminalLineHeight: 1.2,
+  terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
+  terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
+  terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
   terminalCursorStyle: "block",
@@ -29,7 +42,7 @@ export const defaultSettings: Settings = {
   terminalDefaultShellId: "",
   terminalDefaultProfileId: "",
   // UI
-  uiFontFamily: "Geist Variable",
+  uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark",
@@ -39,7 +52,12 @@ export const defaultSettings: Settings = {
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
+  sidebarTabsPosition: "top",
   titleBarProjectMode: "tabs",
+  headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
+  sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
+  footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
+  footerTrailingItemsOrder: [...FOOTER_TRAILING_ITEM_IDS],
   openFoldersInNewWindow: false,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
@@ -49,6 +67,7 @@ export const defaultSettings: Settings = {
   aiCompletion: true,
   aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   aiDefaultSessionMode: "",
+  aiSkills: [],
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
@@ -56,6 +75,7 @@ export const defaultSettings: Settings = {
   showGitHubIssues: true,
   showGitHubActions: true,
   // Keyboard
+  keybindingPreset: "none",
   vimMode: false,
   vimRelativeLineNumbers: false,
   // Language
@@ -77,6 +97,7 @@ export const defaultSettings: Settings = {
     terminal: true,
     search: true,
     diagnostics: true,
+    debugger: false,
     aiChat: true,
     breadcrumbs: true,
     persistentCommands: true,
@@ -90,6 +111,11 @@ export const defaultSettings: Settings = {
   maxOpenTabs: 100,
   horizontalTabScroll: false,
   //// File tree
+  fileTreeIndentSize: 20,
+  compactFoldersInFileTree: false,
+  fileTreeDensity: "default",
+  showHiddenFilesInFileTree: true,
+  showGitignoredFilesInFileTree: true,
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
   gitChangesFolderView: true,
@@ -104,6 +130,8 @@ export const defaultSettings: Settings = {
   collapseEmptyGitSections: false,
   rememberLastGitPanelMode: false,
   gitLastPanelMode: "changes",
+  gitSidebarTabOrder: ["changes", "history", "worktrees"],
+  githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
   enableInlineGitBlame: true,
   enableGitGutter: true,
   // Telemetry
@@ -120,6 +148,11 @@ export function getDefaultSettingsSnapshot(): Settings {
     enterpriseAllowedExtensionIds: [...defaultSettings.enterpriseAllowedExtensionIds],
     hiddenFilePatterns: [...defaultSettings.hiddenFilePatterns],
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
+    headerTrailingItemsOrder: [...defaultSettings.headerTrailingItemsOrder],
+    sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
+    footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
+    footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
+    aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }

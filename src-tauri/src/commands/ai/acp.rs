@@ -1,3 +1,4 @@
+use crate::app_runtime::AppHandle;
 use athas_ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig, AgentRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
@@ -7,7 +8,7 @@ use std::{
    path::{Path, PathBuf},
    sync::Arc,
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{Manager, State};
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
@@ -19,6 +20,8 @@ pub struct PermissionResponseArgs {
    approved: bool,
    #[serde(default)]
    cancelled: bool,
+   #[serde(default, alias = "optionId")]
+   option_id: Option<String>,
 }
 
 #[tauri::command]
@@ -84,10 +87,10 @@ pub async fn stop_acp_agent(bridge: State<'_, AcpBridgeState>) -> Result<AcpAgen
 #[tauri::command]
 pub async fn send_acp_prompt(
    bridge: State<'_, AcpBridgeState>,
-   prompt: String,
+   prompt: Vec<serde_json::Value>,
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
-   bridge.send_prompt(&prompt).await.map_err(|e| e.to_string())
+   bridge.send_prompt(prompt).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -103,7 +106,12 @@ pub async fn respond_acp_permission(
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .respond_to_permission(args.request_id, args.approved, args.cancelled)
+      .respond_to_permission(
+         args.request_id,
+         args.approved,
+         args.cancelled,
+         args.option_id,
+      )
       .await
       .map_err(|e| e.to_string())
 }

@@ -1,5 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { History } from "lucide-react";
+import { ClockCounterClockwise as History } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -12,6 +12,8 @@ import {
   unstageAllFiles,
 } from "@/features/git/api/git-status-api";
 import { useGitStore } from "@/features/git/stores/git-store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { useGitHubStore } from "@/features/github/stores/github-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useOnboardingStore } from "@/features/onboarding/store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -30,10 +32,12 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import Keybinding from "@/ui/keybinding";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";
+import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
 import { createSettingsActions } from "../constants/settings-actions";
@@ -60,7 +64,6 @@ const CommandPalette = () => {
     setIsFindVisible,
     setActiveView,
     setIsQuickOpenVisible,
-    setIsGlobalSearchVisible,
     setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
@@ -81,7 +84,9 @@ const CommandPalette = () => {
   const lspStatus = useLspStore.use.lspStatus();
   const { clearLspError, updateLspStatus } = useLspStore.use.actions();
   const { rootFolderPath } = useFileSystemStore();
+  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const gitStore = useGitStore();
+  const { checkAuth: checkGitHubAuth } = useGitHubStore().actions;
   const { showToast } = useToast();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
   const openOnboarding = useOnboardingStore((state) => state.openPreview);
@@ -140,8 +145,11 @@ const CommandPalette = () => {
       onClose,
     }),
     ...createSettingsActions({
+      query,
       settings,
       setIsSettingsDialogVisible,
+      openSettingsDialog,
+      setSettingsSearchQuery: useSettingsStore.getState().setSearchQuery,
       setIsThemeSelectorVisible,
       setIsIconThemeSelectorVisible,
       updateSetting: useSettingsStore.getState().updateSetting as (
@@ -158,7 +166,6 @@ const CommandPalette = () => {
       setIsSidebarVisible,
       setActiveView,
       setIsQuickOpenVisible,
-      setIsGlobalSearchVisible,
       openSettingsDialog,
       onClose,
     }),
@@ -177,6 +184,9 @@ const CommandPalette = () => {
     }),
     ...createGitActions({
       rootFolderPath,
+      activeRepoPath,
+      setIsSidebarVisible,
+      setActiveView,
       showToast,
       gitStore,
       gitOperations: {
@@ -188,6 +198,22 @@ const CommandPalette = () => {
         fetchChanges,
         discardAllChanges,
       },
+      onClose,
+    }),
+    ...createGitHubActions({
+      setIsSidebarVisible,
+      setActiveView,
+      settings: {
+        showGitHubPullRequests: settings.showGitHubPullRequests,
+        showGitHubIssues: settings.showGitHubIssues,
+        showGitHubActions: settings.showGitHubActions,
+      },
+      updateSetting: useSettingsStore.getState().updateSetting as (
+        key: string,
+        value: any,
+      ) => void | Promise<void>,
+      checkAuth: checkGitHubAuth,
+      showToast,
       onClose,
     }),
     ...createDatabaseActions({
@@ -215,9 +241,8 @@ const CommandPalette = () => {
   // Filter actions based on query
   const filteredActions = allActions.filter(
     (action) =>
-      action.label.toLowerCase().includes(query.toLowerCase()) ||
-      action.description?.toLowerCase().includes(query.toLowerCase()) ||
-      action.category.toLowerCase().includes(query.toLowerCase()),
+      !query.trim() ||
+      matchesSearchQuery(query, [action.label, action.description ?? "", action.category]),
   );
 
   const prioritizedActions = useMemo(() => {

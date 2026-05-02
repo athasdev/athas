@@ -30,6 +30,7 @@ export const CompletionDropdown = memo(
     const cursorPosition = useEditorStateStore.use.cursorPosition();
     const { gutterWidth } = useEditorLayout();
     const baseFontSize = useEditorSettingsStore.use.fontSize();
+    const lineHeightMultiplier = useEditorSettingsStore.use.lineHeight();
     const fontFamily = useEditorSettingsStore.use.fontFamily();
     const tabSize = useEditorSettingsStore.use.tabSize();
     const lines = useEditorViewStore.use.lines();
@@ -37,7 +38,7 @@ export const CompletionDropdown = memo(
 
     // Apply zoom to match the editor's actual font size and line height
     const fontSize = baseFontSize * zoomLevel;
-    const lineHeight = fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
+    const lineHeight = Math.ceil(fontSize * lineHeightMultiplier);
 
     const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 

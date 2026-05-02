@@ -5,14 +5,14 @@ import {
   Download,
   Info,
   Plus,
-  RefreshCw,
-  Settings,
+  ArrowClockwise as RefreshCw,
+  GearSix as Settings,
   Table,
   ToggleLeft,
   ToggleRight,
-  Trash2,
-  Type,
-} from "lucide-react";
+  Trash as Trash2,
+  TextT as Type,
+} from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type {

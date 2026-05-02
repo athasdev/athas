@@ -1,4 +1,5 @@
 use super::types::{AgentConfig, AgentRuntime};
+use crate::runtime::AthasAppHandle as AppHandle;
 use std::{
    collections::HashMap,
    env, fs,
@@ -7,7 +8,7 @@ use std::{
    sync::OnceLock,
    time::Instant,
 };
-use tauri::{AppHandle, Manager};
+use tauri::Manager;
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;

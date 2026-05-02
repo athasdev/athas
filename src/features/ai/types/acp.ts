@@ -21,12 +21,48 @@ export interface AcpAgentStatus {
   sessionActive: boolean;
   initialized: boolean;
   sessionId?: string | null;
+  agentCapabilities?: AcpAgentCapabilities | null;
+}
+
+export interface AcpAgentCapabilities {
+  loadSession: boolean;
+  promptCapabilities: {
+    image: boolean;
+    audio: boolean;
+    embeddedContext: boolean;
+  };
+  mcpCapabilities: {
+    http: boolean;
+    sse: boolean;
+  };
+  sessionCapabilities: unknown;
 }
 
 export type AcpContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; data: string; mediaType: string }
-  | { type: "resource"; uri: string; name: string | null };
+  | { type: "audio"; data: string; mediaType: string }
+  | {
+      type: "resource";
+      uri: string;
+      name: string | null;
+      mimeType?: string | null;
+      text?: string | null;
+      blob?: string | null;
+      title?: string | null;
+      description?: string | null;
+      size?: number | null;
+    };
+
+export type AcpPromptContentBlock =
+  | { type: "text"; text: string }
+  | { type: "resource_link"; uri: string; name: string; mimeType?: string | null }
+  | {
+      type: "resource";
+      resource:
+        | { uri: string; text: string; mimeType?: string | null }
+        | { uri: string; blob: string; mimeType?: string | null };
+    };
 
 // Slash command types
 export interface SlashCommandInput {
@@ -77,13 +113,45 @@ export interface AcpPlanEntry {
   status: AcpPlanEntryStatus;
 }
 
+export type AcpPermissionOptionKind =
+  | "allow_once"
+  | "allow_always"
+  | "reject_once"
+  | "reject_always";
+
+export interface AcpPermissionOption {
+  id: string;
+  name: string;
+  kind: AcpPermissionOptionKind;
+}
+
+export type AcpToolKind =
+  | "read"
+  | "edit"
+  | "delete"
+  | "move"
+  | "search"
+  | "execute"
+  | "think"
+  | "fetch"
+  | "switch_mode"
+  | "other";
+
+export type AcpToolCallStatus = "pending" | "in_progress" | "completed" | "failed";
+
+export interface AcpToolCallLocation {
+  path: string;
+  line?: number | null;
+}
+
 // Prompt turn types
 export type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
 
 // UI action types that agents can request
 export type UiAction =
   | { action: "open_web_viewer"; url: string }
-  | { action: "open_terminal"; command: string | null };
+  | { action: "open_terminal"; command: string | null }
+  | { action: "set_chat_title"; title: string };
 
 export type AcpEvent =
   | {
@@ -110,12 +178,29 @@ export type AcpEvent =
       toolName: string;
       toolId: string;
       input: unknown;
+      kind: AcpToolKind;
+      status: AcpToolCallStatus;
+      locations: AcpToolCallLocation[];
+    }
+  | {
+      type: "tool_update";
+      sessionId: string;
+      toolId: string;
+      toolName?: string | null;
+      input?: unknown;
+      output?: unknown;
+      kind?: AcpToolKind | null;
+      status?: AcpToolCallStatus | null;
+      locations?: AcpToolCallLocation[] | null;
+      error?: string | null;
     }
   | {
       type: "tool_complete";
       sessionId: string;
       toolId: string;
       success: boolean;
+      output?: unknown;
+      error?: string | null;
     }
   | {
       type: "permission_request";
@@ -123,6 +208,7 @@ export type AcpEvent =
       permissionType: string;
       resource: string;
       description: string;
+      options: AcpPermissionOption[];
     }
   | {
       type: "session_complete";

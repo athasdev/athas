@@ -1,3 +1,4 @@
+use crate::app_runtime::AppHandle;
 use athas_extensions::{DownloadInfo, ExtensionInstaller, ExtensionMetadata};
 use sha2::{Digest, Sha256};
 use std::{
@@ -6,7 +7,7 @@ use std::{
    io::Write,
    path::{Path, PathBuf},
 };
-use tauri::{AppHandle, Runtime, command};
+use tauri::{AppHandle as TauriAppHandle, Runtime, command};
 use url::Url;
 
 fn validate_extension_id(extension_id: &str) -> Result<(), String> {
@@ -219,7 +220,9 @@ fn get_extensions_dir() -> Result<PathBuf, String> {
 }
 
 #[command]
-pub fn get_bundled_extensions_path<R: Runtime>(app_handle: AppHandle<R>) -> Result<String, String> {
+pub fn get_bundled_extensions_path<R: Runtime>(
+   app_handle: TauriAppHandle<R>,
+) -> Result<String, String> {
    // In production, use Tauri's resource directory API
    // In development, fall back to the source path
    let extensions_path = if cfg!(debug_assertions) {

@@ -34,6 +34,13 @@ import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { loadWorkspaceTerminalsFromStorage } from "@/features/terminal/lib/terminal-session-storage";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
+import {
+  ensureTrailingPathSeparator,
+  getBaseName,
+  getDirName,
+  getFolderName,
+  joinPath,
+} from "@/utils/path-helpers";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
 import type { FsActions, FsState } from "../types/interface";
@@ -56,6 +63,7 @@ import {
   getFilenameFromPath,
   isBinaryContent,
   isBinaryFile,
+  isKnownTextFile,
   isImageFile,
   isPdfFile,
 } from "./file-utils";
@@ -113,6 +121,7 @@ const wrapWithRootFolder = (
 };
 
 let latestFileOpenRequestId = 0;
+const textFileDecoder = new TextDecoder("utf-8");
 const MAX_SESSION_BUFFERS_TO_RESTORE = 8;
 const LARGE_WORKSPACE_GIT_STATUS_THRESHOLD = 2000;
 const MAX_PROJECT_FILES_TO_SCAN = 5000;
@@ -232,7 +241,7 @@ export const useFileSystemStore = createSelectors(
         });
 
         // Add project to workspace tabs
-        const projectName = selected.split("/").pop() || "Project";
+        const projectName = getFolderName(selected);
         useWorkspaceTabsStore.getState().addProjectTab(selected, projectName);
 
         const readDirectoryStartedAt = performance.now();
@@ -491,7 +500,7 @@ export const useFileSystemStore = createSelectors(
         });
 
         // Add project to workspace tabs
-        const projectName = path.split("/").pop() || "Project";
+        const projectName = getFolderName(path);
         useWorkspaceTabsStore.getState().addProjectTab(path, projectName);
 
         const readDirectoryStartedAt = performance.now();
@@ -831,7 +840,9 @@ export const useFileSystemStore = createSelectors(
           );
           fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
-          if (!path.startsWith("remote://")) {
+          let preloadedLocalText: string | null = null;
+
+          if (!path.startsWith("remote://") && !isKnownTextFile(resolvedPath)) {
             try {
               const fileData = await readFile(resolvedPath);
 
@@ -858,6 +869,8 @@ export const useFileSystemStore = createSelectors(
                 fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
                 return;
               }
+
+              preloadedLocalText = textFileDecoder.decode(fileData);
             } catch (error) {
               console.error("Failed to inspect file bytes before opening:", error);
             }
@@ -907,7 +920,7 @@ export const useFileSystemStore = createSelectors(
               filePath: remotePath,
             });
           } else {
-            content = await readFileContent(resolvedPath);
+            content = preloadedLocalText ?? (await readFileContent(resolvedPath));
           }
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
@@ -1265,7 +1278,7 @@ export const useFileSystemStore = createSelectors(
         // Create a temporary new file item for inline editing
         const newItem: FileEntry = {
           name: "",
-          path: `${effectiveRootPath}/`,
+          path: ensureTrailingPathSeparator(effectiveRootPath),
           isDir: false,
           isEditing: true,
           isNewItem: true,
@@ -1307,7 +1320,7 @@ export const useFileSystemStore = createSelectors(
         // Create intermediate folders if they don't exist
         try {
           for (const folder of parts) {
-            const potentialPath = await join(currentPath, folder);
+            const potentialPath = joinPath(currentPath, folder);
             // Check if directory already exists in the file tree
             const existingFolder = findFileInTree(get().files, potentialPath);
 
@@ -1356,7 +1369,7 @@ export const useFileSystemStore = createSelectors(
 
         const newFolder: FileEntry = {
           name: "",
-          path: `${effectiveRootPath}/`,
+          path: ensureTrailingPathSeparator(effectiveRootPath),
           isDir: true,
           isEditing: true,
           isNewItem: true,
@@ -1456,12 +1469,11 @@ export const useFileSystemStore = createSelectors(
         const updatedMovedFile = {
           ...movedFile,
           path: newPath,
-          name: newPath.split("/").pop() || movedFile.name,
+          name: getBaseName(newPath, movedFile.name),
         };
 
         // Determine target directory from the new path
-        const targetDir =
-          newPath.substring(0, newPath.lastIndexOf("/")) || get().rootFolderPath || "/";
+        const targetDir = getDirName(newPath) || get().rootFolderPath || "/";
 
         // Add to new location
         updatedFiles = addFileToTree(updatedFiles, targetDir, updatedMovedFile);
@@ -1477,7 +1489,7 @@ export const useFileSystemStore = createSelectors(
         const { updateBuffer } = useBufferStore.getState().actions;
         const buffer = buffers.find((b) => b.path === oldPath);
         if (buffer) {
-          const fileName = newPath.split("/").pop() || buffer.name;
+          const fileName = getBaseName(newPath, buffer.name);
           updateBuffer({
             ...buffer,
             path: newPath,
@@ -1811,7 +1823,7 @@ export const useFileSystemStore = createSelectors(
 
         do {
           finalName = generateCopyName();
-          finalPath = `${dir}/${finalName}`;
+          finalPath = joinPath(dir, finalName);
           counter++;
         } while (findFileInTree(get().files, finalPath));
 
@@ -2015,6 +2027,11 @@ export const useFileSystemStore = createSelectors(
                   tab.path,
                   watcherStartedAt,
                 );
+
+                fffSetWorkspace(tab.path).catch((error) => {
+                  console.error("[fff] set_workspace failed:", error);
+                });
+
                 const gitStatusStartedAt = performance.now();
                 logWorkspaceOpenStep("start", "switchToProject:getGitStatus", tab.path);
                 const gitStatus = await getGitStatus(tab.path);
@@ -2199,7 +2216,7 @@ export const useFileSystemStore = createSelectors(
           // Clear project store
           const { setRootFolderPath, setProjectName } = useProjectStore.getState();
           setRootFolderPath(undefined);
-          setProjectName("Explorer");
+          setProjectName("Files");
           restoreProjectUiState(undefined);
 
           // Reset file system state

@@ -1,4 +1,4 @@
-import { Folder, FolderOpen } from "lucide-react";
+import { Folder, FolderOpen } from "@phosphor-icons/react";
 import { getIcon } from "material-file-icons";
 import type { IconThemeDefinition } from "../types";
 

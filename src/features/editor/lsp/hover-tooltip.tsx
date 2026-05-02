@@ -8,6 +8,7 @@ import "./hover-tooltip.css";
 
 export const HoverTooltip = memo(() => {
   const fontSize = useEditorSettingsStore((state) => state.fontSize);
+  const lineHeight = useEditorSettingsStore((state) => state.lineHeight);
   const fontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { hoverInfo, actions } = useEditorUIStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,9 +138,9 @@ export const HoverTooltip = memo(() => {
         ...positionStyle,
         fontSize: `${fontSize}px`,
         fontFamily,
-        lineHeight: `${Math.ceil(fontSize * 1.45)}px`,
+        lineHeight: `${Math.ceil(fontSize * lineHeight)}px`,
         ["--hover-tooltip-font-size" as string]: `${fontSize}px`,
-        ["--hover-tooltip-line-height" as string]: `${Math.ceil(fontSize * 1.45)}px`,
+        ["--hover-tooltip-line-height" as string]: `${Math.ceil(fontSize * lineHeight)}px`,
         zIndex: EDITOR_CONSTANTS.Z_INDEX.TOOLTIP,
         width: "max-content",
         maxWidth,

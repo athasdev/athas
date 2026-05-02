@@ -1,4 +1,4 @@
-import { Info, Plus, Trash2 } from "lucide-react";
+import { Info, Plus, Trash as Trash2 } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useFontStore } from "@/features/settings/stores/font-store";
@@ -137,6 +137,8 @@ export const TerminalSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
@@ -179,7 +181,7 @@ export const TerminalSettings = () => {
               terminal toolbar profile picker.
             </div>
             <Button
-              variant="secondary"
+              variant="default"
               size="sm"
               onClick={() =>
                 profileActions.addProfile({
@@ -248,6 +250,8 @@ export const TerminalSettings = () => {
                       className="w-full"
                       size="sm"
                       variant="secondary"
+                      searchable
+                      searchableTrigger="input"
                     />
                   </div>
                 </div>
@@ -412,6 +416,8 @@ export const TerminalSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 

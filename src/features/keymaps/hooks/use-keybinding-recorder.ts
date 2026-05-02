@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { keybindingToDisplay } from "@/utils/keybinding-display";
 import { normalizeKey } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
+import { eventToKey } from "../utils/matcher";
 
 interface RecorderState {
   keys: string[];
@@ -59,14 +60,9 @@ export function useKeybindingRecorder(commandId: string) {
       e.preventDefault();
       e.stopPropagation();
 
-      const modifiers: string[] = [];
-      if (e.ctrlKey) modifiers.push("ctrl");
-      if (e.metaKey) modifiers.push("cmd");
-      if (e.altKey) modifiers.push("alt");
-      if (e.shiftKey) modifiers.push("shift");
-
-      const key = e.key.toLowerCase();
-      const combination = [...modifiers, key].join("+");
+      // Use the same key parsing as the matcher for consistency
+      const parsedKey = eventToKey(e);
+      const combination = [...parsedKey.modifiers, parsedKey.key.toLowerCase()].join("+");
       const normalized = normalizeKey(combination);
 
       setState({

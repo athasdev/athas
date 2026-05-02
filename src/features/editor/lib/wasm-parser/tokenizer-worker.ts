@@ -3,6 +3,7 @@
 import type { Node, QueryCapture, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getDefaultParserWasmUrl } from "./extension-assets";
+import { getLanguageOverlayTokens } from "./language-overlays";
 import { wasmParserLoader } from "./loader";
 import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
 import { calculateEdit, isSimpleEdit } from "../../utils/tree-sitter-edit";
@@ -67,6 +68,10 @@ type WorkerResponse = WorkerSuccessResponse | WorkerErrorResponse;
 const sessions = new Map<string, WorkerSession>();
 
 const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
+  angular: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+  ],
   html: [
     { parentType: "script_element", contentType: "raw_text", language: "javascript" },
     { parentType: "style_element", contentType: "raw_text", language: "css" },
@@ -483,6 +488,8 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
       }
     }
   }
+
+  tokens.push(...getLanguageOverlayTokens(message.languageId, normalizedContent));
 
   const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
   nextSession.bufferId = message.bufferId;

@@ -1,18 +1,19 @@
 import {
-  Columns2,
+  Columns as Columns2,
   Copy,
   FolderOpen,
-  Pin,
-  PinOff,
-  RotateCcw,
-  Rows2,
-  Terminal,
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+  ArrowCounterClockwise as RotateCcw,
+  Rows as Rows2,
+  TerminalWindow as Terminal,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
@@ -123,8 +124,8 @@ const TabContextMenu = ({
             label: "Open in Terminal",
             icon: <Terminal />,
             onClick: () => {
-              const dirPath = buffer.path.substring(0, buffer.path.lastIndexOf("/"));
-              const dirName = dirPath.split("/").pop() || "terminal";
+              const dirPath = getDirName(buffer.path);
+              const dirName = getBaseName(dirPath, "terminal");
               const { openTerminalBuffer } = useBufferStore.getState().actions;
               openTerminalBuffer({
                 name: dirName,

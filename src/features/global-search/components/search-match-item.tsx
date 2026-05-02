@@ -2,6 +2,7 @@ import { type CSSProperties, memo } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
 import { Button } from "@/ui/button";
+import { getBaseName, getDirName } from "@/utils/path-helpers";
 
 interface SearchMatchItemProps {
   filePath: string;
@@ -39,8 +40,8 @@ export const SearchMatchItem = memo(
     onPreview,
     style,
   }: SearchMatchItemProps) => {
-    const fileName = filePath.split("/").pop() || "";
-    const dirPath = displayPath.substring(0, displayPath.lastIndexOf("/"));
+    const fileName = getBaseName(filePath, "");
+    const dirPath = getDirName(displayPath);
 
     return (
       <Button

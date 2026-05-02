@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

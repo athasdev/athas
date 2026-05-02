@@ -3,6 +3,7 @@ import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { calculateTotalGutterWidth } from "../../utils/gutter";
 import { DiagnosticIndicators } from "./diagnostic-indicators";
+import { DebugBreakpointIndicators } from "@/features/debugger/components/debug-breakpoint-indicators";
 import { FoldIndicators } from "./fold-indicators";
 import { GitIndicators } from "./git-indicators";
 import { LineNumbers } from "./line-numbers";
@@ -28,6 +29,8 @@ interface GutterProps {
   wordWrap?: boolean;
   lines?: string[];
   contentWidth?: number;
+  lineNumberStart?: number;
+  lineNumberMap?: Array<number | null>;
 }
 
 const BUFFER_LINES = 20;
@@ -48,6 +51,8 @@ function GutterComponent({
   wordWrap = false,
   lines,
   contentWidth,
+  lineNumberStart = 1,
+  lineNumberMap,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -62,7 +67,17 @@ function GutterComponent({
   const containerHeightRef = useRef(0);
   const viewportRangeRef = useRef(viewportRange);
 
-  const totalWidth = calculateTotalGutterWidth(totalLines);
+  const mappedLargestLine = lineNumberMap?.reduce<number>(
+    (largest, lineNumber) =>
+      typeof lineNumber === "number" ? Math.max(largest, lineNumber) : largest,
+    0,
+  );
+  const largestDisplayedLine = Math.max(
+    totalLines,
+    mappedLargestLine ?? 0,
+    lineNumberStart + totalLines - 1,
+  );
+  const totalWidth = calculateTotalGutterWidth(largestDisplayedLine);
   const totalContentHeight = totalLines * lineHeight + GUTTER_PADDING * 2;
   const isDiffAccordionBuffer = filePath?.startsWith("diff-editor://") ?? false;
 
@@ -126,6 +141,21 @@ function GutterComponent({
     };
 
     const forwardWheel = (e: WheelEvent) => {
+      const isTextareaScrollable = getComputedStyle(textarea).overflowY !== "hidden";
+      if (!isTextareaScrollable) {
+        const scrollContainer =
+          textarea.closest("[data-editor-outer-scroll]") ??
+          textarea.closest("[data-diff-stack-scroll-container]");
+
+        if (scrollContainer instanceof HTMLDivElement) {
+          scrollContainer.scrollTop += e.deltaY;
+          scrollContainer.scrollLeft += e.deltaX;
+          e.preventDefault();
+        }
+
+        return;
+      }
+
       e.preventDefault();
       textarea.scrollTop += e.deltaY;
       textarea.scrollLeft += e.deltaX;
@@ -248,10 +278,20 @@ function GutterComponent({
             onLineClick={onLineClick}
             foldMapping={foldMapping}
             filePath={filePath}
+            lineNumberStart={lineNumberStart}
+            lineNumberMap={lineNumberMap}
           />
         ) : (
           <>
             {accordionGutterDecorations}
+            <DebugBreakpointIndicators
+              filePath={filePath}
+              lineHeight={lineHeight}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+              hiddenLines={accordionLineSet}
+            />
+
             <GitIndicators
               lineHeight={lineHeight}
               fontSize={fontSize}
@@ -291,6 +331,8 @@ function GutterComponent({
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
               hiddenLines={accordionLineSet}
+              lineNumberStart={lineNumberStart}
+              lineNumberMap={lineNumberMap}
             />
           </>
         )}
@@ -312,6 +354,8 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.foldMapping === next.foldMapping &&
     prev.wordWrap === next.wordWrap &&
     prev.lines === next.lines &&
-    prev.contentWidth === next.contentWidth
+    prev.contentWidth === next.contentWidth &&
+    prev.lineNumberStart === next.lineNumberStart &&
+    prev.lineNumberMap === next.lineNumberMap
   );
 });

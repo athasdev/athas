@@ -1,10 +1,18 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import {
+  ANGULAR_TEMPLATE_LANGUAGE_ID,
+  isAngularTemplatePath,
+} from "@/features/editor/lib/wasm-parser/language-overlays";
 import { extensionManager } from "../extensions/manager";
 
 /**
  * Detect programming language from file extension using the extension registry
  */
 export function detectLanguageFromPath(filePath: string): string {
+  if (isAngularTemplatePath(filePath)) {
+    return ANGULAR_TEMPLATE_LANGUAGE_ID;
+  }
+
   const fromRegistry = extensionRegistry.getLanguageId(filePath);
   if (fromRegistry) {
     return fromRegistry;

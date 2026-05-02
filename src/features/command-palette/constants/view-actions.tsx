@@ -1,19 +1,21 @@
 import {
-  AlertCircle,
-  ArrowLeftRight,
-  Globe,
-  Menu,
-  MessageSquare,
-  PanelBottom,
-  PanelLeft,
-  RotateCcw,
-  Search,
-  Terminal,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+  WarningCircle as AlertCircle,
+  ArrowsLeftRight as ArrowLeftRight,
+  GlobeHemisphereWest as Globe,
+  List as Menu,
+  ChatCircleText as MessageSquare,
+  SidebarSimple as PanelBottom,
+  SidebarSimple as PanelLeft,
+  ArrowCounterClockwise as RotateCcw,
+  MagnifyingGlass as Search,
+  TerminalWindow as Terminal,
+  MagnifyingGlassPlus as ZoomIn,
+  MagnifyingGlassMinus as ZoomOut,
+} from "@phosphor-icons/react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
+import { IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
@@ -105,21 +107,13 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     },
     {
       id: "toggle-diagnostics-panel",
-      label:
-        isBottomPaneVisible && bottomPaneActiveTab === "diagnostics"
-          ? "View: Hide Diagnostics"
-          : "View: Show Diagnostics",
-      description: "Toggle diagnostics panel",
+      label: "View: Show Diagnostics",
+      description: "Open diagnostics",
       icon: <AlertCircle />,
       category: "View",
       commandId: "workbench.toggleDiagnostics",
       action: () => {
-        if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
-          setIsBottomPaneVisible(false);
-        } else {
-          setBottomPaneActiveTab("diagnostics");
-          setIsBottomPaneVisible(true);
-        }
+        useBufferStore.getState().actions.openDiagnosticsBuffer();
         onClose();
       },
     },
@@ -162,24 +156,28 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    {
-      id: "toggle-native-menu-bar",
-      label: settings.nativeMenuBar
-        ? "View: Disable Native Menu Bar"
-        : "View: Enable Native Menu Bar",
-      description: settings.nativeMenuBar
-        ? "Use custom menu bar"
-        : "Use native operating system menu bar",
-      icon: <Menu />,
-      category: "View",
-      action: async () => {
-        const newValue = !settings.nativeMenuBar;
-        updateSetting("nativeMenuBar", newValue);
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("toggle_menu_bar", { toggle: newValue });
-        onClose();
-      },
-    },
+    ...(!IS_WINDOWS
+      ? [
+          {
+            id: "toggle-native-menu-bar",
+            label: settings.nativeMenuBar
+              ? "View: Disable Native Menu Bar"
+              : "View: Enable Native Menu Bar",
+            description: settings.nativeMenuBar
+              ? "Use custom menu bar"
+              : "Use native operating system menu bar",
+            icon: <Menu />,
+            category: "View",
+            action: async () => {
+              const newValue = !settings.nativeMenuBar;
+              updateSetting("nativeMenuBar", newValue);
+              const { invoke } = await import("@tauri-apps/api/core");
+              await invoke("toggle_menu_bar", { toggle: newValue });
+              onClose();
+            },
+          },
+        ]
+      : []),
     {
       id: "toggle-compact-menu-bar",
       label: settings.compactMenuBar

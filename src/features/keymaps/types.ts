@@ -7,7 +7,7 @@ export interface Keybinding {
   command: string;
   when?: string;
   args?: unknown;
-  source: "user" | "extension" | "default";
+  source: "user" | "extension" | "default" | "preset";
   enabled?: boolean;
 }
 

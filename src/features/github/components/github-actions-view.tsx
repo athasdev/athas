@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Activity, AlertCircle } from "lucide-react";
-import { GitHubCliStatusMessage } from "./github-cli-status";
+import { Pulse as Activity, WarningCircle as AlertCircle } from "@phosphor-icons/react";
+import { GitHubAuthStatusMessage } from "./github-auth-status";
+import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -13,33 +14,39 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { WorkflowRunListItem } from "../types/github";
-import {
-  GITHUB_ACTION_DETAILS_TTL_MS,
-  GITHUB_ACTION_LIST_TTL_MS,
-  githubActionDetailsCache,
-  githubActionListCache,
-} from "../utils/github-data-cache";
+import { GITHUB_ACTION_LIST_TTL_MS, githubActionListCache } from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
   isActive: boolean;
   onSelect: () => void;
-  onPrefetch: () => void;
+  repoPath?: string | null;
 }
 
-const WorkflowRunRow = memo(({ run, isActive, onSelect, onPrefetch }: WorkflowRunRowProps) => (
+const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunRowProps) => (
   <Button
     onClick={onSelect}
-    onMouseEnter={onPrefetch}
-    onFocus={onPrefetch}
+    draggable
+    onDragStart={(event) => {
+      const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
+      writeSidebarResourceDragData(event.dataTransfer, {
+        type: "github-action",
+        repoPath: repoPath ?? undefined,
+        runId: run.databaseId,
+        title,
+        url: run.url,
+        name: title,
+      });
+    }}
     variant="ghost"
     size="sm"
     active={isActive}
-    className="h-auto w-full min-w-0 items-start justify-start rounded-xl px-3 py-2.5 text-left"
+    className="h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing"
   >
     <div className="grid size-5 shrink-0 place-content-center rounded-full bg-secondary-bg text-text-lighter">
       <Activity className="size-3.5" />
@@ -117,15 +124,6 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
           { force, ttlMs: GITHUB_ACTION_LIST_TTL_MS },
         );
         startTransition(() => setRuns(nextRuns));
-
-        for (const run of nextRuns.slice(0, 3)) {
-          const cacheKey = `${repoPath}::${run.databaseId}`;
-          void githubActionDetailsCache.load(
-            cacheKey,
-            () => invoke("github_get_workflow_run_details", { repoPath, runId: run.databaseId }),
-            { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
-          );
-        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -170,25 +168,23 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <GitHubCliStatusMessage />
+        <GitHubAuthStatusMessage />
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-error">
-            <AlertCircle className="size-4" />
-            <p className="ui-text-sm">{error}</p>
-          </div>
+          <GitHubSidebarState
+            icon={<AlertCircle className="size-4" />}
+            title={error}
+            tone="error"
+          />
         ) : deferredRuns.length === 0 && !isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
-            <Activity className="size-4" />
-            <p className="ui-text-sm">No workflow runs</p>
-          </div>
+          <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
             {deferredRuns.map((run) => (
@@ -196,19 +192,7 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
                 key={run.databaseId}
                 run={run}
                 isActive={activeRunId === run.databaseId}
-                onPrefetch={() => {
-                  if (!repoPath) return;
-                  const cacheKey = `${repoPath}::${run.databaseId}`;
-                  void githubActionDetailsCache.load(
-                    cacheKey,
-                    () =>
-                      invoke("github_get_workflow_run_details", {
-                        repoPath,
-                        runId: run.databaseId,
-                      }),
-                    { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
-                  );
-                }}
+                repoPath={repoPath}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubActionBuffer({

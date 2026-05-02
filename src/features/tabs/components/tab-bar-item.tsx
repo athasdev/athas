@@ -1,21 +1,25 @@
 import {
-  Activity,
+  Pulse as Activity,
   Database,
   GitBranch,
   GitPullRequest,
-  Globe,
-  MessageSquare,
+  GlobeHemisphereWest as Globe,
+  MagnifyingGlass as Search,
+  ChatCircleText as MessageSquare,
   Package,
-  Pin,
-  Sparkles,
-  Terminal,
+  PushPin as Pin,
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+  WarningCircle,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
+import type { RefCallback } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
+import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
@@ -26,13 +30,12 @@ interface TabBarItemProps {
   index: number;
   isActive: boolean;
   isDraggedTab: boolean;
-  showDropIndicatorBefore: boolean;
-  tabRef: (el: HTMLDivElement | null) => void;
-  onMouseDown: (e: React.MouseEvent) => void;
+  showDropIndicatorBefore?: boolean;
+  tabRef?: RefCallback<HTMLDivElement>;
+  onClick?: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
   onDoubleClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.DragEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
   handleTabPin: (id: string) => void;
@@ -43,13 +46,12 @@ const TabBarItem = memo(function TabBarItem({
   displayName,
   isActive,
   isDraggedTab,
-  showDropIndicatorBefore,
+  showDropIndicatorBefore = false,
   tabRef,
+  onClick,
   onMouseDown,
   onDoubleClick,
   onContextMenu,
-  onDragStart,
-  onDragEnd,
   onKeyDown,
   handleTabClose,
   handleTabPin,
@@ -84,14 +86,11 @@ const TabBarItem = memo(function TabBarItem({
   );
 
   return (
-    <>
-      {showDropIndicatorBefore && (
-        <div className="relative">
-          <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
-        </div>
-      )}
+    <div ref={tabRef} className="relative">
+      {showDropIndicatorBefore ? (
+        <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+      ) : null}
       <Tab
-        ref={tabRef}
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
@@ -99,13 +98,11 @@ const TabBarItem = memo(function TabBarItem({
         isActive={isActive}
         isDragged={isDraggedTab}
         className={isActive ? "bg-hover/80" : undefined}
+        onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
-        draggable
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
         action={
           <Button
@@ -184,6 +181,10 @@ const TabBarItem = memo(function TabBarItem({
             )
           ) : buffer.type === "githubAction" ? (
             <Activity className="text-text-lighter" />
+          ) : buffer.type === "globalSearch" ? (
+            <Search className="text-text-lighter" />
+          ) : buffer.type === "diagnostics" ? (
+            <WarningCircle className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={getDiffIconName() ?? buffer.name}
@@ -212,7 +213,7 @@ const TabBarItem = memo(function TabBarItem({
           />
         )}
       </Tab>
-    </>
+    </div>
   );
 });
 
@@ -222,7 +223,7 @@ function isMultiFileDiff(diffData: GitDiff | MultiFileDiff | undefined): diffDat
 
 function getDiffFileName(diff: GitDiff): string {
   const filePath = diff.new_path || diff.old_path || diff.file_path || "";
-  return filePath.split("/").pop() || filePath || "diff";
+  return getBaseName(filePath, filePath || "diff");
 }
 
 export default TabBarItem;

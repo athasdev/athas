@@ -1,4 +1,4 @@
-import { Copy, FolderOpen, X } from "lucide-react";
+import { Copy, FolderOpen, X } from "@phosphor-icons/react";
 import type { ProjectTab } from "@/features/window/stores/workspace-tabs-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 

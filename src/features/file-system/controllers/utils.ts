@@ -1,7 +1,42 @@
 import type { FileEntry } from "../types/app";
 import { sortFileEntries } from "./file-tree-utils";
 
-// Common directories and patterns to ignore for performance
+const OS_GENERATED_FILE_PATTERNS: string[] = [
+  ".DS_Store",
+  ".DS_Store?",
+  "._*",
+  ".Spotlight-V100",
+  ".Trashes",
+  ".fseventsd",
+  ".DocumentRevisions-V100",
+  ".VolumeIcon.icns",
+  ".com.apple.timemachine.donotpresent",
+  ".AppleDB",
+  ".AppleDesktop",
+  "Network Trash Folder",
+  ".TemporaryItems",
+  ".Temporary Items",
+  "Thumbs.db",
+  "ehthumbs.db",
+  "Desktop.ini",
+  "$RECYCLE.BIN",
+  "System Volume Information",
+];
+
+function matchesNamePattern(name: string, pattern: string, caseInsensitive = false): boolean {
+  if (!pattern.includes("*")) {
+    return caseInsensitive ? name.toLowerCase() === pattern.toLowerCase() : name === pattern;
+  }
+
+  const escapedPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  const flags = caseInsensitive ? "i" : undefined;
+  return new RegExp(`^${escapedPattern}$`, flags).test(name);
+}
+
+export const shouldHideFromFileTree = (name: string): boolean =>
+  OS_GENERATED_FILE_PATTERNS.some((pattern) => matchesNamePattern(name, pattern, true));
+
+// Common directories and patterns to ignore for project-wide scans.
 export const IGNORE_PATTERNS: string[] = [
   // Version control
   ".git",
@@ -139,13 +174,7 @@ export const shouldIgnore = (name: string, isDir: boolean): boolean => {
   const lowerName = name.toLowerCase();
   // Check ignore patterns
   for (const pattern of IGNORE_PATTERNS as string[]) {
-    if (pattern?.includes("*")) {
-      // Simple glob pattern matching
-      const regexPattern = pattern.replace(/\*/g, ".*");
-      if (new RegExp(`^${regexPattern}$`).test(lowerName)) {
-        return true;
-      }
-    } else if (lowerName === pattern.toLowerCase()) {
+    if (matchesNamePattern(lowerName, pattern.toLowerCase())) {
       return true;
     }
   }
@@ -158,52 +187,7 @@ export const shouldIgnore = (name: string, isDir: boolean): boolean => {
     }
   }
 
-  // Only ignore specific OS-generated hidden files, not all hidden files
-  // This allows developers to see important dotfiles like .env, .gitignore, etc.
-  if (name.startsWith(".")) {
-    const osGeneratedFiles = [
-      // macOS system files
-      ".DS_Store",
-      ".DS_Store?",
-      "._*", // macOS resource forks (pattern)
-      ".Spotlight-V100",
-      ".Trashes",
-      ".fseventsd",
-      ".DocumentRevisions-V100",
-      ".VolumeIcon.icns",
-      ".com.apple.timemachine.donotpresent",
-      ".AppleDB",
-      ".AppleDesktop",
-      "Network Trash Folder",
-      ".TemporaryItems",
-      ".Temporary Items",
-
-      // Windows system files
-      "Thumbs.db",
-      "ehthumbs.db",
-      "Desktop.ini",
-      "$RECYCLE.BIN",
-      "System Volume Information",
-    ];
-
-    // Check if this is an OS-generated file that should be ignored
-    for (const pattern of osGeneratedFiles) {
-      if (pattern.includes("*")) {
-        // Handle glob patterns like ._*
-        const regexPattern = pattern.replace(/\./g, "\\.").replace(/\*/g, ".*");
-        if (new RegExp(`^${regexPattern}$`, "i").test(name)) {
-          return true;
-        }
-      } else if (name.toLowerCase() === pattern.toLowerCase()) {
-        return true;
-      }
-    }
-
-    // Don't ignore other hidden files - let developers see their dotfiles
-    return false;
-  }
-
-  return false;
+  return shouldHideFromFileTree(name);
 };
 
 // Helper function for directory content updates (used with Immer)
@@ -228,8 +212,7 @@ export function updateDirectoryContents(
         newEntries
           .filter((entry: any) => {
             const entryName = entry.name || "Unknown";
-            const isDir = entry.is_dir || false;
-            return !shouldIgnore(entryName, isDir);
+            return !shouldHideFromFileTree(entryName);
           })
           .map((entry: any) => {
             const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : null;

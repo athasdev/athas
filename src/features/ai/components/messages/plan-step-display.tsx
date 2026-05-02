@@ -1,4 +1,9 @@
-import { CheckCircle2, ChevronRight, Circle, Play } from "lucide-react";
+import {
+  CheckCircle as CheckCircle2,
+  CaretRight as ChevronRight,
+  Circle,
+  Play,
+} from "@phosphor-icons/react";
 import { memo, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";
@@ -20,7 +25,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
 
   const statusColor =
     status === "completed"
-      ? "text-green-400"
+      ? "text-success"
       : status === "current"
         ? "text-accent"
         : "text-text-lighter";

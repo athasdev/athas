@@ -1,4 +1,5 @@
 import type { FileEntry } from "../types/app";
+import { getDirName } from "@/utils/path-helpers";
 
 export function sortFileEntries(entries: FileEntry[]): FileEntry[] {
   return entries.sort((a, b) => {
@@ -72,7 +73,7 @@ export function addFileToTree(
   if (files.length > 0 && files[0].path) {
     const firstFilePath = files[0].path;
     // Extract the parent directory of the first file
-    const rootDirFromFirstFile = firstFilePath.substring(0, firstFilePath.lastIndexOf("/"));
+    const rootDirFromFirstFile = getDirName(firstFilePath);
     if (parentPath === rootDirFromFirstFile) {
       // Add to top level since parentPath is the root directory
       return sortFileEntries([...files, newFile]);

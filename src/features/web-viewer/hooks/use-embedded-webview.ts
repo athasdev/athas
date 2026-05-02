@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
 
@@ -14,6 +15,11 @@ interface UseEmbeddedWebviewOptions {
 interface UseEmbeddedWebviewResult {
   error: string | null;
   webviewLabel: string | null;
+  resetWebview: (label?: string) => void;
+}
+
+function isWebviewNotFoundError(error: unknown) {
+  return typeof error === "string" && error.includes("Webview not found:");
 }
 
 export function useEmbeddedWebview({
@@ -26,23 +32,46 @@ export function useEmbeddedWebview({
 }: UseEmbeddedWebviewOptions): UseEmbeddedWebviewResult {
   const [error, setError] = useState<string | null>(null);
   const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
+  const webviewLabelRef = useRef<string | null>(null);
+  const isMountedRef = useRef(false);
+  const isCreatingRef = useRef(false);
+  const lifecycleIdRef = useRef(0);
   const lastBoundsRef = useRef<string | null>(null);
   const lastVisibilityRef = useRef<boolean | null>(null);
   const overlayHiddenRef = useRef(false);
 
-  const setWebviewVisible = useCallback(async (label: string, visible: boolean) => {
-    if (lastVisibilityRef.current === visible) return;
+  const resetWebview = useCallback((label?: string) => {
+    if (label && webviewLabelRef.current !== label) return;
 
-    try {
-      await invoke("set_webview_visible", {
-        webviewLabel: label,
-        visible,
-      });
-      lastVisibilityRef.current = visible;
-    } catch (error) {
-      console.error("Failed to update webview visibility:", error);
-    }
+    webviewLabelRef.current = null;
+    isCreatingRef.current = false;
+    lastBoundsRef.current = null;
+    lastVisibilityRef.current = null;
+    overlayHiddenRef.current = false;
+    setWebviewLabel(null);
   }, []);
+
+  const setWebviewVisible = useCallback(
+    async (label: string, visible: boolean) => {
+      if (lastVisibilityRef.current === visible) return;
+
+      try {
+        await invoke("set_webview_visible", {
+          webviewLabel: label,
+          visible,
+        });
+        lastVisibilityRef.current = visible;
+      } catch (error) {
+        if (isWebviewNotFoundError(error)) {
+          resetWebview(label);
+          return;
+        }
+
+        console.error("Failed to update webview visibility:", error);
+      }
+    },
+    [resetWebview],
+  );
 
   const resizeWebview = useCallback(
     async (
@@ -64,10 +93,15 @@ export function useEmbeddedWebview({
         });
         lastBoundsRef.current = nextBounds;
       } catch (error) {
+        if (isWebviewNotFoundError(error)) {
+          resetWebview(label);
+          return;
+        }
+
         console.error("Failed to resize webview:", error);
       }
     },
-    [],
+    [resetWebview],
   );
 
   const syncWebviewVisibility = useCallback(
@@ -78,15 +112,31 @@ export function useEmbeddedWebview({
   );
 
   useEffect(() => {
-    if (webviewLabel || !initialUrl) return;
+    isMountedRef.current = true;
+    lifecycleIdRef.current += 1;
 
-    let mounted = true;
-    let createdLabel: string | null = null;
+    return () => {
+      isMountedRef.current = false;
+      lifecycleIdRef.current += 1;
+
+      const label = webviewLabelRef.current;
+      if (label) {
+        void invoke("close_embedded_webview", { webviewLabel: label }).catch(console.error);
+      }
+
+      resetWebview();
+    };
+  }, [bufferId, resetWebview]);
+
+  useEffect(() => {
+    if (webviewLabel || !initialUrl || isCreatingRef.current) return;
 
     const createWebview = async () => {
       const container = containerRef.current;
       if (!container) return;
 
+      isCreatingRef.current = true;
+      const lifecycleId = lifecycleIdRef.current;
       const rect = container.getBoundingClientRect();
 
       // Clamp coordinates to viewport to prevent overflow
@@ -104,12 +154,16 @@ export function useEmbeddedWebview({
           height: clampedHeight,
         });
 
-        if (!mounted) {
+        if (
+          !isMountedRef.current ||
+          lifecycleId !== lifecycleIdRef.current ||
+          webviewLabelRef.current
+        ) {
           await invoke("close_embedded_webview", { webviewLabel: label });
           return;
         }
 
-        createdLabel = label;
+        webviewLabelRef.current = label;
         lastBoundsRef.current = null;
         lastVisibilityRef.current = null;
         overlayHiddenRef.current = false;
@@ -119,21 +173,15 @@ export function useEmbeddedWebview({
         console.error("Failed to create embedded webview:", error);
         setError(error instanceof Error ? error.message : "Couldn't create webview.");
         onLoadStateChange(false);
+      } finally {
+        if (lifecycleId === lifecycleIdRef.current) {
+          isCreatingRef.current = false;
+        }
       }
     };
 
     void createWebview();
-
-    return () => {
-      mounted = false;
-      if (createdLabel) {
-        void invoke("close_embedded_webview", { webviewLabel: createdLabel }).catch(console.error);
-      }
-      lastBoundsRef.current = null;
-      lastVisibilityRef.current = null;
-      overlayHiddenRef.current = false;
-    };
-  }, [bufferId, containerRef, initialUrl, onLoadStateChange]);
+  }, [containerRef, initialUrl, onLoadStateChange, webviewLabel]);
 
   useEffect(() => {
     if (!webviewLabel || !containerRef.current || !isVisible) return;
@@ -252,6 +300,14 @@ export function useEmbeddedWebview({
     void syncWebviewVisibility(webviewLabel);
   }, [syncWebviewVisibility, webviewLabel]);
 
+  useEffect(() => {
+    if (isActive) return;
+
+    void getCurrentWebview()
+      .setFocus()
+      .catch((error) => console.error("Failed to restore app webview focus:", error));
+  }, [isActive]);
+
   // Hide webview when modals, context menus, or overlays appear
   useEffect(() => {
     if (!webviewLabel) return;
@@ -311,5 +367,5 @@ export function useEmbeddedWebview({
     };
   }, [isActive, isVisible, syncWebviewVisibility, webviewLabel]);
 
-  return { error, webviewLabel };
+  return { error, resetWebview, webviewLabel };
 }

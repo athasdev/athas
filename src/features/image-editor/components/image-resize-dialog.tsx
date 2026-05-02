@@ -1,4 +1,4 @@
-import { Image } from "lucide-react";
+import { Image } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

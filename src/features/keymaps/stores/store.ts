@@ -7,6 +7,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { Keybinding, KeymapContext, KeymapStore } from "../types";
+import {
+  getExportableUserKeybindings,
+  normalizeUserKeybinding,
+} from "../utils/keybinding-import-export";
 
 interface KeymapState extends KeymapStore {
   recordingCommandId: string | null;
@@ -41,9 +45,20 @@ const useKeymapStoreBase = create<KeymapState>()(
       },
       actions: {
         addKeybinding: (keybinding) =>
-          set((state) => ({
-            keybindings: [...state.keybindings, keybinding],
-          })),
+          set((state) => {
+            const userKeybinding = normalizeUserKeybinding(keybinding);
+
+            if (!userKeybinding) {
+              return state;
+            }
+
+            return {
+              keybindings: [
+                ...state.keybindings.filter((kb) => kb.command !== userKeybinding.command),
+                userKeybinding,
+              ],
+            };
+          }),
         removeKeybinding: (commandId) =>
           set((state) => ({
             keybindings: state.keybindings.filter((kb) => kb.command !== commandId),
@@ -81,7 +96,7 @@ const useKeymapStoreBase = create<KeymapState>()(
     {
       name: "keymaps-storage",
       partialize: (state) => ({
-        keybindings: state.keybindings.filter((kb) => kb.source === "user"),
+        keybindings: getExportableUserKeybindings(state.keybindings),
       }),
     },
   ),

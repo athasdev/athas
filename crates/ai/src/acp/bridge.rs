@@ -4,14 +4,16 @@ use super::{
    bridge_prompt::run_prompt,
    client::{AthasAcpClient, PermissionResponse},
    config::AgentRegistry,
-   types::{AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption},
+   process::{stop_child_tree, terminate_process_group},
+   types::{AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption},
 };
+use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
 use athas_terminal::TerminalManager;
 use std::{sync::Arc, thread};
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 use tokio::{
    process::Child,
    runtime::Runtime,
@@ -25,9 +27,11 @@ pub(super) struct AcpWorker {
    session_id: Option<acp::SessionId>,
    auth_method_id: Option<String>,
    process: Option<Child>,
+   process_group_id: Option<u32>,
    io_handle: Option<tokio::task::JoinHandle<()>>,
    client: Option<Arc<AthasAcpClient>>,
    agent_id: Option<String>,
+   agent_capabilities: Option<AcpAgentCapabilities>,
    app_handle: Option<AppHandle>,
 }
 
@@ -38,9 +42,11 @@ impl AcpWorker {
          session_id: None,
          auth_method_id: None,
          process: None,
+         process_group_id: None,
          io_handle: None,
          client: None,
          agent_id: None,
+         agent_capabilities: None,
          app_handle: None,
       }
    }
@@ -76,8 +82,10 @@ impl AcpWorker {
             self.connection = None;
             self.session_id = None;
             self.process = None;
+            self.process_group_id = None;
             self.client = None;
             self.agent_id = None;
+            self.agent_capabilities = None;
             self.app_handle = None;
 
             bail!("ACP agent process exited: {}", status);
@@ -126,10 +134,12 @@ impl AcpWorker {
       self.connection = Some(initialized.connection);
       self.session_id = initialized.session_id.clone();
       self.auth_method_id = initialized.auth_method_id;
+      self.process_group_id = initialized.process_group_id;
       self.process = Some(initialized.process);
       self.io_handle = Some(initialized.io_handle);
       self.client = Some(initialized.client);
       self.agent_id = Some(agent_id.clone());
+      self.agent_capabilities = Some(initialized.agent_capabilities);
       self.app_handle = Some(app_handle.clone());
 
       let status = AcpAgentStatus {
@@ -138,12 +148,13 @@ impl AcpWorker {
          session_active: self.session_id.is_some(),
          initialized: true,
          session_id: self.session_id.as_ref().map(ToString::to_string),
+         agent_capabilities: self.agent_capabilities.clone(),
       };
 
       Ok((status, initialized.permission_sender))
    }
 
-   pub(super) async fn send_prompt(&mut self, prompt: &str) -> Result<()> {
+   pub(super) async fn send_prompt(&mut self, prompt: Vec<serde_json::Value>) -> Result<()> {
       self.ensure_process_alive().await?;
 
       let connection = self
@@ -162,7 +173,6 @@ impl AcpWorker {
          .context("No app handle available")?
          .clone();
       let auth_method_id = self.auth_method_id.clone();
-      let prompt = prompt.to_string();
 
       tokio::task::spawn_local(async move {
          if let Err(err) = run_prompt(
@@ -246,8 +256,8 @@ impl AcpWorker {
          handle.abort();
       }
 
-      if let Some(mut process) = self.process.take() {
-         let _ = process.kill().await;
+      if let Some(process) = self.process.take() {
+         stop_child_tree(process, self.process_group_id.take()).await;
       }
 
       self.connection = None;
@@ -255,7 +265,9 @@ impl AcpWorker {
       self.auth_method_id = None;
       self.client = None;
       self.agent_id = None;
+      self.agent_capabilities = None;
       self.app_handle = None;
+      self.process_group_id = None;
 
       Ok(())
    }
@@ -268,8 +280,22 @@ impl AcpWorker {
             session_active: self.session_id.is_some(),
             initialized: self.connection.is_some(),
             session_id: self.session_id.as_ref().map(ToString::to_string),
+            agent_capabilities: self.agent_capabilities.clone(),
          },
          None => AcpAgentStatus::default(),
+      }
+   }
+}
+
+impl Drop for AcpWorker {
+   fn drop(&mut self) {
+      if let Some(handle) = self.io_handle.take() {
+         handle.abort();
+      }
+
+      if let Some(mut process) = self.process.take() {
+         terminate_process_group(self.process_group_id.take());
+         let _ = process.start_kill();
       }
    }
 }
@@ -363,13 +389,13 @@ impl AcpAgentBridge {
    }
 
    /// Send a prompt to the active agent
-   pub async fn send_prompt(&self, prompt: &str) -> Result<()> {
+   pub async fn send_prompt(&self, prompt: Vec<serde_json::Value>) -> Result<()> {
       let (response_tx, response_rx) = oneshot::channel();
 
       self
          .command_tx
          .send(AcpCommand::SendPrompt {
-            prompt: prompt.to_string(),
+            prompt,
             response_tx,
          })
          .await
@@ -384,6 +410,7 @@ impl AcpAgentBridge {
       request_id: String,
       approved: bool,
       cancelled: bool,
+      option_id: Option<String>,
    ) -> Result<()> {
       let tx = self.permission_tx.lock().await;
       if let Some(ref sender) = *tx {
@@ -392,6 +419,7 @@ impl AcpAgentBridge {
                request_id,
                approved,
                cancelled,
+               option_id,
             })
             .await
             .ok();

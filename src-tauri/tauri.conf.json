@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
-  "version": "0.4.5",
+  "version": "0.5.0-preview.2",
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bunx vp dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://127.0.0.1:1420",
     "beforeBuildCommand": "bunx vp build",
     "frontendDist": "../dist"
   },
@@ -29,7 +29,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost https: data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://openrouter.ai https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost https: data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'",
       "capabilities": ["main-capability"],
       "assetProtocol": {
         "enable": true,
@@ -40,7 +40,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg", "nsis"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/prod/32x32.png",
@@ -60,18 +60,7 @@
       "providerShortName": null,
       "entitlements": null
     },
-    "linux": {
-      "appimage": {
-        "files": {
-          "/usr/lib/x86_64-linux-gnu/libfreetype.so.6": "/usr/lib/"
-        }
-      }
-    },
-    "windows": {
-      "wix": {
-        "version": "0.4.5900"
-      }
-    }
+    "linux": {}
   },
   "plugins": {
     "deep-link": {

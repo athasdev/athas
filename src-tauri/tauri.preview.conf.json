@@ -1,0 +1,24 @@
+{
+  "productName": "Athas Preview",
+  "identifier": "com.code.athas.preview",
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/preview/32x32.png",
+      "icons/preview/128x128.png",
+      "icons/preview/128x128@2x.png",
+      "icons/preview/icon.icns",
+      "icons/preview/icon.ico"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["athas-preview"]
+      }
+    },
+    "updater": {
+      "active": false
+    }
+  }
+}

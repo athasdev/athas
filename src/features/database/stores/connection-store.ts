@@ -111,8 +111,12 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
       },
 
       disconnect: async (connectionId: string) => {
+        const dbType = get().activeConnections.find(
+          (connection) => connection.id === connectionId,
+        )?.db_type;
+
         try {
-          await invoke("disconnect_database", { connectionId });
+          await invoke("disconnect_database", { connectionId, dbType });
         } finally {
           set((s) => {
             const idx = s.activeConnections.findIndex((c) => c.id === connectionId);

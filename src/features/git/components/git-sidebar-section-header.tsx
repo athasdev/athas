@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {
@@ -16,7 +16,7 @@ interface GitSidebarSectionHeaderProps {
   collapsible?: boolean;
   isCollapsed?: boolean;
   onToggle?: () => void;
-  icon?: LucideIcon;
+  icon?: PhosphorIcon;
   className?: string;
 }
 

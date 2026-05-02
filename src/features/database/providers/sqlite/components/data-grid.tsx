@@ -4,13 +4,13 @@ import {
   Calendar,
   Copy,
   FileText,
-  Filter,
+  Funnel as Filter,
   Hash,
   Key,
   Link,
   Plus,
-  Type,
-} from "lucide-react";
+  TextT as Type,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";

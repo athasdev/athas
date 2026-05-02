@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import {
   createTerminalAddons,
@@ -58,6 +59,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const { updateSession, getSession } = useTerminalStore();
   const session = getSession(sessionId);
   const connectionId = session?.connectionId;
+  const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
 
   const {
     theme: terminalThemeId,
@@ -70,8 +72,12 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminalCursorBlink,
     terminalCursorWidth,
   } = useSettingsStore((state) => state.settings);
+  const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const { rootFolderPath } = useProjectStore();
   const { getTerminalTheme } = useTerminalTheme();
+  const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
+  const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
+  const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
 
   const fitTerminal = useCallback((attempts = 1) => {
     let attempt = 0;
@@ -114,6 +120,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     isInitialized,
     onTerminalExit,
     remoteConnectionId,
+    reuseExistingConnection: hadExistingConnectionOnMountRef.current,
     sessionId,
     terminal: xtermRef.current,
     updateSession,
@@ -128,7 +135,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) return;
 
     isInitializingRef.current = true;
-    const resolved = await resolveTerminalFont(terminalFontFamily, terminalFontSize);
+    const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (!terminalContainerRef.current) {
@@ -139,12 +146,12 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     try {
       const terminal = new Terminal({
         fontFamily: resolved.fontFamily,
-        fontSize: terminalFontSize,
+        fontSize: effectiveTerminalFontSize,
         lineHeight: terminalLineHeight,
-        letterSpacing: terminalLetterSpacing,
+        letterSpacing: effectiveTerminalLetterSpacing,
         cursorBlink: terminalCursorBlink,
         cursorStyle: terminalCursorStyle,
-        cursorWidth: terminalCursorWidth,
+        cursorWidth: effectiveTerminalCursorWidth,
         allowProposedApi: true,
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
@@ -270,6 +277,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
           remoteConnectionId: effectiveRemoteConnectionId,
         });
       }
+
+      if (existingSession?.serializedContent) {
+        terminal.write(existingSession.serializedContent);
+      }
+
       setIsInitialized(true);
       isInitializingRef.current = false;
 
@@ -307,8 +319,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminalCursorStyle,
     terminalCursorWidth,
     terminalFontFamily,
-    terminalFontSize,
-    terminalLetterSpacing,
+    effectiveTerminalCursorWidth,
+    effectiveTerminalFontSize,
+    effectiveTerminalLetterSpacing,
     terminalLineHeight,
     terminalScrollback,
     updateSession,
@@ -332,7 +345,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     let cancelled = false;
 
     const applyFontChange = async () => {
-      const resolved = await resolveTerminalFont(terminalFontFamily, terminalFontSize);
+      const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
       if (cancelled || !xtermRef.current || !addonsRef.current) return;
 
       if (resolved.skipWebGL) {
@@ -340,13 +353,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       }
 
       xtermRef.current.options.fontFamily = resolved.fontFamily;
-      xtermRef.current.options.fontSize = terminalFontSize;
+      xtermRef.current.options.fontSize = effectiveTerminalFontSize;
       xtermRef.current.options.lineHeight = terminalLineHeight;
-      xtermRef.current.options.letterSpacing = terminalLetterSpacing;
+      xtermRef.current.options.letterSpacing = effectiveTerminalLetterSpacing;
       xtermRef.current.options.scrollback = terminalScrollback;
       xtermRef.current.options.cursorBlink = terminalCursorBlink;
       xtermRef.current.options.cursorStyle = terminalCursorStyle;
-      xtermRef.current.options.cursorWidth = terminalCursorWidth;
+      xtermRef.current.options.cursorWidth = effectiveTerminalCursorWidth;
 
       fitTerminal(4);
       xtermRef.current.refresh(0, xtermRef.current.rows - 1);
@@ -359,13 +372,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     };
   }, [
     terminalFontFamily,
-    terminalFontSize,
+    effectiveTerminalCursorWidth,
+    effectiveTerminalFontSize,
+    effectiveTerminalLetterSpacing,
     terminalLineHeight,
-    terminalLetterSpacing,
     terminalScrollback,
     terminalCursorBlink,
     terminalCursorStyle,
-    terminalCursorWidth,
     fitTerminal,
   ]);
 
@@ -419,12 +432,16 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     return () => {
       if (xtermRef.current) {
+        const serializedContent = addonsRef.current?.serializeAddon.serialize();
+        if (serializedContent && getSession(sessionId)?.connectionId) {
+          updateSession(sessionId, { serializedContent });
+        }
         xtermRef.current.dispose();
         xtermRef.current = null;
         addonsRef.current = null;
       }
     };
-  }, [sessionId]);
+  }, [getSession, sessionId, updateSession]);
 
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;

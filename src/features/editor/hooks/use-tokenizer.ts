@@ -10,6 +10,7 @@ import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-clien
 import type { HighlightToken } from "../lib/wasm-parser/types";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import { getLanguageIdFromPath } from "../utils/language-id";
+import { calculateEdit, isSimpleEdit } from "../utils/tree-sitter-edit";
 import { usePerformanceMonitor } from "./use-performance";
 import type { ViewportRange } from "./use-viewport-lines";
 
@@ -51,6 +52,75 @@ const BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD = 4_000;
 const BACKGROUND_FULL_TOKENIZE_DELAY_MS = 900;
 const BACKGROUND_FULL_TOKENIZE_IDLE_TIMEOUT_MS = 2000;
 
+export function retargetTokensForContentEdit(
+  tokens: Token[],
+  oldContent: string,
+  newContent: string,
+): Token[] {
+  if (tokens.length === 0 || oldContent === newContent) {
+    return tokens;
+  }
+
+  if (!isSimpleEdit(oldContent, newContent)) {
+    return [];
+  }
+
+  const edit = calculateEdit(oldContent, newContent);
+  if (!edit) {
+    return tokens;
+  }
+
+  const delta = edit.newEndIndex - edit.oldEndIndex;
+  const nextTokens: Token[] = [];
+
+  for (const token of tokens) {
+    if (token.end <= edit.startIndex) {
+      nextTokens.push(token);
+      continue;
+    }
+
+    if (token.start >= edit.oldEndIndex) {
+      nextTokens.push({
+        ...token,
+        start: token.start + delta,
+        end: token.end + delta,
+      });
+      continue;
+    }
+
+    const startsBeforeEdit = token.start < edit.startIndex;
+    const endsAfterEdit = token.end > edit.oldEndIndex;
+
+    if (startsBeforeEdit && endsAfterEdit) {
+      nextTokens.push({
+        ...token,
+        end: token.end + delta,
+      });
+      continue;
+    }
+
+    if (startsBeforeEdit && token.end > edit.startIndex) {
+      nextTokens.push({
+        ...token,
+        end: edit.startIndex,
+      });
+      continue;
+    }
+
+    if (endsAfterEdit && token.start < edit.oldEndIndex) {
+      nextTokens.push({
+        ...token,
+        start: edit.newEndIndex,
+        end: token.end + delta,
+      });
+    }
+  }
+
+  return nextTokens.filter(
+    (token) => token.start < token.end && token.start >= 0 && token.end <= newContent.length,
+  );
+}
+
 export function useTokenizer({
   filePath,
   bufferId,
@@ -70,6 +140,25 @@ export function useTokenizer({
   const backgroundSweepVersionRef = useRef(0);
   const backgroundSweepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
+
+  const retargetCachedTokens = useCallback((normalizedText: string) => {
+    const cached = cacheRef.current;
+    const retargetedTokens = retargetTokensForContentEdit(
+      cached.fullTokens,
+      cached.previousContent,
+      normalizedText,
+    );
+
+    if (retargetedTokens === cached.fullTokens) {
+      return;
+    }
+
+    cacheRef.current = {
+      fullTokens: retargetedTokens,
+      previousContent: normalizedText,
+    };
+    setTokens(retargetedTokens);
+  }, []);
 
   const getTextMetrics = useCallback((text: string): TextMetricsCache => {
     const cached = textMetricsRef.current;
@@ -103,6 +192,7 @@ export function useTokenizer({
       const requestVersion = ++requestVersionRef.current;
       const normalizedText = normalizeLineEndings(text);
 
+      retargetCachedTokens(normalizedText);
       setLoading(true);
       startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
@@ -135,7 +225,15 @@ export function useTokenizer({
         endMeasure(`tokenizeFull (len: ${normalizedText.length})`);
       }
     },
-    [enabled, filePath, bufferId, languageIdOverride, startMeasure, endMeasure],
+    [
+      enabled,
+      filePath,
+      bufferId,
+      languageIdOverride,
+      retargetCachedTokens,
+      startMeasure,
+      endMeasure,
+    ],
   );
 
   const tokenizeRangeInternal = useCallback(
@@ -151,6 +249,7 @@ export function useTokenizer({
         lineCount <= BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD &&
         normalizedText.length <= BACKGROUND_FULL_TOKENIZE_CHAR_THRESHOLD;
 
+      retargetCachedTokens(normalizedText);
       setLoading(true);
       startMeasure("tokenizeRangeInternal");
 
@@ -236,6 +335,7 @@ export function useTokenizer({
       bufferId,
       languageIdOverride,
       getTextMetrics,
+      retargetCachedTokens,
       tokenizeFull,
       startMeasure,
       endMeasure,

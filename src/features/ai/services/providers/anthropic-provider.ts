@@ -1,6 +1,43 @@
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
+import {
+  AIProvider,
+  type ProviderHeaders,
+  type ProviderModel,
+  type StreamRequest,
+} from "./ai-provider-interface";
 
 export class AnthropicProvider extends AIProvider {
+  async getModels(apiKey?: string): Promise<ProviderModel[]> {
+    if (!apiKey) {
+      return [];
+    }
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/models", {
+        method: "GET",
+        headers: this.buildHeaders(apiKey),
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = (await response.json()) as {
+        data?: Array<{ id: string; display_name?: string; max_tokens?: number }>;
+      };
+
+      return (data.data || [])
+        .filter((model) => model.id.startsWith("claude-"))
+        .map((model) => ({
+          id: model.id,
+          name: model.display_name || model.id,
+          maxTokens: model.max_tokens,
+        }));
+    } catch (error) {
+      console.error(`${this.id} model fetch error:`, error);
+      return [];
+    }
+  }
+
   buildHeaders(apiKey?: string): ProviderHeaders {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",

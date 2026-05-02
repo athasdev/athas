@@ -5,6 +5,7 @@ import { useEditorUIStore } from "../stores/ui-store";
 interface UseBufferSwitchOptions {
   enabled?: boolean;
   bufferId: string | null;
+  viewStateKey: string | null;
   content: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   forceUpdateViewport: (scrollTop: number, totalLines: number) => void;
@@ -15,6 +16,7 @@ interface UseBufferSwitchOptions {
 export function useBufferSwitch({
   enabled = true,
   bufferId,
+  viewStateKey,
   content,
   textareaRef,
   forceUpdateViewport,
@@ -50,7 +52,7 @@ export function useBufferSwitch({
     }
 
     // 3. Restore cursor & scroll from cache (no DOM side-effects in store)
-    const restored = stateActions.restorePositionForFile(bufferId);
+    const restored = stateActions.restorePositionForFile(viewStateKey ?? bufferId);
 
     // 4. Apply scroll to DOM synchronously (before paint)
     if (textarea) {
@@ -70,7 +72,16 @@ export function useBufferSwitch({
     // 6. Reset token state. Tokenization is triggered by the editor effect
     // once viewport state is ready, avoiding duplicate work on buffer open.
     resetTokenizer();
-  }, [enabled, bufferId, content, textareaRef, forceUpdateViewport, totalLines, resetTokenizer]);
+  }, [
+    enabled,
+    bufferId,
+    viewStateKey,
+    content,
+    textareaRef,
+    forceUpdateViewport,
+    totalLines,
+    resetTokenizer,
+  ]);
 
   return { switchGuardRef };
 }

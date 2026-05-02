@@ -59,7 +59,7 @@ export const GitSettings = () => {
       <Section title="Git View">
         <SettingRow
           label="Folder-Based Changes"
-          description="Show Git changes in a folder tree, similar to File Explorer"
+          description="Show Git changes in a folder tree, similar to Files"
           onReset={() =>
             updateSetting("gitChangesFolderView", getDefaultSetting("gitChangesFolderView"))
           }
@@ -180,6 +180,8 @@ export const GitSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
       </Section>
@@ -217,7 +219,7 @@ export const GitSettings = () => {
       <Section title="File Tree">
         <SettingRow
           label="Show Git Status In File Tree"
-          description="Display Git color decorations in the file explorer"
+          description="Display Git color decorations in Files"
           onReset={() =>
             updateSetting("showGitStatusInFileTree", getDefaultSetting("showGitStatusInFileTree"))
           }

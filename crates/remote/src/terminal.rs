@@ -1,4 +1,5 @@
 use crate::{
+   runtime::AthasAppHandle as AppHandle,
    ssh_helpers::{create_ssh_session, shell_quote},
    state::{REMOTE_TERMINALS, RemoteTerminal},
 };
@@ -13,7 +14,7 @@ use uuid::Uuid;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn create_remote_terminal(
-   app: tauri::AppHandle,
+   app: AppHandle,
    host: String,
    port: u16,
    username: String,
@@ -126,7 +127,7 @@ pub(super) async fn close_remote_terminal(id: String) -> Result<(), String> {
    Ok(())
 }
 
-fn spawn_terminal_reader(app: tauri::AppHandle, id: String, channel: Arc<Mutex<ssh2::Channel>>) {
+fn spawn_terminal_reader(app: AppHandle, id: String, channel: Arc<Mutex<ssh2::Channel>>) {
    thread::spawn(move || {
       let mut buffer = vec![0u8; 65536];
 
@@ -181,7 +182,7 @@ fn spawn_terminal_reader(app: tauri::AppHandle, id: String, channel: Arc<Mutex<s
    });
 }
 
-fn emit_terminal_exit(app: &tauri::AppHandle, id: &str) {
+fn emit_terminal_exit(app: &AppHandle, id: &str) {
    let _ = app.emit(
       &format!("pty-exit-{}", id),
       serde_json::json!({

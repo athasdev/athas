@@ -1,4 +1,4 @@
-use tauri::AppHandle;
+use crate::app_runtime::AppHandle;
 use tauri_plugin_store::StoreExt;
 
 const SECURE_STORE_FILE: &str = "secure.json";
@@ -53,15 +53,23 @@ fn store_delete(app: &AppHandle, key: &str) -> Result<(), String> {
 }
 
 pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
+   let store_result = store_set(app, key, value);
+
    match keyring_entry(app, key) {
       Ok(entry) => match entry.set_password(value) {
          Ok(()) => {
-            let _ = store_delete(app, key);
+            if let Err(error) = &store_result {
+               log::warn!(
+                  "Failed to mirror key '{}' to secure.json fallback after keychain write: {}",
+                  key,
+                  error
+               );
+            }
             return Ok(());
          }
          Err(error) => {
             log::warn!(
-               "Keychain unavailable for key '{}', falling back to secure.json: {}",
+               "Keychain unavailable for key '{}', using secure.json fallback: {}",
                key,
                error
             );
@@ -69,14 +77,14 @@ pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), Strin
       },
       Err(error) => {
          log::warn!(
-            "Keychain entry initialization failed for key '{}', falling back to secure.json: {}",
+            "Keychain entry initialization failed for key '{}', using secure.json fallback: {}",
             key,
             error
          );
       }
    }
 
-   store_set(app, key, value)
+   store_result
 }
 
 pub fn get_secret(app: &AppHandle, key: &str) -> Result<Option<String>, String> {

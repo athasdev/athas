@@ -15,7 +15,8 @@ import { createPortal } from "react-dom";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
-import { Search } from "lucide-react";
+import { matchesSearchQuery } from "@/utils/search-match";
+import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
@@ -26,7 +27,7 @@ export const DROPDOWN_TRIGGER_BASE = cn(
 );
 
 const dropdownRootVariants = cva(
-  "fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 const dropdownItemVariants = cva(
@@ -131,6 +132,7 @@ export function MenuPopover({
   const node = isOpen ? (
     <motion.div
       ref={menuRef}
+      data-prevent-dialog-escape="true"
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       onWheelCapture={containScrollChain}
@@ -332,6 +334,7 @@ export function Dropdown(props: DropdownProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [focusIndex, setFocusIndex] = useState(-1);
   const [resolvedSide, setResolvedSide] = useState<AnchorSide>("bottom");
+  const [isPositioned, setIsPositioned] = useState(false);
 
   const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
   const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
@@ -356,19 +359,17 @@ export function Dropdown(props: DropdownProps) {
   const getFilteredItems = useCallback((): MenuItem[] => {
     const all = getAllItems();
     if (!searchQuery.trim()) return all;
-    const q = searchQuery.toLowerCase();
-    return all.filter((item) => !item.separator && item.label.toLowerCase().includes(q));
+    return all.filter((item) => !item.separator && matchesSearchQuery(searchQuery, [item.label]));
   }, [getAllItems, searchQuery]);
 
   const getFilteredSections = useCallback((): DropdownSection[] => {
     if (!hasSections) return [];
     if (!searchQuery.trim()) return props.sections!;
-    const q = searchQuery.toLowerCase();
     return props
       .sections!.map((section) => ({
         ...section,
         items: section.items.filter(
-          (item) => !item.separator && item.label.toLowerCase().includes(q),
+          (item) => !item.separator && matchesSearchQuery(searchQuery, [item.label]),
         ),
       }))
       .filter((section) => section.items.length > 0);
@@ -476,18 +477,19 @@ export function Dropdown(props: DropdownProps) {
     menu.style.left = `${Math.round(x)}px`;
     menu.style.top = `${Math.round(y)}px`;
     setResolvedSide(finalSide);
+    setIsPositioned(true);
   }, [anchorRef, anchorSide, anchorAlign, point]);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
-    const frame = requestAnimationFrame(positionMenu);
-    return () => cancelAnimationFrame(frame);
+    positionMenu();
   }, [isOpen, positionMenu, searchQuery]);
 
   useEffect(() => {
     if (isOpen) return;
     lockedWidthRef.current = null;
     lastMenuSizeRef.current = null;
+    setIsPositioned(false);
     if (menuRef.current && style?.width == null) {
       menuRef.current.style.width = "";
     }
@@ -530,6 +532,8 @@ export function Dropdown(props: DropdownProps) {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
@@ -539,7 +543,7 @@ export function Dropdown(props: DropdownProps) {
     window.visualViewport?.addEventListener("resize", positionMenu);
     window.visualViewport?.addEventListener("scroll", positionMenu);
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleEscape, true);
 
     return () => {
       resizeObserver.disconnect();
@@ -548,7 +552,7 @@ export function Dropdown(props: DropdownProps) {
       window.visualViewport?.removeEventListener("resize", positionMenu);
       window.visualViewport?.removeEventListener("scroll", positionMenu);
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleEscape, true);
     };
   }, [isOpen, onClose, positionMenu, anchorRef]);
 
@@ -612,19 +616,17 @@ export function Dropdown(props: DropdownProps) {
   const transformOrigin =
     originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
 
-  const yDir = resolvedSide === "top" ? 4 : -4;
-
   return (
     <MenuPopover
       isOpen={isOpen}
       menuRef={menuRef}
       portalContainer={portalContainer}
       className={className}
-      style={{ transformOrigin, ...style }}
-      initial={{ opacity: 0, scale: 0.95, y: yDir }}
+      style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
+      initial={{ opacity: 1, scale: 1, y: 0 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: yDir }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      exit={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0 }}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (

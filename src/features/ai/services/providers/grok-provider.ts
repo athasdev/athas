@@ -1,6 +1,43 @@
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
+import {
+  AIProvider,
+  type ProviderHeaders,
+  type ProviderModel,
+  type StreamRequest,
+} from "./ai-provider-interface";
 
 export class GrokProvider extends AIProvider {
+  async getModels(apiKey?: string): Promise<ProviderModel[]> {
+    if (!apiKey) {
+      return [];
+    }
+
+    try {
+      const response = await fetch("https://api.x.ai/v1/language-models", {
+        method: "GET",
+        headers: this.buildHeaders(apiKey),
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = (await response.json()) as {
+        models?: Array<{ id: string; aliases?: string[] }>;
+      };
+
+      return (data.models || []).flatMap((model) => {
+        const ids = [model.id, ...(model.aliases || [])].filter(Boolean);
+        return ids.map((id) => ({
+          id,
+          name: formatGrokModelName(id),
+        }));
+      });
+    } catch (error) {
+      console.error(`${this.id} model fetch error:`, error);
+      return [];
+    }
+  }
+
   buildHeaders(apiKey?: string): ProviderHeaders {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",
@@ -38,4 +75,11 @@ export class GrokProvider extends AIProvider {
       return false;
     }
   }
+}
+
+function formatGrokModelName(modelId: string): string {
+  return modelId
+    .split("-")
+    .map((part) => (part === "grok" ? "Grok" : part.length <= 3 ? part.toUpperCase() : part))
+    .join(" ");
 }

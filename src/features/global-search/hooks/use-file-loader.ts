@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { MAX_FILES_TO_PROCESS } from "../constants/limits";
 import type { FileItem } from "../models/types";
@@ -10,9 +10,13 @@ export const useFileLoader = (isVisible: boolean) => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
+  const loadedForRootRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isVisible) return;
+
+    const isAlreadyLoaded = loadedForRootRef.current === rootFolderPath;
+    if (isAlreadyLoaded && files.length > 0) return;
 
     const loadFiles = async () => {
       try {
@@ -30,6 +34,7 @@ export const useFileLoader = (isVisible: boolean) => {
             isDir: file.isDir,
           }));
 
+        loadedForRootRef.current = rootFolderPath;
         setFiles(filteredFiles);
         setIsLoadingFiles(false);
 
@@ -46,7 +51,7 @@ export const useFileLoader = (isVisible: boolean) => {
     };
 
     loadFiles();
-  }, [getAllProjectFiles, isVisible]);
+  }, [files.length, getAllProjectFiles, isVisible, rootFolderPath]);
 
   return { files, isLoadingFiles, isIndexing, rootFolderPath };
 };

@@ -3,6 +3,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
+import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
   getProviderApiToken,
   removeProviderApiToken,
@@ -18,6 +20,7 @@ import {
   loadChatFromDb,
   saveChatToDb,
 } from "@/features/ai/services/ai-chat-history-service";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -39,6 +42,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         messageQueue: [],
         isProcessingQueue: false,
         pendingAgentLaunchRequest: null,
+        activeAgentChatIds: [],
         mode: "chat",
         outputStyle: "default",
 
@@ -70,6 +74,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           currentModeId: null,
           availableModes: [],
         },
+        acpStatus: null,
         sessionConfigOptions: [],
 
         // Agent selection actions
@@ -140,6 +145,20 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         setPendingAgentLaunchRequest: (request) =>
           set((state) => {
             state.pendingAgentLaunchRequest = request;
+          }),
+        registerActiveAgentChat: (chatId) =>
+          set((state) => {
+            if (!state.activeAgentChatIds.includes(chatId)) {
+              state.activeAgentChatIds.push(chatId);
+            }
+          }),
+        setActiveAgentChatOrder: (chatIds) =>
+          set((state) => {
+            const ordered = chatIds.filter((chatId) => state.activeAgentChatIds.includes(chatId));
+            const remaining = state.activeAgentChatIds.filter(
+              (chatId) => !ordered.includes(chatId),
+            );
+            state.activeAgentChatIds = [...ordered, ...remaining];
           }),
 
         // Input actions
@@ -237,6 +256,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.chats.unshift(newChat);
             state.currentChatId = newChat.id;
+            state.activeAgentChatIds = [
+              newChat.id,
+              ...state.activeAgentChatIds.filter((chatId) => chatId !== newChat.id),
+            ];
             state.isChatHistoryVisible = false;
             // Clear input and reset state when creating new chat
             state.input = "";
@@ -284,6 +307,9 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         switchToChat: (chatId) => {
           set((state) => {
             state.currentChatId = chatId;
+            if (!state.activeAgentChatIds.includes(chatId)) {
+              state.activeAgentChatIds.unshift(chatId);
+            }
             state.isChatHistoryVisible = false;
             // Clear input and reset state when switching chats
             state.input = "";
@@ -300,6 +326,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             if (chatIndex !== -1) {
               state.chats.splice(chatIndex, 1);
             }
+            state.activeAgentChatIds = state.activeAgentChatIds.filter((id) => id !== chatId);
 
             // If we deleted the current chat, switch to the most recent one
             if (chatId === state.currentChatId) {
@@ -418,6 +445,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         checkApiKey: async (providerId) => {
           try {
             const provider = AI_PROVIDERS.find((p) => p.id === providerId);
+            const subscription = useAuthStore.getState().subscription;
 
             // If provider doesn't require an API key, set hasApiKey to true
             if (provider && !provider.requiresApiKey) {
@@ -429,7 +457,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
             const token = await getProviderApiToken(providerId);
             set((state) => {
-              state.hasApiKey = !!token;
+              state.hasApiKey = canUseProviderWithoutApiKey({
+                providerId,
+                subscription,
+                hasStoredKey: !!token,
+                requiresApiKey: provider?.requiresApiKey ?? true,
+              });
             });
           } catch (error) {
             console.error("Error checking API key:", error);
@@ -441,6 +474,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkAllProviderApiKeys: async () => {
           const newApiKeyMap = new Map<string, boolean>();
+          const subscription = useAuthStore.getState().subscription;
 
           for (const provider of AI_PROVIDERS) {
             try {
@@ -451,7 +485,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
 
               const token = await getProviderApiToken(provider.id);
-              newApiKeyMap.set(provider.id, !!token);
+              newApiKeyMap.set(
+                provider.id,
+                canUseProviderWithoutApiKey({
+                  providerId: provider.id,
+                  subscription,
+                  hasStoredKey: !!token,
+                  requiresApiKey: provider.requiresApiKey,
+                }),
+              );
             } catch {
               newApiKeyMap.set(provider.id, false);
             }
@@ -467,6 +509,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             const isValid = await validateProviderApiKey(providerId, apiKey);
             if (isValid) {
               await storeProviderApiToken(providerId, apiKey);
+              const subscription = useAuthStore.getState().subscription;
 
               // Manually update provider keys after saving
               const newApiKeyMap = new Map<string, boolean>();
@@ -477,7 +520,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                     continue;
                   }
                   const token = await getProviderApiToken(provider.id);
-                  newApiKeyMap.set(provider.id, !!token);
+                  newApiKeyMap.set(
+                    provider.id,
+                    canUseProviderWithoutApiKey({
+                      providerId: provider.id,
+                      subscription,
+                      hasStoredKey: !!token,
+                      requiresApiKey: provider.requiresApiKey,
+                    }),
+                  );
                 } catch {
                   newApiKeyMap.set(provider.id, false);
                 }
@@ -495,7 +546,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               } else {
                 const token = await getProviderApiToken(providerId);
                 set((state) => {
-                  state.hasApiKey = !!token;
+                  state.hasApiKey = canUseProviderWithoutApiKey({
+                    providerId,
+                    subscription,
+                    hasStoredKey: !!token,
+                    requiresApiKey: currentProvider?.requiresApiKey ?? true,
+                  });
                 });
               }
 
@@ -511,6 +567,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         removeApiKey: async (providerId) => {
           try {
             await removeProviderApiToken(providerId);
+            const subscription = useAuthStore.getState().subscription;
 
             // Manually update provider keys after removing
             const newApiKeyMap = new Map<string, boolean>();
@@ -521,7 +578,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                   continue;
                 }
                 const token = await getProviderApiToken(provider.id);
-                newApiKeyMap.set(provider.id, !!token);
+                newApiKeyMap.set(
+                  provider.id,
+                  canUseProviderWithoutApiKey({
+                    providerId: provider.id,
+                    subscription,
+                    hasStoredKey: !!token,
+                    requiresApiKey: provider.requiresApiKey,
+                  }),
+                );
               } catch {
                 newApiKeyMap.set(provider.id, false);
               }
@@ -538,7 +603,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               });
             } else {
               set((state) => {
-                state.hasApiKey = false;
+                state.hasApiKey = canUseProviderWithoutApiKey({
+                  providerId,
+                  subscription,
+                  hasStoredKey: false,
+                  requiresApiKey: currentProvider?.requiresApiKey ?? true,
+                });
               });
             }
           } catch (error) {
@@ -607,31 +677,31 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         getFilteredFiles: (allFiles) => {
           const { search } = get().mentionState;
-          const query = search.toLowerCase();
+          const query = search.trim();
 
-          if (!query) return allFiles.filter((file: FileEntry) => !file.isDir).slice(0, 5);
+          if (!query) {
+            return allFiles
+              .filter((file: FileEntry) => !file.isDir)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .slice(0, 20);
+          }
 
           const scored = allFiles
             .filter((file: FileEntry) => !file.isDir)
             .map((file: FileEntry) => {
-              const name = file.name.toLowerCase();
-              const path = file.path.toLowerCase();
-
-              // Score based on match quality
-              let score = 0;
-              if (name === query) score = 100;
-              else if (name.startsWith(query)) score = 80;
-              else if (name.includes(query)) score = 60;
-              else if (path.includes(query)) score = 40;
-              else return null;
+              const score = Math.max(fuzzyScore(file.name, query), fuzzyScore(file.path, query));
+              if (score <= 0) return null;
 
               return { file, score };
             })
             .filter(Boolean) as { file: FileEntry; score: number }[];
 
           return scored
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5)
+            .sort((a, b) => {
+              if (b.score !== a.score) return b.score - a.score;
+              return a.file.name.localeCompare(b.file.name);
+            })
+            .slice(0, 20)
             .map(({ file }) => file);
         },
 
@@ -706,6 +776,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
 
         // Session mode actions
+        setAcpStatus: (status) =>
+          set((state) => {
+            state.acpStatus = status;
+          }),
+
         setSessionModeState: (currentModeId, availableModes) =>
           set((state) => {
             state.sessionModeState = {
@@ -861,6 +936,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
           set((state) => {
             state.currentChatId = snapshot?.currentChatId || null;
+            state.activeAgentChatIds = snapshot?.currentChatId ? [snapshot.currentChatId] : [];
             state.selectedAgentId = snapshot?.selectedAgentId || "custom";
             state.isChatHistoryVisible = snapshot?.isChatHistoryVisible || false;
             state.selectedBufferIds = selectedBufferIds;
@@ -919,6 +995,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                 currentModeId: null,
                 availableModes: [],
               };
+              draft.acpStatus = null;
             }
           }),
       },

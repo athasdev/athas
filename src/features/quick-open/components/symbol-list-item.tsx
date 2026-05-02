@@ -1,14 +1,14 @@
 import {
-  Blocks,
-  Box,
-  Braces,
-  Code2,
+  SquaresFour as Blocks,
+  Cube as Box,
+  BracketsCurly as Braces,
+  Code as Code2,
   Hash,
-  Layers,
-  LetterText,
-  Puzzle,
-  Variable,
-} from "lucide-react";
+  Stack as Layers,
+  TextT as LetterText,
+  PuzzlePiece as Puzzle,
+  Function as Variable,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { CommandItem } from "@/ui/command";
 import type { SymbolItem } from "../hooks/use-symbol-search";

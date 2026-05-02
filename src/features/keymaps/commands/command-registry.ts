@@ -1,7 +1,14 @@
 import { editorAPI } from "@/features/editor/extensions/api";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import {
+  buildDebugCommand,
+  createGeneratedDebugConfig,
+} from "@/features/debugger/utils/debugger-command";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
@@ -9,7 +16,9 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { toast } from "@/ui/toast";
 import { isMac } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 import type { Command } from "../types";
@@ -23,6 +32,44 @@ function getZoomTarget(): "editor" | "terminal" | "webviewer" {
   if (activeBuffer?.type === "webViewer") return "webviewer";
 
   return "editor";
+}
+
+async function formatActiveEditorDocument(): Promise<void> {
+  const bufferStore = useBufferStore.getState();
+  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+
+  if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
+    toast.warning("No editable file to format.");
+    return;
+  }
+
+  const { formatContent, isFormattingAvailable } =
+    await import("@/features/editor/formatter/formatter-service");
+  const languageId = extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language;
+
+  if (!isFormattingAvailable(activeBuffer.path, languageId || undefined)) {
+    toast.warning("No formatter configured for this file type.");
+    return;
+  }
+
+  const result = await formatContent({
+    filePath: activeBuffer.path,
+    content: activeBuffer.content,
+    languageId: languageId || undefined,
+  });
+
+  if (!result.success || result.formattedContent === undefined) {
+    toast.error(result.error || "Formatting failed.");
+    return;
+  }
+
+  if (result.formattedContent === activeBuffer.content) {
+    toast.info("Document is already formatted.");
+    return;
+  }
+
+  bufferStore.actions.updateBufferContent(activeBuffer.id, result.formattedContent, true);
+  toast.success("Document formatted.");
 }
 
 const fileCommands: Command[] = [
@@ -281,7 +328,9 @@ const editCommands: Command[] = [
     title: "Format Document",
     category: "Edit",
     keybinding: "shift+alt+f",
-    execute: () => {},
+    execute: () => {
+      void formatActiveEditorDocument();
+    },
   },
   {
     id: "editor.inlineEdit",
@@ -304,6 +353,61 @@ const toggleTerminalPane = () => {
     window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
     setTimeout(() => state.requestTerminalFocus(), 100);
   }
+};
+
+const getActiveDebugFile = () => {
+  const bufferStore = useBufferStore.getState();
+  const activeBuffer = bufferStore.buffers.find(
+    (buffer) => buffer.id === bufferStore.activeBufferId,
+  );
+  if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
+
+  return {
+    path: activeBuffer.path,
+    name: activeBuffer.name,
+    language: activeBuffer.language,
+  };
+};
+
+const toggleActiveBreakpoint = () => {
+  const activeFile = getActiveDebugFile();
+  if (!activeFile) return;
+
+  const line = useEditorStateStore.getState().cursorPosition.line;
+  useDebuggerStore.getState().actions.toggleBreakpoint(activeFile.path, line);
+};
+
+const startGeneratedDebugSession = () => {
+  const rootFolderPath = useProjectStore.getState().rootFolderPath;
+  const activeFile = getActiveDebugFile();
+  const config = createGeneratedDebugConfig(activeFile, rootFolderPath);
+  const command = buildDebugCommand(config);
+  if (!command.trim()) {
+    const state = useUIState.getState();
+    state.setActiveView("debugger");
+    state.setIsSidebarVisible(true);
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent("create-terminal-with-command", {
+      detail: {
+        name: config.name,
+        command,
+        workingDirectory: config.cwd || rootFolderPath || undefined,
+      },
+    }),
+  );
+
+  useDebuggerStore.getState().actions.startSession({
+    id: `debug_${Date.now()}`,
+    name: config.name,
+    configId: config.id,
+    command,
+    cwd: config.cwd,
+    startedAt: Date.now(),
+    status: "running",
+  });
 };
 
 const viewCommands: Command[] = [
@@ -333,17 +437,11 @@ const viewCommands: Command[] = [
   },
   {
     id: "workbench.toggleDiagnostics",
-    title: "Toggle Diagnostics",
+    title: "Show Diagnostics",
     category: "View",
     keybinding: "cmd+shift+j",
     execute: () => {
-      const state = useUIState.getState();
-      if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "diagnostics") {
-        state.setIsBottomPaneVisible(false);
-      } else {
-        state.setBottomPaneActiveTab("diagnostics");
-        state.setIsBottomPaneVisible(true);
-      }
+      useBufferStore.getState().actions.openDiagnosticsBuffer();
     },
   },
   {
@@ -352,8 +450,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+p",
     execute: () => {
-      const state = useUIState.getState();
-      state.setIsCommandPaletteVisible(!state.isCommandPaletteVisible);
+      useUIState.getState().setIsCommandPaletteVisible(true);
     },
   },
   {
@@ -381,13 +478,23 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "workbench.showFindReplace",
+    title: "Find and Replace",
+    category: "View",
+    keybinding: "cmd+alt+f",
+    execute: () => {
+      const state = useUIState.getState();
+      state.setIsFindVisible(true);
+      useEditorUIStore.getState().actions.setIsReplaceVisible(true);
+    },
+  },
+  {
     id: "workbench.showGlobalSearch",
     title: "Global Search",
     category: "View",
     keybinding: "cmd+shift+f",
     execute: () => {
-      const state = useUIState.getState();
-      state.setIsGlobalSearchVisible(!state.isGlobalSearchVisible);
+      useBufferStore.getState().actions.openGlobalSearchBuffer();
     },
   },
   {
@@ -396,13 +503,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+h",
     execute: () => {
-      const state = useUIState.getState();
-      state.setIsGlobalSearchVisible(!state.isGlobalSearchVisible);
+      useBufferStore.getState().actions.openGlobalSearchBuffer();
     },
   },
   {
     id: "workbench.showFileExplorer",
-    title: "Show File Explorer",
+    title: "Show Files",
     category: "View",
     keybinding: "cmd+shift+e",
     execute: () => {
@@ -429,6 +535,59 @@ const viewCommands: Command[] = [
         state.setIsSidebarVisible(true);
       }
     },
+  },
+  {
+    id: "workbench.showGitHub",
+    title: "Show GitHub",
+    category: "View",
+    execute: () => {
+      const state = useUIState.getState();
+      if (state.isSidebarVisible && state.activeSidebarView === "github-prs") {
+        state.setIsSidebarVisible(false);
+      } else {
+        state.setActiveView("github-prs");
+        state.setIsSidebarVisible(true);
+      }
+    },
+  },
+  {
+    id: "workbench.showDebugger",
+    title: "Show Run and Debug",
+    category: "View",
+    keybinding: "cmd+shift+d",
+    execute: () => {
+      const state = useUIState.getState();
+      if (state.isSidebarVisible && state.activeSidebarView === "debugger") {
+        state.setIsSidebarVisible(false);
+      } else {
+        state.setActiveView("debugger");
+        state.setIsSidebarVisible(true);
+      }
+    },
+  },
+  {
+    id: "debug.start",
+    title: "Start Debugging",
+    category: "Debug",
+    keybinding: "F5",
+    execute: startGeneratedDebugSession,
+  },
+  {
+    id: "debug.stop",
+    title: "Stop Debugging",
+    category: "Debug",
+    keybinding: "shift+F5",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("close-active-terminal"));
+      useDebuggerStore.getState().actions.stopSession();
+    },
+  },
+  {
+    id: "debug.toggleBreakpoint",
+    title: "Toggle Breakpoint",
+    category: "Debug",
+    keybinding: "F9",
+    execute: toggleActiveBreakpoint,
   },
   {
     id: "workbench.toggleSidebarPosition",
@@ -554,7 +713,16 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+g",
     execute: () => {
-      window.dispatchEvent(new CustomEvent("menu-go-to-line"));
+      const lineText = window.prompt("Go to line");
+      if (!lineText) return;
+
+      const line = Number.parseInt(lineText, 10);
+      if (!Number.isFinite(line) || line < 1) {
+        toast.warning("Enter a valid line number.");
+        return;
+      }
+
+      window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line } }));
     },
   },
   {

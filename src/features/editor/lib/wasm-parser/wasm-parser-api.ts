@@ -20,6 +20,7 @@ const PRELOAD_LANGUAGE_IDS = [
   "bash",
   "markdown",
   "html",
+  "angular",
   "css",
 ];
 

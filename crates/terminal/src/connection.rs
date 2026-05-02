@@ -1,4 +1,4 @@
-use crate::{config::TerminalConfig, shell::get_shell_by_id};
+use crate::{config::TerminalConfig, runtime::AthasAppHandle as AppHandle, shell::get_shell_by_id};
 use anyhow::{Result, anyhow};
 use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
 use std::{
@@ -7,7 +7,7 @@ use std::{
    sync::{Arc, Mutex},
    thread,
 };
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 
 pub struct TerminalConnection {
    pub id: String,

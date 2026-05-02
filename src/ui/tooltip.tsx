@@ -10,6 +10,7 @@ interface TooltipProps {
   side?: "top" | "bottom" | "left" | "right";
   shortcut?: string;
   className?: string;
+  triggerClassName?: string;
 }
 
 const tooltipContentVariants = cva(
@@ -30,11 +31,12 @@ export default function Tooltip({
   side = "top",
   shortcut,
   className,
+  triggerClassName,
 }: TooltipProps) {
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>
-        <span className="inline-flex items-center">{children}</span>
+        <span className={cn("inline-flex items-center", triggerClassName)}>{children}</span>
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content

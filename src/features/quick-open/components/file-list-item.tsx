@@ -1,4 +1,4 @@
-import { ClockIcon } from "lucide-react";
+import { Clock as ClockIcon } from "@phosphor-icons/react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";

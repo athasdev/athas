@@ -27,6 +27,7 @@ interface InputLayerProps {
   showText?: boolean;
   readOnly?: boolean;
   scrollable?: boolean;
+  customCaret?: boolean;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -48,6 +49,7 @@ const InputLayerComponent = ({
   showText = false,
   readOnly = false,
   scrollable = true,
+  customCaret = false,
   textareaRef,
 }: InputLayerProps) => {
   const localRef = useRef<HTMLTextAreaElement>(null);
@@ -80,11 +82,13 @@ const InputLayerComponent = ({
         left: 0,
         right: 0,
         bottom: 0,
-        overflowY: scrollable ? "auto" : "hidden",
+        overflowY: scrollable ? "auto" : "clip",
         overflowX: scrollable && !(wordWrap || horizontalBufferCarousel) ? "auto" : "hidden",
+        overscrollBehaviorY: scrollable ? undefined : "none",
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,
+        caretColor: customCaret ? "transparent" : undefined,
         tabSize,
         whiteSpace: wordWrap ? "pre-wrap" : "pre",
         overflowWrap: wordWrap ? "anywhere" : "normal",
@@ -116,6 +120,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.wordWrap === next.wordWrap &&
     prev.showText === next.showText &&
     prev.scrollable === next.scrollable &&
+    prev.customCaret === next.customCaret &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
     prev.onKeyDown === next.onKeyDown &&
@@ -124,6 +129,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.onKeyUp === next.onKeyUp &&
     prev.onClick === next.onClick &&
     prev.onMouseUp === next.onMouseUp &&
-    prev.onContextMenu === next.onContextMenu
+    prev.onContextMenu === next.onContextMenu &&
+    prev.readOnly === next.readOnly
   );
 });

@@ -1,4 +1,5 @@
 import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
+import { getBaseName, normalizePath } from "@/utils/path-helpers";
 
 /**
  * Check if a file should be ignored in file search
@@ -6,10 +7,10 @@ import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
  * @returns true if the file should be ignored
  */
 export const shouldIgnoreFile = (filePath: string): boolean => {
-  const fileName = filePath.split("/").pop() || "";
+  const fileName = getBaseName(filePath, "");
 
   // Check if any directory in the path should be ignored
-  const pathParts = filePath.split("/");
+  const pathParts = normalizePath(filePath).split("/");
   for (const part of pathParts) {
     if (shouldIgnoreInCommandPalette(part, true)) {
       return true;

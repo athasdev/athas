@@ -1,14 +1,15 @@
 import {
+  Archive,
   Download,
   FolderOpen,
   GitPullRequest,
-  RefreshCw,
-  RotateCcw,
-  Server,
-  Settings,
+  ArrowClockwise as RefreshCw,
+  ArrowCounterClockwise as RotateCcw,
+  HardDrives as Server,
+  GearSix as Settings,
   Tag,
   Upload,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -32,6 +33,7 @@ interface GitActionsMenuProps {
   onRefresh?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
+  onViewStashes?: () => void;
   onSelectRepository?: () => Promise<void> | void;
   isSelectingRepository?: boolean;
 }
@@ -45,6 +47,7 @@ const GitActionsMenu = ({
   onRefresh,
   onOpenRemoteManager,
   onOpenTagManager,
+  onViewStashes,
   onSelectRepository,
   isSelectingRepository,
 }: GitActionsMenuProps) => {
@@ -152,6 +155,11 @@ const GitActionsMenu = ({
     onClose();
   };
 
+  const handleViewStashes = () => {
+    onViewStashes?.();
+    onClose();
+  };
+
   const handleSelectRepository = async () => {
     await onSelectRepository?.();
     onClose();
@@ -205,6 +213,12 @@ const GitActionsMenu = ({
           label: "Manage Tags",
           icon: <Tag />,
           onClick: handleTagManager,
+        },
+        {
+          id: "view-stashes",
+          label: "View Stashes",
+          icon: <Archive />,
+          onClick: handleViewStashes,
         },
         { id: "sep-4", label: "", separator: true, onClick: () => {} },
         {

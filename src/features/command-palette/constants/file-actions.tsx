@@ -1,4 +1,4 @@
-import { FilePlus } from "lucide-react";
+import { FilePlus } from "@phosphor-icons/react";
 import { createTabActions } from "@/features/tabs/constants/tab-actions";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import type { Action } from "../models/action.types";

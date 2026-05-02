@@ -24,7 +24,7 @@ interface UseGoToDefinitionProps {
   ) => Promise<Definition[] | null>;
   isLanguageSupported?: (filePath: string) => boolean;
   filePath: string;
-  fontSize: number;
+  lineHeight: number;
   charWidth: number;
 }
 
@@ -32,7 +32,7 @@ export const useGoToDefinition = ({
   getDefinition,
   isLanguageSupported,
   filePath,
-  fontSize,
+  lineHeight,
   charWidth,
 }: UseGoToDefinitionProps) => {
   const { centerCursorInViewport } = useCenterCursor();
@@ -62,7 +62,6 @@ export const useGoToDefinition = ({
       const scrollTop = textarea?.scrollTop ?? 0;
       const scrollLeft = textarea?.scrollLeft ?? 0;
 
-      const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
       // Always use EDITOR_PADDING_LEFT since mouse events are captured on the
       // overlay-editor-container which is positioned AFTER the gutter
       const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
@@ -139,7 +138,7 @@ export const useGoToDefinition = ({
         }
       }
     },
-    [getDefinition, isLanguageSupported, filePath, fontSize, charWidth, centerCursorInViewport],
+    [getDefinition, isLanguageSupported, filePath, lineHeight, charWidth, centerCursorInViewport],
   );
 
   return {

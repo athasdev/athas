@@ -1,10 +1,13 @@
-import { forwardRef, memo, useMemo } from "react";
+import { Plus } from "@phosphor-icons/react";
+import { forwardRef, memo, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
+import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import type { AIChatSkill } from "@/features/ai/types/skills";
+import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
 import { AcpInlineEvent } from "./acp-inline-event";
 import { ChatMessage } from "./chat-message";
@@ -12,6 +15,7 @@ import { ChatMessage } from "./chat-message";
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
   acpEvents?: ChatAcpEvent[];
+  chatId?: string | null;
 }
 
 const getTimestampMs = (value: Date | string): number => {
@@ -22,20 +26,22 @@ const getTimestampMs = (value: Date | string): number => {
 
 export const ChatMessages = memo(
   forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
-    { onApplyCode, acpEvents },
+    { onApplyCode, acpEvents, chatId },
     ref,
   ) {
-    const { currentChatId, chats, switchToChat } = useAIChatStore(
+    const { currentChatId, chats } = useAIChatStore(
       useShallow((state) => ({
         currentChatId: state.currentChatId,
         chats: state.chats,
-        switchToChat: state.switchToChat,
       })),
     );
+    const skills = useSettingsStore((state) => state.settings.aiSkills);
+    const [isSkillsOpen, setIsSkillsOpen] = useState(false);
+    const [skillsInitialView, setSkillsInitialView] = useState<"list" | "editor">("list");
 
     const currentChat = useMemo(
-      () => chats.find((chat) => chat.id === currentChatId),
-      [chats, currentChatId],
+      () => chats.find((chat) => chat.id === (chatId ?? currentChatId)),
+      [chatId, chats, currentChatId],
     );
     const messages = currentChat?.messages || [];
     const timelineItems = useMemo(
@@ -66,49 +72,56 @@ export const ChatMessages = memo(
       [messages, acpEvents],
     );
 
-    // Get recent chats excluding the current one (title "New Chat" means it's empty/unused)
-    const recentChats = useMemo(
+    const visibleSkills = useMemo(
       () =>
-        chats
-          .filter((chat) => chat.id !== currentChatId && chat.title !== "New Chat")
-          .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
-          .slice(0, 5),
-      [chats, currentChatId],
+        [...skills].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 8),
+      [skills],
     );
 
-    if (messages.length === 0) {
-      if (recentChats.length === 0) {
-        return null;
-      }
+    const openNewSkill = () => {
+      setSkillsInitialView("editor");
+      setIsSkillsOpen(true);
+    };
 
+    const handleSkillSelect = (skill: AIChatSkill) => {
+      dispatchAIChatSkillInsert(skill);
+    };
+
+    if (messages.length === 0) {
       return (
-        <div className="flex h-full flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-xl border border-border/40 bg-secondary-bg/30 p-1">
-            {recentChats.map((chat) => (
+        <div className="flex h-full flex-col justify-end px-4 pb-2 pt-4">
+          <div className="mx-auto flex w-full max-w-sm flex-wrap justify-center gap-1.5">
+            {visibleSkills.map((skill) => (
               <Button
-                key={chat.id}
+                key={skill.id}
                 type="button"
                 variant="ghost"
-                size="sm"
-                onClick={() => switchToChat(chat.id)}
-                className="h-auto w-full justify-start gap-2.5 px-2 py-1.5 text-left"
+                size="xs"
+                onClick={() => handleSkillSelect(skill)}
+                className="h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
+                tooltip={skill.title}
+                aria-label={`Use skill ${skill.title}`}
               >
-                <ProviderIcon
-                  providerId={chat.agentId || "custom"}
-                  size={12}
-                  className="shrink-0 text-text-lighter"
-                />
-                <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
-                  <span className="block w-full truncate text-left text-text text-xs">
-                    {chat.title}
-                  </span>
-                  <span className="block w-full select-none text-left text-[10px] text-text-lighter">
-                    {getRelativeTime(chat.lastMessageAt)}
-                  </span>
-                </div>
+                <span className="min-w-0 truncate">{skill.title}</span>
               </Button>
             ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={openNewSkill}
+              className="h-6 rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/65 hover:border-border-strong hover:bg-transparent hover:text-text"
+            >
+              <Plus size={12} />
+              <span>New skill</span>
+            </Button>
           </div>
+          <SkillsCommand
+            isOpen={isSkillsOpen}
+            initialView={skillsInitialView}
+            onClose={() => setIsSkillsOpen(false)}
+            onSelectSkill={handleSkillSelect}
+          />
         </div>
       );
     }

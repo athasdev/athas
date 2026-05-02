@@ -1,27 +1,31 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  AlertCircle,
+  WarningCircle as AlertCircle,
   CheckCircle,
   Cloud,
-  ExternalLink,
-  Globe,
+  ArrowSquareOut as ExternalLink,
+  GlobeHemisphereWest as Globe,
   Key,
   Laptop,
-  RefreshCw,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
+  ArrowClockwise as RefreshCw,
+  ArrowCounterClockwise as RotateCcw,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
+import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
+import { ModelSelector } from "@/features/ai/components/selectors/model-selector";
+import { ProviderSelector } from "@/features/ai/components/selectors/provider-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AgentConfig, SessionConfigOption, SessionMode } from "@/features/ai/types/acp";
+import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { SegmentedControl } from "@/ui/segmented-control";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
@@ -43,8 +47,6 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
-const NO_DEFAULT_SESSION_MODE = "__none__";
-
 const DEFAULT_AUTOCOMPLETE_MODELS = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
   { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
@@ -67,14 +69,13 @@ export const AISettings = () => {
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const aiCompletionAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
-  const isPro = subscription?.status === "pro";
 
-  const [availableModes, setAvailableModes] = useState<SessionMode[]>([]);
   const [sessionConfigOptions, setSessionConfigOptions] = useState<SessionConfigOption[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
+  const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -103,10 +104,8 @@ export const AISettings = () => {
 
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
-      setAvailableModes(state.sessionModeState.availableModes);
       setSessionConfigOptions(state.sessionConfigOptions);
     });
-    setAvailableModes(useAIChatStore.getState().sessionModeState.availableModes);
     setSessionConfigOptions(useAIChatStore.getState().sessionConfigOptions);
     return unsubscribe;
   }, []);
@@ -239,19 +238,9 @@ export const AISettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Athas Agent">
-        <div className="ui-font ui-text-sm px-1 pb-1 text-text-lighter">
-          When `Athas Agent` is selected in chat, it uses the provider and model configured here.
-        </div>
-        {isPro ? (
-          <div className="ui-font ui-text-sm rounded-xl border border-border bg-secondary-bg/60 px-3 py-2 text-text-lighter">
-            <span className="text-text">Athas Pro detected.</span> Chat provider routing is
-            currently configured through the model selection below; autocomplete already uses
-            Athas-hosted credit on Pro.
-          </div>
-        ) : null}
         <SettingRow
-          label="Provider & Model"
-          description="Choose the provider and model used by Athas Agent"
+          label="Provider"
+          description="Choose the provider used by Athas Agent"
           onReset={() => {
             updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
             updateSetting("aiModelId", getDefaultSetting("aiModelId"));
@@ -261,40 +250,56 @@ export const AISettings = () => {
             settings.aiModelId !== getDefaultSetting("aiModelId")
           }
         >
-          <ProviderModelSelector
+          <ProviderSelector
+            providerId={settings.aiProviderId}
+            onChange={(id) => handleProviderChange(id)}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Model"
+          description="Choose the model used by Athas Agent"
+          onReset={() => updateSetting("aiModelId", getDefaultSetting("aiModelId"))}
+          canReset={settings.aiModelId !== getDefaultSetting("aiModelId")}
+        >
+          <ModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
-            onProviderChange={(id) => handleProviderChange(id)}
-            onModelChange={(id) => updateSetting("aiModelId", id)}
+            onChange={(id) => updateSetting("aiModelId", id)}
           />
+        </SettingRow>
+
+        <SettingRow label="API Keys" description="Manage provider API keys separately">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsApiKeyManagerOpen(true)}
+            className="w-fit"
+          >
+            <Key />
+            <span>Manage keys</span>
+          </Button>
         </SettingRow>
       </Section>
 
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
           <SettingRow label="Mode" description="Run Ollama locally or use Ollama Cloud">
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant={isOllamaCloud ? "secondary" : "default"}
-                size="xs"
-                onClick={handleResetOllamaUrl}
-                className="gap-1.5"
-              >
-                <Laptop />
-                Local
-              </Button>
-              <Button
-                type="button"
-                variant={isOllamaCloud ? "default" : "secondary"}
-                size="xs"
-                onClick={handleUseOllamaCloud}
-                className="gap-1.5"
-              >
-                <Cloud />
-                Cloud
-              </Button>
-            </div>
+            <SegmentedControl
+              value={isOllamaCloud ? "cloud" : "local"}
+              onChange={(nextValue) => {
+                if (nextValue === "local") {
+                  handleResetOllamaUrl();
+                  return;
+                }
+                handleUseOllamaCloud();
+              }}
+              options={[
+                { value: "local", label: "Local", icon: <Laptop /> },
+                { value: "cloud", label: "Cloud", icon: <Cloud /> },
+              ]}
+            />
           </SettingRow>
           <SettingRow
             label="Endpoint"
@@ -320,7 +325,7 @@ export const AISettings = () => {
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="default"
                   size="icon-xs"
                   onClick={handleResetOllamaUrl}
                   title="Reset to default"
@@ -333,11 +338,7 @@ export const AISettings = () => {
           </SettingRow>
           <SettingRow
             label="API Key"
-            description={
-              needsApiKey
-                ? "Required for Ollama Cloud — create one at ollama.com/settings/keys"
-                : "Optional — only needed if your Ollama server requires authentication"
-            }
+            description="Used for authenticated Ollama endpoints and Ollama Cloud."
           >
             <div className="flex items-center gap-1.5">
               <Input
@@ -353,7 +354,7 @@ export const AISettings = () => {
               />
               <Button
                 type="button"
-                variant="secondary"
+                variant="default"
                 size="xs"
                 onClick={handleSaveOllamaApiKey}
                 disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
@@ -363,7 +364,7 @@ export const AISettings = () => {
               {hasStoredOllamaKey && (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="default"
                   size="xs"
                   onClick={handleRemoveOllamaApiKey}
                   title="Remove saved API key"
@@ -376,33 +377,42 @@ export const AISettings = () => {
             </div>
           </SettingRow>
           {needsApiKey && !hasStoredOllamaKey && (
-            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-text-lighter">
-              <AlertCircle className="shrink-0 text-warning" />
-              <span>
-                Ollama Cloud requires an API key.{" "}
+            <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key.">
+              <div className="flex items-center gap-1.5">
+                <AlertCircle className="shrink-0 text-warning" />
                 <a
                   href="https://ollama.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-link hover:underline"
                 >
-                  Get one here <ExternalLink className="size-3" />
+                  Get key <ExternalLink className="size-3" />
                 </a>
-              </span>
-            </div>
+              </div>
+            </SettingRow>
           )}
           {ollamaStatus === "error" && (
-            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-error">
-              <AlertCircle className="shrink-0" />
-              <span>
-                {isOllamaCloud
+            <SettingRow
+              label="Connection Status"
+              description={
+                isOllamaCloud
                   ? "Could not reach Ollama Cloud. Verify your API key and internet connection."
-                  : "Could not connect. Check that Ollama is running at this address."}
-              </span>
-            </div>
+                  : "Could not connect. Check that Ollama is running at this address."
+              }
+            >
+              <Badge variant="default" size="default">
+                Error
+              </Badge>
+            </SettingRow>
           )}
         </Section>
       )}
+
+      <ProviderApiKeyCommand
+        isOpen={isApiKeyManagerOpen}
+        onClose={() => setIsApiKeyManagerOpen(false)}
+        initialProviderId={settings.aiProviderId}
+      />
 
       {providersNeedingAuth.length > 0 && (
         <Section title="Authentication">
@@ -417,38 +427,6 @@ export const AISettings = () => {
               </Badge>
             </SettingRow>
           ))}
-        </Section>
-      )}
-
-      {availableModes.length > 0 && (
-        <Section title="Agent Defaults">
-          <SettingRow
-            label="Default Session Mode"
-            description="Default mode for ACP agent sessions"
-            onReset={() =>
-              updateSetting("aiDefaultSessionMode", getDefaultSetting("aiDefaultSessionMode"))
-            }
-            canReset={settings.aiDefaultSessionMode !== getDefaultSetting("aiDefaultSessionMode")}
-          >
-            <Select
-              value={settings.aiDefaultSessionMode || NO_DEFAULT_SESSION_MODE}
-              options={[
-                { value: NO_DEFAULT_SESSION_MODE, label: "None" },
-                ...availableModes.map((mode) => ({
-                  value: mode.id,
-                  label: mode.name,
-                })),
-              ]}
-              onChange={(value) =>
-                updateSetting(
-                  "aiDefaultSessionMode",
-                  value === NO_DEFAULT_SESSION_MODE ? "" : value,
-                )
-              }
-              size="xs"
-              variant="secondary"
-            />
-          </SettingRow>
         </Section>
       )}
 
@@ -476,6 +454,8 @@ export const AISettings = () => {
                   }
                   size="xs"
                   variant="secondary"
+                  searchable
+                  searchableTrigger="input"
                 />
               </SettingRow>
             );
@@ -485,7 +465,7 @@ export const AISettings = () => {
 
       <Section title="Autocomplete">
         <SettingRow
-          label="AI Completion"
+          label="AI Autocomplete"
           description="Enable AI autocomplete while typing"
           onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
           canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
@@ -497,85 +477,81 @@ export const AISettings = () => {
             size="sm"
           />
         </SettingRow>
-        <SettingRow
-          label="Autocomplete Model"
-          description="Choose any OpenRouter model for autocomplete"
-          onReset={() =>
-            updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
-          }
-          canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
-        >
-          <div className="flex items-center gap-2">
-            <Select
-              value={settings.aiAutocompleteModelId}
-              options={autocompleteModels.map((model) => ({
-                value: model.id,
-                label: model.name,
-              }))}
-              onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-              size="xs"
-              variant="secondary"
-              searchable
-              searchableTrigger="input"
-              className={SETTINGS_CONTROL_WIDTHS.xwide}
-              disabled={!aiCompletionAllowedByPolicy}
-            />
-            <Button
-              variant="secondary"
-              size="xs"
-              onClick={loadAutocompleteModels}
-              disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-              title="Refresh model list"
+        {settings.aiCompletion && (
+          <>
+            <SettingRow
+              label="Autocomplete Model"
+              description="Choose any OpenRouter model for autocomplete"
+              onReset={() =>
+                updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+              }
+              canReset={
+                settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
+              }
             >
-              <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
-            </Button>
-          </div>
-        </SettingRow>
-        {autocompleteModelError && (
-          <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
-            <AlertCircle />
-            <span>{autocompleteModelError}</span>
-          </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="xs"
+                  onClick={loadAutocompleteModels}
+                  disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
+                  title="Refresh model list"
+                >
+                  <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+                </Button>
+                <Select
+                  value={settings.aiAutocompleteModelId}
+                  options={autocompleteModels.map((model) => ({
+                    value: model.id,
+                    label: model.name,
+                  }))}
+                  onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+                  size="xs"
+                  variant="default"
+                  searchable
+                  searchableTrigger="input"
+                  className={SETTINGS_CONTROL_WIDTHS.xwide}
+                  disabled={!aiCompletionAllowedByPolicy}
+                />
+              </div>
+            </SettingRow>
+            {autocompleteModelError && (
+              <SettingRow label="Model List" description={autocompleteModelError}>
+                <Badge variant="default" size="default">
+                  Error
+                </Badge>
+              </SettingRow>
+            )}
+          </>
         )}
-        <div className="ui-font ui-text-sm px-1 text-text-lighter">
-          Pro uses Athas-hosted autocomplete credit. Free can use BYOK by setting an OpenRouter API
-          key in the API Keys section.
-        </div>
         {managedPolicy ? (
-          <div className="ui-font ui-text-sm px-1 text-text-lighter">
-            Enterprise policy:{" "}
-            {aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."}{" "}
-            {byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}
-          </div>
+          <SettingRow
+            label="Enterprise Policy"
+            description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
+          >
+            <Badge variant="default" size="default">
+              Managed
+            </Badge>
+          </SettingRow>
         ) : null}
       </Section>
 
       <Section title="Chat History">
         <SettingRow label="Clear All Chats" description="Permanently delete all chat history">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={async () => {
-              if (
-                window.confirm(
-                  "Are you sure you want to delete all chat history? This action cannot be undone.",
-                )
-              ) {
-                setIsClearingChats(true);
-                try {
-                  await useAIChatStore.getState().clearAllChats();
-                  showToast({ message: "All chats cleared", type: "success" });
-                } finally {
-                  setIsClearingChats(false);
-                }
+          <TypedConfirmAction
+            actionLabel="Clear All"
+            busyLabel="Clearing..."
+            isBusy={isClearingChats}
+            onConfirm={async () => {
+              setIsClearingChats(true);
+              try {
+                await useAIChatStore.getState().clearAllChats();
+                showToast({ message: "All chats cleared", type: "success" });
+              } finally {
+                setIsClearingChats(false);
               }
             }}
-            disabled={isClearingChats}
-            className="gap-1.5 text-error hover:bg-error/10"
-          >
-            <Trash2 />
-            {isClearingChats ? "Clearing..." : "Clear All"}
-          </Button>
+          />
         </SettingRow>
       </Section>
     </div>

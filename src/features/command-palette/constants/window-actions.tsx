@@ -1,4 +1,4 @@
-import { Maximize, Minimize } from "lucide-react";
+import { ArrowsOut as Maximize, ArrowsIn as Minimize } from "@phosphor-icons/react";
 import type { Action } from "../models/action.types";
 
 interface WindowActionsParams {

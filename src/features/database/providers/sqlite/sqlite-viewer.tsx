@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";

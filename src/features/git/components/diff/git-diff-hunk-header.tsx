@@ -1,4 +1,9 @@
-import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  Minus,
+  Plus,
+} from "@phosphor-icons/react";
 import { memo, useCallback } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { cn } from "@/utils/cn";

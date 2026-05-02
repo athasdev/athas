@@ -3,7 +3,6 @@
  */
 
 import { useMemo, useRef } from "react";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
@@ -37,6 +36,7 @@ export function useLayout() {
  */
 export function useEditorLayout() {
   const baseFontSize = useEditorSettingsStore.use.fontSize();
+  const lineHeightMultiplier = useEditorSettingsStore.use.lineHeight();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const lines = useEditorViewStore.use.lines();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
@@ -63,8 +63,8 @@ export function useEditorLayout() {
   }, [lines.length]);
 
   const lineHeight = useMemo(() => {
-    return fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
-  }, [fontSize]);
+    return Math.ceil(fontSize * lineHeightMultiplier);
+  }, [fontSize, lineHeightMultiplier]);
 
   return {
     gutterWidth,

@@ -1,6 +1,7 @@
+use crate::app_runtime::AppHandle;
 use athas_terminal::{TerminalConfig, TerminalManager, shell::Shell};
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::State;
 
 #[tauri::command]
 pub async fn create_terminal(

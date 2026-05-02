@@ -13,7 +13,7 @@ interface Definition {
 interface UseDefinitionLinkProps {
   filePath: string;
   content: string;
-  fontSize: number;
+  lineHeight: number;
   charWidth: number;
   isLanguageSupported: boolean;
   getDefinition?: (
@@ -61,7 +61,7 @@ function getWordBoundaries(
 export const useDefinitionLink = ({
   filePath,
   content,
-  fontSize,
+  lineHeight,
   charWidth,
   isLanguageSupported,
   getDefinition,
@@ -104,7 +104,6 @@ export const useDefinitionLink = ({
       const scrollTop = textarea?.scrollTop ?? 0;
       const scrollLeft = textarea?.scrollLeft ?? 0;
 
-      const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
       // Always use EDITOR_PADDING_LEFT since mouse events are captured on the
       // overlay-editor-container which is positioned AFTER the gutter
       const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
@@ -117,7 +116,7 @@ export const useDefinitionLink = ({
 
       return { line, column };
     },
-    [fontSize, charWidth],
+    [lineHeight, charWidth],
   );
 
   // Update the definition link based on current mouse position

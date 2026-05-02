@@ -1,6 +1,14 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Edit, Folder, Plus, Server, SquareArrowOutUpRight, Trash2, X } from "lucide-react";
+import {
+  PencilSimple as Edit,
+  Folder,
+  Plus,
+  HardDrives as Server,
+  ArrowSquareOut as SquareArrowOutUpRight,
+  Trash as Trash2,
+  X,
+} from "@phosphor-icons/react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";

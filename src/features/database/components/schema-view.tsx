@@ -1,4 +1,4 @@
-import { Filter } from "lucide-react";
+import { Funnel as Filter } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import type { ColumnInfo } from "../models/common.types";
 

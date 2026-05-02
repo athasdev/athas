@@ -1,4 +1,4 @@
-import { Folder, Server } from "lucide-react";
+import { Folder, HardDrives as Server } from "@phosphor-icons/react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { cn } from "@/utils/cn";

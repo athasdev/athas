@@ -28,7 +28,6 @@ interface UseLspIntegrationOptions {
   value: string;
   cursorPosition: Position;
   editorRef: RefObject<HTMLDivElement | null> | RefObject<HTMLTextAreaElement>;
-  fontSize: number;
 }
 
 /**
@@ -49,7 +48,6 @@ export const useLspIntegration = ({
   value,
   cursorPosition,
   editorRef,
-  fontSize,
 }: UseLspIntegrationOptions) => {
   // Get LSP client instance (singleton)
   const lspClient = useMemo(() => LspClient.getInstance(), []);
@@ -68,7 +66,7 @@ export const useLspIntegration = ({
   const snippetCompletion = useSnippetCompletion(filePath);
 
   // Get layout dimensions for hover position calculations
-  const { charWidth } = useEditorLayout();
+  const { charWidth, lineHeight } = useEditorLayout();
 
   // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -76,8 +74,8 @@ export const useLspIntegration = ({
   // Track cursor position where completions were triggered (to hide on cursor movement)
   const completionTriggerOffsetRef = useRef<number | null>(null);
 
-  // Track which file the last input was for (to avoid triggering completions on buffer switch)
-  const lastInputFilePathRef = useRef<string | null>(null);
+  // Track the latest input timestamp already considered for completions.
+  const lastHandledCompletionInputRef = useRef(0);
 
   // Track document versions per file path for LSP sync
   const documentVersionsRef = useRef<Map<string, number>>(new Map());
@@ -104,7 +102,7 @@ export const useLspIntegration = ({
     getHover: lspClient.getHover.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
-    fontSize,
+    lineHeight,
     charWidth,
   });
 
@@ -113,7 +111,7 @@ export const useLspIntegration = ({
     getDefinition: lspClient.getDefinition.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
-    fontSize,
+    lineHeight,
     charWidth,
   });
 
@@ -121,7 +119,7 @@ export const useLspIntegration = ({
   const definitionLinkHandlers = useDefinitionLink({
     filePath: filePath || "",
     content: value,
-    fontSize,
+    lineHeight,
     charWidth,
     isLanguageSupported: isLspSupported,
     getDefinition: lspClient.getDefinition.bind(lspClient),
@@ -215,6 +213,16 @@ export const useLspIntegration = ({
     });
   }, [enabled, value, filePath, isLspSupported, lspClient]);
 
+  useEffect(() => {
+    lastHandledCompletionInputRef.current = useEditorUIStore.getState().lastInputTimestamp;
+    completionTriggerOffsetRef.current = null;
+
+    if (completionTimerRef.current) {
+      clearTimeout(completionTimerRef.current);
+      completionTimerRef.current = undefined;
+    }
+  }, [filePath]);
+
   // Handle completion triggers - only when user types (not on cursor movement)
   useEffect(() => {
     if (!enabled) return;
@@ -238,11 +246,12 @@ export const useLspIntegration = ({
       return;
     }
 
-    // Skip if this is a buffer switch (filePath changed but typing happened in a different file)
-    // This prevents completions from appearing when switching to a buffer where user didn't just type
-    if (lastInputFilePathRef.current !== null && lastInputFilePathRef.current !== filePath) {
+    // Skip file switches and repeated renders that did not originate from a new edit in this file.
+    if (lastInputTimestamp <= lastHandledCompletionInputRef.current) {
       return;
     }
+
+    lastHandledCompletionInputRef.current = lastInputTimestamp;
 
     // Debounce completion trigger with fixed delay for predictable behavior
     completionTimerRef.current = setTimeout(() => {
@@ -250,9 +259,8 @@ export const useLspIntegration = ({
       const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
       if (!buffer || !hasTextContent(buffer)) return;
 
-      // Store the cursor offset and file path where completion was triggered
+      // Store the cursor offset where completion was triggered
       completionTriggerOffsetRef.current = cursorPosition.offset;
-      lastInputFilePathRef.current = filePath;
 
       lspActions.requestCompletion({
         filePath,

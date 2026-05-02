@@ -1,4 +1,4 @@
-import { Pin, X } from "lucide-react";
+import { PushPin as Pin, X } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import { Button } from "@/ui/button";
@@ -14,10 +14,8 @@ interface TerminalTabBarItemProps {
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
   tabRef: (el: HTMLDivElement | null) => void;
-  onMouseDown: (e: React.MouseEvent) => void;
+  onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.DragEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
   handleTabPin: (id: string) => void;
@@ -37,10 +35,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
   isDraggedTab,
   showDropIndicatorBefore,
   tabRef,
-  onMouseDown,
+  onClick,
   onContextMenu,
-  onDragStart,
-  onDragEnd,
   onKeyDown,
   handleTabClose,
   handleTabPin,
@@ -106,12 +102,9 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           isEditing ? "pr-2" : undefined,
         )}
         maxWidth={orientation === "vertical" ? undefined : 290}
-        onMouseDown={isEditing ? undefined : onMouseDown}
+        onClick={isEditing ? undefined : onClick}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
-        draggable={!isEditing}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
         action={
           !isEditing ? (
@@ -184,7 +177,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
+              "ui-font ui-text-sm max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}

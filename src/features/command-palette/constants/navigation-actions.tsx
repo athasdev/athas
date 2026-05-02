@@ -1,39 +1,34 @@
 import {
   FileText,
   FolderOpen,
+  BugBeetle,
   GitBranch,
   GitPullRequest,
   Hash,
   Package,
-  Search,
-} from "lucide-react";
+  MagnifyingGlass as Search,
+} from "@phosphor-icons/react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "github-prs") => void;
+  setActiveView: (view: "files" | "git" | "github-prs" | "debugger") => void;
   setIsQuickOpenVisible: (v: boolean) => void;
-  setIsGlobalSearchVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   onClose: () => void;
 }
 
 export const createNavigationActions = (params: NavigationActionsParams): Action[] => {
-  const {
-    setIsSidebarVisible,
-    setActiveView,
-    setIsQuickOpenVisible,
-    setIsGlobalSearchVisible,
-    openSettingsDialog,
-    onClose,
-  } = params;
+  const { setIsSidebarVisible, setActiveView, setIsQuickOpenVisible, openSettingsDialog, onClose } =
+    params;
 
   return [
     {
       id: "view-show-files",
       label: "View: Show Files",
-      description: "Switch to files explorer view",
+      description: "Switch to files view",
       icon: <FolderOpen />,
       category: "Navigation",
       commandId: "workbench.showFileExplorer",
@@ -62,9 +57,23 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Switch to GitHub Pull Requests view",
       icon: <GitPullRequest />,
       category: "Navigation",
+      commandId: "workbench.showGitHub",
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("github-prs");
+        onClose();
+      },
+    },
+    {
+      id: "view-show-debugger",
+      label: "View: Show Run and Debug",
+      description: "Switch to debugger view",
+      icon: <BugBeetle />,
+      category: "Navigation",
+      commandId: "workbench.showDebugger",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("debugger");
         onClose();
       },
     },
@@ -77,7 +86,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       commandId: "workbench.showGlobalSearch",
       action: () => {
         onClose();
-        setIsGlobalSearchVisible(true);
+        useBufferStore.getState().actions.openGlobalSearchBuffer();
       },
     },
     {

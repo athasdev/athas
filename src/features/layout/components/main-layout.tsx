@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { AgentLauncher } from "@/features/ai/components/agent-launcher";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
@@ -6,14 +6,12 @@ import CommandPalette from "@/features/command-palette/components/command-palett
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
-import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
+import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { useGitStore } from "@/features/git/stores/git-store";
-import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import QuickOpen from "@/features/quick-open/components/quick-open";
@@ -28,12 +26,13 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
 import { frontendTrace } from "@/utils/frontend-trace";
+import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
-import { MainSidebar } from "./sidebar/main-sidebar";
+import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
 
 const SIDEBAR_COLLAPSE_THRESHOLD = 48;
 
@@ -55,7 +54,6 @@ export function MainLayout() {
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
-  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const switchToProject = useFileSystemStore.use.switchToProject?.();
@@ -96,17 +94,14 @@ export function MainLayout() {
     }
   });
 
-  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
-  const diagnostics = useMemo(() => {
-    const allDiagnostics: Diagnostic[] = [];
-    diagnosticsByFile.forEach((fileDiagnostics) => {
-      allDiagnostics.push(...fileDiagnostics);
-    });
-    return allDiagnostics;
-  }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const showInlineAiChat = settings.isAIChatVisible;
+  const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+
+  useEffect(() => {
+    void initializeDebuggerEventBridge();
+  }, []);
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
@@ -123,29 +118,6 @@ export function MainLayout() {
   const handleIconThemeChange = (iconTheme: string) => {
     updateSetting("iconTheme", iconTheme);
   };
-
-  const handleDiagnosticClick = useCallback(
-    (diagnostic: Diagnostic) => {
-      if (handleFileSelect && diagnostic.filePath) {
-        void handleFileSelect(
-          diagnostic.filePath,
-          false,
-          diagnostic.line + 1,
-          diagnostic.column + 1,
-          undefined,
-          false,
-        );
-        return;
-      }
-
-      window.dispatchEvent(
-        new CustomEvent("menu-go-to-line", {
-          detail: { line: diagnostic.line + 1 },
-        }),
-      );
-    },
-    [handleFileSelect],
-  );
 
   // Initialize event listeners
   useMenuEventsWrapper();
@@ -243,7 +215,7 @@ export function MainLayout() {
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
-      {isDraggingOver && (
+      {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
           <div className="rounded-lg border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
             <p className="font-medium text-text text-xl">
@@ -272,16 +244,20 @@ export function MainLayout() {
             </div>
           ) : (
             sidebarPosition === "left" && (
-              <ResizablePane
-                position="left"
-                widthKey="sidebarWidth"
-                hidden={!isSidebarVisible}
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                onCollapse={() => setIsSidebarVisible(false)}
-              >
-                <MainSidebar />
-              </ResizablePane>
+              <>
+                {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
+                <ResizablePane
+                  position="left"
+                  widthKey="sidebarWidth"
+                  hidden={!isSidebarVisible}
+                  collapsible
+                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                  edgePadding={!showLeftSidebarTabs}
+                  onCollapse={() => setIsSidebarVisible(false)}
+                >
+                  <MainSidebar showActivityRail={!showLeftSidebarTabs} />
+                </ResizablePane>
+              </>
             )
           )}
 
@@ -290,23 +266,25 @@ export function MainLayout() {
             <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
-            {terminalWidthMode === "editor" && (
-              <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-            )}
+            {terminalWidthMode === "editor" && <BottomPane />}
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            <ResizablePane
-              position="right"
-              widthKey="sidebarWidth"
-              hidden={!isSidebarVisible}
-              collapsible
-              collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-              onCollapse={() => setIsSidebarVisible(false)}
-            >
-              <MainSidebar />
-            </ResizablePane>
+            <>
+              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
+              <ResizablePane
+                position="right"
+                widthKey="sidebarWidth"
+                hidden={!isSidebarVisible}
+                collapsible
+                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                edgePadding={!showLeftSidebarTabs}
+                onCollapse={() => setIsSidebarVisible(false)}
+              >
+                <MainSidebar showActivityRail={!showLeftSidebarTabs} />
+              </ResizablePane>
+            </>
           ) : (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
               <ResizablePane
@@ -324,7 +302,7 @@ export function MainLayout() {
 
         {terminalWidthMode === "full" && (
           <div className="px-2">
-            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+            <BottomPane />
           </div>
         )}
       </div>
@@ -333,7 +311,6 @@ export function MainLayout() {
 
       {/* Global modals and overlays */}
       <QuickOpen />
-      <ContentGlobalSearch />
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />

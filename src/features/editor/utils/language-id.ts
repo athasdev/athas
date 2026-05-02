@@ -1,4 +1,8 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import {
+  ANGULAR_TEMPLATE_LANGUAGE_ID,
+  isAngularTemplatePath,
+} from "@/features/editor/lib/wasm-parser/language-overlays";
 
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   js: "javascript",
@@ -51,6 +55,8 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   kts: "kotlin",
   scala: "scala",
   lua: "lua",
+  nix: "nix",
+  scm: "scheme",
   dart: "dart",
   ex: "elixir",
   exs: "elixir",
@@ -93,6 +99,7 @@ export function getLanguageIdFromExtension(extension: string): string | null {
 }
 
 export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+  [ANGULAR_TEMPLATE_LANGUAGE_ID]: "Angular Template",
   javascript: "JavaScript",
   javascriptreact: "JSX",
   typescript: "TypeScript",
@@ -118,6 +125,7 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   kotlin: "Kotlin",
   scala: "Scala",
   lua: "Lua",
+  nix: "Nix",
   dart: "Dart",
   elixir: "Elixir",
   ocaml: "OCaml",
@@ -164,6 +172,10 @@ export function getAllLanguages(): Array<{ id: string; displayName: string }> {
 }
 
 export function getLanguageIdFromPath(filePath: string): string | null {
+  if (isAngularTemplatePath(filePath)) {
+    return ANGULAR_TEMPLATE_LANGUAGE_ID;
+  }
+
   const fromRegistry = extensionRegistry.getLanguageId(filePath);
   if (fromRegistry) {
     return normalizeLanguageId(fromRegistry);

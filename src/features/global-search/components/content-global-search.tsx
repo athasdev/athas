@@ -1,21 +1,19 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
-import { SEARCH_TOGGLE_ICONS, SearchInput } from "@/ui/search";
+import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import { SEARCH_TOGGLE_ICONS } from "@/ui/search";
 import { cn } from "@/utils/cn";
+import { getBaseName, getRelativePath } from "@/utils/path-helpers";
 import { PREVIEW_DEBOUNCE_DELAY } from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
+import { ContentSearchResult } from "./content-search-result";
 import { FilePreview } from "./file-preview";
-import { SearchMatchItem } from "./search-match-item";
-
 const MAX_DISPLAYED_MATCHES = 500;
-const ESTIMATED_ITEM_HEIGHT = 32;
 
 const ContentGlobalSearch = () => {
   const isVisible = useUIState((state) => state.isGlobalSearchVisible);
@@ -24,7 +22,6 @@ const ContentGlobalSearch = () => {
   const quickOpenPreview = useSettingsStore((state) => state.settings.quickOpenPreview);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [previewFilePath, setPreviewFilePath] = useState<string | null>(null);
   const {
     query,
@@ -36,6 +33,10 @@ const ContentGlobalSearch = () => {
     rootFolderPath,
     searchOptions,
     setSearchOption,
+    includeQuery,
+    setIncludeQuery,
+    excludeQuery,
+    setExcludeQuery,
   } = useContentSearch(isVisible);
 
   const debouncedSetPreview = useDebouncedCallback(
@@ -69,9 +70,7 @@ const ContentGlobalSearch = () => {
     }> = [];
 
     for (const result of results) {
-      const displayPath = rootFolderPath
-        ? result.file_path.replace(rootFolderPath, "").replace(/^\//, "")
-        : result.file_path;
+      const displayPath = getRelativePath(result.file_path, rootFolderPath);
 
       for (const match of result.matches) {
         matches.push({
@@ -89,32 +88,17 @@ const ContentGlobalSearch = () => {
     return matches;
   }, [results, rootFolderPath]);
 
-  // Virtualizer
-  const virtualizer = useVirtualizer({
-    count: flattenedMatches.length,
-    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
-    getScrollElement: () => scrollContainerRef.current,
-    overscan: 10,
-  });
-
   // Prepare data for keyboard navigation - convert matches to FileItem format
   const navigationItems = useMemo(() => {
     return flattenedMatches.map((item) => ({
       path: `${item.filePath}:${item.match.line_number}`,
-      name: item.filePath.split("/").pop() || "",
+      name: getBaseName(item.filePath, ""),
       isDir: false,
     }));
   }, [flattenedMatches]);
 
-  const scrollToIndex = useCallback(
-    (index: number) => {
-      virtualizer.scrollToIndex(index, { align: "auto" });
-    },
-    [virtualizer],
-  );
-
   // Keyboard navigation
-  const { selectedIndex } = useKeyboardNavigation({
+  const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
     isVisible,
     allResults: navigationItems,
     onClose,
@@ -123,7 +107,6 @@ const ContentGlobalSearch = () => {
       const lineNumber = parseInt(lineStr, 10);
       handleFileClick(filePath, lineNumber);
     },
-    scrollToIndex,
   });
 
   // Update preview when selected index changes
@@ -158,6 +141,10 @@ const ContentGlobalSearch = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isVisible, onClose]);
 
+  const matchIndexMap = useMemo(() => {
+    return new Map(navigationItems.map((item, index) => [item.path, index]));
+  }, [navigationItems]);
+
   if (!isVisible) {
     return null;
   }
@@ -167,155 +154,171 @@ const ContentGlobalSearch = () => {
   const displayedCount = flattenedMatches.length;
   const hasMore = totalMatches > displayedCount;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
-      {/* Backdrop */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="absolute inset-0 cursor-default rounded-none bg-transparent hover:bg-transparent"
-        onClick={onClose}
-        aria-label="Close global search"
-        tabIndex={-1}
-      />
+  const resultLabel =
+    debouncedQuery && !isSearching
+      ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
+      : null;
 
-      <div
-        data-global-search
-        className={cn(
-          "relative flex overflow-hidden rounded-md border border-border bg-primary-bg shadow-2xl",
-          quickOpenPreview ? "h-[600px] w-[1200px]" : "h-[600px] w-[800px]",
-        )}
-      >
-        {/* Left Column - Search Results */}
-        <div
-          className={cn(
-            "flex flex-col",
-            quickOpenPreview ? "w-[600px] border-border border-r" : "w-full",
-          )}
-        >
-          {/* Header */}
-          <div className="border-border border-b">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <SearchInput
-                inputRef={inputRef}
+  const searchOptionsButtons = [
+    {
+      id: "case-sensitive",
+      label: "Match case",
+      icon: SEARCH_TOGGLE_ICONS.caseSensitive,
+      active: searchOptions.caseSensitive,
+      onToggle: () => setSearchOption("caseSensitive", !searchOptions.caseSensitive),
+    },
+    {
+      id: "whole-word",
+      label: "Match whole word",
+      icon: SEARCH_TOGGLE_ICONS.wholeWord,
+      active: searchOptions.wholeWord,
+      onToggle: () => setSearchOption("wholeWord", !searchOptions.wholeWord),
+    },
+    {
+      id: "regex",
+      label: "Use regular expression",
+      icon: SEARCH_TOGGLE_ICONS.regex,
+      active: searchOptions.useRegex,
+      onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
+    },
+  ];
+  const selectedMatchKey =
+    selectedIndex >= 0 && selectedIndex < navigationItems.length
+      ? navigationItems[selectedIndex]?.path
+      : null;
+
+  return (
+    <Command
+      isVisible={isVisible}
+      onClose={onClose}
+      className={cn(
+        "overflow-hidden",
+        quickOpenPreview
+          ? "h-[min(600px,calc(100dvh-128px))] w-[min(1200px,calc(100vw-32px))]"
+          : "h-[min(600px,calc(100dvh-128px))] w-[min(800px,calc(100vw-32px))]",
+      )}
+    >
+      <div data-global-search className="flex min-h-0 flex-1 flex-col">
+        <CommandHeader onClose={onClose}>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <CommandInput
+                ref={inputRef}
                 value={query}
                 onChange={setQuery}
                 placeholder="Search in files..."
-                matchLabel={
-                  hasResults
-                    ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
-                    : null
-                }
-                options={[
-                  {
-                    id: "case-sensitive",
-                    label: "Match case",
-                    icon: SEARCH_TOGGLE_ICONS.caseSensitive,
-                    active: searchOptions.caseSensitive,
-                    onToggle: () => setSearchOption("caseSensitive", !searchOptions.caseSensitive),
-                  },
-                  {
-                    id: "whole-word",
-                    label: "Match whole word",
-                    icon: SEARCH_TOGGLE_ICONS.wholeWord,
-                    active: searchOptions.wholeWord,
-                    onToggle: () => setSearchOption("wholeWord", !searchOptions.wholeWord),
-                  },
-                  {
-                    id: "regex",
-                    label: "Use regular expression",
-                    icon: SEARCH_TOGGLE_ICONS.regex,
-                    active: searchOptions.useRegex,
-                    onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
-                  },
-                ]}
+                className="ui-font"
               />
-              <Button onClick={onClose} variant="ghost" size="icon-xs" className="shrink-0 rounded">
-                <X className="text-text-lighter" />
-              </Button>
+              {resultLabel ? (
+                <span className="ui-font ui-text-xs shrink-0 text-text-lighter">{resultLabel}</span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {searchOptionsButtons.map((option) => (
+                <Button
+                  key={option.id}
+                  type="button"
+                  onClick={option.onToggle}
+                  variant="ghost"
+                  size="icon-xs"
+                  className={cn(
+                    "rounded-md border border-transparent text-text-lighter transition-colors",
+                    option.active
+                      ? "border-border/70 bg-hover text-text"
+                      : "hover:border-border/70 hover:bg-hover hover:text-text",
+                  )}
+                  tooltip={option.label}
+                  aria-label={option.label}
+                  aria-pressed={option.active}
+                >
+                  {option.icon}
+                </Button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <CommandInput
+                value={includeQuery}
+                onChange={setIncludeQuery}
+                placeholder="Files to include"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
+              <CommandInput
+                value={excludeQuery}
+                onChange={setExcludeQuery}
+                placeholder="Files to exclude"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
             </div>
           </div>
+        </CommandHeader>
 
-          {/* Results */}
+        <div className="flex min-h-0 flex-1">
           <div
-            ref={scrollContainerRef}
-            className="custom-scrollbar-thin flex-1 overflow-y-auto p-2"
+            className={cn(
+              "flex min-h-0 flex-1 flex-col overflow-hidden",
+              quickOpenPreview ? "border-border border-r" : "w-full",
+            )}
           >
-            {!debouncedQuery && (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
-                Type to search across all files in your project
-              </div>
-            )}
-
-            {debouncedQuery && isSearching && (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
-                Searching...
-              </div>
-            )}
-
-            {debouncedQuery && !isSearching && !hasResults && !error && (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
-                No results found for "{debouncedQuery}"
-              </div>
-            )}
-
-            {error && (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-red-500">
-                {error}
-              </div>
-            )}
-
-            {hasResults && (
-              <>
-                <div
-                  style={{
-                    height: virtualizer.getTotalSize(),
-                    position: "relative",
-                    width: "100%",
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualRow) => {
-                    const item = flattenedMatches[virtualRow.index];
-                    return (
-                      <SearchMatchItem
-                        key={`${item.filePath}-${item.match.line_number}-${virtualRow.index}`}
-                        index={virtualRow.index}
-                        isSelected={virtualRow.index === selectedIndex}
-                        filePath={item.filePath}
-                        displayPath={item.displayPath}
-                        match={item.match}
-                        onSelect={handleFileClick}
-                        onPreview={quickOpenPreview ? debouncedSetPreview : undefined}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      />
-                    );
-                  })}
+            <CommandList ref={scrollContainerRef}>
+              {!debouncedQuery && (
+                <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
+                  Type to search across all files in your project
                 </div>
-                {hasMore && (
-                  <div className="ui-text-sm px-3 py-2 text-center text-text-lighter">
-                    Showing first {displayedCount} of {totalMatches} results
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+              )}
 
-        {/* Right Column - Preview Pane */}
-        {quickOpenPreview && (
-          <div className="w-[600px] shrink-0">
-            <FilePreview filePath={previewFilePath} />
+              {debouncedQuery && isSearching && (
+                <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
+                  Searching...
+                </div>
+              )}
+
+              {debouncedQuery && !isSearching && !hasResults && !error && (
+                <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
+                  No results found for "{debouncedQuery}"
+                </div>
+              )}
+
+              {error && (
+                <div className="ui-text-sm flex h-full items-center justify-center text-center text-error">
+                  {error}
+                </div>
+              )}
+
+              {hasResults && (
+                <>
+                  <div className="space-y-1">
+                    {results.map((result) => (
+                      <ContentSearchResult
+                        key={result.file_path}
+                        result={result}
+                        rootFolderPath={rootFolderPath}
+                        onFileClick={handleFileClick}
+                        onFileHover={quickOpenPreview ? debouncedSetPreview : undefined}
+                        selectedMatchKey={selectedMatchKey}
+                        getMatchIndex={(lineNumber) =>
+                          matchIndexMap.get(`${result.file_path}:${lineNumber}`)
+                        }
+                      />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <div className="ui-text-sm px-3 py-2 text-center text-text-lighter">
+                      Showing first {displayedCount} of {totalMatches} results
+                    </div>
+                  )}
+                </>
+              )}
+            </CommandList>
           </div>
-        )}
+
+          {quickOpenPreview && (
+            <div className="w-[min(48%,600px)] shrink-0">
+              <FilePreview filePath={previewFilePath} />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Command>
   );
 };
 

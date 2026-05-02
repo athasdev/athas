@@ -4,7 +4,7 @@ import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { initializeUIExtensions } from "@/extensions/ui/services/ui-extension-initializer";
 import { initializeWasmTokenizer } from "@/features/editor/lib/wasm-parser/wasm-parser-api";
 import { initializeSettingsStore } from "@/features/settings/store";
-import { initializeHeartbeat } from "@/features/telemetry/services/heartbeat";
+import { initializeTelemetry } from "@/features/telemetry/services/telemetry";
 import { reportBootstrapResults } from "./bootstrap-errors";
 
 const asyncBootstrapSteps = [
@@ -29,8 +29,8 @@ const asyncBootstrapSteps = [
     run: () => initializeExtensionStore(),
   },
   {
-    name: "heartbeat",
-    run: () => initializeHeartbeat(),
+    name: "telemetry",
+    run: () => initializeTelemetry(),
   },
   {
     name: "ui extensions",

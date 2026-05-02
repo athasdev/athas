@@ -69,6 +69,7 @@ export const initializeThemeSystem = async () => {
       canRedo: () => false,
       getSettings: () => ({
         fontSize: 14,
+        lineHeight: 1.4,
         tabSize: 2,
         lineNumbers: true,
         wordWrap: false,

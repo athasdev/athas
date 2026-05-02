@@ -1,5 +1,6 @@
+use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::{Context, Result, bail};
-use athas_runtime::NodeRuntime;
+use athas_runtime::{NodeRuntime, process::configure_background_command};
 use crossbeam_channel::{Sender, bounded};
 use lsp_types::*;
 use serde_json::{Value, json};
@@ -15,7 +16,7 @@ use std::{
    },
    thread,
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{Emitter, Manager};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
@@ -81,7 +82,8 @@ impl LspClient {
          (server_path, args)
       };
 
-      let mut child = Command::new(&command_path)
+      let mut command = Command::new(&command_path);
+      let mut child = configure_background_command(&mut command)
          .args(&final_args)
          .stdin(Stdio::piped())
          .stdout(Stdio::piped())
@@ -648,6 +650,17 @@ impl LspClient {
       params: SignatureHelpParams,
    ) -> Result<Option<SignatureHelp>> {
       self.request::<request::SignatureHelpRequest>(params).await
+   }
+
+   pub fn signature_help_trigger_characters(&self) -> Vec<String> {
+      self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.signature_help_provider.as_ref())
+         .and_then(|provider| provider.trigger_characters.clone())
+         .unwrap_or_default()
    }
 
    pub async fn text_document_references(

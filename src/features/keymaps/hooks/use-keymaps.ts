@@ -8,8 +8,10 @@
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/store";
+import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useKeymapStore } from "../stores/store";
+import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
 import { parseKeybinding } from "../utils/parser";
@@ -26,6 +28,7 @@ const NATIVE_MENU_ACCELERATORS = [
   "cmd+q",
   "cmd+f",
   "cmd+alt+f",
+  "cmd+/",
   "cmd+shift+p",
   "cmd+b",
   "cmd+j",
@@ -80,6 +83,14 @@ export function useKeymaps() {
 
       // Escape key - global modal closing
       if (e.key === "Escape") {
+        const activeElement =
+          typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+        const { dismissTarget, blurTarget } = resolveEscapeGuard(e.target, activeElement);
+
+        if (dismissTarget || blurTarget) {
+          return;
+        }
+
         const { hasOpenModal, closeTopModal } = useUIState.getState();
         if (hasOpenModal()) {
           e.preventDefault();
@@ -111,15 +122,13 @@ export function useKeymaps() {
       // Get keybindings from registry (defaults and extensions)
       const registryKeybindings = keymapRegistry.getAllKeybindings();
 
-      // Get user keybindings from store
+      // Get preset and user keybindings
       const userKeybindings = useKeymapStore.getState().keybindings;
-
-      // Merge keybindings: user overrides take priority over registry
-      const userCommandIds = new Set(userKeybindings.map((kb) => kb.command));
-      const allKeybindings = [
-        ...userKeybindings,
-        ...registryKeybindings.filter((kb) => !userCommandIds.has(kb.command)),
-      ];
+      const allKeybindings = getEffectiveKeybindings({
+        preset: settings.keybindingPreset,
+        registryKeybindings,
+        userKeybindings,
+      });
 
       // Get current event key
       const eventKey = eventToKey(e);

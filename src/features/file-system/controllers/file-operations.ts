@@ -1,4 +1,5 @@
 import type { FileEntry } from "../types/app";
+import { joinPath } from "@/utils/path-helpers";
 import {
   getSymlinkInfo,
   createDirectory as platformCreateDirectory,
@@ -8,7 +9,7 @@ import {
   writeFile as platformWriteFile,
 } from "./platform";
 import { useFileSystemStore } from "./store";
-import { shouldIgnore } from "./utils";
+import { shouldHideFromFileTree } from "./utils";
 
 export async function readFileContent(path: string): Promise<string> {
   try {
@@ -35,7 +36,7 @@ export async function createNewFile(directoryPath: string, fileName: string): Pr
     throw new Error("File name cannot be empty");
   }
 
-  const filePath = `${directoryPath}/${fileName}`;
+  const filePath = joinPath(directoryPath, fileName);
   await writeFileContent(filePath, "");
   return filePath;
 }
@@ -48,7 +49,7 @@ export async function createNewDirectory(parentPath: string, folderName: string)
     throw new Error("Folder name cannot be empty");
   }
 
-  const folderPath = `${parentPath}/${folderName}`;
+  const folderPath = joinPath(parentPath, folderName);
   await platformCreateDirectory(folderPath);
   return folderPath;
 }
@@ -64,13 +65,12 @@ export async function readDirectoryContents(path: string): Promise<FileEntry[]> 
 
     const filteredEntries = (entries as any[]).filter((entry: any) => {
       const name = entry.name || "Unknown";
-      const isDir = entry.is_dir || false;
-      return !shouldIgnore(name, isDir);
+      return !shouldHideFromFileTree(name);
     });
 
     const entriesWithSymlinkInfo = await Promise.all(
       filteredEntries.map(async (entry: any) => {
-        const entryPath = entry.path || `${path}/${entry.name}`;
+        const entryPath = entry.path || joinPath(path, entry.name);
 
         try {
           const symlinkInfo = await getSymlinkInfo(entryPath, workspaceRoot);

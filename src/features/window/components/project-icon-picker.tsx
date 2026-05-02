@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir } from "@tauri-apps/plugin-fs";
-import { Trash2 } from "lucide-react";
+import { Trash as Trash2 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { Button } from "@/ui/button";

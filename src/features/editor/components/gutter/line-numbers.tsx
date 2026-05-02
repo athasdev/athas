@@ -18,6 +18,8 @@ interface LineNumbersProps {
   startLine: number;
   endLine: number;
   hiddenLines?: Set<number>;
+  lineNumberStart?: number;
+  lineNumberMap?: Array<number | null>;
 }
 
 function LineNumbersComponent({
@@ -30,9 +32,18 @@ function LineNumbersComponent({
   startLine,
   endLine,
   hiddenLines,
+  lineNumberStart = 1,
+  lineNumberMap,
 }: LineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
-  const lineNumberWidth = calculateLineNumberWidth(totalLines);
+  const mappedLargestLine = lineNumberMap?.reduce<number>(
+    (largest, lineNumber) =>
+      typeof lineNumber === "number" ? Math.max(largest, lineNumber) : largest,
+    0,
+  );
+  const lineNumberWidth = calculateLineNumberWidth(
+    Math.max(lineNumberStart + totalLines - 1, mappedLargestLine ?? 0),
+  );
 
   const visualCursorLine = useMemo(() => {
     if (foldMapping?.actualToVirtual) {
@@ -45,6 +56,9 @@ function LineNumbersComponent({
     const result = [];
     for (let i = startLine; i < endLine; i++) {
       const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
+      const mappedLineNumber = lineNumberMap?.[actualLineNumber];
+      const displayedLineNumber = mappedLineNumber ?? lineNumberStart + actualLineNumber;
+      const hasDisplayedLineNumber = mappedLineNumber !== null;
       const isActive = i === visualCursorLine;
 
       result.push(
@@ -59,7 +73,7 @@ function LineNumbersComponent({
             lineHeight: `${lineHeight}px`,
             textAlign: "right",
             paddingRight: "12px",
-            visibility: hiddenLines?.has(i) ? "hidden" : "visible",
+            visibility: hiddenLines?.has(i) || !hasDisplayedLineNumber ? "hidden" : "visible",
             color: isActive
               ? "var(--text, #d4d4d4)"
               : "var(--text-light, rgba(255, 255, 255, 0.5))",
@@ -69,14 +83,24 @@ function LineNumbersComponent({
             userSelect: "none",
           }}
           onClick={() => onLineClick?.(i)}
-          title={`Line ${actualLineNumber + 1}`}
+          title={hasDisplayedLineNumber ? `Line ${displayedLineNumber}` : undefined}
         >
-          {actualLineNumber + 1}
+          {hasDisplayedLineNumber ? displayedLineNumber : ""}
         </div>,
       );
     }
     return result;
-  }, [startLine, endLine, visualCursorLine, lineHeight, onLineClick, foldMapping, hiddenLines]);
+  }, [
+    startLine,
+    endLine,
+    visualCursorLine,
+    lineHeight,
+    onLineClick,
+    foldMapping,
+    hiddenLines,
+    lineNumberStart,
+    lineNumberMap,
+  ]);
 
   return (
     <div

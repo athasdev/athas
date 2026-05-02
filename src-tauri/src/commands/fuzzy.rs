@@ -1,11 +1,15 @@
+use crate::app_runtime::AppHandle;
 use athas_fff_search::{FffSearch, FffSearchHit};
 use nucleo_matcher::{
    Config, Matcher, Utf32Str,
    pattern::{Atom, AtomKind, CaseMatching, Normalization},
 };
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use tauri::{AppHandle, Manager, State};
+use std::{
+   path::{Path, PathBuf},
+   sync::{Mutex, OnceLock},
+};
+use tauri::{Manager, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FuzzyMatchItem {
@@ -201,15 +205,21 @@ pub fn filter_completions(request: CompletionFilterRequest) -> Vec<FilteredCompl
    filtered
 }
 
-pub struct FffSearchState(pub std::sync::OnceLock<FffSearch>);
+pub struct FffSearchState {
+   fff: OnceLock<FffSearch>,
+   workspace_path: Mutex<Option<PathBuf>>,
+}
 
 impl FffSearchState {
    pub fn new() -> Self {
-      Self(std::sync::OnceLock::new())
+      Self {
+         fff: OnceLock::new(),
+         workspace_path: Mutex::new(None),
+      }
    }
 
-   fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
-      if let Some(fff) = self.0.get() {
+   pub(crate) fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
+      if let Some(fff) = self.fff.get() {
          return Ok(fff);
       }
 
@@ -219,9 +229,31 @@ impl FffSearchState {
          .map_err(|e| format!("app_data_dir: {e}"))?;
       let db_path: PathBuf = data_dir.join("fff-frecency.lmdb");
       let fff = FffSearch::new(db_path).map_err(|e| format!("fff init: {e}"))?;
-      let _ = self.0.set(fff);
-      Ok(self.0.get().unwrap())
+      let _ = self.fff.set(fff);
+      Ok(self.fff.get().unwrap())
    }
+
+   pub(crate) fn ensure_workspace(&self, app: &AppHandle, base_path: &Path) -> Result<(), String> {
+      let fff = self.get_or_init(app)?;
+      let next_path = base_path.to_path_buf();
+      let mut workspace_path = self
+         .workspace_path
+         .lock()
+         .map_err(|e| format!("fff workspace lock: {e}"))?;
+
+      if workspace_path.as_ref() == Some(&next_path) {
+         return Ok(());
+      }
+
+      fff.set_workspace(base_path)
+         .map_err(|e| format!("fff set_workspace: {e}"))?;
+      *workspace_path = Some(next_path);
+      Ok(())
+   }
+}
+
+fn should_skip_fff_path(path: &str) -> bool {
+   path.starts_with("remote://") || path.starts_with("diff://") || path.trim().is_empty()
 }
 
 #[tauri::command]
@@ -230,9 +262,11 @@ pub fn fff_set_workspace(
    state: State<'_, FffSearchState>,
    base_path: String,
 ) -> Result<(), String> {
-   let fff = state.get_or_init(&app)?;
-   fff.set_workspace(std::path::Path::new(&base_path))
-      .map_err(|e| format!("fff set_workspace: {e}"))
+   if should_skip_fff_path(&base_path) {
+      return Ok(());
+   }
+
+   state.ensure_workspace(&app, Path::new(&base_path))
 }
 
 #[tauri::command]
@@ -241,7 +275,20 @@ pub fn fff_search_files(
    state: State<'_, FffSearchState>,
    query: String,
    limit: Option<usize>,
+   root_path: Option<String>,
 ) -> Result<Vec<FffSearchHit>, String> {
+   if query.trim().is_empty() {
+      return Ok(Vec::new());
+   }
+
+   if let Some(root_path) = root_path.as_deref() {
+      if should_skip_fff_path(root_path) {
+         return Ok(Vec::new());
+      }
+
+      state.ensure_workspace(&app, Path::new(root_path))?;
+   }
+
    let fff = state.get_or_init(&app)?;
    fff.search(&query, limit.unwrap_or(100))
       .map_err(|e| format!("fff search: {e}"))
@@ -253,6 +300,10 @@ pub fn fff_track_access(
    state: State<'_, FffSearchState>,
    path: String,
 ) -> Result<(), String> {
+   if should_skip_fff_path(&path) {
+      return Ok(());
+   }
+
    let fff = state.get_or_init(&app)?;
    fff.track_access(std::path::Path::new(&path))
       .map_err(|e| format!("fff track_access: {e}"))

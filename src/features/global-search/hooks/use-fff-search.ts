@@ -2,12 +2,19 @@ import { useEffect, useState } from "react";
 import { fffSearchFiles, type FffSearchHit } from "../lib/rust-api/search";
 import { MAX_RESULTS } from "../constants/limits";
 
-export const useFffSearch = (query: string, enabled: boolean) => {
+const canUseFffSearch = (rootPath: string | null | undefined): rootPath is string =>
+  Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
+
+export const useFffSearch = (
+  query: string,
+  enabled: boolean,
+  rootPath: string | null | undefined,
+) => {
   const [hits, setHits] = useState<FffSearchHit[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !query.trim()) {
+    if (!enabled || !query.trim() || !canUseFffSearch(rootPath)) {
       setHits([]);
       setError(null);
       return;
@@ -15,7 +22,7 @@ export const useFffSearch = (query: string, enabled: boolean) => {
 
     let cancelled = false;
 
-    fffSearchFiles(query, MAX_RESULTS)
+    fffSearchFiles(query, MAX_RESULTS, rootPath)
       .then((results) => {
         if (cancelled) return;
         setHits(results);
@@ -31,7 +38,7 @@ export const useFffSearch = (query: string, enabled: boolean) => {
     return () => {
       cancelled = true;
     };
-  }, [query, enabled]);
+  }, [query, enabled, rootPath]);
 
   return { hits, error };
 };

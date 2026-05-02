@@ -1,5 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ArrowDown, ArrowUp, FileIcon, X } from "lucide-react";
+import { ArrowDown, ArrowUp, File as FileIcon, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

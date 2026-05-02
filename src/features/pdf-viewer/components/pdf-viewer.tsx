@@ -7,7 +7,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ArrowSquareOut as ExternalLink, SpinnerGap as Loader2 } from "@phosphor-icons/react";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

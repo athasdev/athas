@@ -1,10 +1,11 @@
-use crate::{config::TerminalConfig, connection::TerminalConnection};
+use crate::{
+   config::TerminalConfig, connection::TerminalConnection, runtime::AthasAppHandle as AppHandle,
+};
 use anyhow::{Result, anyhow};
 use std::{
    collections::HashMap,
    sync::{Arc, Mutex},
 };
-use tauri::AppHandle;
 use uuid::Uuid;
 
 pub struct TerminalManager {
@@ -73,5 +74,20 @@ impl TerminalManager {
       } else {
          Err(anyhow!("Terminal connection not found"))
       }
+   }
+
+   pub fn close_all(&self) {
+      let mut connections = self.connections.lock().unwrap();
+      for (id, connection) in connections.drain() {
+         if let Err(e) = connection.kill() {
+            log::debug!("Terminal {} kill returned error during shutdown: {}", id, e);
+         }
+      }
+   }
+}
+
+impl Drop for TerminalManager {
+   fn drop(&mut self) {
+      self.close_all();
    }
 }

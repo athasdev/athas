@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { Eye, Search, Sparkles } from "lucide-react";
+import { Eye, MagnifyingGlass as Search, Sparkle as Sparkles } from "@phosphor-icons/react";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import type { Position } from "@/features/editor/types/editor";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
@@ -12,23 +13,30 @@ import { Button } from "@/ui/button";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
 export interface BreadcrumbProps {
+  bufferId?: string;
+  cursorPosition?: Position;
   filePathOverride?: string;
   rightContent?: ReactNode;
   extraLeftContent?: ReactNode;
   showDefaultActions?: boolean;
   interactive?: boolean;
+  showPath?: boolean;
 }
 
 export default function Breadcrumb({
+  bufferId,
+  cursorPosition,
   filePathOverride,
   rightContent,
   extraLeftContent,
   showDefaultActions = true,
   interactive = true,
+  showPath = true,
 }: BreadcrumbProps = {}) {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const resolvedBufferId = bufferId ?? activeBufferId;
+  const activeBuffer = buffers.find((b) => b.id === resolvedBufferId) || null;
   const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
   const { isFindVisible, setIsFindVisible } = useUIState();
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
@@ -139,7 +147,10 @@ export default function Breadcrumb({
           <Search />
         </Button>
         <div className="mx-1 h-3.5 w-px bg-border/70" />
-        <EditorStatusActions />
+        <EditorStatusActions
+          bufferId={resolvedBufferId ?? undefined}
+          cursorPosition={cursorPosition}
+        />
       </>
     ) : null;
 
@@ -147,7 +158,7 @@ export default function Breadcrumb({
     <>
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
         <div className="ui-font flex min-w-0 items-center gap-2 text-text-lighter text-xs">
-          {showBreadcrumbPath ? (
+          {showPath && showBreadcrumbPath ? (
             <FilePathBreadcrumb filePath={filePath} interactive={interactive} />
           ) : null}
           {extensionActions.left.map((action) => (

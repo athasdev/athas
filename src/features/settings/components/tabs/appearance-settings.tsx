@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Upload } from "lucide-react";
+import { Upload } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
@@ -18,7 +18,7 @@ import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-sectio
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 
 export const AppearanceSettings = () => {
@@ -33,6 +33,10 @@ export const AppearanceSettings = () => {
   const titleBarProjectModeOptions = [
     { value: "tabs", label: "Tabs" },
     { value: "window", label: "Window" },
+  ];
+  const sidebarTabsPositionOptions = [
+    { value: "top", label: "Top" },
+    { value: "left", label: "Left" },
   ];
 
   // Load themes from theme registry
@@ -136,17 +140,12 @@ export const AppearanceSettings = () => {
     updateSetting("iconTheme", themeId);
   };
 
-  const getThemeDescription = () => {
-    const currentTheme = themeRegistry.getTheme(settings.theme);
-    return currentTheme?.description || "Choose your preferred color theme";
-  };
-
   return (
     <div className="space-y-4">
       <Section title="Theme">
         <SettingRow
           label="Color Theme"
-          description={getThemeDescription()}
+          description="Choose your preferred color theme"
           onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
           canReset={settings.theme !== getDefaultSetting("theme")}
         >
@@ -162,7 +161,7 @@ export const AppearanceSettings = () => {
               searchableTrigger="input"
               disabled={settings.syncSystemTheme}
             />
-            <Button onClick={handleUploadTheme} variant="secondary" size="xs" className="gap-1">
+            <Button onClick={handleUploadTheme} variant="default" size="xs" className="gap-1">
               <Upload />
               Upload
             </Button>
@@ -182,41 +181,45 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Preferred Light Theme"
-          description="Used when Sync With OS is enabled and the system appearance is light"
-          onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
-          canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
-        >
-          <Select
-            value={settings.autoThemeLight}
-            options={lightThemeOptions}
-            onChange={(value) => updateSetting("autoThemeLight", value)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
-            variant="secondary"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
+        {settings.syncSystemTheme ? (
+          <>
+            <SettingRow
+              label="Preferred Light Theme"
+              description="Used when Sync With OS is enabled and the system appearance is light"
+              onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
+              canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
+            >
+              <Select
+                value={settings.autoThemeLight}
+                options={lightThemeOptions}
+                onChange={(value) => updateSetting("autoThemeLight", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="secondary"
+                searchable
+                searchableTrigger="input"
+              />
+            </SettingRow>
 
-        <SettingRow
-          label="Preferred Dark Theme"
-          description="Used when Sync With OS is enabled and the system appearance is dark"
-          onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
-          canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
-        >
-          <Select
-            value={settings.autoThemeDark}
-            options={darkThemeOptions}
-            onChange={(value) => updateSetting("autoThemeDark", value)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
-            variant="secondary"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
+            <SettingRow
+              label="Preferred Dark Theme"
+              description="Used when Sync With OS is enabled and the system appearance is dark"
+              onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
+              canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
+            >
+              <Select
+                value={settings.autoThemeDark}
+                options={darkThemeOptions}
+                onChange={(value) => updateSetting("autoThemeDark", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="secondary"
+                searchable
+                searchableTrigger="input"
+              />
+            </SettingRow>
+          </>
+        ) : null}
 
         <SettingRow
           label="Icon Theme"
@@ -285,51 +288,32 @@ export const AppearanceSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
         <SettingRow
-          label="Show GitHub Pull Requests"
-          description="Display the pull requests section in the GitHub sidebar"
+          label="Sidebar Tabs"
+          description="Show sidebar activity tabs across the top or in a left rail"
           onReset={() =>
-            updateSetting("showGitHubPullRequests", getDefaultSetting("showGitHubPullRequests"))
+            updateSetting("sidebarTabsPosition", getDefaultSetting("sidebarTabsPosition"))
           }
-          canReset={settings.showGitHubPullRequests !== getDefaultSetting("showGitHubPullRequests")}
+          canReset={settings.sidebarTabsPosition !== getDefaultSetting("sidebarTabsPosition")}
         >
-          <Switch
-            checked={settings.showGitHubPullRequests}
-            onChange={(checked) => updateSetting("showGitHubPullRequests", checked)}
-            size="sm"
+          <Select
+            value={settings.sidebarTabsPosition}
+            options={sidebarTabsPositionOptions}
+            onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
+            className={SETTINGS_CONTROL_WIDTHS.compact}
+            size="xs"
+            variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
-        <SettingRow
-          label="Show GitHub Issues"
-          description="Display the issues section in the GitHub sidebar"
-          onReset={() => updateSetting("showGitHubIssues", getDefaultSetting("showGitHubIssues"))}
-          canReset={settings.showGitHubIssues !== getDefaultSetting("showGitHubIssues")}
-        >
-          <Switch
-            checked={settings.showGitHubIssues}
-            onChange={(checked) => updateSetting("showGitHubIssues", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show GitHub Actions"
-          description="Display the actions section in the GitHub sidebar"
-          onReset={() => updateSetting("showGitHubActions", getDefaultSetting("showGitHubActions"))}
-          canReset={settings.showGitHubActions !== getDefaultSetting("showGitHubActions")}
-        >
-          <Switch
-            checked={settings.showGitHubActions}
-            onChange={(checked) => updateSetting("showGitHubActions", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
-        {IS_MAC && (
+        {!IS_MAC && !IS_WINDOWS && (
           <SettingRow
             label="Native Menu Bar"
             description="Use the native menu bar or a custom UI menu bar"
@@ -347,19 +331,21 @@ export const AppearanceSettings = () => {
           </SettingRow>
         )}
 
-        <SettingRow
-          label="Compact Menu Bar"
-          description="Requires UI menu bar; compact hamburger or full UI menu"
-          onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
-          canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
-        >
-          <Switch
-            checked={settings.compactMenuBar}
-            disabled={settings.nativeMenuBar}
-            onChange={(checked) => updateSetting("compactMenuBar", checked)}
-            size="sm"
-          />
-        </SettingRow>
+        {!IS_MAC && (
+          <SettingRow
+            label="Compact Menu Bar"
+            description="Requires UI menu bar; compact hamburger or full UI menu"
+            onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
+            canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
+          >
+            <Switch
+              checked={settings.compactMenuBar}
+              disabled={settings.nativeMenuBar}
+              onChange={(checked) => updateSetting("compactMenuBar", checked)}
+              size="sm"
+            />
+          </SettingRow>
+        )}
 
         <SettingRow
           label="Title Bar Project Mode"
@@ -376,19 +362,8 @@ export const AppearanceSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Quick Open Preview"
-          description="Show right-side file preview in quick open and global search"
-          onReset={() => updateSetting("quickOpenPreview", getDefaultSetting("quickOpenPreview"))}
-          canReset={settings.quickOpenPreview !== getDefaultSetting("quickOpenPreview")}
-        >
-          <Switch
-            checked={settings.quickOpenPreview}
-            onChange={(checked) => updateSetting("quickOpenPreview", checked)}
-            size="sm"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 

@@ -13,6 +13,7 @@ interface TerminalStore {
   tabSidebarPosition: TerminalTabSidebarPosition;
   updateSession: (sessionId: string, updates: Partial<Terminal>) => void;
   getSession: (sessionId: string) => Partial<Terminal> | undefined;
+  removeSession: (sessionId: string) => void;
   setWidthMode: (mode: TerminalWidthMode) => void;
   setTabLayout: (layout: TerminalTabLayout) => void;
   setTabSidebarWidth: (width: number) => void;
@@ -37,6 +38,14 @@ export const useTerminalStore = create<TerminalStore>()((set, get) => ({
 
   getSession: (sessionId: string) => {
     return get().sessions.get(sessionId);
+  },
+
+  removeSession: (sessionId: string) => {
+    set((state) => {
+      const newSessions = new Map(state.sessions);
+      newSessions.delete(sessionId);
+      return { sessions: newSessions };
+    });
   },
 
   setWidthMode: (mode: TerminalWidthMode) => {

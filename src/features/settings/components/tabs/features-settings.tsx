@@ -36,6 +36,13 @@ export const FeaturesSettings = () => {
           <SettingRow
             key={feature.id}
             label={feature.name}
+            labelAccessory={
+              feature.status === "experimental" ? (
+                <span className="rounded border border-accent/35 bg-accent/10 px-1 py-0.5 font-medium text-[0.62rem] text-accent uppercase leading-none tracking-normal">
+                  Experimental
+                </span>
+              ) : undefined
+            }
             description={feature.description}
             onReset={() => handleResetFeature(feature.id)}
             canReset={

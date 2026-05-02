@@ -1,6 +1,4 @@
-import { X } from "lucide-react";
-import { Button } from "@/ui/button";
-import { CommandInput, CommandList } from "@/ui/command";
+import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useGlobalSearch } from "../hooks/use-global-search";
 import { EmptyState } from "./empty-state";
@@ -40,55 +38,39 @@ const GlobalSearch = () => {
   const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
-      {/* Backdrop - click to close */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="absolute inset-0 cursor-default rounded-none bg-black/20 hover:bg-black/20"
-        onClick={onClose}
-        aria-label="Close global search"
-        tabIndex={-1}
-      />
-
-      <div
-        data-global-search
-        className={cn(
-          "relative flex overflow-hidden rounded-md border border-border bg-primary-bg shadow-2xl",
-          showPreview ? "h-[480px] w-[900px]" : "h-[320px] w-[520px]",
-        )}
-      >
-        {/* Left Column - File List */}
+    <Command
+      isVisible={isVisible}
+      onClose={onClose}
+      className={cn(
+        "overflow-hidden",
+        showPreview
+          ? "h-[min(520px,calc(100dvh-128px))] w-[min(980px,calc(100vw-32px))]"
+          : "max-h-[min(320px,calc(100dvh-128px))] w-[min(520px,calc(100vw-32px))]",
+      )}
+    >
+      <div data-global-search className="flex min-h-0 flex-1">
         <div
           className={cn(
-            "flex flex-col border-border",
-            showPreview ? "w-[450px] border-r" : "w-full",
+            "flex min-h-0 flex-1 flex-col overflow-hidden border-border",
+            showPreview ? "border-r" : "w-full",
           )}
         >
-          {/* Header */}
-          <div className="border-border border-b">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <CommandInput
-                ref={inputRef}
-                value={query}
-                onChange={setQuery}
-                placeholder="Search files globally..."
-                className="ui-font"
-              />
-              <FileCountBadge
-                totalFiles={files.length}
-                resultCount={totalResults}
-                hasQuery={!!debouncedQuery}
-                isLoading={isLoadingFiles}
-              />
-              <Button onClick={onClose} variant="ghost" size="icon-xs" className="rounded">
-                <X className="text-text-lighter" />
-              </Button>
-            </div>
-          </div>
+          <CommandHeader onClose={onClose}>
+            <CommandInput
+              ref={inputRef}
+              value={query}
+              onChange={setQuery}
+              placeholder="Type to search files..."
+              className="ui-font"
+            />
+            <FileCountBadge
+              totalFiles={files.length}
+              resultCount={totalResults}
+              hasQuery={!!debouncedQuery}
+              isLoading={isLoadingFiles}
+            />
+          </CommandHeader>
 
-          {/* File List */}
           <CommandList ref={scrollContainerRef}>
             {!hasResults ? (
               <EmptyState
@@ -166,14 +148,13 @@ const GlobalSearch = () => {
           </CommandList>
         </div>
 
-        {/* Right Column - Preview Pane */}
         {showPreview && (
-          <div className="w-[450px] shrink-0">
+          <div className="w-[min(48%,460px)] shrink-0">
             <FilePreview filePath={previewFilePath} />
           </div>
         )}
       </div>
-    </div>
+    </Command>
   );
 };
 

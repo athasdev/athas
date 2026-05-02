@@ -102,6 +102,7 @@ pub struct GitTag {
    pub commit: String,
    pub message: Option<String>,
    pub date: String,
+   pub is_annotated: bool,
 }
 
 #[derive(Serialize)]

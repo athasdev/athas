@@ -5,11 +5,11 @@ import {
   FlipVertical,
   FolderOpen,
   Image,
-  RotateCcw,
-  RotateCw,
-  Save,
-  Undo2,
-} from "lucide-react";
+  ArrowCounterClockwise as RotateCcw,
+  ArrowClockwise as RotateCw,
+  FloppyDisk as Save,
+  ArrowCounterClockwise as Undo2,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";

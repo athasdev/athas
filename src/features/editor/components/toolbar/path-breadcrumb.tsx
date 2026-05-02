@@ -1,5 +1,5 @@
 import type React from "react";
-import { ChevronRight } from "lucide-react";
+import { CaretRight as ChevronRight } from "@phosphor-icons/react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";

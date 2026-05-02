@@ -8,7 +8,7 @@ interface UseHoverProps {
   getHover?: (filePath: string, line: number, character: number) => Promise<Hover | null>;
   isLanguageSupported?: (filePath: string) => boolean;
   filePath: string;
-  fontSize: number;
+  lineHeight: number;
   charWidth: number;
 }
 
@@ -16,7 +16,7 @@ export const useHover = ({
   getHover,
   isLanguageSupported,
   filePath,
-  fontSize,
+  lineHeight,
   charWidth,
 }: UseHoverProps) => {
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,7 +52,6 @@ export const useHover = ({
         const x = clientX - rect.left;
         const y = clientY - rect.top;
 
-        const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
         // Editor container is already to the right of gutter, so do not subtract gutter width again.
         const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
         const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
@@ -117,8 +116,6 @@ export const useHover = ({
               if (content.trim()) {
                 const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;
                 const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-                const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-
                 const gap = 6;
                 const maxTooltipHeight = EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT;
                 let tooltipX = clientX;
@@ -158,7 +155,7 @@ export const useHover = ({
       getHover,
       isLanguageSupported,
       filePath,
-      fontSize,
+      lineHeight,
       charWidth,
       actions.setHoverInfo,
       actions.setIsHovering,

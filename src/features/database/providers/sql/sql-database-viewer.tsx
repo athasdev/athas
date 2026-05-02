@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import CreateSubscriptionDialog from "../postgres/components/create-subscription-dialog";
 import PostgresSubscriptionSchemaView from "../postgres/components/postgres-subscription-schema-view";

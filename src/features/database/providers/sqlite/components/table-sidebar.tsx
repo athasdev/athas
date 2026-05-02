@@ -1,4 +1,4 @@
-import { Code, Database, Plus, Radio, Table } from "lucide-react";
+import { Code, Database, Plus, RadioButton as Radio, Table } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { TableInfo } from "../sqlite-types";

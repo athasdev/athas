@@ -78,6 +78,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["font", "size", "editor", "typography"],
   },
   {
+    id: "editor-line-height",
+    tab: "editor",
+    section: "Typography",
+    label: "Line Height",
+    description: "Editor line height multiplier",
+    keywords: ["line", "height", "spacing", "editor", "typography"],
+  },
+  {
     id: "editor-tab-size",
     tab: "editor",
     section: "Typography",
@@ -136,6 +144,46 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
 
   // File Tree Settings
   {
+    id: "file-tree-indent-size",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Indent Size",
+    description: "Pixels per nesting level in the file tree",
+    keywords: ["indent", "indentation", "nesting", "depth", "tree", "file explorer", "spacing"],
+  },
+  {
+    id: "file-tree-show-hidden-files",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Hidden Files",
+    description: "Show dotfiles and hidden directories in the file tree",
+    keywords: ["hidden", "dotfiles", "dotfile", "files", "folders", "directories", "visibility"],
+  },
+  {
+    id: "file-tree-compact-folders",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Compact Folders",
+    description: "Collapse single-child folder chains in the file tree",
+    keywords: ["compact", "folders", "directories", "single child", "collapse", "nested"],
+  },
+  {
+    id: "file-tree-density",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Density",
+    description: "Choose file tree row spacing",
+    keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
+  },
+  {
+    id: "file-tree-show-gitignored-files",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Gitignored Files",
+    description: "Show files matched by .gitignore in the file tree",
+    keywords: ["gitignore", "ignored", "git", "files", "visibility"],
+  },
+  {
     id: "file-tree-hidden-file-patterns",
     tab: "file-explorer",
     section: "Filters",
@@ -156,7 +204,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "git",
     section: "Git View",
     label: "Folder-Based Changes",
-    description: "Show Git changes in a folder tree, similar to File Explorer",
+    description: "Show Git changes in a folder tree, similar to Files",
     keywords: ["git", "changes", "folder", "tree", "files", "explorer", "sidebar"],
   },
   {
@@ -212,8 +260,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "git",
     section: "File Tree",
     label: "Show Git Status In File Tree",
-    description: "Display Git decorations in the file explorer",
-    keywords: ["git", "file tree", "file explorer", "decorations", "status"],
+    description: "Display Git decorations in Files",
+    keywords: ["git", "file tree", "files", "file explorer", "decorations", "status"],
   },
   {
     id: "git-compact-status-badges",
@@ -222,30 +270,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Compact Git Status Badges",
     description: "Use denser diff stats and staged indicators in the Git panel",
     keywords: ["git", "compact", "badges", "status", "dense"],
-  },
-  {
-    id: "appearance-show-github-pull-requests",
-    tab: "appearance",
-    section: "Layout",
-    label: "Show GitHub Pull Requests",
-    description: "Display the pull requests section in the GitHub sidebar",
-    keywords: ["github", "sidebar", "pull requests", "prs", "visibility"],
-  },
-  {
-    id: "appearance-show-github-issues",
-    tab: "appearance",
-    section: "Layout",
-    label: "Show GitHub Issues",
-    description: "Display the issues section in the GitHub sidebar",
-    keywords: ["github", "sidebar", "issues", "visibility"],
-  },
-  {
-    id: "appearance-show-github-actions",
-    tab: "appearance",
-    section: "Layout",
-    label: "Show GitHub Actions",
-    description: "Display the actions section in the GitHub sidebar",
-    keywords: ["github", "sidebar", "actions", "workflow runs", "visibility"],
   },
   {
     id: "git-collapse-empty-sections",
@@ -346,6 +370,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Choose where to position the sidebar",
     keywords: ["sidebar", "position", "left", "right", "layout"],
   },
+  {
+    id: "appearance-sidebar-tabs-position",
+    tab: "appearance",
+    section: "Layout",
+    label: "Sidebar Tabs",
+    description: "Show sidebar activity tabs across the top or in a left rail",
+    keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
+  },
   ...(IS_MAC
     ? [
         {
@@ -365,14 +397,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Compact Menu Bar",
     description: "Requires UI menu bar; compact hamburger or full UI menu",
     keywords: ["menu", "bar", "compact", "hamburger", "ui"],
-  },
-  {
-    id: "appearance-quick-open-preview",
-    tab: "appearance",
-    section: "Layout",
-    label: "Quick Open Preview",
-    description: "Show right-side file preview in quick open and global search",
-    keywords: ["quick", "open", "preview", "file", "global", "search"],
   },
   {
     id: "appearance-title-bar-project-mode",
@@ -604,7 +628,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   // Language Settings
   {
     id: "language-default-language",
-    tab: "language",
+    tab: "editor",
     section: "Language Support",
     label: "Default Language",
     description: "Default syntax highlighting for new files",
@@ -612,7 +636,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-auto-detect",
-    tab: "language",
+    tab: "editor",
     section: "Language Support",
     label: "Auto-detect Language",
     description: "Automatically detect file language from extension",
@@ -620,7 +644,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-format-on-save",
-    tab: "language",
+    tab: "editor",
     section: "Code Formatting",
     label: "Format on Save",
     description: "Automatically format code when saving",
@@ -628,23 +652,15 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-lint-on-save",
-    tab: "language",
+    tab: "editor",
     section: "Code Formatting",
     label: "Lint on Save",
     description: "Run linter when saving files",
     keywords: ["lint", "linter", "save", "eslint", "check"],
   },
   {
-    id: "language-formatter",
-    tab: "language",
-    section: "Code Formatting",
-    label: "Default Formatter",
-    description: "Choose default code formatter",
-    keywords: ["format", "formatter", "prettier", "eslint"],
-  },
-  {
     id: "language-auto-completion",
-    tab: "language",
+    tab: "editor",
     section: "IntelliSense",
     label: "Auto Completion",
     description: "Show completion suggestions while typing",
@@ -652,7 +668,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-parameter-hints",
-    tab: "language",
+    tab: "editor",
     section: "IntelliSense",
     label: "Parameter Hints",
     description: "Show function parameter hints",
@@ -699,6 +715,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Diagnostics & Problems",
     description: "Code diagnostics and error reporting",
     keywords: ["diagnostics", "problems", "errors", "linting"],
+  },
+  {
+    id: "features-debugger",
+    tab: "features",
+    section: "Features",
+    label: "Debugger",
+    description: "Run and debug files with launch configurations and breakpoints",
+    keywords: ["debug", "debugger", "breakpoint", "launch", "run"],
   },
   {
     id: "features-ai-chat",
@@ -852,6 +876,22 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
 
   // Advanced Settings
   {
+    id: "advanced-export-settings",
+    tab: "advanced",
+    section: "Data",
+    label: "Export Settings",
+    description: "Save all app settings to a JSON file",
+    keywords: ["export", "settings", "backup", "json", "sync"],
+  },
+  {
+    id: "advanced-import-settings",
+    tab: "advanced",
+    section: "Data",
+    label: "Import Settings",
+    description: "Restore app settings from a JSON file",
+    keywords: ["import", "settings", "restore", "backup", "json"],
+  },
+  {
     id: "advanced-reset-settings",
     tab: "advanced",
     section: "Data",
@@ -863,8 +903,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "advanced-telemetry",
     tab: "advanced",
     section: "Telemetry",
-    label: "Usage Analytics",
-    description: "Send anonymous usage data to help improve Athas",
-    keywords: ["telemetry", "analytics", "tracking", "privacy", "usage", "data"],
+    label: "Anonymous Usage Telemetry",
+    description: "Send anonymous heartbeat, extension, and crash-report metadata",
+    keywords: ["telemetry", "analytics", "tracking", "privacy", "crash", "updates", "extensions"],
   },
 ];

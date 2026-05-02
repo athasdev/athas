@@ -1,16 +1,65 @@
 import { memo } from "react";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import DebuggerView from "@/features/debugger/components/debugger-view";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
+import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { cn } from "@/utils/cn";
 
-export const MainSidebar = memo(() => {
+interface MainSidebarProps {
+  showActivityRail?: boolean;
+}
+
+export const SidebarActivityRail = memo(() => {
+  const {
+    isGitViewActive,
+    isGitHubPRsViewActive,
+    activeSidebarView,
+    isSidebarVisible,
+    setActiveView,
+    setIsSidebarVisible,
+  } = useUIState();
+  const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const { settings } = useSettingsStore();
+
+  const handleSidebarViewChange = (view: typeof activeSidebarView) => {
+    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
+      {
+        isSidebarVisible,
+        isGitViewActive,
+        isGitHubPRsViewActive,
+      },
+      view,
+    );
+
+    setActiveView(nextView);
+    setIsSidebarVisible(nextIsSidebarVisible);
+  };
+
+  return (
+    <div className="flex shrink-0 items-start px-1 pt-0 pb-1.5">
+      <SidebarPaneSelector
+        activeSidebarView={activeSidebarView}
+        isGitViewActive={isGitViewActive}
+        isGitHubPRsViewActive={isGitHubPRsViewActive}
+        coreFeatures={settings.coreFeatures}
+        onViewChange={handleSidebarViewChange}
+        onSearchClick={() => openGlobalSearchBuffer()}
+        orientation="vertical"
+      />
+    </div>
+  );
+});
+
+export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) => {
   // Get state from stores
   const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView } = useUIState();
   const extensionViews = useExtensionViews();
@@ -41,10 +90,21 @@ export const MainSidebar = memo(() => {
   const { settings } = useSettingsStore();
   const isFilesViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const isDebuggerViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
+  const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+  const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex h-full min-h-0">
+      {shouldRenderActivityRail ? <SidebarActivityRail /> : null}
+
+      <div
+        className={cn(
+          "min-h-0 min-w-0 flex-1 overflow-hidden",
+          shouldRenderActivityRail && "rounded-lg border border-border/70 bg-primary-bg",
+        )}
+      >
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
             <GitView
@@ -95,6 +155,12 @@ export const MainSidebar = memo(() => {
             </div>
           )}
         </div>
+
+        {settings.coreFeatures.debugger && (
+          <div className={cn("h-full", !isDebuggerViewActive && "hidden")}>
+            <DebuggerView />
+          </div>
+        )}
 
         {Array.from(extensionViews).map(([viewId, view]) => (
           <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>

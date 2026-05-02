@@ -1,4 +1,5 @@
 use super::exec_guard::{validate_exec_command, validate_exec_env};
+use athas_runtime::process::configure_background_command;
 use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,
@@ -90,6 +91,7 @@ async fn format_with_generic(
 
    // Build command
    let mut cmd = Command::new(&command);
+   configure_background_command(&mut cmd);
    cmd.args(&args);
 
    // Add environment variables if specified
@@ -227,6 +229,7 @@ async fn format_with_prettier(content: &str, language: &str) -> Result<FormatRes
    };
 
    let mut cmd = Command::new("npx");
+   configure_background_command(&mut cmd);
    cmd.args([
       "prettier",
       "--parser",
@@ -293,6 +296,7 @@ async fn format_with_prettier(content: &str, language: &str) -> Result<FormatRes
 /// Format Rust code using rustfmt
 async fn format_with_rustfmt(content: &str) -> Result<FormatResponse, String> {
    let mut cmd = Command::new("rustfmt");
+   configure_background_command(&mut cmd);
    cmd.args(["--emit", "stdout"])
       .stdin(std::process::Stdio::piped())
       .stdout(std::process::Stdio::piped())
@@ -349,6 +353,7 @@ async fn format_with_rustfmt(content: &str) -> Result<FormatResponse, String> {
 /// Format Go code using gofmt
 async fn format_with_gofmt(content: &str) -> Result<FormatResponse, String> {
    let mut cmd = Command::new("gofmt");
+   configure_background_command(&mut cmd);
    cmd.stdin(std::process::Stdio::piped())
       .stdout(std::process::Stdio::piped())
       .stderr(std::process::Stdio::piped());

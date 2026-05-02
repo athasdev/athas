@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import type { Commit } from "../types/pr-viewer";
 import { CommentItem } from "./comment-item";

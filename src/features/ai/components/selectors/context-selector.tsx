@@ -1,16 +1,17 @@
-import { Database, FileText, Plus, Search } from "lucide-react";
+import { Database, FileText, Plus, X } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useDebounce } from "use-debounce";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import type { FileEntry } from "@/features/file-system/types/app";
+import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project-store";
-import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
-import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
-import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
-import { getDirectoryPath } from "@/utils/path-helpers";
+import {
+  chatComposerDropdownClassName,
+  chatComposerIconButtonClassName,
+} from "../input/chat-composer-control-styles";
+import { AIFileSelector } from "../mentions/ai-file-selector";
 
 import type { PaneContent } from "@/features/panes/types/pane-content";
 
@@ -23,10 +24,9 @@ interface ContextSelectorProps {
   onToggleFile: (filePath: string) => void;
   isOpen: boolean;
   onToggleOpen: () => void;
+  className?: string;
+  selectedItemsClassName?: string;
 }
-
-const MAX_RESULTS = 20;
-const SEARCH_DEBOUNCE_MS = 100;
 
 export function ContextSelector({
   buffers,
@@ -36,9 +36,11 @@ export function ContextSelector({
   onToggleFile,
   isOpen,
   onToggleOpen,
+  className,
+  selectedItemsClassName,
 }: Omit<ContextSelectorProps, "allProjectFiles">) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch] = useDebounce(searchTerm, SEARCH_DEBOUNCE_MS);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,102 +52,36 @@ export function ContextSelector({
   );
 
   // Pre-filtered file list (excludes directories + ignored files). Refreshed on each open.
-  const [fileItems, setFileItems] = useState<Array<{ name: string; path: string }>>([]);
+  const [fileItems, setFileItems] = useState<FileEntry[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     getAllProjectFiles().then((projectFiles) => {
-      const filtered: Array<{ name: string; path: string }> = [];
+      const filtered: FileEntry[] = [];
       for (const file of projectFiles) {
         if (!file.isDir && !shouldIgnoreFile(file.path)) {
-          filtered.push({ name: file.name, path: file.path });
+          filtered.push(file);
         }
       }
       setFileItems(filtered);
     });
   }, [isOpen, getAllProjectFiles]);
 
-  // Open buffer paths as Set for O(1) lookup
-  const openBufferPathSet = useMemo(
-    () => new Set(selectableBuffers.map((buffer) => buffer.path)),
+  const bufferByPath = useMemo(
+    () => new Map(selectableBuffers.map((buffer) => [buffer.path, buffer])),
     [selectableBuffers],
   );
 
-  const allItems = useMemo(() => {
-    const bufferItems = selectableBuffers.map((buffer) => ({
-      type: "buffer" as const,
-      id: buffer.id,
-      name: buffer.name,
-      path: buffer.path,
-      databaseType: buffer.type === "database" ? buffer.databaseType : undefined,
-      isDirty: buffer.type === "editor" && buffer.isDirty,
-      isSelected: selectedBufferIds.has(buffer.id),
-    }));
-
-    if (!debouncedSearch.trim()) {
-      const sortedFiles = fileItems
-        .slice(0, MAX_RESULTS)
-        .map((file) => ({
-          type: "file" as const,
-          id: file.path,
-          name: file.name,
-          path: file.path,
-          isSelected: selectedFilesPaths.has(file.path),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      return [...bufferItems, ...sortedFiles];
+  const handleFileSelect = (file: { path: string }) => {
+    const buffer = bufferByPath.get(file.path);
+    if (buffer) {
+      onToggleBuffer(buffer.id);
+      return;
     }
 
-    // Score all items, take top results
-    const scored: Array<{ item: any; score: number }> = [];
-
-    for (const item of bufferItems) {
-      const score = Math.max(
-        fuzzyScore(item.name, debouncedSearch),
-        fuzzyScore(item.path, debouncedSearch),
-      );
-      if (score > 0) scored.push({ item, score });
-    }
-
-    for (const file of fileItems) {
-      const score = Math.max(
-        fuzzyScore(file.name, debouncedSearch),
-        fuzzyScore(file.path, debouncedSearch),
-      );
-      if (score > 0) {
-        scored.push({
-          item: {
-            type: "file" as const,
-            id: file.path,
-            name: file.name,
-            path: file.path,
-            isSelected: selectedFilesPaths.has(file.path),
-          },
-          score,
-        });
-      }
-    }
-
-    scored.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      // Prioritize open buffers
-      const aIsOpen = openBufferPathSet.has(a.item.path);
-      const bIsOpen = openBufferPathSet.has(b.item.path);
-      if (aIsOpen !== bIsOpen) return aIsOpen ? -1 : 1;
-      return a.item.name.localeCompare(b.item.name);
-    });
-
-    return scored.slice(0, MAX_RESULTS).map(({ item }) => item);
-  }, [
-    fileItems,
-    selectableBuffers,
-    debouncedSearch,
-    selectedBufferIds,
-    selectedFilesPaths,
-    openBufferPathSet,
-  ]);
+    onToggleFile(file.path);
+  };
 
   const selectedItems = useMemo(() => {
     const bufferSelections = selectableBuffers
@@ -171,20 +107,19 @@ export function ContextSelector({
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
+      setSelectedIndex(0);
       setTimeout(() => searchInputRef.current?.focus(), 0);
     }
   }, [isOpen]);
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+    <div className={cn("flex min-w-0 flex-1 items-center gap-1.5", className)}>
       <div className="relative shrink-0" ref={triggerRef}>
         <Button
           onClick={onToggleOpen}
           variant="ghost"
           size="icon-xs"
-          className={cn(
-            "rounded-md text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text focus:outline-none",
-          )}
+          className={chatComposerIconButtonClassName()}
           tooltip="Add context files"
           aria-label="Add context files"
           aria-expanded={isOpen}
@@ -197,111 +132,38 @@ export function ContextSelector({
       <Dropdown
         isOpen={isOpen}
         anchorRef={triggerRef}
-        anchorSide="top"
+        anchorSide="bottom"
         onClose={onToggleOpen}
-        className="w-[340px] overflow-hidden rounded-2xl p-0"
+        className={chatComposerDropdownClassName("w-[min(300px,calc(100vw-16px))]")}
+        style={{ maxHeight: "238px" }}
       >
-        <div className="bg-secondary-bg px-2 py-2">
-          <Input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search files..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            variant="ghost"
-            leftIcon={Search}
-            className="w-full"
-            aria-label="Search files"
-          />
-        </div>
-
-        <div
-          className="min-h-0 flex-1 overflow-y-auto p-1.5"
-          role="listbox"
-          aria-label="Files and buffers"
-        >
-          {allItems.length === 0 ? (
-            <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
-              {searchTerm ? "No matching files found" : "No files available"}
-            </div>
-          ) : (
-            allItems.map((item: any) => (
-              <Button
-                key={`${item.type}-${item.id}`}
-                onClick={() => {
-                  if (item.type === "buffer") {
-                    onToggleBuffer(item.id);
-                  } else {
-                    onToggleFile(item.path);
-                  }
-                }}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "group ui-font flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
-                  item.isSelected && "bg-selected",
-                )}
-                aria-label={`${item.isSelected ? "Remove" : "Add"} ${item.name} ${item.isSelected ? "from" : "to"} context`}
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {item.type === "buffer" ? (
-                    item.databaseType ? (
-                      <Database className="shrink-0 text-text-lighter" />
-                    ) : (
-                      <FileText className="shrink-0 text-text-lighter" />
-                    )
-                  ) : (
-                    <FileExplorerIcon
-                      fileName={item.name}
-                      isDir={false}
-                      size={10}
-                      className="shrink-0 text-text-lighter"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1 truncate">
-                    <span className="text-text">{item.name}</span>
-                    {item.type === "buffer" ? (
-                      item.isDirty && (
-                        <span className="ml-1 text-[8px] text-yellow-500" title="Unsaved changes">
-                          ●
-                        </span>
-                      )
-                    ) : (
-                      <span className="ml-2 text-[10px] text-text-lighter opacity-60">
-                        {getDirectoryPath(item.path, rootFolderPath) || "root"}
-                      </span>
-                    )}
-                  </div>
-                  {item.type === "buffer" && (
-                    <span className="rounded bg-accent/20 px-1 py-0.5 font-medium text-[10px] text-accent">
-                      open
-                    </span>
-                  )}
-                </div>
-                {item.isSelected && (
-                  <div className="flex size-4 items-center justify-center rounded text-accent opacity-60">
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 16 16"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
-                    </svg>
-                  </div>
-                )}
-              </Button>
-            ))
-          )}
-        </div>
+        <AIFileSelector
+          files={fileItems}
+          query={searchTerm}
+          onQueryChange={setSearchTerm}
+          onSelect={handleFileSelect}
+          rootFolderPath={rootFolderPath}
+          selectedIndex={selectedIndex}
+          onSelectedIndexChange={setSelectedIndex}
+          searchInputRef={searchInputRef}
+          emptyLabel={searchTerm ? "No matching files found" : "No files available"}
+          compact
+          autoFocusSearchInput
+          listClassName="max-h-[176px]"
+        />
       </Dropdown>
 
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-x-hidden">
+      <div
+        className={cn(
+          "custom-scrollbar-thin flex min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-y-auto overflow-x-hidden",
+          "max-h-14",
+          selectedItemsClassName,
+        )}
+      >
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}
-            className="group flex shrink-0 select-none items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-1 text-xs"
+            className="group ui-font ui-text-sm flex h-6 min-w-0 shrink-0 select-none items-center gap-1 rounded-md border border-border/60 bg-primary-bg/45 px-1.5 text-text-lighter"
           >
             {item.type === "buffer" ? (
               item.databaseType ? (
@@ -310,18 +172,21 @@ export function ContextSelector({
                 <FileText className="text-text-lighter" />
               )
             ) : (
-              <FileText className="text-blue-500" />
+              <FileText className="text-accent" />
             )}
             <span
               className={cn(
                 "max-w-20 truncate",
-                item.type === "buffer" ? "text-text" : "text-blue-400",
+                item.type === "buffer" ? "text-text" : "text-accent",
               )}
             >
               {item.name}
             </span>
             {item.type === "buffer" && item.isDirty && (
-              <span className="text-[8px] text-yellow-500" title="Unsaved changes">
+              <span
+                className="text-[length:calc(var(--ui-text-xs)*0.7)] text-warning"
+                title="Unsaved changes"
+              >
                 ●
               </span>
             )}
@@ -335,13 +200,11 @@ export function ContextSelector({
               }}
               variant="ghost"
               size="icon-xs"
-              className="rounded-full text-text-lighter opacity-0 hover:bg-red-500/20 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
+              className="size-4 rounded text-text-lighter opacity-0 hover:bg-hover hover:text-text focus:opacity-100 group-hover:opacity-100"
               aria-label={`Remove ${item.name} from context`}
               tabIndex={0}
             >
-              <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" />
-              </svg>
+              <X size={10} />
             </Button>
           </div>
         ))}

@@ -1,15 +1,15 @@
 import { useCallback } from "react";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { calculateLineHeight } from "@/features/editor/utils/lines";
 
 export const useCenterCursor = () => {
   const centerCursorInViewport = useCallback((line: number) => {
     const textarea = editorAPI.getTextareaRef();
     if (!textarea) return;
 
-    const fontSize = useEditorSettingsStore.getState().fontSize;
-    const lineHeight = Math.ceil(EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER * fontSize);
+    const { fontSize, lineHeight: editorLineHeight } = useEditorSettingsStore.getState();
+    const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
     const viewportHeight = textarea.clientHeight;
 
     const targetLineTop = line * lineHeight;

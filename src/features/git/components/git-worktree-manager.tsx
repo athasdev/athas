@@ -1,4 +1,12 @@
-import { Copy, GitBranch, GitCommit, GitFork, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Copy,
+  GitBranch,
+  GitCommit,
+  GitFork,
+  Plus,
+  ArrowClockwise as RefreshCw,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
@@ -14,6 +22,7 @@ import {
   removeWorktree,
 } from "../api/git-worktrees-api";
 import type { GitWorktree } from "../types/git-types";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import GitSidebarSectionHeader, {
   gitSidebarSectionActionButtonClassName,
 } from "./git-sidebar-section-header";
@@ -298,8 +307,17 @@ const GitWorktreeManager = ({
                 onContextMenu={(e) =>
                   contextMenu.open(e, { path: worktree.path, isCurrent: worktree.is_current })
                 }
+                draggable
+                onDragStart={(event) => {
+                  writeSidebarResourceDragData(event.dataTransfer, {
+                    type: "git-worktree",
+                    path: worktree.path,
+                    branch: worktree.branch,
+                    name: worktreeName,
+                  });
+                }}
                 className={cn(
-                  "mb-1 cursor-pointer rounded-xl border border-transparent px-2.5 py-2.5 transition-colors",
+                  "mb-1 cursor-grab rounded-xl border border-transparent px-2.5 py-2.5 transition-[transform,background-color,border-color,opacity] active:cursor-grabbing",
                   worktree.is_current
                     ? "border-border/60 bg-primary-bg/55"
                     : "bg-primary-bg/20 hover:bg-hover/70",

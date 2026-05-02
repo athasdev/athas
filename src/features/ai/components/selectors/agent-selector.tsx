@@ -1,12 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDown, Download, LoaderCircle, Plus, Search, Settings2 } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  Plus,
+  MagnifyingGlass as Search,
+  SlidersHorizontal as Settings2,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
-import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -19,6 +23,9 @@ interface AgentSelectorProps {
   selectedAgentId?: AgentType;
   onSelectAgent?: (agentId: AgentType) => void;
   portalContainer?: Element | DocumentFragment | null;
+  triggerClassName?: string;
+  triggerTooltip?: string;
+  openSignal?: number;
 }
 
 export function AgentSelector({
@@ -27,14 +34,14 @@ export function AgentSelector({
   selectedAgentId,
   onSelectAgent,
   portalContainer,
+  triggerClassName,
+  triggerTooltip,
+  openSignal,
 }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [availableAgents, setAvailableAgents] = useState<AgentConfig[]>([]);
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
-  const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
-  const { showToast } = useToast();
   const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
   const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
   const createNewChat = useAIChatStore((state) => state.createNewChat);
@@ -42,18 +49,14 @@ export function AgentSelector({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previousOpenSignalRef = useRef(openSignal);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
   const currentAgent = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
-  const agentConfigById = useMemo(
-    () => new Map(availableAgents.map((agent) => [agent.id, agent])),
-    [availableAgents],
-  );
 
-  const reloadAgents = useCallback(async () => {
+  const loadInstalledAgents = useCallback(async () => {
     try {
       const detectedAgents = await invoke<AgentConfig[]>("get_available_agents");
-      setAvailableAgents(detectedAgents);
       const installed = new Set<string>(["custom"]);
       for (const agent of detectedAgents) {
         if (agent.installed) {
@@ -68,23 +71,8 @@ export function AgentSelector({
 
   // Detect installed agents
   useEffect(() => {
-    const detectAgents = async () => {
-      try {
-        const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
-        setAvailableAgents(availableAgents);
-        const installed = new Set<string>(["custom"]);
-        for (const agent of availableAgents) {
-          if (agent.installed) {
-            installed.add(agent.id);
-          }
-        }
-        setInstalledAgents(installed);
-      } catch {
-        // Silent fail
-      }
-    };
-    detectAgents();
-  }, []);
+    void loadInstalledAgents();
+  }, [loadInstalledAgents]);
 
   // Build filtered items list
   const filteredItems = useMemo(() => {
@@ -93,7 +81,6 @@ export function AgentSelector({
       id: string;
       name: string;
       isInstalled?: boolean;
-      canInstall?: boolean;
       isCurrent?: boolean;
     }> = [];
 
@@ -106,26 +93,35 @@ export function AgentSelector({
     );
 
     for (const agent of matchingAgents) {
+      const isInstalled = installedAgents.has(agent.id);
+      if (!isInstalled && agent.id !== "custom") continue;
+
       items.push({
         type: "agent",
         id: agent.id,
         name: agent.name,
-        isInstalled: installedAgents.has(agent.id),
-        canInstall: agentConfigById.get(agent.id)?.canInstall,
+        isInstalled,
         isCurrent: agent.id === currentAgentId,
       });
     }
 
     return items;
-  }, [search, installedAgents, agentConfigById, currentAgentId]);
+  }, [search, installedAgents, currentAgentId]);
 
   const selectableItems = filteredItems;
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (!isOpen) return;
+
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (openSignal === undefined || openSignal === previousOpenSignalRef.current) return;
+    previousOpenSignalRef.current = openSignal;
+    setIsOpen(true);
+  }, [openSignal]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -185,33 +181,6 @@ export function AgentSelector({
     ],
   );
 
-  const handleInstallAgent = useCallback(
-    async (agentId: string) => {
-      const agent = agentConfigById.get(agentId);
-      if (!agent?.canInstall || installingAgentId === agentId) {
-        return;
-      }
-
-      setInstallingAgentId(agentId);
-      try {
-        await invoke<AgentConfig>("install_acp_agent", { agentId });
-        await reloadAgents();
-        showToast({
-          message: `${agent.name} installed successfully`,
-          type: "success",
-        });
-      } catch (error) {
-        showToast({
-          message: `Failed to install ${agent.name}: ${error instanceof Error ? error.message : String(error)}`,
-          type: "error",
-        });
-      } finally {
-        setInstallingAgentId(null);
-      }
-    },
-    [agentConfigById, installingAgentId, reloadAgents, showToast],
-  );
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!isOpen) return;
@@ -229,11 +198,7 @@ export function AgentSelector({
           e.preventDefault();
           if (selectableItems[selectedIndex]) {
             const item = selectableItems[selectedIndex];
-            if (item.isInstalled || item.id === "custom") {
-              handleAgentChange(item.id as AgentType);
-            } else {
-              void handleInstallAgent(item.id);
-            }
+            handleAgentChange(item.id as AgentType);
           }
           break;
         case "Escape":
@@ -242,7 +207,7 @@ export function AgentSelector({
           break;
       }
     },
-    [isOpen, selectableItems, selectedIndex, handleAgentChange, handleInstallAgent],
+    [isOpen, selectableItems, selectedIndex, handleAgentChange],
   );
 
   let selectableIndex = -1;
@@ -254,7 +219,8 @@ export function AgentSelector({
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           type="button"
-          tooltip="New chat"
+          tooltip={triggerTooltip ?? "New chat"}
+          className={triggerClassName}
         >
           <Plus />
         </PaneIconButton>
@@ -278,12 +244,14 @@ export function AgentSelector({
       <Dropdown
         isOpen={isOpen}
         anchorRef={triggerRef}
+        anchorSide="bottom"
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
         portalContainer={portalContainer}
-        className="flex w-[min(360px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-2xl p-0"
+        className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
+        style={{ maxHeight: "240px" }}
       >
-        <div className="bg-secondary-bg px-2 py-2" onKeyDown={handleKeyDown}>
+        <div className="bg-secondary-bg px-1.5 py-1.5" onKeyDown={handleKeyDown}>
           <Input
             ref={inputRef}
             type="text"
@@ -292,12 +260,13 @@ export function AgentSelector({
             onKeyDown={handleKeyDown}
             placeholder="Search agents..."
             variant="ghost"
+            size="xs"
             leftIcon={Search}
             className="w-full pr-3"
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 [overscroll-behavior:contain]">
+        <div className="min-h-0 flex-1 overflow-y-auto p-1 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
@@ -305,9 +274,6 @@ export function AgentSelector({
               selectableIndex++;
               const itemIndex = selectableIndex;
               const isSelected = itemIndex === selectedIndex;
-              const isInstalling = installingAgentId === item.id;
-              const isUnavailable = !item.isInstalled && item.id !== "custom";
-              const isClickable = item.isInstalled || item.id === "custom" || item.canInstall;
 
               return (
                 <div
@@ -315,16 +281,11 @@ export function AgentSelector({
                   role="button"
                   tabIndex={-1}
                   onMouseEnter={() => setSelectedIndex(itemIndex)}
-                  onClick={() =>
-                    item.isInstalled || item.id === "custom"
-                      ? void handleAgentChange(item.id as AgentType)
-                      : void handleInstallAgent(item.id)
-                  }
+                  onClick={() => void handleAgentChange(item.id as AgentType)}
                   className={cn(
-                    "group flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
-                    isClickable && "cursor-pointer",
                   )}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -355,26 +316,6 @@ export function AgentSelector({
                         aria-label="Open Athas Agent settings"
                       >
                         <Settings2 />
-                      </Button>
-                    ) : null}
-                    {isUnavailable && item.canInstall ? (
-                      <Button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleInstallAgent(item.id);
-                        }}
-                        disabled={isInstalling}
-                        variant="outline"
-                        size="xs"
-                        className="h-5 shrink-0 gap-1 rounded-full bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter disabled:cursor-wait disabled:opacity-70"
-                      >
-                        {isInstalling ? (
-                          <LoaderCircle size={10} className="animate-spin" />
-                        ) : (
-                          <Download size={10} />
-                        )}
-                        {isInstalling ? "Installing" : "Install"}
                       </Button>
                     ) : null}
                   </div>

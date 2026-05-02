@@ -143,7 +143,7 @@ fn extract_tar_gz(bytes: &[u8], target_dir: &Path) -> Result<(), RuntimeError> {
    let mut staged_entries = fs::read_dir(staging_path)?
       .collect::<Result<Vec<_>, _>>()?
       .into_iter()
-      .filter(|entry| entry.file_name() != std::ffi::OsString::from("pax_global_header"));
+      .filter(|entry| entry.file_name() != "pax_global_header");
 
    let first = staged_entries.next();
    let second = staged_entries.next();

@@ -4,6 +4,7 @@ import { cn } from "@/utils/cn";
 export type DropZone = "left" | "right" | "top" | "bottom" | "center" | null;
 
 interface SplitDropOverlayProps {
+  activeZoneOverride?: DropZone;
   onDrop: (zone: DropZone, e: React.DragEvent) => void;
   visible: boolean;
 }
@@ -35,7 +36,7 @@ const zoneStyles: Record<string, string> = {
   center: "inset-1 rounded-lg",
 };
 
-export function SplitDropOverlay({ onDrop, visible }: SplitDropOverlayProps) {
+export function SplitDropOverlay({ activeZoneOverride, onDrop, visible }: SplitDropOverlayProps) {
   const [activeZone, setActiveZone] = useState<DropZone>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -66,20 +67,26 @@ export function SplitDropOverlay({ onDrop, visible }: SplitDropOverlayProps) {
     }
   }, []);
 
+  const effectiveZone = activeZoneOverride ?? activeZone;
+
   if (!visible) return null;
 
   return (
     <div
-      className="absolute inset-0 z-50"
+      data-split-drop-overlay
+      className={cn(
+        "absolute inset-0 z-50",
+        activeZoneOverride !== undefined && "pointer-events-none",
+      )}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onDragLeave={handleDragLeave}
     >
-      {activeZone && (
+      {effectiveZone && (
         <div
           className={cn(
-            "pointer-events-none absolute border-2 border-accent/60 bg-accent/10 transition-all duration-100",
-            zoneStyles[activeZone],
+            "pointer-events-none absolute border-2 border-accent bg-accent/14 shadow-[0_0_0_1px_rgba(96,165,250,0.25)] transition-all duration-100",
+            zoneStyles[effectiveZone],
           )}
         />
       )}

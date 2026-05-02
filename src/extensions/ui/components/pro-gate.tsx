@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Lock } from "lucide-react";
+import { Lock } from "@phosphor-icons/react";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { ProBadge } from "./pro-badge";
 

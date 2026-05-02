@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { RefreshCw, Sparkles, Terminal } from "lucide-react";
+import {
+  ArrowClockwise as RefreshCw,
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+} from "@phosphor-icons/react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { Action } from "../models/action.types";
 

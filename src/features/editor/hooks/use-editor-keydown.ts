@@ -7,6 +7,12 @@ import { useLspStore } from "../lsp/lsp-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
 import { useFoldStore } from "../stores/fold-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import { useSettingsStore } from "@/features/settings/store";
+import { useKeymapStore } from "@/features/keymaps/stores/store";
+import { evaluateWhenClause } from "@/features/keymaps/utils/context";
+import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keymaps";
+import { matchKeybinding } from "@/features/keymaps/utils/matcher";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Decoration, MultiCursorState, Position, Range } from "../types/editor";
 import { calculateLineOffset, splitLines } from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
@@ -215,6 +221,37 @@ export function useEditorKeyDown({
       const isAltTextInput = shouldTreatAltAsTextInput(e);
       const hasBlockedModifier =
         e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph && !isAltTextInput);
+
+      if (hasBlockedModifier && !useSettingsStore.getState().settings.nativeMenuBar) {
+        const contexts = useKeymapStore.getState().contexts;
+        const registryKeybindings = keymapRegistry.getAllKeybindings();
+        const userKeybindings = useKeymapStore.getState().keybindings;
+        const allKeybindings = getEffectiveKeybindings({
+          preset: useSettingsStore.getState().settings.keybindingPreset,
+          registryKeybindings,
+          userKeybindings,
+        });
+
+        for (const keybinding of allKeybindings) {
+          if (!keybinding.enabled && keybinding.enabled !== undefined) {
+            continue;
+          }
+
+          if (keybinding.when && !evaluateWhenClause(keybinding.when, contexts)) {
+            continue;
+          }
+
+          const matchResult = matchKeybinding(e.nativeEvent, keybinding.key, []);
+          if (!matchResult.matched || matchResult.partialMatch) {
+            continue;
+          }
+
+          e.preventDefault();
+          e.stopPropagation();
+          keymapRegistry.executeCommand(keybinding.command, keybinding.args);
+          return;
+        }
+      }
 
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "s") {
         e.preventDefault();

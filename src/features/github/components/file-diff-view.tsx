@@ -1,4 +1,9 @@
-import { ChevronDown, ChevronRight, FileText, RefreshCw } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  FileText,
+  ArrowClockwise as RefreshCw,
+} from "@phosphor-icons/react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";

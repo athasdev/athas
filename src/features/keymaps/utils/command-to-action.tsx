@@ -1,4 +1,4 @@
-import { Terminal } from "lucide-react";
+import { TerminalWindow as Terminal } from "@phosphor-icons/react";
 import type { Action } from "@/features/command-palette/models/action.types";
 import type { Command } from "../types";
 

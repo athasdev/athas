@@ -11,14 +11,13 @@ import {
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
-import {
-  normalizeSettingValue,
-  normalizeSettings,
-} from "@/features/settings/lib/settings-normalization";
+import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 import {
   debouncedSaveSettingsToStore,
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
+import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
+import { scoreSearchQuery } from "@/utils/search-match";
 import { settingsSearchIndex } from "./config/search-index";
 import type { SearchResult, SearchState } from "./types/search";
 import type { Settings } from "./types/settings";
@@ -57,11 +56,11 @@ export const useSettingsStore = create(
       (set, get) => ({
         updateSettingsFromJSON: (jsonString: string): boolean => {
           try {
-            const parsedSettings = JSON.parse(jsonString);
-            const validatedSettings = normalizeSettings({
-              ...getDefaultSettingsSnapshot(),
-              ...parsedSettings,
-            });
+            const validatedSettings = parseSettingsImportJson(jsonString);
+
+            if (!validatedSettings) {
+              return false;
+            }
 
             set((state) => {
               state.settings = validatedSettings;
@@ -143,39 +142,14 @@ export const useSettingsStore = create(
             state.search.isSearching = true;
           });
 
-          const normalizedQuery = query
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase();
-
-          const tokens = normalizedQuery.split(/\s+/);
-
           const results: SearchResult[] = settingsSearchIndex
             .map((record) => {
-              const searchableText = [
-                record.label,
-                record.description,
-                record.section,
-                ...(record.keywords || []),
-              ]
-                .join(" ")
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase();
-
-              let score = 0;
-
-              for (const token of tokens) {
-                if (searchableText.includes(token)) {
-                  if (record.label.toLowerCase().includes(token)) {
-                    score += 10;
-                  }
-                  if (record.keywords?.some((kw) => kw.toLowerCase().includes(token))) {
-                    score += 5;
-                  }
-                  score += 1;
-                }
-              }
+              const score = scoreSearchQuery(query, [
+                { value: record.label, weight: 11 },
+                { value: record.description, weight: 1 },
+                { value: record.section, weight: 1 },
+                ...(record.keywords || []).map((keyword) => ({ value: keyword, weight: 6 })),
+              ]);
 
               return { ...record, score };
             })

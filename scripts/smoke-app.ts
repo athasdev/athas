@@ -4,31 +4,31 @@ import { $ } from "bun";
 import process from "node:process";
 import path from "node:path";
 
-type Channel = "prod" | "alpha";
+type Channel = "stable" | "preview";
 
 // Examples:
 //   bun smoke
-//   bun smoke alpha
-//   bun smoke prod
-//   bun smoke:alpha
-//   bun smoke:prod
+//   bun smoke preview
+//   bun smoke stable
+//   bun smoke:preview
+//   bun smoke:stable
 
-const channelArg = (process.argv[2] ?? "alpha").toLowerCase();
+const channelArg = (process.argv[2] ?? "preview").toLowerCase();
 
-if (channelArg !== "prod" && channelArg !== "alpha") {
-  console.error("Usage: bun smoke [alpha|prod]");
+if (channelArg !== "stable" && channelArg !== "preview") {
+  console.error("Usage: bun smoke [preview|stable]");
   process.exit(1);
 }
 
 const channel = channelArg as Channel;
 
 const targets: Record<Channel, { config?: string; macosAppName: string }> = {
-  prod: {
+  stable: {
     macosAppName: "Athas.app",
   },
-  alpha: {
-    config: "src-tauri/tauri.alpha.conf.json",
-    macosAppName: "Athas Alpha.app",
+  preview: {
+    config: "src-tauri/tauri.preview.conf.json",
+    macosAppName: "Athas Preview.app",
   },
 };
 

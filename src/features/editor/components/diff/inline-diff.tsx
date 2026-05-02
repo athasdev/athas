@@ -1,5 +1,7 @@
 import type React from "react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowCounterClockwise, X } from "@phosphor-icons/react";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import type { GitDiffLine } from "@/features/git/types/git-types";
 import { Button } from "@/ui/button";
 
@@ -137,8 +139,8 @@ function InlineDiffComponent({
                 whiteSpace: "pre",
                 backgroundColor: currentHighlighted
                   ? lineType === "removed"
-                    ? "rgba(248, 81, 73, 0.4)"
-                    : "rgba(46, 160, 67, 0.4)"
+                    ? "color-mix(in srgb, var(--git-deleted, #f85149) 36%, transparent)"
+                    : "color-mix(in srgb, var(--git-added, #2ea043) 36%, transparent)"
                   : "transparent",
                 borderRadius: currentHighlighted ? "2px" : "0",
               }}
@@ -160,15 +162,33 @@ function InlineDiffComponent({
   const getLineBackground = (lineType: GitDiffLine["line_type"]) => {
     switch (lineType) {
       case "added":
-        return "rgba(46, 160, 67, 0.2)";
+        return "color-mix(in srgb, var(--git-added, #2ea043) 16%, var(--primary-bg))";
       case "removed":
-        return "rgba(248, 81, 73, 0.2)";
+        return "color-mix(in srgb, var(--git-deleted, #f85149) 16%, var(--primary-bg))";
       default:
-        return "transparent";
+        return "var(--primary-bg)";
     }
   };
 
-  const topPosition = (lineNumber + 1) * lineHeight;
+  const getLineAccent = (lineType: GitDiffLine["line_type"]) => {
+    if (lineType === "added") return "var(--git-added, #2ea043)";
+    if (lineType === "removed") return "var(--git-deleted, #f85149)";
+    return "var(--border)";
+  };
+
+  const getLineMarker = (lineType: GitDiffLine["line_type"]) => {
+    if (lineType === "added") return "+";
+    if (lineType === "removed") return "-";
+    return " ";
+  };
+
+  const getLineNumber = (line: GitDiffLine) => {
+    if (line.line_type === "removed") return line.old_line_number ?? "";
+    if (line.line_type === "added") return line.new_line_number ?? "";
+    return line.new_line_number ?? line.old_line_number ?? "";
+  };
+
+  const topPosition = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + (lineNumber + 1) * lineHeight;
 
   const handleRevert = () => {
     if (!onRevert) return;
@@ -185,90 +205,136 @@ function InlineDiffComponent({
       style={{
         position: "absolute",
         top: `${topPosition}px`,
-        left: 0,
-        right: 0,
+        left: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px`,
+        right: `${EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT}px`,
         pointerEvents: "auto",
+        border: "1px solid var(--border)",
+        borderRadius: "6px",
+        backgroundColor: "var(--primary-bg)",
+        boxShadow: "0 12px 32px color-mix(in srgb, var(--shadow, #000) 26%, transparent)",
+        overflow: "hidden",
+        zIndex: EDITOR_CONSTANTS.Z_INDEX.OVERLAY,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {linesToShow.length > 0 ? (
-        linesToShow.map((line, idx) => (
-          <div
-            key={idx}
-            style={{
-              position: "relative",
-              display: "flex",
-              height: `${lineHeight}px`,
-              lineHeight: `${lineHeight}px`,
-              fontSize: `${fontSize}px`,
-              fontFamily,
-              backgroundColor: getLineBackground(line.line_type),
-              paddingLeft: "1rem",
-            }}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          minHeight: "28px",
+          borderBottom: "1px solid var(--border)",
+          backgroundColor: "var(--secondary-bg)",
+          color: "var(--text-light)",
+          fontSize: "12px",
+          fontFamily: "var(--app-ui-font-family)",
+          padding: "0 8px",
+          gap: "8px",
+        }}
+      >
+        <span style={{ color: "var(--text)", fontWeight: 500 }}>Working tree change</span>
+        <span style={{ color: "var(--text-lighter)" }}>line {lineNumber + 1}</span>
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            opacity: isHovered ? 1 : 0.72,
+          }}
+        >
+          {onRevert && linesToShow.some((line) => line.line_type === "removed") && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleRevert}
+              tooltip="Revert this change"
+              aria-label="Revert change"
+            >
+              <ArrowCounterClockwise />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={onClose}
+            tooltip="Close"
+            shortcut="escape"
+            aria-label="Close diff"
           >
-            <span
+            <X />
+          </Button>
+        </div>
+      </div>
+      {linesToShow.length > 0 ? (
+        <div
+          style={{
+            maxHeight: `${Math.max(lineHeight * 8, 160)}px`,
+            overflow: "auto",
+          }}
+        >
+          {linesToShow.map((line, idx) => (
+            <div
+              key={idx}
               style={{
-                color: "var(--text, #d4d4d4)",
-                display: "flex",
-                flex: 1,
-                overflow: "hidden",
+                position: "relative",
+                display: "grid",
+                gridTemplateColumns: "48px 24px minmax(0, 1fr)",
+                minHeight: `${lineHeight}px`,
+                lineHeight: `${lineHeight}px`,
+                fontSize: `${fontSize}px`,
+                fontFamily,
+                backgroundColor: getLineBackground(line.line_type),
+                borderLeft: `3px solid ${getLineAccent(line.line_type)}`,
               }}
             >
-              {renderHighlightedContent(
-                line.content,
-                charHighlights
-                  ? line.line_type === "removed"
-                    ? charHighlights.oldHighlights
-                    : charHighlights.newHighlights
-                  : null,
-                line.line_type,
-              )}
-            </span>
-
-            {isHovered && idx === 0 && (
               <div
                 style={{
-                  position: "absolute",
-                  right: "8px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
                   display: "flex",
-                  gap: "4px",
-                  backgroundColor: "var(--secondary-bg, #2a2a2a)",
-                  borderRadius: "4px",
-                  padding: "2px 4px",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  paddingRight: "10px",
+                  color: "var(--text-lighter)",
+                  backgroundColor: "color-mix(in srgb, var(--secondary-bg) 72%, transparent)",
+                  userSelect: "none",
                 }}
               >
-                {onRevert && line.line_type === "removed" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleRevert}
-                    className="h-auto px-1.5 py-0.5 text-[11px]"
-                    tooltip="Revert this change"
-                    aria-label="Revert change"
-                  >
-                    ↺
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={onClose}
-                  className="h-auto px-1.5 py-0.5 text-[11px]"
-                  tooltip="Close"
-                  shortcut="escape"
-                  aria-label="Close diff"
-                >
-                  ✕
-                </Button>
+                {getLineNumber(line)}
               </div>
-            )}
-          </div>
-        ))
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: getLineAccent(line.line_type),
+                  userSelect: "none",
+                }}
+              >
+                {getLineMarker(line.line_type)}
+              </div>
+              <div
+                style={{
+                  minWidth: 0,
+                  overflow: "hidden",
+                  color: "var(--text)",
+                  paddingRight: "12px",
+                }}
+              >
+                {renderHighlightedContent(
+                  line.content,
+                  charHighlights
+                    ? line.line_type === "removed"
+                      ? charHighlights.oldHighlights
+                      : charHighlights.newHighlights
+                    : null,
+                  line.line_type,
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div
           style={{
@@ -276,10 +342,10 @@ function InlineDiffComponent({
             lineHeight: `${lineHeight}px`,
             fontSize: `${fontSize}px`,
             fontFamily,
-            paddingLeft: "1rem",
-            color: "var(--text-light, rgba(255, 255, 255, 0.5))",
+            paddingLeft: "72px",
+            color: "var(--text-light)",
             fontStyle: "italic",
-            backgroundColor: "rgba(128, 128, 128, 0.1)",
+            backgroundColor: "var(--primary-bg)",
           }}
         >
           No diff available

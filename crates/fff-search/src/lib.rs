@@ -3,12 +3,13 @@ use fff_search::{
    FilePicker, FilePickerOptions, FrecencyTracker, FuzzySearchOptions, PaginationArgs, QueryParser,
    SharedFrecency, SharedPicker,
 };
+pub use fff_search::{GrepMode, GrepSearchOptions, parse_grep_query};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub struct FffSearch {
-   picker: SharedPicker,
+   pub picker: SharedPicker,
    frecency: SharedFrecency,
    db_path: PathBuf,
 }

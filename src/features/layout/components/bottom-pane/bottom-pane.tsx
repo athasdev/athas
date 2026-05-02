@@ -1,27 +1,60 @@
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
+import {
+  clearInternalTabDragData,
+  getInternalTabDragData,
+  getInternalTabDragHover,
+} from "@/features/tabs/utils/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import DiagnosticsPane from "../../../diagnostics/components/diagnostics-pane";
-import type { Diagnostic } from "../../../diagnostics/types/diagnostics";
 import ReferencesPane from "../../../references/components/references-pane";
+import { BottomBufferPane } from "./bottom-buffer-pane";
 
-interface BottomPaneProps {
-  diagnostics: Diagnostic[];
-  onDiagnosticClick?: (diagnostic: Diagnostic) => void;
-}
-
-const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
+const BottomPane = () => {
   const { isBottomPaneVisible, bottomPaneActiveTab } = useUIState();
   const { rootFolderPath } = useProjectStore();
   const { settings } = useSettingsStore();
+  const bottomRoot = usePaneStore.use.bottomRoot();
+  const bottomPaneBufferIds = getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds);
+  const { moveBufferToPane, setActivePane } = usePaneStore.use.actions();
+  const { openTerminalBuffer } = useBufferStore.use.actions();
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isInternalHoverTarget, setIsInternalHoverTarget] = useState(false);
+
+  useEffect(() => {
+    const syncHover = () => {
+      setIsInternalHoverTarget(getInternalTabDragHover().paneId === BOTTOM_PANE_ID);
+    };
+
+    window.addEventListener("athas-internal-tab-drag-hover", syncHover);
+    return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
+  }, []);
+
+  useEffect(() => {
+    if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
+      useUIState.getState().setIsBottomPaneVisible(false);
+    }
+  }, [bottomPaneActiveTab, isBottomPaneVisible]);
+
+  useEffect(() => {
+    if (
+      isBottomPaneVisible &&
+      bottomPaneActiveTab === "buffers" &&
+      bottomPaneBufferIds.length === 0
+    ) {
+      useUIState.getState().setIsBottomPaneVisible(false);
+    }
+  }, [bottomPaneActiveTab, bottomPaneBufferIds.length, isBottomPaneVisible]);
 
   // Resize logic
   const handleMouseDown = useCallback(
@@ -56,10 +89,75 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
 
   const titleBarHeight = IS_MAC ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
   const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.types.includes("application/tab-data") && !getInternalTabDragData()) {
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const tabDataString = e.dataTransfer.getData("application/tab-data");
+      const fallbackTabData = getInternalTabDragData();
+      if (!tabDataString && !fallbackTabData) return;
+
+      e.preventDefault();
+
+      try {
+        const tabData = (tabDataString ? JSON.parse(tabDataString) : fallbackTabData) as
+          | {
+              bufferId?: string;
+              paneId?: string;
+              source?: "pane" | "terminal-panel";
+              terminalId?: string;
+              name?: string;
+              initialCommand?: string;
+              currentDirectory?: string;
+              remoteConnectionId?: string;
+            }
+          | undefined;
+
+        if (!tabData) return;
+
+        if (tabData.source === "terminal-panel" && tabData.terminalId) {
+          setActivePane(BOTTOM_PANE_ID);
+          openTerminalBuffer({
+            sessionId: tabData.terminalId,
+            name: tabData.name,
+            command: tabData.initialCommand,
+            workingDirectory: tabData.currentDirectory,
+            remoteConnectionId: tabData.remoteConnectionId,
+          });
+          window.dispatchEvent(
+            new CustomEvent("terminal-detach-to-buffer", {
+              detail: { terminalId: tabData.terminalId },
+            }),
+          );
+        } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
+          moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);
+        } else {
+          return;
+        }
+
+        useUIState.getState().setBottomPaneActiveTab("buffers");
+        useUIState.getState().setIsBottomPaneVisible(true);
+      } catch {
+        // Ignore malformed drag payloads.
+      } finally {
+        clearInternalTabDragData();
+      }
+    },
+    [moveBufferToPane, openTerminalBuffer, setActivePane],
+  );
+
   return (
     <div
+      data-bottom-pane-drop-target
       className={cn(
         "relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
+        isInternalHoverTarget && "ring-2 ring-accent ring-inset",
         isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
         !isBottomPaneVisible && "hidden",
       )}
@@ -74,6 +172,8 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
               flexShrink: 0,
             }
       }
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       {/* Resize Handle */}
       <div
@@ -104,21 +204,6 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
           />
         )}
 
-        {/* Diagnostics Pane */}
-        {bottomPaneActiveTab === "diagnostics" && settings.coreFeatures.diagnostics ? (
-          <div className="h-full">
-            <DiagnosticsPane
-              diagnostics={diagnostics}
-              isVisible={true}
-              onClose={() => {}}
-              onDiagnosticClick={onDiagnosticClick}
-              isEmbedded={true}
-              onFullScreen={() => setIsFullScreen(!isFullScreen)}
-              isFullScreen={isFullScreen}
-            />
-          </div>
-        ) : null}
-
         {/* References Pane */}
         {bottomPaneActiveTab === "references" && (
           <div className="h-full">
@@ -126,6 +211,12 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
               onFullScreen={() => setIsFullScreen(!isFullScreen)}
               isFullScreen={isFullScreen}
             />
+          </div>
+        )}
+
+        {bottomPaneActiveTab === "buffers" && (
+          <div className="h-full">
+            {bottomPaneBufferIds.length > 0 ? <BottomBufferPane /> : null}
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Filter } from "lucide-react";
+import { ArrowDown, ArrowUp, Funnel as Filter } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";

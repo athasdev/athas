@@ -2,13 +2,14 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { ROOT_PANE_ID } from "../constants/pane";
+import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import type { PaneGroup, PaneNode, SplitDirection, SplitPlacement } from "../types/pane";
 import {
   addBufferToPane,
   closePane,
   findPaneGroup,
   findPaneGroupByBufferId,
+  findPaneNode,
   getAdjacentPane,
   getAllPaneGroups,
   getFirstPaneGroup,
@@ -22,6 +23,7 @@ import {
 
 interface PaneState {
   root: PaneNode;
+  bottomRoot: PaneNode;
   activePaneId: string;
   fullscreenPaneId: string | null;
   actions: PaneActions;
@@ -37,8 +39,13 @@ interface PaneActions {
   closePane: (paneId: string) => void;
   setActivePane: (paneId: string) => void;
   addBufferToPane: (paneId: string, bufferId: string, setActive?: boolean) => void;
-  removeBufferFromPane: (paneId: string, bufferId: string) => void;
-  moveBufferToPane: (bufferId: string, fromPaneId: string, toPaneId: string) => void;
+  removeBufferFromPane: (paneId: string, bufferId: string, preserveEmptyPane?: boolean) => void;
+  moveBufferToPane: (
+    bufferId: string,
+    fromPaneId: string,
+    toPaneId: string,
+    preserveEmptySource?: boolean,
+  ) => void;
   setActivePaneBuffer: (paneId: string, bufferId: string | null) => void;
   reorderPaneBuffers: (paneId: string, startIndex: number, endIndex: number) => void;
   updatePaneSizes: (splitId: string, sizes: [number, number]) => void;
@@ -46,6 +53,7 @@ interface PaneActions {
   switchToNextBufferInPane: () => void;
   switchToPreviousBufferInPane: () => void;
   getActivePane: () => PaneGroup | null;
+  getPaneById: (paneId: string) => PaneGroup | null;
   getPaneByBufferId: (bufferId: string) => PaneGroup | null;
   getAllPaneGroups: () => PaneGroup[];
   togglePaneFullscreen: (paneId: string) => void;
@@ -62,11 +70,55 @@ function createInitialRoot(): PaneGroup {
   };
 }
 
+function createInitialBottomRoot(): PaneGroup {
+  return {
+    id: BOTTOM_PANE_ID,
+    type: "group",
+    bufferIds: [],
+    activeBufferId: null,
+  };
+}
+
 const initialState = {
   root: createInitialRoot(),
+  bottomRoot: createInitialBottomRoot(),
   activePaneId: ROOT_PANE_ID,
   fullscreenPaneId: null,
 };
+
+function isBottomPaneId(paneId: string) {
+  return paneId === BOTTOM_PANE_ID;
+}
+
+function hasPane(root: PaneNode, paneId: string) {
+  return findPaneGroup(root, paneId) !== null;
+}
+
+function getTreeForPane(
+  state: Pick<PaneState, "root" | "bottomRoot">,
+  paneId: string,
+): "root" | "bottom" {
+  if (hasPane(state.root, paneId)) return "root";
+  if (hasPane(state.bottomRoot, paneId)) return "bottom";
+  return paneId === BOTTOM_PANE_ID ? "bottom" : "root";
+}
+
+function collapseEmptyPaneInTree(tree: PaneNode, paneId: string, fallbackId: string) {
+  const pane = findPaneGroup(tree, paneId);
+  if (!pane || pane.bufferIds.length > 0) {
+    return tree;
+  }
+
+  const allGroups = getAllPaneGroups(tree);
+  if (allGroups.length <= 1) {
+    return fallbackId === ROOT_PANE_ID ? createInitialRoot() : createInitialBottomRoot();
+  }
+
+  return (
+    closePane(tree, paneId) ??
+    (fallbackId === ROOT_PANE_ID ? createInitialRoot() : createInitialBottomRoot())
+  );
+}
 
 const usePaneStoreBase = createWithEqualityFn<PaneState>()(
   immer((set, get) => ({
@@ -75,11 +127,17 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
       splitPane: (paneId, direction, bufferId, placement = "after") => {
         let newPaneId: string | null = null;
         set((state) => {
-          const existingPaneIds = new Set(getAllPaneGroups(state.root).map((pane) => pane.id));
-          const newRoot = splitPane(state.root, paneId, direction, bufferId, placement);
-          if (newRoot !== state.root) {
-            state.root = newRoot;
-            const allGroups = getAllPaneGroups(newRoot);
+          const targetTree = getTreeForPane(state, paneId);
+          const currentTree = targetTree === "root" ? state.root : state.bottomRoot;
+          const existingPaneIds = new Set(getAllPaneGroups(currentTree).map((pane) => pane.id));
+          const nextTree = splitPane(currentTree, paneId, direction, bufferId, placement);
+          if (nextTree !== currentTree) {
+            if (targetTree === "root") {
+              state.root = nextTree;
+            } else {
+              state.bottomRoot = nextTree;
+            }
+            const allGroups = getAllPaneGroups(nextTree);
             const newPane = allGroups.find((g) => !existingPaneIds.has(g.id));
             if (newPane) {
               newPaneId = newPane.id;
@@ -92,15 +150,32 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
 
       closePane: (paneId) => {
         set((state) => {
-          const newRoot = closePane(state.root, paneId);
-          if (newRoot) {
-            state.root = newRoot;
+          const targetTree = getTreeForPane(state, paneId);
+          const currentTree = targetTree === "root" ? state.root : state.bottomRoot;
+          const fallbackId = targetTree === "root" ? ROOT_PANE_ID : BOTTOM_PANE_ID;
+          const nextTree = closePane(currentTree, paneId);
+          if (nextTree) {
+            if (targetTree === "root") {
+              state.root = nextTree;
+            } else {
+              state.bottomRoot = nextTree;
+            }
             if (state.fullscreenPaneId === paneId) {
               state.fullscreenPaneId = null;
             }
             if (state.activePaneId === paneId) {
-              const firstGroup = getFirstPaneGroup(newRoot);
+              const firstGroup = getFirstPaneGroup(nextTree);
               state.activePaneId = firstGroup.id;
+            }
+          } else if (fallbackId === ROOT_PANE_ID) {
+            state.root = createInitialRoot();
+            if (state.activePaneId === paneId) {
+              state.activePaneId = ROOT_PANE_ID;
+            }
+          } else {
+            state.bottomRoot = createInitialBottomRoot();
+            if (state.activePaneId === paneId) {
+              state.activePaneId = ROOT_PANE_ID;
             }
           }
         });
@@ -108,7 +183,7 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
 
       setActivePane: (paneId) => {
         set((state) => {
-          const pane = findPaneGroup(state.root, paneId);
+          const pane = findPaneGroup(state.root, paneId) ?? findPaneGroup(state.bottomRoot, paneId);
           if (pane) {
             state.activePaneId = paneId;
           }
@@ -117,58 +192,125 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
 
       addBufferToPane: (paneId, bufferId, setActive = true) => {
         set((state) => {
-          state.root = addBufferToPane(state.root, paneId, bufferId, setActive);
+          const targetTree = getTreeForPane(state, paneId);
+          if (targetTree === "root") {
+            state.root = addBufferToPane(state.root, paneId, bufferId, setActive);
+          } else {
+            state.bottomRoot = addBufferToPane(state.bottomRoot, paneId, bufferId, setActive);
+          }
         });
       },
 
-      removeBufferFromPane: (paneId, bufferId) => {
+      removeBufferFromPane: (paneId, bufferId, preserveEmptyPane = false) => {
         set((state) => {
-          state.root = removeBufferFromPane(state.root, paneId, bufferId);
-          const pane = findPaneGroup(state.root, paneId);
-          if (pane && pane.bufferIds.length === 0) {
-            const allGroups = getAllPaneGroups(state.root);
-            if (allGroups.length > 1) {
-              const newRoot = closePane(state.root, paneId);
-              if (newRoot) {
-                state.root = newRoot;
-                if (state.activePaneId === paneId) {
-                  const firstGroup = getFirstPaneGroup(newRoot);
-                  state.activePaneId = firstGroup.id;
-                }
-              }
+          const targetTree = getTreeForPane(state, paneId);
+          if (targetTree === "root") {
+            state.root = removeBufferFromPane(state.root, paneId, bufferId);
+            if (!preserveEmptyPane) {
+              state.root = collapseEmptyPaneInTree(state.root, paneId, ROOT_PANE_ID);
+            }
+            if (state.activePaneId === paneId && !findPaneGroup(state.root, paneId)) {
+              state.activePaneId = getFirstPaneGroup(state.root).id;
+            }
+          } else {
+            state.bottomRoot = removeBufferFromPane(state.bottomRoot, paneId, bufferId);
+            if (!preserveEmptyPane) {
+              state.bottomRoot = collapseEmptyPaneInTree(state.bottomRoot, paneId, BOTTOM_PANE_ID);
+            }
+            if (state.activePaneId === paneId && !findPaneGroup(state.bottomRoot, paneId)) {
+              state.activePaneId = getFirstPaneGroup(state.bottomRoot).id;
             }
           }
         });
       },
 
-      moveBufferToPane: (bufferId, fromPaneId, toPaneId) => {
+      moveBufferToPane: (bufferId, fromPaneId, toPaneId, preserveEmptySource = false) => {
         set((state) => {
-          state.root = moveBufferBetweenPanes(state.root, bufferId, fromPaneId, toPaneId);
+          const fromTree = getTreeForPane(state, fromPaneId);
+          const toTree = getTreeForPane(state, toPaneId);
+
+          if (fromTree === toTree) {
+            if (fromTree === "root") {
+              state.root = moveBufferBetweenPanes(state.root, bufferId, fromPaneId, toPaneId);
+              if (!preserveEmptySource) {
+                state.root = collapseEmptyPaneInTree(state.root, fromPaneId, ROOT_PANE_ID);
+              }
+            } else {
+              state.bottomRoot = moveBufferBetweenPanes(
+                state.bottomRoot,
+                bufferId,
+                fromPaneId,
+                toPaneId,
+              );
+              if (!preserveEmptySource) {
+                state.bottomRoot = collapseEmptyPaneInTree(
+                  state.bottomRoot,
+                  fromPaneId,
+                  BOTTOM_PANE_ID,
+                );
+              }
+            }
+          } else {
+            if (fromTree === "root") {
+              state.root = removeBufferFromPane(state.root, fromPaneId, bufferId);
+              if (!preserveEmptySource) {
+                state.root = collapseEmptyPaneInTree(state.root, fromPaneId, ROOT_PANE_ID);
+              }
+              state.bottomRoot = addBufferToPane(state.bottomRoot, toPaneId, bufferId, true);
+            } else {
+              state.bottomRoot = removeBufferFromPane(state.bottomRoot, fromPaneId, bufferId);
+              if (!preserveEmptySource) {
+                state.bottomRoot = collapseEmptyPaneInTree(
+                  state.bottomRoot,
+                  fromPaneId,
+                  BOTTOM_PANE_ID,
+                );
+              }
+              state.root = addBufferToPane(state.root, toPaneId, bufferId, true);
+            }
+          }
+
           state.activePaneId = toPaneId;
         });
       },
 
       setActivePaneBuffer: (paneId, bufferId) => {
         set((state) => {
-          state.root = setActivePaneBuffer(state.root, paneId, bufferId);
+          const targetTree = getTreeForPane(state, paneId);
+          if (targetTree === "root") {
+            state.root = setActivePaneBuffer(state.root, paneId, bufferId);
+          } else {
+            state.bottomRoot = setActivePaneBuffer(state.bottomRoot, paneId, bufferId);
+          }
         });
       },
 
       reorderPaneBuffers: (paneId, startIndex, endIndex) => {
         set((state) => {
-          state.root = reorderPaneBuffers(state.root, paneId, startIndex, endIndex);
+          const targetTree = getTreeForPane(state, paneId);
+          if (targetTree === "root") {
+            state.root = reorderPaneBuffers(state.root, paneId, startIndex, endIndex);
+          } else {
+            state.bottomRoot = reorderPaneBuffers(state.bottomRoot, paneId, startIndex, endIndex);
+          }
         });
       },
 
       updatePaneSizes: (splitId, sizes) => {
         set((state) => {
-          state.root = updatePaneSizes(state.root, splitId, sizes);
+          if (findPaneNode(state.root, splitId)) {
+            state.root = updatePaneSizes(state.root, splitId, sizes);
+          } else {
+            state.bottomRoot = updatePaneSizes(state.bottomRoot, splitId, sizes);
+          }
         });
       },
 
       navigateToPane: (direction) => {
         const state = get();
-        const adjacent = getAdjacentPane(state.root, state.activePaneId, direction);
+        const activeTree = getTreeForPane(state, state.activePaneId);
+        const tree = activeTree === "root" ? state.root : state.bottomRoot;
+        const adjacent = getAdjacentPane(tree, state.activePaneId, direction);
         if (adjacent) {
           set((s) => {
             s.activePaneId = adjacent.id;
@@ -178,7 +320,9 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
 
       switchToNextBufferInPane: () => {
         const state = get();
-        const activePane = findPaneGroup(state.root, state.activePaneId);
+        const activePane =
+          findPaneGroup(state.root, state.activePaneId) ??
+          findPaneGroup(state.bottomRoot, state.activePaneId);
         if (!activePane || activePane.bufferIds.length <= 1) return;
 
         const currentIndex = activePane.activeBufferId
@@ -188,13 +332,19 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
         const nextBufferId = activePane.bufferIds[nextIndex];
 
         set((s) => {
-          s.root = setActivePaneBuffer(s.root, activePane.id, nextBufferId);
+          if (findPaneGroup(s.root, activePane.id)) {
+            s.root = setActivePaneBuffer(s.root, activePane.id, nextBufferId);
+          } else {
+            s.bottomRoot = setActivePaneBuffer(s.bottomRoot, activePane.id, nextBufferId);
+          }
         });
       },
 
       switchToPreviousBufferInPane: () => {
         const state = get();
-        const activePane = findPaneGroup(state.root, state.activePaneId);
+        const activePane =
+          findPaneGroup(state.root, state.activePaneId) ??
+          findPaneGroup(state.bottomRoot, state.activePaneId);
         if (!activePane || activePane.bufferIds.length <= 1) return;
 
         const currentIndex = activePane.activeBufferId
@@ -205,28 +355,43 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
         const prevBufferId = activePane.bufferIds[prevIndex];
 
         set((s) => {
-          s.root = setActivePaneBuffer(s.root, activePane.id, prevBufferId);
+          if (findPaneGroup(s.root, activePane.id)) {
+            s.root = setActivePaneBuffer(s.root, activePane.id, prevBufferId);
+          } else {
+            s.bottomRoot = setActivePaneBuffer(s.bottomRoot, activePane.id, prevBufferId);
+          }
         });
       },
 
       getActivePane: () => {
         const state = get();
-        return findPaneGroup(state.root, state.activePaneId);
+        return (
+          findPaneGroup(state.root, state.activePaneId) ??
+          findPaneGroup(state.bottomRoot, state.activePaneId)
+        );
+      },
+
+      getPaneById: (paneId) => {
+        const state = get();
+        return findPaneGroup(state.root, paneId) ?? findPaneGroup(state.bottomRoot, paneId);
       },
 
       getPaneByBufferId: (bufferId) => {
         const state = get();
-        return findPaneGroupByBufferId(state.root, bufferId);
+        return (
+          findPaneGroupByBufferId(state.root, bufferId) ??
+          findPaneGroupByBufferId(state.bottomRoot, bufferId)
+        );
       },
 
       getAllPaneGroups: () => {
         const state = get();
-        return getAllPaneGroups(state.root);
+        return [...getAllPaneGroups(state.root), ...getAllPaneGroups(state.bottomRoot)];
       },
 
       togglePaneFullscreen: (paneId) => {
         set((state) => {
-          const pane = findPaneGroup(state.root, paneId);
+          const pane = findPaneGroup(state.root, paneId) ?? findPaneGroup(state.bottomRoot, paneId);
           if (!pane) return;
 
           state.fullscreenPaneId = state.fullscreenPaneId === paneId ? null : paneId;
@@ -243,6 +408,7 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
       reset: () => {
         set((state) => {
           state.root = createInitialRoot();
+          state.bottomRoot = createInitialBottomRoot();
           state.activePaneId = ROOT_PANE_ID;
           state.fullscreenPaneId = null;
         });

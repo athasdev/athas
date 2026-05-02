@@ -1,4 +1,11 @@
 import type { CoreFeaturesState } from "./feature";
+import type { AIChatSkill } from "@/features/ai/types/skills";
+import type {
+  FooterLeadingItemId,
+  FooterTrailingItemId,
+  HeaderTrailingItemId,
+  SidebarActivityItemId,
+} from "@/features/layout/config/item-order";
 
 export type Theme = string;
 
@@ -10,6 +17,7 @@ export interface Settings {
   // Editor
   fontFamily: string;
   fontSize: number;
+  editorLineHeight: number;
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
@@ -36,7 +44,12 @@ export interface Settings {
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
+  sidebarTabsPosition: "top" | "left";
   titleBarProjectMode: "tabs" | "window";
+  headerTrailingItemsOrder: HeaderTrailingItemId[];
+  sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
+  footerLeadingItemsOrder: FooterLeadingItemId[];
+  footerTrailingItemsOrder: FooterTrailingItemId[];
   openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;
@@ -46,6 +59,7 @@ export interface Settings {
   aiCompletion: boolean;
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
+  aiSkills: AIChatSkill[];
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
@@ -53,6 +67,15 @@ export interface Settings {
   showGitHubIssues: boolean;
   showGitHubActions: boolean;
   // Keyboard
+  keybindingPreset:
+    | "none"
+    | "vscode"
+    | "jetbrains"
+    | "sublime"
+    | "xcode"
+    | "atom"
+    | "emacs"
+    | "zed";
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
   // Language
@@ -81,10 +104,16 @@ export interface Settings {
     | "icon-theme"
     | "snippet"
     | "database"
+    | "skill"
     | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree
+  fileTreeIndentSize: number;
+  compactFoldersInFileTree: boolean;
+  fileTreeDensity: "compact" | "default" | "comfortable";
+  showHiddenFilesInFileTree: boolean;
+  showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
   gitChangesFolderView: boolean;
@@ -98,7 +127,9 @@ export interface Settings {
   compactGitStatusBadges: boolean;
   collapseEmptyGitSections: boolean;
   rememberLastGitPanelMode: boolean;
-  gitLastPanelMode: "changes" | "stash" | "history" | "worktrees";
+  gitLastPanelMode: "changes" | "history" | "worktrees";
+  gitSidebarTabOrder: Array<"changes" | "history" | "worktrees">;
+  githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
   enableInlineGitBlame: boolean;
   enableGitGutter: boolean;
   // Telemetry

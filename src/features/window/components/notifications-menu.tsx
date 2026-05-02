@@ -1,27 +1,45 @@
-import { Bell, Check, ChevronDown, ChevronUp, Info, AlertTriangle, XCircle } from "lucide-react";
+import {
+  Bell,
+  CaretDown,
+  CaretUp,
+  Check,
+  ClipboardText,
+  Copy,
+  Info,
+  Trash,
+  WarningCircle,
+  XCircle,
+} from "@phosphor-icons/react";
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
+import { TabsList } from "@/ui/tabs";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
+  "h-6 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
+
 interface NotificationsMenuProps {
-  iconSize?: number;
   className?: string;
 }
 
 function getNotificationIcon(type: NotificationEntry["type"]) {
   switch (type) {
     case "success":
-      return <Check className="size-3.5 text-success" />;
+      return <Check className="size-3.5 text-success" weight="bold" />;
     case "warning":
-      return <AlertTriangle className="size-3.5 text-warning" />;
+      return <WarningCircle className="size-3.5 text-warning" weight="duotone" />;
     case "error":
-      return <XCircle className="size-3.5 text-error" />;
+      return <XCircle className="size-3.5 text-error" weight="duotone" />;
     default:
-      return <Info className="size-3.5 text-accent" />;
+      return <Info className="size-3.5 text-accent" weight="duotone" />;
   }
 }
 
@@ -39,7 +57,23 @@ function formatNotificationAge(timestamp: number) {
   return `${diffDays}d ago`;
 }
 
-function NotificationItem({ notification }: { notification: NotificationEntry }) {
+function formatNotificationText(notification: NotificationEntry) {
+  return [
+    notification.message,
+    notification.description,
+    `${notification.type} - ${formatNotificationAge(notification.updatedAt)}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function NotificationItem({
+  notification,
+  onContextMenu,
+}: {
+  notification: NotificationEntry;
+  onContextMenu: (event: React.MouseEvent, notification: NotificationEntry) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const hasDescription = !!notification.description;
 
@@ -51,6 +85,7 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
         hasDescription && "cursor-pointer",
       )}
       onClick={hasDescription ? () => setExpanded((v) => !v) : undefined}
+      onContextMenu={(event) => onContextMenu(event, notification)}
     >
       <div className="flex items-start gap-2">
         <span className="mt-0.5 shrink-0">{getNotificationIcon(notification.type)}</span>
@@ -64,7 +99,11 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
           <div className="ui-font ui-text-sm mt-1 flex items-center gap-1 text-text-lighter">
             <span>{formatNotificationAge(notification.updatedAt)}</span>
             {hasDescription &&
-              (expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
+              (expanded ? (
+                <CaretUp className="size-3" weight="bold" />
+              ) : (
+                <CaretDown className="size-3" weight="bold" />
+              ))}
           </div>
         </div>
       </div>
@@ -72,7 +111,7 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
   );
 }
 
-export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMenuProps) => {
+export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
   const notifications = useToastStore.use.notifications();
   const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
   const clearNotifications = useToastStore((state) => state.actions.clearNotifications);
@@ -89,6 +128,7 @@ export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMen
   );
 
   const [isOpen, setIsOpen] = useState(false);
+  const notificationContextMenu = useContextMenu<NotificationEntry>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const unreadCount = useMemo(
     () =>
@@ -107,29 +147,74 @@ export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMen
     markAllNotificationsRead();
   }, [isOpen, unreadCount, markAllNotificationsRead]);
 
+  const notificationContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    const notification = notificationContextMenu.data;
+    if (!notification) return [];
+
+    const copyText = async (text: string) => {
+      await navigator.clipboard.writeText(text);
+    };
+
+    return [
+      {
+        id: "copy-message",
+        label: "Copy Message",
+        icon: <Copy />,
+        onClick: () => void copyText(notification.message),
+      },
+      ...(notification.description
+        ? [
+            {
+              id: "copy-details",
+              label: "Copy Details",
+              icon: <ClipboardText />,
+              onClick: () => void copyText(notification.description || ""),
+            },
+          ]
+        : []),
+      {
+        id: "copy-notification",
+        label: "Copy Notification",
+        icon: <ClipboardText />,
+        onClick: () => void copyText(formatNotificationText(notification)),
+      },
+      { id: "sep-clear", label: "", separator: true, onClick: () => {} },
+      {
+        id: "clear-all",
+        label: "Clear All",
+        icon: <Trash />,
+        onClick: () => clearNotifications(),
+      },
+    ];
+  }, [clearNotifications, notificationContextMenu.data]);
+
   return (
     <>
       <Tooltip content="Notifications" side="bottom">
-        <div className="relative">
+        <TabsList variant="segmented" className={cn(TITLE_BAR_CONTROL_GROUP_CLASS_NAME, className)}>
           <Button
             ref={buttonRef}
             onClick={() => setIsOpen((open) => !open)}
             type="button"
-            variant="secondary"
-            size="icon-sm"
-            className={className}
+            variant="ghost"
+            size="sm"
+            active={isOpen}
+            className={cn(
+              TITLE_BAR_ICON_BUTTON_CLASS_NAME,
+              unreadCount > 0 ? "min-w-10 gap-1 px-1.5" : "w-7 px-0",
+            )}
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-label="Notifications"
           >
-            <Bell size={iconSize} />
+            <Bell className="size-4" weight="duotone" />
+            {unreadCount > 0 && (
+              <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
+                {unreadCount}
+              </span>
+            )}
           </Button>
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-4 text-primary-bg">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </div>
+        </TabsList>
       </Tooltip>
       <Dropdown
         isOpen={isOpen}
@@ -157,11 +242,21 @@ export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMen
         ) : (
           <div className="max-h-[360px] overflow-y-auto p-1">
             {notifications.map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onContextMenu={notificationContextMenu.open}
+              />
             ))}
           </div>
         )}
       </Dropdown>
+      <ContextMenu
+        isOpen={notificationContextMenu.isOpen}
+        position={notificationContextMenu.position}
+        items={notificationContextMenuItems}
+        onClose={notificationContextMenu.close}
+      />
     </>
   );
 };

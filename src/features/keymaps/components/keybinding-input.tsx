@@ -69,7 +69,7 @@ export function KeybindingInput({
         {keys.length > 0 ? (
           <Keybinding keys={keys} />
         ) : (
-          <span className="text-[10px] text-text-lighter">
+          <span className="ui-font ui-text-xs text-text-lighter">
             {isRecording ? "Press keys..." : value || "Not assigned"}
           </span>
         )}
@@ -83,7 +83,7 @@ export function KeybindingInput({
             e.stopPropagation();
             handleCancel();
           }}
-          className="shrink-0 px-1 text-[10px] text-text-lighter hover:bg-transparent hover:text-text"
+          className="ui-text-xs shrink-0 px-1 text-text-lighter hover:bg-transparent hover:text-text"
           aria-label="Cancel recording"
         >
           ESC

@@ -5,6 +5,7 @@ import {
   fetchCurrentUser,
   fetchSubscriptionStatus,
   getAuthToken,
+  isAuthInvalidError,
   logoutFromServer,
   removeAuthToken,
   storeAuthToken,
@@ -42,8 +43,15 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       try {
         const token = await getAuthToken();
         if (token) {
-          const user = await fetchCurrentUser();
-          const subscription = await fetchSubscriptionStatus();
+          const user = await fetchCurrentUser(token);
+          let subscription: SubscriptionInfo | null = null;
+          try {
+            subscription = await fetchSubscriptionStatus(token);
+          } catch (error) {
+            if (isAuthInvalidError(error)) {
+              throw error;
+            }
+          }
           set((state) => {
             state.user = user;
             state.subscription = subscription;
@@ -55,13 +63,17 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             state.isLoading = false;
           });
         }
-      } catch {
-        // Token is invalid or expired — clear it
-        await removeAuthToken();
+      } catch (error) {
+        if (isAuthInvalidError(error)) {
+          await removeAuthToken();
+        }
         set((state) => {
           state.user = null;
           state.subscription = null;
           state.isAuthenticated = false;
+          state.error = isAuthInvalidError(error)
+            ? null
+            : "Could not verify your saved session. Check your connection and try again.";
           state.isLoading = false;
         });
       }
@@ -75,7 +87,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       try {
         await storeAuthToken(token);
         const user = await fetchCurrentUser(token);
-        const subscription = await fetchSubscriptionStatus(token);
+        let subscription: SubscriptionInfo | null = null;
+        try {
+          subscription = await fetchSubscriptionStatus(token);
+        } catch (error) {
+          if (isAuthInvalidError(error)) {
+            throw error;
+          }
+        }
         set((state) => {
           state.user = user;
           state.subscription = subscription;
@@ -83,11 +102,15 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           state.isLoading = false;
         });
       } catch (error) {
-        await removeAuthToken();
+        if (isAuthInvalidError(error)) {
+          await removeAuthToken();
+        }
         set((state) => {
-          state.user = null;
-          state.subscription = null;
-          state.isAuthenticated = false;
+          if (isAuthInvalidError(error)) {
+            state.user = null;
+            state.subscription = null;
+            state.isAuthenticated = false;
+          }
           state.error = "Authentication failed. Please try again.";
           state.isLoading = false;
         });
@@ -100,9 +123,18 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         const user = await fetchCurrentUser();
         set((state) => {
           state.user = user;
+          state.isAuthenticated = true;
+          state.error = null;
         });
-      } catch {
-        await get().logout();
+      } catch (error) {
+        if (isAuthInvalidError(error)) {
+          await get().logout();
+          return;
+        }
+
+        set((state) => {
+          state.error = "Could not refresh account details. Check your connection and try again.";
+        });
       }
     },
 
@@ -111,9 +143,12 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         const subscription = await fetchSubscriptionStatus();
         set((state) => {
           state.subscription = subscription;
+          state.error = null;
         });
-      } catch {
-        // Ignore refresh failures
+      } catch (error) {
+        if (isAuthInvalidError(error)) {
+          await get().logout();
+        }
       }
     },
 

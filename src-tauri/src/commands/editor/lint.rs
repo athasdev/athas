@@ -1,4 +1,5 @@
 use super::exec_guard::{validate_exec_command, validate_exec_env};
+use athas_runtime::process::configure_background_command;
 use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,
@@ -115,6 +116,7 @@ async fn lint_with_generic(
 
    // Build command
    let mut cmd = Command::new(&command);
+   configure_background_command(&mut cmd);
    cmd.args(&args);
 
    // Add environment variables if specified

@@ -1,9 +1,10 @@
 use super::types::{AcpEvent, StopReason};
+use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 
 const ACP_PROMPT_TIMEOUT_SECONDS: u64 = 90;
 
@@ -11,13 +12,15 @@ pub(super) async fn run_prompt(
    connection: Arc<acp::ClientSideConnection>,
    session_id: acp::SessionId,
    app_handle: AppHandle,
-   prompt: String,
+   prompt: Vec<serde_json::Value>,
    auth_method_id: Option<String>,
 ) -> Result<()> {
-   let prompt_request = acp::PromptRequest::new(
-      session_id.clone(),
-      vec![acp::ContentBlock::Text(acp::TextContent::new(prompt))],
-   );
+   let prompt = prompt
+      .into_iter()
+      .map(serde_json::from_value)
+      .collect::<Result<Vec<acp::ContentBlock>, _>>()
+      .context("Failed to decode ACP prompt content blocks")?;
+   let prompt_request = acp::PromptRequest::new(session_id.clone(), prompt);
    let response = send_prompt_with_auth_retry(connection, prompt_request, auth_method_id).await?;
 
    let stop_reason: StopReason = response.stop_reason.into();

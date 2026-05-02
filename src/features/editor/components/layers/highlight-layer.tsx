@@ -1,5 +1,10 @@
 import { forwardRef, memo, type ReactNode, useMemo } from "react";
-import { ChevronDown, ChevronRight, FileJson2, FileText } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  FileCode as FileJson2,
+  FileText,
+} from "@phosphor-icons/react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
 
@@ -108,9 +113,6 @@ const Line = memo<LineProps>(
             </span>
             <span className="diff-accordion-name">{accordionMeta.name}</span>
             <span className="diff-accordion-path">{accordionMeta.path}</span>
-            {accordionMeta.hiddenCount ? (
-              <span className="diff-accordion-count">{accordionMeta.hiddenCount} hidden</span>
-            ) : null}
           </div>
         </div>
       );
@@ -119,7 +121,7 @@ const Line = memo<LineProps>(
     if (foldedCount) {
       return (
         <div className="highlight-layer-line folded-preview-line token-text">
-          {lineContent || `${foldedCount} lines hidden`}
+          {lineContent || "\u00A0"}
         </div>
       );
     }

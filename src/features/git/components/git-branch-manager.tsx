@@ -1,11 +1,19 @@
-import { Check, ChevronDown, GitBranch, Plus, Trash2 } from "lucide-react";
+import { Check, GitBranch, Plus, Trash as Trash2 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
-import Input from "@/ui/input";
+import {
+  Combobox,
+  ComboboxActionItem,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/ui/combobox";
 import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
 import { createStash } from "../api/git-stash-api";
 
@@ -13,13 +21,11 @@ interface GitBranchManagerProps {
   currentBranch?: string;
   repoPath?: string;
   onBranchChange?: () => void;
-  compact?: boolean;
   paletteTarget?: boolean;
-  placement?: "auto" | "up" | "down";
+  placement?: "up" | "down";
 }
 
-const COMPACT_DROPDOWN_WIDTH = 360;
-const DEFAULT_DROPDOWN_WIDTH = 420;
+const BRANCH_MANAGER_DROPDOWN_WIDTH = 360;
 
 function getFilteredBranches(branches: string[], currentBranch: string, query: string) {
   const sorted = [...branches].sort((a, b) => {
@@ -31,7 +37,7 @@ function getFilteredBranches(branches: string[], currentBranch: string, query: s
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return sorted;
 
-  return sorted.filter((branch) => branch.toLowerCase().includes(normalizedQuery));
+  return sorted.filter((branch) => matchesSearchQuery(normalizedQuery, [branch]));
 }
 
 function getCreateBranchName(branches: string[], currentBranch: string, query: string) {
@@ -48,9 +54,8 @@ const GitBranchManager = ({
   currentBranch,
   repoPath,
   onBranchChange,
-  compact = false,
   paletteTarget = false,
-  placement = "auto",
+  placement = "down",
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [branchQuery, setBranchQuery] = useState("");
@@ -69,8 +74,9 @@ const GitBranchManager = ({
   );
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownWidth = compact ? COMPACT_DROPDOWN_WIDTH : DEFAULT_DROPDOWN_WIDTH;
   const activeBranch = currentBranch ?? "";
+  const triggerText = isDropdownOpen ? branchQuery || activeBranch : activeBranch;
+  const triggerTextWidthCh = Math.min(Math.max(triggerText.length + 1, 6), 40);
   const normalizedQuery = branchQuery.trim();
   const filteredBranches = useMemo(
     () => getFilteredBranches(branches, activeBranch, branchQuery),
@@ -227,76 +233,87 @@ const GitBranchManager = ({
   };
 
   return (
-    <>
-      <Input
+    <Combobox
+      items={filteredBranches}
+      value={currentBranch}
+      inputValue={isDropdownOpen ? branchQuery : currentBranch}
+      open={isDropdownOpen}
+      filter={null}
+      itemToStringLabel={(branch) => branch}
+      itemToStringValue={(branch) => branch}
+      onInputValueChange={(value) => {
+        setBranchQuery(value);
+        if (!isDropdownOpen) {
+          void handleOpenDropdown();
+        }
+      }}
+      onOpenChange={(open) => {
+        setIsDropdownOpen(open);
+        if (open) {
+          void loadBranches();
+        }
+      }}
+      onValueChange={(value) => {
+        if (typeof value === "string") {
+          void handleBranchChange(value);
+        }
+      }}
+    >
+      <ComboboxInput
         ref={inputRef}
         data-branch-manager-trigger="true"
-        value={isDropdownOpen ? branchQuery : currentBranch}
         onFocus={() => void handleOpenDropdown()}
         onClick={() => void handleOpenDropdown()}
-        onChange={(event) => {
-          setBranchQuery(event.target.value);
-          if (!isDropdownOpen) {
-            void handleOpenDropdown();
-          }
-        }}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
-            setIsDropdownOpen(false);
+            closeDropdown();
           }
         }}
         disabled={isLoading}
         readOnly={!isDropdownOpen}
         leftIcon={GitBranch}
-        rightIcon={ChevronDown}
-        size="sm"
         variant="ghost"
-        containerClassName={compact ? "w-fit min-w-0 shrink" : "w-fit min-w-0"}
+        showTrigger={false}
+        showClear={false}
         className={cn(
-          "ui-font ui-text-sm min-w-0 pl-7 pr-7 font-medium text-text-lighter",
-          compact ? "w-[180px] truncate" : "w-fit rounded-full",
+          "inline-flex w-fit max-w-[360px] shrink-0 hover:bg-hover/80",
+          isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
         )}
+        inputClassName={cn(
+          "truncate pr-0 pl-7 font-normal",
+          isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
+        )}
+        containerStyle={{ width: "fit-content", maxWidth: "360px" }}
+        inputStyle={{ width: `calc(${triggerTextWidthCh}ch + 1.75rem)`, flex: "0 0 auto" }}
         placeholder={currentBranch}
         aria-label="Search branches"
       />
 
-      <Dropdown
-        isOpen={isDropdownOpen}
-        anchorRef={inputRef}
-        anchorSide={placement === "up" ? "top" : "bottom"}
-        onClose={closeDropdown}
-        className="flex flex-col overflow-hidden rounded-2xl p-0"
-        menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+      <ComboboxContent
+        side={placement === "up" ? "top" : "bottom"}
+        className="flex flex-col rounded-2xl p-0"
         style={{
-          width: `min(${dropdownWidth}px, calc(100vw - 16px))`,
+          width: `min(${BRANCH_MANAGER_DROPDOWN_WIDTH}px, calc(100vw - 16px))`,
           maxWidth: "calc(100vw - 16px)",
-          maxHeight: compact ? "240px" : "280px",
+          maxHeight: "240px",
         }}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {branches.length === 0 ? (
-            <div className="ui-text-sm p-3 text-center text-text-lighter italic">
-              No branches found
-            </div>
-          ) : (
+        <ComboboxList className="min-h-0 flex-1 p-2">
+          {branches.length === 0 ? <ComboboxEmpty>No branches found</ComboboxEmpty> : null}
+          {branches.length > 0 ? (
             <div className="space-y-1">
               {createBranchName ? (
-                <Button
+                <ComboboxActionItem
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
-                  className={cn(
-                    "h-auto w-full justify-start gap-1.5 rounded-lg px-2 py-1.5 text-left text-text hover:bg-hover",
-                    normalizedQuery && "bg-hover",
-                  )}
+                  className={normalizedQuery ? "bg-hover" : undefined}
                 >
                   <Plus className="shrink-0 text-text-lighter" />
-                  <span className="ui-font ui-text-sm truncate">
+                  <span className="min-w-0 flex-1 truncate">
                     Create new branch "{createBranchName}"
                   </span>
-                </Button>
+                </ComboboxActionItem>
               ) : null}
               {filteredBranches.map((branch, index) => (
                 <BranchRow
@@ -305,15 +322,14 @@ const GitBranchManager = ({
                   isCurrent={branch === currentBranch}
                   isFirstMatch={Boolean(normalizedQuery) && !createBranchName && index === 0}
                   isLoading={isLoading}
-                  onSelect={() => void handleBranchChange(branch)}
                   onDelete={() => void handleDeleteBranch(branch)}
                 />
               ))}
             </div>
-          )}
-        </div>
-      </Dropdown>
-    </>
+          ) : null}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   );
 };
 
@@ -322,47 +338,43 @@ function BranchRow({
   isCurrent,
   isFirstMatch,
   isLoading,
-  onSelect,
   onDelete,
 }: {
   branch: string;
   isCurrent: boolean;
   isFirstMatch: boolean;
   isLoading: boolean;
-  onSelect: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div
+    <ComboboxItem
+      value={branch}
+      disabled={isLoading}
+      showIndicator={false}
       className={cn(
-        "group flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-hover",
+        "group",
         isFirstMatch && "bg-hover",
+        isCurrent ? "font-medium text-text" : "text-text-lighter hover:text-text",
       )}
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={onSelect}
-        disabled={isLoading || isCurrent}
-        className={cn(
-          "h-auto min-w-0 flex-1 justify-start gap-1.5 px-0 py-0 text-left disabled:opacity-50 hover:bg-transparent",
-          isCurrent ? "font-medium text-text" : "text-text-lighter hover:text-text",
-        )}
-      >
-        {isCurrent ? (
-          <Check className="shrink-0 text-success" />
-        ) : (
-          <GitBranch className="shrink-0 text-text-lighter" />
-        )}
-        <span className="ui-font ui-text-sm truncate">{branch}</span>
-        {isCurrent ? (
-          <span className="ui-text-sm ml-auto shrink-0 text-success">current</span>
-        ) : null}
-      </Button>
+      {isCurrent ? (
+        <Check className="shrink-0 text-success" />
+      ) : (
+        <GitBranch className="shrink-0 text-text-lighter" />
+      )}
+      <span className="min-w-0 flex-1 truncate">{branch}</span>
+      {isCurrent ? <span className="ui-text-sm ml-auto shrink-0 text-success">current</span> : null}
       {!isCurrent ? (
         <Button
-          onClick={onDelete}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete();
+          }}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
           disabled={isLoading}
           variant="ghost"
           size="icon-xs"
@@ -378,7 +390,7 @@ function BranchRow({
           <Trash2 />
         </Button>
       ) : null}
-    </div>
+    </ComboboxItem>
   );
 }
 

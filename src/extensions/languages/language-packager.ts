@@ -67,6 +67,10 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
   return rawCategories.map((category) => {
     const normalized = category.trim().toLowerCase();
     if (normalized === "language") return "Language";
+    if (normalized === "database") return "Database";
+    if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
+      return "Icon Theme";
+    }
     if (normalized === "linter") return "Linter";
     if (normalized === "formatter") return "Formatter";
     if (normalized === "theme") return "Theme";
@@ -251,6 +255,10 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
 
   for (const [folder, manifest] of Object.entries(manifests)) {
     try {
+      if (!manifest.languages?.length) {
+        continue;
+      }
+
       const syntheticPath = `/extensions/${folder}/extension.json`;
       const entry = convertLanguageManifest(syntheticPath, manifest);
       packagedEntries.push(entry);

@@ -7,16 +7,19 @@
  */
 
 import { useKeymapStore } from "../stores/store";
+import { getEffectiveKeybindingForCommand } from "../utils/effective-keymaps";
 import { keymapRegistry } from "../utils/registry";
+import { useSettingsStore } from "@/features/settings/store";
 
 export function useCommandShortcut(commandId?: string): string | undefined {
-  const userBinding = useKeymapStore((state) =>
-    commandId
-      ? state.keybindings.find((kb) => kb.command === commandId && kb.source === "user")?.key
-      : undefined,
-  );
-
+  const userKeybindings = useKeymapStore((state) => state.keybindings);
+  const preset = useSettingsStore((state) => state.settings.keybindingPreset);
   if (!commandId) return undefined;
-  if (userBinding) return userBinding;
-  return keymapRegistry.getKeybinding(commandId)?.key;
+
+  return getEffectiveKeybindingForCommand({
+    commandId,
+    preset,
+    registryKeybindings: keymapRegistry.getAllKeybindings(),
+    userKeybindings,
+  })?.key;
 }

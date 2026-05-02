@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { PlusIcon, XIcon } from "lucide-react";
+import { Plus as PlusIcon, X as XIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
 import { Button } from "@/ui/button";

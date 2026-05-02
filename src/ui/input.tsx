@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef } from "react";
@@ -12,8 +12,8 @@ import { cn } from "@/utils/cn";
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
-  leftIcon?: LucideIcon;
-  rightIcon?: LucideIcon;
+  leftIcon?: PhosphorIcon;
+  rightIcon?: PhosphorIcon;
   containerClassName?: string;
 }
 

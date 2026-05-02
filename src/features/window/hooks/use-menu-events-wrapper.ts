@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
+import { useEffect } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { fetchRawAppVersion } from "@/features/window/utils/app-version";
@@ -9,6 +12,45 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { useMenuEvents } from "./use-menu-events";
+
+interface EmbeddedWebviewShortcutEvent {
+  webviewLabel: string;
+  shortcut: string;
+}
+
+const WEBVIEW_GLOBAL_SHORTCUT_COMMANDS: Record<string, string> = {
+  "switch-tab": "workbench.nextTabCtrlTab",
+  "toggle-terminal": "workbench.toggleTerminal",
+  "toggle-sidebar": "workbench.toggleSidebar",
+  "command-palette": "workbench.commandPalette",
+  "quick-open": "file.quickOpen",
+  "close-tab": "file.close",
+  "reopen-tab": "file.reopenClosed",
+  "new-tab": "workbench.newTab",
+  find: "workbench.showFind",
+  "find-in-files": "workbench.showGlobalSearch",
+};
+
+function handleEmbeddedWebviewGlobalShortcut(shortcut: string) {
+  if (!shortcut.startsWith("global:")) return;
+
+  const globalShortcut = shortcut.replace("global:", "");
+
+  if (globalShortcut === "new-window") {
+    void createAppWindow();
+    return;
+  }
+
+  if (globalShortcut === "settings") {
+    useUIState.getState().openSettingsDialog("general");
+    return;
+  }
+
+  const commandId = WEBVIEW_GLOBAL_SHORTCUT_COMMANDS[globalShortcut];
+  if (!commandId) return;
+
+  void keymapRegistry.executeCommand(commandId);
+}
 
 export function useMenuEventsWrapper() {
   const uiState = useUIState();
@@ -23,6 +65,28 @@ export function useMenuEventsWrapper() {
     const activeElement = document.activeElement as HTMLElement | null;
     return activeElement?.closest(".terminal-container") !== null;
   };
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<EmbeddedWebviewShortcutEvent>(
+        "embedded-webview-shortcut",
+        (event) => {
+          if (disposed) return;
+          handleEmbeddedWebviewGlobalShortcut(event.payload.shortcut);
+        },
+      );
+    };
+
+    void setupListener();
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   useMenuEvents({
     onNewWindow: () => {
@@ -111,6 +175,9 @@ export function useMenuEventsWrapper() {
       // For now, we'll show the find bar and log that replace mode should be active
       console.log("Find/Replace mode activated - find bar shown with replace functionality");
       // In a full implementation, this would enable replace input field in the find bar
+    },
+    onToggleComment: () => {
+      void keymapRegistry.executeCommand("editor.toggleComment");
     },
     onCommandPalette: () => uiState.setIsCommandPaletteVisible(true),
     onToggleSidebar: () => uiState.setIsSidebarVisible(!uiState.isSidebarVisible),

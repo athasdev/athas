@@ -14,7 +14,7 @@
 - Start the app with `bun dev`.
 - Use `bun smoke alpha` or `bun smoke prod` for quick local smoke tests of packaged app launches.
 - Run full checks with `bun check`.
-- Run tests with `bun test`.
+- Run tests with `bunx vp test run`.
 - Run TypeScript checks with `bun typecheck`.
 - Run Rust checks with `bun check:rust` when touching Rust code.
 - When touching release flow, validate locally with `bun scripts/release.ts <bump> --dry-run` before anything else, then run `bun release:check`.

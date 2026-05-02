@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeSlash as EyeOff } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -143,7 +143,7 @@ const PasswordPromptDialog = ({
           </div>
         </div>
 
-        {errorMessage && <p className="ui-text-sm text-red-500">{errorMessage}</p>}
+        {errorMessage && <p className="ui-text-sm text-error">{errorMessage}</p>}
       </div>
     </Dialog>
   );

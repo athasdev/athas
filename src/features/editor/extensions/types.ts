@@ -54,6 +54,7 @@ export interface EditorAPI {
 
 export interface EditorSettings {
   fontSize: number;
+  lineHeight: number;
   tabSize: number;
   lineNumbers: boolean;
   wordWrap: boolean;

@@ -1,4 +1,4 @@
-import { ChevronDown, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { CaretDown, PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
@@ -10,6 +10,12 @@ import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
+
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_BUTTON_CLASS_NAME =
+  "h-6 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
 
 type ActionDraft = {
   id?: string;
@@ -115,7 +121,11 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <TabsList variant="segmented" data-active={isMenuOpen}>
+        <TabsList
+          variant="segmented"
+          data-active={isMenuOpen}
+          className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}
+        >
           <Tooltip
             content={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             side="bottom"
@@ -125,10 +135,10 @@ export default function RunActionsButton() {
               onClick={handlePrimaryRun}
               variant="ghost"
               size="sm"
-              className="h-full min-w-9 rounded-none border-0 px-2 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
+              className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "min-w-9 px-2")}
               aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             >
-              <Play className="translate-x-[0.5px] fill-none" />
+              <Play className="size-4 translate-x-[0.5px]" weight="duotone" />
             </Button>
           </Tooltip>
 
@@ -137,13 +147,14 @@ export default function RunActionsButton() {
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               variant="ghost"
-              size="icon-xs"
-              className="h-full w-6 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
+              size="icon-sm"
+              active={isMenuOpen}
+              className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "w-7 px-0")}
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label="Open run actions"
             >
-              <ChevronDown />
+              <CaretDown className="size-4" weight="bold" />
             </Button>
           </Tooltip>
         </TabsList>
@@ -173,7 +184,7 @@ export default function RunActionsButton() {
                   className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent px-0 py-0 text-text hover:bg-transparent"
                   style={{ fontSize: "var(--ui-text-sm)" }}
                 >
-                  <Play className="shrink-0 text-text-lighter" />
+                  <Play className="shrink-0 text-text-lighter" weight="duotone" />
                   <span className="ui-text-sm truncate text-text">{action.name}</span>
                 </Button>
 
@@ -192,7 +203,7 @@ export default function RunActionsButton() {
                     className="rounded-md text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
-                    <Pencil />
+                    <PencilSimple weight="duotone" />
                   </Button>
                   <Button
                     type="button"
@@ -202,7 +213,7 @@ export default function RunActionsButton() {
                     className="rounded-md text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
-                    <Trash2 />
+                    <Trash weight="duotone" />
                   </Button>
                 </div>
               </div>
@@ -222,7 +233,7 @@ export default function RunActionsButton() {
           onClick={() => openDialog()}
           className={dropdownItemClassName()}
         >
-          <Plus className="text-text-lighter" />
+          <Plus className="text-text-lighter" weight="bold" />
           <span>Add Action</span>
         </Button>
       </Dropdown>

@@ -25,7 +25,9 @@ export function hasOverlayCoveringWebview(container: HTMLElement | null) {
     return true;
   }
 
-  const overlays = document.querySelectorAll('[role="menu"], .context-menu');
+  const overlays = document.querySelectorAll(
+    '[role="menu"], .context-menu, [data-split-drop-overlay]',
+  );
   for (const overlay of overlays) {
     if (!isVisibleOverlay(overlay)) continue;
     if (rectsOverlap(overlay.getBoundingClientRect(), containerRect)) {

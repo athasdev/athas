@@ -1,4 +1,9 @@
-import { Minus, Plus, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  MagnifyingGlassPlus as ZoomIn,
+  MagnifyingGlassMinus as ZoomOut,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

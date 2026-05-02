@@ -1,4 +1,4 @@
-import { ListChecks, Play } from "lucide-react";
+import { ListChecks, Play } from "@phosphor-icons/react";
 import { memo, useCallback, useState } from "react";
 import type { ParsedPlan, PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";

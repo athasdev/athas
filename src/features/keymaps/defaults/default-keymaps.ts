@@ -206,6 +206,14 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
   },
   {
+    key: "cmd+shift+d",
+    command: "workbench.showDebugger",
+    source: "default",
+  },
+  { key: "F5", command: "debug.start", source: "default" },
+  { key: "shift+F5", command: "debug.stop", source: "default" },
+  { key: "F9", command: "debug.toggleBreakpoint", source: "default" },
+  {
     key: "cmd+shift+b",
     command: "workbench.toggleSidebarPosition",
     source: "default",

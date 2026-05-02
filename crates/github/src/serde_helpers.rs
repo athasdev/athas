@@ -66,6 +66,7 @@ where
          .map(ToOwned::to_owned);
 
       let check = StatusCheck {
+         id: context.get("id").and_then(|value| value.as_i64()),
          name: context
             .get("name")
             .and_then(|value| value.as_str())

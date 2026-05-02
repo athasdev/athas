@@ -1,4 +1,5 @@
 import type React from "react";
+import type { AcpToolCallLocation, AcpToolCallStatus, AcpToolKind } from "@/features/ai/types/acp";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
@@ -9,6 +10,9 @@ export interface ToolCall {
   input: any;
   output?: any;
   error?: string;
+  kind?: AcpToolKind;
+  status?: AcpToolCallStatus;
+  locations?: AcpToolCallLocation[];
   timestamp: Date;
   isComplete?: boolean;
 }

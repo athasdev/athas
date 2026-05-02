@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import { cn } from "@/utils/cn";
 
 interface CheckboxProps {

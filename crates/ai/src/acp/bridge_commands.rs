@@ -3,10 +3,10 @@ use super::{
    client::PermissionResponse,
    types::{AcpAgentStatus, AgentConfig},
 };
+use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::Result;
 use athas_terminal::TerminalManager;
 use std::sync::Arc;
-use tauri::AppHandle;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 /// Commands that can be sent to the ACP worker thread
@@ -22,7 +22,7 @@ pub(super) enum AcpCommand {
       response_tx: oneshot::Sender<Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)>>,
    },
    SendPrompt {
-      prompt: String,
+      prompt: Vec<serde_json::Value>,
       response_tx: oneshot::Sender<Result<()>>,
    },
    SetMode {
@@ -89,7 +89,7 @@ pub(super) async fn run_worker_loop(
                   prompt,
                   response_tx,
                } => {
-                  let result = worker.send_prompt(&prompt).await;
+                  let result = worker.send_prompt(prompt).await;
                   {
                      let mut s = status.lock().await;
                      *s = worker.get_status();

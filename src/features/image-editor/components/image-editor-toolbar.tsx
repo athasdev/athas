@@ -1,13 +1,13 @@
 import {
-  ChevronDown,
+  CaretDown as ChevronDown,
   FlipHorizontal,
   FlipVertical,
   Image,
-  RotateCcw,
-  RotateCw,
-  Save,
-  Undo2,
-} from "lucide-react";
+  ArrowCounterClockwise as RotateCcw,
+  ArrowClockwise as RotateCw,
+  FloppyDisk as Save,
+  ArrowCounterClockwise as Undo2,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

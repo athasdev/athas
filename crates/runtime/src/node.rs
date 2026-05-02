@@ -1,4 +1,4 @@
-use crate::{RuntimeError, RuntimeStatus, downloader};
+use crate::{RuntimeError, RuntimeStatus, downloader, process::configure_background_command};
 use std::{
    path::{Path, PathBuf},
    process::Command,
@@ -128,7 +128,8 @@ impl NodeRuntime {
 
    /// Check Node.js version by running `node --version`
    async fn check_version(&self) -> Result<(u32, u32, u32), RuntimeError> {
-      let output = Command::new(&self.binary_path)
+      let mut command = Command::new(&self.binary_path);
+      let output = configure_background_command(&mut command)
          .arg("--version")
          .output()
          .map_err(|e| RuntimeError::VersionCheckFailed(e.to_string()))?;

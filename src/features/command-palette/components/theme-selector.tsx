@@ -1,4 +1,4 @@
-import { Monitor, Moon, Palette, Settings, Sun, Upload } from "lucide-react";
+import { Monitor, Moon, Palette, GearSix as Settings, Sun, Upload } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
@@ -13,6 +13,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
+import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
   id: string;
@@ -81,9 +82,8 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
   // Filter themes based on query
   const filteredThemes = themes.filter(
     (theme) =>
-      theme.name.toLowerCase().includes(query.toLowerCase()) ||
-      theme.description?.toLowerCase().includes(query.toLowerCase()) ||
-      theme.category.toLowerCase().includes(query.toLowerCase()),
+      !query.trim() ||
+      matchesSearchQuery(query, [theme.name, theme.description ?? "", theme.category]),
   );
 
   // Handle keyboard navigation

@@ -8,10 +8,15 @@ import {
   MAX_RECENT_FILES_NO_QUERY,
   MAX_RESULTS,
 } from "../constants/limits";
+import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
 import type { CategorizedFiles, FileItem } from "../types/quick-open";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
-export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
+export const useFileSearch = (
+  files: FileItem[],
+  debouncedQuery: string,
+  fffHits: FffSearchHit[] | null = null,
+) => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
@@ -62,32 +67,38 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
       };
     }
 
-    const scoredFiles = files
-      .map((file) => {
-        const nameScore = fuzzyScore(file.name, debouncedQuery);
-        const pathScore = fuzzyScore(file.path, debouncedQuery);
-        return { file, score: Math.max(nameScore, pathScore) };
-      })
-      .filter(({ score }) => score > 0)
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
+    const scoredFiles =
+      fffHits && fffHits.length > 0
+        ? fffHits.map((hit) => ({
+            file: { name: hit.name, path: hit.path, isDir: false } as FileItem,
+            score: hit.score,
+          }))
+        : files
+            .map((file) => {
+              const nameScore = fuzzyScore(file.name, debouncedQuery);
+              const pathScore = fuzzyScore(file.path, debouncedQuery);
+              return { file, score: Math.max(nameScore, pathScore) };
+            })
+            .filter(({ score }) => score > 0)
+            .sort((a, b) => {
+              if (b.score !== a.score) return b.score - a.score;
 
-        const aIsOpen = openBufferPaths.has(a.file.path);
-        const bIsOpen = openBufferPaths.has(b.file.path);
-        if (aIsOpen !== bIsOpen) return aIsOpen ? -1 : 1;
+              const aIsOpen = openBufferPaths.has(a.file.path);
+              const bIsOpen = openBufferPaths.has(b.file.path);
+              if (aIsOpen !== bIsOpen) return aIsOpen ? -1 : 1;
 
-        const aIsRecent = recentFilePaths.has(a.file.path);
-        const bIsRecent = recentFilePaths.has(b.file.path);
-        if (aIsRecent !== bIsRecent) return aIsRecent ? -1 : 1;
+              const aIsRecent = recentFilePaths.has(a.file.path);
+              const bIsRecent = recentFilePaths.has(b.file.path);
+              if (aIsRecent !== bIsRecent) return aIsRecent ? -1 : 1;
 
-        if (aIsRecent && bIsRecent) {
-          const aIndex = recentFileIndices.get(a.file.path) ?? Number.MAX_VALUE;
-          const bIndex = recentFileIndices.get(b.file.path) ?? Number.MAX_VALUE;
-          return aIndex - bIndex;
-        }
+              if (aIsRecent && bIsRecent) {
+                const aIndex = recentFileIndices.get(a.file.path) ?? Number.MAX_VALUE;
+                const bIndex = recentFileIndices.get(b.file.path) ?? Number.MAX_VALUE;
+                return aIndex - bIndex;
+              }
 
-        return a.file.name.localeCompare(b.file.name);
-      });
+              return a.file.name.localeCompare(b.file.name);
+            });
 
     const openBuffers = scoredFiles
       .filter(({ file }) => openBufferPaths.has(file.path))
@@ -111,7 +122,7 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
       recentFilesInResults: recent.slice(0, MAX_RESULTS - openBuffers.length),
       otherFiles: others.slice(0, MAX_OTHER_FILES_SHOWN - openBuffers.length - recent.length),
     };
-  }, [files, debouncedQuery, buffers, activeBufferId, getRecentFilesOrderedByFrecency]);
+  }, [files, debouncedQuery, buffers, activeBufferId, getRecentFilesOrderedByFrecency, fffHits]);
 
   return categorizedFiles;
 };

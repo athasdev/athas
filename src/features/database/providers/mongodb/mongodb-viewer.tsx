@@ -1,14 +1,14 @@
 import {
-  Braces,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
+  BracketsCurly as Braces,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+  CaretDoubleLeft as ChevronsLeft,
+  CaretDoubleRight as ChevronsRight,
   Database,
-  Layers,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
+  Stack as Layers,
+  ArrowClockwise as RefreshCw,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

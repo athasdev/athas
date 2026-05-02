@@ -1,12 +1,12 @@
 import {
   Check,
-  ChevronDown,
-  ChevronRight,
-  Columns2,
-  ExternalLink,
-  Rows3,
-  Trash2,
-} from "lucide-react";
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  Columns as Columns2,
+  ArrowSquareOut as ExternalLink,
+  Rows as Rows3,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
@@ -22,6 +22,7 @@ import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
+import { joinPath } from "@/utils/path-helpers";
 import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
@@ -65,21 +66,38 @@ const statusBadgeClass: Record<string, string> = {
   renamed: "bg-git-renamed/12 text-git-renamed",
 };
 
-function buildGitHubCommitUrl(remoteUrl: string, commitHash: string): string | null {
+const MAX_HUNK_ACTION_DIFF_LINES = 1200;
+
+function parseGitHubRemoteSlug(remoteUrl: string): { owner: string; repo: string } | null {
   const normalized = remoteUrl.trim();
   const httpsMatch = normalized.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
   if (httpsMatch) {
     const [, owner, repo] = httpsMatch;
-    return `https://github.com/${owner}/${repo}/commit/${commitHash}`;
+    return { owner, repo };
   }
 
   const sshMatch = normalized.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/i);
   if (sshMatch) {
     const [, owner, repo] = sshMatch;
-    return `https://github.com/${owner}/${repo}/commit/${commitHash}`;
+    return { owner, repo };
   }
 
   return null;
+}
+
+function buildGitHubReferenceUrl(remoteUrl: string, gitRef: string): string | null {
+  const slug = parseGitHubRemoteSlug(remoteUrl);
+  if (!slug) return null;
+
+  const comparisonMatch = gitRef.match(/^(.+?)(?:\.{2,3})(.+)$/);
+  if (comparisonMatch) {
+    const [, baseRef, targetRef] = comparisonMatch;
+    return `https://github.com/${slug.owner}/${slug.repo}/compare/${encodeURIComponent(
+      baseRef,
+    )}...${encodeURIComponent(targetRef)}`;
+  }
+
+  return `https://github.com/${slug.owner}/${slug.repo}/commit/${encodeURIComponent(gitRef)}`;
 }
 
 function DiffSectionEditor({
@@ -299,11 +317,13 @@ const DiffFileSection = memo(function DiffFileSection({
   viewMode,
   showWhitespace,
   enableHunkActions,
+  onOpenFile,
 }: {
   diff: GitDiff;
   sectionKey: string;
   expanded: boolean;
   onToggle: (sectionKey: string) => void;
+  onOpenFile: (filePath: string) => void | Promise<void>;
   viewMode: "unified" | "split";
   showWhitespace: boolean;
   enableHunkActions: boolean;
@@ -318,68 +338,112 @@ const DiffFileSection = memo(function DiffFileSection({
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
   }, [onToggle, sectionKey]);
+  const handleOpenFile = useCallback(() => {
+    void onOpenFile(filePath);
+  }, [filePath, onOpenFile]);
+  const shouldUseInlineTextDiff =
+    enableHunkActions && viewMode === "unified" && diff.lines.length <= MAX_HUNK_ACTION_DIFF_LINES;
 
   return (
-    <section className="relative isolate rounded-md border border-border/70 bg-primary-bg">
-      <div className="sticky top-0 rounded-t-md z-50 border-border/70 border-b bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-        <button
-          type="button"
-          onClick={handleToggle}
-          className="relative z-50 flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-hover/30"
+    <section className="relative isolate min-w-0 max-w-full rounded-md bg-primary-bg">
+      <div className="sticky top-0 z-50 min-w-0 max-w-full bg-primary-bg">
+        <div
+          className={cn(
+            "min-w-0 max-w-full overflow-hidden border border-border/70 bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]",
+            expanded ? "rounded-t-md" : "rounded-md",
+          )}
         >
-          <span className="shrink-0 text-text-lighter">
-            {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </span>
-          <FileExplorerIcon
-            fileName={fileName}
-            isDir={false}
-            size={16}
-            className="shrink-0 text-text-lighter"
-          />
-          <span className={`shrink-0 ui-text-sm font-medium ${statusTextClass[status]}`}>
-            {fileName}
-          </span>
-          <span className="min-w-0 truncate ui-text-sm editor-font text-text-lighter">
-            {directoryPath}
-          </span>
-          <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px]">
-            {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
-            {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
-            <Badge
-              size="compact"
-              variant="muted"
-              className={`rounded px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
+          <div className="flex min-w-0 items-center">
+            <button
+              type="button"
+              onClick={handleToggle}
+              className="relative z-50 flex h-8 w-8 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
+              aria-label={expanded ? "Collapse file diff" : "Expand file diff"}
+              aria-expanded={expanded}
             >
-              {status}
-            </Badge>
-          </span>
-        </button>
+              {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenFile}
+              className="relative z-50 flex min-w-0 flex-1 items-center gap-2 overflow-hidden py-2 pr-3 text-left hover:bg-hover/30"
+              aria-label={`Open ${filePath}`}
+            >
+              <FileExplorerIcon
+                fileName={fileName}
+                isDir={false}
+                size={16}
+                className="shrink-0 text-text-lighter"
+              />
+              <span className="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden">
+                <span
+                  className={cn(
+                    "min-w-0 max-w-[45%] truncate ui-text-sm font-medium",
+                    statusTextClass[status],
+                  )}
+                >
+                  {fileName}
+                </span>
+                <span className="min-w-0 flex-1 truncate ui-text-sm editor-font text-text-lighter">
+                  {directoryPath}
+                </span>
+              </span>
+              <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px]">
+                {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
+                {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
+                <Badge
+                  size="compact"
+                  variant="muted"
+                  className={`rounded px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
+                >
+                  {status}
+                </Badge>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {expanded ? (
         diff.is_image ? (
-          <LazyDiffSectionBody expanded={expanded}>
-            <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
-          </LazyDiffSectionBody>
+          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-md border-border/70 border-x border-b">
+            <LazyDiffSectionBody expanded={expanded}>
+              <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
+            </LazyDiffSectionBody>
+          </div>
         ) : (
-          <LazyDiffSectionBody expanded={expanded}>
-            {enableHunkActions && viewMode === "unified" ? (
-              <TextDiffViewer
-                diff={diff}
-                isStaged={sectionKey.startsWith("staged:")}
-                viewMode={viewMode}
-                showWhitespace={showWhitespace}
-                isEmbeddedInScrollView={true}
-              />
-            ) : (
-              <DiffSectionEditor diff={diff} cacheKey={sectionKey} viewMode={viewMode} />
-            )}
-          </LazyDiffSectionBody>
+          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-md border-border/70 border-x border-b">
+            <LazyDiffSectionBody expanded={expanded}>
+              {shouldUseInlineTextDiff ? (
+                <TextDiffViewer
+                  diff={diff}
+                  isStaged={sectionKey.startsWith("staged:")}
+                  viewMode={viewMode}
+                  showWhitespace={showWhitespace}
+                  isEmbeddedInScrollView={true}
+                />
+              ) : (
+                <DiffSectionEditor diff={diff} cacheKey={sectionKey} viewMode={viewMode} />
+              )}
+            </LazyDiffSectionBody>
+          </div>
         )
       ) : null}
     </section>
   );
 });
+
+function getInitialExpandedFiles(multiDiff: MultiFileDiff): Set<string> {
+  if (multiDiff.initiallyExpandedFileKey) {
+    return new Set([multiDiff.initiallyExpandedFileKey]);
+  }
+
+  return new Set(
+    multiDiff.files.map(
+      (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
+    ),
+  );
+}
 
 const GitDiffEditorStack = memo(function GitDiffEditorStack({
   multiDiff,
@@ -397,14 +461,25 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isRefreshingRef = useRef(false);
+  const handleOpenFile = useCallback(
+    async (filePath: string) => {
+      const repoPath = multiDiff.repoPath ?? rootFolderPath;
+      const targetPath =
+        filePath.startsWith("/") || filePath.startsWith("remote://")
+          ? filePath
+          : repoPath
+            ? joinPath(repoPath, filePath)
+            : filePath;
+
+      await useFileSystemStore
+        .getState()
+        .handleFileSelect(targetPath, false, undefined, undefined, undefined, false);
+    },
+    [multiDiff.repoPath, rootFolderPath],
+  );
   const [githubCommitUrl, setGitHubCommitUrl] = useState<string | null>(null);
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
-    () =>
-      new Set(
-        multiDiff.files.map(
-          (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
-        ),
-      ),
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() =>
+    getInitialExpandedFiles(multiDiff),
   );
   const handleToggleSection = useCallback((sectionKey: string) => {
     setExpandedFiles((prev) => {
@@ -416,14 +491,26 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   }, []);
 
   useEffect(() => {
-    setExpandedFiles(
-      new Set(
-        multiDiff.files.map(
-          (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
-        ),
+    const nextKeys = new Set(
+      multiDiff.files.map(
+        (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
       ),
     );
-  }, [multiDiff]);
+
+    setExpandedFiles((previous) => {
+      const nextExpanded = new Set(Array.from(previous).filter((key) => nextKeys.has(key)));
+
+      if (nextExpanded.size === 0) {
+        return getInitialExpandedFiles(multiDiff);
+      }
+
+      if (multiDiff.initiallyExpandedFileKey && nextKeys.has(multiDiff.initiallyExpandedFileKey)) {
+        nextExpanded.add(multiDiff.initiallyExpandedFileKey);
+      }
+
+      return nextExpanded;
+    });
+  }, [multiDiff.fileKeys, multiDiff.files, multiDiff.initiallyExpandedFileKey]);
 
   const refreshWorkingTreeBuffer = useCallback(async () => {
     if (!isWorkingTree || !isWorkingTreeBuffer || !rootFolderPath || !activeBuffer) return;
@@ -492,7 +579,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       const remotes = await getRemotes(repoPath);
       const candidate =
         remotes.find((remote) => remote.name === "origin")?.url ?? remotes[0]?.url ?? null;
-      const nextUrl = candidate ? buildGitHubCommitUrl(candidate, multiDiff.commitHash) : null;
+      const nextUrl = candidate ? buildGitHubReferenceUrl(candidate, multiDiff.commitHash) : null;
       if (!isCancelled) {
         setGitHubCommitUrl(nextUrl);
       }
@@ -510,6 +597,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       <Breadcrumb
         filePathOverride={multiDiff.title || "Uncommitted Changes"}
         interactive={false}
+        showPath={false}
         showDefaultActions={true}
         extraLeftContent={
           <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
@@ -614,7 +702,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         style={{ overflowAnchor: "none" }}
         data-diff-stack-scroll-container
       >
-        <div className="flex flex-col gap-2 rounded-md">
+        <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
           {multiDiff.files.map((diff, index) => {
             const sectionKey = multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
 
@@ -628,6 +716,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 showWhitespace={showWhitespace}
                 enableHunkActions={isWorkingTree}
                 onToggle={handleToggleSection}
+                onOpenFile={handleOpenFile}
               />
             );
           })}

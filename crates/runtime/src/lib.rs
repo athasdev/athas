@@ -1,6 +1,7 @@
 mod bun;
 mod downloader;
 mod node;
+pub mod process;
 
 pub use bun::BunRuntime;
 pub use node::NodeRuntime;

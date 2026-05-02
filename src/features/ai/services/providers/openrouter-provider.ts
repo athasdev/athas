@@ -1,6 +1,42 @@
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import {
+  AIProvider,
+  type ProviderHeaders,
+  type ProviderModel,
+  type StreamRequest,
+} from "./ai-provider-interface";
 
 export class OpenRouterProvider extends AIProvider {
+  async getModels(apiKey?: string): Promise<ProviderModel[]> {
+    try {
+      const response = await tauriFetch("https://openrouter.ai/api/v1/models", {
+        method: "GET",
+        headers: this.buildHeaders(apiKey),
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = (await response.json()) as {
+        data?: Array<{
+          id: string;
+          name?: string;
+          top_provider?: { max_completion_tokens?: number };
+        }>;
+      };
+
+      return (data.data || []).map((model) => ({
+        id: model.id,
+        name: model.name || model.id,
+        maxTokens: model.top_provider?.max_completion_tokens,
+      }));
+    } catch (error) {
+      console.error(`${this.id} model fetch error:`, error);
+      return [];
+    }
+  }
+
   buildHeaders(apiKey?: string): ProviderHeaders {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",
@@ -27,7 +63,7 @@ export class OpenRouterProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/key", {
+      const response = await tauriFetch("https://openrouter.ai/api/v1/key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,

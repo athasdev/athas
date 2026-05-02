@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Activity, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  Pulse as Activity,
+  Copy,
+  ArrowSquareOut as ExternalLink,
+  ArrowClockwise as RefreshCw,
+  FileText,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";
@@ -23,10 +29,18 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visibleJobCount, setVisibleJobCount] = useState(10);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [jobLogs, setJobLogs] = useState<Record<number, string>>({});
+  const [jobLogErrors, setJobLogErrors] = useState<Record<number, string>>({});
+  const [loadingJobLogId, setLoadingJobLogId] = useState<number | null>(null);
   const buffer = buffers.find((item) => item.id === bufferId);
   const visibleJobs = useMemo(
     () => details?.jobs.slice(0, visibleJobCount) ?? [],
     [details?.jobs, visibleJobCount],
+  );
+  const selectedJob = useMemo(
+    () => details?.jobs.find((job) => job.id === selectedJobId) ?? null,
+    [details?.jobs, selectedJobId],
   );
 
   const fetchWorkflowRun = useCallback(
@@ -95,7 +109,20 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
 
   useEffect(() => {
     setVisibleJobCount(10);
+    setSelectedJobId(null);
+    setJobLogs({});
+    setJobLogErrors({});
+    setLoadingJobLogId(null);
   }, [details?.databaseId]);
+
+  useEffect(() => {
+    if (!details?.jobs.length || selectedJobId !== null) return;
+
+    const failedJob =
+      details.jobs.find((job) => job.conclusion === "failure" || job.conclusion === "cancelled") ??
+      details.jobs.find((job) => job.id);
+    setSelectedJobId(failedJob?.id ?? null);
+  }, [details?.jobs, selectedJobId]);
 
   useEffect(() => {
     const totalJobs = details?.jobs.length ?? 0;
@@ -143,6 +170,60 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
     }
     void copyToClipboard(details.url, "Run link copied");
   }, [details?.url]);
+
+  const loadJobLogs = useCallback(
+    async (jobId: number, force = false) => {
+      if (!repoPath) {
+        toast.error("No repository selected.");
+        return;
+      }
+
+      if (jobLogs[jobId] && !force) {
+        return;
+      }
+
+      setLoadingJobLogId(jobId);
+      setJobLogErrors((current) => {
+        const next = { ...current };
+        delete next[jobId];
+        return next;
+      });
+
+      try {
+        const logs = await invoke<string>("github_get_workflow_job_logs", {
+          repoPath,
+          jobId,
+        });
+        setJobLogs((current) => ({ ...current, [jobId]: logs }));
+      } catch (nextError) {
+        setJobLogErrors((current) => ({
+          ...current,
+          [jobId]: nextError instanceof Error ? nextError.message : String(nextError),
+        }));
+      } finally {
+        setLoadingJobLogId((current) => (current === jobId ? null : current));
+      }
+    },
+    [jobLogs, repoPath],
+  );
+
+  useEffect(() => {
+    if (selectedJobId === null) return;
+    void loadJobLogs(selectedJobId);
+  }, [loadJobLogs, selectedJobId]);
+
+  const handleSelectJob = useCallback((jobId: number | null) => {
+    setSelectedJobId(jobId);
+  }, []);
+
+  const handleCopyJobLogs = useCallback(() => {
+    if (!selectedJobId || !jobLogs[selectedJobId]) {
+      toast.error("Job logs are not loaded.");
+      return;
+    }
+
+    void copyToClipboard(jobLogs[selectedJobId], "Job logs copied");
+  }, [jobLogs, selectedJobId]);
 
   const runTitle = useMemo(
     () =>
@@ -264,15 +345,47 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             <div className="space-y-2">
               {visibleJobs.map((job) => (
                 <div
-                  key={`${job.name}-${job.startedAt ?? ""}`}
+                  key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
                   className="rounded-lg bg-secondary-bg/20 px-3 py-2"
                 >
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="ui-text-sm text-text">{job.name}</span>
-                    <span className="ui-text-sm text-text-lighter">
-                      {[job.status, job.conclusion].filter(Boolean).join(" · ").toLowerCase()}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectJob(job.id ?? null)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="ui-text-sm text-text">{job.name}</span>
+                      <span className="ui-text-sm ml-2 text-text-lighter">
+                        {[job.status, job.conclusion].filter(Boolean).join(" · ").toLowerCase()}
+                      </span>
+                    </button>
+                    {job.id ? (
+                      <Button
+                        type="button"
+                        onClick={() => handleSelectJob(job.id ?? null)}
+                        variant="ghost"
+                        size="xs"
+                        active={selectedJobId === job.id}
+                        className="shrink-0 text-text-lighter"
+                      >
+                        <FileText />
+                        Log
+                      </Button>
+                    ) : null}
                   </div>
+                  {job.runnerName || (job.labels ?? []).length > 0 ? (
+                    <div className="ui-text-xs mt-1 flex flex-wrap gap-x-2 gap-y-1 text-text-lighter">
+                      {job.runnerName ? <span>{job.runnerName}</span> : null}
+                      {(job.labels ?? []).slice(0, 4).map((label) => (
+                        <span
+                          key={label}
+                          className="rounded bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter"
+                        >
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   {job.steps.length > 0 && (
                     <div className="mt-1.5 space-y-1">
                       {job.steps.map((step, index) => (
@@ -300,6 +413,75 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 </div>
               ) : null}
             </div>
+
+            {selectedJob ? (
+              <div className="rounded-lg border border-border/70 bg-secondary-bg/20">
+                <div className="flex items-center justify-between gap-2 border-border/70 border-b px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="ui-text-sm truncate text-text">{selectedJob.name}</div>
+                    <div className="ui-text-xs text-text-lighter">
+                      {[selectedJob.status, selectedJob.conclusion]
+                        .filter(Boolean)
+                        .join(" · ")
+                        .toLowerCase()}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {selectedJob.id ? (
+                      <Button
+                        type="button"
+                        onClick={() => void loadJobLogs(selectedJob.id!, true)}
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Refresh job logs"
+                      >
+                        <RefreshCw
+                          className={loadingJobLogId === selectedJob.id ? "animate-spin" : ""}
+                        />
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      onClick={handleCopyJobLogs}
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Copy job logs"
+                    >
+                      <Copy />
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-[55vh] overflow-auto p-3">
+                  {selectedJob.id &&
+                  loadingJobLogId === selectedJob.id &&
+                  !jobLogs[selectedJob.id] ? (
+                    <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
+                      <RefreshCw className="animate-spin" />
+                      Loading logs...
+                    </div>
+                  ) : selectedJob.id && jobLogErrors[selectedJob.id] ? (
+                    <div className="space-y-2">
+                      <p className="ui-text-sm text-error">{jobLogErrors[selectedJob.id]}</p>
+                      <Button
+                        type="button"
+                        onClick={() => void loadJobLogs(selectedJob.id!, true)}
+                        variant="outline"
+                        size="xs"
+                        className="border-error/40 text-error/90 hover:bg-error/10"
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  ) : selectedJob.id && jobLogs[selectedJob.id] ? (
+                    <pre className="ui-text-xs whitespace-pre-wrap break-words font-mono leading-5 text-text-light">
+                      {jobLogs[selectedJob.id]}
+                    </pre>
+                  ) : (
+                    <p className="ui-text-sm text-text-lighter">No logs available for this job.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

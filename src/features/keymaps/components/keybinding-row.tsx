@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WarningCircle } from "@phosphor-icons/react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import KeybindingDisplay from "@/ui/keybinding";
@@ -7,6 +8,10 @@ import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/store";
 import type { Command, Keybinding } from "../types";
 import { KeybindingInput } from "./keybinding-input";
+
+export const KEYBINDING_TABLE_GRID_COLS_CLASS_NAME =
+  "grid-cols-[minmax(220px,2fr)_minmax(156px,1fr)_minmax(128px,1.25fr)_72px_92px]";
+export const KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME = "min-w-[700px]";
 
 interface KeybindingRowProps {
   command: Command;
@@ -52,17 +57,28 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
   const source = keybinding?.source || "default";
   const isUserOverride = source === "user";
+  const sourceLabel =
+    source === "preset"
+      ? "Preset"
+      : source === "default"
+        ? "Default"
+        : source === "extension"
+          ? "Extension"
+          : "User";
 
   return (
     <div
       className={cn(
-        "grid grid-cols-[minmax(0,2.2fr)_minmax(180px,1.1fr)_minmax(0,1.6fr)_88px_108px] gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
+        "grid gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
+        "gap-3 px-1.5 py-1.5",
+        KEYBINDING_TABLE_GRID_COLS_CLASS_NAME,
+        KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
         hasConflict && "bg-error/5 hover:bg-error/10",
       )}
     >
       <div className="min-w-0">
         <div className="ui-font ui-text-sm truncate text-text">{command.title}</div>
-        <div className="ui-font mt-0.5 truncate text-[11px] text-text-lighter">
+        <div className="ui-font ui-text-xs mt-0.5 truncate text-text-lighter">
           {command.category} • {command.id}
         </div>
       </div>
@@ -81,7 +97,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={() => setIsEditing(true)}
             variant="outline"
             size="xs"
-            className="flex w-full items-center justify-start px-2 text-xs hover:border-accent"
+            className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
             {keybinding?.key ? (
@@ -93,13 +109,17 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         )}
       </div>
 
-      <div className="ui-font flex items-center truncate text-[11px] text-text-lighter">
+      <div className="ui-font ui-text-xs flex items-center truncate text-text-lighter">
         {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
       </div>
 
       <div className="flex items-center">
-        <Badge variant={isUserOverride ? "accent" : "default"} shape="pill" size="compact">
-          {source}
+        <Badge
+          variant={isUserOverride ? "accent" : "default"}
+          size="compact"
+          className="h-6 min-w-[68px] px-2"
+        >
+          {sourceLabel}
         </Badge>
       </div>
 
@@ -110,7 +130,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={handleReset}
             variant="ghost"
             size="xs"
-            className="text-[11px] text-text-lighter hover:text-text"
+            className="ui-text-xs text-text-lighter hover:text-text"
             tooltip="Reset to default"
             aria-label="Reset to default keybinding"
           >
@@ -123,7 +143,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={handleRemove}
             variant="ghost"
             size="xs"
-            className="text-[11px] text-text-lighter hover:text-error"
+            className="ui-text-xs text-text-lighter hover:text-error"
             tooltip="Remove keybinding"
             aria-label="Remove keybinding"
           >
@@ -133,8 +153,9 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       {hasConflict && (
-        <div className="ui-font col-span-5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-[11px] text-error">
-          ⚠ Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}
+        <div className="ui-font ui-text-xs col-span-5 flex items-start gap-1.5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
+          <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
+          <span>Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}</span>
         </div>
       )}
     </div>

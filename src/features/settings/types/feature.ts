@@ -6,6 +6,7 @@ export interface CoreFeature {
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   enabled: boolean;
+  status?: "experimental";
 }
 
 export interface CoreFeaturesState {
@@ -15,6 +16,7 @@ export interface CoreFeaturesState {
   terminal: boolean;
   search: boolean;
   diagnostics: boolean;
+  debugger: boolean;
   aiChat: boolean;
   breadcrumbs: boolean;
   persistentCommands: boolean;

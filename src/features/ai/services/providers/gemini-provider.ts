@@ -1,7 +1,57 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
+import {
+  AIProvider,
+  type ProviderHeaders,
+  type ProviderModel,
+  type StreamRequest,
+} from "./ai-provider-interface";
 
 export class GeminiProvider extends AIProvider {
+  async getModels(apiKey?: string): Promise<ProviderModel[]> {
+    if (!apiKey) {
+      return [];
+    }
+
+    try {
+      const response = await tauriFetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+        {
+          method: "GET",
+        },
+      );
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = (await response.json()) as {
+        models?: Array<{
+          name: string;
+          displayName?: string;
+          outputTokenLimit?: number;
+          supportedGenerationMethods?: string[];
+        }>;
+      };
+
+      return (data.models || [])
+        .filter((model) => {
+          const modelId = model.name.replace(/^models\//, "");
+          return (
+            model.supportedGenerationMethods?.includes("generateContent") &&
+            (modelId.startsWith("gemini-") || modelId.startsWith("learnlm-"))
+          );
+        })
+        .map((model) => ({
+          id: model.name.replace(/^models\//, ""),
+          name: model.displayName || model.name.replace(/^models\//, ""),
+          maxTokens: model.outputTokenLimit,
+        }));
+    } catch (error) {
+      console.error(`${this.id} model fetch error:`, error);
+      return [];
+    }
+  }
+
   buildHeaders(apiKey?: string): ProviderHeaders {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",

@@ -1,10 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpAgentStatus, AcpEvent, AgentConfig } from "@/features/ai/types/acp";
+import type {
+  AcpAgentStatus,
+  AcpEvent,
+  AcpPromptContentBlock,
+  AgentConfig,
+} from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { buildContextPrompt } from "../utils/ai-context-builder";
 
 interface AcpHandlers {
@@ -12,8 +18,9 @@ interface AcpHandlers {
   onComplete: () => void;
   onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string, toolInput?: unknown, toolId?: string) => void;
-  onToolComplete?: (toolName: string, toolId?: string) => void;
+  onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
+  onToolUpdate?: (event: Extract<AcpEvent, { type: "tool_update" }>) => void;
+  onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
   onImageChunk?: (data: string, mediaType: string) => void;
@@ -61,8 +68,7 @@ export class AcpStreamHandler {
       this.receivedResponseSignal = false;
       await this.setupListeners();
       await this.ensureAgentRunning();
-      const fullMessage = this.buildMessage(userMessage, context);
-      await invoke("send_acp_prompt", { prompt: fullMessage });
+      await invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) });
       this.setupTimeout();
     } catch (error) {
       console.error("ACP agent error:", error);
@@ -81,6 +87,10 @@ export class AcpStreamHandler {
         status.running &&
         status.agentId === this.agentId &&
         (status.sessionId ?? null) !== desiredSessionId;
+
+      if (status.running) {
+        useAIChatStore.getState().setAcpStatus(status);
+      }
 
       if (!status.running || status.agentId !== this.agentId || shouldRestartForSession) {
         console.log(`Starting agent ${this.agentId}...`);
@@ -113,6 +123,8 @@ export class AcpStreamHandler {
         if (!startStatus.running) {
           throw new Error(`${this.agentId} failed to start`);
         }
+
+        useAIChatStore.getState().setAcpStatus(startStatus);
 
         if (startStatus.sessionId) {
           if (targetChat) {
@@ -162,15 +174,60 @@ export class AcpStreamHandler {
     return `${this.agentId} is currently unavailable.`;
   }
 
-  private buildMessage(userMessage: string, context: ContextInfo): string {
+  private buildPrompt(userMessage: string, context: ContextInfo): AcpPromptContentBlock[] {
     // ACP slash commands must remain the first token in the prompt.
     // If we prepend context, agents interpret them as plain text.
     if (userMessage.trimStart().startsWith("/")) {
-      return userMessage;
+      return [{ type: "text", text: userMessage }];
     }
 
     const contextPrompt = buildContextPrompt(context);
-    return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
+    const blocks: AcpPromptContentBlock[] = [
+      { type: "text", text: contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage },
+    ];
+
+    const supportsEmbeddedContext =
+      useAIChatStore.getState().acpStatus?.agentCapabilities?.promptCapabilities.embeddedContext ??
+      false;
+
+    for (const file of context.mentionedFiles || []) {
+      if (supportsEmbeddedContext) {
+        blocks.push({
+          type: "resource",
+          resource: {
+            uri: `file://${file.path}`,
+            text: file.content,
+            mimeType: "text/plain",
+          },
+        });
+      } else {
+        blocks.push({
+          type: "resource_link",
+          uri: `file://${file.path}`,
+          name: file.path.split("/").pop() || file.path,
+          mimeType: "text/plain",
+        });
+      }
+    }
+
+    const resourceLinks = new Set<string>();
+    for (const filePath of context.selectedProjectFiles || []) {
+      if (context.mentionedFiles?.some((file) => file.path === filePath)) {
+        continue;
+      }
+      if (resourceLinks.has(filePath)) {
+        continue;
+      }
+      resourceLinks.add(filePath);
+      blocks.push({
+        type: "resource_link",
+        uri: `file://${filePath}`,
+        name: filePath.split("/").pop() || filePath,
+        mimeType: "text/plain",
+      });
+    }
+
+    return blocks;
   }
 
   private async setupListeners(): Promise<void> {
@@ -203,6 +260,10 @@ export class AcpStreamHandler {
 
       case "tool_start":
         this.handleToolStart(event);
+        break;
+
+      case "tool_update":
+        this.handleToolUpdate(event);
         break;
 
       case "tool_complete":
@@ -287,6 +348,7 @@ export class AcpStreamHandler {
 
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
+    useAIChatStore.getState().setAcpStatus(event.status);
 
     if (event.status.running && event.status.sessionId) {
       const targetChat = this.getTargetChat();
@@ -321,6 +383,17 @@ export class AcpStreamHandler {
           name: action.command ?? undefined,
         });
         break;
+
+      case "set_chat_title": {
+        const targetChat = this.getTargetChat();
+        const nextTitle = targetChat
+          ? getChatTitleFromSessionInfo(targetChat.title, action.title)
+          : null;
+        if (targetChat && nextTitle) {
+          useAIChatStore.getState().updateChatTitle(targetChat.id, nextTitle);
+        }
+        break;
+      }
     }
   }
 
@@ -353,14 +426,24 @@ export class AcpStreamHandler {
     this.receivedResponseSignal = true;
     this.activeTools.set(event.toolId, event.toolName);
     if (this.handlers.onToolUse) {
-      this.handlers.onToolUse(event.toolName, event.input, event.toolId);
+      this.handlers.onToolUse(event);
+    }
+  }
+
+  private handleToolUpdate(event: Extract<AcpEvent, { type: "tool_update" }>): void {
+    this.receivedResponseSignal = true;
+    if (event.toolName) {
+      this.activeTools.set(event.toolId, event.toolName);
+    }
+    if (this.handlers.onToolUpdate) {
+      this.handlers.onToolUpdate(event);
     }
   }
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
     const toolName = this.activeTools.get(event.toolId);
     if (toolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(toolName, event.toolId);
+      this.handlers.onToolComplete(toolName, event.toolId, event.output, event.error ?? undefined);
     }
     this.activeTools.delete(event.toolId);
     this.pendingNewMessage = true;
@@ -471,8 +554,11 @@ export class AcpStreamHandler {
     requestId: string,
     approved: boolean,
     cancelled = false,
+    optionId?: string,
   ): Promise<void> {
-    await invoke("respond_acp_permission", { args: { requestId, approved, cancelled } });
+    await invoke("respond_acp_permission", {
+      args: { requestId, approved, cancelled, optionId },
+    });
   }
 
   // Static method to get available agents

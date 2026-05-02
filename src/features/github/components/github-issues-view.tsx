@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, MessageSquare } from "lucide-react";
-import { GitHubCliStatusMessage } from "./github-cli-status";
+import {
+  WarningCircle as AlertCircle,
+  ChatCircleText as MessageSquare,
+} from "@phosphor-icons/react";
+import { GitHubAuthStatusMessage } from "./github-auth-status";
+import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -13,15 +17,11 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
-import {
-  GITHUB_ISSUE_DETAILS_TTL_MS,
-  GITHUB_ISSUE_LIST_TTL_MS,
-  githubIssueDetailsCache,
-  githubIssueListCache,
-} from "../utils/github-data-cache";
+import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -29,19 +29,31 @@ interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
-  onPrefetch: () => void;
+  repoPath?: string | null;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch }: IssueListItemProps) => (
+const IssueRow = memo(({ issue, isActive, onSelect, repoPath }: IssueListItemProps) => (
   <Button
     onClick={onSelect}
-    onMouseEnter={onPrefetch}
-    onFocus={onPrefetch}
+    draggable
+    onDragStart={(event) => {
+      writeSidebarResourceDragData(event.dataTransfer, {
+        type: "github-issue",
+        repoPath: repoPath ?? undefined,
+        number: issue.number,
+        title: issue.title,
+        authorAvatarUrl:
+          issue.author.avatarUrl ||
+          `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+        url: issue.url,
+        name: `Issue #${issue.number}`,
+      });
+    }}
     variant="ghost"
     size="sm"
     active={isActive}
     className={cn(
-      "h-auto w-full min-w-0 items-start justify-start rounded-xl px-3 py-2.5 text-left",
+      "h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing",
     )}
   >
     <img
@@ -116,16 +128,6 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
           { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
         );
         startTransition(() => setIssues(nextIssues));
-
-        // Warm a few likely-next issue details so opening is near-instant.
-        for (const issue of nextIssues.slice(0, 3)) {
-          const cacheKey = `${repoPath}::${issue.number}`;
-          void githubIssueDetailsCache.load(
-            cacheKey,
-            () => invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
-            { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-          );
-        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -170,25 +172,23 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <GitHubCliStatusMessage />
+        <GitHubAuthStatusMessage />
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-error">
-            <AlertCircle className="size-4" />
-            <p className="ui-text-sm">{error}</p>
-          </div>
+          <GitHubSidebarState
+            icon={<AlertCircle className="size-4" />}
+            title={error}
+            tone="error"
+          />
         ) : deferredIssues.length === 0 && !isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
-            <MessageSquare className="size-4" />
-            <p className="ui-text-sm">No open issues</p>
-          </div>
+          <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No open issues" />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
             {deferredIssues.map((issue) => (
@@ -196,16 +196,7 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
                 key={issue.number}
                 issue={issue}
                 isActive={activeIssueNumber === issue.number}
-                onPrefetch={() => {
-                  if (!repoPath) return;
-                  const cacheKey = `${repoPath}::${issue.number}`;
-                  void githubIssueDetailsCache.load(
-                    cacheKey,
-                    () =>
-                      invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
-                    { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-                  );
-                }}
+                repoPath={repoPath}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubIssueBuffer({

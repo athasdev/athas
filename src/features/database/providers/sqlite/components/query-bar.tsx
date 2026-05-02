@@ -1,4 +1,4 @@
-import { Code, Search, X } from "lucide-react";
+import { Code, MagnifyingGlass as Search, X } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";

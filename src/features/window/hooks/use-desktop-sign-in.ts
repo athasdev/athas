@@ -9,6 +9,7 @@ import {
 } from "@/features/window/services/auth-api";
 
 interface UseDesktopSignInOptions {
+  apiBase?: string;
   onSuccess?: () => void;
 }
 
@@ -20,11 +21,15 @@ export function useDesktopSignIn(options: UseDesktopSignInOptions = {}) {
     setIsSigningIn(true);
 
     try {
-      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession();
+      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession({
+        apiBase: options.apiBase,
+      });
       await openUrl(loginUrl);
       toast.info("Complete sign-in in your browser. Waiting for confirmation...");
 
-      const token = await waitForDesktopAuthToken(sessionId, pollSecret);
+      const token = await waitForDesktopAuthToken(sessionId, pollSecret, undefined, {
+        apiBase: options.apiBase,
+      });
       await handleAuthCallback(token);
       toast.success("Signed in successfully!");
       options.onSuccess?.();

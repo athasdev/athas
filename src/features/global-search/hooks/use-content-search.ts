@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileSearchResult } from "@/features/global-search/lib/rust-api/search";
 import { searchFilesContent } from "@/features/global-search/lib/rust-api/search";
-import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { CONTENT_SEARCH_BACKEND_LIMIT, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { matchesPathFilters } from "../utils/path-filters";
 
 export interface ContentSearchOptions {
   caseSensitive: boolean;
@@ -11,13 +12,19 @@ export interface ContentSearchOptions {
   useRegex: boolean;
 }
 
+const canUseContentSearch = (rootPath: string | null | undefined): rootPath is string =>
+  Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
+
 export const useContentSearch = (isVisible: boolean) => {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
-  const [results, setResults] = useState<FileSearchResult[]>([]);
+  const [rawResults, setRawResults] = useState<FileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeQuery, setIncludeQuery] = useState("");
+  const [excludeQuery, setExcludeQuery] = useState("");
+  const [contextLines, setContextLines] = useState(2);
   const [searchOptions, setSearchOptions] = useState<ContentSearchOptions>({
     caseSensitive: false,
     wholeWord: false,
@@ -33,8 +40,10 @@ export const useContentSearch = (isVisible: boolean) => {
   );
 
   const performSearch = useCallback(async () => {
-    if (!debouncedQuery || !rootFolderPath) {
-      setResults([]);
+    const searchRootPath = rootFolderPath;
+    if (!debouncedQuery || !canUseContentSearch(searchRootPath)) {
+      setRawResults([]);
+      setIsSearching(false);
       return;
     }
 
@@ -42,43 +51,43 @@ export const useContentSearch = (isVisible: boolean) => {
     setIsSearching(true);
     setError(null);
 
-    let effectiveQuery = debouncedQuery;
-    if (searchOptions.useRegex) {
-      if (searchOptions.wholeWord) {
-        effectiveQuery = `\\b${debouncedQuery}\\b`;
-      }
-    } else {
-      if (searchOptions.wholeWord) {
-        effectiveQuery = `\\b${debouncedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`;
-      }
-    }
-
     try {
       const searchResults = await searchFilesContent({
-        root_path: rootFolderPath,
-        query: effectiveQuery,
+        root_path: searchRootPath,
+        query: debouncedQuery,
         case_sensitive: searchOptions.caseSensitive,
-        max_results: 100,
+        whole_word: searchOptions.wholeWord,
+        use_regex: searchOptions.useRegex,
+        max_results: CONTENT_SEARCH_BACKEND_LIMIT,
+        context_lines: contextLines,
       });
 
       if (currentRequestId !== requestIdRef.current) {
         return;
       }
 
-      setResults(searchResults);
+      setRawResults(searchResults);
     } catch (err) {
       if (currentRequestId !== requestIdRef.current) {
         return;
       }
       console.error("Search error:", err);
       setError(`Search failed: ${err}`);
-      setResults([]);
+      setRawResults([]);
     } finally {
       if (currentRequestId === requestIdRef.current) {
         setIsSearching(false);
       }
     }
-  }, [debouncedQuery, rootFolderPath, searchOptions]);
+  }, [debouncedQuery, rootFolderPath, searchOptions, contextLines]);
+
+  const results = useMemo(
+    () =>
+      rawResults.filter((result) =>
+        matchesPathFilters(result.file_path, rootFolderPath, includeQuery, excludeQuery),
+      ),
+    [rawResults, rootFolderPath, includeQuery, excludeQuery],
+  );
 
   useEffect(() => {
     if (isVisible) {
@@ -90,8 +99,11 @@ export const useContentSearch = (isVisible: boolean) => {
   useEffect(() => {
     if (!isVisible) {
       setQuery("");
-      setResults([]);
+      setRawResults([]);
       setError(null);
+      setIncludeQuery("");
+      setExcludeQuery("");
+      setContextLines(2);
     }
   }, [isVisible]);
 
@@ -105,5 +117,12 @@ export const useContentSearch = (isVisible: boolean) => {
     rootFolderPath,
     searchOptions,
     setSearchOption,
+    includeQuery,
+    setIncludeQuery,
+    excludeQuery,
+    setExcludeQuery,
+    contextLines,
+    setContextLines,
+    refreshSearch: performSearch,
   };
 };

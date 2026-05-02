@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
@@ -8,10 +10,20 @@ import { FontSelector } from "../font-selector";
 
 export const EditorSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
+  const languageOptions = useMemo(
+    () => [
+      { value: "auto", label: "Auto Detect" },
+      ...getAllLanguages().map((language) => ({
+        value: language.id,
+        label: language.displayName,
+      })),
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-4">
-      <Section title="Typography">
+      <Section title="Editor">
         <SettingRow
           label="Editor Font Family"
           description="Font family for code editor"
@@ -43,6 +55,23 @@ export const EditorSettings = () => {
         </SettingRow>
 
         <SettingRow
+          label="Line Height"
+          description="Editor line height multiplier"
+          onReset={() => updateSetting("editorLineHeight", getDefaultSetting("editorLineHeight"))}
+          canReset={settings.editorLineHeight !== getDefaultSetting("editorLineHeight")}
+        >
+          <NumberInput
+            min="1"
+            max="2"
+            step={0.1}
+            value={settings.editorLineHeight}
+            onChange={(val) => updateSetting("editorLineHeight", val)}
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
+            size="xs"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Tab Size"
           description="Number of spaces per tab"
           onReset={() => updateSetting("tabSize", getDefaultSetting("tabSize"))}
@@ -57,9 +86,6 @@ export const EditorSettings = () => {
             size="xs"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="Display">
         <SettingRow
           label="Word Wrap"
           description="Wrap lines that exceed viewport width"
@@ -114,24 +140,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="Input">
-        <SettingRow
-          label="Vim Mode"
-          description="Enable vim keybindings and commands"
-          onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-          canReset={settings.vimMode !== getDefaultSetting("vimMode")}
-        >
-          <Switch
-            checked={settings.vimMode}
-            onChange={(checked) => updateSetting("vimMode", checked)}
-            size="sm"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="Tabs">
         <SettingRow
           label="Max Open Tabs"
           description="Maximum number of tabs before oldest closes"
@@ -162,9 +170,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="Saving">
         <SettingRow
           label="Auto Save"
           description="Automatically save files when editing"
@@ -177,9 +182,91 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-      </Section>
+        <SettingRow
+          label="Default Language"
+          description="Default syntax highlighting for new files"
+          onReset={() => updateSetting("defaultLanguage", getDefaultSetting("defaultLanguage"))}
+          canReset={settings.defaultLanguage !== getDefaultSetting("defaultLanguage")}
+        >
+          <Select
+            value={settings.defaultLanguage}
+            options={languageOptions}
+            onChange={(value) => updateSetting("defaultLanguage", value)}
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="xs"
+            variant="secondary"
+            searchable
+            searchableTrigger="input"
+          />
+        </SettingRow>
 
-      <Section title="External Editor">
+        <SettingRow
+          label="Auto-detect Language"
+          description="Automatically detect file language from extension"
+          onReset={() =>
+            updateSetting("autoDetectLanguage", getDefaultSetting("autoDetectLanguage"))
+          }
+          canReset={settings.autoDetectLanguage !== getDefaultSetting("autoDetectLanguage")}
+        >
+          <Switch
+            checked={settings.autoDetectLanguage}
+            onChange={(checked) => updateSetting("autoDetectLanguage", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Format on Save"
+          description="Automatically format code when saving"
+          onReset={() => updateSetting("formatOnSave", getDefaultSetting("formatOnSave"))}
+          canReset={settings.formatOnSave !== getDefaultSetting("formatOnSave")}
+        >
+          <Switch
+            checked={settings.formatOnSave}
+            onChange={(checked) => updateSetting("formatOnSave", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Lint on Save"
+          description="Run linter when saving files"
+          onReset={() => updateSetting("lintOnSave", getDefaultSetting("lintOnSave"))}
+          canReset={settings.lintOnSave !== getDefaultSetting("lintOnSave")}
+        >
+          <Switch
+            checked={settings.lintOnSave}
+            onChange={(checked) => updateSetting("lintOnSave", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Auto Completion"
+          description="Show completion suggestions while typing"
+          onReset={() => updateSetting("autoCompletion", getDefaultSetting("autoCompletion"))}
+          canReset={settings.autoCompletion !== getDefaultSetting("autoCompletion")}
+        >
+          <Switch
+            checked={settings.autoCompletion}
+            onChange={(checked) => updateSetting("autoCompletion", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Parameter Hints"
+          description="Show function parameter hints"
+          onReset={() => updateSetting("parameterHints", getDefaultSetting("parameterHints"))}
+          canReset={settings.parameterHints !== getDefaultSetting("parameterHints")}
+        >
+          <Switch
+            checked={settings.parameterHints}
+            onChange={(checked) => updateSetting("parameterHints", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
         <SettingRow
           label="Default Editor"
           description="Open files in an external terminal editor instead of the built-in editor"
@@ -206,6 +293,8 @@ export const EditorSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.text}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 

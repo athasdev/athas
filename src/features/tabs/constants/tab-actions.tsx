@@ -1,4 +1,9 @@
-import { ArrowLeft, ArrowRight, RotateCcw, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowCounterClockwise as RotateCcw,
+  X,
+} from "@phosphor-icons/react";
 import type { Action } from "@/features/command-palette/models/action.types";
 
 interface TabActionsParams {

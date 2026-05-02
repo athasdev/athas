@@ -1,12 +1,12 @@
 import {
-  ChevronDown,
-  ChevronRight,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
   FileCode,
-  Loader2,
-  Maximize2,
-  Minimize2,
+  SpinnerGap as Loader2,
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

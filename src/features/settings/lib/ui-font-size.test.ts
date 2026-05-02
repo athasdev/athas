@@ -35,6 +35,8 @@ describe("ui-font-size helpers", () => {
   it("formats values with two decimals and exposes stable scale", () => {
     expect(formatUiFontSize(14)).toBe("14.00");
     expect(getUiFontScale(UI_FONT_SIZE_DEFAULT)).toBe(1);
-    expect(getUiFontScale(17.5)).toBe(1.25);
+    expect(getUiFontScale(UI_FONT_SIZE_DEFAULT + 2.5)).toBe(
+      Number(((UI_FONT_SIZE_DEFAULT + 2.5) / UI_FONT_SIZE_DEFAULT).toFixed(4)),
+    );
   });
 });

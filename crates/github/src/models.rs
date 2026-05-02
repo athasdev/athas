@@ -50,6 +50,8 @@ pub struct PullRequestAuthor {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StatusCheck {
    #[serde(default)]
+   pub id: Option<i64>,
+   #[serde(default)]
    pub name: Option<String>,
    #[serde(default)]
    pub status: Option<String>,
@@ -123,12 +125,15 @@ pub struct PullRequestDetails {
    #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub commits: Vec<serde_json::Value>,
    #[serde(
-      rename = "statusCheckRollup",
+      rename(serialize = "statusChecks", deserialize = "statusCheckRollup"),
       default,
       deserialize_with = "deserialize_status_checks"
    )]
    pub status_checks: Vec<StatusCheck>,
-   #[serde(rename = "closingIssuesReferences", default)]
+   #[serde(
+      rename(serialize = "linkedIssues", deserialize = "closingIssuesReferences"),
+      default
+   )]
    pub linked_issues: Vec<LinkedIssue>,
    #[serde(
       rename = "reviewRequests",
@@ -237,6 +242,8 @@ pub struct WorkflowRunStep {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WorkflowRunJob {
+   #[serde(default)]
+   pub id: Option<i64>,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub name: String,
    #[serde(default)]
@@ -249,6 +256,10 @@ pub struct WorkflowRunJob {
    pub completed_at: Option<String>,
    #[serde(default)]
    pub url: Option<String>,
+   #[serde(rename = "runnerName", default)]
+   pub runner_name: Option<String>,
+   #[serde(default)]
+   pub labels: Vec<String>,
    #[serde(default)]
    pub steps: Vec<WorkflowRunStep>,
 }

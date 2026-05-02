@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import { codeInspectorPlugin } from "code-inspector-plugin";
 import { defineConfig } from "vite-plus";
 
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST || "127.0.0.1";
 const isVitest = Boolean(process.env.VITEST);
 const enableCodeInspector = process.env.VITE_CODE_INSPECTOR === "true";
 
@@ -33,7 +33,7 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    host,
     hmr: host
       ? {
           protocol: "ws",

@@ -289,11 +289,9 @@ export function parseDiffAccordionLine(line: string): DiffAccordionLineMeta | nu
 
 export function createCollapsedDiffAccordionLine(
   meta: Omit<DiffAccordionLineMeta, "collapsed">,
-  hiddenCount: number,
 ): string {
   return `${DIFF_ACCORDION_PREFIX}${JSON.stringify({
     ...meta,
     collapsed: true,
-    hiddenCount,
   } satisfies DiffAccordionLineMeta)}`;
 }

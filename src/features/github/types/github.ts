@@ -4,6 +4,7 @@ export interface PullRequestAuthor {
 }
 
 export interface StatusCheck {
+  id?: number | null;
   name: string | null;
   status: string | null;
   conclusion: string | null;
@@ -118,12 +119,15 @@ export interface WorkflowRunStep {
 }
 
 export interface WorkflowRunJob {
+  id?: number | null;
   name: string;
   status: string | null;
   conclusion: string | null;
   startedAt: string | null;
   completedAt: string | null;
   url?: string | null;
+  runnerName?: string | null;
+  labels: string[];
   steps: WorkflowRunStep[];
 }
 

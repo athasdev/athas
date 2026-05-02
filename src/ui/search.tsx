@@ -1,15 +1,15 @@
 import { cva } from "class-variance-authority";
 import {
-  CaseSensitive,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Regex,
-  Replace,
-  Search,
-  WholeWord,
+  TextAa as CaseSensitive,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  CaretUp as ChevronUp,
+  BracketsCurly as Regex,
+  ArrowsLeftRight as Replace,
+  MagnifyingGlass as Search,
+  TextT as WholeWord,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import type { ReactNode, RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -231,10 +231,16 @@ export function SearchPopover({
 export function SearchReplaceToggle({
   isExpanded,
   onToggle,
+  expandedLabel = "Hide replace",
+  collapsedLabel = "Show replace",
 }: {
   isExpanded: boolean;
   onToggle: () => void;
+  expandedLabel?: string;
+  collapsedLabel?: string;
 }) {
+  const label = isExpanded ? expandedLabel : collapsedLabel;
+
   return (
     <Button
       type="button"
@@ -242,8 +248,8 @@ export function SearchReplaceToggle({
       variant="ghost"
       size="icon-xs"
       className={searchIconButtonVariants()}
-      tooltip={isExpanded ? "Hide replace" : "Show replace"}
-      aria-label={isExpanded ? "Hide replace" : "Show replace"}
+      tooltip={label}
+      aria-label={label}
     >
       <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
     </Button>

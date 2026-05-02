@@ -1,4 +1,6 @@
-import { icons, type LucideIcon, Puzzle } from "lucide-react";
+import * as PhosphorIcons from "@phosphor-icons/react";
+import { PuzzlePiece } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 
 interface DynamicIconProps {
   name: string;
@@ -6,7 +8,7 @@ interface DynamicIconProps {
   size?: number;
 }
 
-function toLucideKey(name: string): string {
+function toPhosphorKey(name: string): string {
   return name
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -14,11 +16,11 @@ function toLucideKey(name: string): string {
 }
 
 export function DynamicIcon({ name, className, size }: DynamicIconProps) {
-  const key = toLucideKey(name);
-  const Icon: LucideIcon | undefined = icons[key as keyof typeof icons];
+  const key = toPhosphorKey(name);
+  const Icon = PhosphorIcons[key as keyof typeof PhosphorIcons] as Icon | undefined;
 
   if (!Icon) {
-    return <Puzzle className={className} size={size} />;
+    return <PuzzlePiece className={className} size={size} />;
   }
 
   return <Icon className={className} size={size} />;

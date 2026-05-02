@@ -1,11 +1,17 @@
 import { memo, useMemo } from "react";
+import { FadersHorizontal } from "@phosphor-icons/react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode } from "@/features/ai/store/types";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
+import {
+  chatComposerControlClassName,
+  chatComposerIconButtonClassName,
+} from "../input/chat-composer-control-styles";
 
 interface ModeSelectorProps {
   className?: string;
+  iconOnly?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -17,6 +23,7 @@ const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
 
 export const ModeSelector = memo(function ModeSelector({
   className,
+  iconOnly = false,
   open,
   onOpenChange,
 }: ModeSelectorProps) {
@@ -80,11 +87,17 @@ export const ModeSelector = memo(function ModeSelector({
       variant="ghost"
       open={open}
       onOpenChange={onOpenChange}
-      className={cn(
-        "w-fit min-w-0 max-w-[132px] rounded-md px-1.5 text-text-lighter hover:bg-hover hover:text-text data-[state=open]:bg-hover data-[state=open]:text-text",
-        className,
-      )}
-      menuClassName="w-[248px]"
+      leftIcon={iconOnly ? <FadersHorizontal size={13} className="text-current" /> : undefined}
+      className={cn(iconOnly ? "w-fit" : "w-fit max-w-[108px]", className)}
+      triggerClassName={
+        iconOnly
+          ? chatComposerIconButtonClassName()
+          : chatComposerControlClassName("w-fit max-w-[108px]")
+      }
+      menuClassName="!min-w-0 w-max max-w-[160px]"
+      hideChevron
+      iconOnly={iconOnly}
+      tooltip="Select chat mode"
       aria-label="Select chat mode"
     />
   );

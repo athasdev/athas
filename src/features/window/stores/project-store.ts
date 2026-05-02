@@ -8,7 +8,7 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-s
 export const useProjectStore = create(
   combine(
     {
-      projectName: "Explorer",
+      projectName: "Files",
       rootFolderPath: undefined as string | undefined,
       activeProjectId: undefined as string | undefined,
     },
@@ -35,7 +35,7 @@ export const useProjectStore = create(
         }
 
         const { rootFolderPath } = get();
-        if (!rootFolderPath) return "Explorer";
+        if (!rootFolderPath) return "Files";
 
         return getFolderName(rootFolderPath);
       },

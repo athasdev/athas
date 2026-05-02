@@ -4,6 +4,7 @@ import { GrokProvider } from "./grok-provider";
 import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
+import { V0Provider } from "./v0-provider";
 import type { AIProvider, ProviderConfig } from "./ai-provider-interface";
 
 const providers = new Map<string, AIProvider>();
@@ -26,6 +27,15 @@ function initializeProviders(): void {
     maxTokens: 4096,
   };
   providers.set("openai", new OpenAIProvider(openAIConfig));
+
+  const v0Config: ProviderConfig = {
+    id: "v0",
+    name: "v0",
+    apiUrl: "https://api.v0.dev/v1/chat/completions",
+    requiresApiKey: true,
+    maxTokens: 32768,
+  };
+  providers.set("v0", new V0Provider(v0Config));
 
   const openRouterConfig: ProviderConfig = {
     id: "openrouter",

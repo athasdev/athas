@@ -11,23 +11,22 @@ interface SemanticTokensOverlayProps {
   viewportHeight: number;
 }
 
-// Map token type indices to CSS color classes
 const TOKEN_TYPE_COLORS: Record<string, string> = {
-  namespace: "text-cyan-400/80",
-  type: "text-teal-400/80",
-  class: "text-yellow-400/80",
-  enum: "text-orange-300/80",
-  interface: "text-cyan-300/80",
-  struct: "text-yellow-300/80",
-  typeParameter: "text-teal-300/80",
-  parameter: "text-orange-200/70",
-  variable: "text-blue-300/70",
-  property: "text-green-300/70",
-  enumMember: "text-orange-300/70",
-  function: "text-purple-300/80",
-  method: "text-purple-300/80",
-  macro: "text-rose-300/80",
-  decorator: "text-yellow-200/80",
+  namespace: "var(--syntax-type, #ffcb6b)",
+  type: "var(--syntax-type, #ffcb6b)",
+  class: "var(--syntax-type, #ffcb6b)",
+  enum: "var(--syntax-type, #ffcb6b)",
+  interface: "var(--syntax-type, #ffcb6b)",
+  struct: "var(--syntax-type, #ffcb6b)",
+  typeParameter: "var(--syntax-type, #ffcb6b)",
+  parameter: "var(--syntax-variable, #f07178)",
+  variable: "var(--syntax-variable, #f07178)",
+  property: "var(--syntax-property, #82aaff)",
+  enumMember: "var(--syntax-constant, #89ddff)",
+  function: "var(--syntax-function, #82aaff)",
+  method: "var(--syntax-function, #82aaff)",
+  macro: "var(--syntax-function, #82aaff)",
+  decorator: "var(--syntax-attribute, #c792ea)",
 };
 
 const SemanticTokensOverlay = forwardRef(
@@ -57,9 +56,9 @@ const SemanticTokensOverlay = forwardRef(
       >
         {visibleTokens.map((token) => {
           const typeName = TOKEN_TYPE_NAMES[token.tokenType];
-          const colorClass = typeName ? TOKEN_TYPE_COLORS[typeName] : undefined;
+          const color = typeName ? TOKEN_TYPE_COLORS[typeName] : undefined;
 
-          if (!colorClass) return null;
+          if (!color) return null;
 
           const top = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + token.line * lineHeight;
           const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + token.startChar * charWidth;
@@ -71,11 +70,13 @@ const SemanticTokensOverlay = forwardRef(
           return (
             <span
               key={`${token.line}:${token.startChar}:${token.length}`}
-              className={`absolute editor-font ${colorClass}`}
+              className="absolute editor-font"
               style={{
                 top: `${top}px`,
                 left: `${left}px`,
                 width: `${width}px`,
+                color,
+                opacity: 0.95,
                 fontSize: `${fontSize}px`,
                 lineHeight: `${lineHeight}px`,
               }}

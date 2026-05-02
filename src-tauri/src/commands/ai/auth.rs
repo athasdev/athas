@@ -5,18 +5,21 @@ const AUTH_TOKEN_KEY: &str = "athas_auth_token";
 
 /// Store the auth token using OS keychain when available.
 #[command]
-pub async fn store_auth_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+pub async fn store_auth_token(
+   app: crate::app_runtime::AppHandle,
+   token: String,
+) -> Result<(), String> {
    store_secret(&app, AUTH_TOKEN_KEY, &token)
 }
 
 /// Get the stored auth token
 #[command]
-pub async fn get_auth_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub async fn get_auth_token(app: crate::app_runtime::AppHandle) -> Result<Option<String>, String> {
    get_secret(&app, AUTH_TOKEN_KEY)
 }
 
 /// Remove the auth token
 #[command]
-pub async fn remove_auth_token(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn remove_auth_token(app: crate::app_runtime::AppHandle) -> Result<(), String> {
    remove_secret(&app, AUTH_TOKEN_KEY)
 }

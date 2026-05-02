@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import type { GitCommit } from "../types/git-types";
@@ -17,9 +18,10 @@ interface CommitItemProps {
   commit: GitCommit;
   onViewCommitDiff: (commitHash: string) => void;
   isSelected: boolean;
+  repoPath?: string;
 }
 
-const CommitItem = memo(({ commit, onViewCommitDiff, isSelected }: CommitItemProps) => {
+const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: CommitItemProps) => {
   const handleCommitClick = useCallback(() => {
     onViewCommitDiff(commit.hash);
   }, [commit.hash, onViewCommitDiff]);
@@ -28,9 +30,23 @@ const CommitItem = memo(({ commit, onViewCommitDiff, isSelected }: CommitItemPro
     <div
       onClick={handleCommitClick}
       className={cn(
-        "ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 hover:bg-hover",
+        "ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 transition-[transform,background-color,opacity] hover:bg-hover",
+        repoPath && "cursor-grab active:cursor-grabbing",
         isSelected && "bg-hover",
       )}
+      draggable={!!repoPath}
+      onDragStart={(event) => {
+        if (!repoPath) return;
+        writeSidebarResourceDragData(event.dataTransfer, {
+          type: "git-commit",
+          repoPath,
+          commitHash: commit.hash,
+          message: commit.message,
+          author: commit.author,
+          date: commit.date,
+          name: `Commit ${commit.hash.substring(0, 7)}`,
+        });
+      }}
     >
       <div className="truncate text-inherit text-text leading-tight">{commit.message}</div>
       <div className="ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
@@ -187,6 +203,7 @@ const GitCommitHistory = ({
                     commit={commit}
                     onViewCommitDiff={handleViewCommitDiff}
                     isSelected={commit.hash === selectedCommitHash}
+                    repoPath={repoPath}
                   />
                 ))}
 

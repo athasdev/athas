@@ -8,6 +8,7 @@ interface RenameInputProps {
   line: number;
   column: number;
   fontSize: number;
+  lineHeight: number;
   charWidth: number;
   inputRef: RefObject<HTMLInputElement | null>;
   onSubmit: (newName: string) => void;
@@ -16,12 +17,20 @@ interface RenameInputProps {
 
 const RenameInput = forwardRef(
   (
-    { symbol, line, fontSize, charWidth, inputRef, onSubmit, onCancel }: RenameInputProps,
+    {
+      symbol,
+      line,
+      fontSize,
+      lineHeight,
+      charWidth,
+      inputRef,
+      onSubmit,
+      onCancel,
+    }: RenameInputProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
     const [value, setValue] = useState(symbol);
 
-    const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
     const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
     const handleKeyDown = useCallback(

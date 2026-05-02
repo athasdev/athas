@@ -1,4 +1,4 @@
-import { File, Folder, FolderOpen } from "lucide-react";
+import { File, Folder, FolderOpen } from "@phosphor-icons/react";
 import type { IconThemeDefinition } from "../types";
 
 export const minimalIconTheme: IconThemeDefinition = {

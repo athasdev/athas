@@ -3,6 +3,11 @@ name = "athas-terminal"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["tauri-wry"]
+tauri-wry = ["tauri/wry", "tauri/x11"]
+linux = ["tauri/cef"]
+
 [dependencies]
 anyhow = "1.0"
 dirs = "5.0"
@@ -10,5 +15,5 @@ log = "0.4"
 portable-pty = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tauri = { version = "2", features = ["test"] }
+tauri = { version = "2", default-features = false, features = ["test"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }

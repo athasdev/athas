@@ -1,4 +1,8 @@
-import { ClockIcon, FolderOpen, PanelTopClose } from "lucide-react";
+import {
+  Clock as ClockIcon,
+  FolderOpen,
+  SidebarSimple as PanelTopClose,
+} from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

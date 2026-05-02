@@ -1,4 +1,5 @@
 mod file_ops;
+mod runtime;
 mod ssh_helpers;
 mod state;
 mod terminal;
@@ -8,6 +9,7 @@ use crate::{
       read_directory as read_directory_inner, read_file as read_file_inner,
       write_file as write_file_inner,
    },
+   runtime::AthasAppHandle as AppHandle,
    ssh_helpers::{create_ssh_session, exec_remote_command, shell_quote},
    state::CONNECTIONS,
    terminal::{
@@ -77,7 +79,7 @@ pub async fn ssh_connect(
    Ok(connection)
 }
 
-pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
+pub async fn ssh_disconnect(app: AppHandle, connection_id: String) -> Result<(), String> {
    let mut connections = CONNECTIONS
       .lock()
       .map_err(|e| format!("Failed to lock connections: {}", e))?;
@@ -216,7 +218,7 @@ pub async fn ssh_copy_path(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn create_remote_terminal(
-   app: tauri::AppHandle,
+   app: AppHandle,
    host: String,
    port: u16,
    username: String,

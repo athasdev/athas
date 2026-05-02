@@ -1,5 +1,5 @@
 import { readFile } from "@tauri-apps/plugin-fs";
-import { FileIcon } from "lucide-react";
+import { File as FileIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
 import { cn } from "@/utils/cn";

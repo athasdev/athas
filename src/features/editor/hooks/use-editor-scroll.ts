@@ -6,10 +6,13 @@ const SCROLL_STATE_UPDATE_INTERVAL_MS = 33;
 
 interface UseEditorScrollOptions {
   bufferId: string | null;
+  viewStateKey: string | null;
   linesCount: number;
   minimapEnabled: boolean;
+  lockVerticalScroll?: boolean;
   switchGuardRef: RefObject<number>;
   highlightRef: RefObject<HTMLDivElement | null>;
+  primaryCursorRef: RefObject<HTMLDivElement | null>;
   multiCursorRef: RefObject<HTMLDivElement | null>;
   searchHighlightRef: RefObject<HTMLDivElement | null>;
   selectionLayerRef: RefObject<HTMLDivElement | null>;
@@ -24,10 +27,13 @@ interface UseEditorScrollOptions {
 
 export function useEditorScroll({
   bufferId,
+  viewStateKey,
   linesCount,
   minimapEnabled,
+  lockVerticalScroll = false,
   switchGuardRef,
   highlightRef,
+  primaryCursorRef,
   multiCursorRef,
   searchHighlightRef,
   selectionLayerRef,
@@ -47,7 +53,11 @@ export function useEditorScroll({
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
-      const scrollTop = e.currentTarget.scrollTop;
+      if (lockVerticalScroll && e.currentTarget.scrollTop !== 0) {
+        e.currentTarget.scrollTop = 0;
+      }
+
+      const scrollTop = lockVerticalScroll ? 0 : e.currentTarget.scrollTop;
       const scrollLeft = e.currentTarget.scrollLeft;
 
       if (lastScrollRef.current.top === scrollTop && lastScrollRef.current.left === scrollLeft) {
@@ -68,6 +78,9 @@ export function useEditorScroll({
 
       if (highlightRef.current) {
         highlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (primaryCursorRef.current) {
+        primaryCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
       }
       if (multiCursorRef.current) {
         multiCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
@@ -110,7 +123,9 @@ export function useEditorScroll({
 
           const now = performance.now();
           if (now - lastStoreScrollUpdateRef.current >= SCROLL_STATE_UPDATE_INTERVAL_MS) {
-            useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+            useEditorStateStore
+              .getState()
+              .actions.setScrollForBuffer(viewStateKey ?? currentBufferId, top, left);
             lastStoreScrollUpdateRef.current = now;
           }
 
@@ -123,17 +138,22 @@ export function useEditorScroll({
       scrollTimeoutRef.current = setTimeout(() => {
         isScrollingRef.current = false;
         const { top, left } = lastScrollRef.current;
-        useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+        useEditorStateStore
+          .getState()
+          .actions.setScrollForBuffer(viewStateKey ?? currentBufferId, top, left);
         lastStoreScrollUpdateRef.current = performance.now();
       }, 150);
     },
     [
       bufferId,
+      viewStateKey,
       handleViewportScroll,
       linesCount,
       minimapEnabled,
+      lockVerticalScroll,
       switchGuardRef,
       highlightRef,
+      primaryCursorRef,
       multiCursorRef,
       searchHighlightRef,
       selectionLayerRef,

@@ -2,14 +2,14 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Columns3,
-  LogIn,
-  Loader2,
-  MousePointerClick,
-  Puzzle,
-  Sparkles,
-  Terminal,
-} from "lucide-react";
+  RowsPlusTop as Columns3,
+  SignIn as LogIn,
+  SpinnerGap as Loader2,
+  CursorClick as MousePointerClick,
+  PuzzlePiece as Puzzle,
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+} from "@phosphor-icons/react";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

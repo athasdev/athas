@@ -1,5 +1,5 @@
 import type React from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
@@ -8,6 +8,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
+import { getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
 import { PathBreadcrumb } from "./path-breadcrumb";
 
 interface DirectoryEntry {
@@ -50,12 +51,14 @@ export function FilePathBreadcrumb({
       return [filePath.split("://")[1] || filePath];
     }
 
-    if (rootFolderPath && filePath.startsWith(rootFolderPath)) {
-      const relativePath = filePath.slice(rootFolderPath.length);
-      return relativePath.split("/").filter(Boolean);
+    if (rootFolderPath) {
+      const relativePath = getRelativePath(filePath, rootFolderPath);
+      if (relativePath !== filePath) {
+        return normalizePath(relativePath).split("/").filter(Boolean);
+      }
     }
 
-    return filePath.split("/").filter(Boolean);
+    return normalizePath(filePath).split("/").filter(Boolean);
   };
 
   const segments = getPathSegments();
@@ -117,7 +120,7 @@ export function FilePathBreadcrumb({
 
     if (segmentIndex === segments.length - 1) {
       const fullPath = rootFolderPath
-        ? `${rootFolderPath}/${segments.slice(0, segmentIndex + 1).join("/")}`
+        ? joinPath(rootFolderPath, ...segments.slice(0, segmentIndex + 1))
         : segments.slice(0, segmentIndex + 1).join("/");
       await handleNavigate(fullPath);
       return;
@@ -129,7 +132,7 @@ export function FilePathBreadcrumb({
     }
 
     const dirPath = rootFolderPath
-      ? `${rootFolderPath}/${segments.slice(0, segmentIndex + 1).join("/")}`
+      ? joinPath(rootFolderPath, ...segments.slice(0, segmentIndex + 1))
       : segments.slice(0, segmentIndex + 1).join("/");
 
     try {

@@ -4,10 +4,8 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { isDragScrolling } from "@/features/editor/hooks/use-drag-scroll";
 import type { Cursor, MultiCursorState, Position, Range } from "@/features/editor/types/editor";
-import { getLineHeight } from "@/features/editor/utils/position";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { useBufferStore } from "./buffer-store";
-import { useEditorSettingsStore } from "./settings-store";
 
 // Types for editor state caching
 export interface EditorViewState {
@@ -98,25 +96,32 @@ const ensureCursorVisible = (position: Position) => {
   // Skip scroll adjustment during drag selection auto-scroll
   if (isDragScrolling()) return;
 
-  const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
-  if (!viewport) return;
+  const editorElement = useEditorStateStore.getState().editorRef?.current;
+  const scopedTextarea =
+    editorElement?.querySelector<HTMLTextAreaElement>("textarea.editor-textarea") ?? null;
+  const focusedTextarea =
+    document.activeElement instanceof HTMLTextAreaElement &&
+    document.activeElement.classList.contains("editor-textarea")
+      ? document.activeElement
+      : null;
+  const textarea = scopedTextarea ?? focusedTextarea;
 
-  const fontSize = useEditorSettingsStore.getState().fontSize;
-  const lineHeight = getLineHeight(fontSize);
-  const targetTop = position.line * lineHeight;
+  if (!textarea) return;
+
+  const computedStyle = window.getComputedStyle(textarea);
+  const lineHeight =
+    Number.parseFloat(computedStyle.lineHeight) || EDITOR_CONSTANTS.DEFAULT_LINE_HEIGHT;
+  const paddingTop =
+    Number.parseFloat(computedStyle.paddingTop) || EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+  const targetTop = position.line * lineHeight + paddingTop;
   const targetBottom = targetTop + lineHeight;
-  const currentScrollTop = viewport.scrollTop;
-  const viewportHeight = viewport.clientHeight || 0;
+  const currentScrollTop = textarea.scrollTop;
+  const viewportHeight = textarea.clientHeight || 0;
 
   if (targetTop < currentScrollTop) {
-    viewport.scrollTop = targetTop;
+    textarea.scrollTop = targetTop;
   } else if (targetBottom > currentScrollTop + viewportHeight) {
-    viewport.scrollTop = Math.max(0, targetBottom - viewportHeight);
-  }
-
-  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement | null;
-  if (textarea && textarea.scrollTop !== viewport.scrollTop) {
-    textarea.scrollTop = viewport.scrollTop;
+    textarea.scrollTop = Math.max(0, targetBottom - viewportHeight);
   }
 };
 
@@ -143,6 +148,7 @@ interface EditorState {
   editorRef: RefObject<HTMLDivElement | null> | null;
   placeholder?: string;
   disabled: boolean;
+  activeEditorViewKey: string | null;
 
   // Actions
   actions: EditorStateActions;
@@ -150,7 +156,7 @@ interface EditorState {
 
 interface EditorStateActions {
   // Cursor actions
-  setCursorPosition: (position: Position) => void;
+  setCursorPosition: (position: Position, options?: { ensureVisible?: boolean }) => void;
   setSelection: (selection?: Range) => void;
   setDesiredColumn: (column?: number) => void;
   setCursorVisibility: (visible: boolean) => void;
@@ -178,6 +184,7 @@ interface EditorStateActions {
   setFileInfo: (filePath: string) => void;
   setPlaceholder: (placeholder?: string) => void;
   setDisabled: (disabled: boolean) => void;
+  setActiveEditorViewKey: (viewKey: string | null) => void;
 }
 
 export const useEditorStateStore = createSelectors(
@@ -204,17 +211,22 @@ export const useEditorStateStore = createSelectors(
       editorRef: null,
       placeholder: undefined,
       disabled: false,
+      activeEditorViewKey: null,
 
       // Actions
       actions: {
         // Cursor actions
-        setCursorPosition: (position) => {
-          const activeBufferId = useBufferStore.getState().activeBufferId;
-          if (activeBufferId) {
-            viewStateCache.setCursor(activeBufferId, position);
+        setCursorPosition: (position, options) => {
+          const { activeBufferId } = useBufferStore.getState();
+          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const viewKey = activeEditorViewKey ?? activeBufferId;
+          if (viewKey) {
+            viewStateCache.setCursor(viewKey, position);
           }
           set({ cursorPosition: position });
-          ensureCursorVisible(position);
+          if (options?.ensureVisible !== false) {
+            ensureCursorVisible(position);
+          }
         },
         setSelection: (selection) => set({ selection }),
         setDesiredColumn: (column) => set({ desiredColumn: column }),
@@ -359,9 +371,11 @@ export const useEditorStateStore = createSelectors(
 
         // Layout actions
         setScroll: (scrollTop, scrollLeft) => {
-          const activeBufferId = useBufferStore.getState().activeBufferId;
-          if (activeBufferId) {
-            viewStateCache.setScroll(activeBufferId, scrollTop, scrollLeft);
+          const { activeBufferId } = useBufferStore.getState();
+          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const viewKey = activeEditorViewKey ?? activeBufferId;
+          if (viewKey) {
+            viewStateCache.setScroll(viewKey, scrollTop, scrollLeft);
           }
           set({ scrollTop, scrollLeft });
         },
@@ -384,6 +398,7 @@ export const useEditorStateStore = createSelectors(
         setFileInfo: (filePath) => set({ filePath }),
         setPlaceholder: (placeholder) => set({ placeholder }),
         setDisabled: (disabled) => set({ disabled }),
+        setActiveEditorViewKey: (activeEditorViewKey) => set({ activeEditorViewKey }),
       },
     })),
   ),

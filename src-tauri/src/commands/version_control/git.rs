@@ -92,12 +92,21 @@ pub fn git_diff_file_with_content(
 }
 
 #[tauri::command]
-pub fn git_commit_diff(
+pub async fn git_commit_diff(
    repo_path: String,
    commit_hash: String,
    file_path: Option<String>,
 ) -> Result<Vec<git_backend::GitDiff>, String> {
-   git_backend::git_commit_diff(repo_path, commit_hash, file_path)
+   run_blocking(move || git_backend::git_commit_diff(repo_path, commit_hash, file_path)).await
+}
+
+#[tauri::command]
+pub async fn git_ref_diff(
+   repo_path: String,
+   base_ref: String,
+   target_ref: String,
+) -> Result<Vec<git_backend::GitDiff>, String> {
+   run_blocking(move || git_backend::git_ref_diff(repo_path, base_ref, target_ref)).await
 }
 
 #[tauri::command]
@@ -249,13 +258,36 @@ pub fn git_create_tag(
    name: String,
    message: Option<String>,
    commit: Option<String>,
+   signed: bool,
 ) -> Result<(), String> {
-   git_backend::git_create_tag(repo_path, name, message, commit)
+   git_backend::git_create_tag(repo_path, name, message, commit, signed)
 }
 
 #[tauri::command]
 pub fn git_delete_tag(repo_path: String, name: String) -> Result<(), String> {
    git_backend::git_delete_tag(repo_path, name)
+}
+
+#[tauri::command]
+pub async fn git_push_tag(repo_path: String, name: String, remote: String) -> Result<(), String> {
+   run_blocking(move || git_backend::git_push_tag(repo_path, name, remote)).await
+}
+
+#[tauri::command]
+pub async fn git_delete_remote_tag(
+   repo_path: String,
+   name: String,
+   remote: String,
+) -> Result<(), String> {
+   run_blocking(move || git_backend::git_delete_remote_tag(repo_path, name, remote)).await
+}
+
+#[tauri::command]
+pub fn git_checkout_tag(
+   repo_path: String,
+   name: String,
+) -> Result<git_backend::CheckoutResult, String> {
+   git_backend::git_checkout_tag(repo_path, name)
 }
 
 #[tauri::command]

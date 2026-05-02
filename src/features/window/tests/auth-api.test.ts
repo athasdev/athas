@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { __test__ as apiBaseTest } from "@/utils/api-base";
-import { __test__ } from "../services/auth-api";
+import { AuthApiError, isAuthInvalidError, __test__ } from "../services/auth-api";
 
 describe("auth-api desktop auth parsers", () => {
   it("parses valid desktop auth init response", () => {
@@ -48,5 +48,12 @@ describe("auth-api desktop auth parsers", () => {
     expect(apiBaseTest.isLocalApiBase("http://localhost:3000")).toBe(true);
     expect(apiBaseTest.isLocalApiBase("http://127.0.0.1:3000")).toBe(true);
     expect(apiBaseTest.isLocalApiBase("https://athas.dev")).toBe(false);
+  });
+
+  it("only treats authorization failures as invalid auth", () => {
+    expect(isAuthInvalidError(new AuthApiError("Unauthorized", 401))).toBe(true);
+    expect(isAuthInvalidError(new AuthApiError("Forbidden", 403))).toBe(true);
+    expect(isAuthInvalidError(new AuthApiError("Server error", 500))).toBe(false);
+    expect(isAuthInvalidError(new Error("Network error"))).toBe(false);
   });
 });

@@ -1,48 +1,34 @@
 import {
-  AlertCircle,
-  ChevronRight,
+  WarningCircle as AlertCircle,
+  CaretRight as ChevronRight,
   Cloud,
-  Code2,
+  Code as Code2,
   GitBranch,
   Hash,
   Info,
-  Languages,
+  Translate as Languages,
   Lightbulb,
-  MessageSquare,
+  ChatCircleText as MessageSquare,
   Palette,
-  Save,
-  Search,
-  Settings,
-  Sparkles,
-  Terminal,
-  WrapText,
-} from "lucide-react";
+  FloppyDisk as Save,
+  MagnifyingGlass as Search,
+  GearSix as Settings,
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+  TextAlignJustify as WrapText,
+} from "@phosphor-icons/react";
+import { settingsSearchIndex } from "@/features/settings/config/search-index";
+import type { Settings as AppSettings } from "@/features/settings/store";
+import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../models/action.types";
 
 interface SettingsActionsParams {
-  settings: {
-    vimMode: boolean;
-    wordWrap: boolean;
-    lineNumbers: boolean;
-    vimRelativeLineNumbers: boolean;
-    autoSave: boolean;
-    autoDetectLanguage: boolean;
-    formatOnSave: boolean;
-    autoCompletion: boolean;
-    parameterHints: boolean;
-    aiCompletion: boolean;
-    coreFeatures: {
-      breadcrumbs: boolean;
-      diagnostics: boolean;
-      search: boolean;
-      git: boolean;
-      terminal: boolean;
-      aiChat: boolean;
-      remote: boolean;
-      persistentCommands: boolean;
-    };
-  };
+  query: string;
+  settings: AppSettings;
   setIsSettingsDialogVisible: (v: boolean) => void;
+  openSettingsDialog: (tab?: SettingsTab) => void;
+  setSettingsSearchQuery: (query: string) => void;
   setIsThemeSelectorVisible: (v: boolean) => void;
   setIsIconThemeSelectorVisible: (v: boolean) => void;
   updateSetting: (key: string, value: any) => void | Promise<void>;
@@ -53,10 +39,60 @@ interface SettingsActionsParams {
   onClose: () => void;
 }
 
+const settingsTabLabels: Record<SettingsTab, string> = {
+  account: "Account",
+  general: "General",
+  editor: "Editor",
+  git: "Git",
+  appearance: "Appearance",
+  databases: "Database",
+  extensions: "Extensions",
+  ai: "AI",
+  keyboard: "Keybindings",
+  language: "Editor",
+  features: "Features",
+  enterprise: "Enterprise",
+  advanced: "Advanced",
+  terminal: "Terminal",
+  "file-explorer": "Files",
+};
+
+const settingsTabCommands = (Object.entries(settingsTabLabels) as Array<[SettingsTab, string]>)
+  .map(([tab, label]) => ({ tab, label }))
+  .filter(({ tab }) => tab !== "language");
+
+function getMatchingSettingsRecords(query: string) {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) return [];
+
+  return settingsSearchIndex
+    .map((record) => {
+      const score = scoreSearchQuery(trimmedQuery, [
+        { value: record.label, weight: 11 },
+        { value: record.description, weight: 1 },
+        { value: record.section, weight: 1 },
+        ...(record.keywords || []).map((keyword) => ({ value: keyword, weight: 6 })),
+      ]);
+
+      if (score === 0) return null;
+
+      return { record, score };
+    })
+    .filter((entry): entry is { record: (typeof settingsSearchIndex)[number]; score: number } => {
+      return entry !== null;
+    })
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 12)
+    .map((entry) => entry.record);
+}
+
 export const createSettingsActions = (params: SettingsActionsParams): Action[] => {
   const {
+    query,
     settings,
     setIsSettingsDialogVisible,
+    openSettingsDialog,
+    setSettingsSearchQuery,
     setIsThemeSelectorVisible,
     setIsIconThemeSelectorVisible,
     updateSetting,
@@ -66,6 +102,32 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     openOnboarding,
     onClose,
   } = params;
+
+  const openSettingsTabActions: Action[] = settingsTabCommands.map(({ tab, label }) => ({
+    id: `open-settings-tab-${tab}`,
+    label: `Preferences: Open ${label} Settings`,
+    description: `Open the ${label.toLowerCase()} settings tab`,
+    icon: <Settings />,
+    category: "Settings",
+    action: () => {
+      onClose();
+      setSettingsSearchQuery("");
+      openSettingsDialog(tab);
+    },
+  }));
+
+  const generatedSettingActions: Action[] = getMatchingSettingsRecords(query).map((record) => ({
+    id: `open-setting-${record.id}`,
+    label: `Settings: ${record.label}`,
+    description: `Open ${settingsTabLabels[record.tab]} > ${record.label}`,
+    icon: <Settings />,
+    category: "Settings",
+    action: () => {
+      onClose();
+      setSettingsSearchQuery(record.label);
+      openSettingsDialog(record.tab);
+    },
+  }));
 
   return [
     {
@@ -315,6 +377,32 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "toggle-show-minimap",
+      label: settings.showMinimap ? "Editor: Hide Minimap" : "Editor: Show Minimap",
+      description: settings.showMinimap
+        ? "Hide the editor minimap overview"
+        : "Show the editor minimap overview",
+      icon: <Code2 />,
+      category: "Editor",
+      action: () => {
+        updateSetting("showMinimap", !settings.showMinimap);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-telemetry",
+      label: settings.telemetry ? "Advanced: Disable Telemetry" : "Advanced: Enable Telemetry",
+      description: settings.telemetry
+        ? "Stop sending anonymous usage diagnostics"
+        : "Enable anonymous usage diagnostics",
+      icon: <Info />,
+      category: "Advanced",
+      action: () => {
+        updateSetting("telemetry", !settings.telemetry);
+        onClose();
+      },
+    },
+    {
       id: "toggle-breadcrumbs",
       label: settings.coreFeatures.breadcrumbs
         ? "Features: Disable Breadcrumbs"
@@ -346,6 +434,24 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           diagnostics: !settings.coreFeatures.diagnostics,
+        });
+        onClose();
+      },
+    },
+    {
+      id: "toggle-debugger-feature",
+      label: settings.coreFeatures.debugger
+        ? "Features: Disable Debugger"
+        : "Features: Enable Debugger",
+      description: settings.coreFeatures.debugger
+        ? "Disable run and debug panel"
+        : "Enable run and debug panel",
+      icon: <AlertCircle />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          debugger: !settings.coreFeatures.debugger,
         });
         onClose();
       },
@@ -448,5 +554,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         onClose();
       },
     },
+    ...openSettingsTabActions,
+    ...generatedSettingActions,
   ];
 };

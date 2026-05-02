@@ -1,4 +1,13 @@
-import { Edit, FolderOpen, Loader2, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
+import {
+  PencilSimple as Edit,
+  FolderOpen,
+  SpinnerGap as Loader2,
+  Plus,
+  HardDrives as Server,
+  Trash as Trash2,
+  WifiHigh as Wifi,
+  WifiSlash as WifiOff,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -60,7 +69,7 @@ const ConnectionList = ({
           id: "delete",
           label: "Delete",
           icon: <Trash2 />,
-          className: "hover:text-red-500",
+          className: "hover:text-error",
           onClick: () => {
             if (contextMenu.data) {
               onDelete(contextMenu.data);
@@ -132,14 +141,14 @@ const ConnectionList = ({
                 <span
                   className={cn(
                     "h-1.5 w-1.5 shrink-0 rounded-full",
-                    connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                    connection.isConnected ? "bg-success" : "bg-text-lighter/40",
                   )}
                 />
 
                 {/* Connection Info */}
                 <div className="flex min-w-0 flex-1 items-center gap-1.5">
                   <span className="truncate">{connection.name}</span>
-                  <span className="shrink-0 text-[10px] text-text-lighter">
+                  <span className="ui-text-xs shrink-0 text-text-lighter">
                     {connection.type.toUpperCase()}
                   </span>
                 </div>
@@ -154,7 +163,7 @@ const ConnectionList = ({
                         ? formatLastConnected(connection.lastConnected)
                         : "";
                   return (
-                    <span className="shrink-0 text-[10px] text-text-lighter">{statusText}</span>
+                    <span className="ui-text-xs shrink-0 text-text-lighter">{statusText}</span>
                   );
                 })()}
 
@@ -182,7 +191,7 @@ const ConnectionList = ({
                         }}
                         variant="ghost"
                         size="icon-xs"
-                        className="hover:text-red-400"
+                        className="hover:text-error"
                         aria-label="Disconnect"
                       >
                         <WifiOff />

@@ -1,4 +1,4 @@
-import { Download, FileJson, Rows } from "lucide-react";
+import { Download, FileCode as FileJson, Rows } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";

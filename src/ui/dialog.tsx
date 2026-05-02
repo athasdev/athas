@@ -1,8 +1,9 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva } from "class-variance-authority";
 import { motion } from "framer-motion";
-import { type LucideProps, X } from "lucide-react";
+import { type IconProps as PhosphorIconProps, X } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
+import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 
 interface DialogProps {
@@ -10,7 +11,7 @@ interface DialogProps {
   onClose: () => void;
   title: ReactNode;
   icon?: React.ForwardRefExoticComponent<
-    Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+    Omit<PhosphorIconProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
   headerActions?: ReactNode;
   footer?: ReactNode;
@@ -52,8 +53,6 @@ const Dialog = ({
   headerActions,
   footer,
   size = "md",
-  headerBorder = true,
-  footerBorder = true,
   classNames,
 }: DialogProps) => {
   return (
@@ -65,14 +64,34 @@ const Dialog = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className={cn(
-              "fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]",
-              classNames?.backdrop,
-            )}
+            className={cn("fixed inset-0 z-[9998] bg-black/20", classNames?.backdrop)}
           />
         </DialogPrimitive.Overlay>
 
-        <DialogPrimitive.Content asChild onEscapeKeyDown={() => onClose()}>
+        <DialogPrimitive.Content
+          asChild
+          aria-describedby={undefined}
+          onEscapeKeyDown={(event) => {
+            const target = event.target as HTMLElement | null;
+            const activeElement =
+              typeof document !== "undefined"
+                ? (document.activeElement as HTMLElement | null)
+                : null;
+            const { dismissTarget, blurTarget } = resolveEscapeGuard(target, activeElement);
+
+            if (event.defaultPrevented || dismissTarget) {
+              event.preventDefault();
+              return;
+            }
+
+            if (blurTarget) {
+              event.preventDefault();
+              blurTarget.blur();
+              return;
+            }
+            onClose();
+          }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -81,12 +100,7 @@ const Dialog = ({
             data-dialog-content=""
             className={cn(dialogContentVariants({ size }), classNames?.modal)}
           >
-            <div
-              className={cn(
-                "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
-                headerBorder && "border-border border-b",
-              )}
-            >
+            <div className="flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3">
               <div className="flex items-center gap-2">
                 {Icon && <Icon className="text-text-lighter" />}
                 <DialogPrimitive.Title className="min-w-0 ui-font ui-text-md font-medium text-text">
@@ -110,14 +124,7 @@ const Dialog = ({
             <div className={cn("flex-1 overflow-y-auto p-4", classNames?.content)}>{children}</div>
 
             {footer && (
-              <div
-                className={cn(
-                  "flex shrink-0 items-center justify-end gap-2 px-4 py-3",
-                  footerBorder && "border-border border-t",
-                )}
-              >
-                {footer}
-              </div>
+              <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>
             )}
           </motion.div>
         </DialogPrimitive.Content>

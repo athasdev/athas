@@ -1,5 +1,12 @@
+import { useEffect, useState } from "react";
 import { create } from "zustand";
-import { AlertTriangle, CheckCircle2, Info, Loader2, X } from "lucide-react";
+import {
+  Warning as AlertTriangle,
+  CheckCircle as CheckCircle2,
+  Info,
+  SpinnerGap as Loader2,
+  X,
+} from "@phosphor-icons/react";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -225,13 +232,37 @@ export const useToast = () => {
   };
 };
 
+function getToastTheme() {
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.getAttribute("data-theme-type") === "light" ? "light" : "dark";
+}
+
 export const ToastContainer = () => {
+  const [theme, setTheme] = useState<"light" | "dark">(getToastTheme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setTheme(getToastTheme());
+    });
+
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme-type"],
+    });
+
+    setTheme(getToastTheme());
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <SonnerToaster
       position="bottom-right"
-      expand={false}
-      richColors
-      theme="dark"
+      expand
+      theme={theme}
       icons={{
         success: <CheckCircle2 size={18} />,
         info: <Info size={18} />,
@@ -242,14 +273,14 @@ export const ToastContainer = () => {
       }}
       toastOptions={{
         closeButton: true,
-        className: "ui-font group",
-        descriptionClassName: "ui-font",
+        className: "ui-font font-normal group",
+        descriptionClassName: "ui-font font-normal",
         classNames: {
           toast:
-            "group rounded-xl border border-border bg-primary-bg text-text shadow-xl backdrop-blur-sm",
+            "group ui-font rounded-xl border border-border bg-primary-bg text-text font-normal shadow-xl backdrop-blur-sm",
           content: "pr-8",
-          title: "ui-font text-sm leading-5 text-text",
-          description: "ui-font text-sm leading-5 text-text-light",
+          title: "ui-font text-sm font-normal leading-5 text-text",
+          description: "ui-font text-sm font-normal leading-5 text-text-light",
           icon: "mt-0.5",
           success: "border-border",
           info: "border-border",
@@ -257,7 +288,7 @@ export const ToastContainer = () => {
           error: "border-border",
           loading: "border-border",
           closeButton:
-            "absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100 border-none bg-transparent text-text-lighter hover:bg-hover hover:text-text",
+            "absolute left-auto right-2 top-2 m-0 opacity-0 transition-opacity group-hover:opacity-100 border-none bg-transparent text-text-lighter hover:bg-hover hover:text-text",
           actionButton: "ui-font border-none bg-hover text-text hover:bg-border",
           cancelButton: "ui-font border-none bg-hover text-text hover:bg-border",
         },
@@ -273,6 +304,8 @@ export const ToastContainer = () => {
           background: "var(--color-primary-bg)",
           border: "1px solid var(--color-border)",
           color: "var(--color-text)",
+          fontFamily: "var(--font-ui)",
+          fontWeight: "400",
         },
       }}
     />

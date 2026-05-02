@@ -1,6 +1,7 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { recordUpdateCheckTelemetry } from "@/features/telemetry/services/telemetry";
 import { useWhatsNewStore } from "../stores/whats-new-store";
 
 export interface UpdateInfo {
@@ -46,6 +47,7 @@ export const useUpdater = (checkOnMount = true) => {
 
       const update = await check();
       updateRef.current = update;
+      const currentVersion = update?.currentVersion ?? "";
 
       if (update?.available) {
         const updateInfo = {
@@ -61,6 +63,11 @@ export const useUpdater = (checkOnMount = true) => {
           checking: false,
           updateInfo,
         }));
+        void recordUpdateCheckTelemetry({
+          status: "available",
+          availableVersion: update.version,
+          currentVersion,
+        });
         return true;
       }
 
@@ -71,14 +78,27 @@ export const useUpdater = (checkOnMount = true) => {
         checking: false,
         updateInfo: null,
       }));
+      void recordUpdateCheckTelemetry({
+        status: "up_to_date",
+        availableVersion: null,
+        currentVersion,
+      });
       return false;
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to check for updates";
+      const failedCurrentVersion = updateInfoRef.current?.currentVersion ?? "";
       updateInfoRef.current = null;
       setState((prev) => ({
         ...prev,
         checking: false,
-        error: error instanceof Error ? error.message : "Failed to check for updates",
+        error: message,
       }));
+      void recordUpdateCheckTelemetry({
+        status: "failed",
+        availableVersion: null,
+        currentVersion: failedCurrentVersion,
+        error: message,
+      });
       return false;
     }
   }, []);

@@ -1,21 +1,21 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  AlertCircle,
-  AlertTriangle,
-  AlignCenter,
+  WarningCircle as AlertCircle,
+  Warning as AlertTriangle,
+  TextAlignCenter as AlignCenter,
   Check,
-  ChevronDown,
-  ChevronRight,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
   Copy,
-  Filter,
+  Funnel as Filter,
   Info,
-  Maximize,
-  Maximize2,
-  Minimize2,
-  Search,
-  WandSparkles,
+  ArrowsOut as Maximize,
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
+  MagnifyingGlass as Search,
+  MagicWand as WandSparkles,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

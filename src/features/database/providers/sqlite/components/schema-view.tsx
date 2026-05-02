@@ -1,4 +1,12 @@
-import { Calendar, FileText, Filter, Hash, Key, Link, Type } from "lucide-react";
+import {
+  Calendar,
+  FileText,
+  Funnel as Filter,
+  Hash,
+  Key,
+  Link,
+  TextT as Type,
+} from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import type { ColumnInfo, ForeignKeyInfo } from "../sqlite-types";
 

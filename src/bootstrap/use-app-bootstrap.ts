@@ -18,6 +18,7 @@ import { useContextMenuPrevention } from "@/features/window/hooks/use-context-me
 import { useDeepLink } from "@/features/window/hooks/use-deep-link";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
+import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import {
   handleWindowOpenRequest,
@@ -29,6 +30,7 @@ export function useAppBootstrap() {
   const initializeOnboarding = useOnboardingStore((state) => state.initialize);
 
   usePlatformSetup();
+  useSettingsSync();
   useFontLoading();
   useDeepLink();
   useCliOpen();

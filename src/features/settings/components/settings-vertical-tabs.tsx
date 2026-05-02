@@ -1,115 +1,146 @@
-import { ChevronDown, ChevronRight, PenTool, Settings2, Shield, Sparkles } from "lucide-react";
+import {
+  ArrowSquareUp,
+  CodeBlock,
+  Database,
+  Gear,
+  GearSix,
+  GitBranch,
+  Keyboard,
+  PaintBrush,
+  PuzzlePiece,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkle,
+  TerminalWindow,
+  TreeStructure,
+  UserCircle,
+} from "@phosphor-icons/react";
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
+import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface SettingsVerticalTabsProps {
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
+  panelIdForTab?: (tab: SettingsTab) => string;
 }
 
 interface TabItem {
   id: SettingsTab;
   label: string;
+  icon: React.ComponentType<{
+    size?: string | number;
+    className?: string;
+    weight?: "regular" | "duotone";
+  }>;
 }
 
-interface TabGroup {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  items: TabItem[];
-}
-
-const tabGroups: TabGroup[] = [
+const tabItems: TabItem[] = [
   {
-    id: "workspace",
-    label: "Workspace",
-    icon: Settings2,
-    items: [
-      { id: "general", label: "General" },
-      { id: "account", label: "Account" },
-      { id: "appearance", label: "Appearance" },
-      { id: "features", label: "Features" },
-    ],
+    id: "general",
+    label: "General",
+    icon: GearSix,
   },
   {
-    id: "development",
-    label: "Development",
-    icon: PenTool,
-    items: [
-      { id: "editor", label: "Editor" },
-      { id: "file-explorer", label: "File Explorer" },
-      { id: "git", label: "Git" },
-      { id: "terminal", label: "Terminal" },
-      { id: "language", label: "Language" },
-      { id: "keyboard", label: "Keybindings" },
-      { id: "extensions", label: "Extensions" },
-      { id: "databases", label: "Databases" },
-    ],
+    id: "account",
+    label: "Account",
+    icon: UserCircle,
   },
   {
-    id: "intelligence",
-    label: "Intelligence",
-    icon: Sparkles,
-    items: [{ id: "ai", label: "AI" }],
+    id: "appearance",
+    label: "Appearance",
+    icon: PaintBrush,
   },
   {
-    id: "administration",
-    label: "System",
-    icon: Shield,
-    items: [
-      { id: "enterprise", label: "Enterprise" },
-      { id: "advanced", label: "Advanced" },
-    ],
+    id: "features",
+    label: "Features",
+    icon: SlidersHorizontal,
+  },
+  {
+    id: "editor",
+    label: "Editor",
+    icon: CodeBlock,
+  },
+  {
+    id: "file-explorer",
+    label: "Files",
+    icon: TreeStructure,
+  },
+  {
+    id: "git",
+    label: "Git",
+    icon: GitBranch,
+  },
+  {
+    id: "terminal",
+    label: "Terminal",
+    icon: TerminalWindow,
+  },
+  {
+    id: "keyboard",
+    label: "Keybindings",
+    icon: Keyboard,
+  },
+  {
+    id: "extensions",
+    label: "Extensions",
+    icon: PuzzlePiece,
+  },
+  {
+    id: "databases",
+    label: "Database",
+    icon: Database,
+  },
+  {
+    id: "ai",
+    label: "AI",
+    icon: Sparkle,
+  },
+  {
+    id: "enterprise",
+    label: "Enterprise",
+    icon: ShieldCheck,
+  },
+  {
+    id: "advanced",
+    label: "Advanced",
+    icon: Gear,
   },
 ];
 
-const defaultExpandedGroups = ["workspace", "development", "intelligence"];
-
-function getGroupIdForTab(tab: SettingsTab) {
-  return tabGroups.find((group) => group.items.some((item) => item.id === tab))?.id ?? "workspace";
-}
-
-export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVerticalTabsProps) => {
+export const SettingsVerticalTabs = ({
+  activeTab,
+  onTabChange,
+  panelIdForTab = (tab) => `settings-panel-${tab}`,
+}: SettingsVerticalTabsProps) => {
   const searchQuery = useSettingsStore((state) => state.search.query);
   const searchResults = useSettingsStore((state) => state.search.results);
   const subscription = useAuthStore((state) => state.subscription);
+  const { isPro } = useProFeature();
+  const { promptUpgrade } = useUpgradeToPro();
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const [expandedGroups, setExpandedGroups] = React.useState<string[]>(() => {
-    const activeGroupId = getGroupIdForTab(activeTab);
-    return defaultExpandedGroups.includes(activeGroupId)
-      ? defaultExpandedGroups
-      : [...defaultExpandedGroups, activeGroupId];
+  const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+  const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
+
+  const visibleTabs = tabItems.filter((item) => {
+    if (!hasEnterpriseAccess && item.id === "enterprise") {
+      return false;
+    }
+
+    if (!matchingTabs) {
+      return true;
+    }
+
+    return matchingTabs.has(item.id);
   });
 
-  // Get unique tabs from search results
-  const matchingTabs = searchQuery ? [...new Set(searchResults.map((result) => result.tab))] : [];
-
-  const availableGroups = tabGroups
-    .map((group) => ({
-      ...group,
-      items: hasEnterpriseAccess
-        ? group.items
-        : group.items.filter((item) => item.id !== "enterprise"),
-    }))
-    .filter((group) => group.items.length > 0);
-
-  const visibleGroups = searchQuery
-    ? availableGroups
-        .map((group) => ({
-          ...group,
-          items: group.items.filter((item) => matchingTabs.includes(item.id)),
-        }))
-        .filter((group) => group.items.length > 0)
-    : availableGroups;
-
-  const visibleTabs = visibleGroups.flatMap((group) => group.items);
-
-  // Auto-select first visible tab when searching
   React.useEffect(() => {
     if (searchQuery && visibleTabs.length > 0) {
       const firstVisibleTab = visibleTabs[0].id;
@@ -118,23 +149,6 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
       }
     }
   }, [searchQuery, visibleTabs, activeTab, onTabChange]);
-
-  React.useEffect(() => {
-    if (searchQuery) return;
-
-    const activeGroupId = availableGroups.find((group) =>
-      group.items.some((item) => item.id === activeTab),
-    )?.id;
-    if (!activeGroupId || expandedGroups.includes(activeGroupId)) return;
-
-    setExpandedGroups((current) => [...current, activeGroupId]);
-  }, [searchQuery, availableGroups, activeTab, expandedGroups]);
-
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroups((current) =>
-      current.includes(groupId) ? current.filter((id) => id !== groupId) : [...current, groupId],
-    );
-  };
 
   const handleSidebarWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     const container = scrollContainerRef.current;
@@ -147,69 +161,81 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
     event.preventDefault();
   };
 
+  const focusTabAtIndex = React.useCallback(
+    (index: number) => {
+      const nextTab = visibleTabs[index];
+      if (!nextTab) return;
+
+      onTabChange(nextTab.id);
+      window.requestAnimationFrame(() => {
+        tabRefs.current[index]?.focus();
+      });
+    },
+    [onTabChange, visibleTabs],
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div
         ref={scrollContainerRef}
-        className="flex-1 space-y-1 overflow-y-auto p-2"
+        role="tablist"
+        aria-orientation="vertical"
+        aria-label="Settings sections"
+        className="flex-1 space-y-0.5 overflow-y-auto p-2"
         onWheelCapture={handleSidebarWheel}
       >
-        {visibleGroups.length > 0 ? (
-          visibleGroups.map((group) => {
-            const Icon = group.icon;
-            const isExpanded = searchQuery ? true : expandedGroups.includes(group.id);
-            const hasActiveItem = group.items.some((item) => item.id === activeTab);
+        {visibleTabs.length > 0 ? (
+          visibleTabs.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
 
             return (
-              <div key={group.id} className="overflow-hidden rounded-xl">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleGroup(group.id)}
-                  className={cn(
-                    "ui-text-sm h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
-                    hasActiveItem
-                      ? "bg-accent/8 text-text"
-                      : "text-text-lighter hover:bg-hover hover:text-text",
-                  )}
-                >
-                  <Icon />
-                  <span className="flex-1">{group.label}</span>
-                  {isExpanded ? (
-                    <ChevronDown className="shrink-0" />
-                  ) : (
-                    <ChevronRight className="shrink-0" />
-                  )}
-                </Button>
-
-                {isExpanded ? (
-                  <div className="relative mt-1 space-y-1 pl-6">
-                    <div className="pointer-events-none absolute top-0 bottom-0 left-[17px] w-px bg-border/40" />
-                    {group.items.map((item) => {
-                      const isActive = activeTab === item.id;
-
-                      return (
-                        <Button
-                          key={item.id}
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => onTabChange(item.id)}
-                          className={cn(
-                            "ui-text-sm h-auto w-full justify-start px-2.5 py-1.5 text-left",
-                            isActive
-                              ? "bg-accent/10 text-accent"
-                              : "text-text-lighter hover:bg-hover hover:text-text",
-                          )}
-                        >
-                          <span>{item.label}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
+              <Button
+                key={item.id}
+                ref={(element) => {
+                  tabRefs.current[index] = element;
+                }}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onTabChange(item.id)}
+                onKeyDown={(event) => {
+                  switch (event.key) {
+                    case "ArrowDown":
+                    case "ArrowRight":
+                      event.preventDefault();
+                      focusTabAtIndex((index + 1) % visibleTabs.length);
+                      break;
+                    case "ArrowUp":
+                    case "ArrowLeft":
+                      event.preventDefault();
+                      focusTabAtIndex((index - 1 + visibleTabs.length) % visibleTabs.length);
+                      break;
+                    case "Home":
+                      event.preventDefault();
+                      focusTabAtIndex(0);
+                      break;
+                    case "End":
+                      event.preventDefault();
+                      focusTabAtIndex(visibleTabs.length - 1);
+                      break;
+                    default:
+                      break;
+                  }
+                }}
+                role="tab"
+                id={`settings-tab-${item.id}`}
+                aria-selected={isActive}
+                aria-controls={panelIdForTab(item.id)}
+                tabIndex={isActive ? 0 : -1}
+                className={cn(
+                  "ui-text-sm h-auto w-full justify-start gap-2.5 rounded-xl px-2.5 py-1.5 text-left",
+                  isActive ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
+                )}
+              >
+                <Icon className="size-[18px] shrink-0 text-current" weight="duotone" />
+                <span className="truncate">{item.label}</span>
+              </Button>
             );
           })
         ) : (
@@ -218,6 +244,21 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
           </div>
         )}
       </div>
+
+      {!isPro ? (
+        <div className="p-2">
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={promptUpgrade}
+            className="w-full justify-center border border-border/70"
+          >
+            <ArrowSquareUp className="size-4" weight="duotone" />
+            Upgrade to Pro
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 };

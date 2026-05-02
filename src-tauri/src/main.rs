@@ -4,10 +4,12 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use app_setup::configure_app;
+use app_runtime::AthasRuntime;
+use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
 use terminal::{close_terminal, create_terminal, list_shells, terminal_resize, terminal_write};
 
+mod app_runtime;
 mod app_setup;
 mod bootstrap;
 mod commands;
@@ -17,9 +19,10 @@ mod menu;
 mod secure_storage;
 mod terminal;
 
+#[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
    #[cfg(target_os = "linux")]
-   if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+   if cfg!(not(feature = "linux")) && std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
       // SAFETY: Called at program start before any threads are spawned
       unsafe {
          std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
@@ -29,7 +32,7 @@ fn main() {
    #[cfg(target_os = "macos")]
    bootstrap::macos::disable_macos_autofill_heuristics();
 
-   tauri::Builder::default()
+   tauri::Builder::<AthasRuntime>::new()
       .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
@@ -67,6 +70,7 @@ fn main() {
          git_diff_file,
          git_diff_file_with_content,
          git_commit_diff,
+         git_ref_diff,
          git_branches,
          git_checkout,
          git_create_branch,
@@ -89,6 +93,9 @@ fn main() {
          git_get_tags,
          git_create_tag,
          git_delete_tag,
+         git_push_tag,
+         git_delete_remote_tag,
+         git_checkout_tag,
          git_get_worktrees,
          git_add_worktree,
          git_remove_worktree,
@@ -100,12 +107,11 @@ fn main() {
          store_github_token,
          get_github_token,
          remove_github_token,
-         github_check_cli_auth,
+         github_check_auth,
          github_list_prs,
          github_list_issues,
          github_list_workflow_runs,
          github_get_current_user,
-         github_open_pr_in_browser,
          github_checkout_pr,
          github_get_pr_details,
          github_get_pr_diff,
@@ -113,6 +119,7 @@ fn main() {
          github_get_pr_comments,
          github_get_issue_details,
          github_get_workflow_run_details,
+         github_get_workflow_job_logs,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,
@@ -131,6 +138,7 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_app_window,
+         uses_native_window_chrome,
          create_embedded_webview,
          close_embedded_webview,
          navigate_embedded_webview,
@@ -193,24 +201,8 @@ fn main() {
          get_system_fonts,
          get_monospace_fonts,
          validate_font,
-         // SQLite commands
-         get_sqlite_tables,
-         query_sqlite,
-         query_sqlite_filtered,
-         execute_sqlite,
-         insert_sqlite_row,
-         update_sqlite_row,
-         delete_sqlite_row,
-         get_sqlite_foreign_keys,
-         // DuckDB commands
-         get_duckdb_tables,
-         query_duckdb,
-         query_duckdb_filtered,
-         execute_duckdb,
-         insert_duckdb_row,
-         update_duckdb_row,
-         delete_duckdb_row,
-         get_duckdb_foreign_keys,
+         // Database provider sidecar commands
+         run_database_provider_command,
          // Connection management
          connect_database,
          disconnect_database,
@@ -222,45 +214,6 @@ fn main() {
          save_connection,
          list_saved_connections,
          delete_saved_connection,
-         // PostgreSQL commands
-         get_postgres_tables,
-         query_postgres,
-         query_postgres_filtered,
-         execute_postgres,
-         get_postgres_foreign_keys,
-         get_postgres_table_schema,
-         get_postgres_subscription_info,
-         get_postgres_subscription_status,
-         create_postgres_subscription,
-         drop_postgres_subscription,
-         set_postgres_subscription_enabled,
-         refresh_postgres_subscription,
-         insert_postgres_row,
-         update_postgres_row,
-         delete_postgres_row,
-         // MySQL commands
-         get_mysql_tables,
-         query_mysql,
-         query_mysql_filtered,
-         execute_mysql,
-         get_mysql_foreign_keys,
-         get_mysql_table_schema,
-         insert_mysql_row,
-         update_mysql_row,
-         delete_mysql_row,
-         // MongoDB commands
-         get_mongo_databases,
-         get_mongo_collections,
-         query_mongo_documents,
-         insert_mongo_document,
-         update_mongo_document,
-         delete_mongo_document,
-         // Redis commands
-         redis_scan_keys,
-         redis_get_value,
-         redis_set_value,
-         redis_delete_key,
-         redis_get_info,
          // LSP commands
          lsp_start,
          lsp_stop,
@@ -274,14 +227,22 @@ fn main() {
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
+         lsp_get_signature_trigger_characters,
          lsp_get_references,
          lsp_rename,
+         lsp_prepare_rename,
          lsp_get_code_actions,
          lsp_apply_code_action,
          lsp_document_open,
          lsp_document_change,
          lsp_document_close,
          lsp_is_language_supported,
+         // Debugger commands
+         debug_start_session,
+         debug_send_request,
+         debug_send_raw_message,
+         debug_stop_session,
+         debug_list_sessions,
          // Extension commands
          download_extension,
          install_extension,
@@ -328,6 +289,12 @@ fn main() {
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,
       ])
-      .run(tauri::generate_context!())
-      .expect("error while running tauri application");
+      .build(tauri::generate_context!())
+      .expect("error while building tauri application")
+      .run(|app_handle, event| match event {
+         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+            shutdown_background_services(app_handle);
+         }
+         _ => {}
+      });
 }

@@ -1,7 +1,9 @@
+import { DEFAULT_UI_FONT_SIZE } from "@/features/settings/config/typography-defaults";
+
 export const UI_FONT_SIZE_MIN = 10;
 export const UI_FONT_SIZE_MAX = 24;
 export const UI_FONT_SIZE_STEP = 0.5;
-export const UI_FONT_SIZE_DEFAULT = 14;
+export const UI_FONT_SIZE_DEFAULT = DEFAULT_UI_FONT_SIZE;
 
 const UI_FONT_SCALE_PRECISION = 4;
 

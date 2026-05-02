@@ -38,6 +38,8 @@ export default function Switch({
 }: SwitchProps) {
   return (
     <label
+      data-setting-interactive-root="true"
+      data-setting-primary-control="true"
       className={cn(
         "relative inline-flex cursor-pointer items-center",
         disabled && "cursor-not-allowed opacity-50",
@@ -46,6 +48,8 @@ export default function Switch({
     >
       <input
         type="checkbox"
+        role="switch"
+        aria-checked={checked}
         className="peer sr-only"
         checked={checked}
         onChange={(e) => !disabled && onChange(e.target.checked)}

@@ -1,4 +1,4 @@
-import { Database } from "lucide-react";
+import { Database } from "@phosphor-icons/react";
 import type { Action } from "../models/action.types";
 
 interface DatabaseActionsParams {

@@ -3,13 +3,13 @@ import {
   Database,
   FileText,
   FolderOpen,
-  Globe,
+  GlobeHemisphereWest as Globe,
   Pencil,
   Plus,
-  Sparkles,
-  Terminal,
-  Trash2,
-} from "lucide-react";
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -245,11 +245,8 @@ export function EmptyEditorState() {
   ];
 
   return (
-    <div
-      className="flex h-full flex-col items-center justify-center"
-      onContextMenu={contextMenu.open}
-    >
-      <div className="flex w-48 flex-col gap-0.5">
+    <div className="flex h-full min-h-0 w-full overflow-auto" onContextMenu={contextMenu.open}>
+      <div className="m-auto flex w-48 min-w-0 flex-col gap-0.5 px-2 py-3">
         {actions.map((item) => (
           <Button
             key={item.id}
@@ -269,7 +266,7 @@ export function EmptyEditorState() {
             <div className="my-1 h-px bg-border" />
             {customActions.map((action) =>
               editingActionId === action.id ? (
-                <div key={action.id} className="px-1">
+                <div key={action.id} className="min-w-0 px-1">
                   <Input
                     ref={inputRef}
                     type="text"
@@ -284,7 +281,7 @@ export function EmptyEditorState() {
               ) : (
                 <div
                   key={action.id}
-                  className="group flex items-center gap-1 rounded-md px-3 py-1.5 hover:bg-hover"
+                  className="group flex min-w-0 items-center gap-1 rounded-md px-3 py-1.5 hover:bg-hover"
                 >
                   <Button
                     type="button"
@@ -293,10 +290,10 @@ export function EmptyEditorState() {
                     }
                     variant="ghost"
                     size="sm"
-                    className="h-auto flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
+                    className="h-auto min-w-0 flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
                   >
                     <Terminal className="shrink-0 text-text-light" />
-                    <span className="text-text text-xs">{action.name}</span>
+                    <span className="truncate text-text text-xs">{action.name}</span>
                   </Button>
                   <Button
                     type="button"
@@ -325,7 +322,7 @@ export function EmptyEditorState() {
         <div className="my-1 h-px bg-border" />
 
         {isAddingAction ? (
-          <div className="px-1">
+          <div className="min-w-0 px-1">
             <Input
               ref={inputRef}
               type="text"

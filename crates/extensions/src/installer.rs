@@ -1,10 +1,11 @@
 use super::types::{DownloadInfo, ExtensionMetadata, InstallProgress, InstallStatus};
+use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::{Context, Result};
 use std::{
    fs,
    path::{Path, PathBuf},
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{Emitter, Manager};
 
 pub struct ExtensionInstaller {
    app_handle: AppHandle,
@@ -107,17 +108,26 @@ impl ExtensionInstaller {
          },
       );
 
-      let checksum = sha256::digest(bytes.as_ref());
-      if checksum != download_info.checksum {
-         anyhow::bail!(
-            "Checksum mismatch for extension {}: expected {}, got {}",
-            extension_id,
-            download_info.checksum,
-            checksum
-         );
+      if !download_info.checksum.is_empty() {
+         let checksum = sha256::digest(bytes.as_ref());
+         if checksum != download_info.checksum {
+            anyhow::bail!(
+               "Checksum mismatch for extension {}: expected {}, got {}",
+               extension_id,
+               download_info.checksum,
+               checksum
+            );
+         }
       }
 
-      log::info!("Checksum verified for extension {}", extension_id);
+      if download_info.checksum.is_empty() {
+         log::info!(
+            "Checksum verification skipped for extension {}",
+            extension_id
+         );
+      } else {
+         log::info!("Checksum verified for extension {}", extension_id);
+      }
 
       // Save to temporary file
       let temp_dir = std::env::temp_dir();

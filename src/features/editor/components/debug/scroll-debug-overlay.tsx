@@ -34,6 +34,7 @@ export function ScrollDebugOverlay() {
   const scrollLeft = useEditorStateStore.use.scrollLeft();
   const viewportHeight = useEditorStateStore.use.viewportHeight();
   const fontSize = useEditorSettingsStore.use.fontSize();
+  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
 
   useEffect(() => {
     const checkDebugMode = () => {
@@ -56,7 +57,7 @@ export function ScrollDebugOverlay() {
   useEffect(() => {
     if (!enabled) return;
 
-    const lineHeight = getLineHeight(fontSize);
+    const lineHeight = getLineHeight(fontSize, editorLineHeight);
     const now = Date.now();
     const timeDelta = now - metrics.lastUpdate;
     const fps = timeDelta > 0 ? Math.round(1000 / timeDelta) : 0;
@@ -70,7 +71,15 @@ export function ScrollDebugOverlay() {
       fps,
       lastUpdate: now,
     });
-  }, [enabled, scrollTop, scrollLeft, viewportHeight, fontSize, metrics.lastUpdate]);
+  }, [
+    enabled,
+    scrollTop,
+    scrollLeft,
+    viewportHeight,
+    fontSize,
+    editorLineHeight,
+    metrics.lastUpdate,
+  ]);
 
   if (!enabled) return null;
 

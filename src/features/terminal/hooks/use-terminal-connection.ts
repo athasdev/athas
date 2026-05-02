@@ -13,6 +13,7 @@ interface UseTerminalConnectionOptions {
   isInitialized: boolean;
   onTerminalExit?: (sessionId: string) => void;
   remoteConnectionId?: string;
+  reuseExistingConnection?: boolean;
   sessionId: string;
   terminal: XtermTerminal | null;
   updateSession: (
@@ -32,6 +33,7 @@ export function useTerminalConnection({
   isInitialized,
   onTerminalExit,
   remoteConnectionId,
+  reuseExistingConnection = false,
   sessionId,
   terminal,
   updateSession,
@@ -284,7 +286,7 @@ export function useTerminalConnection({
   ]);
 
   useEffect(() => {
-    if (!initialCommand || !connectionId) return;
+    if (!initialCommand || !connectionId || reuseExistingConnection) return;
     if (initialCommandSentForConnectionRef.current === connectionId) return;
 
     initialCommandSentForConnectionRef.current = connectionId;
@@ -293,7 +295,7 @@ export function useTerminalConnection({
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
-  }, [connectionId, initialCommand, write]);
+  }, [connectionId, initialCommand, reuseExistingConnection, write]);
 
   return {
     currentConnectionIdRef,

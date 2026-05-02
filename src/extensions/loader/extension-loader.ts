@@ -46,6 +46,7 @@ function createDummyEditorAPI(): EditorAPI {
     selectAll: () => {},
     getSettings: () => ({
       fontSize: 14,
+      lineHeight: 1.4,
       tabSize: 2,
       lineNumbers: true,
       wordWrap: false,

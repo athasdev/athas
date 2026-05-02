@@ -1,4 +1,4 @@
-use crate::{RuntimeError, RuntimeStatus};
+use crate::{RuntimeError, RuntimeStatus, process::configure_background_command};
 use std::{
    fs::{self, File},
    io::{self, Cursor},
@@ -130,7 +130,8 @@ impl BunRuntime {
 
    /// Check Bun version by running `bun --version`
    async fn check_version(&self) -> Result<(u32, u32, u32), RuntimeError> {
-      let output = Command::new(&self.binary_path)
+      let mut command = Command::new(&self.binary_path);
+      let output = configure_background_command(&mut command)
          .arg("--version")
          .output()
          .map_err(|e| RuntimeError::VersionCheckFailed(e.to_string()))?;

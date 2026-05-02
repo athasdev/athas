@@ -63,6 +63,8 @@ jobs:
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
 
       - name: Run Rust checks
         run: bash scripts/check/rust.sh

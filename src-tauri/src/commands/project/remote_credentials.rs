@@ -9,7 +9,7 @@ fn remote_credential_key(connection_id: &str) -> String {
 
 #[command]
 pub async fn store_remote_credential(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    connection_id: String,
    password: String,
 ) -> Result<(), String> {
@@ -18,7 +18,7 @@ pub async fn store_remote_credential(
 
 #[command]
 pub async fn get_remote_credential(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    connection_id: String,
 ) -> Result<Option<String>, String> {
    secure_storage::get_secret(&app, &remote_credential_key(&connection_id))
@@ -26,7 +26,7 @@ pub async fn get_remote_credential(
 
 #[command]
 pub async fn remove_remote_credential(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    connection_id: String,
 ) -> Result<(), String> {
    secure_storage::remove_secret(&app, &remote_credential_key(&connection_id))

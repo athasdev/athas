@@ -1,5 +1,6 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import type { DatabaseType } from "@/features/database/models/provider.types";
+import { getBaseName, getDirName } from "@/utils/path-helpers";
 
 /**
  * Get the programming language from a filename based on its extension
@@ -167,6 +168,71 @@ export const isBinaryFile = (path: string): boolean => {
   return binaryExtensions.some((ext) => lowerPath.endsWith(ext));
 };
 
+const TEXT_FILE_NAMES = new Set([
+  ".dockerignore",
+  ".env",
+  ".env.example",
+  ".gitignore",
+  ".npmrc",
+  "bun.lock",
+  "cargo.lock",
+  "gemfile.lock",
+  "go.mod",
+  "go.sum",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+]);
+
+const TEXT_EXTENSIONS = new Set([
+  ".c",
+  ".cfg",
+  ".conf",
+  ".cpp",
+  ".css",
+  ".csv",
+  ".diff",
+  ".env",
+  ".go",
+  ".h",
+  ".hpp",
+  ".html",
+  ".ini",
+  ".java",
+  ".js",
+  ".json",
+  ".jsonc",
+  ".jsx",
+  ".log",
+  ".md",
+  ".mdx",
+  ".patch",
+  ".php",
+  ".py",
+  ".rb",
+  ".rs",
+  ".scss",
+  ".sh",
+  ".sql",
+  ".svg",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".zig",
+]);
+
+export const isKnownTextFile = (path: string): boolean => {
+  const fileName = getBaseName(path, "").toLowerCase();
+  if (TEXT_FILE_NAMES.has(fileName)) return true;
+
+  const lowerPath = path.toLowerCase();
+  return Array.from(TEXT_EXTENSIONS).some((extension) => lowerPath.endsWith(extension));
+};
+
 /**
  * Best-effort binary sniffing for files with unknown extensions.
  * Treat null bytes and a high ratio of control bytes as unsupported for the text editor.
@@ -200,16 +266,14 @@ export const isBinaryContent = (data: Uint8Array, sampleSize = 8192): boolean =>
  * Extract filename from a path
  */
 export const getFilenameFromPath = (path: string): string => {
-  return path.split("/").pop() || "Untitled";
+  return getBaseName(path, "Untitled");
 };
 
 /**
  * Get the directory path from a file path
  */
 const getDirectoryFromPath = (filePath: string): string => {
-  const pathParts = filePath.split("/");
-  pathParts.pop(); // Remove the filename
-  return pathParts.join("/");
+  return getDirName(filePath);
 };
 
 /**

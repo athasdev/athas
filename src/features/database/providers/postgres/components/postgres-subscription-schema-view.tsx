@@ -1,4 +1,4 @@
-import { Radio } from "lucide-react";
+import { RadioButton as Radio } from "@phosphor-icons/react";
 import type { PostgresSubscriptionInfo } from "../../sqlite/sqlite-types";
 
 interface PostgresSubscriptionSchemaViewProps {

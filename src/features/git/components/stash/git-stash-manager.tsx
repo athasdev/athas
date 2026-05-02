@@ -1,4 +1,4 @@
-import { Archive, Clock, Download, Plus, Trash2, Upload, X } from "lucide-react";
+import { Archive, Clock, Download, Plus, Trash as Trash2, Upload, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

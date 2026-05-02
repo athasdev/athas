@@ -4,6 +4,7 @@ use git2::{BranchType, Repository, Status};
 use serde::Serialize;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckoutResult {
    pub success: bool,
    pub has_changes: bool,

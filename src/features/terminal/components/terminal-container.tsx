@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Maximize2, Minimize2, Plus, Search, SplitSquareHorizontal } from "lucide-react";
+import {
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
+  Plus,
+  MagnifyingGlass as Search,
+  SplitHorizontal as SplitSquareHorizontal,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useSettingsStore } from "@/features/settings/store";
@@ -12,7 +18,6 @@ import {
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -24,6 +29,10 @@ interface TerminalContainerProps {
   className?: string;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
+}
+
+interface CloseTerminalOptions {
+  preserveSession?: boolean;
 }
 
 const TerminalContainer = ({
@@ -64,14 +73,26 @@ const TerminalContainer = ({
 
   // Wrapper to add logging and ensure terminal closes properly
   const closeTerminal = useCallback(
-    (terminalId: string) => {
-      console.log("closeTerminal called for terminal:", terminalId);
+    (terminalId: string, options: CloseTerminalOptions = {}) => {
+      const terminalStore = useTerminalStore.getState();
+      const session = terminalStore.getSession(terminalId);
       originalCloseTerminal(terminalId);
+
+      if (options.preserveSession) return;
+
+      if (session?.connectionId) {
+        const closeCommand = session.remoteConnectionId
+          ? "close_remote_terminal"
+          : "close_terminal";
+        void invoke(closeCommand, { id: session.connectionId }).catch((error) => {
+          console.error("Failed to close terminal session:", error);
+        });
+      }
+
+      terminalStore.removeSession(terminalId);
     },
     [originalCloseTerminal],
   );
-
-  const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
   const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
@@ -380,8 +401,10 @@ const TerminalContainer = ({
       const customEvent = event as CustomEvent<{
         command: string;
         name?: string;
+        workingDirectory?: string;
       }>;
-      const { command, name } = customEvent.detail;
+      const { command, name, workingDirectory } = customEvent.detail;
+      const terminalDirectory = workingDirectory || currentDirectory;
 
       // Show bottom pane and switch to terminal tab
       setBottomPaneActiveTab("terminal");
@@ -389,10 +412,10 @@ const TerminalContainer = ({
 
       // Create a new terminal
       const commandLabel = command.trim().split(/\s+/)[0]?.split(/[\\/]/).pop();
-      const terminalName = name || commandLabel || getDisplayNameFromDirectory(currentDirectory);
+      const terminalName = name || commandLabel || getDisplayNameFromDirectory(terminalDirectory);
       const newTerminalId = createTerminal({
         name: terminalName,
-        currentDirectory,
+        currentDirectory: terminalDirectory,
       });
 
       if (newTerminalId) {
@@ -476,6 +499,14 @@ const TerminalContainer = ({
       handleNewTerminal();
     };
 
+    const handleDetachTerminalToBuffer = (event: Event) => {
+      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
+      if (!terminalId) return;
+      requestAnimationFrame(() => {
+        closeTerminal(terminalId, { preserveSession: true });
+      });
+    };
+
     const handleEnsureTerminalSession = () => {
       if (terminals.length === 0) {
         hasInitializedRef.current = true;
@@ -497,17 +528,26 @@ const TerminalContainer = ({
     };
 
     window.addEventListener("terminal-new", handleNewTerminalEvent);
+    window.addEventListener("terminal-detach-to-buffer", handleDetachTerminalToBuffer);
     window.addEventListener("terminal-ensure-session", handleEnsureTerminalSession);
     window.addEventListener("terminal-split", handleSplitTerminalEvent);
     window.addEventListener("terminal-activate-tab", handleActivateTerminalTab);
 
     return () => {
       window.removeEventListener("terminal-new", handleNewTerminalEvent);
+      window.removeEventListener("terminal-detach-to-buffer", handleDetachTerminalToBuffer);
       window.removeEventListener("terminal-ensure-session", handleEnsureTerminalSession);
       window.removeEventListener("terminal-split", handleSplitTerminalEvent);
       window.removeEventListener("terminal-activate-tab", handleActivateTerminalTab);
     };
-  }, [terminals, focusActiveTerminal, handleNewTerminal, setActiveTerminal, handleSplitView]);
+  }, [
+    terminals,
+    focusActiveTerminal,
+    handleNewTerminal,
+    setActiveTerminal,
+    handleSplitView,
+    closeTerminal,
+  ]);
 
   // Auto-create first terminal when the pane becomes visible
   useEffect(() => {
@@ -564,14 +604,7 @@ const TerminalContainer = ({
   };
 
   const terminalSessions = (
-    <div
-      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg"
-      style={{
-        transform: `scale(${zoomLevel})`,
-        transformOrigin: "top left",
-        width: `${100 / zoomLevel}%`,
-      }}
-    >
+    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg">
       {(() => {
         return (
           <div className="flex h-full min-h-0 flex-col">

@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useFoldStore } from "../../stores/fold-store";
 

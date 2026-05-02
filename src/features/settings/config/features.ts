@@ -1,15 +1,15 @@
 import {
   Brain,
   Bug,
+  BugBeetle,
   GitBranch,
   GitPullRequest,
-  Icon,
-  MessageSquare,
-  Navigation,
-  Search,
-  Server,
-  Terminal as TerminalIcon,
-} from "lucide-react";
+  ChatCircleText as MessageSquare,
+  NavigationArrow as Navigation,
+  MagnifyingGlass as Search,
+  HardDrives as Server,
+  TerminalWindow as TerminalIcon,
+} from "@phosphor-icons/react";
 import type { CoreFeature, CoreFeaturesState } from "../types/feature";
 
 export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFeature[] => [
@@ -54,6 +54,14 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Code diagnostics and error reporting",
     icon: Bug,
     enabled: coreFeatures.diagnostics,
+  },
+  {
+    id: "debugger",
+    name: "Debugger",
+    description: "Run and debug files with launch configurations and breakpoints",
+    icon: BugBeetle,
+    enabled: coreFeatures.debugger,
+    status: "experimental",
   },
   {
     id: "aiChat",

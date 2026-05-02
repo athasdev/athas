@@ -1,9 +1,19 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Maximize2, MenuIcon, Minimize2, Minus, SquareArrowOutUpRight, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  ArrowSquareOut,
+  CornersIn,
+  CornersOut,
+  List,
+  Minus,
+  Sparkle,
+  X,
+} from "@phosphor-icons/react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import {
   resolveSidebarPaneClick,
@@ -13,12 +23,14 @@ import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { IS_LINUX, IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "./account-menu";
 import { NotificationsMenu } from "./notifications-menu";
 import ProjectTabs from "./project-tabs";
@@ -29,6 +41,42 @@ import CustomMenuBar from "./menu-bar/window-menu-bar";
 interface CustomTitleBarProps {
   title?: string;
   showMinimal?: boolean;
+}
+
+type HeaderItem<T extends string> = {
+  id: T;
+  label: string;
+  content: ReactNode;
+};
+
+const CHROME_ICON_CLASS_NAME = "size-4";
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
+  "h-6 w-7 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md";
+
+function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, orderedIds: T[]) {
+  const itemMap = new Map(items.map((item) => [item.id, item]));
+  const orderedItems = orderedIds
+    .map((id) => itemMap.get(id))
+    .filter((item): item is HeaderItem<T> => Boolean(item));
+  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  return [...orderedItems, ...missingItems];
+}
+
+function placeAiChatBeforeAccount<T extends string>(items: Array<HeaderItem<T>>) {
+  const aiChatIndex = items.findIndex((item) => item.id === "ai-chat");
+  const accountIndex = items.findIndex((item) => item.id === "account");
+
+  if (aiChatIndex < 0 || accountIndex < 0 || aiChatIndex === accountIndex - 1) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [aiChatItem] = nextItems.splice(aiChatIndex, 1);
+  const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
+  nextItems.splice(nextAccountIndex, 0, aiChatItem);
+  return nextItems;
 }
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
@@ -42,10 +90,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     isSidebarVisible,
     setActiveView,
     setIsSidebarVisible,
-    setIsGlobalSearchVisible,
-    isGlobalSearchVisible,
     setIsProjectPickerVisible,
   } = useUIState();
+  const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -55,9 +102,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const titleBarContextMenu = useContextMenu();
 
   const isMacOS = IS_MAC;
-  const isLinux = IS_LINUX;
+  const isWindows = IS_WINDOWS;
+  const usesNativeWindowChrome = useNativeWindowChrome();
+  const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
+  const shouldUseNativeMenuBar = !isWindows && settings.nativeMenuBar;
   const titleBarProjectMode = settings.titleBarProjectMode;
-
+  const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
@@ -171,7 +221,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "new-window",
       label: "New Window",
-      icon: <SquareArrowOutUpRight />,
+      icon: <ArrowSquareOut weight="duotone" />,
       onClick: () => {
         void createAppWindow();
       },
@@ -219,6 +269,76 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     document.body,
   );
 
+  const menuItem = !shouldUseNativeMenuBar ? (
+    settings.compactMenuBar ? (
+      <div className="relative">
+        <Tooltip content="Menu" side="bottom">
+          <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
+            <Button
+              ref={menuButtonRef}
+              onClick={() => {
+                setMenuBarActiveMenu("File");
+              }}
+              variant="ghost"
+              size="icon-sm"
+              className={cn(
+                TITLE_BAR_ICON_BUTTON_CLASS_NAME,
+                menuBarActiveMenu && "bg-hover/70 text-text",
+              )}
+              aria-label="Menu"
+            >
+              <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+            </Button>
+          </TabsList>
+        </Tooltip>
+        <CustomMenuBar
+          activeMenu={menuBarActiveMenu}
+          setActiveMenu={setMenuBarActiveMenu}
+          compactFloating
+          anchorRef={menuButtonRef}
+        />
+      </div>
+    ) : (
+      <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+    )
+  ) : null;
+
+  const headerTrailingItems: Array<HeaderItem<HeaderTrailingItemId>> = [
+    { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
+    {
+      id: "notifications",
+      label: "Notifications",
+      content: <NotificationsMenu />,
+    },
+    {
+      id: "ai-chat",
+      label: "AI Chat",
+      content: (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          active={settings.isAIChatVisible}
+          tooltip="Toggle AI Chat"
+          tooltipSide="bottom"
+          commandId="workbench.toggleAIChat"
+          onClick={() => {
+            useSettingsStore.getState().toggleAIChatVisible();
+          }}
+          className={cn(TITLE_BAR_ICON_BUTTON_CLASS_NAME, "[&_svg]:size-4")}
+          aria-label="Toggle AI Chat"
+        >
+          <Sparkle weight="duotone" />
+        </Button>
+      ),
+    },
+    {
+      id: "account",
+      label: "Account",
+      content: <AccountMenu className={!isMacOS ? "mr-1" : undefined} />,
+    },
+  ];
+
   if (showMinimal) {
     return (
       <div
@@ -229,30 +349,29 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       >
         <div className="flex-1" />
 
-        {/* Window controls - only show on Linux */}
-        {isLinux && (
+        {showCustomWindowControls && (
           <div className="flex items-center">
             <Tooltip content="Minimize" side="bottom">
               <Button
                 onClick={handleMinimize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
-                <Minus className="size-3.5 text-text-lighter" />
+                <Minus className="size-4 text-text-lighter" weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
                 {isMaximized ? (
-                  <Minimize2 className="size-3.5 text-text-lighter" />
+                  <CornersIn className="size-4 text-text-lighter" weight="duotone" />
                 ) : (
-                  <Maximize2 className="size-3.5 text-text-lighter" />
+                  <CornersOut className="size-4 text-text-lighter" weight="duotone" />
                 )}
               </Button>
             </Tooltip>
@@ -260,10 +379,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto group"
               >
-                <X className="size-3.5 text-text-lighter group-hover:text-white" />
+                <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
             </Tooltip>
           </div>
@@ -279,47 +398,24 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         data-tauri-drag-region
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
-          "relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-3",
+          "relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
         {/* Left side: keep clear of traffic lights */}
-        <div className="pointer-events-auto flex h-8 min-w-0 items-center gap-1">
-          {!settings.nativeMenuBar && !settings.compactMenuBar && (
-            <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-          )}
-          {!settings.nativeMenuBar && settings.compactMenuBar && (
-            <div className="relative">
-              <Tooltip content="Menu" side="bottom">
-                <Button
-                  ref={menuButtonRef}
-                  onClick={() => {
-                    setMenuBarActiveMenu((prev) => (prev ? null : "File"));
-                  }}
-                  variant="secondary"
-                  size="icon-sm"
-                  className="pointer-events-auto"
-                >
-                  <MenuIcon />
-                </Button>
-              </Tooltip>
-              <CustomMenuBar
-                activeMenu={menuBarActiveMenu}
-                setActiveMenu={setMenuBarActiveMenu}
-                compactFloating
-                anchorRef={menuButtonRef}
-              />
-            </div>
-          )}
-          <SidebarPaneSelector
-            activeSidebarView={activeSidebarView}
-            isGitViewActive={isGitViewActive}
-            isGitHubPRsViewActive={isGitHubPRsViewActive}
-            coreFeatures={settings.coreFeatures}
-            onViewChange={handleSidebarViewChange}
-            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
-            compact
-          />
+        <div className="pointer-events-auto flex h-8 min-w-0 items-center">
+          {menuItem}
+          {showTopSidebarTabs ? (
+            <SidebarPaneSelector
+              activeSidebarView={activeSidebarView}
+              isGitViewActive={isGitViewActive}
+              isGitHubPRsViewActive={isGitHubPRsViewActive}
+              coreFeatures={settings.coreFeatures}
+              onViewChange={handleSidebarViewChange}
+              onSearchClick={() => openGlobalSearchBuffer()}
+              compact
+            />
+          ) : null}
         </div>
 
         {/* Center - Project tabs for macOS */}
@@ -333,10 +429,14 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Account menu */}
-        <div className="mr-1 flex h-8 items-center gap-1">
-          <RunActionsButton />
-          <NotificationsMenu iconSize={13} />
-          <AccountMenu iconSize={13} />
+        <div className="flex h-8 items-center">
+          <div className="flex items-center gap-1">
+            {placeAiChatBeforeAccount(
+              orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
+            ).map((item) => (
+              <div key={item.id}>{item.content}</div>
+            ))}
+          </div>
         </div>
         {titleBarContextMenuPortal}
       </div>
@@ -351,46 +451,22 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       className="relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
     >
       {/* Left side */}
-      <div data-tauri-drag-region className="flex flex-1 items-center px-1">
-        {!settings.nativeMenuBar && !settings.compactMenuBar && (
-          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-        )}
-
-        {/* Menu bar button */}
-        {!settings.nativeMenuBar && settings.compactMenuBar && (
-          <div className="relative mr-2">
-            <Tooltip content="Menu" side="bottom">
-              <Button
-                ref={menuButtonRef}
-                onClick={() => {
-                  setMenuBarActiveMenu((prev) => (prev ? null : "File"));
-                }}
-                variant="secondary"
-                size="icon-sm"
-                className="pointer-events-auto"
-              >
-                <MenuIcon />
-              </Button>
-            </Tooltip>
-            <CustomMenuBar
-              activeMenu={menuBarActiveMenu}
-              setActiveMenu={setMenuBarActiveMenu}
-              compactFloating
-              anchorRef={menuButtonRef}
-            />
+      <div data-tauri-drag-region className="flex flex-1 items-center">
+        <div className="pointer-events-auto">
+          <div className="flex items-center gap-2">
+            {menuItem}
+            {showTopSidebarTabs ? (
+              <SidebarPaneSelector
+                activeSidebarView={activeSidebarView}
+                isGitViewActive={isGitViewActive}
+                isGitHubPRsViewActive={isGitHubPRsViewActive}
+                coreFeatures={settings.coreFeatures}
+                onViewChange={handleSidebarViewChange}
+                onSearchClick={() => openGlobalSearchBuffer()}
+                compact
+              />
+            ) : null}
           </div>
-        )}
-
-        <div className="pointer-events-auto mr-2">
-          <SidebarPaneSelector
-            activeSidebarView={activeSidebarView}
-            isGitViewActive={isGitViewActive}
-            isGitHubPRsViewActive={isGitHubPRsViewActive}
-            coreFeatures={settings.coreFeatures}
-            onViewChange={handleSidebarViewChange}
-            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
-            compact
-          />
         </div>
       </div>
 
@@ -405,36 +481,38 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       </div>
 
       {/* Right side */}
-      <div className="z-20 flex items-center gap-1">
-        <RunActionsButton />
-        <NotificationsMenu iconSize={12} />
-        {/* Account menu */}
-        <AccountMenu iconSize={12} className="mr-1" />
+      <div className="z-20 flex items-center">
+        <div className="flex items-center gap-1">
+          {placeAiChatBeforeAccount(
+            orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
+          ).map((item) => (
+            <div key={item.id}>{item.content}</div>
+          ))}
+        </div>
 
-        {/* Window controls - only show on Linux */}
-        {isLinux && (
+        {showCustomWindowControls && (
           <div className="flex items-center gap-0.5">
             <Tooltip content="Minimize" side="bottom">
               <Button
                 onClick={handleMinimize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
-                <Minus className="size-3.5 text-text-lighter" />
+                <Minus className="size-4 text-text-lighter" weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
                 {isMaximized ? (
-                  <Minimize2 className="size-3.5 text-text-lighter" />
+                  <CornersIn className="size-4 text-text-lighter" weight="duotone" />
                 ) : (
-                  <Maximize2 className="size-3.5 text-text-lighter" />
+                  <CornersOut className="size-4 text-text-lighter" weight="duotone" />
                 )}
               </Button>
             </Tooltip>
@@ -442,10 +520,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto group"
               >
-                <X className="size-3.5 text-text-lighter group-hover:text-white" />
+                <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
             </Tooltip>
           </div>

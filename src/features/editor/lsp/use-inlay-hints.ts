@@ -12,30 +12,38 @@ export interface InlayHint {
   paddingRight: boolean;
 }
 
+export interface InlayHintLineRange {
+  startLine: number;
+  endLine: number;
+}
+
 const DEBOUNCE_MS = 500;
 
-export const useInlayHints = (filePath: string | undefined, enabled: boolean) => {
+export const useInlayHints = (
+  filePath: string | undefined,
+  enabled: boolean,
+  lineRange: InlayHintLineRange,
+) => {
   const [hints, setHints] = useState<InlayHint[]>([]);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
   const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const fetchHints = useCallback(async () => {
+    const id = ++requestIdRef.current;
+
     if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
       setHints([]);
       return;
     }
 
-    const id = ++requestIdRef.current;
     const lspClient = LspClient.getInstance();
 
-    // Request hints for a large range (visible viewport would be ideal but
-    // we don't have easy access here, so request first 1000 lines)
-    const result = await lspClient.getInlayHints(filePath, 0, 1000);
+    const result = await lspClient.getInlayHints(filePath, lineRange.startLine, lineRange.endLine);
 
     if (id !== requestIdRef.current) return;
     setHints(result);
-  }, [filePath, enabled]);
+  }, [filePath, enabled, lineRange.startLine, lineRange.endLine]);
 
   // Fetch on file change
   useEffect(() => {

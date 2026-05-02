@@ -4,6 +4,7 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { getBaseName } from "@/utils/path-helpers";
 import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFffSearch } from "./use-fff-search";
 import { useFileLoader } from "./use-file-loader";
@@ -37,7 +38,7 @@ export const useGlobalSearch = () => {
   } = useFileLoader(isGlobalSearchVisible);
 
   // Rust-side fuzzy search with frecency + git ranking (only when visible)
-  const { hits: fffHits } = useFffSearch(debouncedQuery, isGlobalSearchVisible);
+  const { hits: fffHits } = useFffSearch(debouncedQuery, isGlobalSearchVisible, rootFolderPath);
 
   // Search and categorize files
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
@@ -49,7 +50,7 @@ export const useGlobalSearch = () => {
   // Handle file selection
   const handleItemSelect = useCallback(
     (path: string) => {
-      const fileName = path.split("/").pop() || path;
+      const fileName = getBaseName(path, path);
       addOrUpdateRecentFile(path, fileName);
       handleFileSelect(path, false);
       onClose();

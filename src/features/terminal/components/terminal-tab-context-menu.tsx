@@ -1,4 +1,12 @@
-import { Copy, Download, Edit, Pin, PinOff, RotateCcw, X } from "lucide-react";
+import {
+  Copy,
+  Download,
+  PencilSimple as Edit,
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+  ArrowCounterClockwise as RotateCcw,
+  X,
+} from "@phosphor-icons/react";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";

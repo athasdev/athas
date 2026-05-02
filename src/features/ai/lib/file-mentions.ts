@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { FileEntry } from "@/features/file-system/types/app";
 
-interface MentionedFile {
+export interface MentionedFile {
   name: string;
   path: string;
   content: string;

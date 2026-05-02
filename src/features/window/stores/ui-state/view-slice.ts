@@ -36,7 +36,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
     const state = get() as ViewSlice & {
       isSidebarVisible?: boolean;
       isBottomPaneVisible?: boolean;
-      bottomPaneActiveTab?: "terminal" | "diagnostics";
+      bottomPaneActiveTab?: "terminal" | "diagnostics" | "references" | "buffers";
     };
 
     useSessionStore.getState().saveUiState(projectPath, {

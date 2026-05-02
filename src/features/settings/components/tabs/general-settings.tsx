@@ -3,9 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { Button } from "@/ui/button";
-import Section, { SettingRow } from "../settings-section";
+import { SettingRow } from "../settings-section";
 
 export const GeneralSettings = () => {
   const {
@@ -110,115 +111,109 @@ export const GeneralSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="About">
-        <SettingRow label="Version" description="Current application version">
-          <span className="ui-font ui-text-sm text-text-lighter">{appVersion || "..."}</span>
-        </SettingRow>
-        <SettingRow
-          label="Check for Updates"
-          description={
-            downloading
-              ? `Downloading ${downloadProgress?.percentage ?? 0}%`
-              : installing
-                ? "Installing update..."
-                : available
-                  ? `Version ${updateInfo?.version} available`
-                  : error
-                    ? "Failed to check for updates"
-                    : "App is up to date"
-          }
-        >
-          <div className="flex gap-2">
+      <SettingRow
+        label="Version"
+        description="Check for updates and install the latest app version."
+      >
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCheckForUpdates}
+            disabled={checking || downloading || installing}
+            variant="default"
+            size="xs"
+          >
+            {checking ? "Checking..." : "Check"}
+          </Button>
+          {available && (
             <Button
-              onClick={handleCheckForUpdates}
-              disabled={checking || downloading || installing}
-              variant="secondary"
+              onClick={downloadAndInstall}
+              disabled={downloading || installing}
+              variant="default"
               size="xs"
             >
-              {checking ? "Checking..." : "Check"}
+              {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
             </Button>
-            {available && (
+          )}
+        </div>
+      </SettingRow>
+
+      <div className="ui-font ui-text-sm px-1 text-text-lighter">
+        {downloading
+          ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
+          : installing
+            ? `Athas ${appVersion || "..."} · Installing update...`
+            : available
+              ? `Athas ${appVersion || "..."} · Version ${updateInfo?.version} available`
+              : error
+                ? `Athas ${appVersion || "..."} · Failed to check for updates`
+                : `Athas ${appVersion || "..."} · App is up to date`}
+      </div>
+
+      {downloading && downloadProgress && (
+        <div className="px-3">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
+            <div
+              className="h-full bg-accent transition-all duration-300"
+              style={{ width: `${downloadProgress.percentage}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {error && <div className="ui-font ui-text-sm px-3 text-error">{error}</div>}
+
+      <SettingRow
+        label="Terminal Command"
+        description="Install the `athas` command to launch the app from your terminal."
+      >
+        <div className="flex gap-2">
+          {cliInstalled ? (
+            <TypedConfirmAction
+              actionLabel="Uninstall"
+              busyLabel="Uninstalling..."
+              isBusy={cliInstalling}
+              onConfirm={handleUninstallCli}
+            />
+          ) : (
+            <>
               <Button
-                onClick={downloadAndInstall}
-                disabled={downloading || installing}
-                variant="secondary"
+                onClick={() => void handleInstallCli()}
+                disabled={cliInstalling || cliChecking}
+                variant="default"
                 size="xs"
               >
-                {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
+                {cliInstalling ? "Installing..." : "Install"}
               </Button>
-            )}
-          </div>
-        </SettingRow>
-
-        {/* Download progress bar */}
-        {downloading && downloadProgress && (
-          <div className="mt-2 px-3">
-            <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
-              <div
-                className="h-full bg-accent transition-all duration-300"
-                style={{ width: `${downloadProgress.percentage}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {error && <div className="ui-font ui-text-sm mt-2 px-3 text-error">{error}</div>}
-
-        <SettingRow
-          label="Report a Bug"
-          description="Copy environment details and open the bug report page"
-        >
-          <Button onClick={handleReportBug} variant="secondary" size="xs">
-            Open
-          </Button>
-        </SettingRow>
-      </Section>
-
-      <Section title="CLI Command">
-        <SettingRow
-          label="Terminal Command"
-          description={
-            cliChecking
-              ? "Checking..."
-              : cliInstalled
-                ? "CLI command is installed at $HOME/.local/bin/athas"
-                : "Install 'athas' command to launch app from terminal"
-          }
-        >
-          <div className="flex gap-2">
-            {cliInstalled ? (
               <Button
-                onClick={handleUninstallCli}
-                disabled={cliInstalling}
-                variant="secondary"
+                onClick={handleCopyInstallCommand}
+                disabled={cliChecking}
+                variant="default"
                 size="xs"
+                tooltip="Copy install command to clipboard"
               >
-                {cliInstalling ? "Uninstalling..." : "Uninstall"}
+                Copy
               </Button>
-            ) : (
-              <>
-                <Button
-                  onClick={handleInstallCli}
-                  disabled={cliInstalling || cliChecking}
-                  variant="secondary"
-                  size="xs"
-                >
-                  {cliInstalling ? "Installing..." : "Install"}
-                </Button>
-                <Button
-                  onClick={handleCopyInstallCommand}
-                  disabled={cliChecking}
-                  variant="secondary"
-                  size="xs"
-                  tooltip="Copy install command to clipboard"
-                >
-                  Copy
-                </Button>
-              </>
-            )}
-          </div>
-        </SettingRow>
-      </Section>
+            </>
+          )}
+        </div>
+      </SettingRow>
+
+      <div className="ui-font ui-text-sm px-1 text-text-lighter">
+        {cliChecking
+          ? "Checking..."
+          : cliInstalled
+            ? "CLI command is installed at $HOME/.local/bin/athas"
+            : "CLI command is not installed."}
+      </div>
+
+      <SettingRow
+        label="Report a Bug"
+        description="Copy environment details and open the bug report page"
+      >
+        <Button onClick={handleReportBug} variant="default" size="xs">
+          Open
+        </Button>
+      </SettingRow>
     </div>
   );
 };
