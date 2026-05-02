@@ -39,77 +39,25 @@ async function getComparableRevision(tag) {
   }
 }
 
-async function getCommits(previousTag, tag) {
-  const revision = await getComparableRevision(tag);
-  const range = previousTag ? `${previousTag}..${revision}` : revision;
-  const output = await text(
-    `git log ${shellQuote(range)} --pretty=format:%H%x1f%h%x1f%s%x1f%an%x1f%ae`,
+async function generateGithubNotes(tag, previousTag, repo) {
+  const targetCommitish = await getComparableRevision(tag);
+  const args = ["repos", repo, "releases", "generate-notes"].join("/");
+  const previousTagArg = previousTag ? ` -f previous_tag_name=${shellQuote(previousTag)}` : "";
+  return text(
+    `gh api ${shellQuote(args)} -X POST -f tag_name=${shellQuote(tag)} -f target_commitish=${shellQuote(targetCommitish)}${previousTagArg} --jq .body`,
   );
-
-  return output
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [hash, shortHash, subject, authorName, authorEmail] = line.split("\x1f");
-      return { hash, shortHash, subject, authorName, authorEmail };
-    });
 }
 
-function contributorKey(commit) {
-  return `${commit.authorName} <${commit.authorEmail}>`;
-}
-
-function formatBody(tag, previousTag, commits) {
-  const version = tag.replace(/^v/, "");
-  const isPrerelease = /-preview\.\d+$/.test(version);
+function formatBody(githubNotes, tag, previousTag) {
   const compareRange = previousTag ? `${previousTag}...${tag}` : tag;
-  const contributors = new Map();
-  const lines = [];
-
-  for (const commit of commits) {
-    const key = contributorKey(commit);
-    const entry = contributors.get(key) ?? {
-      name: commit.authorName,
-      email: commit.authorEmail,
-      count: 0,
-    };
-    entry.count += 1;
-    contributors.set(key, entry);
+  const pullRequestLines = githubNotes
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => /^\* .+ by @.+ in https:\/\/github\.com\/.+\/pull\/\d+$/.test(line));
+  const lines = [...pullRequestLines];
+  if (lines.length > 0) {
+    lines.push("");
   }
-
-  lines.push(`## Athas ${tag}`);
-  lines.push("");
-  lines.push(
-    isPrerelease
-      ? `Preview release generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`
-      : `Stable release generated from ${commits.length} commits since ${previousTag ?? "the first tracked release"}.`,
-  );
-  lines.push("");
-  lines.push("### Changes");
-  if (commits.length === 0) {
-    lines.push("- No commits found in this range.");
-  } else {
-    for (const commit of commits) {
-      lines.push(`- ${commit.subject} (${commit.shortHash}, ${commit.authorName})`);
-    }
-  }
-  lines.push("");
-  lines.push("### Contributors");
-  if (contributors.size === 0) {
-    lines.push("- No contributors found in this range.");
-  } else {
-    const sortedContributors = [...contributors.values()].sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.name.localeCompare(b.name);
-    });
-    for (const contributor of sortedContributors) {
-      lines.push(
-        `- ${contributor.name} (${contributor.count} commit${contributor.count === 1 ? "" : "s"})`,
-      );
-    }
-  }
-  lines.push("");
   lines.push(`**Full Changelog**: https://github.com/athasdev/athas/compare/${compareRange}`);
 
   return lines.join("\n");
@@ -134,9 +82,10 @@ if (!tag) {
 }
 
 const outputPath = getArg("--github-output");
+const repo = getArg("--repo") || process.env.GITHUB_REPOSITORY || "athasdev/athas";
 const previousTag = await getPreviousTag(tag);
-const commits = await getCommits(previousTag, tag);
-const releaseBody = formatBody(tag, previousTag, commits);
+const githubNotes = await generateGithubNotes(tag, previousTag, repo);
+const releaseBody = formatBody(githubNotes, tag, previousTag);
 const version = tag.replace(/^v/, "");
 const isPrerelease = /-preview\.\d+$/.test(version) ? "true" : "false";
 const releaseName = `Athas ${tag}`;
