@@ -19,14 +19,13 @@ import {
   Upload,
   Warning,
 } from "@phosphor-icons/react";
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   buildEnvTemplateContent,
   ENV_TEMPLATE_TARGETS,
   isEnvFileName,
-  normalizeEnvTargetFileName,
 } from "@/features/file-explorer/lib/env-template";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
@@ -34,7 +33,6 @@ import type { ContextMenuState } from "@/features/file-system/types/app";
 import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
-import Input from "@/ui/input";
 import { toast } from "@/ui/toast";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
 
@@ -60,11 +58,6 @@ interface UseFileExplorerContextMenuOptions {
 interface EnvOverwriteDialogState {
   sourcePath: string;
   targetFileName: string;
-}
-
-interface EnvCustomDialogState {
-  sourcePath: string;
-  value: string;
 }
 
 interface PropertiesDialogState {
@@ -111,7 +104,6 @@ export function useFileExplorerContextMenu({
   const [envOverwriteDialog, setEnvOverwriteDialog] = useState<EnvOverwriteDialogState | null>(
     null,
   );
-  const [envCustomDialog, setEnvCustomDialog] = useState<EnvCustomDialogState | null>(null);
   const [propertiesDialog, setPropertiesDialog] = useState<PropertiesDialogState | null>(null);
   const clipboardActions = useFileClipboardStore.getState().actions;
   const clipboard = useFileClipboardStore((state) => state.clipboard);
@@ -165,28 +157,6 @@ export function useFileExplorerContextMenu({
       }
     },
     [onCreateNewFileInDirectory, onRefreshDirectory],
-  );
-
-  const promptAndCreateEnvTemplateFile = useCallback((sourcePath: string) => {
-    setEnvCustomDialog({ sourcePath, value: "" });
-  }, []);
-
-  const handleEnvCustomSubmit = useCallback(
-    (event?: FormEvent<HTMLFormElement>) => {
-      event?.preventDefault();
-      if (!envCustomDialog) return;
-
-      const targetFileName = normalizeEnvTargetFileName(envCustomDialog.value);
-      if (!targetFileName) {
-        toast.error("Invalid env file name");
-        return;
-      }
-
-      const sourcePath = envCustomDialog.sourcePath;
-      setEnvCustomDialog(null);
-      void createEnvTemplateFile(sourcePath, targetFileName);
-    },
-    [createEnvTemplateFile, envCustomDialog],
   );
 
   const handleEnvOverwriteConfirm = useCallback(() => {
@@ -328,12 +298,6 @@ export function useFileExplorerContextMenu({
                 icon: index === 0 ? <FilePlus /> : menuIconSpacer,
                 onClick: () => void createEnvTemplateFile(contextMenu.path, target.fileName),
               })),
-              {
-                id: "env-other",
-                label: "Create Other .env...",
-                icon: menuIconSpacer,
-                onClick: () => promptAndCreateEnvTemplateFile(contextMenu.path),
-              },
             ]
           : []),
         {
@@ -461,11 +425,10 @@ export function useFileExplorerContextMenu({
     onRevealInFinder,
     onStartInlineEditing,
     onUploadFile,
-    promptAndCreateEnvTemplateFile,
     rootFolderPath,
   ]);
 
-  const hasDialog = Boolean(envCustomDialog || envOverwriteDialog || propertiesDialog);
+  const hasDialog = Boolean(envOverwriteDialog || propertiesDialog);
   const contextMenuElement =
     contextMenu || hasDialog ? (
       <>
@@ -477,41 +440,6 @@ export function useFileExplorerContextMenu({
             onClose={() => setContextMenu(null)}
             className="min-w-[220px]"
           />
-        )}
-
-        {envCustomDialog && (
-          <Dialog
-            title="Create Env File"
-            icon={FilePlus}
-            onClose={() => setEnvCustomDialog(null)}
-            size="sm"
-            footer={
-              <>
-                <Button variant="ghost" size="sm" onClick={() => setEnvCustomDialog(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" form="custom-env-template-form" variant="primary" size="sm">
-                  Create
-                </Button>
-              </>
-            }
-          >
-            <form id="custom-env-template-form" onSubmit={handleEnvCustomSubmit}>
-              <label className="flex flex-col gap-2 ui-font ui-text-sm text-text">
-                File name or suffix
-                <Input
-                  autoFocus
-                  value={envCustomDialog.value}
-                  placeholder="staging or .env.staging"
-                  onChange={(event) =>
-                    setEnvCustomDialog((state) =>
-                      state ? { ...state, value: event.target.value } : state,
-                    )
-                  }
-                />
-              </label>
-            </form>
-          </Dialog>
         )}
 
         {envOverwriteDialog && (
