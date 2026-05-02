@@ -1,6 +1,7 @@
 import { AnthropicProvider } from "./anthropic-provider";
 import { GeminiProvider } from "./gemini-provider";
 import { GrokProvider } from "./grok-provider";
+import { MistralProvider } from "./mistral-provider";
 import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
@@ -63,6 +64,15 @@ function initializeProviders(): void {
     maxTokens: 131072,
   };
   providers.set("grok", new GrokProvider(grokConfig));
+
+  const mistralConfig: ProviderConfig = {
+    id: "mistral",
+    name: "Mistral AI",
+    apiUrl: "https://api.mistral.ai/v1/chat/completions",
+    requiresApiKey: true,
+    maxTokens: 131072,
+  };
+  providers.set("mistral", new MistralProvider(mistralConfig));
 
   const ollamaConfig: ProviderConfig = {
     id: "ollama",

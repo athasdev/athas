@@ -32,6 +32,7 @@ const DASHBOARD_LINKS: Partial<Record<string, string>> = {
   openai: "https://platform.openai.com/api-keys",
   anthropic: "https://console.anthropic.com/settings/keys",
   gemini: "https://aistudio.google.com/app/apikey",
+  mistral: "https://console.mistral.ai/api-keys",
 };
 
 const PLACEHOLDERS: Partial<Record<string, string>> = {
@@ -39,6 +40,7 @@ const PLACEHOLDERS: Partial<Record<string, string>> = {
   v0: "v0_xxxxxxxxxxxxxxxxxxxx",
   grok: "xai-xxxxxxxxxxxxxxxxxxxx",
   openai: "sk-xxxxxxxxxxxxxxxxxxxx",
+  mistral: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 };
 
 export function ProviderApiKeyCommand({
