@@ -30,7 +30,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import { isMac } from "@/utils/platform";
+import { IS_LINUX, isMac } from "@/utils/platform";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { AcpConfigSelector } from "../selectors/acp-config-selector";
@@ -49,6 +49,18 @@ function isComposerTokenElement(node: Node | null): node is Element {
     ((node as Element).hasAttribute("data-mention") ||
       (node as Element).hasAttribute("data-slash-command"))
   );
+}
+
+function getMicrophoneAccessErrorMessage(error?: string): string {
+  if (IS_LINUX) {
+    if (error === "service-not-allowed") {
+      return "Voice input is unavailable in this Linux webview. Chromium speech recognition may be blocked even when the microphone works.";
+    }
+
+    return "Microphone access failed. Check your PipeWire/PulseAudio input device and unmute the default microphone.";
+  }
+
+  return "Microphone access failed. Check System Settings -> Privacy & Security -> Microphone.";
 }
 
 const AIChatInputBar = memo(function AIChatInputBar({
@@ -1100,7 +1112,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     setInterimTranscript("");
   }, []);
 
-  const startVoiceInput = useCallback(() => {
+  const startVoiceInput = useCallback(async () => {
     if (!isInputEnabled) return;
 
     if (isMacDevSpeechRecognitionBlocked) {
@@ -1111,6 +1123,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (!SpeechRecognitionCtor) {
       toast.warning("Voice input is not supported in this webview.");
       return;
+    }
+
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch {
+        toast.error(getMicrophoneAccessErrorMessage());
+        return;
+      }
     }
 
     const recognition = new SpeechRecognitionCtor();
@@ -1150,9 +1172,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         shouldKeepListeningRef.current = false;
-        toast.error(
-          "Microphone access failed. Check System Settings → Privacy & Security → Microphone.",
-        );
+        toast.error(getMicrophoneAccessErrorMessage(event.error));
         return;
       }
 
@@ -1195,7 +1215,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       return;
     }
 
-    startVoiceInput();
+    void startVoiceInput();
   }, [isListening, startVoiceInput, stopVoiceInput]);
 
   // Get available slash commands
