@@ -6,10 +6,12 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import { evaluateWhenClause } from "../utils/context";
@@ -19,6 +21,7 @@ import type { ParsedKey } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
 
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
+const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
 const NATIVE_MENU_ACCELERATORS = [
   "cmd+shift+n",
   "cmd+o",
@@ -49,6 +52,7 @@ const NATIVE_MENU_ACCELERATORS = [
 const parsedNativeMenuAccelerators = NATIVE_MENU_ACCELERATORS.map((shortcut) =>
   parseKeybinding(shortcut),
 );
+const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
 
 function isNativeMenuAccelerator(event: KeyboardEvent) {
   const eventKey = eventToKey(event);
@@ -58,10 +62,51 @@ function isNativeMenuAccelerator(event: KeyboardEvent) {
   });
 }
 
+function isCloseTabShortcut(event: KeyboardEvent) {
+  return keysMatch(eventToKey(event), closeTabShortcut);
+}
+
 export function useKeymaps() {
   const contexts = useKeymapStore.use.contexts();
   const [chordState, setChordState] = useState<ParsedKey[]>([]);
   const chordTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCloseTabShortcutAtRef = useRef(0);
+
+  useEffect(() => {
+    if (!IS_LINUX || typeof window === "undefined") return;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const setupCloseRequestGuard = async () => {
+      try {
+        const removeListener = await getCurrentWindow().onCloseRequested((event) => {
+          const elapsed = Date.now() - lastCloseTabShortcutAtRef.current;
+
+          if (elapsed <= CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS) {
+            event.preventDefault();
+            lastCloseTabShortcutAtRef.current = 0;
+          }
+        });
+
+        if (disposed) {
+          removeListener();
+          return;
+        }
+
+        unlisten = removeListener;
+      } catch (error) {
+        logger.debug("Keymaps", `Failed to register close request guard: ${String(error)}`);
+      }
+    };
+
+    void setupCloseRequestGuard();
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -72,6 +117,14 @@ export function useKeymaps() {
 
       // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
       if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
+        return;
+      }
+
+      if (isCloseTabShortcut(e)) {
+        lastCloseTabShortcutAtRef.current = Date.now();
+        e.preventDefault();
+        e.stopPropagation();
+        keymapRegistry.executeCommand(contexts.terminalFocus ? "terminal.close" : "file.close");
         return;
       }
 

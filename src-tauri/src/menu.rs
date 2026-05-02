@@ -117,6 +117,8 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
    themes: Option<Vec<ThemeData>>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+   let close_tab_accelerator = close_tab_accelerator();
+
    // Unified File menu for all platforms - clean and consistent
    let file_menu = SubmenuBuilder::new(app, "File")
       .item(&MenuItem::with_id(
@@ -169,7 +171,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "close_tab",
          "Close Tab",
          true,
-         Some("CmdOrCtrl+W"),
+         close_tab_accelerator,
       )?)
       .separator()
       .item(&MenuItem::with_id(
@@ -360,4 +362,16 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          &help_menu,
       ])
       .build()
+}
+
+fn close_tab_accelerator() -> Option<&'static str> {
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   {
+      None
+   }
+
+   #[cfg(not(all(target_os = "linux", feature = "linux")))]
+   {
+      Some("CmdOrCtrl+W")
+   }
 }
