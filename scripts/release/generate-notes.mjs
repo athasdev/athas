@@ -35,7 +35,13 @@ async function getComparableRevision(tag) {
     await text(`git rev-parse --verify ${shellQuote(tag)}`);
     return tag;
   } catch {
-    return "HEAD";
+    try {
+      await text(`git fetch origin ${shellQuote(`refs/tags/${tag}:refs/tags/${tag}`)}`);
+      await text(`git rev-parse --verify ${shellQuote(tag)}`);
+      return tag;
+    } catch {
+      return "HEAD";
+    }
   }
 }
 
@@ -48,19 +54,96 @@ async function generateGithubNotes(tag, previousTag, repo) {
   );
 }
 
+function parseGithubPullRequestLines(githubNotes) {
+  const pullRequestLines = new Map();
+  for (const line of githubNotes.split("\n")) {
+    const trimmedLine = line.trimEnd();
+    const match = trimmedLine.match(/^\* .+ by @.+ in https:\/\/github\.com\/.+\/pull\/(\d+)$/);
+    if (match) {
+      pullRequestLines.set(match[1], trimmedLine);
+    }
+  }
+  return pullRequestLines;
+}
+
+function shouldSkipCommit(subject) {
+  return (
+    subject === "Prepare release" ||
+    subject === "Prepare preview release" ||
+    subject.startsWith("Merge remote-tracking branch ")
+  );
+}
+
+async function getCommits(tag, previousTag) {
+  const targetCommitish = await getComparableRevision(tag);
+  const range = previousTag ? `${previousTag}..${targetCommitish}` : targetCommitish;
+  const output = await text(
+    `git log --reverse --format='%H%x1f%an%x1f%ae%x1f%s' ${shellQuote(range)}`,
+  );
+  if (!output) return [];
+
+  return output
+    .split("\n")
+    .map((line) => {
+      const [sha, authorName, authorEmail, ...subjectParts] = line.split("\x1f");
+      return {
+        sha,
+        authorName,
+        authorEmail,
+        subject: subjectParts.join("\x1f"),
+      };
+    })
+    .filter((commit) => commit.sha && commit.subject && !shouldSkipCommit(commit.subject));
+}
+
+async function getCommitAuthorLogin(repo, sha) {
+  try {
+    const login = await text(
+      `gh api ${shellQuote(`repos/${repo}/commits/${sha}`)} --jq '.author.login // empty'`,
+    );
+    return login || null;
+  } catch {
+    return null;
+  }
+}
+
+function formatAuthor(login, fallbackName) {
+  return login ? `@${login}` : fallbackName;
+}
+
+async function formatCommitLine(commit, repo) {
+  const authorLogin = await getCommitAuthorLogin(repo, commit.sha);
+  return `* ${commit.subject} by ${formatAuthor(authorLogin, commit.authorName)} in https://github.com/${repo}/commit/${commit.sha}`;
+}
+
 function formatBody(githubNotes, tag, previousTag) {
   const compareRange = previousTag ? `${previousTag}...${tag}` : tag;
-  const pullRequestLines = githubNotes
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line) => /^\* .+ by @.+ in https:\/\/github\.com\/.+\/pull\/\d+$/.test(line));
-  const lines = [...pullRequestLines];
+  const lines = [...githubNotes];
   if (lines.length > 0) {
     lines.push("");
   }
   lines.push(`**Full Changelog**: https://github.com/athasdev/athas/compare/${compareRange}`);
 
   return lines.join("\n");
+}
+
+async function formatReleaseEntries(tag, previousTag, repo, githubNotes) {
+  const pullRequestLines = parseGithubPullRequestLines(githubNotes);
+  const commits = await getCommits(tag, previousTag);
+  const lines = [];
+
+  for (const commit of commits) {
+    const pullRequestMatch = commit.subject.match(/\(#(\d+)\)$/);
+    const pullRequestLine = pullRequestMatch ? pullRequestLines.get(pullRequestMatch[1]) : null;
+    if (pullRequestLine) {
+      lines.push(pullRequestLine);
+      continue;
+    }
+
+    lines.push(await formatCommitLine(commit, repo));
+  }
+
+  return lines;
 }
 
 function writeGithubOutput(path, outputs) {
@@ -85,7 +168,8 @@ const outputPath = getArg("--github-output");
 const repo = getArg("--repo") || process.env.GITHUB_REPOSITORY || "athasdev/athas";
 const previousTag = await getPreviousTag(tag);
 const githubNotes = await generateGithubNotes(tag, previousTag, repo);
-const releaseBody = formatBody(githubNotes, tag, previousTag);
+const releaseEntries = await formatReleaseEntries(tag, previousTag, repo, githubNotes);
+const releaseBody = formatBody(releaseEntries, tag, previousTag);
 const version = tag.replace(/^v/, "");
 const isPrerelease = /-preview\.\d+$/.test(version) ? "true" : "false";
 const releaseName = `Athas ${tag}`;
