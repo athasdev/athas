@@ -159,11 +159,61 @@ export function ContextSelector({
           "max-h-14",
           selectedItemsClassName,
         )}
+        role="list"
+        aria-label="Selected context"
       >
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}
-            className="group ui-font ui-text-sm flex h-6 min-w-0 shrink-0 select-none items-center gap-1 rounded-md border border-border/60 bg-primary-bg/45 px-1.5 text-text-lighter"
+            className="group ui-font ui-text-xs flex min-h-7 min-w-0 shrink-0 select-none items-center gap-1 rounded-md border border-border/60 bg-primary-bg/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:border-border-strong/60 hover:bg-hover/70 focus-within:border-border-strong/60 focus-within:bg-hover/70"
+            data-context-chip
+            role="listitem"
+            tabIndex={0}
+            aria-label={`${item.name}. Press Delete to remove from context.`}
+            title={item.type === "file" ? item.path : item.name}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                event.preventDefault();
+                const chips = Array.from(
+                  event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                    "[data-context-chip]",
+                  ) || [],
+                );
+                const currentIndex = chips.indexOf(event.currentTarget);
+                const nextIndex =
+                  event.key === "ArrowLeft"
+                    ? Math.max(currentIndex - 1, 0)
+                    : Math.min(currentIndex + 1, chips.length - 1);
+                chips[nextIndex]?.focus();
+                return;
+              }
+
+              if (event.key === "Backspace" || event.key === "Delete") {
+                event.preventDefault();
+                const chipContainer = event.currentTarget.parentElement;
+                const chips = Array.from(
+                  chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
+                );
+                const currentIndex = chips.indexOf(event.currentTarget);
+                const nextFocusIndex = Math.max(0, Math.min(currentIndex, chips.length - 2));
+                if (item.type === "buffer") {
+                  onToggleBuffer(item.id);
+                } else {
+                  onToggleFile(item.id);
+                }
+                requestAnimationFrame(() => {
+                  const nextChips = Array.from(
+                    chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
+                  );
+                  const nextChip = nextChips[nextFocusIndex];
+                  if (nextChip) {
+                    nextChip.focus();
+                    return;
+                  }
+                  triggerRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+                });
+              }
+            }}
           >
             {item.type === "buffer" ? (
               item.databaseType ? (
@@ -176,7 +226,7 @@ export function ContextSelector({
             )}
             <span
               className={cn(
-                "max-w-20 truncate",
+                "max-w-24 truncate leading-[1.35]",
                 item.type === "buffer" ? "text-text" : "text-accent",
               )}
             >

@@ -16,6 +16,7 @@ interface SlashCommandDropdownProps {
 }
 
 const ATTACHED_DROPDOWN_GAP = -1;
+const SLASH_COMMAND_DROPDOWN_MAX_HEIGHT = 300;
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   onSelect,
@@ -44,9 +45,10 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   // Adjust position
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(Math.max(position.width, 260), window.innerWidth - 16);
+    const dropdownWidth = Math.min(Math.max(position.width, 180), window.innerWidth - 16);
     const dropdownHeight = Math.min(
-      filteredCommands.length * 40 + 16,
+      filteredCommands.length * 44 + 12,
+      SLASH_COMMAND_DROPDOWN_MAX_HEIGHT,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
     );
     const padding = 8;
@@ -108,7 +110,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       )}
       style={{
         zIndex: 10040,
-        maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
+        maxHeight: `${SLASH_COMMAND_DROPDOWN_MAX_HEIGHT}px`,
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,
@@ -118,31 +120,47 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       aria-label="Slash command suggestions"
     >
       {filteredCommands.length > 0 ? (
-        <div className="items-container space-y-1" role="listbox" aria-label="Command list">
+        <div className="items-container space-y-1" role="presentation">
           {filteredCommands.map((command, index) => (
             <button
               key={command.name}
               type="button"
+              data-item-index={index}
               onClick={() => onSelect(command)}
               className={cn(
                 dropdownItemClassName(),
-                chatComposerDropdownItemClassName("w-full items-start py-2"),
-                index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
+                chatComposerDropdownItemClassName(
+                  "grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pr-2",
+                ),
+                index === selectedIndex
+                  ? "bg-selected text-text shadow-[inset_0_0_0_1px_var(--color-border)]"
+                  : "text-text hover:bg-hover",
               )}
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
             >
-              <div className="min-w-0 flex-1">
-                <div className="ui-text-xs truncate font-medium text-text">/{command.name}</div>
+              <span className="ui-text-xs flex size-5 items-center justify-center rounded-md border border-border/70 bg-primary-bg/60 font-medium leading-none text-text-lighter">
+                /
+              </span>
+              <div className="min-w-0">
+                <div className="ui-text-xs truncate font-medium leading-[1.35] text-text">
+                  {command.name}
+                </div>
                 <div className="ui-text-xs truncate pt-0.5 text-text-lighter">
                   {command.description}
                 </div>
-                {command.input?.hint && (
-                  <div className="ui-text-xs mt-0.5 truncate text-text-lighter opacity-60">
+              </div>
+              <div className="min-w-0 justify-self-end">
+                {command.input?.hint ? (
+                  <span className="ui-text-xs block max-w-24 truncate rounded border border-border/60 bg-primary-bg/45 px-1.5 py-0.5 leading-[1.35] text-text-lighter">
                     {command.input.hint}
-                  </div>
-                )}
+                  </span>
+                ) : index === selectedIndex ? (
+                  <span className="ui-text-xs rounded border border-border/60 px-1.5 py-0.5 leading-none text-text-lighter">
+                    Enter
+                  </span>
+                ) : null}
               </div>
             </button>
           ))}

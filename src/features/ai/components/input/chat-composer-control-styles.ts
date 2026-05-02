@@ -35,7 +35,7 @@ export const chatComposerDropdownListClassName =
 
 export function chatComposerDropdownItemClassName(className?: string) {
   return cn(
-    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left text-xs text-text",
+    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left text-xs leading-[1.35] text-text",
     "hover:bg-hover focus:outline-none focus:ring-1 focus:ring-border-strong/35",
     className,
   );

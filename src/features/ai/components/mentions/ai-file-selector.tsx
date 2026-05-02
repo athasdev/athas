@@ -1,5 +1,5 @@
 import { MagnifyingGlass as Search } from "@phosphor-icons/react";
-import { useEffect, useMemo, type RefObject } from "react";
+import { Fragment, useEffect, useId, useMemo, type KeyboardEvent, type RefObject } from "react";
 import { useDebounce } from "use-debounce";
 import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
@@ -29,6 +29,7 @@ interface AIFileSelectorProps {
   compact?: boolean;
   autoFocusSearchInput?: boolean;
   useBackendSearch?: boolean;
+  onResultsChange?: (files: FileItem[]) => void;
 }
 
 function flattenFileSearchResults(categorizedFiles: ReturnType<typeof useFileSearch>) {
@@ -50,6 +51,12 @@ function flattenFileSearchResults(categorizedFiles: ReturnType<typeof useFileSea
 const canUseBackendFileSearch = (rootPath: string | null | undefined): rootPath is string =>
   Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
 
+const categoryLabels: Record<FileCategory, string> = {
+  open: "Open",
+  recent: "Recent",
+  other: "Files",
+};
+
 export function AIFileSelector({
   files,
   query,
@@ -65,7 +72,9 @@ export function AIFileSelector({
   compact = false,
   autoFocusSearchInput = false,
   useBackendSearch = true,
+  onResultsChange,
 }: AIFileSelectorProps) {
+  const listboxId = useId();
   const [debouncedQuery] = useDebounce(query, 50);
   const isBackendSearchActive =
     useBackendSearch && debouncedQuery.trim().length > 0 && canUseBackendFileSearch(rootFolderPath);
@@ -100,11 +109,49 @@ export function AIFileSelector({
   }, [onSelectedIndexChange, results.length, selectedIndex]);
 
   useEffect(() => {
+    onResultsChange?.(results.map(({ file }) => file));
+  }, [onResultsChange, results]);
+
+  useEffect(() => {
     if (!showSearchInput || !autoFocusSearchInput) return;
 
     const frame = requestAnimationFrame(() => searchInputRef?.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [autoFocusSearchInput, searchInputRef, showSearchInput]);
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (results.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      onSelectedIndexChange?.(Math.min(selectedIndex + 1, results.length - 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      onSelectedIndexChange?.(Math.max(selectedIndex - 1, 0));
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      onSelectedIndexChange?.(0);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      onSelectedIndexChange?.(results.length - 1);
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      const selected = results[selectedIndex] ?? results[0];
+      onSelect(selected.file);
+    }
+  };
 
   return (
     <>
@@ -121,6 +168,14 @@ export function AIFileSelector({
             leftIcon={Search}
             className="w-full"
             aria-label="Search files"
+            aria-activedescendant={
+              results.length > 0 ? `ai-file-selector-option-${selectedIndex}` : undefined
+            }
+            aria-controls={listboxId}
+            aria-expanded="true"
+            aria-autocomplete="list"
+            role="combobox"
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
       )}
@@ -128,25 +183,38 @@ export function AIFileSelector({
       <CommandList>
         <div
           className={cn("items-container", chatComposerDropdownListClassName, listClassName)}
+          id={listboxId}
           role="listbox"
           aria-label="File list"
         >
           {results.length === 0 ? (
             <CommandEmpty>{emptyLabel}</CommandEmpty>
           ) : (
-            results.map(({ file, category, index }) => (
-              <FileListItem
-                key={`${category}-${file.path}`}
-                file={file}
-                category={category}
-                index={index}
-                isSelected={index === selectedIndex}
-                onClick={() => onSelect(file)}
-                onPreview={() => onSelectedIndexChange?.(index)}
-                rootFolderPath={rootFolderPath}
-                compact={compact}
-              />
-            ))
+            results.map(({ file, category, index }, resultIndex) => {
+              const previousCategory = results[resultIndex - 1]?.category;
+              const showCategoryHeader = category !== "other" && category !== previousCategory;
+
+              return (
+                <Fragment key={`${category}-${file.path}`}>
+                  {showCategoryHeader && (
+                    <div className="ui-text-xs px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
+                      {categoryLabels[category]}
+                    </div>
+                  )}
+                  <FileListItem
+                    id={`ai-file-selector-option-${index}`}
+                    file={file}
+                    category={category}
+                    index={index}
+                    isSelected={index === selectedIndex}
+                    onClick={() => onSelect(file)}
+                    onPreview={() => onSelectedIndexChange?.(index)}
+                    rootFolderPath={rootFolderPath}
+                    compact={compact}
+                  />
+                </Fragment>
+              );
+            })
           )}
         </div>
       </CommandList>

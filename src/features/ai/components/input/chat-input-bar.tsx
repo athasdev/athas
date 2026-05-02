@@ -16,6 +16,7 @@ import type { InlineDropdownPosition } from "@/features/ai/store/types";
 import type { AIChatSkill } from "@/features/ai/types/skills";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
+import type { FileEntry } from "@/features/file-system/types/app";
 import { getProviderById } from "@/features/ai/types/providers";
 import { openSidebarResourceBuffer } from "@/features/sidebar-drag/open-sidebar-resource";
 import {
@@ -42,6 +43,14 @@ import { SkillsCommand } from "../skills/skills-command";
 import { ChatLoadingIndicator } from "../chat/chat-loading-indicator";
 import { chatComposerIconButtonClassName } from "./chat-composer-control-styles";
 
+function isComposerTokenElement(node: Node | null): node is Element {
+  return (
+    node?.nodeType === Node.ELEMENT_NODE &&
+    ((node as Element).hasAttribute("data-mention") ||
+      (node as Element).hasAttribute("data-slash-command"))
+  );
+}
+
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
@@ -52,6 +61,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const contextDropdownRef = useRef<HTMLDivElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingContentRef = useRef(false);
+  const visibleMentionFilesRef = useRef<FileEntry[]>([]);
   const performanceTimer = useRef<number | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldKeepListeningRef = useRef(false);
@@ -113,9 +123,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const showMention = useAIChatStore((state) => state.showMention);
   const hideMention = useAIChatStore((state) => state.hideMention);
   const updatePosition = useAIChatStore((state) => state.updatePosition);
-  const selectNext = useAIChatStore((state) => state.selectNext);
-  const selectPrevious = useAIChatStore((state) => state.selectPrevious);
-  const getFilteredFiles = useAIChatStore((state) => state.getFilteredFiles);
+  const setSelectedIndex = useAIChatStore((state) => state.setSelectedIndex);
 
   // Slash command state and actions
   const slashCommandState = useAIChatStore((state) => state.slashCommandState);
@@ -274,24 +282,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
     const element = inputRef.current;
     const children = element.childNodes;
 
-    // Fast path: check if there are any mention badges (without Array.from for performance)
-    let hasMentions = false;
+    // Fast path: check if there are any composer tokens (without Array.from for performance)
+    let hasComposerTokens = false;
     for (let i = 0; i < children.length; i++) {
-      if (
-        children[i].nodeType === Node.ELEMENT_NODE &&
-        (children[i] as Element).hasAttribute("data-mention")
-      ) {
-        hasMentions = true;
+      if (isComposerTokenElement(children[i])) {
+        hasComposerTokens = true;
         break;
       }
     }
 
-    // If no mentions, just return textContent (fastest path)
-    if (!hasMentions) {
+    // If no tokens, just return textContent (fastest path)
+    if (!hasComposerTokens) {
       return element.textContent || "";
     }
 
-    // Handle mention badges
+    // Handle composer tokens
     let text = "";
     for (let i = 0; i < children.length; i++) {
       const node = children[i];
@@ -300,8 +305,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const el = node as Element;
         if (el.hasAttribute("data-mention")) {
-          const fileName = el.textContent?.trim();
+          const fileName = el.getAttribute("data-mention-name") || el.textContent?.trim();
           if (fileName) text += `@[${fileName}]`;
+        } else if (el.hasAttribute("data-slash-command")) {
+          const commandName = el.getAttribute("data-slash-command-name") || el.textContent?.trim();
+          if (commandName) text += commandName.startsWith("/") ? commandName : `/${commandName}`;
         } else {
           text += node.textContent || "";
         }
@@ -333,7 +341,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
     const inputRect = inputRef.current.getBoundingClientRect();
     const fallbackPosition: InlineDropdownPosition = {
-      top: inputRect.top,
+      top: Math.max(inputRect.top, inputRect.bottom - 24),
       bottom: inputRect.bottom,
       left: inputRect.left + 12,
       width: 320,
@@ -394,8 +402,66 @@ const AIChatInputBar = memo(function AIChatInputBar({
     return position;
   }, []);
 
-  const getMentionDropdownPosition = getCaretDropdownPosition;
-  const getSlashDropdownPosition = getCaretDropdownPosition;
+  const getMentionDropdownPosition = useCallback(() => {
+    const position = getCaretDropdownPosition();
+    if (!inputRef.current) return position;
+
+    const inputRect = inputRef.current.getBoundingClientRect();
+    return {
+      ...position,
+      width: Math.min(360, Math.max(220, inputRect.width - 24)),
+    };
+  }, [getCaretDropdownPosition]);
+  const getSlashDropdownPosition = useCallback(() => {
+    const position = getCaretDropdownPosition();
+    if (!inputRef.current) return position;
+
+    const inputRect = inputRef.current.getBoundingClientRect();
+    return {
+      ...position,
+      width: Math.min(320, Math.max(180, inputRect.width - 24)),
+    };
+  }, [getCaretDropdownPosition]);
+
+  const syncInputFromEditable = useCallback(() => {
+    const newPlainText = getPlainTextFromDiv();
+    setInput(newPlainText);
+    setHasInputText(newPlainText.trim().length > 0);
+    return newPlainText;
+  }, [getPlainTextFromDiv, setInput]);
+
+  const removeComposerToken = useCallback(
+    (token: Element) => {
+      const parent = token.parentNode;
+      const nextSibling = token.nextSibling;
+      token.remove();
+      if (
+        nextSibling?.nodeType === Node.TEXT_NODE &&
+        (nextSibling.textContent === "\u200B" || nextSibling.textContent === " ")
+      ) {
+        nextSibling.remove();
+      }
+
+      syncInputFromEditable();
+
+      if (!parent) return;
+
+      const selection = window.getSelection();
+      if (!selection) return;
+
+      const range = document.createRange();
+      if (nextSibling?.parentNode === parent) {
+        range.setStartBefore(nextSibling);
+      } else {
+        range.selectNodeContents(parent);
+        range.collapse(false);
+      }
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    },
+    [syncInputFromEditable],
+  );
 
   // Function to recalculate mention dropdown position
   const recalculateMentionPosition = useCallback(() => {
@@ -526,75 +592,75 @@ const AIChatInputBar = memo(function AIChatInputBar({
     } else if (mentionState.active) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        selectNext();
+        const lastIndex = visibleMentionFilesRef.current.length - 1;
+        setSelectedIndex(lastIndex < 0 ? 0 : Math.min(mentionState.selectedIndex + 1, lastIndex));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        selectPrevious();
+        setSelectedIndex(Math.max(mentionState.selectedIndex - 1, 0));
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        // Handle file selection
-        const filteredFiles = getFilteredFiles(allProjectFiles);
-        if (filteredFiles[mentionState.selectedIndex]) {
-          handleFileMentionSelect(filteredFiles[mentionState.selectedIndex]);
+        const visibleFiles = visibleMentionFilesRef.current;
+        if (visibleFiles[mentionState.selectedIndex]) {
+          handleFileMentionSelect(visibleFiles[mentionState.selectedIndex]);
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
         hideMention();
       }
-    } else if (e.key === "Backspace") {
-      // Handle mention badge deletion
+    } else if (e.key === "Backspace" || e.key === "Delete") {
+      // Handle composer token deletion
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0 && inputRef.current) {
         const range = selection.getRangeAt(0);
+        if (!range.collapsed) return;
+
         const container = range.startContainer;
         const offset = range.startOffset;
+        let tokenToRemove: Element | null = null;
+        const isBackwardDelete = e.key === "Backspace";
 
-        // Check if cursor is at the beginning of a text node that follows a mention badge
-        if (container.nodeType === Node.TEXT_NODE && offset === 0) {
-          const previousSibling = container.previousSibling;
-
-          if (
-            previousSibling &&
-            previousSibling.nodeType === Node.ELEMENT_NODE &&
-            (previousSibling as Element).hasAttribute("data-mention")
-          ) {
-            e.preventDefault();
-
-            // Remove the mention badge
-            previousSibling.remove();
-
-            // Update the input state by getting the new plain text
-            const newPlainText = getPlainTextFromDiv();
-            setInput(newPlainText);
-
-            return;
+        if (container === inputRef.current) {
+          const candidateIndex = isBackwardDelete ? offset - 1 : offset;
+          const candidateNode = inputRef.current.childNodes[candidateIndex] ?? null;
+          if (isComposerTokenElement(candidateNode)) {
+            tokenToRemove = candidateNode;
           }
         }
 
-        // Check if cursor is right after a mention badge (in separator text node)
+        // Check if cursor is at the beginning of a text node that follows a composer token
+        if (!tokenToRemove && container.nodeType === Node.TEXT_NODE) {
+          const textContent = container.textContent || "";
+          const candidateSibling =
+            isBackwardDelete && offset === 0
+              ? container.previousSibling
+              : !isBackwardDelete && offset === textContent.length
+                ? container.nextSibling
+                : null;
+
+          if (isComposerTokenElement(candidateSibling)) {
+            tokenToRemove = candidateSibling;
+          }
+        }
+
+        // Check if cursor is right after a composer token (in separator text node)
         if (
+          isBackwardDelete &&
+          !tokenToRemove &&
           container.nodeType === Node.TEXT_NODE &&
           container.textContent === "\u200B" &&
           offset === 1
         ) {
-          const previousSibling = container.previousSibling?.previousSibling; // Skip the space node
+          const previousSibling = container.previousSibling?.previousSibling ?? null; // Skip the space node
 
-          if (
-            previousSibling &&
-            previousSibling.nodeType === Node.ELEMENT_NODE &&
-            (previousSibling as Element).hasAttribute("data-mention")
-          ) {
-            e.preventDefault();
-
-            // Remove the mention badge
-            previousSibling.remove();
-
-            // Update the input state
-            const newPlainText = getPlainTextFromDiv();
-            setInput(newPlainText);
-
-            return;
+          if (isComposerTokenElement(previousSibling)) {
+            tokenToRemove = previousSibling;
           }
+        }
+
+        if (tokenToRemove) {
+          e.preventDefault();
+          removeComposerToken(tokenToRemove);
+          return;
         }
       }
     } else if (e.key === "Enter" && !e.shiftKey) {
@@ -686,6 +752,26 @@ const AIChatInputBar = memo(function AIChatInputBar({
     isContextDropdownOpen,
     setIsContextDropdownOpen,
   ]);
+
+  const handleEditableMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!inputRef.current) return;
+
+    const target = event.target as HTMLElement | null;
+    const token = target?.closest("[data-mention],[data-slash-command]");
+    if (!token || !inputRef.current.contains(token)) return;
+
+    event.preventDefault();
+    inputRef.current.focus();
+
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    const range = document.createRange();
+    range.setStartAfter(token);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, []);
 
   const insertTextAtCursor = useCallback(
     (text: string) => {
@@ -840,7 +926,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Handle file mention selection
   const handleFileMentionSelect = useCallback(
-    (file: any) => {
+    (file: FileEntry) => {
       if (!inputRef.current) return;
 
       isUpdatingContentRef.current = true;
@@ -873,8 +959,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
         // Add the mention badge
         const mentionSpan = document.createElement("span");
         mentionSpan.setAttribute("data-mention", "true");
+        mentionSpan.setAttribute("data-mention-name", file.name);
+        mentionSpan.setAttribute("data-mention-path", file.path);
+        mentionSpan.setAttribute("contenteditable", "false");
+        mentionSpan.title = file.path;
         mentionSpan.className =
-          "ui-font ui-text-xs inline-flex items-center gap-1 rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-accent select-none";
+          "ui-font ui-text-xs inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
@@ -909,6 +999,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
         inputRef.current.focus();
         isUpdatingContentRef.current = false;
+        setHasInputText(true);
       }, 0);
     },
     [mentionState.startIndex, mentionState.search.length, setInput, hideMention],
@@ -925,29 +1016,60 @@ const AIChatInputBar = memo(function AIChatInputBar({
       const { startIndex, endIndex } = slashCommandRangeRef.current;
       const beforeCommand = currentInput.slice(0, startIndex);
       const afterCommand = currentInput.slice(endIndex);
-      const trailingSpace = afterCommand.startsWith(" ") ? "" : " ";
-      const newInput = `${beforeCommand}/${command.name}${trailingSpace}${afterCommand}`;
+      const normalizedAfterCommand = afterCommand.startsWith(" ")
+        ? afterCommand.slice(1)
+        : afterCommand;
+      const newInput = `${beforeCommand}/${command.name} ${normalizedAfterCommand}`;
       setInput(newInput);
       hideSlashCommands();
 
-      // Update the DOM content
+      // Rebuild the DOM so the command behaves like an atomic composer token.
       setTimeout(() => {
         if (!inputRef.current) return;
 
-        inputRef.current.textContent = newInput;
+        inputRef.current.innerHTML = "";
 
-        // Position cursor at the end
+        if (beforeCommand) {
+          inputRef.current.appendChild(document.createTextNode(beforeCommand));
+        }
+
+        const commandSpan = document.createElement("span");
+        commandSpan.setAttribute("data-slash-command", "true");
+        commandSpan.setAttribute("data-slash-command-name", command.name);
+        commandSpan.setAttribute("contenteditable", "false");
+        commandSpan.title = command.description || `/${command.name}`;
+        commandSpan.className =
+          "ui-font ui-text-xs inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-md border border-border/70 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
+        commandSpan.textContent = `/${command.name}`;
+        inputRef.current.appendChild(commandSpan);
+
+        const afterTextNode = document.createTextNode(
+          ` ${normalizedAfterCommand}${normalizedAfterCommand ? "" : " "}`,
+        );
+        inputRef.current.appendChild(afterTextNode);
+
+        const separatorNode = document.createTextNode("\u200B");
+        inputRef.current.appendChild(separatorNode);
+
         const selection = window.getSelection();
         if (selection) {
           const range = document.createRange();
-          range.selectNodeContents(inputRef.current);
-          range.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(range);
+          try {
+            range.setStart(separatorNode, 1);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } catch {
+            range.selectNodeContents(inputRef.current);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
         }
 
         inputRef.current.focus();
         isUpdatingContentRef.current = false;
+        setHasInputText(true);
       }, 0);
     },
     [getPlainTextFromDiv, setInput, hideSlashCommands],
@@ -1129,6 +1251,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             contentEditable={isInputEnabled}
             onInput={handleInputChange}
             onKeyDown={handleKeyDown}
+            onMouseDown={handleEditableMouseDown}
             onPaste={handlePaste}
             data-placeholder={
               isInputEnabled
@@ -1392,7 +1515,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
       </div>
 
       {mentionState.active && (
-        <FileMentionDropdown files={mentionableFiles} onSelect={handleFileMentionSelect} />
+        <FileMentionDropdown
+          files={mentionableFiles}
+          onSelect={handleFileMentionSelect}
+          onVisibleFilesChange={(files) => {
+            visibleMentionFilesRef.current = files;
+          }}
+        />
       )}
 
       {slashCommandState.active && <SlashCommandDropdown onSelect={handleSlashCommandSelect} />}

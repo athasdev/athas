@@ -207,7 +207,7 @@ interface CommandEmptyProps {
 }
 
 export const CommandEmpty = ({ children }: CommandEmptyProps) => (
-  <div className="ui-text-sm p-3 text-center text-text-lighter">{children}</div>
+  <div className="ui-text-sm p-3 text-center leading-[1.35] text-text-lighter">{children}</div>
 );
 
 export default Command;
