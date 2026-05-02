@@ -219,6 +219,10 @@ function isStandardEditorBuffer(buffer: Buffer): buffer is EditorContent {
   return buffer.type === "editor";
 }
 
+function EmptyPaneState() {
+  return <div className="h-full w-full bg-primary-bg" />;
+}
+
 export function PaneContainer({ pane }: PaneContainerProps) {
   const buffers = useBufferStore.use.buffers();
   const activePaneId = usePaneStore.use.activePaneId();
@@ -984,9 +988,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {(!activeBuffer || activeBuffer.type === "newTab") && !shouldRenderCarousel && (
-          <EmptyEditorState />
-        )}
+        {!activeBuffer && !shouldRenderCarousel && <EmptyPaneState />}
+        {activeBuffer?.type === "newTab" && !shouldRenderCarousel && <EmptyEditorState />}
 
         <Suspense fallback={null}>
           {shouldRenderCarousel ? (
