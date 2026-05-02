@@ -4,6 +4,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitDiff } from "../types/git-types";
+import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
 
 interface UseDiffDataReturn {
   diff: GitDiff | null;
@@ -43,18 +44,9 @@ export const useDiffData = (): UseDiffDataReturn => {
   const diff = rawDiffData && "file_path" in rawDiffData ? rawDiffData : null;
 
   const stagedMatch = activeBuffer?.path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
-  const commitMatch = activeBuffer?.path.match(/^diff:\/\/commit\/[^/]+\/(.+?)(?:\.diff)?$/);
-  const stashMatch = activeBuffer?.path.match(/^diff:\/\/stash\/\d+\/(.+)$/);
-
   const isStaged = stagedMatch?.[1] === "staged";
-  const encodedFilePath = stagedMatch?.[2];
-  const filePath = encodedFilePath
-    ? decodeURIComponent(encodedFilePath)
-    : commitMatch?.[1] && commitMatch[1] !== "all-files"
-      ? decodeURIComponent(commitMatch[1])
-      : stashMatch?.[1] && stashMatch[1] !== "all-files"
-        ? decodeURIComponent(stashMatch[1])
-        : null;
+  const isWorkingTreeFileDiff = Boolean(stagedMatch);
+  const filePath = getDiffBufferFilePath(activeBuffer?.path);
 
   const switchToView = useCallback(
     (viewType: "staged" | "unstaged") => {
@@ -85,7 +77,13 @@ export const useDiffData = (): UseDiffDataReturn => {
   );
 
   const refresh = useCallback(async () => {
-    if (!rootFolderPath || !filePath || !activeBuffer || isRefreshing.current) {
+    if (
+      !isWorkingTreeFileDiff ||
+      !rootFolderPath ||
+      !filePath ||
+      !activeBuffer ||
+      isRefreshing.current
+    ) {
       return;
     }
 
@@ -119,6 +117,7 @@ export const useDiffData = (): UseDiffDataReturn => {
     rootFolderPath,
     filePath,
     isStaged,
+    isWorkingTreeFileDiff,
     activeBuffer,
     updateBufferContent,
     closeBuffer,
@@ -127,7 +126,7 @@ export const useDiffData = (): UseDiffDataReturn => {
 
   useEffect(() => {
     const handleGitStatusChanged = async () => {
-      if (!rootFolderPath || !filePath || !activeBuffer) return;
+      if (!isWorkingTreeFileDiff || !rootFolderPath || !filePath || !activeBuffer) return;
 
       if (isRefreshing.current) return;
 
@@ -142,7 +141,7 @@ export const useDiffData = (): UseDiffDataReturn => {
     return () => {
       window.removeEventListener("git-status-changed", handleGitStatusChanged);
     };
-  }, [refresh, rootFolderPath, filePath, activeBuffer]);
+  }, [refresh, rootFolderPath, filePath, activeBuffer, isWorkingTreeFileDiff]);
 
   return {
     diff,
