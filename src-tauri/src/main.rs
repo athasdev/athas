@@ -50,6 +50,7 @@ fn main() {
       .invoke_handler(tauri::generate_handler![
          // File system commands
          open_file_external,
+         open_folder_dialog,
          move_file,
          rename_file,
          get_symlink_info,

@@ -1,10 +1,10 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
   type ProviderHeaders,
   type ProviderModel,
   type StreamRequest,
 } from "./ai-provider-interface";
+import { providerFetch } from "./provider-fetch";
 
 export class MistralProvider extends AIProvider {
   async getModels(apiKey?: string): Promise<ProviderModel[]> {
@@ -13,7 +13,7 @@ export class MistralProvider extends AIProvider {
     }
 
     try {
-      const response = await tauriFetch("https://api.mistral.ai/v1/models", {
+      const response = await providerFetch("https://api.mistral.ai/v1/models", {
         method: "GET",
         headers: this.buildHeaders(apiKey),
       });
@@ -63,7 +63,7 @@ export class MistralProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await tauriFetch("https://api.mistral.ai/v1/models", {
+      const response = await providerFetch("https://api.mistral.ai/v1/models", {
         method: "GET",
         headers: this.buildHeaders(apiKey),
       });

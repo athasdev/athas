@@ -1,5 +1,7 @@
 use crate::app_runtime::AppHandle;
-use tauri_plugin_store::StoreExt;
+use serde_json::{Map, Value};
+use std::{fs, io::ErrorKind, path::PathBuf};
+use tauri::Manager;
 
 const SECURE_STORE_FILE: &str = "secure.json";
 
@@ -12,44 +14,84 @@ fn keyring_entry(app: &AppHandle, key: &str) -> Result<keyring::Entry, String> {
       .map_err(|e| format!("Failed to initialize keychain entry: {e}"))
 }
 
+fn secure_store_path(app: &AppHandle) -> Result<PathBuf, String> {
+   let mut candidates = Vec::new();
+
+   if let Ok(dir) = app.path().app_data_dir() {
+      candidates.push(dir);
+   }
+
+   if let Some(dir) = dirs::data_dir() {
+      candidates.push(dir.join("athas"));
+   }
+
+   if let Some(dir) = dirs::home_dir() {
+      candidates.push(dir.join(".athas"));
+   }
+
+   for dir in candidates {
+      match fs::create_dir_all(&dir) {
+         Ok(()) => return Ok(dir.join(SECURE_STORE_FILE)),
+         Err(error) => {
+            log::warn!(
+               "Failed to create secure storage directory '{}': {}",
+               dir.display(),
+               error
+            );
+         }
+      }
+   }
+
+   Err("Failed to resolve a writable secure storage directory".to_string())
+}
+
+fn load_store(app: &AppHandle) -> Result<Map<String, Value>, String> {
+   let path = secure_store_path(app)?;
+
+   match fs::read_to_string(&path) {
+      Ok(contents) => {
+         if contents.trim().is_empty() {
+            return Ok(Map::new());
+         }
+
+         serde_json::from_str::<Map<String, Value>>(&contents)
+            .map_err(|e| format!("Failed to parse secure store '{}': {}", path.display(), e))
+      }
+      Err(error) if error.kind() == ErrorKind::NotFound => Ok(Map::new()),
+      Err(error) => Err(format!(
+         "Failed to read secure store '{}': {}",
+         path.display(),
+         error
+      )),
+   }
+}
+
+fn save_store(app: &AppHandle, store: &Map<String, Value>) -> Result<(), String> {
+   let path = secure_store_path(app)?;
+   let contents = serde_json::to_string_pretty(store)
+      .map_err(|e| format!("Failed to serialize secure store: {e}"))?;
+
+   fs::write(&path, contents)
+      .map_err(|e| format!("Failed to save secure store '{}': {}", path.display(), e))
+}
+
 fn store_set(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
-   let store = app
-      .store(SECURE_STORE_FILE)
-      .map_err(|e| format!("Failed to access secure store: {e}"))?;
-
-   store.set(
-      key.to_string(),
-      serde_json::Value::String(value.to_string()),
-   );
-
-   store
-      .save()
-      .map_err(|e| format!("Failed to save secure store: {e}"))?;
-
-   Ok(())
+   let mut store = load_store(app)?;
+   store.insert(key.to_string(), Value::String(value.to_string()));
+   save_store(app, &store)
 }
 
 fn store_get(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
-   let store = app
-      .store(SECURE_STORE_FILE)
-      .map_err(|e| format!("Failed to access secure store: {e}"))?;
-
+   let store = load_store(app)?;
    Ok(store
       .get(key)
       .and_then(|value| value.as_str().map(|s| s.to_string())))
 }
 
 fn store_delete(app: &AppHandle, key: &str) -> Result<(), String> {
-   let store = app
-      .store(SECURE_STORE_FILE)
-      .map_err(|e| format!("Failed to access secure store: {e}"))?;
-
-   let _removed = store.delete(key);
-   store
-      .save()
-      .map_err(|e| format!("Failed to save secure store: {e}"))?;
-
-   Ok(())
+   let mut store = load_store(app)?;
+   store.remove(key);
+   save_store(app, &store)
 }
 
 pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {

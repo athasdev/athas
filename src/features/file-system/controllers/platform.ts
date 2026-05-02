@@ -59,12 +59,17 @@ export async function deletePath(path: string): Promise<void> {
  * Open a folder selection dialog
  */
 export async function openFolder(): Promise<string | null> {
-  const selected = await open({
-    directory: true,
-    multiple: false,
-  });
+  try {
+    return await invoke<string | null>("open_folder_dialog");
+  } catch (error) {
+    console.warn("Native folder dialog failed, falling back to Tauri dialog plugin:", error);
+    const selected = await open({
+      directory: true,
+      multiple: false,
+    });
 
-  return selected as string | null;
+    return selected as string | null;
+  }
 }
 
 /**
