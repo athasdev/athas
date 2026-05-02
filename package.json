@@ -20,7 +20,7 @@
     "dev": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.dev.conf.json",
     "dev:stable": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:preview": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.preview.conf.json",
-    "dev:linux": "bun scripts/check-zig.ts && cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux",
+    "dev:linux": "bun scripts/check-zig.ts && cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux -- --ozone-platform=x11 --disable-vulkan --disable-features=Vulkan",
     "build:stable": "bun scripts/check-zig.ts && tauri build",
     "build:linux": "bun scripts/check-zig.ts && cargo tauri build --no-bundle -- --no-default-features --features linux && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
     "build:preview": "bun scripts/check-zig.ts && tauri build --config src-tauri/tauri.preview.conf.json",

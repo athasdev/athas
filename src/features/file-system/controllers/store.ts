@@ -223,56 +223,66 @@ export const useFileSystemStore = createSelectors(
         const openStartedAt = performance.now();
         logWorkspaceOpenStep("start", "handleOpenFolder", selected);
 
-        const { settings } = useSettingsStore.getState();
-        const hasOpenWorkspace =
-          !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
+        try {
+          const { settings } = useSettingsStore.getState();
+          const hasOpenWorkspace =
+            !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
 
-        if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
-          await createAppWindow({
-            path: selected,
-            isDirectory: true,
+          if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+            await createAppWindow({
+              path: selected,
+              isDirectory: true,
+            });
+            return true;
+          }
+
+          persistCurrentProjectUiState(get().rootFolderPath);
+
+          set((state) => {
+            state.isFileTreeLoading = true;
           });
-          return true;
+
+          // Add project to workspace tabs
+          const projectName = getFolderName(selected);
+          useWorkspaceTabsStore.getState().addProjectTab(selected, projectName);
+
+          const readDirectoryStartedAt = performance.now();
+          logWorkspaceOpenStep("start", "readDirectoryContents", selected);
+          const entries = await readDirectoryContents(selected);
+          logWorkspaceOpenStep("end", "readDirectoryContents", selected, readDirectoryStartedAt);
+          const fileTree = sortFileEntries(entries);
+          const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
+
+          // Initialize tree UI state: expand root
+          useFileTreeStore.getState().setExpandedPaths(new Set([selected]));
+
+          // Update project store
+          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          setRootFolderPath(selected);
+          setProjectName(projectName);
+
+          // Add to recent folders
+          useRecentFoldersStore.getState().addToRecents(selected);
+
+          // Clear git diff cache for new project
+          gitDiffCache.clear();
+
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.files = wrappedFileTree;
+            state.rootFolderPath = selected;
+            state.filesVersion++;
+            state.projectFilesCache = undefined;
+          });
+        } catch (error) {
+          set((state) => {
+            state.isFileTreeLoading = false;
+          });
+          logWorkspaceOpenStep("error", "handleOpenFolder", selected, openStartedAt);
+          console.error("Failed to open folder:", error);
+          toast.error(`Failed to open folder: ${selected}`);
+          return false;
         }
-
-        persistCurrentProjectUiState(get().rootFolderPath);
-
-        set((state) => {
-          state.isFileTreeLoading = true;
-        });
-
-        // Add project to workspace tabs
-        const projectName = getFolderName(selected);
-        useWorkspaceTabsStore.getState().addProjectTab(selected, projectName);
-
-        const readDirectoryStartedAt = performance.now();
-        logWorkspaceOpenStep("start", "readDirectoryContents", selected);
-        const entries = await readDirectoryContents(selected);
-        logWorkspaceOpenStep("end", "readDirectoryContents", selected, readDirectoryStartedAt);
-        const fileTree = sortFileEntries(entries);
-        const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
-
-        // Initialize tree UI state: expand root
-        useFileTreeStore.getState().setExpandedPaths(new Set([selected]));
-
-        // Update project store
-        const { setRootFolderPath, setProjectName } = useProjectStore.getState();
-        setRootFolderPath(selected);
-        setProjectName(projectName);
-
-        // Add to recent folders
-        useRecentFoldersStore.getState().addToRecents(selected);
-
-        // Clear git diff cache for new project
-        gitDiffCache.clear();
-
-        set((state) => {
-          state.isFileTreeLoading = false;
-          state.files = wrappedFileTree;
-          state.rootFolderPath = selected;
-          state.filesVersion++;
-          state.projectFilesCache = undefined;
-        });
 
         useGitStore.getState().actions.setWorkspaceGitStatus(null, selected);
 
@@ -494,45 +504,55 @@ export const useFileSystemStore = createSelectors(
       handleOpenFolderByPath: async (path: string) => {
         const openStartedAt = performance.now();
         logWorkspaceOpenStep("start", "handleOpenFolderByPath", path);
-        persistCurrentProjectUiState(get().rootFolderPath);
+        try {
+          persistCurrentProjectUiState(get().rootFolderPath);
 
-        set((state) => {
-          state.isFileTreeLoading = true;
-        });
+          set((state) => {
+            state.isFileTreeLoading = true;
+          });
 
-        // Add project to workspace tabs
-        const projectName = getFolderName(path);
-        useWorkspaceTabsStore.getState().addProjectTab(path, projectName);
+          // Add project to workspace tabs
+          const projectName = getFolderName(path);
+          useWorkspaceTabsStore.getState().addProjectTab(path, projectName);
 
-        const readDirectoryStartedAt = performance.now();
-        logWorkspaceOpenStep("start", "readDirectoryContents", path);
-        const entries = await readDirectoryContents(path);
-        logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
-        const fileTree = sortFileEntries(entries);
-        const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
+          const readDirectoryStartedAt = performance.now();
+          logWorkspaceOpenStep("start", "readDirectoryContents", path);
+          const entries = await readDirectoryContents(path);
+          logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
+          const fileTree = sortFileEntries(entries);
+          const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
 
-        // Clear tree UI state
-        useFileTreeStore.getState().collapseAll();
+          // Clear tree UI state
+          useFileTreeStore.getState().collapseAll();
 
-        // Update project store
-        const { setRootFolderPath, setProjectName } = useProjectStore.getState();
-        setRootFolderPath(path);
-        setProjectName(projectName);
-        restoreProjectUiState(path);
+          // Update project store
+          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          setRootFolderPath(path);
+          setProjectName(projectName);
+          restoreProjectUiState(path);
 
-        // Add to recent folders
-        useRecentFoldersStore.getState().addToRecents(path);
+          // Add to recent folders
+          useRecentFoldersStore.getState().addToRecents(path);
 
-        // Clear git diff cache for new project
-        gitDiffCache.clear();
+          // Clear git diff cache for new project
+          gitDiffCache.clear();
 
-        set((state) => {
-          state.isFileTreeLoading = false;
-          state.files = wrappedFileTree;
-          state.rootFolderPath = path;
-          state.filesVersion++;
-          state.projectFilesCache = undefined;
-        });
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.files = wrappedFileTree;
+            state.rootFolderPath = path;
+            state.filesVersion++;
+            state.projectFilesCache = undefined;
+          });
+        } catch (error) {
+          set((state) => {
+            state.isFileTreeLoading = false;
+          });
+          logWorkspaceOpenStep("error", "handleOpenFolderByPath", path, openStartedAt);
+          console.error("Failed to open folder by path:", error);
+          toast.error(`Failed to open folder: ${path}`);
+          return false;
+        }
 
         useGitStore.getState().actions.setWorkspaceGitStatus(null, path);
 

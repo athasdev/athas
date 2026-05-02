@@ -1,4 +1,3 @@
-import { open } from "@tauri-apps/plugin-dialog";
 import {
   Database,
   FileText,
@@ -14,6 +13,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { openFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -76,10 +76,7 @@ export function EmptyEditorState() {
 
   const handleOpenFile = useCallback(async () => {
     try {
-      const selected = await open({
-        multiple: false,
-        directory: false,
-      });
+      const selected = await openFile();
       if (selected && typeof selected === "string") {
         const fileName = selected.split("/").pop() || selected;
         const content = await readFileContent(selected);

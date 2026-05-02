@@ -97,7 +97,18 @@ icon_base_dir="${app_root}/share/icons/hicolor"
 
 install -d "$bin_dir" "$libexec_dir" "$resource_dir" "$desktop_dir"
 install -m 755 "$binary" "${libexec_dir}/athas"
-ln -s ../libexec/athas "${bin_dir}/athas"
+cat > "${bin_dir}/athas" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+bin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "${bin_dir}/../libexec/athas" \
+  --ozone-platform=x11 \
+  --disable-vulkan \
+  --disable-features=Vulkan \
+  "$@"
+EOF
+chmod 755 "${bin_dir}/athas"
 
 cp -R src/extensions/bundled "${resource_dir}/bundled"
 

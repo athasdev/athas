@@ -78,12 +78,22 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
    })
 }
 
+fn is_chromium_runtime_arg(arg: &str) -> bool {
+   arg == "--disable-vulkan" || arg == "--ozone-platform=x11" || arg == "--disable-features=Vulkan"
+}
+
 pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
+   let args = args
+      .iter()
+      .map(String::as_str)
+      .filter(|arg| !is_chromium_runtime_arg(arg))
+      .collect::<Vec<_>>();
+
    if args.is_empty() {
       return Vec::new();
    }
 
-   match args[0].as_str() {
+   match args[0] {
       "help" | "-h" | "--help" => Vec::new(),
       "open" => args[1..]
          .iter()
@@ -94,7 +104,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          .get(1)
          .map(|url| {
             vec![CliRequest::Web {
-               url: url.to_string(),
+               url: (*url).to_string(),
             }]
          })
          .unwrap_or_default(),
@@ -117,7 +127,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
       "remote" => args
          .get(1)
          .map(|connection_id| CliRequest::Remote {
-            connection_id: connection_id.to_string(),
+            connection_id: (*connection_id).to_string(),
             name: if args.len() > 2 {
                Some(args[2..].join(" "))
             } else {
@@ -259,6 +269,25 @@ mod tests {
    fn parse_cli_args_web_command() {
       let cwd = std::env::current_dir().unwrap();
       let args = vec!["web".to_string(), "https://athas.dev".to_string()];
+      assert_eq!(
+         parse_cli_args(&args, &cwd),
+         vec![CliRequest::Web {
+            url: "https://athas.dev".to_string()
+         }]
+      );
+   }
+
+   #[test]
+   fn parse_cli_args_ignores_linux_chromium_runtime_flags() {
+      let cwd = std::env::current_dir().unwrap();
+      let args = vec![
+         "--ozone-platform=x11".to_string(),
+         "--disable-vulkan".to_string(),
+         "--disable-features=Vulkan".to_string(),
+         "web".to_string(),
+         "https://athas.dev".to_string(),
+      ];
+
       assert_eq!(
          parse_cli_args(&args, &cwd),
          vec![CliRequest::Web {
