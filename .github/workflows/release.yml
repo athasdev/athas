@@ -19,7 +19,7 @@ jobs:
   release-metadata:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     outputs:
       tag_name: ${{ steps.release_meta.outputs.tag_name }}
