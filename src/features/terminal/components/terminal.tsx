@@ -7,6 +7,7 @@ import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import {
   createTerminalAddons,
   injectLinkStyles,
@@ -200,14 +201,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
               lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
               normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
 
-            if (
-              requiresConfirmation &&
-              !window.confirm(
-                `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
-              )
-            ) {
+            if (requiresConfirmation) {
               event.preventDefault();
               event.stopImmediatePropagation();
+              void primitiveConfirm(
+                `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
+                { title: "Paste Into Terminal", confirmLabel: "Paste" },
+              ).then((confirmed) => {
+                if (confirmed) writeBuffered(normalizedText);
+              });
               return;
             }
 

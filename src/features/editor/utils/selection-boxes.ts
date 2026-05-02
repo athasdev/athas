@@ -10,6 +10,12 @@ export interface SelectionBox {
   left: number;
   width: number;
   height: number;
+  corners: {
+    topLeft: boolean;
+    topRight: boolean;
+    bottomRight: boolean;
+    bottomLeft: boolean;
+  };
 }
 
 export interface CalculateSelectionBoxesOptions {
@@ -56,6 +62,30 @@ function offsetToLineColumn(
   };
 }
 
+export function addSelectionBoxCorners(
+  boxes: Array<Omit<SelectionBox, "corners">>,
+): SelectionBox[] {
+  const epsilon = 0.5;
+
+  return boxes.map((box, index) => {
+    const previous = boxes[index - 1];
+    const next = boxes[index + 1];
+    const right = box.left + box.width;
+    const previousRight = previous ? previous.left + previous.width : 0;
+    const nextRight = next ? next.left + next.width : 0;
+
+    return {
+      ...box,
+      corners: {
+        topLeft: !previous || box.left < previous.left - epsilon,
+        topRight: !previous || right > previousRight + epsilon,
+        bottomRight: !next || right > nextRight + epsilon,
+        bottomLeft: !next || box.left < next.left - epsilon,
+      },
+    };
+  });
+}
+
 export function calculateSelectionBoxes({
   selectionOffsets,
   lines,
@@ -64,7 +94,7 @@ export function calculateSelectionBoxes({
   lineHeight,
   measureText,
 }: CalculateSelectionBoxesOptions): SelectionBox[] {
-  const boxes: SelectionBox[] = [];
+  const boxes: Array<Omit<SelectionBox, "corners">> = [];
   const minimumSelectionWidth = Math.max(measureText(" "), 4);
 
   const getLineLeft = (lineIndex: number, column: number): number => {
@@ -109,5 +139,5 @@ export function calculateSelectionBoxes({
     });
   }
 
-  return boxes;
+  return addSelectionBoxCorners(boxes);
 }

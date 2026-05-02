@@ -29,6 +29,7 @@ export function useFileExplorerDragDrop(
   rootFolderPath: string | undefined,
   onFileMove?: (oldPath: string, newPath: string) => void,
   onAutoExpandDirectory?: (path: string) => void,
+  onMoveError?: (message: string) => void,
 ) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
@@ -253,7 +254,8 @@ export function useFileExplorerDragDrop(
           onFileMove?.(sourcePath, newPath);
         } catch (error) {
           console.error("Failed to move file:", error);
-          alert(`Failed to move ${sourceName}: ${error}`);
+          const message = error instanceof Error ? error.message : String(error);
+          onMoveError?.(`Failed to move ${sourceName}: ${message}`);
         }
       }
 
@@ -278,6 +280,7 @@ export function useFileExplorerDragDrop(
     clearEditorDropHover,
     dragState,
     onFileMove,
+    onMoveError,
     rootFolderPath,
     scheduleAutoExpand,
   ]);

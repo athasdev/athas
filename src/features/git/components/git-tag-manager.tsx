@@ -19,6 +19,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import Select from "@/ui/select";
 import { toast } from "@/ui/toast";
 import { formatShortDate } from "@/utils/date";
@@ -158,7 +159,14 @@ const GitTagManager = ({
 
   const handleCheckoutTag = async (tagName: string) => {
     if (!repoPath) return;
-    if (!window.confirm(`Checkout ${tagName} in detached HEAD?`)) return;
+    if (
+      !(await primitiveConfirm(`Checkout ${tagName} in detached HEAD?`, {
+        title: "Checkout Tag",
+        confirmLabel: "Checkout",
+      }))
+    ) {
+      return;
+    }
 
     const actionKey = `checkout:${tagName}`;
     setActionLoading((prev) => new Set(prev).add(actionKey));
@@ -475,10 +483,15 @@ const GitTagManager = ({
                     onClick={(event) => {
                       event.stopPropagation();
                       if (!repoPath || !selectedRemoteName) return;
-                      if (!window.confirm(`Delete ${tag.name} from ${selectedRemoteName}?`)) return;
-                      void handleTagRemoteAction(tag.name, "Delete remote tag", () =>
-                        deleteRemoteTag(repoPath, tag.name, selectedRemoteName),
-                      );
+                      void primitiveConfirm(`Delete ${tag.name} from ${selectedRemoteName}?`, {
+                        title: "Delete Remote Tag",
+                        confirmLabel: "Delete",
+                      }).then((confirmed) => {
+                        if (!confirmed) return;
+                        void handleTagRemoteAction(tag.name, "Delete remote tag", () =>
+                          deleteRemoteTag(repoPath, tag.name, selectedRemoteName),
+                        );
+                      });
                     }}
                     disabled={
                       !selectedRemoteName || actionLoading.has(`Delete remote tag:${tag.name}`)

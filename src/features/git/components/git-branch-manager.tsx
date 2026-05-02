@@ -12,6 +12,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
@@ -67,8 +68,6 @@ const GitBranchManager = ({
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
       state.isSettingsDialogVisible ||
-      state.isThemeSelectorVisible ||
-      state.isIconThemeSelectorVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible,
   );
@@ -192,7 +191,10 @@ const GitBranchManager = ({
   const handleDeleteBranch = async (branchName: string) => {
     if (!repoPath || !branchName || branchName === currentBranch) return;
 
-    const confirmed = confirm(`Are you sure you want to delete branch "${branchName}"?`);
+    const confirmed = await primitiveConfirm(
+      `Are you sure you want to delete branch "${branchName}"?`,
+      { title: "Delete Branch", confirmLabel: "Delete" },
+    );
     if (!confirmed) return;
 
     setIsLoading(true);

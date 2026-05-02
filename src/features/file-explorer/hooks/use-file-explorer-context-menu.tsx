@@ -17,8 +17,9 @@ import {
   TerminalWindow as Terminal,
   Trash,
   Upload,
+  Warning,
 } from "@phosphor-icons/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
@@ -30,7 +31,10 @@ import {
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import type { ContextMenuState } from "@/features/file-system/types/app";
+import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import Dialog from "@/ui/dialog";
+import Input from "@/ui/input";
 import { toast } from "@/ui/toast";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
 
@@ -53,6 +57,41 @@ interface UseFileExplorerContextMenuOptions {
   onOpenAllFilesInDirectory: (directoryPath: string) => Promise<void>;
 }
 
+interface EnvOverwriteDialogState {
+  sourcePath: string;
+  targetFileName: string;
+}
+
+interface EnvCustomDialogState {
+  sourcePath: string;
+  value: string;
+}
+
+interface PropertiesDialogState {
+  fileName: string;
+  path: string;
+  size: string;
+  type: string;
+}
+
+const menuIconSpacer = <span aria-hidden="true" />;
+
+function formatFileSize(sizeHeader: string | null): string {
+  const bytes = Number(sizeHeader);
+  if (!Number.isFinite(bytes) || bytes < 0) return "Unknown";
+  if (bytes < 1024) return `${bytes} bytes`;
+
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[unitIndex]}`;
+}
+
 export function useFileExplorerContextMenu({
   rootFolderPath,
   onFileSelect,
@@ -69,11 +108,16 @@ export function useFileExplorerContextMenu({
   onOpenAllFilesInDirectory,
 }: UseFileExplorerContextMenuOptions) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [envOverwriteDialog, setEnvOverwriteDialog] = useState<EnvOverwriteDialogState | null>(
+    null,
+  );
+  const [envCustomDialog, setEnvCustomDialog] = useState<EnvCustomDialogState | null>(null);
+  const [propertiesDialog, setPropertiesDialog] = useState<PropertiesDialogState | null>(null);
   const clipboardActions = useFileClipboardStore.getState().actions;
   const clipboard = useFileClipboardStore((state) => state.clipboard);
 
   const createEnvTemplateFile = useCallback(
-    async (sourcePath: string, targetFileName: string) => {
+    async (sourcePath: string, targetFileName: string, options?: { overwrite?: boolean }) => {
       if (!onCreateNewFileInDirectory) return;
 
       const directoryPath = getDirName(sourcePath);
@@ -89,8 +133,10 @@ export function useFileExplorerContextMenu({
         try {
           await readTextFile(targetPath);
           targetExists = true;
-          const shouldOverwrite = window.confirm(`${targetFileName} already exists. Overwrite it?`);
-          if (!shouldOverwrite) return;
+          if (!options?.overwrite) {
+            setEnvOverwriteDialog({ sourcePath, targetFileName });
+            return;
+          }
         } catch {}
 
         const sourceContent = await readTextFile(sourcePath);
@@ -121,23 +167,34 @@ export function useFileExplorerContextMenu({
     [onCreateNewFileInDirectory, onRefreshDirectory],
   );
 
-  const promptAndCreateEnvTemplateFile = useCallback(
-    (sourcePath: string) => {
-      const input = window.prompt(
-        "Enter env file name or suffix (for example: staging or .env.staging):",
-      );
-      if (!input) return;
+  const promptAndCreateEnvTemplateFile = useCallback((sourcePath: string) => {
+    setEnvCustomDialog({ sourcePath, value: "" });
+  }, []);
 
-      const targetFileName = normalizeEnvTargetFileName(input);
+  const handleEnvCustomSubmit = useCallback(
+    (event?: FormEvent<HTMLFormElement>) => {
+      event?.preventDefault();
+      if (!envCustomDialog) return;
+
+      const targetFileName = normalizeEnvTargetFileName(envCustomDialog.value);
       if (!targetFileName) {
         toast.error("Invalid env file name");
         return;
       }
 
+      const sourcePath = envCustomDialog.sourcePath;
+      setEnvCustomDialog(null);
       void createEnvTemplateFile(sourcePath, targetFileName);
     },
-    [createEnvTemplateFile],
+    [createEnvTemplateFile, envCustomDialog],
   );
+
+  const handleEnvOverwriteConfirm = useCallback(() => {
+    if (!envOverwriteDialog) return;
+    const { sourcePath, targetFileName } = envOverwriteDialog;
+    setEnvOverwriteDialog(null);
+    void createEnvTemplateFile(sourcePath, targetFileName, { overwrite: true });
+  }, [createEnvTemplateFile, envOverwriteDialog]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, filePath: string, isDir: boolean) => {
     e.preventDefault();
@@ -265,16 +322,16 @@ export function useFileExplorerContextMenu({
         ...(canCreateEnvTemplate
           ? [
               { id: "sep-env-template", label: "", separator: true, onClick: () => {} },
-              ...ENV_TEMPLATE_TARGETS.map((target) => ({
+              ...ENV_TEMPLATE_TARGETS.map((target, index) => ({
                 id: target.id,
                 label: target.label,
-                icon: <FilePlus />,
+                icon: index === 0 ? <FilePlus /> : menuIconSpacer,
                 onClick: () => void createEnvTemplateFile(contextMenu.path, target.fileName),
               })),
               {
                 id: "env-other",
                 label: "Create Other .env...",
-                icon: <FilePlus />,
+                icon: menuIconSpacer,
                 onClick: () => promptAndCreateEnvTemplateFile(contextMenu.path),
               },
             ]
@@ -284,18 +341,21 @@ export function useFileExplorerContextMenu({
           label: "Properties",
           icon: <Info />,
           onClick: async () => {
+            const fileName = getBaseName(contextMenu.path, "");
+            const extension = fileName.includes(".") ? fileName.split(".").pop() : undefined;
+            let size = "Unknown";
+
             try {
               const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
-              const size = stats.headers.get("content-length") || "Unknown";
-              const fileName = getBaseName(contextMenu.path, "");
-              const extension = fileName.includes(".") ? fileName.split(".").pop() : "No extension";
-              alert(
-                `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
-              );
-            } catch {
-              const fileName = getBaseName(contextMenu.path, "");
-              alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
-            }
+              size = formatFileSize(stats.headers.get("content-length"));
+            } catch {}
+
+            setPropertiesDialog({
+              fileName,
+              path: contextMenu.path,
+              size,
+              type: extension || "No extension",
+            });
           },
         },
         { id: "sep-file", label: "", separator: true, onClick: () => {} },
@@ -405,15 +465,99 @@ export function useFileExplorerContextMenu({
     rootFolderPath,
   ]);
 
-  const contextMenuElement = contextMenu ? (
-    <ContextMenu
-      isOpen
-      position={{ x: contextMenu.x, y: contextMenu.y }}
-      items={contextMenuItems}
-      onClose={() => setContextMenu(null)}
-      className="min-w-[220px]"
-    />
-  ) : null;
+  const hasDialog = Boolean(envCustomDialog || envOverwriteDialog || propertiesDialog);
+  const contextMenuElement =
+    contextMenu || hasDialog ? (
+      <>
+        {contextMenu && (
+          <ContextMenu
+            isOpen
+            position={{ x: contextMenu.x, y: contextMenu.y }}
+            items={contextMenuItems}
+            onClose={() => setContextMenu(null)}
+            className="min-w-[220px]"
+          />
+        )}
+
+        {envCustomDialog && (
+          <Dialog
+            title="Create Env File"
+            icon={FilePlus}
+            onClose={() => setEnvCustomDialog(null)}
+            size="sm"
+            footer={
+              <>
+                <Button variant="ghost" size="sm" onClick={() => setEnvCustomDialog(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" form="custom-env-template-form" variant="primary" size="sm">
+                  Create
+                </Button>
+              </>
+            }
+          >
+            <form id="custom-env-template-form" onSubmit={handleEnvCustomSubmit}>
+              <label className="flex flex-col gap-2 ui-font ui-text-sm text-text">
+                File name or suffix
+                <Input
+                  autoFocus
+                  value={envCustomDialog.value}
+                  placeholder="staging or .env.staging"
+                  onChange={(event) =>
+                    setEnvCustomDialog((state) =>
+                      state ? { ...state, value: event.target.value } : state,
+                    )
+                  }
+                />
+              </label>
+            </form>
+          </Dialog>
+        )}
+
+        {envOverwriteDialog && (
+          <Dialog
+            title="Overwrite Env File"
+            icon={Warning}
+            onClose={() => setEnvOverwriteDialog(null)}
+            size="sm"
+            footer={
+              <>
+                <Button variant="ghost" size="sm" onClick={() => setEnvOverwriteDialog(null)}>
+                  Cancel
+                </Button>
+                <Button variant="danger" size="sm" onClick={handleEnvOverwriteConfirm}>
+                  Overwrite
+                </Button>
+              </>
+            }
+          >
+            <p className="ui-font ui-text-sm text-text">
+              {envOverwriteDialog.targetFileName} already exists. Overwrite it?
+            </p>
+          </Dialog>
+        )}
+
+        {propertiesDialog && (
+          <Dialog
+            title="Properties"
+            icon={Info}
+            onClose={() => setPropertiesDialog(null)}
+            size="md"
+          >
+            <dl className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2 ui-font ui-text-sm">
+              <dt className="text-text-lighter">File</dt>
+              <dd className="min-w-0 break-words text-text">{propertiesDialog.fileName}</dd>
+              <dt className="text-text-lighter">Path</dt>
+              <dd className="min-w-0 break-words text-text">{propertiesDialog.path}</dd>
+              <dt className="text-text-lighter">Size</dt>
+              <dd className="text-text">{propertiesDialog.size}</dd>
+              <dt className="text-text-lighter">Type</dt>
+              <dd className="text-text">{propertiesDialog.type}</dd>
+            </dl>
+          </Dialog>
+        )}
+      </>
+    ) : null;
 
   return {
     contextMenu,

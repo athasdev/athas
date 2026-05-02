@@ -13,6 +13,7 @@ import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import {
@@ -108,7 +109,10 @@ const GitWorktreeManager = ({
 
   const handleRemoveWorktree = async (worktreePath: string) => {
     if (!repoPath) return;
-    const confirmed = confirm(`Remove worktree at "${worktreePath}"?`);
+    const confirmed = await primitiveConfirm(`Remove worktree at "${worktreePath}"?`, {
+      title: "Remove Worktree",
+      confirmLabel: "Remove",
+    });
     if (!confirmed) return;
 
     setActionLoading((prev) => new Set(prev).add(worktreePath));

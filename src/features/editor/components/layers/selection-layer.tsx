@@ -128,6 +128,10 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
               left: `${box.left}px`,
               width: `${box.width}px`,
               height: `${box.height}px`,
+              borderTopLeftRadius: box.corners.topLeft ? undefined : 0,
+              borderTopRightRadius: box.corners.topRight ? undefined : 0,
+              borderBottomRightRadius: box.corners.bottomRight ? undefined : 0,
+              borderBottomLeftRadius: box.corners.bottomLeft ? undefined : 0,
             }}
           />
         ))}

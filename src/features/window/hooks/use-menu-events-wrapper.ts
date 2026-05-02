@@ -11,6 +11,7 @@ import { fetchRawAppVersion } from "@/features/window/utils/app-version";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { primitiveAlert, primitivePrompt } from "@/ui/primitive-dialog-service";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
@@ -133,7 +134,7 @@ export function useMenuEventsWrapper() {
             // This would require updating the buffer store with the new file path
           } catch (writeError) {
             console.error("Failed to save file:", writeError);
-            alert("Failed to save file. Please try again.");
+            await primitiveAlert("Failed to save file. Please try again.", "Save As");
           }
         }
       } catch (error) {
@@ -204,18 +205,22 @@ export function useMenuEventsWrapper() {
         paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
       }
     },
-    onToggleVim: () => {
+    onToggleVim: async () => {
       // For now, we'll show a notification about vim mode
       console.log("Toggle Vim keybindings");
-      alert(
+      await primitiveAlert(
         "Vim mode is coming soon!\n\nThis will enable vim-style keybindings in the editor for power users.",
+        "Vim Mode",
       );
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
     onQuickOpen: () => uiState.setIsQuickOpenVisible(true),
-    onGoToLine: () => {
+    onGoToLine: async () => {
       // Simple go to line implementation using browser prompt
-      const line = prompt("Go to line:");
+      const line = await primitivePrompt("Go to line:", {
+        title: "Go to Line",
+        placeholder: "Line number",
+      });
       if (line && !Number.isNaN(Number(line))) {
         const lineNumber = parseInt(line, 10);
         console.log(`Going to line ${lineNumber}`);
@@ -258,9 +263,9 @@ A lightweight, fast code editor for developers.
 
 GitHub: https://github.com/athasdev/athas`;
 
-      alert(aboutText);
+      await primitiveAlert(aboutText, "About Athas");
     },
-    onHelp: () => {
+    onHelp: async () => {
       const helpText = `Athas Help - Keyboard Shortcuts
 
 File:
@@ -288,7 +293,7 @@ Go:
 
 For more help: https://github.com/athasdev/athas`;
 
-      alert(helpText);
+      await primitiveAlert(helpText, "Help");
     },
     onReportBug: async () => {
       try {
@@ -330,7 +335,7 @@ A lightweight, fast code editor for developers.
 
 GitHub: https://github.com/athasdev/athas`;
 
-      alert(aboutText);
+      await primitiveAlert(aboutText, "About Athas");
     },
     onToggleMenuBar: async () => {
       try {

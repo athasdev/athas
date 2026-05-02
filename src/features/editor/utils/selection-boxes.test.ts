@@ -40,4 +40,36 @@ describe("calculateSelectionBoxes", () => {
     expect(boxes).toHaveLength(1);
     expect(boxes[0]?.width).toBe("first".length * 8);
   });
+
+  it("only rounds the outside corners of a multiline selection", () => {
+    const content = "first\nsecond\nthird";
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: 1, end: "first\nsecond\nth".length },
+      lines: content.split("\n"),
+      lineOffsets: buildLineOffsetMap(content),
+      contentLength: content.length,
+      lineHeight: 20,
+      measureText,
+    });
+
+    expect(boxes).toHaveLength(3);
+    expect(boxes[0]?.corners).toEqual({
+      topLeft: true,
+      topRight: true,
+      bottomRight: false,
+      bottomLeft: false,
+    });
+    expect(boxes[1]?.corners).toEqual({
+      topLeft: true,
+      topRight: true,
+      bottomRight: true,
+      bottomLeft: false,
+    });
+    expect(boxes[2]?.corners).toEqual({
+      topLeft: false,
+      topRight: false,
+      bottomRight: true,
+      bottomLeft: true,
+    });
+  });
 });

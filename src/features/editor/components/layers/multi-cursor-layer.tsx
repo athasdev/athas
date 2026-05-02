@@ -4,10 +4,10 @@
  * This layer renders additional cursors when in multi-cursor mode
  */
 
-import type React from "react";
 import { forwardRef, memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Cursor } from "../../types/editor";
+import { addSelectionBoxCorners } from "../../utils/selection-boxes";
 
 interface MultiCursorLayerProps {
   cursors: Cursor[];
@@ -72,7 +72,12 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
             const actualStart = isReversed ? end : start;
             const actualEnd = isReversed ? start : end;
 
-            const boxes: React.ReactNode[] = [];
+            const boxes: Array<{
+              top: number;
+              left: number;
+              height: number;
+              width: number;
+            }> = [];
 
             for (let line = startLine; line <= endLine; line++) {
               const lineText = lines[line] || "";
@@ -100,21 +105,30 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
               const leftPos = getCursorPosition(line, startCol).left;
               const rightPos = getCursorPosition(line, endCol).left;
 
-              boxes.push(
-                <div
-                  key={`${cursor.id}-selection-${line}`}
-                  className="editor-selection-box absolute"
-                  style={{
-                    top: `${line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
-                    left: `${leftPos}px`,
-                    height: `${lineHeight}px`,
-                    width: `${Math.max(rightPos - leftPos, 2)}px`,
-                  }}
-                />,
-              );
+              boxes.push({
+                top: line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+                left: leftPos,
+                height: lineHeight,
+                width: Math.max(rightPos - leftPos, 2),
+              });
             }
 
-            return boxes;
+            return addSelectionBoxCorners(boxes).map((box, index) => (
+              <div
+                key={`${cursor.id}-selection-${index}`}
+                className="editor-selection-box absolute"
+                style={{
+                  top: `${box.top}px`,
+                  left: `${box.left}px`,
+                  height: `${box.height}px`,
+                  width: `${box.width}px`,
+                  borderTopLeftRadius: box.corners.topLeft ? undefined : 0,
+                  borderTopRightRadius: box.corners.topRight ? undefined : 0,
+                  borderBottomRightRadius: box.corners.bottomRight ? undefined : 0,
+                  borderBottomLeftRadius: box.corners.bottomLeft ? undefined : 0,
+                }}
+              />
+            ));
           };
 
           return (

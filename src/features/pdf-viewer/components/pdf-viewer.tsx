@@ -5,7 +5,6 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-import { confirm } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
 import { ArrowSquareOut as ExternalLink, SpinnerGap as Loader2 } from "@phosphor-icons/react";
 // Configure PDF.js worker
@@ -15,6 +14,7 @@ import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
 
@@ -137,9 +137,9 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       e.preventDefault();
       // External links start with http etc.
       if (anchor.href.startsWith("http")) {
-        const confirmed = await confirm(
+        const confirmed = await primitiveConfirm(
           `Do you want to open this external link?\n\n${anchor.href}`,
-          { kind: "info", title: "External Link" },
+          { title: "External Link", confirmLabel: "Open" },
         );
         if (confirmed) {
           await openUrl(anchor.href);

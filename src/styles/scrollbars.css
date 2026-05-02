@@ -19,6 +19,8 @@
   --app-scrollbar-thumb-hover: var(--color-text-lighter);
   --app-scrollbar-thumb-active: var(--color-text-light);
   --app-scrollbar-border-size: 3px;
+  --app-scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  --app-scrollbar-thumb-border: var(--app-scrollbar-border-size) solid transparent;
 }
 
 @supports (color: color-mix(in srgb, black, transparent)) {
@@ -30,57 +32,70 @@
   }
 }
 
-* {
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+:where(*) {
+  scrollbar-color: var(--app-scrollbar-color);
   scrollbar-width: thin;
 }
 
-*::-webkit-scrollbar {
+:where(*)::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
-}
-
-*::-webkit-scrollbar-track,
-*::-webkit-scrollbar-corner {
   background: var(--app-scrollbar-track);
 }
 
-*::-webkit-scrollbar-thumb {
+:where(*)::-webkit-scrollbar-track,
+:where(*)::-webkit-scrollbar-corner {
+  -webkit-appearance: none;
+  background: var(--app-scrollbar-track);
+}
+
+:where(*)::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
   min-height: 32px;
   min-width: 32px;
-  border: var(--app-scrollbar-border-size) solid transparent;
+  border: var(--app-scrollbar-thumb-border);
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb);
   background-clip: content-box;
 }
 
-*::-webkit-scrollbar-thumb:hover {
+:where(*)::-webkit-scrollbar-thumb:hover {
   background: var(--app-scrollbar-thumb-hover);
   background-clip: content-box;
 }
 
-*::-webkit-scrollbar-thumb:active {
+:where(*)::-webkit-scrollbar-thumb:active {
   background: var(--app-scrollbar-thumb-active);
   background-clip: content-box;
 }
 
+:where(*)::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-color: var(--app-scrollbar-color);
   overflow: auto;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
+  -webkit-appearance: none;
   background: var(--app-scrollbar-track);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  border: var(--app-scrollbar-border-size) solid transparent;
+  -webkit-appearance: none;
+  border: var(--app-scrollbar-thumb-border);
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb);
   background-clip: content-box;
@@ -97,20 +112,23 @@
 
 .custom-scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) transparent;
+  scrollbar-color: var(--app-scrollbar-color);
   overflow: auto;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: var(--app-scrollbar-thin-size);
   height: var(--app-scrollbar-thin-size);
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-track {
+  -webkit-appearance: none;
   background: transparent;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
   border: 2px solid transparent;
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb);
@@ -124,21 +142,24 @@
 
 .custom-scrollbar-auto {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) transparent;
+  scrollbar-color: var(--app-scrollbar-color);
   overflow: auto;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-track {
+  -webkit-appearance: none;
   background: transparent;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-thumb {
-  border: var(--app-scrollbar-border-size) solid transparent;
+  -webkit-appearance: none;
+  border: var(--app-scrollbar-thumb-border);
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb-subtle);
   background-clip: content-box;
@@ -160,20 +181,23 @@
 
 .editor-scrollable {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb-subtle) transparent;
+  scrollbar-color: var(--app-scrollbar-color);
   overscroll-behavior: none;
 }
 
 .editor-scrollable::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: var(--app-scrollbar-thin-size);
   height: var(--app-scrollbar-thin-size);
 }
 
 .editor-scrollable::-webkit-scrollbar-track {
+  -webkit-appearance: none;
   background: transparent;
 }
 
 .editor-scrollable::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
   border: 2px solid transparent;
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb-subtle);
@@ -207,21 +231,24 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) transparent;
+  scrollbar-color: var(--app-scrollbar-color);
   overscroll-behavior-x: contain;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
 .tab-scroll-container::-webkit-scrollbar {
+  -webkit-appearance: none;
   height: var(--app-scrollbar-thin-size);
 }
 
 .tab-scroll-container::-webkit-scrollbar-track {
+  -webkit-appearance: none;
   background: transparent;
 }
 
 .tab-scroll-container::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
   border: 2px solid transparent;
   border-radius: var(--app-scrollbar-radius);
   background: var(--app-scrollbar-thumb);

@@ -18,6 +18,7 @@ import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { primitivePrompt } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
 import { isMac } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
@@ -605,7 +606,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+k cmd+t",
     execute: () => {
-      useUIState.getState().setIsThemeSelectorVisible(true);
+      useUIState.getState().openCommandPaletteView("color-theme");
     },
   },
   {
@@ -712,8 +713,11 @@ const navigationCommands: Command[] = [
     title: "Go to Line",
     category: "Navigation",
     keybinding: "cmd+g",
-    execute: () => {
-      const lineText = window.prompt("Go to line");
+    execute: async () => {
+      const lineText = await primitivePrompt("Go to line", {
+        title: "Go to Line",
+        placeholder: "Line number",
+      });
       if (!lineText) return;
 
       const line = Number.parseInt(lineText, 10);
