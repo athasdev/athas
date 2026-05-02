@@ -6,6 +6,7 @@ import CommandPalette from "@/features/command-palette/components/command-palett
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -321,6 +322,7 @@ export function MainLayout() {
         isOpen={isDatabaseConnectionVisible}
         onClose={() => setIsDatabaseConnectionVisible(false)}
       />
+      <LinuxFolderPickerDialog />
       <ExtensionDialogs />
     </div>
   );

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
+import { useLinuxFolderPickerStore } from "@/features/file-system/controllers/linux-folder-picker-store";
 import { IS_LINUX } from "@/utils/platform";
 import {
   BaseDirectory,
@@ -79,7 +80,7 @@ export async function deletePath(path: string): Promise<void> {
  */
 export async function openFolder(): Promise<string | null> {
   if (IS_LINUX) {
-    return promptForPath("Folder path");
+    return useLinuxFolderPickerStore.getState().actions.open();
   }
 
   const selected = await open({
