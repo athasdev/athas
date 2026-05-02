@@ -32,7 +32,8 @@ export type PaneContentType =
   | "csvPreview"
   | "externalEditor"
   | "globalSearch"
-  | "diagnostics";
+  | "diagnostics"
+  | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
 
@@ -161,6 +162,13 @@ export interface DiagnosticsContent extends PaneContentBase {
   type: "diagnostics";
 }
 
+export interface OnboardingContent extends PaneContentBase {
+  type: "onboarding";
+  mode: import("@/features/onboarding/lib/onboarding-state").OnboardingMode;
+  currentVersion: string;
+  previousVersion?: string;
+}
+
 // ── Discriminated union ─────────────────────────────────────────────
 
 export type PaneContent =
@@ -182,7 +190,8 @@ export type PaneContent =
   | CsvPreviewContent
   | ExternalEditorContent
   | GlobalSearchContent
-  | DiagnosticsContent;
+  | DiagnosticsContent
+  | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
 
@@ -248,6 +257,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubAction",
   "globalSearch",
   "diagnostics",
+  "onboarding",
 ]);
 
 export function isVirtualContent(c: PaneContent): boolean {
@@ -379,4 +389,8 @@ export type OpenContentSpec =
     }
   | {
       type: "diagnostics";
+    }
+  | {
+      type: "onboarding";
+      context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext;
     };

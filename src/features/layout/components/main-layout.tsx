@@ -3,15 +3,15 @@ import AIChat from "@/features/ai/components/chat/ai-chat";
 import { AgentLauncher } from "@/features/ai/components/agent-launcher";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandPalette from "@/features/command-palette/components/command-palette";
-import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
-import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { useGitStore } from "@/features/git/stores/git-store";
+import { useOnboardingStore } from "@/features/onboarding/store";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import QuickOpen from "@/features/quick-open/components/quick-open";
@@ -43,10 +43,6 @@ export function MainLayout() {
   const {
     isSidebarVisible,
     setIsSidebarVisible,
-    isThemeSelectorVisible,
-    setIsThemeSelectorVisible,
-    isIconThemeSelectorVisible,
-    setIsIconThemeSelectorVisible,
     isDatabaseConnectionVisible,
     setIsDatabaseConnectionVisible,
   } = useUIState();
@@ -60,6 +56,10 @@ export function MainLayout() {
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
   const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
+  const onboardingOpen = useOnboardingStore((state) => state.isOpen);
+  const onboardingContext = useOnboardingStore((state) => state.context);
+  const dismissOnboarding = useOnboardingStore((state) => state.dismiss);
+  const openOnboardingBuffer = useBufferStore.use.actions().openOnboardingBuffer;
 
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
@@ -104,20 +104,19 @@ export function MainLayout() {
   }, []);
 
   useEffect(() => {
+    if (!onboardingOpen || !onboardingContext) return;
+
+    openOnboardingBuffer(onboardingContext);
+    void dismissOnboarding();
+  }, [dismissOnboarding, onboardingContext, onboardingOpen, openOnboardingBuffer]);
+
+  useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
       setRelativeLineNumbers(settings.vimRelativeLineNumbers, {
         persist: false,
       });
     }
   }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
-
-  const handleThemeChange = (theme: string) => {
-    updateSetting("theme", theme);
-  };
-
-  const handleIconThemeChange = (iconTheme: string) => {
-    updateSetting("iconTheme", iconTheme);
-  };
 
   // Initialize event listeners
   useMenuEventsWrapper();
@@ -318,18 +317,6 @@ export function MainLayout() {
       <ProjectNameMenu />
 
       {/* Dialog components */}
-      <ThemeSelector
-        isVisible={isThemeSelectorVisible}
-        onClose={() => setIsThemeSelectorVisible(false)}
-        onThemeChange={handleThemeChange}
-        currentTheme={settings.theme}
-      />
-      <IconThemeSelector
-        isVisible={isIconThemeSelectorVisible}
-        onClose={() => setIsIconThemeSelectorVisible(false)}
-        onThemeChange={handleIconThemeChange}
-        currentTheme={settings.iconTheme}
-      />
       <ConnectionDialog
         isOpen={isDatabaseConnectionVisible}
         onClose={() => setIsDatabaseConnectionVisible(false)}

@@ -61,6 +61,7 @@ const GlobalSearchBuffer = lazy(
 const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
+const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
@@ -871,6 +872,18 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "diagnostics":
           return <DiagnosticsBuffer />;
+
+        case "onboarding":
+          return (
+            <OnboardingView
+              bufferId={buffer.id}
+              context={{
+                mode: buffer.mode,
+                currentVersion: buffer.currentVersion,
+                previousVersion: buffer.previousVersion,
+              }}
+            />
+          );
 
         case "image":
           return <ImageViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;

@@ -199,5 +199,16 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         name: "Diagnostics",
         isPreview: false,
       };
+    case "onboarding":
+      return {
+        ...base,
+        type: "onboarding",
+        path: `onboarding://${spec.context.mode}/${spec.context.currentVersion}`,
+        name: "Welcome",
+        isPreview: false,
+        mode: spec.context.mode,
+        currentVersion: spec.context.currentVersion,
+        previousVersion: spec.context.previousVersion,
+      };
   }
 };
