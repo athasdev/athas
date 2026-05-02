@@ -1,4 +1,10 @@
-import { DownloadSimple, PuzzlePiece, TerminalWindow, WarningCircle } from "@phosphor-icons/react";
+import {
+  ArrowClockwise,
+  DownloadSimple,
+  PuzzlePiece,
+  TerminalWindow,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
@@ -10,7 +16,7 @@ import GitBranchManager from "@/features/git/components/git-branch-manager";
 import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { useUpdater } from "@/features/settings/hooks/use-updater";
+import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
@@ -101,7 +107,15 @@ const Footer = () => {
   const currentRepoPath = useGitStore((state) => state.currentRepoPath);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   const { actions } = useGitStore();
-  const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
+  const {
+    showUpdateIndicator,
+    downloading,
+    installing,
+    error: updateError,
+    updateInfo,
+    downloadProgress,
+    onDownload: downloadAndInstall,
+  } = useAutoUpdate();
 
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
@@ -230,24 +244,28 @@ const Footer = () => {
           ),
         }
       : null,
-    available
+    showUpdateIndicator && updateInfo
       ? {
           id: "updates",
           label: "App updates",
           content: (
             <FooterTabControl
               tooltip={
-                downloading
-                  ? "Downloading update..."
-                  : installing
-                    ? "Installing update..."
-                    : `Update available: ${updateInfo?.version}`
+                updateError
+                  ? updateError
+                  : downloading
+                    ? `Updating Athas ${downloadProgress?.percentage ?? 0}%`
+                    : installing
+                      ? "Installing update..."
+                      : `Update available: ${updateInfo.version}`
               }
               className={cn(
-                FOOTER_ICON_TAB_CLASS_NAME,
+                FOOTER_PILL_TAB_CLASS_NAME,
                 downloading || installing
-                  ? "cursor-not-allowed opacity-60"
-                  : "text-blue-400 hover:text-blue-300",
+                  ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
+                  : updateError
+                    ? "text-error hover:bg-error/10 hover:text-error"
+                    : "text-accent hover:bg-accent/10 hover:text-accent",
               )}
               onClick={() => {
                 if (!downloading && !installing) {
@@ -255,10 +273,20 @@ const Footer = () => {
                 }
               }}
             >
-              <DownloadSimple
-                className={cn(downloading || (installing && "animate-pulse"))}
-                weight="duotone"
-              />
+              {downloading || installing ? (
+                <ArrowClockwise className="animate-spin" weight="duotone" />
+              ) : (
+                <DownloadSimple weight="duotone" />
+              )}
+              <span className="ui-font ui-text-xs font-medium">
+                {downloading
+                  ? `Updating ${downloadProgress?.percentage ?? 0}%`
+                  : installing
+                    ? "Installing"
+                    : updateError
+                      ? "Update failed"
+                      : "Update available"}
+              </span>
             </FooterTabControl>
           ),
         }

@@ -138,6 +138,7 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_app_window,
+         uses_native_window_chrome,
          create_embedded_webview,
          close_embedded_webview,
          navigate_embedded_webview,

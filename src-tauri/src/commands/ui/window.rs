@@ -88,10 +88,15 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
       let _ = window.set_decorations(false);
    }
 
-   #[cfg(target_os = "linux")]
+   #[cfg(all(target_os = "linux", not(feature = "linux")))]
    {
       let _ = window.set_decorations(false);
    }
+}
+
+#[command]
+pub fn uses_native_window_chrome() -> bool {
+   cfg!(all(target_os = "linux", feature = "linux"))
 }
 
 pub fn create_app_window_internal(
@@ -113,7 +118,10 @@ pub fn create_app_window_internal(
       .resizable(true)
       .shadow(true);
 
-   #[cfg(any(target_os = "windows", target_os = "linux"))]
+   #[cfg(any(
+      target_os = "windows",
+      all(target_os = "linux", not(feature = "linux"))
+   ))]
    let builder = builder.decorations(false);
 
    #[cfg(target_os = "macos")]
@@ -153,7 +161,13 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
   function emit(event, payload) {{
     const invoke = window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke;
     if (typeof invoke !== 'function') return;
-    void invoke('plugin:event|emit', {{ event, payload }}).catch(() => {{}});
+
+    try {{
+      const result = invoke('plugin:event|emit', {{ event, payload }});
+      if (result && typeof result.catch === 'function') {{
+        void result.catch(() => {{}});
+      }}
+    }} catch (_) {{}}
   }}
 
   function emitShortcut(shortcut) {{

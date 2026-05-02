@@ -40,6 +40,8 @@ interface EmbeddedWebviewLocationChangeEvent {
 
 type PendingNavigationAction = "push" | "back" | "forward" | "reload" | null;
 
+const LOAD_WATCHDOG_TIMEOUT_MS = 15_000;
+
 function getWebViewerErrorMessage(error: unknown) {
   if (typeof error === "string" && error.trim()) {
     return error;
@@ -274,6 +276,11 @@ export function WebViewer({
           const nextUrl = event.payload.url;
           const pendingAction = pendingNavigationActionRef.current;
 
+          setUrlError(null);
+          setPageError(null);
+          setCurrentUrl(nextUrl);
+          setInputUrl(nextUrl);
+
           if (pendingAction === "push" || event.payload.navigationType === "push") {
             if (historyRef.current[historyIndexRef.current] !== nextUrl) {
               pushHistoryEntry(nextUrl);
@@ -320,6 +327,17 @@ export function WebViewer({
     syncHistoryState,
     webviewLabel,
   ]);
+
+  useEffect(() => {
+    if (!isLoading || !currentUrl) return;
+
+    const timeoutId = window.setTimeout(() => {
+      pendingNavigationActionRef.current = null;
+      setIsLoading(false);
+    }, LOAD_WATCHDOG_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentUrl, isLoading]);
 
   useEffect(() => {
     if (!webviewLabel || !bufferId) return;

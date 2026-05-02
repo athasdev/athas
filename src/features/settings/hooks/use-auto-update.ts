@@ -5,7 +5,7 @@ const UPDATE_CHECK_DELAY = 5000; // 5 seconds after app start
 const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
 
 export const useAutoUpdate = () => {
-  const [showDialog, setShowDialog] = useState(false);
+  const [showUpdateIndicator, setShowUpdateIndicator] = useState(false);
   const {
     available,
     checking,
@@ -36,15 +36,15 @@ export const useAutoUpdate = () => {
     };
   }, [checkForUpdates]);
 
-  // Show dialog when update is available
+  // Show the footer update indicator when update is available
   useEffect(() => {
     if (available && updateInfo) {
-      setShowDialog(true);
+      setShowUpdateIndicator(true);
     }
   }, [available, updateInfo]);
 
   const handleDismiss = useCallback(() => {
-    setShowDialog(false);
+    setShowUpdateIndicator(false);
     dismissUpdate();
   }, [dismissUpdate]);
 
@@ -53,7 +53,7 @@ export const useAutoUpdate = () => {
   }, [downloadAndInstall]);
 
   return {
-    showDialog,
+    showUpdateIndicator,
     updateInfo,
     downloadProgress,
     downloading,

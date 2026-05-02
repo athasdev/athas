@@ -23,6 +23,7 @@ import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -101,7 +102,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
   const isMacOS = IS_MAC;
   const isWindows = IS_WINDOWS;
-  const showCustomWindowControls = !isMacOS;
+  const usesNativeWindowChrome = useNativeWindowChrome();
+  const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && settings.nativeMenuBar;
   const titleBarProjectMode = settings.titleBarProjectMode;
   const showTopSidebarTabs = settings.sidebarTabsPosition === "top";

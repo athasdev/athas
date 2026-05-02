@@ -1,11 +1,9 @@
 import { lazy, Suspense } from "react";
 import { useOnboardingStore } from "@/features/onboarding/store";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
-import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useAppBootstrap } from "@/bootstrap/use-app-bootstrap";
 
 const OnboardingDialog = lazy(() => import("@/features/onboarding/components/onboarding-dialog"));
-const UpdateDialog = lazy(() => import("@/features/settings/components/update-dialog"));
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -14,17 +12,6 @@ import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 
 function App() {
-  // Auto-update check
-  const {
-    showDialog: showUpdateDialog,
-    updateInfo,
-    downloadProgress,
-    downloading,
-    installing,
-    error: updateError,
-    onDismiss: dismissUpdate,
-    onDownload: downloadUpdate,
-  } = useAutoUpdate();
   useAppBootstrap();
   const isOnboardingOpen = useOnboardingStore((state) => state.isOpen);
   const onboardingContext = useOnboardingStore((state) => state.context);
@@ -43,20 +30,6 @@ function App() {
         </div>
         <ZoomIndicator />
         <ToastContainer />
-
-        {showUpdateDialog && updateInfo && (
-          <Suspense fallback={null}>
-            <UpdateDialog
-              updateInfo={updateInfo}
-              downloadProgress={downloadProgress}
-              downloading={downloading}
-              installing={installing}
-              error={updateError}
-              onDownload={downloadUpdate}
-              onDismiss={dismissUpdate}
-            />
-          </Suspense>
-        )}
 
         {isOnboardingOpen && onboardingContext && (
           <Suspense fallback={null}>
