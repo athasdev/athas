@@ -375,9 +375,7 @@ jobs:
             throw "Could not find Windows setup installer."
           }
           Copy-Item $setup.FullName release-dist/
-          if (Test-Path "$($setup.FullName).sig") {
-            Copy-Item "$($setup.FullName).sig" release-dist/
-          } else {
+          if (-not (Test-Path "$($setup.FullName).sig")) {
             throw "Could not find updater signature for $($setup.Name)."
           }
 
