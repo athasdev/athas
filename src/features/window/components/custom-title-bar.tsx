@@ -8,7 +8,7 @@ import {
   Sparkle,
   X,
 } from "@phosphor-icons/react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -95,6 +95,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -274,6 +275,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <Tooltip content="Menu" side="bottom">
           <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
             <Button
+              ref={menuButtonRef}
               onClick={() => {
                 setMenuBarActiveMenu("File");
               }}
@@ -293,6 +295,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           activeMenu={menuBarActiveMenu}
           setActiveMenu={setMenuBarActiveMenu}
           compactFloating
+          anchorRef={menuButtonRef}
         />
       </div>
     ) : (
