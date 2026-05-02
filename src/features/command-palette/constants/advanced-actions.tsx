@@ -5,6 +5,7 @@ import {
   TerminalWindow as Terminal,
 } from "@phosphor-icons/react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { primitiveAlert } from "@/ui/primitive-dialog-service";
 import type { Action } from "../models/action.types";
 
 interface AdvancedActionsParams {
@@ -84,9 +85,10 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       description: `Status: ${lspStatus.status} (${lspStatus.activeWorkspaces.length} workspaces)`,
       icon: <Terminal />,
       category: "LSP",
-      action: () => {
-        alert(
+      action: async () => {
+        await primitiveAlert(
           `LSP Status: ${lspStatus.status}\nActive workspaces: ${lspStatus.activeWorkspaces.join(", ") || "None"}\nError: ${lspStatus.lastError || "None"}`,
+          "LSP Status",
         );
         onClose();
       },

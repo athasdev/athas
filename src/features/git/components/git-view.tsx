@@ -16,6 +16,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import { PANE_GROUP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import { primitiveAlert } from "@/ui/primitive-dialog-service";
 import {
   EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
   EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
@@ -124,7 +125,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       if (!resolvedRepoPath) {
         const message = "Selected folder is not inside a Git repository.";
         setRepoSelectionError(message);
-        alert(message);
+        await primitiveAlert(message, "Select Repository");
         return;
       }
 
@@ -133,7 +134,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       console.error("Failed to select repository:", error);
       const message = "Failed to select repository";
       setRepoSelectionError(message);
-      alert(`${message}:\n${error}`);
+      await primitiveAlert(`${message}:\n${error}`, "Select Repository");
     } finally {
       setIsSelectingRepo(false);
     }
@@ -384,7 +385,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       onFileSelect(fullPath, false);
     } catch (error) {
       console.error("Error opening file:", error);
-      alert(`Failed to open file ${filePath}:\n${error}`);
+      await primitiveAlert(`Failed to open file ${filePath}:\n${error}`, "Open File");
     }
   };
 
@@ -516,7 +517,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
     } catch (error) {
       console.error("Error getting file diff:", error);
-      alert(`Failed to get diff for ${filePath}:\n${error}`);
+      await primitiveAlert(`Failed to get diff for ${filePath}:\n${error}`, "Git Diff");
     }
   };
 
@@ -570,11 +571,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             );
         }
       } else {
-        alert(`No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`);
+        await primitiveAlert(
+          `No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`,
+          "Git Diff",
+        );
       }
     } catch (error) {
       console.error("Error getting commit diff:", error);
-      alert(`Failed to get diff for commit ${commitHash}:\n${error}`);
+      await primitiveAlert(`Failed to get diff for commit ${commitHash}:\n${error}`, "Git Diff");
     }
   };
 
@@ -612,11 +616,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             multiDiff,
           );
       } else {
-        alert("No changes in this stash.");
+        await primitiveAlert("No changes in this stash.", "Git Diff");
       }
     } catch (error) {
       console.error("Error getting stash diff:", error);
-      alert(`Failed to get diff for stash@{${stashIndex}}:\n${error}`);
+      await primitiveAlert(`Failed to get diff for stash@{${stashIndex}}:\n${error}`, "Git Diff");
     }
   };
 
@@ -653,11 +657,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             multiDiff,
           );
       } else {
-        alert(`No changes between ${baseRef} and ${targetRef}.`);
+        await primitiveAlert(`No changes between ${baseRef} and ${targetRef}.`, "Git Diff");
       }
     } catch (error) {
       console.error("Error getting tag comparison:", error);
-      alert(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`);
+      await primitiveAlert(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`, "Git Diff");
     }
   };
 
