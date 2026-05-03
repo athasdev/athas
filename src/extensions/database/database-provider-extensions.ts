@@ -162,7 +162,7 @@ export function getDatabaseProviderExtensions(): ExtensionManifest[] {
   return PROVIDER_DEFINITIONS.map(({ extensionId, packageName, name, description, provider }) => ({
     id: extensionId,
     name,
-    displayName: `${name} Provider`,
+    displayName: name,
     description,
     version: "1.0.0",
     publisher: "Athas",
