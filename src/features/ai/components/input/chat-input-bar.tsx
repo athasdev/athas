@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
-import { getPrimarySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
+import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { AI_CHAT_INSERT_SKILL_EVENT } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { InlineDropdownPosition } from "@/features/ai/store/types";
@@ -83,9 +83,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isContextDragOver, setIsContextDragOver] = useState(false);
-  const [activeInlineControl, setActiveInlineControl] = useState<
-    "provider" | "model" | "mode" | "commands" | null
-  >(null);
+  const [activeInlineControl, setActiveInlineControl] = useState<string | null>(null);
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
@@ -114,16 +112,31 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
   const isStreaming = isTyping && !!streamingMessageId;
-  const acpModelOption = useMemo(
-    () => (isCustomAgent ? null : getPrimarySessionConfigOption(sessionConfigOptions, "model")),
+  const acpInlineConfigOptions = useMemo(
+    () =>
+      isCustomAgent
+        ? []
+        : sessionConfigOptions
+            .map((option) => ({
+              option,
+              category: classifySessionConfigOption(option),
+            }))
+            .filter(
+              ({ option, category }) =>
+                option.kind.type === "select" &&
+                option.kind.options.length > 0 &&
+                (category === "model" || category === "mode" || category === "thought_level"),
+            )
+            .slice(0, 3),
     [isCustomAgent, sessionConfigOptions],
   );
-  const hasAcpModeOptions = !isCustomAgent && sessionModeState.availableModes.length > 0;
-  const hasAcpModelOptions = Boolean(acpModelOption);
+  const hasAcpLegacyModeOptions = !isCustomAgent && sessionModeState.availableModes.length > 0;
+  const hasAcpConfigModeOption = acpInlineConfigOptions.some(({ category }) => category === "mode");
+  const hasAcpConfigOptions = acpInlineConfigOptions.length > 0;
   const isAcpMetadataLoading =
     !isCustomAgent &&
     isTyping &&
-    (!acpStatus?.initialized || (!hasAcpModeOptions && !hasAcpModelOptions));
+    (!acpStatus?.initialized || (!hasAcpLegacyModeOptions && !hasAcpConfigOptions));
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -1391,23 +1404,29 @@ const AIChatInputBar = memo(function AIChatInputBar({
           ) : (
             <>
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                {acpModelOption && (
-                  <AcpConfigSelector
-                    option={acpModelOption}
-                    onChange={(value) => void changeSessionConfigOption(acpModelOption.id, value)}
-                    open={activeInlineControl === "model"}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        closeInlineMenus();
-                        setActiveInlineControl("model");
-                        return;
-                      }
-                      setActiveInlineControl((current) => (current === "model" ? null : current));
-                    }}
-                    className="max-w-[180px]"
-                    menuClassName="!min-w-0 w-max max-w-[240px]"
-                  />
-                )}
+                {acpInlineConfigOptions.map(({ option, category }) => {
+                  const controlId = `config:${option.id}`;
+                  return (
+                    <AcpConfigSelector
+                      key={option.id}
+                      option={option}
+                      onChange={(value) => void changeSessionConfigOption(option.id, value)}
+                      open={activeInlineControl === controlId}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          closeInlineMenus();
+                          setActiveInlineControl(controlId);
+                          return;
+                        }
+                        setActiveInlineControl((current) =>
+                          current === controlId ? null : current,
+                        );
+                      }}
+                      className={category === "model" ? "max-w-[180px]" : "max-w-[132px]"}
+                      menuClassName="!min-w-0 w-max max-w-[240px]"
+                    />
+                  );
+                })}
 
                 {isCustomAgent && (
                   <>
@@ -1463,18 +1482,20 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   </>
                 )}
 
-                <ModeSelector
-                  open={activeInlineControl === "mode"}
-                  onOpenChange={(open) => {
-                    if (open) {
-                      closeInlineMenus();
-                      setActiveInlineControl("mode");
-                      return;
-                    }
-                    setActiveInlineControl((current) => (current === "mode" ? null : current));
-                  }}
-                  iconOnly
-                />
+                {(isCustomAgent || !hasAcpConfigModeOption) && (
+                  <ModeSelector
+                    open={activeInlineControl === "mode"}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        closeInlineMenus();
+                        setActiveInlineControl("mode");
+                        return;
+                      }
+                      setActiveInlineControl((current) => (current === "mode" ? null : current));
+                    }}
+                    iconOnly
+                  />
+                )}
 
                 {hasSlashCommands && (
                   <Button

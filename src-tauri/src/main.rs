@@ -188,6 +188,7 @@ fn main() {
          respond_acp_permission,
          set_acp_session_mode,
          set_acp_session_config_option,
+         list_acp_sessions,
          cancel_acp_prompt,
          // Theme commands
          get_system_theme,

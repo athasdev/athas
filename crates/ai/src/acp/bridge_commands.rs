@@ -1,7 +1,7 @@
 use super::{
    bridge::AcpWorker,
    client::PermissionResponse,
-   types::{AcpAgentStatus, AgentConfig},
+   types::{AcpAgentStatus, AcpSessionList, AgentConfig},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::Result;
@@ -33,6 +33,11 @@ pub(super) enum AcpCommand {
       config_id: String,
       value: String,
       response_tx: oneshot::Sender<Result<()>>,
+   },
+   ListSessions {
+      cwd: Option<String>,
+      cursor: Option<String>,
+      response_tx: oneshot::Sender<Result<AcpSessionList>>,
    },
    CancelPrompt {
       response_tx: oneshot::Sender<Result<()>>,
@@ -121,6 +126,18 @@ pub(super) async fn run_worker_loop(
                }
                AcpCommand::CancelPrompt { response_tx } => {
                   let result = worker.cancel_prompt().await;
+                  {
+                     let mut s = status.lock().await;
+                     *s = worker.get_status();
+                  }
+                  let _ = response_tx.send(result);
+               }
+               AcpCommand::ListSessions {
+                  cwd,
+                  cursor,
+                  response_tx,
+               } => {
+                  let result = worker.list_sessions(cwd, cursor).await;
                   {
                      let mut s = status.lock().await;
                      *s = worker.get_status();

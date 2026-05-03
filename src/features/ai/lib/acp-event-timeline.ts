@@ -52,6 +52,29 @@ export const completeThinkingAcpEvents = (previousEvents: ChatAcpEvent[]): ChatA
   return changed ? updated : previousEvents;
 };
 
+const completeToolLabel = (label: string, success: boolean): string => {
+  if (!success) return label;
+
+  switch (label) {
+    case "Editing file":
+      return "Edited file";
+    case "Reading file":
+      return "Read file";
+    case "Deleting file":
+      return "Deleted file";
+    case "Moving file":
+      return "Moved file";
+    case "Searching":
+      return "Searched";
+    case "Running command":
+      return "Ran command";
+    case "Fetching":
+      return "Fetched";
+    default:
+      return label;
+  }
+};
+
 export const updateToolCompletionAcpEvent = (
   previousEvents: ChatAcpEvent[],
   activityId: string,
@@ -76,7 +99,8 @@ export const updateToolCompletionAcpEvent = (
     event.id === activityId
       ? {
           ...event,
-          detail: completionDetail,
+          label: completeToolLabel(event.label, success),
+          detail: event.detail ?? completionDetail,
           state: completionState,
           timestamp: now,
         }

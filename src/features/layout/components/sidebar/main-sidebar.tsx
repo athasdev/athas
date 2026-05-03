@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-sidebar-view";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import DebuggerView from "@/features/debugger/components/debugger-view";
@@ -36,6 +37,7 @@ export const SidebarActivityRail = memo(() => {
         isSidebarVisible,
         isGitViewActive,
         isGitHubPRsViewActive,
+        activeSidebarView,
       },
       view,
     );
@@ -92,6 +94,8 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const isDebuggerViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
+  const isMultiAgentsViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "multi-agents";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
   const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
 
@@ -159,6 +163,12 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
         {settings.coreFeatures.debugger && (
           <div className={cn("h-full", !isDebuggerViewActive && "hidden")}>
             <DebuggerView />
+          </div>
+        )}
+
+        {settings.coreFeatures.aiChat && (
+          <div className={cn("h-full", !isMultiAgentsViewActive && "hidden")}>
+            <MultiAgentsSidebarView />
           </div>
         )}
 

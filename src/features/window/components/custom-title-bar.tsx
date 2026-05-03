@@ -186,6 +186,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         isSidebarVisible,
         isGitViewActive,
         isGitHubPRsViewActive,
+        activeSidebarView,
       },
       view,
     );

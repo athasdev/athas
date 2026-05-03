@@ -24,6 +24,9 @@ interface GitBranchManagerProps {
   onBranchChange?: () => void;
   paletteTarget?: boolean;
   placement?: "up" | "down";
+  triggerIconSize?: number;
+  triggerClassName?: string;
+  triggerInputClassName?: string;
 }
 
 const BRANCH_MANAGER_DROPDOWN_WIDTH = 360;
@@ -57,6 +60,9 @@ const GitBranchManager = ({
   onBranchChange,
   paletteTarget = false,
   placement = "down",
+  triggerIconSize,
+  triggerClassName,
+  triggerInputClassName,
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [branchQuery, setBranchQuery] = useState("");
@@ -274,19 +280,21 @@ const GitBranchManager = ({
         disabled={isLoading}
         readOnly={!isDropdownOpen}
         leftIcon={GitBranch}
+        leftIconSize={triggerIconSize}
+        htmlSize={triggerTextWidthCh}
         variant="ghost"
         showTrigger={false}
         showClear={false}
         className={cn(
-          "inline-flex w-fit max-w-[360px] shrink-0 hover:bg-hover/80",
+          "inline-flex w-fit shrink-0 hover:bg-hover/80",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
+          triggerClassName,
         )}
         inputClassName={cn(
-          "truncate pr-0 pl-7 font-normal",
+          "max-w-[360px] truncate pr-0 pl-7 font-normal",
           isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
+          triggerInputClassName,
         )}
-        containerStyle={{ width: "fit-content", maxWidth: "360px" }}
-        inputStyle={{ width: `calc(${triggerTextWidthCh}ch + 1.75rem)`, flex: "0 0 auto" }}
         placeholder={currentBranch}
         aria-label="Search branches"
       />

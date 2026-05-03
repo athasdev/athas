@@ -1,9 +1,10 @@
-export type SidebarView = "files" | "git" | "github-prs" | (string & {});
+export type SidebarView = "files" | "git" | "github-prs" | "multi-agents" | (string & {});
 
 interface SidebarPaneState {
   isSidebarVisible: boolean;
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
+  activeSidebarView?: SidebarView;
 }
 
 interface SidebarPaneClickResult {
@@ -14,10 +15,11 @@ interface SidebarPaneClickResult {
 export function getActiveSidebarView({
   isGitViewActive,
   isGitHubPRsViewActive,
+  activeSidebarView,
 }: Omit<SidebarPaneState, "isSidebarVisible">): SidebarView {
   if (isGitViewActive) return "git";
   if (isGitHubPRsViewActive) return "github-prs";
-  return "files";
+  return activeSidebarView ?? "files";
 }
 
 export function resolveSidebarPaneClick(

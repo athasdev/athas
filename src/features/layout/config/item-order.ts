@@ -8,6 +8,7 @@ export const HEADER_TRAILING_ITEM_IDS = [
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
   "search",
+  "multi-agents",
   "git",
   "debugger",
   "github-prs",
