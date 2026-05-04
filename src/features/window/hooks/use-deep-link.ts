@@ -34,7 +34,7 @@ function handleDeepLink(url: string) {
 
     const openRequest = parseWindowOpenUrl(parsed);
     if (openRequest) {
-      handleWindowOpenRequest(openRequest);
+      handleWindowOpenRequest({ ...openRequest, source: "deepLink" });
       return;
     }
 

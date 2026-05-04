@@ -3,6 +3,8 @@ import { __test__ } from "../utils/window-open-request";
 
 const { parseWindowOpenUrl } = __test__;
 const { resolveWindowOpenPathTarget } = __test__;
+const { shouldConfirmTerminalCommand } = __test__;
+const { getTerminalCommandConfirmationMessage } = __test__;
 
 describe("parseWindowOpenUrl", () => {
   it("parses file with line number", () => {
@@ -148,5 +150,44 @@ describe("resolveWindowOpenPathTarget", () => {
       type: "invalid",
       message: "Path is not a folder.",
     });
+  });
+});
+
+describe("terminal command confirmation", () => {
+  it("requires confirmation only for deep-link terminal commands", () => {
+    expect(
+      shouldConfirmTerminalCommand({
+        type: "terminal",
+        source: "deepLink",
+        command: "npm test",
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldConfirmTerminalCommand({
+        type: "terminal",
+        source: "cli",
+        command: "npm test",
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldConfirmTerminalCommand({
+        type: "terminal",
+        source: "deepLink",
+      }),
+    ).toBe(false);
+  });
+
+  it("includes command and working directory in the confirmation message", () => {
+    expect(
+      getTerminalCommandConfirmationMessage({
+        type: "terminal",
+        command: "npm test",
+        workingDirectory: "/Users/test/project",
+      }),
+    ).toBe(
+      "Open a terminal and run this command?\n\nnpm test\n\nWorking directory: /Users/test/project",
+    );
   });
 });

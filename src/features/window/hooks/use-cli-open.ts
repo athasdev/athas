@@ -28,12 +28,14 @@ export function useCliOpen() {
           if (!payload.url) return;
           handleWindowOpenRequest({
             type: "web",
+            source: "cli",
             url: payload.url,
           });
           break;
         case "terminal":
           handleWindowOpenRequest({
             type: "terminal",
+            source: "cli",
             command: payload.command ?? undefined,
             workingDirectory: payload.working_directory ?? undefined,
           });
@@ -42,6 +44,7 @@ export function useCliOpen() {
           if (!payload.connection_id) return;
           handleWindowOpenRequest({
             type: "remote",
+            source: "cli",
             remoteConnectionId: payload.connection_id,
             remoteConnectionName: payload.name ?? undefined,
           });
@@ -51,6 +54,7 @@ export function useCliOpen() {
           if (!payload.path) return;
           handleWindowOpenRequest({
             type: "path",
+            source: "cli",
             path: payload.path,
             isDirectory: payload.is_directory ?? false,
             line: toPositiveInteger(payload.line),

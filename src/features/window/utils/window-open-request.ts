@@ -1,5 +1,6 @@
 export interface WindowOpenRequest {
   type?: "path" | "remote" | "web" | "terminal";
+  source?: "app" | "cli" | "deepLink";
   path?: string;
   isDirectory?: boolean;
   line?: number;
@@ -13,6 +14,20 @@ export interface WindowOpenRequest {
 
 interface PathInfo {
   is_dir: boolean;
+}
+
+function shouldConfirmTerminalCommand(request: WindowOpenRequest) {
+  return request.type === "terminal" && request.source === "deepLink" && !!request.command;
+}
+
+function getTerminalCommandConfirmationMessage(request: WindowOpenRequest) {
+  const lines = ["Open a terminal and run this command?", "", request.command ?? ""];
+
+  if (request.workingDirectory) {
+    lines.push("", `Working directory: ${request.workingDirectory}`);
+  }
+
+  return lines.join("\n");
 }
 
 const parsePositiveInteger = (value: string | null | undefined) => {
@@ -107,6 +122,17 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
   }
 
   if (request.type === "terminal") {
+    if (shouldConfirmTerminalCommand(request)) {
+      const { primitiveConfirm } = await import("@/ui/primitive-dialog-service");
+      const confirmed = await primitiveConfirm(getTerminalCommandConfirmationMessage(request), {
+        title: "Run Terminal Command",
+        confirmLabel: "Run Command",
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
     useBufferStore.getState().actions.openTerminalBuffer({
       command: request.command,
       workingDirectory: request.workingDirectory,
@@ -156,4 +182,9 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
   }
 }
 
-export const __test__ = { parseWindowOpenUrl, resolveWindowOpenPathTarget };
+export const __test__ = {
+  getTerminalCommandConfirmationMessage,
+  parseWindowOpenUrl,
+  resolveWindowOpenPathTarget,
+  shouldConfirmTerminalCommand,
+};
