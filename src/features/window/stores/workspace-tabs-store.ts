@@ -47,7 +47,13 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
         );
 
         if (existing) {
-          // If tab already exists, just activate it
+          set((state) => {
+            const tab = state.projectTabs.find((projectTab) => projectTab.id === existing.id);
+            if (tab) {
+              tab.name = name;
+              tab.path = normalizedPath;
+            }
+          });
           get().setActiveProjectTab(existing.id);
           return;
         }
