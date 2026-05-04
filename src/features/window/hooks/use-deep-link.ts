@@ -2,7 +2,11 @@ import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "@/ui/toast";
-import { enqueueWindowOpenRequest, parseWindowOpenUrl } from "../utils/window-open-request";
+import {
+  enqueueWindowOpenRequest,
+  parseWindowOpenUrl,
+  type WindowOpenRequest,
+} from "../utils/window-open-request";
 
 /**
  * Hook to handle deep link URLs
@@ -26,24 +30,13 @@ export function useDeepLink() {
 
 function handleDeepLink(url: string) {
   try {
-    const parsed = new URL(url);
+    const action = parseDeepLinkAction(url);
+    if (!action) return;
 
-    if (!isSupportedDeepLinkProtocol(parsed.protocol)) {
-      return;
-    }
-
-    const openRequest = parseWindowOpenUrl(parsed);
-    if (openRequest) {
-      void enqueueWindowOpenRequest({ ...openRequest, source: "deepLink" });
-      return;
-    }
-
-    const path = parsed.pathname.replace(/^\/\//, "");
-    const segments = path.split("/").filter(Boolean);
-
-    if (segments[0] === "extension" && segments[1] === "install" && segments[2]) {
-      const extensionId = segments[2];
-      installExtensionFromDeepLink(extensionId);
+    if (action.type === "windowOpen") {
+      void enqueueWindowOpenRequest(action.request);
+    } else {
+      installExtensionFromDeepLink(action.extensionId);
     }
   } catch (error) {
     console.error("Failed to parse deep link:", error);
@@ -54,6 +47,38 @@ const SUPPORTED_DEEP_LINK_PROTOCOLS = new Set(["athas:", "athas-dev:", "athas-pr
 
 function isSupportedDeepLinkProtocol(protocol: string) {
   return SUPPORTED_DEEP_LINK_PROTOCOLS.has(protocol);
+}
+
+export type DeepLinkAction =
+  | { type: "windowOpen"; request: WindowOpenRequest }
+  | { type: "extensionInstall"; extensionId: string };
+
+export function parseDeepLinkAction(url: string): DeepLinkAction | null {
+  const parsed = new URL(url);
+
+  if (!isSupportedDeepLinkProtocol(parsed.protocol)) {
+    return null;
+  }
+
+  const openRequest = parseWindowOpenUrl(parsed);
+  if (openRequest) {
+    return {
+      type: "windowOpen",
+      request: { ...openRequest, source: "deepLink" },
+    };
+  }
+
+  const path = parsed.pathname.replace(/^\/\//, "");
+  const segments = [parsed.host, ...path.split("/")].filter(Boolean);
+
+  if (segments[0] === "extension" && segments[1] === "install" && segments[2]) {
+    return {
+      type: "extensionInstall",
+      extensionId: segments[2],
+    };
+  }
+
+  return null;
 }
 
 async function installExtensionFromDeepLink(extensionId: string) {
@@ -82,4 +107,4 @@ async function installExtensionFromDeepLink(extensionId: string) {
   }
 }
 
-export const __test__ = { isSupportedDeepLinkProtocol };
+export const __test__ = { isSupportedDeepLinkProtocol, parseDeepLinkAction };

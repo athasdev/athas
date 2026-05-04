@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { __test__ } from "../hooks/use-deep-link";
 
-const { isSupportedDeepLinkProtocol } = __test__;
+const { isSupportedDeepLinkProtocol, parseDeepLinkAction } = __test__;
 
 describe("isSupportedDeepLinkProtocol", () => {
   it("accepts registered stable, preview, and dev schemes", () => {
@@ -14,5 +14,32 @@ describe("isSupportedDeepLinkProtocol", () => {
     expect(isSupportedDeepLinkProtocol("https:")).toBe(false);
     expect(isSupportedDeepLinkProtocol("file:")).toBe(false);
     expect(isSupportedDeepLinkProtocol("athas-alpha:")).toBe(false);
+  });
+});
+
+describe("parseDeepLinkAction", () => {
+  it("maps supported open URLs to queued window requests", () => {
+    expect(parseDeepLinkAction("athas://open?path=/Users/test/project/file.ts&line=42")).toEqual({
+      type: "windowOpen",
+      request: {
+        type: "path",
+        source: "deepLink",
+        path: "/Users/test/project/file.ts",
+        isDirectory: false,
+        line: 42,
+      },
+    });
+  });
+
+  it("maps extension install URLs without touching extension state", () => {
+    expect(parseDeepLinkAction("athas://extension/install/theme-dark")).toEqual({
+      type: "extensionInstall",
+      extensionId: "theme-dark",
+    });
+  });
+
+  it("drops unsupported schemes and malformed actions", () => {
+    expect(parseDeepLinkAction("athas-alpha://open?path=/Users/test/file.ts")).toBeNull();
+    expect(parseDeepLinkAction("athas://open")).toBeNull();
   });
 });
