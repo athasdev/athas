@@ -19,6 +19,10 @@ export const GeneralSettings = () => {
     downloadProgress,
     checkForUpdates,
     downloadAndInstall,
+    downloadLater,
+    remindLater,
+    skipVersion,
+    viewReleaseNotes,
   } = useUpdater(false);
   const { showToast } = useToast();
 
@@ -86,10 +90,25 @@ export const GeneralSettings = () => {
   };
 
   const handleCheckForUpdates = async () => {
-    const hasUpdate = await checkForUpdates();
+    const hasUpdate = await checkForUpdates({ ignoreSuppression: true });
     if (!hasUpdate) {
       showToast({ message: "You're on the latest version", type: "success" });
     }
+  };
+
+  const handleDownloadLater = () => {
+    downloadLater();
+    showToast({ message: "Update hidden until the next check", type: "success" });
+  };
+
+  const handleRemindLater = () => {
+    remindLater();
+    showToast({ message: "Update reminder set for tomorrow", type: "success" });
+  };
+
+  const handleSkipVersion = () => {
+    skipVersion();
+    showToast({ message: `Athas ${updateInfo?.version ?? "update"} skipped`, type: "success" });
   };
 
   const handleReportBug = async () => {
@@ -115,7 +134,7 @@ export const GeneralSettings = () => {
         label="Version"
         description="Check for updates and install the latest app version."
       >
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button
             onClick={handleCheckForUpdates}
             disabled={checking || downloading || installing}
@@ -125,14 +144,48 @@ export const GeneralSettings = () => {
             {checking ? "Checking..." : "Check"}
           </Button>
           {available && (
-            <Button
-              onClick={downloadAndInstall}
-              disabled={downloading || installing}
-              variant="default"
-              size="xs"
-            >
-              {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
-            </Button>
+            <>
+              <Button
+                onClick={viewReleaseNotes}
+                disabled={downloading || installing}
+                variant="default"
+                size="xs"
+              >
+                Notes
+              </Button>
+              <Button
+                onClick={handleDownloadLater}
+                disabled={downloading || installing}
+                variant="default"
+                size="xs"
+              >
+                Later
+              </Button>
+              <Button
+                onClick={handleRemindLater}
+                disabled={downloading || installing}
+                variant="default"
+                size="xs"
+              >
+                Tomorrow
+              </Button>
+              <Button
+                onClick={handleSkipVersion}
+                disabled={downloading || installing}
+                variant="default"
+                size="xs"
+              >
+                Skip
+              </Button>
+              <Button
+                onClick={downloadAndInstall}
+                disabled={downloading || installing}
+                variant="default"
+                size="xs"
+              >
+                {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
+              </Button>
+            </>
           )}
         </div>
       </SettingRow>

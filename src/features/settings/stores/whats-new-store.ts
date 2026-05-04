@@ -14,6 +14,7 @@ interface WhatsNewState {
   info: WhatsNewInfo | null;
   initialize: () => Promise<void>;
   open: () => Promise<void>;
+  openInfo: (info: WhatsNewInfo) => void;
   queuePendingUpdate: (updateInfo: UpdateInfo) => void;
 }
 
@@ -59,6 +60,10 @@ export const useWhatsNewStore = create<WhatsNewState>()((set, get) => ({
       return;
     }
 
+    openWhatsNewBuffer(info);
+  },
+
+  openInfo: (info) => {
     openWhatsNewBuffer(info);
   },
 

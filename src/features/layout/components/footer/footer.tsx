@@ -1,13 +1,15 @@
 import {
   ArrowClockwise,
+  CaretUp,
   DownloadSimple,
   PuzzlePiece,
   TerminalWindow,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
+import { Dropdown } from "@/ui/dropdown";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -58,6 +60,7 @@ function FooterTabControl({
   className,
   onClick,
   commandId,
+  controlRef,
   children,
 }: {
   tooltip: string;
@@ -65,6 +68,7 @@ function FooterTabControl({
   className?: string;
   onClick: () => void;
   commandId?: string;
+  controlRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }) {
   const shortcut = useCommandShortcut(commandId);
@@ -73,6 +77,7 @@ function FooterTabControl({
     <TabsList variant="segmented" className={FOOTER_CONTROL_GROUP_CLASS_NAME}>
       <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
+          ref={controlRef}
           role="button"
           aria-label={tooltip}
           tabIndex={0}
@@ -117,7 +122,13 @@ const Footer = () => {
     updateInfo,
     downloadProgress,
     onDownload: downloadAndInstall,
+    onDismiss: dismissUpdate,
+    onRemindLater,
+    onSkipVersion,
+    onViewReleaseNotes,
   } = useAutoUpdate();
+  const [isUpdateMenuOpen, setIsUpdateMenuOpen] = useState(false);
+  const updateMenuRef = useRef<HTMLDivElement>(null);
 
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
@@ -134,6 +145,43 @@ const Footer = () => {
       ? gitStatus
       : workspaceGitStatus;
   const footerBranch = footerGitStatus?.branch;
+  const updateMenuItems = useMemo(
+    () => [
+      {
+        id: "release-notes",
+        label: "View Release Notes",
+        onClick: onViewReleaseNotes,
+        disabled: downloading || installing,
+      },
+      {
+        id: "download-later",
+        label: "Download Later",
+        onClick: dismissUpdate,
+        disabled: downloading || installing,
+      },
+      {
+        id: "remind-later",
+        label: "Remind Me Tomorrow",
+        onClick: onRemindLater,
+        disabled: downloading || installing,
+      },
+      {
+        id: "skip-version",
+        label: `Skip ${updateInfo?.version ?? "Version"}`,
+        onClick: onSkipVersion,
+        disabled: downloading || installing,
+      },
+    ],
+    [
+      dismissUpdate,
+      downloading,
+      installing,
+      onRemindLater,
+      onSkipVersion,
+      onViewReleaseNotes,
+      updateInfo?.version,
+    ],
+  );
 
   const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
     footerRepoPath && footerBranch
@@ -257,45 +305,70 @@ const Footer = () => {
           id: "updates",
           label: "App updates",
           content: (
-            <FooterTabControl
-              tooltip={
-                updateError
-                  ? updateError
-                  : downloading
-                    ? `Updating Athas ${downloadProgress?.percentage ?? 0}%`
+            <div className="flex items-center gap-0.5">
+              <FooterTabControl
+                tooltip={
+                  updateError
+                    ? updateError
+                    : downloading
+                      ? `Updating Athas ${downloadProgress?.percentage ?? 0}%`
+                      : installing
+                        ? "Installing update..."
+                        : `Update available: ${updateInfo.version}`
+                }
+                className={cn(
+                  FOOTER_PILL_TAB_CLASS_NAME,
+                  downloading || installing
+                    ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
+                    : updateError
+                      ? "text-error hover:bg-error/10 hover:text-error"
+                      : "text-accent hover:bg-accent/10 hover:text-accent",
+                )}
+                onClick={() => {
+                  if (!downloading && !installing) {
+                    void downloadAndInstall();
+                  }
+                }}
+              >
+                {downloading || installing ? (
+                  <ArrowClockwise className="animate-spin" weight="duotone" />
+                ) : (
+                  <DownloadSimple weight="duotone" />
+                )}
+                <span className="ui-font ui-text-xs font-medium">
+                  {downloading
+                    ? `Updating ${downloadProgress?.percentage ?? 0}%`
                     : installing
-                      ? "Installing update..."
-                      : `Update available: ${updateInfo.version}`
-              }
-              className={cn(
-                FOOTER_PILL_TAB_CLASS_NAME,
-                downloading || installing
-                  ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
-                  : updateError
+                      ? "Installing"
+                      : updateError
+                        ? "Update failed"
+                        : "Update available"}
+                </span>
+              </FooterTabControl>
+              <FooterTabControl
+                tooltip="Update Options"
+                active={isUpdateMenuOpen}
+                className={cn(
+                  FOOTER_ICON_TAB_CLASS_NAME,
+                  updateError
                     ? "text-error hover:bg-error/10 hover:text-error"
                     : "text-accent hover:bg-accent/10 hover:text-accent",
-              )}
-              onClick={() => {
-                if (!downloading && !installing) {
-                  void downloadAndInstall();
-                }
-              }}
-            >
-              {downloading || installing ? (
-                <ArrowClockwise className="animate-spin" weight="duotone" />
-              ) : (
-                <DownloadSimple weight="duotone" />
-              )}
-              <span className="ui-font ui-text-xs font-medium">
-                {downloading
-                  ? `Updating ${downloadProgress?.percentage ?? 0}%`
-                  : installing
-                    ? "Installing"
-                    : updateError
-                      ? "Update failed"
-                      : "Update available"}
-              </span>
-            </FooterTabControl>
+                )}
+                controlRef={updateMenuRef}
+                onClick={() => setIsUpdateMenuOpen((open) => !open)}
+              >
+                <CaretUp weight="bold" />
+              </FooterTabControl>
+              <Dropdown
+                isOpen={isUpdateMenuOpen}
+                onClose={() => setIsUpdateMenuOpen(false)}
+                anchorRef={updateMenuRef}
+                anchorSide="top"
+                anchorAlign="start"
+                items={updateMenuItems}
+                className="min-w-[210px]"
+              />
+            </div>
           ),
         }
       : null,
