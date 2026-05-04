@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { EDITOR_CONSTANTS } from "../config/constants";
-import { buildLineOffsetMap } from "./html";
-import { calculateSelectionBoxes } from "./selection-boxes";
+import { buildLineOffsetMap } from "../utils/html";
+import { calculateSelectionBoxes } from "../utils/selection-boxes";
 
 const measureText = (text: string) => text.length * 8;
 

@@ -5,7 +5,7 @@ import {
   filePathFromUri,
   isWorkspaceEdit,
   offsetFromPosition,
-} from "./workspace-edit";
+} from "../lsp/workspace-edit";
 
 describe("workspace edit utilities", () => {
   it("decodes file URIs into filesystem paths", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getLineCommentTokenForLanguage, toggleLineComment } from "./comment-toggle";
+import { getLineCommentTokenForLanguage, toggleLineComment } from "../utils/comment-toggle";
 
 describe("toggleLineComment", () => {
   it("keeps the cursor on the same code when commenting a line", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getLanguageDisplayName, getLanguageIdFromPath } from "./language-id";
+import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
 
 describe("getLanguageIdFromPath", () => {
   it("detects scm files as scheme", () => {
