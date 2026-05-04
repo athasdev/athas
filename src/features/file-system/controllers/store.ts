@@ -77,6 +77,7 @@ import { useFileWatcherStore } from "./file-watcher-store";
 import { fffSetWorkspace, fffTrackAccess } from "@/features/global-search/lib/rust-api/search";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
+import { buildRemoteWorkspaceTree, type RemoteDirectoryEntry } from "./remote-workspace";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 import { prepareProjectTransitionWithUnsavedBuffers } from "./workspace-project-transition";
 import { buildWorkspaceRestoreBatch, buildWorkspaceRestorePlan } from "./workspace-session";
@@ -381,6 +382,26 @@ const openLocalWorkspace = async (
   return true;
 };
 
+const initializeRemoteWorkspaceSession = async (remotePath: string, get: FileSystemGet) => {
+  await useFileWatcherStore.getState().setProjectRoot("");
+  useGitStore.getState().actions.setWorkspaceGitStatus(null, null);
+
+  try {
+    const restoreStartedAt = performance.now();
+    logWorkspaceOpenStep("start", "remoteWorkspace:restoreSession", remotePath);
+    await get().restoreSession(remotePath);
+    logWorkspaceOpenStep("end", "remoteWorkspace:restoreSession", remotePath, restoreStartedAt);
+  } catch (error) {
+    logWorkspaceOpenStep("error", "remoteWorkspace:restoreSession", remotePath);
+    console.error("Failed to restore remote workspace session:", error);
+    toast.warning("Remote workspace opened, but saved tabs could not be restored.");
+    frontendTrace("warn", "workspace-open", "remoteWorkspace:restoreSession:error", {
+      path: remotePath,
+      error: getErrorMessage(error),
+    });
+  }
+};
+
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
     immer((set, get) => ({
@@ -657,37 +678,20 @@ export const useFileSystemStore = createSelectors(
           const connection = await reconnectRemoteConnection(connectionId);
 
           // Read remote root directory
-          const entries = await invoke<
-            Array<{ name: string; path: string; is_dir: boolean; size: number }>
-          >("ssh_read_directory", {
+          const entries = await invoke<RemoteDirectoryEntry[]>("ssh_read_directory", {
             connectionId,
             path: "/",
           });
 
-          // Convert to FileEntry format
-          const fileTree: FileEntry[] = entries.map((entry) => ({
-            name: entry.name,
-            path: `remote://${connectionId}${entry.path}`,
-            isDir: entry.is_dir,
-            children: entry.is_dir ? [] : undefined,
-          }));
-
-          // Create remote root path
-          const remotePath = `remote://${connectionId}/`;
+          const { remotePath, wrappedFileTree } = buildRemoteWorkspaceTree(
+            connectionId,
+            connection.name,
+            entries,
+          );
 
           // Add project to workspace tabs
           useWorkspaceTabsStore.getState().addProjectTab(remotePath, connection.name);
           const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
-
-          // Wrap with root folder
-          const wrappedFileTree: FileEntry[] = [
-            {
-              name: connection.name,
-              path: remotePath,
-              isDir: true,
-              children: fileTree,
-            },
-          ];
 
           // Initialize tree UI state: expand remote root
           useFileTreeStore.getState().setExpandedPaths(new Set([remotePath]));
@@ -700,9 +704,6 @@ export const useFileSystemStore = createSelectors(
           setActiveProjectId(activeProjectTab?.id);
           restoreProjectUiState(remotePath);
 
-          await useFileWatcherStore.getState().setProjectRoot("");
-          useGitStore.getState().actions.setWorkspaceGitStatus(null, null);
-
           set((state) => {
             state.isFileTreeLoading = false;
             state.files = wrappedFileTree;
@@ -710,6 +711,8 @@ export const useFileSystemStore = createSelectors(
             state.filesVersion++;
             state.projectFilesCache = undefined;
           });
+
+          await initializeRemoteWorkspaceSession(remotePath, get);
 
           return true;
         } catch (error) {
