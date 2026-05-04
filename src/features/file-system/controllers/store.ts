@@ -131,6 +131,9 @@ const MAX_PROJECT_SCAN_DEPTH = 8;
 const shouldSkipLargeWorkspaceRestore = (gitFilesCount: number) =>
   gitFilesCount > LARGE_WORKSPACE_GIT_STATUS_THRESHOLD;
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error || "Unknown error");
+
 const readPersistedTerminalSessions = (workspacePath: string | undefined) => {
   try {
     return loadWorkspaceTerminalsFromStorage(workspacePath);
@@ -1977,9 +1980,8 @@ export const useFileSystemStore = createSelectors(
 
       switchToProject: async (projectId: string) => {
         const switchStartedAt = performance.now();
-        const tab = useWorkspaceTabsStore
-          .getState()
-          .projectTabs.find((t: { id: string }) => t.id === projectId);
+        const workspaceTabsStore = useWorkspaceTabsStore.getState();
+        const tab = workspaceTabsStore.projectTabs.find((t: { id: string }) => t.id === projectId);
 
         if (!tab) {
           console.warn(`Project tab not found: ${projectId}`);
@@ -1987,8 +1989,9 @@ export const useFileSystemStore = createSelectors(
         }
 
         const currentRootPath = get().rootFolderPath;
+        const previousActiveTab = workspaceTabsStore.getActiveProjectTab();
         if (currentRootPath === tab.path) {
-          useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
+          workspaceTabsStore.setActiveProjectTab(projectId);
           set((state) => {
             state.isSwitchingProject = false;
           });
@@ -2011,6 +2014,13 @@ export const useFileSystemStore = createSelectors(
         });
 
         try {
+          if (!remoteTabInfo) {
+            const symlinkInfo = await getSymlinkInfo(tab.path);
+            if (!symlinkInfo.is_dir) {
+              throw new Error(`Project path is not a folder: ${tab.path}`);
+            }
+          }
+
           if (currentRootPath) {
             persistCurrentProjectUiState(currentRootPath);
             clearQueuedWorkspaceSessionSave(currentRootPath);
@@ -2025,7 +2035,7 @@ export const useFileSystemStore = createSelectors(
             );
           }
 
-          useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
+          workspaceTabsStore.setActiveProjectTab(projectId);
 
           if (remoteTabInfo) {
             const reconnected = await get().handleOpenRemoteProject(
@@ -2201,10 +2211,36 @@ export const useFileSystemStore = createSelectors(
         } catch (error) {
           console.error("Failed to switch project:", error);
           logWorkspaceOpenStep("error", "switchToProject", tab.path, switchStartedAt);
+
+          const nextWorkspaceTabsStore = useWorkspaceTabsStore.getState();
+
+          if (!remoteTabInfo) {
+            nextWorkspaceTabsStore.removeProjectTab(tab.id);
+          }
+
+          const previousActiveTabId = previousActiveTab?.id;
+          const previousTabStillExists = previousActiveTabId
+            ? nextWorkspaceTabsStore.projectTabs.some(
+                (projectTab) => projectTab.id === previousActiveTabId,
+              )
+            : false;
+
+          if (previousActiveTabId && previousTabStillExists) {
+            nextWorkspaceTabsStore.setActiveProjectTab(previousActiveTabId);
+          } else if (currentRootPath) {
+            const currentRootTab = nextWorkspaceTabsStore.projectTabs.find(
+              (projectTab) => projectTab.path === currentRootPath,
+            );
+            if (currentRootTab) {
+              nextWorkspaceTabsStore.setActiveProjectTab(currentRootTab.id);
+            }
+          }
+
           set((state) => {
             state.isFileTreeLoading = false;
             state.isSwitchingProject = false;
           });
+          toast.error(`Failed to switch project: ${getErrorMessage(error)}`);
           return false;
         }
       },
