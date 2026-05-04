@@ -16,6 +16,7 @@ import type { Settings } from "@/features/settings/types/settings";
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
 export const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
 export const DEFAULT_AI_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
+export const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
 
 export const defaultSettings: Settings = {
   // General
@@ -65,7 +66,10 @@ export const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  aiAutocompleteProvider: "openrouter",
   aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
+  aiAutocompleteCustomBaseUrl: DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL,
+  aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
   aiSkills: [],
   ollamaBaseUrl: "http://localhost:11434",

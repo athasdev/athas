@@ -7,7 +7,9 @@ import {
 
 interface UseAutocompleteOptions {
   enabled: boolean;
+  provider: "openrouter" | "custom";
   model: string;
+  customBaseUrl: string;
   filePath: string | null;
   languageId: string | null;
   content: string;
@@ -24,16 +26,6 @@ const COMPLETION_OVERLAP_SCAN_LIMIT = 256;
 
 const WORD_LIKE_TRIGGER_REGEX = /[\w\]})>"'`.]/;
 const CONTEXT_FOLLOWUP_TRIGGER_REGEX = /[\w\]})>"'`.{;=:[\],(]/;
-const DEBUG_AUTOCOMPLETE = false;
-
-function debugLog(message: string, payload?: Record<string, unknown>) {
-  if (!DEBUG_AUTOCOMPLETE) return;
-  if (payload) {
-    console.log(`[Autocomplete] ${message}`, payload);
-    return;
-  }
-  console.log(`[Autocomplete] ${message}`);
-}
 
 function isWhitespace(char: string): boolean {
   return char === " " || char === "\t" || char === "\n" || char === "\r";
@@ -107,7 +99,9 @@ function shouldTriggerForCharacter(content: string, cursorOffset: number): boole
 
 export function useAutocomplete({
   enabled,
+  provider,
   model,
+  customBaseUrl,
   filePath,
   languageId,
   content,
@@ -129,6 +123,7 @@ export function useAutocomplete({
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const isPro = subscriptionStatus === "pro";
   const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
+  const needsAthasAuth = provider !== "custom";
 
   useEffect(() => {
     return () => {
@@ -152,24 +147,14 @@ export function useAutocomplete({
 
     if (
       !enabled ||
-      !isAuthenticated ||
+      (needsAthasAuth && !isAuthenticated) ||
       (managedPolicy ? !managedPolicy.aiCompletionEnabled : false) ||
+      !model.trim() ||
+      (provider === "custom" && !customBaseUrl.trim()) ||
       hasActiveFolds ||
       lastInputTimestamp === 0 ||
       cursorOffset <= 0
     ) {
-      if (didUserType) {
-        debugLog("skip-prereq", {
-          enabled,
-          isAuthenticated,
-          subscriptionStatus,
-          enterpriseManaged: Boolean(managedPolicy),
-          aiCompletionEnabled: managedPolicy ? managedPolicy.aiCompletionEnabled : true,
-          hasActiveFolds,
-          lastInputTimestamp,
-          cursorOffset,
-        });
-      }
       setAutocompleteCompletion(null);
       return;
     }
@@ -181,12 +166,6 @@ export function useAutocomplete({
     }
 
     if (!shouldTriggerForCharacter(content, cursorOffset)) {
-      const previousSignificantChar = getPreviousNonWhitespaceChar(content, cursorOffset - 2);
-      debugLog("skip-trigger-char", {
-        charBeforeCursor: content[cursorOffset - 1] || "",
-        previousChar: content[cursorOffset - 2] || "",
-        previousSignificantChar,
-      });
       setAutocompleteCompletion(null);
       return;
     }
@@ -209,13 +188,6 @@ export function useAutocomplete({
       abortControllerRef.current = abortController;
 
       try {
-        debugLog("request", {
-          model,
-          filePath: filePath || "untitled",
-          languageId: languageId || "unknown",
-          cursorOffset,
-        });
-
         const result = await requestAutocomplete(
           {
             model,
@@ -224,7 +196,25 @@ export function useAutocomplete({
             filePath: filePath || undefined,
             languageId: languageId || undefined,
           },
-          { useByok },
+          {
+            useByok: provider === "custom" ? false : useByok,
+            provider,
+            customBaseUrl,
+            onChunk: (partialCompletion) => {
+              if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+                return;
+              }
+
+              const normalizedText = normalizeCompletionText(
+                partialCompletion,
+                beforeCursor,
+                afterCursor,
+              );
+              if (!normalizedText) return;
+
+              setAutocompleteCompletion({ text: normalizedText, cursorOffset });
+            },
+          },
         );
 
         if (abortController.signal.aborted || requestIdRef.current !== requestId) {
@@ -233,22 +223,16 @@ export function useAutocomplete({
 
         const text = result.completion;
         if (!text) {
-          debugLog("empty-completion");
           setAutocompleteCompletion(null);
           return;
         }
 
         const normalizedText = normalizeCompletionText(text, beforeCursor, afterCursor);
         if (!normalizedText) {
-          debugLog("empty-normalized-completion");
           setAutocompleteCompletion(null);
           return;
         }
 
-        debugLog("suggestion-ready", {
-          rawLength: text.length,
-          normalizedLength: normalizedText.length,
-        });
         setAutocompleteCompletion({ text: normalizedText, cursorOffset });
       } catch (error) {
         if (abortController.signal.aborted || requestIdRef.current !== requestId) {
@@ -276,16 +260,18 @@ export function useAutocomplete({
     };
   }, [
     enabled,
+    provider,
+    needsAthasAuth,
     isAuthenticated,
     managedPolicy,
     useByok,
-    subscriptionStatus,
     filePath,
     hasActiveFolds,
     lastInputTimestamp,
     cursorOffset,
     content,
     model,
+    customBaseUrl,
     languageId,
     setAutocompleteCompletion,
   ]);

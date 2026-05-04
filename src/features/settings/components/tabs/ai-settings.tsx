@@ -47,6 +47,7 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
+const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
 const DEFAULT_AUTOCOMPLETE_MODELS = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
   { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
@@ -75,6 +76,15 @@ export const AISettings = () => {
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
+  const [customAutocompleteModelInput, setCustomAutocompleteModelInput] = useState(
+    settings.aiAutocompleteCustomModelId,
+  );
+  const [customAutocompleteBaseUrlInput, setCustomAutocompleteBaseUrlInput] = useState(
+    settings.aiAutocompleteCustomBaseUrl,
+  );
+  const [customAutocompleteApiKeyInput, setCustomAutocompleteApiKeyInput] = useState("");
+  const [hasCustomAutocompleteApiKey, setHasCustomAutocompleteApiKey] = useState(false);
+  const [isSavingCustomAutocompleteApiKey, setIsSavingCustomAutocompleteApiKey] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
 
   // Ollama URL state
@@ -228,6 +238,60 @@ export const AISettings = () => {
   useEffect(() => {
     void loadAutocompleteModels();
   }, []);
+
+  useEffect(() => {
+    setCustomAutocompleteModelInput(settings.aiAutocompleteCustomModelId);
+  }, [settings.aiAutocompleteCustomModelId]);
+
+  useEffect(() => {
+    setCustomAutocompleteBaseUrlInput(settings.aiAutocompleteCustomBaseUrl);
+  }, [settings.aiAutocompleteCustomBaseUrl]);
+
+  useEffect(() => {
+    void (async () => {
+      const token = await getProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID);
+      setHasCustomAutocompleteApiKey(Boolean(token));
+    })();
+  }, []);
+
+  const handleSaveCustomAutocompleteApiKey = async () => {
+    const token = customAutocompleteApiKeyInput.trim();
+    if (!token) return;
+
+    setIsSavingCustomAutocompleteApiKey(true);
+    try {
+      await storeProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID, token);
+      setHasCustomAutocompleteApiKey(true);
+      setCustomAutocompleteApiKeyInput("");
+      showToast({ message: "Custom autocomplete API key saved", type: "success" });
+    } catch {
+      showToast({ message: "Failed to save custom autocomplete API key", type: "error" });
+    } finally {
+      setIsSavingCustomAutocompleteApiKey(false);
+    }
+  };
+
+  const handleRemoveCustomAutocompleteApiKey = async () => {
+    setIsSavingCustomAutocompleteApiKey(true);
+    try {
+      await removeProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID);
+      setHasCustomAutocompleteApiKey(false);
+      setCustomAutocompleteApiKeyInput("");
+      showToast({ message: "Custom autocomplete API key removed", type: "success" });
+    } catch {
+      showToast({ message: "Failed to remove custom autocomplete API key", type: "error" });
+    } finally {
+      setIsSavingCustomAutocompleteApiKey(false);
+    }
+  };
+
+  const commitCustomAutocompleteModel = () => {
+    updateSetting("aiAutocompleteCustomModelId", customAutocompleteModelInput);
+  };
+
+  const commitCustomAutocompleteBaseUrl = () => {
+    updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
+  };
 
   const providersNeedingAuth = getAvailableProviders().filter(
     (p) => p.requiresAuth && !p.requiresApiKey,
@@ -480,41 +544,180 @@ export const AISettings = () => {
         {settings.aiCompletion && (
           <>
             <SettingRow
-              label="Autocomplete Model"
-              description="Choose any OpenRouter model for autocomplete"
+              label="Autocomplete Provider"
+              description="Use Athas/OpenRouter or an OpenAI-compatible endpoint"
               onReset={() =>
-                updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+                updateSetting("aiAutocompleteProvider", getDefaultSetting("aiAutocompleteProvider"))
               }
               canReset={
-                settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
+                settings.aiAutocompleteProvider !== getDefaultSetting("aiAutocompleteProvider")
               }
             >
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
+              <SegmentedControl
+                value={settings.aiAutocompleteProvider}
+                options={[
+                  { value: "openrouter", label: "OpenRouter" },
+                  { value: "custom", label: "Custom" },
+                ]}
+                onChange={(value) =>
+                  updateSetting(
+                    "aiAutocompleteProvider",
+                    value === "custom" ? "custom" : "openrouter",
+                  )
+                }
+                size="xs"
+                wrap={false}
+              />
+            </SettingRow>
+            <SettingRow
+              label={
+                settings.aiAutocompleteProvider === "custom" ? "Custom Model" : "Autocomplete Model"
+              }
+              description={
+                settings.aiAutocompleteProvider === "custom"
+                  ? "Model name sent to the custom endpoint"
+                  : "Choose any OpenRouter model for autocomplete"
+              }
+              onReset={() =>
+                settings.aiAutocompleteProvider === "custom"
+                  ? updateSetting(
+                      "aiAutocompleteCustomModelId",
+                      getDefaultSetting("aiAutocompleteCustomModelId"),
+                    )
+                  : updateSetting(
+                      "aiAutocompleteModelId",
+                      getDefaultSetting("aiAutocompleteModelId"),
+                    )
+              }
+              canReset={
+                settings.aiAutocompleteProvider === "custom"
+                  ? settings.aiAutocompleteCustomModelId !==
+                    getDefaultSetting("aiAutocompleteCustomModelId")
+                  : settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
+              }
+            >
+              {settings.aiAutocompleteProvider === "custom" ? (
+                <Input
+                  value={customAutocompleteModelInput}
+                  onChange={(event) => setCustomAutocompleteModelInput(event.currentTarget.value)}
+                  onBlur={commitCustomAutocompleteModel}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="qwen2.5-coder:7b"
                   size="xs"
-                  onClick={loadAutocompleteModels}
-                  disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-                  title="Refresh model list"
-                >
-                  <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
-                </Button>
-                <Select
-                  value={settings.aiAutocompleteModelId}
-                  options={autocompleteModels.map((model) => ({
-                    value: model.id,
-                    label: model.name,
-                  }))}
-                  onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                  size="xs"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
                   className={SETTINGS_CONTROL_WIDTHS.xwide}
                   disabled={!aiCompletionAllowedByPolicy}
                 />
-              </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="xs"
+                    onClick={loadAutocompleteModels}
+                    disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
+                    title="Refresh model list"
+                  >
+                    <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+                  </Button>
+                  <Select
+                    value={settings.aiAutocompleteModelId}
+                    options={autocompleteModels.map((model) => ({
+                      value: model.id,
+                      label: model.name,
+                    }))}
+                    onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+                    size="xs"
+                    variant="default"
+                    searchable
+                    searchableTrigger="input"
+                    className={SETTINGS_CONTROL_WIDTHS.xwide}
+                    disabled={!aiCompletionAllowedByPolicy}
+                  />
+                </div>
+              )}
             </SettingRow>
+            {settings.aiAutocompleteProvider === "custom" && (
+              <>
+                <SettingRow
+                  label="Custom Base URL"
+                  description="OpenAI-compatible endpoint base URL"
+                  onReset={() =>
+                    updateSetting(
+                      "aiAutocompleteCustomBaseUrl",
+                      getDefaultSetting("aiAutocompleteCustomBaseUrl"),
+                    )
+                  }
+                  canReset={
+                    settings.aiAutocompleteCustomBaseUrl !==
+                    getDefaultSetting("aiAutocompleteCustomBaseUrl")
+                  }
+                >
+                  <Input
+                    value={customAutocompleteBaseUrlInput}
+                    onChange={(event) =>
+                      setCustomAutocompleteBaseUrlInput(event.currentTarget.value)
+                    }
+                    onBlur={commitCustomAutocompleteBaseUrl}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="http://localhost:11434/v1"
+                    size="xs"
+                    className={SETTINGS_CONTROL_WIDTHS.xwide}
+                    disabled={!aiCompletionAllowedByPolicy}
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Custom API Key"
+                  description={
+                    hasCustomAutocompleteApiKey
+                      ? "Stored securely. Leave blank to keep the existing key."
+                      : "Optional bearer token for the custom endpoint"
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="password"
+                      value={customAutocompleteApiKeyInput}
+                      onChange={(event) =>
+                        setCustomAutocompleteApiKeyInput(event.currentTarget.value)
+                      }
+                      placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
+                      size="xs"
+                      className={SETTINGS_CONTROL_WIDTHS.wide}
+                      disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                    />
+                    <Button
+                      variant="default"
+                      size="xs"
+                      onClick={handleSaveCustomAutocompleteApiKey}
+                      disabled={
+                        !customAutocompleteApiKeyInput.trim() ||
+                        !aiCompletionAllowedByPolicy ||
+                        isSavingCustomAutocompleteApiKey
+                      }
+                    >
+                      Save
+                    </Button>
+                    {hasCustomAutocompleteApiKey && (
+                      <Button
+                        variant="default"
+                        size="xs"
+                        onClick={handleRemoveCustomAutocompleteApiKey}
+                        disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </SettingRow>
+              </>
+            )}
             {autocompleteModelError && (
               <SettingRow label="Model List" description={autocompleteModelError}>
                 <Badge variant="default" size="default">

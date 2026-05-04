@@ -57,7 +57,10 @@ export interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  aiAutocompleteProvider: "openrouter" | "custom";
   aiAutocompleteModelId: string;
+  aiAutocompleteCustomBaseUrl: string;
+  aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiSkills: AIChatSkill[];
   ollamaBaseUrl: string;
