@@ -208,6 +208,148 @@ const reconnectRemoteConnection = async (connectionId: string) => {
   return connection;
 };
 
+type FileSystemStoreState = FsState & FsActions;
+type FileSystemSet = (updater: (state: FileSystemStoreState) => void) => void;
+type FileSystemGet = () => FileSystemStoreState;
+
+interface OpenLocalWorkspaceOptions {
+  path: string;
+  traceLabel: "handleOpenFolder" | "handleOpenFolderByPath";
+  treeState: "expand-root" | "collapse-all";
+  restoreUiState: boolean;
+}
+
+const initializeLocalWorkspaceInBackground = (
+  path: string,
+  get: FileSystemGet,
+  errorContext: string,
+) => {
+  useGitStore.getState().actions.setWorkspaceGitStatus(null, path);
+
+  void (async () => {
+    const backgroundInitStartedAt = performance.now();
+    logWorkspaceOpenStep("start", "backgroundInit", path);
+    try {
+      const watcherStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "setProjectRoot", path);
+      await useFileWatcherStore.getState().setProjectRoot(path);
+      logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
+
+      fffSetWorkspace(path).catch((error) => {
+        console.error("[fff] set_workspace failed:", error);
+      });
+
+      const gitStatusStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "getGitStatus", path);
+      const gitStatus = await getGitStatus(path);
+      logWorkspaceOpenStep("end", "getGitStatus", path, gitStatusStartedAt);
+
+      if (get().rootFolderPath !== path) {
+        return;
+      }
+
+      useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
+      if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
+        console.warn("[workspace-open] skipping restoreSession for large workspace", {
+          path,
+          gitFiles: gitStatus?.files.length ?? 0,
+        });
+        frontendTrace("warn", "workspace-open", "restoreSession:skipped-large-workspace", {
+          path,
+          gitFiles: gitStatus?.files.length ?? 0,
+        });
+        logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
+        return;
+      }
+
+      const restoreStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "restoreSession", path);
+      await get().restoreSession(path);
+      logWorkspaceOpenStep("end", "restoreSession", path, restoreStartedAt);
+      logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
+    } catch (error) {
+      if (get().rootFolderPath === path) {
+        useGitStore.getState().actions.setWorkspaceGitStatus(null, path);
+      }
+      logWorkspaceOpenStep("error", "backgroundInit", path, backgroundInitStartedAt);
+      console.error(errorContext, error);
+    }
+  })();
+};
+
+const openLocalWorkspace = async (
+  options: OpenLocalWorkspaceOptions,
+  set: FileSystemSet,
+  get: FileSystemGet,
+) => {
+  const { path, traceLabel, treeState, restoreUiState } = options;
+  const openStartedAt = performance.now();
+  logWorkspaceOpenStep("start", traceLabel, path);
+
+  try {
+    persistCurrentProjectUiState(get().rootFolderPath);
+
+    set((state) => {
+      state.isFileTreeLoading = true;
+    });
+
+    const projectName = getFolderName(path);
+    useWorkspaceTabsStore.getState().addProjectTab(path, projectName);
+
+    const readDirectoryStartedAt = performance.now();
+    logWorkspaceOpenStep("start", "readDirectoryContents", path);
+    const entries = await readDirectoryContents(path);
+    logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
+
+    const fileTree = sortFileEntries(entries);
+    const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
+
+    if (treeState === "expand-root") {
+      useFileTreeStore.getState().setExpandedPaths(new Set([path]));
+    } else {
+      useFileTreeStore.getState().collapseAll();
+    }
+
+    const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+    setRootFolderPath(path);
+    setProjectName(projectName);
+
+    if (restoreUiState) {
+      restoreProjectUiState(path);
+    }
+
+    useRecentFoldersStore.getState().addToRecents(path);
+    gitDiffCache.clear();
+
+    set((state) => {
+      state.isFileTreeLoading = false;
+      state.files = wrappedFileTree;
+      state.rootFolderPath = path;
+      state.filesVersion++;
+      state.projectFilesCache = undefined;
+    });
+  } catch (error) {
+    set((state) => {
+      state.isFileTreeLoading = false;
+    });
+    logWorkspaceOpenStep("error", traceLabel, path, openStartedAt);
+    console.error(`Failed to open folder: ${path}`, error);
+    toast.error(`Failed to open folder: ${path}`);
+    return false;
+  }
+
+  initializeLocalWorkspaceInBackground(
+    path,
+    get,
+    traceLabel === "handleOpenFolder"
+      ? "Failed to initialize workspace after opening folder:"
+      : "Failed to initialize workspace after opening folder by path:",
+  );
+
+  logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
+  return true;
+};
+
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
     immer((set, get) => ({
@@ -223,124 +365,29 @@ export const useFileSystemStore = createSelectors(
       handleOpenFolder: async () => {
         const selected = await openFolder();
         if (!selected) return false;
-        const openStartedAt = performance.now();
-        logWorkspaceOpenStep("start", "handleOpenFolder", selected);
 
-        try {
-          const { settings } = useSettingsStore.getState();
-          const hasOpenWorkspace =
-            !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
+        const { settings } = useSettingsStore.getState();
+        const hasOpenWorkspace =
+          !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
 
-          if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
-            await createAppWindow({
-              path: selected,
-              isDirectory: true,
-            });
-            return true;
-          }
-
-          persistCurrentProjectUiState(get().rootFolderPath);
-
-          set((state) => {
-            state.isFileTreeLoading = true;
+        if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+          await createAppWindow({
+            path: selected,
+            isDirectory: true,
           });
-
-          // Add project to workspace tabs
-          const projectName = getFolderName(selected);
-          useWorkspaceTabsStore.getState().addProjectTab(selected, projectName);
-
-          const readDirectoryStartedAt = performance.now();
-          logWorkspaceOpenStep("start", "readDirectoryContents", selected);
-          const entries = await readDirectoryContents(selected);
-          logWorkspaceOpenStep("end", "readDirectoryContents", selected, readDirectoryStartedAt);
-          const fileTree = sortFileEntries(entries);
-          const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
-
-          // Initialize tree UI state: expand root
-          useFileTreeStore.getState().setExpandedPaths(new Set([selected]));
-
-          // Update project store
-          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
-          setRootFolderPath(selected);
-          setProjectName(projectName);
-
-          // Add to recent folders
-          useRecentFoldersStore.getState().addToRecents(selected);
-
-          // Clear git diff cache for new project
-          gitDiffCache.clear();
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = selected;
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
-        } catch (error) {
-          set((state) => {
-            state.isFileTreeLoading = false;
-          });
-          logWorkspaceOpenStep("error", "handleOpenFolder", selected, openStartedAt);
-          console.error("Failed to open folder:", error);
-          toast.error(`Failed to open folder: ${selected}`);
-          return false;
+          return true;
         }
 
-        useGitStore.getState().actions.setWorkspaceGitStatus(null, selected);
-
-        void (async () => {
-          const backgroundInitStartedAt = performance.now();
-          logWorkspaceOpenStep("start", "backgroundInit", selected);
-          try {
-            const watcherStartedAt = performance.now();
-            logWorkspaceOpenStep("start", "setProjectRoot", selected);
-            await useFileWatcherStore.getState().setProjectRoot(selected);
-            logWorkspaceOpenStep("end", "setProjectRoot", selected, watcherStartedAt);
-
-            fffSetWorkspace(selected).catch((error) => {
-              console.error("[fff] set_workspace failed:", error);
-            });
-
-            const gitStatusStartedAt = performance.now();
-            logWorkspaceOpenStep("start", "getGitStatus", selected);
-            const gitStatus = await getGitStatus(selected);
-            logWorkspaceOpenStep("end", "getGitStatus", selected, gitStatusStartedAt);
-
-            if (get().rootFolderPath !== selected) {
-              return;
-            }
-
-            useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, selected);
-            if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
-              console.warn("[workspace-open] skipping restoreSession for large workspace", {
-                path: selected,
-                gitFiles: gitStatus?.files.length ?? 0,
-              });
-              frontendTrace("warn", "workspace-open", "restoreSession:skipped-large-workspace", {
-                path: selected,
-                gitFiles: gitStatus?.files.length ?? 0,
-              });
-              logWorkspaceOpenStep("end", "backgroundInit", selected, backgroundInitStartedAt);
-              return;
-            }
-            const restoreStartedAt = performance.now();
-            logWorkspaceOpenStep("start", "restoreSession", selected);
-            await get().restoreSession(selected);
-            logWorkspaceOpenStep("end", "restoreSession", selected, restoreStartedAt);
-            logWorkspaceOpenStep("end", "backgroundInit", selected, backgroundInitStartedAt);
-          } catch (error) {
-            if (get().rootFolderPath === selected) {
-              useGitStore.getState().actions.setWorkspaceGitStatus(null, selected);
-            }
-            logWorkspaceOpenStep("error", "backgroundInit", selected, backgroundInitStartedAt);
-            console.error("Failed to initialize workspace after opening folder:", error);
-          }
-        })();
-
-        logWorkspaceOpenStep("end", "handleOpenFolder", selected, openStartedAt);
-
-        return true;
+        return await openLocalWorkspace(
+          {
+            path: selected,
+            traceLabel: "handleOpenFolder",
+            treeState: "expand-root",
+            restoreUiState: false,
+          },
+          set,
+          get,
+        );
       },
 
       resetWorkspace: async () => {
@@ -528,112 +575,16 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleOpenFolderByPath: async (path: string) => {
-        const openStartedAt = performance.now();
-        logWorkspaceOpenStep("start", "handleOpenFolderByPath", path);
-        try {
-          persistCurrentProjectUiState(get().rootFolderPath);
-
-          set((state) => {
-            state.isFileTreeLoading = true;
-          });
-
-          // Add project to workspace tabs
-          const projectName = getFolderName(path);
-          useWorkspaceTabsStore.getState().addProjectTab(path, projectName);
-
-          const readDirectoryStartedAt = performance.now();
-          logWorkspaceOpenStep("start", "readDirectoryContents", path);
-          const entries = await readDirectoryContents(path);
-          logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
-          const fileTree = sortFileEntries(entries);
-          const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
-
-          // Clear tree UI state
-          useFileTreeStore.getState().collapseAll();
-
-          // Update project store
-          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
-          setRootFolderPath(path);
-          setProjectName(projectName);
-          restoreProjectUiState(path);
-
-          // Add to recent folders
-          useRecentFoldersStore.getState().addToRecents(path);
-
-          // Clear git diff cache for new project
-          gitDiffCache.clear();
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = path;
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
-        } catch (error) {
-          set((state) => {
-            state.isFileTreeLoading = false;
-          });
-          logWorkspaceOpenStep("error", "handleOpenFolderByPath", path, openStartedAt);
-          console.error("Failed to open folder by path:", error);
-          toast.error(`Failed to open folder: ${path}`);
-          return false;
-        }
-
-        useGitStore.getState().actions.setWorkspaceGitStatus(null, path);
-
-        void (async () => {
-          const backgroundInitStartedAt = performance.now();
-          logWorkspaceOpenStep("start", "backgroundInit", path);
-          try {
-            const watcherStartedAt = performance.now();
-            logWorkspaceOpenStep("start", "setProjectRoot", path);
-            await useFileWatcherStore.getState().setProjectRoot(path);
-            logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
-
-            fffSetWorkspace(path).catch((error) => {
-              console.error("[fff] set_workspace failed:", error);
-            });
-
-            const gitStatusStartedAt = performance.now();
-            logWorkspaceOpenStep("start", "getGitStatus", path);
-            const gitStatus = await getGitStatus(path);
-            logWorkspaceOpenStep("end", "getGitStatus", path, gitStatusStartedAt);
-
-            if (get().rootFolderPath !== path) {
-              return;
-            }
-
-            useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
-            if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
-              console.warn("[workspace-open] skipping restoreSession for large workspace", {
-                path,
-                gitFiles: gitStatus?.files.length ?? 0,
-              });
-              frontendTrace("warn", "workspace-open", "restoreSession:skipped-large-workspace", {
-                path,
-                gitFiles: gitStatus?.files.length ?? 0,
-              });
-              logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-              return;
-            }
-            const restoreStartedAt = performance.now();
-            logWorkspaceOpenStep("start", "restoreSession", path);
-            await get().restoreSession(path);
-            logWorkspaceOpenStep("end", "restoreSession", path, restoreStartedAt);
-            logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-          } catch (error) {
-            if (get().rootFolderPath === path) {
-              useGitStore.getState().actions.setWorkspaceGitStatus(null, path);
-            }
-            logWorkspaceOpenStep("error", "backgroundInit", path, backgroundInitStartedAt);
-            console.error("Failed to initialize workspace after opening folder by path:", error);
-          }
-        })();
-
-        logWorkspaceOpenStep("end", "handleOpenFolderByPath", path, openStartedAt);
-
-        return true;
+        return await openLocalWorkspace(
+          {
+            path,
+            traceLabel: "handleOpenFolderByPath",
+            treeState: "collapse-all",
+            restoreUiState: true,
+          },
+          set,
+          get,
+        );
       },
 
       handleOpenRemoteProject: async (connectionId: string, _connectionName: string) => {
