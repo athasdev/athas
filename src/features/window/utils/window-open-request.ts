@@ -12,6 +12,8 @@ export interface WindowOpenRequest {
   workingDirectory?: string;
 }
 
+type WindowOpenRequestHandler = (request: WindowOpenRequest) => Promise<void>;
+
 interface PathInfo {
   is_dir: boolean;
 }
@@ -182,7 +184,27 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
   }
 }
 
+export function createWindowOpenRequestQueue(
+  handler: WindowOpenRequestHandler,
+  onError: (error: unknown) => void = console.error,
+) {
+  let queue = Promise.resolve();
+
+  return (request: WindowOpenRequest) => {
+    const task = queue.then(
+      () => handler(request),
+      () => handler(request),
+    );
+
+    queue = task.catch(onError);
+    return task;
+  };
+}
+
+export const enqueueWindowOpenRequest = createWindowOpenRequestQueue(handleWindowOpenRequest);
+
 export const __test__ = {
+  createWindowOpenRequestQueue,
   getTerminalCommandConfirmationMessage,
   parseWindowOpenUrl,
   resolveWindowOpenPathTarget,

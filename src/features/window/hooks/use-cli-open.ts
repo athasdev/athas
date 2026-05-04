@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import { handleWindowOpenRequest } from "../utils/window-open-request";
+import { enqueueWindowOpenRequest } from "../utils/window-open-request";
 
 interface CliOpenPayload {
   kind: "path" | "web" | "terminal" | "remote";
@@ -26,14 +26,14 @@ export function useCliOpen() {
       switch (payload.kind) {
         case "web":
           if (!payload.url) return;
-          handleWindowOpenRequest({
+          void enqueueWindowOpenRequest({
             type: "web",
             source: "cli",
             url: payload.url,
           });
           break;
         case "terminal":
-          handleWindowOpenRequest({
+          void enqueueWindowOpenRequest({
             type: "terminal",
             source: "cli",
             command: payload.command ?? undefined,
@@ -42,7 +42,7 @@ export function useCliOpen() {
           break;
         case "remote":
           if (!payload.connection_id) return;
-          handleWindowOpenRequest({
+          void enqueueWindowOpenRequest({
             type: "remote",
             source: "cli",
             remoteConnectionId: payload.connection_id,
@@ -52,7 +52,7 @@ export function useCliOpen() {
         case "path":
         default:
           if (!payload.path) return;
-          handleWindowOpenRequest({
+          void enqueueWindowOpenRequest({
             type: "path",
             source: "cli",
             path: payload.path,

@@ -2,7 +2,7 @@ import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "@/ui/toast";
-import { handleWindowOpenRequest, parseWindowOpenUrl } from "../utils/window-open-request";
+import { enqueueWindowOpenRequest, parseWindowOpenUrl } from "../utils/window-open-request";
 
 /**
  * Hook to handle deep link URLs
@@ -34,7 +34,7 @@ function handleDeepLink(url: string) {
 
     const openRequest = parseWindowOpenUrl(parsed);
     if (openRequest) {
-      handleWindowOpenRequest({ ...openRequest, source: "deepLink" });
+      void enqueueWindowOpenRequest({ ...openRequest, source: "deepLink" });
       return;
     }
 

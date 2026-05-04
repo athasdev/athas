@@ -21,7 +21,7 @@ import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import {
-  handleWindowOpenRequest,
+  enqueueWindowOpenRequest,
   parseWindowOpenUrl,
 } from "@/features/window/utils/window-open-request";
 
@@ -72,7 +72,7 @@ export function useAppBootstrap() {
     const request = parseWindowOpenUrl(new URL(window.location.href));
     if (!request) return;
 
-    void handleWindowOpenRequest(request);
+    void enqueueWindowOpenRequest(request);
 
     const nextUrl = `${window.location.pathname}${window.location.hash}`;
     window.history.replaceState(window.history.state, "", nextUrl || "/");
