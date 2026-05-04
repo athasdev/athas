@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { areProjectTabPathsEqual, normalizeProjectTabPath } from "../utils/project-tab-path";
 
 export interface ProjectTab {
   id: string;
@@ -35,7 +36,10 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
       projectTabs: [],
 
       addProjectTab: (path: string, name: string) => {
-        const existing = get().projectTabs.find((tab) => tab.path === path);
+        const normalizedPath = normalizeProjectTabPath(path);
+        const existing = get().projectTabs.find((tab) =>
+          areProjectTabPathsEqual(tab.path, normalizedPath),
+        );
 
         if (existing) {
           // If tab already exists, just activate it
@@ -53,7 +57,7 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
           state.projectTabs.push({
             id: `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name,
-            path,
+            path: normalizedPath,
             isActive: true,
             lastOpened: Date.now(),
           });
@@ -106,7 +110,7 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
       },
 
       hasProjectTab: (path: string) => {
-        return get().projectTabs.some((tab) => tab.path === path);
+        return get().projectTabs.some((tab) => areProjectTabPathsEqual(tab.path, path));
       },
 
       setProjectIcon: (projectId: string, iconPath: string | undefined) => {
