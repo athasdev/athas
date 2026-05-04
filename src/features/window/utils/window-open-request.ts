@@ -3,11 +3,32 @@ export interface WindowOpenRequest {
   path?: string;
   isDirectory?: boolean;
   line?: number;
+  column?: number;
   remoteConnectionId?: string;
   remoteConnectionName?: string;
   url?: string;
   command?: string;
   workingDirectory?: string;
+}
+
+const parsePositiveInteger = (value: string | null | undefined) => {
+  if (!value) return undefined;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+function parseOpenPosition(searchParams: URLSearchParams) {
+  const lineParam = searchParams.get("line");
+  const [linePart, columnFromLinePart] = lineParam?.split(":") ?? [];
+  const line = parsePositiveInteger(linePart);
+  const column =
+    parsePositiveInteger(searchParams.get("column")) ?? parsePositiveInteger(columnFromLinePart);
+
+  return {
+    line,
+    column: line ? column : undefined,
+  };
 }
 
 export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
@@ -47,14 +68,13 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
   const path = url.searchParams.get("path");
   if (!path) return null;
 
-  const lineParam = url.searchParams.get("line");
-  const line = lineParam ? Number.parseInt(lineParam, 10) : undefined;
+  const position = parseOpenPosition(url.searchParams);
 
   return {
     type: "path",
     path,
     isDirectory: type === "directory",
-    line: line && line > 0 ? line : undefined,
+    ...position,
   };
 }
 
@@ -90,7 +110,7 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
   if (request.isDirectory) {
     await handleOpenFolderByPath(request.path);
   } else {
-    await handleFileSelect(request.path, false, request.line);
+    await handleFileSelect(request.path, false, request.line, request.column);
   }
 }
 

@@ -15,6 +15,30 @@ describe("parseWindowOpenUrl", () => {
     });
   });
 
+  it("parses file with line and column params", () => {
+    const url = new URL("athas://open?path=/Users/test/foo.txt&line=42&column=7");
+    const result = parseWindowOpenUrl(url);
+    expect(result).toEqual({
+      type: "path",
+      path: "/Users/test/foo.txt",
+      isDirectory: false,
+      line: 42,
+      column: 7,
+    });
+  });
+
+  it("parses line column pairs from the line param", () => {
+    const url = new URL("athas://open?path=/Users/test/foo.txt&line=42:7");
+    const result = parseWindowOpenUrl(url);
+    expect(result).toEqual({
+      type: "path",
+      path: "/Users/test/foo.txt",
+      isDirectory: false,
+      line: 42,
+      column: 7,
+    });
+  });
+
   it("parses directory", () => {
     const url = new URL("athas://open?path=/Users/test/project&type=directory");
     const result = parseWindowOpenUrl(url);
@@ -95,5 +119,12 @@ describe("parseWindowOpenUrl", () => {
     const url = new URL("athas://open?path=/foo.txt&line=0");
     const result = parseWindowOpenUrl(url);
     expect(result?.line).toBeUndefined();
+  });
+
+  it("ignores column without a valid line", () => {
+    const url = new URL("athas://open?path=/foo.txt&line=0&column=7");
+    const result = parseWindowOpenUrl(url);
+    expect(result?.line).toBeUndefined();
+    expect(result?.column).toBeUndefined();
   });
 });

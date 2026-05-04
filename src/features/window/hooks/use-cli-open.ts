@@ -7,12 +7,16 @@ interface CliOpenPayload {
   path?: string;
   is_directory?: boolean;
   line?: number | null;
+  column?: number | null;
   url?: string;
   command?: string | null;
   working_directory?: string | null;
   connection_id?: string;
   name?: string | null;
 }
+
+const toPositiveInteger = (value: number | null | undefined) =>
+  typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 
 export function useCliOpen() {
   useEffect(() => {
@@ -49,7 +53,8 @@ export function useCliOpen() {
             type: "path",
             path: payload.path,
             isDirectory: payload.is_directory ?? false,
-            line: payload.line ?? undefined,
+            line: toPositiveInteger(payload.line),
+            column: toPositiveInteger(payload.column),
           });
       }
     });
