@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { retargetTokensForContentEdit } from "./use-tokenizer";
+import { retargetTokensForContentEdit } from "../hooks/use-tokenizer";
 
 describe("retargetTokensForContentEdit", () => {
   it("shifts tokens after an insertion", () => {

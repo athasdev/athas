@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getDefaultParserWasmUrl, getHighlightQueryCandidates } from "./extension-assets";
+import {
+  getDefaultParserWasmUrl,
+  getHighlightQueryCandidates,
+} from "../lib/wasm-parser/extension-assets";
 
 describe("extension-assets", () => {
   it("maps scheme assets to the bundled elisp parser", () => {

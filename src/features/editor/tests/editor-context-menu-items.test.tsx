@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { buildEditorContextMenuItems } from "./editor-context-menu-items";
+import { buildEditorContextMenuItems } from "../context-menu/editor-context-menu-items";
 
 const baseOptions = {
   hasSelection: true,

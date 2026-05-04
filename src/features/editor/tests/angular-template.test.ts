@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { angularTemplateTokens, isAngularTemplatePath } from "./angular-template";
+import {
+  angularTemplateTokens,
+  isAngularTemplatePath,
+} from "../lib/wasm-parser/language-overlays/angular-template";
 
 describe("angular template support", () => {
   it("detects Angular template file names", () => {

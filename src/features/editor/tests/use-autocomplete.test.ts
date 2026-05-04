@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { __test__ } from "./use-autocomplete";
+import { __test__ } from "../hooks/use-autocomplete";
 
 describe("use-autocomplete helpers", () => {
   it("removes duplicated typed prefix from completion", () => {
