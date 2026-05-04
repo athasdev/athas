@@ -5,6 +5,8 @@ export interface WorkspaceSessionBuffer {
   path: string;
   name: string;
   isPinned: boolean;
+  isPreview?: boolean;
+  editorState?: Extract<BufferSession, { type: "editor" }>["editorState"];
   url?: string;
   zoomLevel?: number;
   sessionId?: string;

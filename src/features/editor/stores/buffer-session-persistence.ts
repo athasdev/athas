@@ -3,6 +3,7 @@ import type { BufferSession } from "@/features/window/stores/session-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { createWorkspaceSessionSaveQueue } from "./workspace-session-save-queue";
 import type { PaneContent } from "@/features/panes/types/pane-content";
+import { buildPersistedEditorViewState } from "./editor-session-state";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
@@ -13,6 +14,8 @@ const serializeBufferForSession = (buffer: PaneContent): BufferSession | null =>
       path: buffer.path,
       name: buffer.name,
       isPinned: buffer.isPinned,
+      isPreview: buffer.isPreview,
+      editorState: buildPersistedEditorViewState(buffer),
     };
   }
 

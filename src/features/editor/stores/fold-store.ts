@@ -26,6 +26,8 @@ interface FoldState {
     isCollapsed: (filePath: string, lineNumber: number) => boolean;
     isHidden: (filePath: string, lineNumber: number) => boolean;
     getFoldRegions: (filePath: string) => FoldRegion[];
+    getCollapsedLines: (filePath: string) => number[];
+    setCollapsedLines: (filePath: string, collapsedLines: number[]) => void;
     clearFolds: (filePath: string) => void;
   };
 }
@@ -143,9 +145,12 @@ export const useFoldStore = createSelectors(
         set((state) => {
           const newMap = new Map(state.foldsByFile);
           const existing = newMap.get(filePath);
+          const foldableLines = new Set(regions.map((region) => region.startLine));
           newMap.set(filePath, {
             regions,
-            collapsedLines: existing?.collapsedLines || new Set(),
+            collapsedLines: new Set(
+              [...(existing?.collapsedLines ?? [])].filter((line) => foldableLines.has(line)),
+            ),
           });
           return { foldsByFile: newMap };
         });
@@ -247,6 +252,31 @@ export const useFoldStore = createSelectors(
       getFoldRegions: (filePath) => {
         const fileState = get().foldsByFile.get(filePath);
         return fileState?.regions || [];
+      },
+
+      getCollapsedLines: (filePath) => {
+        const fileState = get().foldsByFile.get(filePath);
+        return fileState ? [...fileState.collapsedLines].sort((a, b) => a - b) : [];
+      },
+
+      setCollapsedLines: (filePath, collapsedLines) => {
+        set((state) => {
+          const newMap = new Map(state.foldsByFile);
+          const existing = newMap.get(filePath);
+          const foldableLines =
+            existing && existing.regions.length > 0
+              ? new Set(existing.regions.map((region) => region.startLine))
+              : null;
+          const nextCollapsedLines = new Set(
+            collapsedLines.filter((line) => !foldableLines || foldableLines.has(line)),
+          );
+
+          newMap.set(filePath, {
+            regions: existing?.regions ?? [],
+            collapsedLines: nextCollapsedLines,
+          });
+          return { foldsByFile: newMap };
+        });
       },
 
       clearFolds: (filePath) => {

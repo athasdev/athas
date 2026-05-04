@@ -7,6 +7,10 @@ import { immer } from "zustand/middleware/immer";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import {
+  buildPersistedEditorViewState,
+  restorePersistedEditorViewState,
+} from "@/features/editor/stores/editor-session-state";
+import {
   clearQueuedWorkspaceSessionSave,
   useBufferStore,
 } from "@/features/editor/stores/buffer-store";
@@ -76,6 +80,7 @@ import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 import { prepareProjectTransitionWithUnsavedBuffers } from "./workspace-project-transition";
 import { buildWorkspaceRestoreBatch, buildWorkspaceRestorePlan } from "./workspace-session";
+import type { WorkspaceSessionBuffer } from "./workspace-session";
 
 const logWorkspaceOpenStep = (
   phase: "start" | "end" | "error",
@@ -161,6 +166,8 @@ const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => 
       name: buffer.name,
       path: buffer.path,
       isPinned: buffer.isPinned,
+      isPreview: buffer.isPreview,
+      editorState: buildPersistedEditorViewState(buffer),
     };
   }
 
@@ -189,6 +196,22 @@ const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => 
   }
 
   return null;
+};
+
+const restoreEditorSessionStateForPath = (
+  bufferSession: BufferSession | WorkspaceSessionBuffer,
+) => {
+  if (bufferSession.type !== "editor" || !bufferSession.editorState) {
+    return;
+  }
+
+  const openedBuffer = useBufferStore
+    .getState()
+    .buffers.find((buffer) => buffer.type === "editor" && buffer.path === bufferSession.path);
+
+  if (openedBuffer?.type === "editor") {
+    restorePersistedEditorViewState(openedBuffer, bufferSession.editorState);
+  }
 };
 
 const reconnectRemoteConnection = async (connectionId: string) => {
@@ -498,7 +521,15 @@ export const useFileSystemStore = createSelectors(
                 bufferPath: buffer.path,
               });
               // Use handleFileSelect to open the file (it handles reading content)
-              await get().handleFileSelect(buffer.path, false);
+              await get().handleFileSelect(
+                buffer.path,
+                false,
+                undefined,
+                undefined,
+                undefined,
+                buffer.isPreview,
+              );
+              restoreEditorSessionStateForPath(buffer);
               frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
                 projectPath,
                 bufferPath: buffer.path,
@@ -2139,7 +2170,15 @@ export const useFileSystemStore = createSelectors(
                       "switchToProject:restoreActiveBuffer",
                       activeSessionBuffer.path,
                     );
-                    await get().handleFileSelect(activeSessionBuffer.path, false);
+                    await get().handleFileSelect(
+                      activeSessionBuffer.path,
+                      false,
+                      undefined,
+                      undefined,
+                      undefined,
+                      activeSessionBuffer.isPreview,
+                    );
+                    restoreEditorSessionStateForPath(activeSessionBuffer);
                     logWorkspaceOpenStep(
                       "end",
                       "switchToProject:restoreActiveBuffer",

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { AIWorkspaceSessionSnapshot } from "@/features/ai/store/types";
+import type { PersistedEditorViewState } from "@/features/editor/types/editor-session";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -12,6 +13,8 @@ interface EditorBufferSession {
   path: string;
   name: string;
   isPinned: boolean;
+  isPreview?: boolean;
+  editorState?: PersistedEditorViewState;
 }
 
 interface TerminalBufferSession {
