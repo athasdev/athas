@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildWorkspaceRestorePlan } from "./workspace-session";
+import { buildWorkspaceRestorePlan } from "../controllers/workspace-session";
 
 describe("buildWorkspaceRestorePlan", () => {
   it("prioritizes the active buffer and defers the rest in order", () => {
