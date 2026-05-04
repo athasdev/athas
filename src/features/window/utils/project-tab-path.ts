@@ -22,3 +22,14 @@ export const areProjectTabPathsEqual = (left: string, right: string) => {
 
   return normalizedLeft === normalizedRight;
 };
+
+export const createProjectTabId = (path: string) => {
+  const normalizedPath = normalizePath(normalizeProjectTabPath(path));
+  let hash = 5381;
+
+  for (let index = 0; index < normalizedPath.length; index++) {
+    hash = (hash * 33) ^ normalizedPath.charCodeAt(index);
+  }
+
+  return `project-${(hash >>> 0).toString(36)}`;
+};

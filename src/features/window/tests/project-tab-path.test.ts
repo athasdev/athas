@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import { areProjectTabPathsEqual, normalizeProjectTabPath } from "../utils/project-tab-path";
+import {
+  areProjectTabPathsEqual,
+  createProjectTabId,
+  normalizeProjectTabPath,
+} from "../utils/project-tab-path";
 
 describe("project tab path identity", () => {
   it("trims and strips trailing path separators", () => {
@@ -21,5 +25,10 @@ describe("project tab path identity", () => {
 
   it("matches windows drive paths case-insensitively", () => {
     expect(areProjectTabPathsEqual("C:\\Users\\Me\\Project", "c:/users/me/project/")).toBe(true);
+  });
+
+  it("creates stable project IDs from normalized paths", () => {
+    expect(createProjectTabId("/Users/me/project")).toBe(createProjectTabId("/Users/me/project/"));
+    expect(createProjectTabId("/Users/me/project")).toMatch(/^project-[a-z0-9]+$/);
   });
 });

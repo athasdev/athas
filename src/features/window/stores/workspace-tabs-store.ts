@@ -4,7 +4,11 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { reorderProjectTabItems } from "../utils/project-tab-order";
-import { areProjectTabPathsEqual, normalizeProjectTabPath } from "../utils/project-tab-path";
+import {
+  areProjectTabPathsEqual,
+  createProjectTabId,
+  normalizeProjectTabPath,
+} from "../utils/project-tab-path";
 
 export interface ProjectTab {
   id: string;
@@ -56,7 +60,7 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
 
           // Add new tab
           state.projectTabs.push({
-            id: `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: createProjectTabId(normalizedPath),
             name,
             path: normalizedPath,
             isActive: true,
