@@ -4,7 +4,7 @@ import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
-import { normalizeSettings, normalizeSettingValue } from "./settings-normalization";
+import { normalizeSettings, normalizeSettingValue } from "../lib/settings-normalization";
 
 describe("settings normalization", () => {
   it("migrates legacy Geist font settings to bundled defaults", () => {

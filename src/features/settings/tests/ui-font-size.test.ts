@@ -7,7 +7,7 @@ import {
   UI_FONT_SIZE_DEFAULT,
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
-} from "./ui-font-size";
+} from "../lib/ui-font-size";
 
 describe("ui-font-size helpers", () => {
   it("uses default size for invalid values", () => {

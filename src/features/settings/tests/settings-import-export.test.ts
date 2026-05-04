@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import { defaultSettings } from "@/features/settings/config/default-settings";
-import { createSettingsExportPayload, parseSettingsImportJson } from "./settings-import-export";
+import {
+  createSettingsExportPayload,
+  parseSettingsImportJson,
+} from "../lib/settings-import-export";
 
 describe("settings import/export", () => {
   it("creates a versioned settings export payload", () => {
