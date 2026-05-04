@@ -11,6 +11,7 @@ import { ProjectNameMenu } from "@/features/file-system/components/project-name-
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
+import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useOnboardingStore } from "@/features/onboarding/store";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
@@ -67,29 +68,21 @@ export function MainLayout() {
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
-    let openedPathCount = 0;
-
-    for (const path of paths) {
-      try {
-        const info = await getSymlinkInfo(path);
-        if (info?.is_dir) {
-          if (handleOpenFolderByPath) {
-            await handleOpenFolderByPath(path);
-            openedPathCount++;
+    const result = await openDroppedWorkspacePaths(paths, {
+      getPathInfo: getSymlinkInfo,
+      openFolder: handleOpenFolderByPath,
+      openFile: handleFileOpen
+        ? async (path) => {
+            await handleFileOpen(path, false);
+            return true;
           }
-          return;
-        }
-
-        if (handleFileOpen) {
-          await handleFileOpen(path, false);
-          openedPathCount++;
-        }
-      } catch (error) {
+        : undefined,
+      onError: (path, error) => {
         console.error("Failed to open dropped path:", path, error);
-      }
-    }
+      },
+    });
 
-    if (openedPathCount === 0) {
+    if (result.openedFolderCount + result.openedFileCount === 0) {
       toast.warning("No supported dropped files or folders could be opened.");
     }
   });
