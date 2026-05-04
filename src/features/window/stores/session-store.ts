@@ -14,6 +14,7 @@ interface EditorBufferSession {
   name: string;
   isPinned: boolean;
   isPreview?: boolean;
+  workspaceScope?: "workspace" | "external";
   editorState?: PersistedEditorViewState;
 }
 

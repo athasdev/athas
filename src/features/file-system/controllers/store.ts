@@ -77,11 +77,17 @@ import { useFileWatcherStore } from "./file-watcher-store";
 import { fffSetWorkspace, fffTrackAccess } from "@/features/global-search/lib/rust-api/search";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
+import { useRecentFilesStore } from "./recent-files-store";
 import { buildRemoteWorkspaceTree, type RemoteDirectoryEntry } from "./remote-workspace";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 import { switchToNextAvailableProjectAfterClose } from "./workspace-project-tabs";
 import { prepareProjectTransitionWithUnsavedBuffers } from "./workspace-project-transition";
-import { buildWorkspaceRestoreBatch, buildWorkspaceRestorePlan } from "./workspace-session";
+import {
+  buildWorkspaceRestoreBatch,
+  buildWorkspaceRestorePlan,
+  getEditorWorkspaceScope,
+  isLocalFileInWorkspace,
+} from "./workspace-session";
 import type { WorkspaceSessionBuffer } from "./workspace-session";
 
 const logWorkspaceOpenStep = (
@@ -160,7 +166,25 @@ const readPersistedTerminalSessions = (workspacePath: string | undefined) => {
 const readPersistedAiWorkspaceSession = () =>
   useAIChatStore.getState().getWorkspaceSessionSnapshot(useBufferStore.getState().buffers);
 
-const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => {
+const recordLocalFileAccess = (
+  path: string,
+  name: string,
+  workspaceRootPath: string | undefined,
+) => {
+  if (path.startsWith("remote://") || path.startsWith("diff://")) {
+    return;
+  }
+
+  useRecentFilesStore.getState().addOrUpdateRecentFile(path, name, {
+    workspacePath: workspaceRootPath ?? null,
+    external: !isLocalFileInWorkspace(path, workspaceRootPath),
+  });
+};
+
+const serializeWorkspaceBuffer = (
+  buffer: PaneContent,
+  workspaceRootPath: string | undefined,
+): BufferSession | null => {
   if (buffer.type === "editor" && !buffer.isVirtual) {
     return {
       type: "editor",
@@ -169,6 +193,7 @@ const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => 
       path: buffer.path,
       isPinned: buffer.isPinned,
       isPreview: buffer.isPreview,
+      workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath),
       editorState: buildPersistedEditorViewState(buffer),
     };
   }
@@ -636,7 +661,7 @@ export const useFileSystemStore = createSelectors(
         useSessionStore.getState().saveSession(
           currentRootPath,
           buffers
-            .map(serializeWorkspaceBuffer)
+            .map((buffer) => serializeWorkspaceBuffer(buffer, currentRootPath))
             .filter((buffer): buffer is BufferSession => buffer !== null),
           activeBuffer?.path || null,
           readPersistedTerminalSessions(currentRootPath),
@@ -760,10 +785,13 @@ export const useFileSystemStore = createSelectors(
           buffers,
           actions: { convertPreviewToDefinite, setActiveBuffer },
         } = useBufferStore.getState();
+        const workspaceRootPath = get().rootFolderPath;
+        const fileName = getFilenameFromPath(path);
         const existingBuffer = buffers.find((buffer) => buffer.path === path);
         if (existingBuffer) {
           fileOpenBenchmark.finish(path, "existing-buffer");
           setActiveBuffer(existingBuffer.id);
+          recordLocalFileAccess(path, fileName, workspaceRootPath);
 
           if (existingBuffer.isPreview && !isPreview) {
             convertPreviewToDefinite(existingBuffer.id);
@@ -823,7 +851,6 @@ export const useFileSystemStore = createSelectors(
         fileOpenBenchmark.mark(path, "symlink-resolved");
 
         if (isStaleRequest()) return;
-        const fileName = getFilenameFromPath(path);
         const { openBuffer } = useBufferStore.getState().actions;
 
         // Handle virtual diff files
@@ -932,6 +959,7 @@ export const useFileSystemStore = createSelectors(
                   false,
                   true,
                 );
+                recordLocalFileAccess(path, fileName, workspaceRootPath);
                 fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
                 return;
               }
@@ -964,6 +992,7 @@ export const useFileSystemStore = createSelectors(
 
               // Open external editor buffer
               openExternalEditorBuffer(resolvedPath, fileName, connectionId);
+              recordLocalFileAccess(path, fileName, workspaceRootPath);
               fileOpenBenchmark.finish(path, "external-editor-buffer-opened");
               return;
             } catch (error) {
@@ -1054,6 +1083,8 @@ export const useFileSystemStore = createSelectors(
             });
           }
         }
+
+        recordLocalFileAccess(path, fileName, workspaceRootPath);
 
         // Dispatch go-to-line event to center the line in viewport
         if (line) {

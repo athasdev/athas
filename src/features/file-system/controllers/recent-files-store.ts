@@ -14,7 +14,7 @@ export const useRecentFilesStore = create<RecentFilesStore>()(
         recentFiles: [],
         maxRecentFiles: MAX_RECENT_FILES,
 
-        addOrUpdateRecentFile: (path: string, name: string) => {
+        addOrUpdateRecentFile: (path: string, name: string, metadata = {}) => {
           set((state) => {
             const existingIndex = state.recentFiles.findIndex((f) => f.path === path);
             const now = new Date().toISOString();
@@ -25,6 +25,8 @@ export const useRecentFilesStore = create<RecentFilesStore>()(
               file.lastAccessed = now;
               file.accessCount += 1;
               file.frecencyScore = calculateFrecencyScore(file.accessCount, now);
+              file.workspacePath = metadata.workspacePath ?? file.workspacePath;
+              file.external = metadata.external ?? file.external;
             } else {
               // Add new file
               const newFile: RecentFile = {
@@ -33,6 +35,8 @@ export const useRecentFilesStore = create<RecentFilesStore>()(
                 lastAccessed: now,
                 accessCount: 1,
                 frecencyScore: calculateFrecencyScore(1, now),
+                workspacePath: metadata.workspacePath,
+                external: metadata.external,
               };
               state.recentFiles.push(newFile);
             }

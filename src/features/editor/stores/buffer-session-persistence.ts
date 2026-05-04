@@ -1,13 +1,17 @@
 import { useProjectStore } from "@/features/window/stores/project-store";
 import type { BufferSession } from "@/features/window/stores/session-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
+import { getEditorWorkspaceScope } from "@/features/file-system/controllers/workspace-session";
 import { createWorkspaceSessionSaveQueue } from "./workspace-session-save-queue";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { buildPersistedEditorViewState } from "./editor-session-state";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
-const serializeBufferForSession = (buffer: PaneContent): BufferSession | null => {
+const serializeBufferForSession = (
+  buffer: PaneContent,
+  workspaceRootPath: string | undefined,
+): BufferSession | null => {
   if (buffer.type === "editor" && !buffer.isVirtual) {
     return {
       type: "editor",
@@ -15,6 +19,7 @@ const serializeBufferForSession = (buffer: PaneContent): BufferSession | null =>
       name: buffer.name,
       isPinned: buffer.isPinned,
       isPreview: buffer.isPreview,
+      workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath),
       editorState: buildPersistedEditorViewState(buffer),
     };
   }
@@ -52,7 +57,7 @@ const saveSessionToStoreImmediate = (
   activeBufferId: string | null,
 ) => {
   const persistableBuffers = buffers
-    .map(serializeBufferForSession)
+    .map((buffer) => serializeBufferForSession(buffer, projectPath))
     .filter((buffer): buffer is BufferSession => buffer !== null);
 
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);

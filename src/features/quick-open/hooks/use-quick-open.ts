@@ -83,11 +83,14 @@ export const useQuickOpen = () => {
   const handleItemSelect = useCallback(
     (path: string) => {
       const fileName = getBaseName(path, path);
-      addOrUpdateRecentFile(path, fileName);
+      addOrUpdateRecentFile(path, fileName, {
+        workspacePath: rootFolderPath ?? null,
+        external: false,
+      });
       handleFileSelect(path, false);
       onClose();
     },
-    [handleFileSelect, onClose, addOrUpdateRecentFile],
+    [handleFileSelect, onClose, addOrUpdateRecentFile, rootFolderPath],
   );
 
   const allResults = useMemo(
