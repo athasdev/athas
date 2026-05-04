@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { reorderProjectTabItems } from "../utils/project-tab-order";
 import { areProjectTabPathsEqual, normalizeProjectTabPath } from "../utils/project-tab-path";
 
 export interface ProjectTab {
@@ -100,8 +101,7 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
 
       reorderProjectTabs: (fromIndex: number, toIndex: number) => {
         set((state) => {
-          const [movedTab] = state.projectTabs.splice(fromIndex, 1);
-          state.projectTabs.splice(toIndex, 0, movedTab);
+          state.projectTabs = reorderProjectTabItems(state.projectTabs, fromIndex, toIndex);
         });
       },
 
