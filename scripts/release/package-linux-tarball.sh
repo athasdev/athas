@@ -101,7 +101,12 @@ cat > "${bin_dir}/athas" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-bin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+script_path="${BASH_SOURCE[0]}"
+if resolved_path="$(readlink -f "$script_path" 2>/dev/null)"; then
+  script_path="$resolved_path"
+fi
+
+bin_dir="$(cd "$(dirname "$script_path")" && pwd)"
 exec "${bin_dir}/../libexec/athas" \
   --ozone-platform=x11 \
   --disable-vulkan \
