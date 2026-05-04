@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { removeProjectTabItems } from "../utils/project-tab-close";
 import { reorderProjectTabItems } from "../utils/project-tab-order";
 import { renameRemoteProjectTabs } from "../utils/project-tab-remote";
 import {
@@ -95,26 +96,9 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
       },
 
       removeProjectTab: (projectId: string) => {
-        const tabs = get().projectTabs;
-
-        const tabIndex = tabs.findIndex((tab) => tab.id === projectId);
-        if (tabIndex === -1) return;
-
-        const wasActive = tabs[tabIndex].isActive;
-
         set((state) => {
-          state.projectTabs = state.projectTabs.filter((tab) => tab.id !== projectId);
+          state.projectTabs = removeProjectTabItems(state.projectTabs, projectId);
         });
-
-        // If we closed the active tab, activate another one
-        if (wasActive) {
-          const newTabs = get().projectTabs;
-          if (newTabs.length > 0) {
-            // Activate the tab before the closed one, or the first tab if we closed the first
-            const newActiveIndex = Math.max(0, tabIndex - 1);
-            get().setActiveProjectTab(newTabs[newActiveIndex].id);
-          }
-        }
       },
 
       setActiveProjectTab: (projectId: string) => {
