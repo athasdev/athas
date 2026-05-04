@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { createGitActions } from "./git-actions";
+import { createGitActions } from "../constants/git-actions";
 
 function createActions() {
   return {

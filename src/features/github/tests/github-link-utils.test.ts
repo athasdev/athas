@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseGitHubEntityLink } from "./github-link-utils";
+import { parseGitHubEntityLink } from "../utils/github-link-utils";
 
 describe("parseGitHubEntityLink", () => {
   it("parses pull request links with extra path segments and fragments", () => {

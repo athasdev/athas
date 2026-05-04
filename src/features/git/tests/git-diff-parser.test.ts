@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitDiff } from "../types/git-types";
-import { isDiffFile, parseRawDiffContent } from "./git-diff-parser";
+import { isDiffFile, parseRawDiffContent } from "../utils/git-diff-parser";
 
 function isMultiFileDiff(value: GitDiff | MultiFileDiff): value is MultiFileDiff {
   return "files" in value;

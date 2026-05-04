@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildDatabaseRowValues, coerceDatabaseValue } from "./value-coercion";
+import { buildDatabaseRowValues, coerceDatabaseValue } from "../utils/value-coercion";
 
 describe("coerceDatabaseValue", () => {
   it("returns null for empty values", () => {

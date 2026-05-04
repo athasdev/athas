@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { convertLintDiagnostic } from "./diagnostics-store";
+import { convertLintDiagnostic } from "../stores/diagnostics-store";
 
 describe("convertLintDiagnostic", () => {
   it("normalizes linter diagnostics to the 0-based diagnostics model", () => {

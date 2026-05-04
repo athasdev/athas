@@ -3,7 +3,7 @@ import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
   parseKeybindingsImportJson,
-} from "./keybinding-import-export";
+} from "../utils/keybinding-import-export";
 
 describe("keybinding import/export", () => {
   it("exports persisted user overrides even when legacy records are missing source", () => {

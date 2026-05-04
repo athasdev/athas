@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { DEFAULT_COLUMN_WIDTH, MIN_COLUMN_WIDTH } from "./use-column-resize";
+import { DEFAULT_COLUMN_WIDTH, MIN_COLUMN_WIDTH } from "../hooks/use-column-resize";
 
 describe("column resize constants", () => {
   it("has a reasonable minimum column width", () => {

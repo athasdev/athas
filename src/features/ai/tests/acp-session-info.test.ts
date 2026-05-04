@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getChatTitleFromSessionInfo } from "./acp-session-info";
+import { getChatTitleFromSessionInfo } from "../lib/acp-session-info";
 
 describe("getChatTitleFromSessionInfo", () => {
   it("returns trimmed title updates", () => {

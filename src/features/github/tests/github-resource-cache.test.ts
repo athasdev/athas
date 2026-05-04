@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createTimedResourceCache } from "./github-resource-cache";
+import { createTimedResourceCache } from "../utils/github-resource-cache";
 
 describe("createTimedResourceCache", () => {
   it("reuses in-flight requests for the same key", async () => {

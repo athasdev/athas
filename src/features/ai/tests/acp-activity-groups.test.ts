@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { groupAcpActivity } from "./acp-activity-groups";
+import { groupAcpActivity } from "../lib/acp-activity-groups";
 
 describe("groupAcpActivity", () => {
   it("groups running, recent, and error activity without duplicate signatures", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildRemoteRootPath, isRemotePath, parseRemotePath } from "./remote-path";
+import { buildRemoteRootPath, isRemotePath, parseRemotePath } from "../utils/remote-path";
 
 describe("remote-path utils", () => {
   it("parses a remote workspace root path", () => {
