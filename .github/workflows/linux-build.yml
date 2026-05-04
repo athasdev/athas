@@ -1,18 +1,6 @@
 name: "Linux Build"
 
 on:
-  pull_request:
-    branches: [master]
-    paths:
-      - ".github/workflows/linux-build.yml"
-      - ".github/workflows/release.yml"
-      - "Cargo.lock"
-      - "Cargo.toml"
-      - "crates/**"
-      - "src-tauri/**"
-      - "package.json"
-      - "bun.lock"
-      - "scripts/release/package-linux-tarball.sh"
   workflow_dispatch:
     inputs:
       runner:
@@ -25,7 +13,7 @@ on:
           - "ubuntu-22.04-arm"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.runner || 'ubuntu-22.04' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.runner || 'ubuntu-22.04' }}
   cancel-in-progress: true
 
 jobs:
