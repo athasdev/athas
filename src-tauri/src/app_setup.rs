@@ -135,13 +135,11 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
             match event_id {
                "quit" => {
                   info!("Quit menu item clicked");
-                  shutdown_background_services(app_handle);
-                  std::process::exit(0);
+                  let _ = window.emit("menu_quit_app", ());
                }
                "quit_app" => {
                   info!("Quit app menu item triggered");
-                  shutdown_background_services(app_handle);
-                  std::process::exit(0);
+                  let _ = window.emit("menu_quit_app", ());
                }
                "new_file" => {
                   let _ = window.emit("menu_new_file", ());

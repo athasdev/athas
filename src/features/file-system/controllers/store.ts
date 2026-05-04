@@ -485,6 +485,29 @@ export const useFileSystemStore = createSelectors(
           .restoreWorkspaceSession(session?.aiSession, useBufferStore.getState().buffers);
       },
 
+      persistActiveProjectSession: () => {
+        const currentRootPath = get().rootFolderPath;
+        if (!currentRootPath) {
+          return;
+        }
+
+        persistCurrentProjectUiState(currentRootPath);
+
+        const { buffers, activeBufferId } = useBufferStore.getState();
+        const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+
+        clearQueuedWorkspaceSessionSave(currentRootPath);
+        useSessionStore.getState().saveSession(
+          currentRootPath,
+          buffers
+            .map(serializeWorkspaceBuffer)
+            .filter((buffer): buffer is BufferSession => buffer !== null),
+          activeBuffer?.path || null,
+          readPersistedTerminalSessions(currentRootPath),
+          readPersistedAiWorkspaceSession(),
+        );
+      },
+
       closeFolder: async () => {
         // Find the active project tab
         const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();

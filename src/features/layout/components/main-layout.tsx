@@ -22,6 +22,7 @@ import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
+import { WindowCloseGuard } from "@/features/window/components/window-close-guard";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
@@ -323,6 +324,7 @@ export function MainLayout() {
         onClose={() => setIsDatabaseConnectionVisible(false)}
       />
       <LinuxFolderPickerDialog />
+      <WindowCloseGuard />
       <ExtensionDialogs />
     </div>
   );

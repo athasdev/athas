@@ -1073,8 +1073,8 @@ const windowCommands: Command[] = [
     keybinding: "cmd+q",
     execute: async () => {
       if (isMac()) {
-        const { exit } = await import("@tauri-apps/plugin-process");
-        exit(0);
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().close();
       }
     },
   },
