@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildHtmlPreviewDocument } from "./html-preview-document";
+import { buildHtmlPreviewDocument } from "../components/html/html-preview-document";
 
 const toAssetUrl = (path: string) => `asset://${path}`;
 
