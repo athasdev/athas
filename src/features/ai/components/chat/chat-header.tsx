@@ -83,10 +83,11 @@ function EditableChatTitle({
 }
 
 interface ChatHeaderProps {
+  chatId?: string | null;
   onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
 }
 
-export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
+export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const chats = useAIChatStore((state) => state.chats);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
@@ -96,7 +97,8 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
   const switchToChat = useAIChatStore((state) => state.switchToChat);
 
   const { openSettingsDialog } = useUIState();
-  const currentChat = chats.find((chat) => chat.id === currentChatId);
+  const effectiveChatId = chatId ?? currentChatId;
+  const currentChat = chats.find((chat) => chat.id === effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
@@ -109,10 +111,10 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
           <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
             <ProviderIcon providerId={currentHeaderIconId} size={12} />
           </span>
-          {currentChatId ? (
+          {effectiveChatId ? (
             <EditableChatTitle
               title={currentChat ? currentChat.title : "New Chat"}
-              onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
+              onUpdateTitle={(title) => updateChatTitle(effectiveChatId, title)}
             />
           ) : (
             <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
@@ -139,7 +141,7 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
         isOpen={isChatHistoryVisible}
         onClose={() => setIsChatHistoryVisible(false)}
         chats={chats}
-        currentChatId={currentChatId}
+        currentChatId={effectiveChatId}
         onSwitchToChat={switchToChat}
         onDeleteChat={onDeleteChat ?? (() => {})}
         triggerRef={historyButtonRef}

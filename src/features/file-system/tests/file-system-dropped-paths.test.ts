@@ -40,4 +40,10 @@ describe("dropped-file-paths", () => {
       "/Users/me/project/another.ts",
     ]);
   });
+
+  it("deduplicates direct drag-drop path arrays", () => {
+    expect(parseDroppedPaths(["/Users/me/project", "", "/Users/me/project"])).toEqual([
+      "/Users/me/project",
+    ]);
+  });
 });

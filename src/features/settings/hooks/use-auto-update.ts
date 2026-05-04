@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  shouldSuppressUpdate,
+  UPDATE_DISMISSED_EVENT,
+  UPDATE_PREFERENCES_CHANGED_EVENT,
+} from "../lib/update-preferences";
 import { useUpdater } from "./use-updater";
 
 const UPDATE_CHECK_DELAY = 5000; // 5 seconds after app start
@@ -17,6 +22,10 @@ export const useAutoUpdate = () => {
     checkForUpdates,
     downloadAndInstall,
     dismissUpdate,
+    downloadLater,
+    remindLater,
+    skipVersion,
+    viewReleaseNotes,
   } = useUpdater(false); // Don't check on mount, we'll do it with a delay
 
   // Check for updates after app starts (with delay)
@@ -43,14 +52,47 @@ export const useAutoUpdate = () => {
     }
   }, [available, updateInfo]);
 
+  useEffect(() => {
+    const hideUpdate = () => {
+      setShowUpdateIndicator(false);
+      dismissUpdate();
+    };
+
+    const syncUpdatePreferences = () => {
+      if (!updateInfo || !shouldSuppressUpdate(updateInfo)) {
+        return;
+      }
+
+      hideUpdate();
+    };
+
+    window.addEventListener(UPDATE_DISMISSED_EVENT, hideUpdate);
+    window.addEventListener(UPDATE_PREFERENCES_CHANGED_EVENT, syncUpdatePreferences);
+
+    return () => {
+      window.removeEventListener(UPDATE_DISMISSED_EVENT, hideUpdate);
+      window.removeEventListener(UPDATE_PREFERENCES_CHANGED_EVENT, syncUpdatePreferences);
+    };
+  }, [dismissUpdate, updateInfo]);
+
   const handleDismiss = useCallback(() => {
     setShowUpdateIndicator(false);
-    dismissUpdate();
-  }, [dismissUpdate]);
+    downloadLater();
+  }, [downloadLater]);
 
   const handleDownload = useCallback(async () => {
     await downloadAndInstall();
   }, [downloadAndInstall]);
+
+  const handleRemindLater = useCallback(() => {
+    setShowUpdateIndicator(false);
+    remindLater();
+  }, [remindLater]);
+
+  const handleSkipVersion = useCallback(() => {
+    setShowUpdateIndicator(false);
+    skipVersion();
+  }, [skipVersion]);
 
   return {
     showUpdateIndicator,
@@ -62,6 +104,9 @@ export const useAutoUpdate = () => {
     checking,
     onDismiss: handleDismiss,
     onDownload: handleDownload,
+    onRemindLater: handleRemindLater,
+    onSkipVersion: handleSkipVersion,
+    onViewReleaseNotes: viewReleaseNotes,
     checkForUpdates,
   };
 };

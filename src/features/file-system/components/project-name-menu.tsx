@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
+import { MAX_RECENT_PROJECTS } from "@/features/file-system/utils/recent-folders";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
@@ -36,7 +37,7 @@ export const ProjectNameMenu = () => {
     }
 
     const recentItems: ContextMenuItem[] = recentFolders
-      .slice(0, 5)
+      .slice(0, MAX_RECENT_PROJECTS)
       .map((folder: RecentFolder) => ({
         id: `recent-${folder.path}`,
         label: folder.name,

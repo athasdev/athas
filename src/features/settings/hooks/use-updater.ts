@@ -1,7 +1,16 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { prepareProjectTransitionWithUnsavedBuffers } from "@/features/file-system/controllers/workspace-project-transition";
 import { recordUpdateCheckTelemetry } from "@/features/telemetry/services/telemetry";
+import {
+  clearUpdatePreferencesForNewVersion,
+  notifyUpdateDismissed,
+  remindAboutUpdateLater,
+  shouldSuppressUpdate,
+  skipUpdateVersion,
+} from "../lib/update-preferences";
 import { useWhatsNewStore } from "../stores/whats-new-store";
 
 export interface UpdateInfo {
@@ -27,6 +36,10 @@ export interface UpdateState {
   downloadProgress: DownloadProgress | null;
 }
 
+interface CheckForUpdatesOptions {
+  ignoreSuppression?: boolean;
+}
+
 export const useUpdater = (checkOnMount = true) => {
   const [state, setState] = useState<UpdateState>({
     available: false,
@@ -41,7 +54,7 @@ export const useUpdater = (checkOnMount = true) => {
   const updateRef = useRef<Update | null>(null);
   const updateInfoRef = useRef<UpdateInfo | null>(null);
 
-  const checkForUpdates = useCallback(async () => {
+  const checkForUpdates = useCallback(async (options: CheckForUpdatesOptions = {}) => {
     try {
       setState((prev) => ({ ...prev, checking: true, error: null }));
 
@@ -56,6 +69,26 @@ export const useUpdater = (checkOnMount = true) => {
           body: update.body,
           date: update.date,
         };
+
+        clearUpdatePreferencesForNewVersion(updateInfo);
+
+        if (!options.ignoreSuppression && shouldSuppressUpdate(updateInfo)) {
+          updateRef.current = null;
+          updateInfoRef.current = null;
+          setState((prev) => ({
+            ...prev,
+            available: false,
+            checking: false,
+            updateInfo: null,
+          }));
+          void recordUpdateCheckTelemetry({
+            status: "available",
+            availableVersion: update.version,
+            currentVersion,
+          });
+          return false;
+        }
+
         updateInfoRef.current = updateInfo;
         setState((prev) => ({
           ...prev,
@@ -118,6 +151,15 @@ export const useUpdater = (checkOnMount = true) => {
           body: newUpdate.body,
           date: newUpdate.date,
         };
+      }
+
+      const canRestart = await prepareProjectTransitionWithUnsavedBuffers(
+        "restarting to update",
+        useBufferStore.getState().buffers,
+      );
+
+      if (!canRestart) {
+        return;
       }
 
       setState((prev) => ({
@@ -189,6 +231,48 @@ export const useUpdater = (checkOnMount = true) => {
     updateInfoRef.current = null;
   }, []);
 
+  const downloadLater = useCallback(() => {
+    dismissUpdate();
+    notifyUpdateDismissed();
+  }, [dismissUpdate]);
+
+  const remindLater = useCallback(
+    (delayMs?: number) => {
+      const updateInfo = updateInfoRef.current;
+      if (!updateInfo) {
+        return;
+      }
+
+      remindAboutUpdateLater(updateInfo, Date.now(), delayMs);
+      dismissUpdate();
+    },
+    [dismissUpdate],
+  );
+
+  const skipVersion = useCallback(() => {
+    const updateInfo = updateInfoRef.current;
+    if (!updateInfo) {
+      return;
+    }
+
+    skipUpdateVersion(updateInfo);
+    dismissUpdate();
+  }, [dismissUpdate]);
+
+  const viewReleaseNotes = useCallback(() => {
+    const updateInfo = updateInfoRef.current;
+    if (!updateInfo) {
+      return;
+    }
+
+    useWhatsNewStore.getState().openInfo({
+      version: updateInfo.version,
+      previousVersion: updateInfo.currentVersion,
+      body: updateInfo.body,
+      date: updateInfo.date,
+    });
+  }, []);
+
   // Check for updates on mount if enabled
   useEffect(() => {
     if (checkOnMount) {
@@ -201,5 +285,9 @@ export const useUpdater = (checkOnMount = true) => {
     checkForUpdates,
     downloadAndInstall,
     dismissUpdate,
+    downloadLater,
+    remindLater,
+    skipVersion,
+    viewReleaseNotes,
   };
 };

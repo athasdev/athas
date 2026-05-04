@@ -8,6 +8,8 @@ import {
   NavigationArrow as Navigation,
   MagnifyingGlass as Search,
   HardDrives as Server,
+  SidebarSimple,
+  Sparkle,
   TerminalWindow as TerminalIcon,
 } from "@phosphor-icons/react";
 import type { CoreFeature, CoreFeaturesState } from "../types/feature";
@@ -69,6 +71,22 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "AI-powered code assistance and chat",
     icon: MessageSquare,
     enabled: coreFeatures.aiChat,
+  },
+  {
+    id: "multiAgents",
+    name: "Multi Agents",
+    description: "Multi-agent session sidebar",
+    icon: Sparkle,
+    enabled: coreFeatures.multiAgents,
+    status: "experimental",
+  },
+  {
+    id: "sidebarBuilder",
+    name: "Sidebar Builder",
+    description: "Customizable vertical sidebar with Git, terminal, browser, and workspace items",
+    icon: SidebarSimple,
+    enabled: coreFeatures.sidebarBuilder,
+    status: "experimental",
   },
   {
     id: "breadcrumbs",

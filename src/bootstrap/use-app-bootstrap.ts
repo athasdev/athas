@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useLayoutEffect } from "react";
 import { useExtensionInstallPrompt } from "@/extensions/hooks/use-extension-install-prompt";
 import {
   cleanupFileClipboardListener,
@@ -21,7 +22,7 @@ import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import {
-  handleWindowOpenRequest,
+  enqueueWindowOpenRequest,
   parseWindowOpenUrl,
 } from "@/features/window/utils/window-open-request";
 
@@ -39,6 +40,12 @@ export function useAppBootstrap() {
   useKeymaps();
   useContextMenuPrevention();
   useLspInitialization();
+
+  useLayoutEffect(() => {
+    void invoke("close_all_embedded_webviews").catch((error) => {
+      console.warn("Failed to clean up stale embedded webviews:", error);
+    });
+  }, []);
 
   useEffect(() => {
     void useAuthStore.getState().initialize();
@@ -72,7 +79,7 @@ export function useAppBootstrap() {
     const request = parseWindowOpenUrl(new URL(window.location.href));
     if (!request) return;
 
-    void handleWindowOpenRequest(request);
+    void enqueueWindowOpenRequest(request);
 
     const nextUrl = `${window.location.pathname}${window.location.hash}`;
     window.history.replaceState(window.history.state, "", nextUrl || "/");

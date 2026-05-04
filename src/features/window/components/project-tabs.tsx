@@ -69,6 +69,15 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     contextMenu.openAt({ x: rect.right, y: rect.bottom + 4 }, tab);
   };
 
+  const closeProjectsSequentially = useCallback(
+    async (projectIds: string[]) => {
+      for (const projectId of projectIds) {
+        await closeProject(projectId);
+      }
+    },
+    [closeProject],
+  );
+
   // Build context menu items based on the selected tab
   const getContextMenuItems = useCallback(
     (tab: ProjectTab | null): ContextMenuItem[] => {
@@ -138,7 +147,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         label: "Close Project",
         icon: <X weight="bold" />,
         onClick: () => {
-          closeProject(tab.id);
+          void closeProject(tab.id);
         },
       });
 
@@ -146,11 +155,8 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         id: "close-others",
         label: "Close Other Projects",
         onClick: () => {
-          projectTabs.forEach((t) => {
-            if (t.id !== tab.id && projectTabs.length > 1) {
-              closeProject(t.id);
-            }
-          });
+          const projectIdsToClose = projectTabs.filter((t) => t.id !== tab.id).map((t) => t.id);
+          void closeProjectsSequentially(projectIdsToClose);
         },
       });
 
@@ -161,11 +167,11 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           const currentIndex = projectTabs.findIndex((t) => t.id === tab.id);
           if (currentIndex === -1) return;
 
-          for (let i = projectTabs.length - 1; i > currentIndex; i--) {
-            if (projectTabs.length > 1) {
-              closeProject(projectTabs[i].id);
-            }
-          }
+          const projectIdsToClose = projectTabs
+            .slice(currentIndex + 1)
+            .reverse()
+            .map((t) => t.id);
+          void closeProjectsSequentially(projectIdsToClose);
         },
       });
 
@@ -173,16 +179,13 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         id: "close-all",
         label: "Close All Projects",
         onClick: () => {
-          // Close all tabs one by one
-          // We copy the array to avoid issues while iterating and modifying
-          const tabsToClose = [...projectTabs];
-          tabsToClose.forEach((t) => closeProject(t.id));
+          void closeProjectsSequentially(projectTabs.map((t) => t.id));
         },
       });
 
       return items;
     },
-    [projectTabs, closeProject],
+    [projectTabs, closeProject, closeProjectsSequentially],
   );
 
   const projectTabItems = useMemo(

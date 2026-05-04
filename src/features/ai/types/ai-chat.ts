@@ -125,6 +125,8 @@ export interface ContextInfo {
 
 export interface AIChatProps {
   className?: string;
+  chatId?: string | null;
+  isActiveSurface?: boolean;
   // Context from the main app
   activeBuffer?: PaneContent | null;
   buffers?: PaneContent[];
@@ -153,6 +155,7 @@ export interface MarkdownRendererProps {
 export interface AIChatInputBarProps {
   buffers: PaneContent[];
   allProjectFiles: FileEntry[];
+  isActiveSurface?: boolean;
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

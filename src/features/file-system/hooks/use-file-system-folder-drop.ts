@@ -9,6 +9,10 @@ import {
   getInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import {
+  handleExternalFileDropPayload,
+  isExternalFileDragTypeList,
+} from "../utils/file-system-drop-controller";
 
 function resolveClientPoint(position: { x: number; y: number }) {
   const rawPoint = { x: position.x, y: position.y };
@@ -79,10 +83,7 @@ function routeInternalTabDrop(position: { x: number; y: number }) {
 }
 
 function isExternalFileDrag(event: DragEvent): boolean {
-  const types = event.dataTransfer?.types;
-  if (!types) return false;
-
-  return Array.from(types).includes("Files");
+  return isExternalFileDragTypeList(event.dataTransfer?.types);
 }
 
 /**
@@ -98,6 +99,16 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
     let unlistenWindow: (() => void) | null = null;
     let unlistenWebview: (() => void) | null = null;
     let domTeardown: (() => void) | null = null;
+
+    const handleExternalPayload = async (payload: { type: string; paths?: string[] }) => {
+      await handleExternalFileDropPayload(payload, {
+        onDrop,
+        setDraggingOver: setIsDraggingOver,
+        onError: (error) => {
+          console.error("Error handling dropped items:", error);
+        },
+      });
+    };
 
     const setupListener = async () => {
       unlistenWindow = await currentWindow.onDragDropEvent(async (event) => {
@@ -115,21 +126,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           }
           return;
         }
-        if (event.payload.type === "drop" && "paths" in event.payload) {
-          const paths = event.payload.paths || [];
-          if (paths.length > 0) {
-            try {
-              await onDrop(paths);
-            } catch (error) {
-              console.error("Error handling dropped items:", error);
-            }
-          }
-          setIsDraggingOver(false);
-        } else if (event.payload.type === "enter") {
-          setIsDraggingOver(true);
-        } else if (event.payload.type === "leave") {
-          setIsDraggingOver(false);
-        }
+        await handleExternalPayload(event.payload);
       });
 
       const currentWebview = getCurrentWebview();
@@ -148,21 +145,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           }
           return;
         }
-        if (event.payload.type === "drop" && "paths" in event.payload) {
-          const paths = event.payload.paths || [];
-          if (paths.length > 0) {
-            try {
-              await onDrop(paths);
-            } catch (error) {
-              console.error("Error handling dropped items:", error);
-            }
-          }
-          setIsDraggingOver(false);
-        } else if (event.payload.type === "enter") {
-          setIsDraggingOver(true);
-        } else if (event.payload.type === "leave") {
-          setIsDraggingOver(false);
-        }
+        await handleExternalPayload(event.payload);
       });
 
       const onDomDragOver = (event: DragEvent) => {

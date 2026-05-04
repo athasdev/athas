@@ -4,6 +4,13 @@ export interface RecentFile {
   lastAccessed: string; // ISO timestamp
   accessCount: number;
   frecencyScore: number;
+  workspacePath?: string | null;
+  external?: boolean;
+}
+
+export interface RecentFileMetadata {
+  workspacePath?: string | null;
+  external?: boolean;
 }
 
 interface RecentFilesState {
@@ -12,7 +19,7 @@ interface RecentFilesState {
 }
 
 interface RecentFilesActions {
-  addOrUpdateRecentFile: (path: string, name: string) => void;
+  addOrUpdateRecentFile: (path: string, name: string, metadata?: RecentFileMetadata) => void;
   getRecentFilesOrderedByFrecency: () => RecentFile[];
   removeRecentFile: (path: string) => void;
   clearRecentFiles: () => void;

@@ -1,8 +1,14 @@
 import { Info, Question, Warning } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { Button } from "@/ui/button";
+import { Button, type ButtonVariant } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+
+interface PrimitiveChoiceOption {
+  value: string;
+  label: string;
+  variant?: ButtonVariant;
+}
 
 type PrimitiveDialogRequest =
   | {
@@ -20,6 +26,14 @@ type PrimitiveDialogRequest =
       confirmLabel: string;
       cancelLabel: string;
       resolve: (value: boolean) => void;
+    }
+  | {
+      id: number;
+      type: "choice";
+      title: string;
+      message: ReactNode;
+      choices: PrimitiveChoiceOption[];
+      resolve: (value: string | null) => void;
     }
   | {
       id: number;
@@ -42,6 +56,15 @@ interface PrimitiveConfirmOptions {
 interface PrimitivePromptOptions extends PrimitiveConfirmOptions {
   defaultValue?: string;
   placeholder?: string;
+}
+
+interface PrimitiveChoiceOptions<T extends string> {
+  title?: string;
+  choices: Array<{
+    value: T;
+    label: string;
+    variant?: ButtonVariant;
+  }>;
 }
 
 let nextDialogId = 1;
@@ -76,6 +99,22 @@ export function primitiveConfirm(
       confirmLabel: options.confirmLabel ?? "Confirm",
       cancelLabel: options.cancelLabel ?? "Cancel",
       resolve,
+    });
+  });
+}
+
+export function primitiveChoice<T extends string>(
+  message: ReactNode,
+  options: PrimitiveChoiceOptions<T>,
+): Promise<T | null> {
+  return new Promise((resolve) => {
+    enqueue({
+      id: nextDialogId++,
+      type: "choice",
+      title: options.title ?? "Choose",
+      message,
+      choices: options.choices,
+      resolve: (value) => resolve(value as T | null),
     });
   });
 }
@@ -178,6 +217,33 @@ function PrimitiveDialogHost({
             <Button variant="primary" size="sm" onClick={() => onClose(() => dialog.resolve(true))}>
               {dialog.confirmLabel}
             </Button>
+          </>
+        }
+      >
+        <div className="whitespace-pre-wrap text-text text-xs">{dialog.message}</div>
+      </Dialog>
+    );
+  }
+
+  if (dialog.type === "choice") {
+    return (
+      <Dialog
+        title={dialog.title}
+        icon={Warning}
+        onClose={() => onClose(() => dialog.resolve(null))}
+        size="sm"
+        footer={
+          <>
+            {dialog.choices.map((choice) => (
+              <Button
+                key={choice.value}
+                variant={choice.variant ?? "outline"}
+                size="sm"
+                onClick={() => onClose(() => dialog.resolve(choice.value))}
+              >
+                {choice.label}
+              </Button>
+            ))}
           </>
         }
       >

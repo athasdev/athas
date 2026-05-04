@@ -138,6 +138,7 @@ CommandList.displayName = "CommandList";
 interface CommandInputProps {
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   className?: string;
   ref?: React.Ref<HTMLInputElement>;
@@ -146,6 +147,7 @@ interface CommandInputProps {
 export const CommandInput = ({
   value,
   onChange,
+  onKeyDown,
   placeholder,
   className,
   ref,
@@ -155,6 +157,7 @@ export const CommandInput = ({
     type="text"
     value={value}
     onChange={(e) => onChange(e.target.value)}
+    onKeyDown={onKeyDown}
     placeholder={placeholder}
     className={cn(
       "ui-text-sm flex-1 bg-transparent text-text placeholder-text-lighter outline-none",

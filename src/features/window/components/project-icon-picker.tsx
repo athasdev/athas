@@ -2,6 +2,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { Trash as Trash2 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
+import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -95,15 +96,23 @@ const ProjectIconPicker = memo(
     const handleSelect = useCallback(
       (iconPath: string) => {
         setProjectIcon(projectId, iconPath);
+        useRecentFoldersStore.getState().updateRecentFolder(projectPath, {
+          activeProjectTabId: projectId,
+          customIcon: iconPath,
+        });
         onClose();
       },
-      [projectId, onClose, setProjectIcon],
+      [projectId, projectPath, onClose, setProjectIcon],
     );
 
     const handleRemoveIcon = useCallback(() => {
       setProjectIcon(projectId, undefined);
+      useRecentFoldersStore.getState().updateRecentFolder(projectPath, {
+        activeProjectTabId: projectId,
+        customIcon: undefined,
+      });
       onClose();
-    }, [projectId, onClose, setProjectIcon]);
+    }, [projectId, projectPath, onClose, setProjectIcon]);
 
     if (!isOpen) return null;
 

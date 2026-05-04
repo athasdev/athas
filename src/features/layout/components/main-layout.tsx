@@ -11,6 +11,7 @@ import { ProjectNameMenu } from "@/features/file-system/components/project-name-
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
+import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useOnboardingStore } from "@/features/onboarding/store";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
@@ -22,10 +23,11 @@ import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
+import { WindowCloseGuard } from "@/features/window/components/window-close-guard";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
+import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
@@ -59,39 +61,29 @@ export function MainLayout() {
   const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
   const onboardingOpen = useOnboardingStore((state) => state.isOpen);
   const onboardingContext = useOnboardingStore((state) => state.context);
-  const dismissOnboarding = useOnboardingStore((state) => state.dismiss);
+  const consumeOnboardingOpenRequest = useOnboardingStore((state) => state.consumeOpenRequest);
   const openOnboardingBuffer = useBufferStore.use.actions().openOnboardingBuffer;
 
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
-    const droppedPaths = parseDroppedPaths(paths);
-    if (droppedPaths.length === 0) return;
-
-    try {
-      const info = await getSymlinkInfo(droppedPaths[0]);
-      if (info?.is_dir) {
-        if (handleOpenFolderByPath) {
-          await handleOpenFolderByPath(droppedPaths[0]);
-        }
-        return;
-      }
-
-      if (handleFileOpen) {
-        for (const p of droppedPaths) {
-          try {
-            const pInfo = await getSymlinkInfo(p);
-            if (!pInfo?.is_dir) {
-              await handleFileOpen(p, false);
-            }
-          } catch (e) {
-            console.error("Failed to open dropped path:", p, e);
+    const result = await openDroppedWorkspacePaths(paths, {
+      getPathInfo: getSymlinkInfo,
+      openFolder: handleOpenFolderByPath,
+      openFile: handleFileOpen
+        ? async (path) => {
+            await handleFileOpen(path, false);
+            return true;
           }
-        }
-      }
-    } catch (error) {
-      console.error("Error handling drag-and-drop:", error);
+        : undefined,
+      onError: (path, error) => {
+        console.error("Failed to open dropped path:", path, error);
+      },
+    });
+
+    if (result.openedFolderCount + result.openedFileCount === 0) {
+      toast.warning("No supported dropped files or folders could be opened.");
     }
   });
 
@@ -108,8 +100,8 @@ export function MainLayout() {
     if (!onboardingOpen || !onboardingContext) return;
 
     openOnboardingBuffer(onboardingContext);
-    void dismissOnboarding();
-  }, [dismissOnboarding, onboardingContext, onboardingOpen, openOnboardingBuffer]);
+    consumeOnboardingOpenRequest();
+  }, [consumeOnboardingOpenRequest, onboardingContext, onboardingOpen, openOnboardingBuffer]);
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
@@ -142,9 +134,32 @@ export function MainLayout() {
   useEffect(() => {
     if (hasRestoredWorkspace.current) return;
 
+    const resolveRestorableActiveTab = async () => {
+      while (true) {
+        const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+        if (!activeTab) return null;
+
+        if (activeTab.path.startsWith("remote://")) {
+          return activeTab;
+        }
+
+        try {
+          const info = await getSymlinkInfo(activeTab.path);
+          if (info.is_dir) {
+            return activeTab;
+          }
+        } catch (error) {
+          console.warn("Persisted workspace no longer exists:", activeTab.path, error);
+        }
+
+        useWorkspaceTabsStore.getState().removeProjectTab(activeTab.id);
+        toast.warning(`Removed missing project "${activeTab.name}"`);
+      }
+    };
+
     const restoreWorkspace = async () => {
       // Get the active project tab from persisted state
-      const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+      const activeTab = await resolveRestorableActiveTab();
       frontendTrace("info", "workspace-open", "startupRestore:checked", {
         hasActiveTab: !!activeTab,
         tabPath: activeTab?.path ?? null,
@@ -323,6 +338,7 @@ export function MainLayout() {
         onClose={() => setIsDatabaseConnectionVisible(false)}
       />
       <LinuxFolderPickerDialog />
+      <WindowCloseGuard />
       <ExtensionDialogs />
     </div>
   );

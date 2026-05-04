@@ -2,39 +2,20 @@ import { getVersion } from "@tauri-apps/api/app";
 import { create } from "zustand";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { UpdateInfo } from "../hooks/use-updater";
-import { hydrateWhatsNew, queuePendingWhatsNew, type WhatsNewInfo } from "../lib/whats-new";
+import {
+  buildWhatsNewMarkdown,
+  hydrateWhatsNew,
+  queuePendingWhatsNew,
+  type WhatsNewInfo,
+} from "../lib/whats-new";
 
 interface WhatsNewState {
   initialized: boolean;
   info: WhatsNewInfo | null;
   initialize: () => Promise<void>;
   open: () => Promise<void>;
+  openInfo: (info: WhatsNewInfo) => void;
   queuePendingUpdate: (updateInfo: UpdateInfo) => void;
-}
-
-function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
-  const lines = [`# What's New in Athas ${info.version}`, ""];
-
-  if (info.previousVersion) {
-    lines.push(`Updated from \`${info.previousVersion}\`.`, "");
-  }
-
-  if (info.date) {
-    lines.push(`Released: ${info.date}`, "");
-  }
-
-  if (info.body?.trim()) {
-    lines.push(info.body.trim(), "");
-  } else {
-    lines.push("Release notes were not bundled with this update.", "");
-  }
-
-  lines.push("---");
-  lines.push(
-    `[View release on GitHub](https://github.com/athasdev/athas/releases/tag/v${info.version})`,
-  );
-
-  return lines.join("\n");
 }
 
 function openWhatsNewBuffer(info: WhatsNewInfo) {
@@ -79,6 +60,10 @@ export const useWhatsNewStore = create<WhatsNewState>()((set, get) => ({
       return;
     }
 
+    openWhatsNewBuffer(info);
+  },
+
+  openInfo: (info) => {
     openWhatsNewBuffer(info);
   },
 

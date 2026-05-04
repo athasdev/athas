@@ -1,4 +1,10 @@
-export type SidebarView = "files" | "git" | "github-prs" | "multi-agents" | (string & {});
+export type SidebarView =
+  | "files"
+  | "git"
+  | "github-prs"
+  | "multi-agents"
+  | "sidebar-builder"
+  | (string & {});
 
 interface SidebarPaneState {
   isSidebarVisible: boolean;

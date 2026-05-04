@@ -1,24 +1,24 @@
-import {
-  CaretRight,
-  DotsThreeVertical,
-  MagnifyingGlass as Search,
-  PushPin,
-} from "@phosphor-icons/react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { CaretRight, MagnifyingGlass as Search, PushPin } from "@phosphor-icons/react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AgentSelector } from "@/features/ai/components/selectors/agent-selector";
+import ChatHistoryDropdown from "@/features/ai/components/history/sidebar";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpSessionInfo } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType, type Chat } from "@/features/ai/types/ai-chat";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem, useContextMenu } from "@/ui/context-menu";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
+import { getBaseName } from "@/utils/path-helpers";
 
 const PINNED_AGENT_CHATS_KEY = "athas:multi-agents-sidebar:pinned-chats";
+const INITIAL_VISIBLE_SESSIONS = 5;
+const EXPANDED_VISIBLE_SESSIONS = 30;
 
 interface SidebarAgentChat {
   agentId: AgentType;
@@ -28,12 +28,6 @@ interface SidebarAgentChat {
   running: boolean;
   remoteSessionId?: string;
   remoteOnly?: boolean;
-}
-
-interface ChatGroup {
-  key: string;
-  label: string;
-  chats: SidebarAgentChat[];
 }
 
 function isRunningChat(chat: Chat, status: AcpAgentStatus | null) {
@@ -65,33 +59,6 @@ function hasSessionListCapability(status: AcpAgentStatus | null) {
   );
 }
 
-function getDayKey(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
-function getDayLabel(date: Date) {
-  const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.round((todayStart.getTime() - dateStart.getTime()) / 86400000);
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) {
-    return new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date);
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: today.getFullYear() === date.getFullYear() ? undefined : "numeric",
-  }).format(date);
-}
-
 function readPinnedChatIds() {
   try {
     const raw = window.localStorage.getItem(PINNED_AGENT_CHATS_KEY);
@@ -113,24 +80,11 @@ function writePinnedChatIds(chatIds: Set<string>) {
   }
 }
 
-function groupChatsByDay(chats: SidebarAgentChat[]): ChatGroup[] {
-  const groups = new Map<string, ChatGroup>();
-
-  for (const chat of chats) {
-    const key = getDayKey(chat.lastMessageAt);
-    const existing = groups.get(key);
-    if (existing) {
-      existing.chats.push(chat);
-    } else {
-      groups.set(key, {
-        key,
-        label: getDayLabel(chat.lastMessageAt),
-        chats: [chat],
-      });
-    }
-  }
-
-  return Array.from(groups.values());
+function getWorkspaceLabel(
+  rootFolderPath: string | undefined,
+  activeProjectName: string | undefined,
+) {
+  return activeProjectName?.trim() || (rootFolderPath ? getBaseName(rootFolderPath) : "Workspace");
 }
 
 export function MultiAgentsSidebarView() {
@@ -145,12 +99,20 @@ export function MultiAgentsSidebarView() {
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const activeProject = projectTabs.find((tab) => tab.isActive);
   const agentContextMenu = useContextMenu<SidebarAgentChat>();
+  const chatHistoryTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [pinnedChatIds, setPinnedChatIds] = useState<Set<string>>(() => readPinnedChatIds());
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [remoteSessions, setRemoteSessions] = useState<AcpSessionInfo[]>([]);
+  const [visibleSessionCount, setVisibleSessionCount] = useState(INITIAL_VISIBLE_SESSIONS);
+  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
+
+  const workspaceKey = activeProject?.id ?? rootFolderPath ?? "workspace";
+  const workspaceLabel = getWorkspaceLabel(rootFolderPath, activeProject?.name);
 
   useEffect(() => {
     writePinnedChatIds(pinnedChatIds);
@@ -251,10 +213,24 @@ export function MultiAgentsSidebarView() {
     [filteredChats, pinnedChatIds],
   );
 
-  const groupedHistory = useMemo(
-    () => groupChatsByDay(filteredChats.filter((chat) => !pinnedChatIds.has(chat.chatId))),
+  const historyChats = useMemo(
+    () => filteredChats.filter((chat) => !pinnedChatIds.has(chat.chatId)),
     [filteredChats, pinnedChatIds],
   );
+
+  const visibleHistoryChats = useMemo(
+    () => historyChats.slice(0, visibleSessionCount),
+    [historyChats, visibleSessionCount],
+  );
+
+  const sortedChatsForHistory = useMemo(
+    () => [...chats].sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime()),
+    [chats],
+  );
+
+  useEffect(() => {
+    setVisibleSessionCount(INITIAL_VISIBLE_SESSIONS);
+  }, [deferredSearchQuery, workspaceKey]);
 
   const openChat = useCallback(
     (chatId: string) => {
@@ -319,6 +295,15 @@ export function MultiAgentsSidebarView() {
       [groupKey]: !(current[groupKey] ?? true),
     }));
   }, []);
+
+  const showMoreHistory = useCallback(() => {
+    if (visibleSessionCount < EXPANDED_VISIBLE_SESSIONS) {
+      setVisibleSessionCount(EXPANDED_VISIBLE_SESSIONS);
+      return;
+    }
+
+    setIsChatHistoryOpen(true);
+  }, [visibleSessionCount]);
 
   const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
     const agent = agentContextMenu.data;
@@ -433,20 +418,6 @@ export function MultiAgentsSidebarView() {
         >
           <PushPin className="size-3.5" weight={pinned ? "fill" : "regular"} />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="shrink-0 opacity-0 group-hover:opacity-100"
-          onClick={(event) => {
-            event.stopPropagation();
-            agentContextMenu.open(event, agent);
-          }}
-          tooltip="Agent actions"
-          aria-label="Agent actions"
-        >
-          <DotsThreeVertical className="size-3.5" weight="bold" />
-        </Button>
       </div>
     );
   };
@@ -503,29 +474,68 @@ export function MultiAgentsSidebarView() {
               </section>
             ) : null}
 
-            {groupedHistory.map((group, index) => {
-              const isOpen = searchQuery.trim() ? true : (openGroups[group.key] ?? index < 2);
+            {historyChats.length > 0
+              ? (() => {
+                  const isOpen = searchQuery.trim() ? true : (openGroups[workspaceKey] ?? true);
+                  const hasHiddenHistory = historyChats.length > visibleSessionCount;
+                  const canShowLess = visibleSessionCount > INITIAL_VISIBLE_SESSIONS;
 
-              return (
-                <section key={group.key} className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.key)}
-                    className="flex h-6 items-center gap-1 rounded-md px-1.5 text-left text-text-lighter text-xs hover:bg-hover/50 hover:text-text"
-                  >
-                    <CaretRight
-                      className={cn("size-3 shrink-0 transition-transform", isOpen && "rotate-90")}
-                      weight="bold"
-                    />
-                    <span className="min-w-0 flex-1 truncate font-medium">{group.label}</span>
-                    <span className="shrink-0 text-[10px] tabular-nums">{group.chats.length}</span>
-                  </button>
-                  {isOpen ? (
-                    <div className="flex flex-col gap-1">{group.chats.map(renderChatRow)}</div>
-                  ) : null}
-                </section>
-              );
-            })}
+                  return (
+                    <section className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(workspaceKey)}
+                        className="flex h-6 items-center gap-1 rounded-md px-1.5 text-left text-text-lighter text-xs hover:bg-hover/50 hover:text-text"
+                      >
+                        <CaretRight
+                          className={cn(
+                            "size-3 shrink-0 transition-transform",
+                            isOpen && "rotate-90",
+                          )}
+                          weight="bold"
+                        />
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {workspaceLabel}
+                        </span>
+                      </button>
+                      {isOpen ? (
+                        <div className="flex flex-col gap-1">
+                          {visibleHistoryChats.map(renderChatRow)}
+                          {hasHiddenHistory || canShowLess ? (
+                            <div className="flex items-center gap-1 px-1.5 pt-0.5">
+                              {hasHiddenHistory ? (
+                                <Button
+                                  ref={chatHistoryTriggerRef}
+                                  type="button"
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={showMoreHistory}
+                                  className="h-6 px-1.5 text-[11px] text-text-lighter hover:text-text"
+                                >
+                                  {visibleSessionCount < EXPANDED_VISIBLE_SESSIONS
+                                    ? "Show more"
+                                    : "Open chat history"}
+                                </Button>
+                              ) : null}
+                              {canShowLess ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() => setVisibleSessionCount(INITIAL_VISIBLE_SESSIONS)}
+                                  className="h-6 px-1.5 text-[11px] text-text-lighter hover:text-text"
+                                >
+                                  Show less
+                                </Button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </section>
+                  );
+                })()
+              : null}
           </div>
         )}
       </div>
@@ -535,6 +545,18 @@ export function MultiAgentsSidebarView() {
         position={agentContextMenu.position}
         items={contextMenuItems}
         onClose={agentContextMenu.close}
+      />
+      <ChatHistoryDropdown
+        isOpen={isChatHistoryOpen}
+        onClose={() => setIsChatHistoryOpen(false)}
+        chats={sortedChatsForHistory}
+        currentChatId={currentChatId}
+        onSwitchToChat={openChat}
+        onDeleteChat={(chatId, event) => {
+          event.stopPropagation();
+          deleteChat(chatId);
+        }}
+        triggerRef={chatHistoryTriggerRef}
       />
     </div>
   );

@@ -58,7 +58,15 @@ interface PaneActions {
   getAllPaneGroups: () => PaneGroup[];
   togglePaneFullscreen: (paneId: string) => void;
   exitPaneFullscreen: () => void;
+  restoreLayout: (layout: PaneLayoutSnapshot) => void;
   reset: () => void;
+}
+
+export interface PaneLayoutSnapshot {
+  root: PaneNode;
+  bottomRoot: PaneNode;
+  activePaneId: string;
+  fullscreenPaneId: string | null;
 }
 
 function createInitialRoot(): PaneGroup {
@@ -85,10 +93,6 @@ const initialState = {
   activePaneId: ROOT_PANE_ID,
   fullscreenPaneId: null,
 };
-
-function isBottomPaneId(paneId: string) {
-  return paneId === BOTTOM_PANE_ID;
-}
 
 function hasPane(root: PaneNode, paneId: string) {
   return findPaneGroup(root, paneId) !== null;
@@ -402,6 +406,23 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
       exitPaneFullscreen: () => {
         set((state) => {
           state.fullscreenPaneId = null;
+        });
+      },
+
+      restoreLayout: (layout) => {
+        set((state) => {
+          const activePane =
+            findPaneGroup(layout.root, layout.activePaneId) ??
+            findPaneGroup(layout.bottomRoot, layout.activePaneId);
+          const fullscreenPane = layout.fullscreenPaneId
+            ? (findPaneGroup(layout.root, layout.fullscreenPaneId) ??
+              findPaneGroup(layout.bottomRoot, layout.fullscreenPaneId))
+            : null;
+
+          state.root = layout.root;
+          state.bottomRoot = layout.bottomRoot;
+          state.activePaneId = activePane?.id ?? getFirstPaneGroup(layout.root).id;
+          state.fullscreenPaneId = fullscreenPane?.id ?? null;
         });
       },
 

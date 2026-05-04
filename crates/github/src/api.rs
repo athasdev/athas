@@ -19,6 +19,10 @@ use std::{
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
 const GITHUB_API_VERSION: &str = "2022-11-28";
+const GITHUB_JSON_ACCEPT: &str = "application/vnd.github+json";
+const GITHUB_WORKFLOW_JOB_LOGS_ACCEPT: &str = GITHUB_JSON_ACCEPT;
+const WORKFLOW_JOB_LOGS_UNAVAILABLE_MESSAGE: &str =
+   "GitHub Actions logs are not available yet. Try again after the job finishes.";
 const USER_AGENT_VALUE: &str = "Athas";
 const GITHUB_REQUEST_INTERVAL: Duration = Duration::from_millis(200);
 
@@ -244,7 +248,7 @@ impl GitHubApi {
    where
       T: for<'de> Deserialize<'de>,
    {
-      let mut request = self.get(path, "application/vnd.github+json");
+      let mut request = self.get(path, GITHUB_JSON_ACCEPT);
       if !query.is_empty() {
          request = request.query(query);
       }
@@ -361,6 +365,10 @@ fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
 }
 
 fn parse_github_error_message(body: &str) -> Option<String> {
+   if body.contains("<Code>BlobNotFound</Code>") {
+      return Some(WORKFLOW_JOB_LOGS_UNAVAILABLE_MESSAGE.to_string());
+   }
+
    serde_json::from_str::<serde_json::Value>(body)
       .ok()
       .and_then(|value| {
@@ -1064,13 +1072,16 @@ pub fn github_get_workflow_job_logs(
    let api = GitHubApi::new_authenticated(github_token)?;
    api.get_text(
       &repo_path(&slug, &format!("actions/jobs/{job_id}/logs")),
-      "text/plain",
+      GITHUB_WORKFLOW_JOB_LOGS_ACCEPT,
    )
 }
 
 #[cfg(test)]
 mod api_tests {
-   use super::{GitHubApi, order_remote_names, parse_github_remote_url};
+   use super::{
+      GITHUB_JSON_ACCEPT, GITHUB_WORKFLOW_JOB_LOGS_ACCEPT, GitHubApi, order_remote_names,
+      parse_github_remote_url,
+   };
 
    #[test]
    fn parses_https_github_remote() {
@@ -1103,6 +1114,22 @@ mod api_tests {
    fn rejects_missing_authenticated_token() {
       assert!(GitHubApi::new_authenticated(None).is_err());
       assert!(GitHubApi::new_authenticated(Some("   ".to_string())).is_err());
+   }
+
+   #[test]
+   fn workflow_job_logs_use_github_json_accept_header() {
+      assert_eq!(GITHUB_WORKFLOW_JOB_LOGS_ACCEPT, GITHUB_JSON_ACCEPT);
+      assert_ne!(GITHUB_WORKFLOW_JOB_LOGS_ACCEPT, "text/plain");
+   }
+
+   #[test]
+   fn parses_blob_not_found_log_response_as_unavailable_logs() {
+      let body = r#"<?xml version="1.0" encoding="utf-8"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.</Message></Error>"#;
+
+      assert_eq!(
+         super::parse_github_error_message(body).as_deref(),
+         Some(super::WORKFLOW_JOB_LOGS_UNAVAILABLE_MESSAGE)
+      );
    }
 
    #[test]

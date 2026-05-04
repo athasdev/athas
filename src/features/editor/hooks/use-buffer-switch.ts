@@ -33,13 +33,14 @@ export function useBufferSwitch({
     const isSwitch = prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId;
     prevBufferIdRef.current = bufferId;
 
-    if (!isSwitch) return;
+    const stateActions = useEditorStateStore.getState().actions;
+    const uiActions = useEditorUIStore.getState().actions;
+    const viewKey = viewStateKey ?? bufferId;
+    const hasRestoredInitialState = !!stateActions.getCachedViewState(viewKey);
+    if (!isSwitch && !hasRestoredInitialState) return;
 
     // Increment guard — stale RAF callbacks will check this and bail
     switchGuardRef.current += 1;
-
-    const stateActions = useEditorStateStore.getState().actions;
-    const uiActions = useEditorUIStore.getState().actions;
 
     // 1. Reset transient state
     stateActions.resetOnBufferSwitch();
@@ -52,7 +53,7 @@ export function useBufferSwitch({
     }
 
     // 3. Restore cursor & scroll from cache (no DOM side-effects in store)
-    const restored = stateActions.restorePositionForFile(viewStateKey ?? bufferId);
+    const restored = stateActions.restorePositionForFile(viewKey);
 
     // 4. Apply scroll to DOM synchronously (before paint)
     if (textarea) {
@@ -60,9 +61,10 @@ export function useBufferSwitch({
       textarea.scrollLeft = restored.scrollLeft;
 
       // Set cursor position in textarea
-      const safeOffset = Math.min(restored.cursor.offset, textarea.value.length);
-      textarea.selectionStart = safeOffset;
-      textarea.selectionEnd = safeOffset;
+      const selectionStart = restored.selection?.start.offset ?? restored.cursor.offset;
+      const selectionEnd = restored.selection?.end.offset ?? selectionStart;
+      textarea.selectionStart = Math.min(selectionStart, textarea.value.length);
+      textarea.selectionEnd = Math.min(selectionEnd, textarea.value.length);
       textarea.focus({ preventScroll: true });
     }
 

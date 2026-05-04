@@ -1,6 +1,12 @@
 use crate::app_runtime::AthasRuntime;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::{
+   collections::HashSet,
+   sync::{
+      LazyLock, Mutex,
+      atomic::{AtomicU32, Ordering},
+   },
+};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
@@ -8,6 +14,8 @@ use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::Page
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+static EMBEDDED_WEBVIEW_LABELS: LazyLock<Mutex<HashSet<String>>> =
+   LazyLock::new(|| Mutex::new(HashSet::new()));
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -397,6 +405,10 @@ pub async fn create_embedded_webview(
       .set_auto_resize(false)
       .map_err(|e| format!("Failed to set auto resize: {e}"))?;
 
+   if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
+      labels.insert(webview_label.clone());
+   }
+
    Ok(webview_label)
 }
 
@@ -410,7 +422,42 @@ pub async fn close_embedded_webview(
          .close()
          .map_err(|e| format!("Failed to close webview: {e}"))?;
    }
+   if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
+      labels.remove(&webview_label);
+   }
    Ok(())
+}
+
+#[command]
+pub async fn close_all_embedded_webviews(
+   app: tauri::AppHandle<AthasRuntime>,
+) -> Result<(), String> {
+   let labels = EMBEDDED_WEBVIEW_LABELS
+      .lock()
+      .map(|labels| labels.iter().cloned().collect::<Vec<_>>())
+      .unwrap_or_default();
+
+   let mut close_errors = Vec::new();
+   for label in labels {
+      if let Some(webview) = app.get_webview(&label) {
+         if let Err(error) = webview.close() {
+            close_errors.push(format!("{label}: {error}"));
+         }
+      }
+   }
+
+   if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
+      labels.clear();
+   }
+
+   if close_errors.is_empty() {
+      Ok(())
+   } else {
+      Err(format!(
+         "Failed to close embedded webviews: {}",
+         close_errors.join(", ")
+      ))
+   }
 }
 
 #[command]

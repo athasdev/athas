@@ -3,17 +3,24 @@ import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { useSettingsStore } from "@/features/settings/store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
-import type { RecentFolder } from "../types/recent-folders";
+import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders";
+import {
+  toggleRecentFolderPinned,
+  updateRecentFolderMetadata,
+  upsertRecentFolder,
+} from "../utils/recent-folders";
 
 interface RecentFoldersState {
   recentFolders: RecentFolder[];
 }
 
 interface RecentFoldersActions {
-  addToRecents: (folderPath: string) => void;
+  addToRecents: (folderPath: string, metadata?: RecentFolderMetadata) => void;
   openRecentFolder: (folderPath: string) => Promise<void>;
   removeFromRecents: (folderPath: string) => void;
   clearRecents: () => void;
+  togglePinned: (folderPath: string) => void;
+  updateRecentFolder: (folderPath: string, metadata: RecentFolderMetadata) => void;
 }
 
 export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersActions>()(
@@ -22,47 +29,56 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
       (set, get) => ({
         recentFolders: [],
 
-        addToRecents: (folderPath: string) => {
-          const pathSeparator = folderPath.includes("\\") ? "\\" : "/";
-          const folderName = folderPath.split(pathSeparator).pop() || folderPath;
-          const now = new Date();
-          const timeString = now.toLocaleString();
-
-          const newFolder: RecentFolder = {
-            name: folderName,
-            path: folderPath,
-            lastOpened: timeString,
-          };
-
+        addToRecents: (folderPath: string, metadata: RecentFolderMetadata = {}) => {
           set((state) => {
-            // Remove existing entry if it exists
-            state.recentFolders = state.recentFolders.filter((f) => f.path !== folderPath);
-            // Add new entry at the beginning
-            state.recentFolders.unshift(newFolder);
-            // Keep only 5 most recent
-            state.recentFolders = state.recentFolders.slice(0, 5);
+            state.recentFolders = upsertRecentFolder(state.recentFolders, folderPath, metadata);
           });
         },
 
         openRecentFolder: async (folderPath: string) => {
           try {
+            const { getSymlinkInfo } = await import("./platform");
             const { useFileSystemStore } = await import("./store");
             const { handleOpenFolderByPath, rootFolderPath } = useFileSystemStore.getState();
             const { settings } = useSettingsStore.getState();
             const hasOpenWorkspace =
               !!rootFolderPath || useFileSystemStore.getState().files.length > 0;
 
+            try {
+              const pathInfo = await getSymlinkInfo(folderPath);
+              if (!pathInfo.is_dir) {
+                get().updateRecentFolder(folderPath, { missing: true });
+                const { toast } = await import("@/ui/toast");
+                toast.error(`Recent project is not a folder: ${folderPath}`);
+                return;
+              }
+            } catch (error) {
+              get().updateRecentFolder(folderPath, { missing: true });
+              console.error("Recent folder is no longer available:", folderPath, error);
+              const { toast } = await import("@/ui/toast");
+              toast.error(`Recent project is unavailable: ${folderPath}`);
+              return;
+            }
+
             if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
               await createAppWindow({
                 path: folderPath,
                 isDirectory: true,
               });
-              get().addToRecents(folderPath);
+              get().addToRecents(folderPath, {
+                missing: false,
+                openInNewWindow: true,
+              });
               return;
             }
 
-            await handleOpenFolderByPath(folderPath);
-            get().addToRecents(folderPath);
+            const opened = await handleOpenFolderByPath(folderPath);
+            if (opened) {
+              get().addToRecents(folderPath, {
+                missing: false,
+                openInNewWindow: false,
+              });
+            }
           } catch (error) {
             console.error("Error opening recent folder:", error);
           }
@@ -79,10 +95,48 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
             state.recentFolders = [];
           });
         },
+
+        togglePinned: (folderPath: string) => {
+          set((state) => {
+            state.recentFolders = toggleRecentFolderPinned(state.recentFolders, folderPath);
+          });
+        },
+
+        updateRecentFolder: (folderPath: string, metadata: RecentFolderMetadata) => {
+          set((state) => {
+            state.recentFolders = updateRecentFolderMetadata(
+              state.recentFolders,
+              folderPath,
+              metadata,
+            );
+          });
+        },
       }),
       {
         name: "athas-code-recent-folders",
-        version: 1,
+        version: 2,
+        migrate: (persistedState) => {
+          if (!persistedState || typeof persistedState !== "object") {
+            return persistedState;
+          }
+
+          const state = persistedState as RecentFoldersState;
+          if (!Array.isArray(state.recentFolders)) {
+            return persistedState;
+          }
+
+          return {
+            ...state,
+            recentFolders: state.recentFolders.map((folder) => ({
+              ...folder,
+              lastOpenedAt:
+                folder.lastOpenedAt ??
+                (Number.isNaN(Date.parse(folder.lastOpened))
+                  ? Date.now()
+                  : Date.parse(folder.lastOpened)),
+            })),
+          };
+        },
       },
     ),
   ),
