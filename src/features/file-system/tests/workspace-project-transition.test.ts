@@ -5,8 +5,8 @@ import type {
   TerminalContent,
 } from "@/features/panes/types/pane-content";
 import {
-  getBlockedProjectTransitionMessage,
   getDirtyEditorBuffers,
+  getUnsavedProjectTransitionMessage,
 } from "../controllers/workspace-project-transition";
 
 const createEditorBuffer = (overrides: Partial<EditorContent>): EditorContent => ({
@@ -48,24 +48,24 @@ describe("workspace project transition guards", () => {
     expect(getDirtyEditorBuffers(buffers).map((buffer) => buffer.id)).toEqual(["dirty"]);
   });
 
-  it("builds a specific block message for one dirty buffer", () => {
+  it("builds a specific save prompt for one dirty buffer", () => {
     const buffers: PaneContent[] = [
       createEditorBuffer({ id: "dirty", name: "settings.json", isDirty: true }),
     ];
 
-    expect(getBlockedProjectTransitionMessage("switching projects", buffers)).toBe(
-      'Save or close "settings.json" before switching projects.',
+    expect(getUnsavedProjectTransitionMessage("switching projects", buffers)).toBe(
+      'Save changes to "settings.json" before switching projects?',
     );
   });
 
-  it("builds a count based block message for multiple dirty buffers", () => {
+  it("builds a count based save prompt for multiple dirty buffers", () => {
     const buffers: PaneContent[] = [
       createEditorBuffer({ id: "dirty-1", name: "one.ts", isDirty: true }),
       createEditorBuffer({ id: "dirty-2", name: "two.ts", isDirty: true }),
     ];
 
-    expect(getBlockedProjectTransitionMessage("closing this project", buffers)).toBe(
-      "Save or close 2 unsaved files before closing this project.",
+    expect(getUnsavedProjectTransitionMessage("closing this project", buffers)).toBe(
+      "Save changes to 2 files before closing this project?",
     );
   });
 
@@ -75,6 +75,6 @@ describe("workspace project transition guards", () => {
       createTerminalBuffer({ id: "terminal" }),
     ];
 
-    expect(getBlockedProjectTransitionMessage("switching projects", buffers)).toBeNull();
+    expect(getUnsavedProjectTransitionMessage("switching projects", buffers)).toBeNull();
   });
 });
