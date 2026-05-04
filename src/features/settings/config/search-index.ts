@@ -904,7 +904,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "advanced",
     section: "Telemetry",
     label: "Anonymous Usage Telemetry",
-    description: "Send anonymous heartbeat, extension, and crash-report metadata",
+    description:
+      "Send anonymous heartbeat, extension, and crash-report metadata; update checks always send required delivery metadata",
     keywords: ["telemetry", "analytics", "tracking", "privacy", "crash", "updates", "extensions"],
   },
 ];

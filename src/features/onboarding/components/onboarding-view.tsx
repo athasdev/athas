@@ -10,6 +10,10 @@ import {
 import { markOnboardingCompleted } from "@/features/onboarding/lib/onboarding-state";
 import type { OnboardingContext } from "@/features/onboarding/lib/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
+import {
+  REQUIRED_UPDATE_TELEMETRY_NOTICE,
+  USAGE_TELEMETRY_DESCRIPTION,
+} from "@/features/settings/lib/telemetry-copy";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { Button } from "@/ui/button";
@@ -131,7 +135,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
 
             <SettingRow
               title="Share anonymous telemetry"
-              description="Heartbeats, extension metadata, and crash reports. Minimal update-check metadata is always sent."
+              description={`${USAGE_TELEMETRY_DESCRIPTION} ${REQUIRED_UPDATE_TELEMETRY_NOTICE}`}
             >
               <Switch checked={telemetry} onChange={setTelemetry} />
             </SettingRow>
