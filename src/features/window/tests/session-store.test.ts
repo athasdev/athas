@@ -29,6 +29,22 @@ const previousSession: ProjectSession = {
     isBottomPaneVisible: false,
     bottomPaneActiveTab: "terminal",
     activeSidebarView: "explorer",
+    paneState: {
+      root: {
+        id: "root",
+        type: "group",
+        bufferPaths: ["/workspace/old.ts"],
+        activeBufferPath: "/workspace/old.ts",
+      },
+      bottomRoot: {
+        id: "bottom",
+        type: "group",
+        bufferPaths: [],
+        activeBufferPath: null,
+      },
+      activePaneId: "root",
+      fullscreenPaneId: null,
+    },
   },
   lastSaved: 1,
 };
@@ -72,6 +88,7 @@ describe("project session persistence helpers", () => {
         isBottomPaneVisible: true,
         bottomPaneActiveTab: "diagnostics",
         activeSidebarView: "search",
+        paneState: null,
       },
       now: 2,
     });
@@ -84,6 +101,7 @@ describe("project session persistence helpers", () => {
       isBottomPaneVisible: true,
       bottomPaneActiveTab: "diagnostics",
       activeSidebarView: "search",
+      paneState: null,
     });
   });
 });

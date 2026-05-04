@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { AIWorkspaceSessionSnapshot } from "@/features/ai/store/types";
 import type { PersistedEditorViewState } from "@/features/editor/types/editor-session";
+import type { PaneNode } from "@/features/panes/types/pane";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -55,6 +56,31 @@ export interface ProjectUiSession {
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: BottomPaneTab;
   activeSidebarView: SidebarView;
+  paneState?: ProjectPaneSession | null;
+}
+
+export interface ProjectPaneGroupSession {
+  id: string;
+  type: "group";
+  bufferPaths: string[];
+  activeBufferPath: string | null;
+}
+
+export interface ProjectPaneSplitSession {
+  id: string;
+  type: "split";
+  direction: Extract<PaneNode, { type: "split" }>["direction"];
+  children: [ProjectPaneSessionNode, ProjectPaneSessionNode];
+  sizes: [number, number];
+}
+
+export type ProjectPaneSessionNode = ProjectPaneGroupSession | ProjectPaneSplitSession;
+
+export interface ProjectPaneSession {
+  root: ProjectPaneSessionNode;
+  bottomRoot: ProjectPaneSessionNode;
+  activePaneId: string;
+  fullscreenPaneId: string | null;
 }
 
 interface SessionState {
@@ -113,6 +139,14 @@ export function buildSavedProjectUiSession({
   uiState: ProjectUiSession;
   now: number;
 }): ProjectSession {
+  const nextUiState: ProjectUiSession = {
+    ...uiState,
+    paneState:
+      uiState.paneState === undefined
+        ? (previousSession?.uiState?.paneState ?? null)
+        : uiState.paneState,
+  };
+
   return {
     ...previousSession,
     projectPath,
@@ -120,7 +154,7 @@ export function buildSavedProjectUiSession({
     buffers: previousSession?.buffers ?? [],
     terminals: previousSession?.terminals ?? [],
     aiSession: previousSession?.aiSession ?? null,
-    uiState,
+    uiState: nextUiState,
     lastSaved: now,
   };
 }

@@ -31,6 +31,7 @@ import type { BufferSession } from "@/features/window/stores/session-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import {
   persistCurrentProjectUiState,
+  restoreProjectPaneState,
   restoreProjectUiState,
 } from "@/features/window/stores/workspace-ui-session";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
@@ -613,6 +614,7 @@ export const useFileSystemStore = createSelectors(
                     }
 
                     await restoreBuffers(deferredBuffers);
+                    restoreProjectPaneState(projectPath);
                   })();
                 },
               },
@@ -640,6 +642,8 @@ export const useFileSystemStore = createSelectors(
             }
           }
         }
+
+        restoreProjectPaneState(projectPath);
 
         useAIChatStore
           .getState()
