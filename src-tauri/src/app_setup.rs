@@ -10,7 +10,7 @@ use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 #[cfg(not(target_os = "windows"))]
 use tauri_plugin_os::platform;
@@ -86,8 +86,8 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
 
 fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
    let cwd = std::env::current_dir().unwrap_or_default();
-   let args: Vec<String> = std::env::args().skip(1).collect();
-   let open_requests = commands::development::cli_args::parse_cli_args(&args, &cwd);
+   let args: Vec<String> = std::env::args().collect();
+   let open_requests = commands::development::cli_args::parse_cli_argv(&args, &cwd);
 
    if open_requests.is_empty() {
       return;
@@ -96,12 +96,39 @@ fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
    let app_handle = app.handle().clone();
    tauri::async_runtime::spawn(async move {
       tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
-      for req in open_requests {
-         if let Err(e) = app_handle.emit("cli_open_request", &req) {
-            log::error!("Failed to emit cli_open_request: {}", e);
-         }
-      }
+      emit_cli_requests_to_frontend(&app_handle, open_requests);
    });
+}
+
+pub fn handle_single_instance_open(
+   app_handle: &tauri::AppHandle<AthasRuntime>,
+   args: Vec<String>,
+   cwd: String,
+) {
+   let cwd = PathBuf::from(cwd);
+   let open_requests = commands::development::cli_args::parse_cli_argv(&args, &cwd);
+   let app_handle = app_handle.clone();
+
+   tauri::async_runtime::spawn(async move {
+      focus_active_window(&app_handle);
+
+      if open_requests.is_empty() {
+         return;
+      }
+
+      emit_cli_requests_to_frontend(&app_handle, open_requests);
+   });
+}
+
+fn emit_cli_requests_to_frontend(
+   app_handle: &tauri::AppHandle<AthasRuntime>,
+   open_requests: Vec<commands::development::cli_args::CliRequest>,
+) {
+   for req in open_requests {
+      if let Err(e) = app_handle.emit("cli_open_request", &req) {
+         log::error!("Failed to emit cli_open_request: {}", e);
+      }
+   }
 }
 
 fn configure_initial_window(app: &tauri::App<AthasRuntime>) {
@@ -117,6 +144,14 @@ fn get_active_webview_window(
       .and_then(|window| app.get_webview_window(window.label()))
       .or_else(|| app.get_webview_window("main"))
       .or_else(|| app.webview_windows().into_values().next())
+}
+
+fn focus_active_window(app: &tauri::AppHandle<AthasRuntime>) {
+   if let Some(window) = get_active_webview_window(app) {
+      let _ = window.unminimize();
+      let _ = window.show();
+      let _ = window.set_focus();
+   }
 }
 
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {

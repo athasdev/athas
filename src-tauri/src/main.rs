@@ -33,6 +33,9 @@ fn main() {
    bootstrap::macos::disable_macos_autofill_heuristics();
 
    tauri::Builder::<AthasRuntime>::new()
+      .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+         app_setup::handle_single_instance_open(app, args, cwd);
+      }))
       .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
@@ -142,6 +145,7 @@ fn main() {
          uses_native_window_chrome,
          create_embedded_webview,
          close_embedded_webview,
+         close_all_embedded_webviews,
          navigate_embedded_webview,
          resize_embedded_webview,
          set_webview_visible,
