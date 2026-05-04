@@ -1,0 +1,21 @@
+{
+  "productName": "Athas Smoke",
+  "identifier": "com.code.athas.smoke",
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "resources": null,
+    "macOS": {
+      "signingIdentity": null
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["athas-smoke"]
+      }
+    },
+    "updater": {
+      "active": false
+    }
+  }
+}

@@ -1,10 +1,9 @@
 import {
-  ArrowLeft,
-  ArrowRight,
   Check,
   Code as Code2,
   Copy,
   ArrowSquareOut as ExternalLink,
+  Broom,
   Minus,
   Plus,
   ArrowClockwise as RefreshCw,
@@ -20,11 +19,10 @@ import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 
 interface WebViewerToolbarProps {
-  canGoBack: boolean;
-  canGoForward: boolean;
   canOpenDevTools: boolean;
   canOpenExternal: boolean;
   canCopyUrl: boolean;
+  canClearBrowsingData: boolean;
   copied: boolean;
   devToolsTooltip: string;
   hasUrlError: boolean;
@@ -36,9 +34,8 @@ interface WebViewerToolbarProps {
   securityTooltip: string;
   urlInputRef: RefObject<HTMLInputElement | null>;
   zoomLevel: number;
+  onClearBrowsingData: () => void;
   onCopyUrl: () => void;
-  onGoBack: () => void;
-  onGoForward: () => void;
   onInputUrlChange: (value: string) => void;
   onOpenDevTools: () => void;
   onOpenExternal: () => void;
@@ -51,11 +48,10 @@ interface WebViewerToolbarProps {
 }
 
 export function WebViewerToolbar({
-  canGoBack,
-  canGoForward,
   canOpenDevTools,
   canOpenExternal,
   canCopyUrl,
+  canClearBrowsingData,
   copied,
   devToolsTooltip,
   hasUrlError,
@@ -67,9 +63,8 @@ export function WebViewerToolbar({
   securityTooltip,
   urlInputRef,
   zoomLevel,
+  onClearBrowsingData,
   onCopyUrl,
-  onGoBack,
-  onGoForward,
   onInputUrlChange,
   onOpenDevTools,
   onOpenExternal,
@@ -86,29 +81,6 @@ export function WebViewerToolbar({
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
-      <div className="flex items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onGoBack}
-          disabled={!canGoBack}
-          tooltip="Go back"
-        >
-          <ArrowLeft />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onGoForward}
-          disabled={!canGoForward}
-          tooltip="Go forward"
-        >
-          <ArrowRight />
-        </Button>
-      </div>
-
-      <div className="mx-1.5 h-5 w-px bg-border" />
-
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <div className="relative flex flex-1 items-center">
           <div
@@ -223,6 +195,15 @@ export function WebViewerToolbar({
             </Button>
           </div>
         </Dropdown>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClearBrowsingData}
+          disabled={!canClearBrowsingData}
+          tooltip="Clear browsing data"
+        >
+          <Broom />
+        </Button>
         <Button
           variant="ghost"
           size="icon-sm"

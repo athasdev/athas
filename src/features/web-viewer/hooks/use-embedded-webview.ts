@@ -6,6 +6,8 @@ import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
 interface UseEmbeddedWebviewOptions {
   bufferId: string;
   initialUrl: string;
+  profileKey: string;
+  userAgent?: string;
   containerRef: RefObject<HTMLDivElement | null>;
   isActive: boolean;
   isVisible: boolean;
@@ -25,6 +27,8 @@ function isWebviewNotFoundError(error: unknown) {
 export function useEmbeddedWebview({
   bufferId,
   initialUrl,
+  profileKey,
+  userAgent,
   containerRef,
   isActive,
   isVisible,
@@ -148,6 +152,8 @@ export function useEmbeddedWebview({
       try {
         const label = await invoke<string>("create_embedded_webview", {
           url: initialUrl,
+          profileKey,
+          userAgent,
           x: clampedX,
           y: clampedY,
           width: clampedWidth,
@@ -181,7 +187,7 @@ export function useEmbeddedWebview({
     };
 
     void createWebview();
-  }, [containerRef, initialUrl, onLoadStateChange, webviewLabel]);
+  }, [containerRef, initialUrl, onLoadStateChange, profileKey, userAgent, webviewLabel]);
 
   useEffect(() => {
     if (!webviewLabel || !containerRef.current || !isVisible) return;

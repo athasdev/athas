@@ -398,6 +398,7 @@ export const useBufferStore = createSelectors(
               });
 
               syncBufferToPane(newBuffer.id);
+              saveSessionToStore(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 

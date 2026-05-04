@@ -37,6 +37,9 @@ interface WebViewerBufferSession {
   isPinned: boolean;
   url: string;
   zoomLevel?: number;
+  profileKey?: string;
+  history?: string[];
+  historyIndex?: number;
 }
 
 export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;

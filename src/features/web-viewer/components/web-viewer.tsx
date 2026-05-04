@@ -3,13 +3,19 @@ import { listen } from "@tauri-apps/api/event";
 import { WarningCircle as AlertCircle, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
+import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation-store";
+import { getEmbeddedWebViewerUserAgent, getWebViewerProfileKey } from "../utils/web-viewer-profile";
 import { getWebViewerSecurity, normalizeWebViewerUrl } from "../utils/web-viewer-url";
 import { WebViewerToolbar } from "./web-viewer-toolbar";
 
 export interface WebViewerProps {
   url: string;
   bufferId: string;
+  profileKey?: string;
+  history?: string[];
+  historyIndex?: number;
   paneId?: string;
   isActive?: boolean;
   isVisible?: boolean;
@@ -67,6 +73,9 @@ function isWebviewNotFoundError(error: unknown) {
 export function WebViewer({
   url: initialUrl,
   bufferId,
+  profileKey: initialProfileKey,
+  history: initialHistory,
+  historyIndex: initialHistoryIndex,
   isActive = true,
   isVisible = true,
 }: WebViewerProps) {
@@ -75,21 +84,33 @@ export function WebViewer({
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
   const [isLoading, setIsLoading] = useState(!isNewTab);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
-  const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
-  const historyIndexRef = useRef(isNewTab ? -1 : 0);
+  const historyRef = useRef<string[]>(
+    initialHistory && initialHistory.length > 0 ? initialHistory : isNewTab ? [] : [initialUrl],
+  );
+  const historyIndexRef = useRef(
+    typeof initialHistoryIndex === "number" &&
+      initialHistoryIndex >= 0 &&
+      initialHistoryIndex < historyRef.current.length
+      ? initialHistoryIndex
+      : historyRef.current.length > 0
+        ? historyRef.current.length - 1
+        : -1,
+  );
   const pendingNavigationActionRef = useRef<PendingNavigationAction>(null);
   const previousUrlPropRef = useRef(initialUrl);
 
   const { updateBuffer } = useBufferStore.use.actions();
+  const webViewerNavigationActions = useWebViewerNavigationStore.use.actions();
   const buffers = useBufferStore.use.buffers();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const profileKey = initialProfileKey ?? getWebViewerProfileKey(rootFolderPath);
+  const userAgent = getEmbeddedWebViewerUserAgent();
   const webViewerBuffer = buffers.find(
     (buffer) => buffer.id === bufferId && buffer.type === "webViewer",
   );
@@ -100,6 +121,8 @@ export function WebViewer({
   } = useEmbeddedWebview({
     bufferId,
     initialUrl: currentUrl,
+    profileKey,
+    userAgent,
     containerRef,
     isActive,
     isVisible,
@@ -115,9 +138,35 @@ export function WebViewer({
   }, [webViewerBuffer, zoomLevel]);
 
   const syncHistoryState = useCallback(() => {
-    setCanGoBack(historyIndexRef.current > 0);
-    setCanGoForward(historyIndexRef.current < historyRef.current.length - 1);
-  }, []);
+    const nextCanGoBack = historyIndexRef.current > 0;
+    const nextCanGoForward = historyIndexRef.current < historyRef.current.length - 1;
+
+    webViewerNavigationActions.setNavigationState(bufferId, {
+      canGoBack: nextCanGoBack,
+      canGoForward: nextCanGoForward,
+    });
+  }, [bufferId, webViewerNavigationActions]);
+
+  const persistWebViewerState = useCallback(
+    (updates?: { url?: string; zoomLevel?: number }) => {
+      const buffer = useBufferStore
+        .getState()
+        .buffers.find((b) => b.id === bufferId && b.type === "webViewer");
+      if (!buffer || buffer.type !== "webViewer") return;
+
+      updateBuffer({
+        ...buffer,
+        ...(updates && "url" in updates
+          ? { url: updates.url ?? "", path: `web-viewer://${updates.url ?? ""}` }
+          : {}),
+        ...(typeof updates?.zoomLevel === "number" ? { zoomLevel: updates.zoomLevel } : {}),
+        profileKey,
+        history: [...historyRef.current],
+        historyIndex: historyIndexRef.current,
+      });
+    },
+    [bufferId, profileKey, updateBuffer],
+  );
 
   const pushHistoryEntry = useCallback(
     (url: string) => {
@@ -125,8 +174,9 @@ export function WebViewer({
       historyRef.current.push(url);
       historyIndexRef.current = historyRef.current.length - 1;
       syncHistoryState();
+      persistWebViewerState({ url });
     },
-    [syncHistoryState],
+    [persistWebViewerState, syncHistoryState],
   );
 
   const replaceCurrentHistoryEntry = useCallback(
@@ -138,8 +188,9 @@ export function WebViewer({
         historyRef.current[historyIndexRef.current] = url;
       }
       syncHistoryState();
+      persistWebViewerState({ url });
     },
-    [syncHistoryState],
+    [persistWebViewerState, syncHistoryState],
   );
 
   const stepHistoryToUrl = useCallback(
@@ -158,8 +209,9 @@ export function WebViewer({
       }
 
       syncHistoryState();
+      persistWebViewerState({ url });
     },
-    [syncHistoryState],
+    [persistWebViewerState, syncHistoryState],
   );
 
   useEffect(() => {
@@ -178,6 +230,7 @@ export function WebViewer({
       historyRef.current = [];
       historyIndexRef.current = -1;
       syncHistoryState();
+      persistWebViewerState({ url: "" });
       return;
     }
 
@@ -186,7 +239,7 @@ export function WebViewer({
     setUrlError(null);
     setPageError(null);
     replaceCurrentHistoryEntry(initialUrl);
-  }, [initialUrl, replaceCurrentHistoryEntry, syncHistoryState]);
+  }, [initialUrl, persistWebViewerState, replaceCurrentHistoryEntry, syncHistoryState]);
 
   useEffect(() => {
     if (!webviewError) return;
@@ -254,11 +307,14 @@ export function WebViewer({
         title: hostname,
         favicon: faviconUrl,
         url: currentUrl,
+        profileKey,
+        history: [...historyRef.current],
+        historyIndex: historyIndexRef.current,
       });
     } catch {
       // Invalid URL, ignore
     }
-  }, [currentUrl, bufferId, buffers, updateBuffer]);
+  }, [currentUrl, bufferId, buffers, profileKey, updateBuffer]);
 
   useEffect(() => {
     if (!webviewLabel) return;
@@ -364,6 +420,9 @@ export function WebViewer({
             ...buffer,
             name: displayTitle,
             title: event.payload.title,
+            profileKey,
+            history: [...historyRef.current],
+            historyIndex: historyIndexRef.current,
             ...(event.payload.favicon ? { favicon: event.payload.favicon } : {}),
           });
         },
@@ -378,7 +437,7 @@ export function WebViewer({
         unlisten();
       }
     };
-  }, [bufferId, updateBuffer, webviewLabel]);
+  }, [bufferId, profileKey, updateBuffer, webviewLabel]);
 
   // Auto-focus URL input for new tabs
   useEffect(() => {
@@ -448,6 +507,18 @@ export function WebViewer({
     }
   }, [navigateTo, syncHistoryState]);
 
+  useEffect(() => {
+    webViewerNavigationActions.registerNavigationActions(bufferId, {
+      goBack: handleGoBack,
+      goForward: handleGoForward,
+    });
+    syncHistoryState();
+
+    return () => {
+      webViewerNavigationActions.unregisterNavigationActions(bufferId);
+    };
+  }, [bufferId, handleGoBack, handleGoForward, syncHistoryState, webViewerNavigationActions]);
+
   const handleRefresh = useCallback(() => {
     navigateTo(currentUrl, false);
   }, [currentUrl, navigateTo]);
@@ -472,12 +543,13 @@ export function WebViewer({
         historyRef.current = [normalizedUrl];
         historyIndexRef.current = 0;
         syncHistoryState();
+        persistWebViewerState({ url: normalizedUrl });
         return;
       }
 
       navigateTo(inputUrl);
     },
-    [inputUrl, navigateTo, webviewLabel],
+    [inputUrl, navigateTo, persistWebViewerState, syncHistoryState, webviewLabel],
   );
 
   const handleOpenExternal = useCallback(async () => {
@@ -500,46 +572,59 @@ export function WebViewer({
     }
   }, [canOpenDevTools, webviewLabel]);
 
+  const handleClearBrowsingData = useCallback(async () => {
+    if (!webviewLabel) return;
+
+    const confirmed = window.confirm(
+      "Clear cookies, storage, and cache for this browser profile? This can sign you out of sites in this workspace.",
+    );
+    if (!confirmed) return;
+
+    try {
+      await invoke("clear_embedded_webview_browsing_data", { webviewLabel });
+      if (currentUrl) {
+        handleRefresh();
+      }
+    } catch (error) {
+      console.error("Failed to clear browsing data:", error);
+      setPageError(getWebViewerErrorMessage(error));
+    }
+  }, [currentUrl, handleRefresh, webviewLabel]);
+
   const handleZoomIn = useCallback(async () => {
     if (!webviewLabel) return;
     const newZoom = Math.min(zoomLevel + 0.1, 3);
     setZoomLevel(newZoom);
-    if (webViewerBuffer?.type === "webViewer") {
-      updateBuffer({ ...webViewerBuffer, zoomLevel: newZoom });
-    }
+    persistWebViewerState({ zoomLevel: newZoom });
     try {
       await invoke("set_webview_zoom", { webviewLabel, zoomLevel: newZoom });
     } catch (error) {
       console.error("Failed to zoom in:", error);
     }
-  }, [updateBuffer, webViewerBuffer, webviewLabel, zoomLevel]);
+  }, [persistWebViewerState, webviewLabel, zoomLevel]);
 
   const handleZoomOut = useCallback(async () => {
     if (!webviewLabel) return;
     const newZoom = Math.max(zoomLevel - 0.1, 0.25);
     setZoomLevel(newZoom);
-    if (webViewerBuffer?.type === "webViewer") {
-      updateBuffer({ ...webViewerBuffer, zoomLevel: newZoom });
-    }
+    persistWebViewerState({ zoomLevel: newZoom });
     try {
       await invoke("set_webview_zoom", { webviewLabel, zoomLevel: newZoom });
     } catch (error) {
       console.error("Failed to zoom out:", error);
     }
-  }, [updateBuffer, webViewerBuffer, webviewLabel, zoomLevel]);
+  }, [persistWebViewerState, webviewLabel, zoomLevel]);
 
   const handleResetZoom = useCallback(async () => {
     if (!webviewLabel) return;
     setZoomLevel(1);
-    if (webViewerBuffer?.type === "webViewer") {
-      updateBuffer({ ...webViewerBuffer, zoomLevel: 1 });
-    }
+    persistWebViewerState({ zoomLevel: 1 });
     try {
       await invoke("set_webview_zoom", { webviewLabel, zoomLevel: 1 });
     } catch (error) {
       console.error("Failed to reset zoom:", error);
     }
-  }, [updateBuffer, webViewerBuffer, webviewLabel]);
+  }, [persistWebViewerState, webviewLabel]);
 
   const handleCopyUrl = useCallback(async () => {
     try {
@@ -729,11 +814,10 @@ export function WebViewer({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
       <WebViewerToolbar
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
         canOpenDevTools={canOpenDevTools && Boolean(webviewLabel)}
         canOpenExternal={Boolean(currentUrl)}
         canCopyUrl={Boolean(currentUrl)}
+        canClearBrowsingData={Boolean(webviewLabel)}
         copied={copied}
         devToolsTooltip={
           canOpenDevTools
@@ -749,9 +833,8 @@ export function WebViewer({
         securityTooltip={security.tooltip}
         urlInputRef={urlInputRef}
         zoomLevel={zoomLevel}
+        onClearBrowsingData={handleClearBrowsingData}
         onCopyUrl={handleCopyUrl}
-        onGoBack={handleGoBack}
-        onGoForward={handleGoForward}
         onInputUrlChange={handleInputUrlChange}
         onOpenDevTools={handleOpenDevTools}
         onOpenExternal={handleOpenExternal}

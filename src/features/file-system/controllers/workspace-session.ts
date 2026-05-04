@@ -10,6 +10,9 @@ export interface WorkspaceSessionBuffer {
   editorState?: Extract<BufferSession, { type: "editor" }>["editorState"];
   url?: string;
   zoomLevel?: number;
+  profileKey?: string;
+  history?: string[];
+  historyIndex?: number;
   sessionId?: string;
   initialCommand?: string;
   workingDirectory?: string;
