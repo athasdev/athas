@@ -1952,10 +1952,9 @@ export const useFileSystemStore = createSelectors(
 
         const remoteTabInfo = parseRemotePath(tab.path);
 
-        const { buffers, activeBufferId, actions: bufferActions } = useBufferStore.getState();
+        const { buffers, actions: bufferActions } = useBufferStore.getState();
         const currentBuffers = [...buffers];
         const currentBufferIds = currentBuffers.map((buffer) => buffer.id);
-        const activeBuffer = currentBuffers.find((buffer) => buffer.id === activeBufferId);
         const session = useSessionStore.getState().getSession(tab.path);
         const restorePlan = buildWorkspaceRestorePlan(session);
 
@@ -1973,17 +1972,7 @@ export const useFileSystemStore = createSelectors(
           }
 
           if (currentRootPath) {
-            persistCurrentProjectUiState(currentRootPath);
-            clearQueuedWorkspaceSessionSave(currentRootPath);
-            useSessionStore.getState().saveSession(
-              currentRootPath,
-              currentBuffers
-                .map(serializeWorkspaceBuffer)
-                .filter((buffer): buffer is BufferSession => buffer !== null),
-              activeBuffer?.path || null,
-              readPersistedTerminalSessions(currentRootPath),
-              readPersistedAiWorkspaceSession(),
-            );
+            get().persistActiveProjectSession();
           }
 
           workspaceTabsStore.setActiveProjectTab(projectId);
@@ -2243,20 +2232,7 @@ export const useFileSystemStore = createSelectors(
 
         // Save session before closing if it's the active project
         if (wasActive) {
-          persistCurrentProjectUiState(tab.path);
-          const { buffers, activeBufferId } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-
-          clearQueuedWorkspaceSessionSave(tab.path);
-          useSessionStore.getState().saveSession(
-            tab.path,
-            buffers
-              .map(serializeWorkspaceBuffer)
-              .filter((buffer): buffer is BufferSession => buffer !== null),
-            activeBuffer?.path || null,
-            readPersistedTerminalSessions(tab.path),
-            readPersistedAiWorkspaceSession(),
-          );
+          get().persistActiveProjectSession();
         }
 
         if (remoteTabInfo) {
