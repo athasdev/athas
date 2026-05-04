@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { reorderProjectTabItems } from "../utils/project-tab-order";
+import { renameRemoteProjectTabs } from "../utils/project-tab-remote";
 import {
   areProjectTabPathsEqual,
   createProjectTabId,
@@ -34,6 +35,7 @@ interface WorkspaceTabsActions {
   reorderProjectTabs: (fromIndex: number, toIndex: number) => void;
   getActiveProjectTab: () => ProjectTab | undefined;
   hasProjectTab: (path: string) => boolean;
+  renameRemoteProjectTabs: (connectionId: string, connectionName: string) => void;
   setProjectIcon: (projectId: string, iconPath: string | undefined) => void;
 }
 
@@ -138,6 +140,16 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
 
       hasProjectTab: (path: string) => {
         return get().projectTabs.some((tab) => areProjectTabPathsEqual(tab.path, path));
+      },
+
+      renameRemoteProjectTabs: (connectionId: string, connectionName: string) => {
+        set((state) => {
+          state.projectTabs = renameRemoteProjectTabs(
+            state.projectTabs,
+            connectionId,
+            connectionName,
+          );
+        });
       },
 
       setProjectIcon: (projectId: string, iconPath: string | undefined) => {
