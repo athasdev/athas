@@ -36,7 +36,7 @@ interface WebViewerBufferSession {
 
 export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;
 
-interface ProjectSession {
+export interface ProjectSession {
   projectPath: string;
   activeBufferPath: string | null;
   buffers: BufferSession[];
@@ -69,6 +69,58 @@ interface SessionState {
   clearAllSessions: () => void;
 }
 
+export function buildSavedProjectSession({
+  previousSession,
+  projectPath,
+  buffers,
+  activeBufferPath,
+  terminals,
+  aiSession,
+  now,
+}: {
+  previousSession?: ProjectSession;
+  projectPath: string;
+  buffers: BufferSession[];
+  activeBufferPath: string | null;
+  terminals?: PersistedTerminal[];
+  aiSession?: AIWorkspaceSessionSnapshot | null;
+  now: number;
+}): ProjectSession {
+  return {
+    ...previousSession,
+    projectPath,
+    activeBufferPath,
+    buffers,
+    terminals: terminals === undefined ? (previousSession?.terminals ?? []) : terminals,
+    aiSession: aiSession === undefined ? (previousSession?.aiSession ?? null) : aiSession,
+    uiState: previousSession?.uiState ?? null,
+    lastSaved: now,
+  };
+}
+
+export function buildSavedProjectUiSession({
+  previousSession,
+  projectPath,
+  uiState,
+  now,
+}: {
+  previousSession?: ProjectSession;
+  projectPath: string;
+  uiState: ProjectUiSession;
+  now: number;
+}): ProjectSession {
+  return {
+    ...previousSession,
+    projectPath,
+    activeBufferPath: previousSession?.activeBufferPath ?? null,
+    buffers: previousSession?.buffers ?? [],
+    terminals: previousSession?.terminals ?? [],
+    aiSession: previousSession?.aiSession ?? null,
+    uiState,
+    lastSaved: now,
+  };
+}
+
 const useSessionStoreBase = create<SessionState>()(
   persist(
     (set, get) => ({
@@ -78,16 +130,15 @@ const useSessionStoreBase = create<SessionState>()(
         set((state) => ({
           sessions: {
             ...state.sessions,
-            [projectPath]: {
-              ...state.sessions[projectPath],
+            [projectPath]: buildSavedProjectSession({
+              previousSession: state.sessions[projectPath],
               projectPath,
-              activeBufferPath,
               buffers,
-              terminals: terminals ?? state.sessions[projectPath]?.terminals ?? [],
-              aiSession: aiSession ?? state.sessions[projectPath]?.aiSession ?? null,
-              uiState: state.sessions[projectPath]?.uiState ?? null,
-              lastSaved: Date.now(),
-            },
+              activeBufferPath,
+              terminals,
+              aiSession,
+              now: Date.now(),
+            }),
           },
         }));
       },
@@ -100,16 +151,12 @@ const useSessionStoreBase = create<SessionState>()(
         set((state) => ({
           sessions: {
             ...state.sessions,
-            [projectPath]: {
-              ...state.sessions[projectPath],
+            [projectPath]: buildSavedProjectUiSession({
+              previousSession: state.sessions[projectPath],
               projectPath,
-              activeBufferPath: state.sessions[projectPath]?.activeBufferPath ?? null,
-              buffers: state.sessions[projectPath]?.buffers ?? [],
-              terminals: state.sessions[projectPath]?.terminals ?? [],
-              aiSession: state.sessions[projectPath]?.aiSession ?? null,
               uiState,
-              lastSaved: Date.now(),
-            },
+              now: Date.now(),
+            }),
           },
         }));
       },
