@@ -175,6 +175,12 @@ function normalizeAISettings(settings: Settings): Settings {
     AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
     normalizedSettings.aiAutocompleteModelId ||
     DEFAULT_AI_AUTOCOMPLETE_MODEL_ID;
+  normalizedSettings.aiAutocompleteProvider =
+    normalizedSettings.aiAutocompleteProvider === "custom" ? "custom" : "openrouter";
+  normalizedSettings.aiAutocompleteCustomBaseUrl =
+    normalizedSettings.aiAutocompleteCustomBaseUrl?.trim() || "";
+  normalizedSettings.aiAutocompleteCustomModelId =
+    normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
 
   return normalizedSettings;
@@ -293,6 +299,18 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "aiSkills") {
     return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
+  }
+
+  if (key === "aiAutocompleteProvider") {
+    return (value === "custom" ? "custom" : "openrouter") as Settings[K];
+  }
+
+  if (key === "aiAutocompleteCustomBaseUrl") {
+    return (value as string).trim() as Settings[K];
+  }
+
+  if (key === "aiAutocompleteCustomModelId") {
+    return (value as string).trim() as Settings[K];
   }
 
   return value;

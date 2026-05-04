@@ -56,8 +56,9 @@ export default defineConfig({
         }
       : undefined,
     watch: {
-      // 3. tell vite to ignore watching `src-tauri` and `interceptor`
-      ignored: ["**/src-tauri/**", "**/interceptor/**"],
+      // 3. tell vite to ignore app-owned files that should not reload the
+      // editor while they are being edited from inside the editor itself.
+      ignored: ["**/src-tauri/**", "**/interceptor/**", "**/index.html"],
     },
   },
 });

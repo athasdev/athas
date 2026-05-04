@@ -153,7 +153,14 @@ export function Editor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
+  const aiAutocompleteProvider = useSettingsStore((state) => state.settings.aiAutocompleteProvider);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const aiAutocompleteCustomBaseUrl = useSettingsStore(
+    (state) => state.settings.aiAutocompleteCustomBaseUrl,
+  );
+  const aiAutocompleteCustomModelId = useSettingsStore(
+    (state) => state.settings.aiAutocompleteCustomModelId,
+  );
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const gitGutterEnabled = useSettingsStore((state) => state.settings.enableGitGutter);
   const vimMode = useVimStore.use.mode();
@@ -723,7 +730,10 @@ export function Editor({
 
   useAutocomplete({
     enabled: aiCompletionEnabled && !isPreviewMode && !readOnly,
-    model: aiAutocompleteModelId,
+    provider: aiAutocompleteProvider,
+    model:
+      aiAutocompleteProvider === "custom" ? aiAutocompleteCustomModelId : aiAutocompleteModelId,
+    customBaseUrl: aiAutocompleteCustomBaseUrl,
     filePath: filePath || null,
     languageId: filePath ? getLanguageId(filePath) : null,
     content,
@@ -1083,12 +1093,26 @@ export function Editor({
 
     const lineText = lines[visualCursorLine] || "";
     const cursorColumn = Math.min(cursorPosition.column, lineText.length);
+    const textAfterCursorOnLine = lineText.slice(cursorColumn);
+    if (textAfterCursorOnLine.trim().length > 0) return null;
+
     const cursorX = getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize);
+    const previewLines: Array<{ text: string; index: number }> = [];
+
+    for (const [index, text] of normalized.split("\n").entries()) {
+      if (index > 0 && lines[visualCursorLine + index]?.trim()) {
+        break;
+      }
+      previewLines.push({ text, index });
+    }
+
+    if (previewLines.every((line) => line.text.length === 0)) return null;
 
     return {
-      text: normalized,
+      lines: previewLines,
       top: visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
-      left: cursorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      firstLineLeft: cursorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      continuationLeft: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
     };
   }, [
     autocompleteCompletion,
@@ -1330,7 +1354,7 @@ export function Editor({
               style={{
                 position: "absolute",
                 top: `${inlineAutocompletePreview.top}px`,
-                left: `${inlineAutocompletePreview.left}px`,
+                left: 0,
                 fontSize: `${fontSize}px`,
                 fontFamily,
                 lineHeight: `${lineHeight}px`,
@@ -1339,7 +1363,24 @@ export function Editor({
                 color: "var(--text-lighter, #94a3b8)",
               }}
             >
-              {inlineAutocompletePreview.text}
+              {inlineAutocompletePreview.lines.map((line) => {
+                if (line.text.length === 0) return null;
+                return (
+                  <div
+                    key={line.index}
+                    style={{
+                      position: "absolute",
+                      top: `${line.index * lineHeight}px`,
+                      left:
+                        line.index === 0
+                          ? `${inlineAutocompletePreview.firstLineLeft}px`
+                          : `${inlineAutocompletePreview.continuationLeft}px`,
+                    }}
+                  >
+                    {line.text}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
