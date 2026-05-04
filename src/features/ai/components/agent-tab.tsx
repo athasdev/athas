@@ -1,14 +1,36 @@
+import { useEffect } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { AgentContent, PaneContent } from "@/features/panes/types/pane-content";
+import { useAIChatStore } from "@/features/ai/store/store";
 import AIChat from "./chat/ai-chat";
 
-export function AgentTab() {
+interface AgentTabProps {
+  buffer: AgentContent;
+  isActive?: boolean;
+}
+
+export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const chatTitle = useAIChatStore(
+    (state) => state.chats.find((chat) => chat.id === buffer.sessionId)?.title,
+  );
+  const activeBuffer = buffers.find((b) => b.id === buffer.id) ?? (buffer as PaneContent);
+
+  useEffect(() => {
+    if (!chatTitle || chatTitle === buffer.name) return;
+    updateBuffer({ ...buffer, name: chatTitle });
+  }, [buffer, chatTitle, updateBuffer]);
 
   return (
     <div className="h-full w-full">
-      <AIChat mode="chat" activeBuffer={activeBuffer} buffers={buffers} />
+      <AIChat
+        mode="chat"
+        chatId={buffer.sessionId}
+        activeBuffer={activeBuffer}
+        buffers={buffers}
+        isActiveSurface={isActive}
+      />
     </div>
   );
 }

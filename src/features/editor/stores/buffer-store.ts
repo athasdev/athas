@@ -371,7 +371,7 @@ export const useBufferStore = createSelectors(
                       isActive: b.id === existing.id,
                     }));
                   });
-                  syncBufferToPane(existing.id);
+                  syncAndFocusBufferInPane(existing.id);
                   return existing.id;
                 }
               }

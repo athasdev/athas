@@ -45,7 +45,23 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   // Adjust position
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(Math.max(position.width, 180), window.innerWidth - 16);
+    const activeElement = document.activeElement as HTMLElement | null;
+    const activeRect =
+      activeElement?.isContentEditable || activeElement?.tagName === "INPUT"
+        ? activeElement.getBoundingClientRect()
+        : null;
+    const basePosition =
+      position.bottom > 0
+        ? position
+        : activeRect && activeRect.width > 0 && activeRect.bottom > 0
+          ? {
+              top: Math.max(activeRect.top, activeRect.bottom - 24),
+              bottom: activeRect.bottom,
+              left: activeRect.left + 12,
+              width: Math.min(320, Math.max(180, activeRect.width - 24)),
+            }
+          : position;
+    const dropdownWidth = Math.min(Math.max(basePosition.width, 180), window.innerWidth - 16);
     const dropdownHeight = Math.min(
       filteredCommands.length * 44 + 12,
       SLASH_COMMAND_DROPDOWN_MAX_HEIGHT,
@@ -53,7 +69,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
     );
     const padding = 8;
 
-    let { left } = position;
+    let { left } = basePosition;
 
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
@@ -62,8 +78,8 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       left = padding;
     }
 
-    const attachedAboveTop = position.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
-    const attachedBelowTop = position.bottom + ATTACHED_DROPDOWN_GAP;
+    const attachedAboveTop = basePosition.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
+    const attachedBelowTop = basePosition.bottom + ATTACHED_DROPDOWN_GAP;
     const top =
       attachedAboveTop >= padding
         ? attachedAboveTop

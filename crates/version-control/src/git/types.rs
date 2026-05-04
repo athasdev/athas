@@ -31,6 +31,7 @@ pub struct GitCommit {
    pub message: String,
    pub description: Option<String>,
    pub author: String,
+   pub email: String,
    pub date: String,
 }
 

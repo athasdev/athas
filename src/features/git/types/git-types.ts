@@ -16,6 +16,7 @@ export interface GitCommit {
   message: string;
   description?: string;
   author: string;
+  email?: string;
   date: string;
 }
 

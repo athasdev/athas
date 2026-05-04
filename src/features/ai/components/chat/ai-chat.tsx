@@ -184,6 +184,8 @@ function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false
 
 const AIChat = memo(function AIChat({
   className,
+  chatId,
+  isActiveSurface = true,
   activeBuffer,
   buffers = [],
   selectedFiles = [],
@@ -216,12 +218,21 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const effectiveChatId =
+    chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
 
   useEffect(() => {
-    if (activeBuffer) {
+    if (isActiveSurface && activeBuffer) {
       chatActions.autoSelectBuffer(activeBuffer.id);
     }
-  }, [activeBuffer, chatActions.autoSelectBuffer]);
+  }, [activeBuffer, chatActions.autoSelectBuffer, isActiveSurface]);
+
+  useEffect(() => {
+    if (!isActiveSurface || !effectiveChatId || effectiveChatId === chatState.currentChatId) return;
+    if (!chatState.chats.some((chat) => chat.id === effectiveChatId)) return;
+
+    chatActions.switchToChat(effectiveChatId);
+  }, [chatActions, chatState.chats, chatState.currentChatId, effectiveChatId, isActiveSurface]);
 
   useEffect(() => {
     chatActions.checkApiKey(settings.aiProviderId);
@@ -231,7 +242,7 @@ const AIChat = memo(function AIChat({
   // Clear ACP events when switching chats
   useEffect(() => {
     setAcpEvents([]);
-  }, [chatState.currentChatId]);
+  }, [effectiveChatId]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -1035,7 +1046,7 @@ details: ${errorDetails || mainError}
   useEffect(() => {
     const pendingLaunch = chatState.pendingAgentLaunchRequest;
     if (!pendingLaunch) return;
-    if (pendingLaunch.chatId !== chatState.currentChatId) return;
+    if (pendingLaunch.chatId !== effectiveChatId) return;
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
     if (chatState.isTyping || chatState.streamingMessageId) return;
@@ -1046,7 +1057,7 @@ details: ${errorDetails || mainError}
     void sendMessage(pendingLaunch.prompt);
   }, [
     chatActions,
-    chatState.currentChatId,
+    effectiveChatId,
     chatState.isTyping,
     chatState.pendingAgentLaunchRequest,
     chatState.streamingMessageId,
@@ -1086,7 +1097,7 @@ details: ${errorDetails || mainError}
     <div
       className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
-      <ChatHeader onDeleteChat={handleDeleteChat} />
+      <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -1105,7 +1116,7 @@ details: ${errorDetails || mainError}
           >
             <ChatMessages
               ref={messagesEndRef}
-              chatId={chatState.currentChatId}
+              chatId={effectiveChatId}
               onApplyCode={onApplyCode}
               acpEvents={acpEvents}
             />
@@ -1159,6 +1170,7 @@ details: ${errorDetails || mainError}
           <AIChatInputBar
             buffers={buffers}
             allProjectFiles={allProjectFiles}
+            isActiveSurface={isActiveSurface}
             onSendMessage={handleSendMessage}
             onStopStreaming={stopStreaming}
           />

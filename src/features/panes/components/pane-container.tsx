@@ -864,7 +864,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <WebViewer url={buffer.url} bufferId={buffer.id} isActive={isActivePane} />;
 
         case "agent":
-          return <AgentTab />;
+          return <AgentTab buffer={buffer} isActive={isActivePane} />;
 
         case "diff":
           return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;

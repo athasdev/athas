@@ -99,6 +99,8 @@ export const defaultSettings: Settings = {
     diagnostics: true,
     debugger: false,
     aiChat: true,
+    multiAgents: false,
+    sidebarBuilder: false,
     breadcrumbs: true,
     persistentCommands: true,
   },

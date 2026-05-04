@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useLayoutEffect } from "react";
 import { useExtensionInstallPrompt } from "@/extensions/hooks/use-extension-install-prompt";
 import {
   cleanupFileClipboardListener,
@@ -39,6 +40,12 @@ export function useAppBootstrap() {
   useKeymaps();
   useContextMenuPrevention();
   useLspInitialization();
+
+  useLayoutEffect(() => {
+    void invoke("close_all_embedded_webviews").catch((error) => {
+      console.warn("Failed to clean up stale embedded webviews:", error);
+    });
+  }, []);
 
   useEffect(() => {
     void useAuthStore.getState().initialize();

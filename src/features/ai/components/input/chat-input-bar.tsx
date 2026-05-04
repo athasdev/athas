@@ -66,6 +66,7 @@ function getMicrophoneAccessErrorMessage(error?: string): string {
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
+  isActiveSurface = true,
   onSendMessage,
   onStopStreaming,
 }: AIChatInputBarProps) {
@@ -86,6 +87,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [activeInlineControl, setActiveInlineControl] = useState<string | null>(null);
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
+  const [isComposerFocused, setIsComposerFocused] = useState(false);
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
   // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
@@ -365,6 +367,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
     }
 
     const inputRect = inputRef.current.getBoundingClientRect();
+    if (inputRect.width <= 0 || inputRect.height <= 0 || inputRect.bottom <= 0) {
+      return { top: 0, bottom: 0, left: 0, width: 0 };
+    }
+
     const fallbackPosition: InlineDropdownPosition = {
       top: Math.max(inputRect.top, inputRect.bottom - 24),
       bottom: inputRect.bottom,
@@ -1285,6 +1291,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
             onInput={handleInputChange}
             onKeyDown={handleKeyDown}
             onMouseDown={handleEditableMouseDown}
+            onFocus={() => setIsComposerFocused(true)}
+            onBlur={() => setIsComposerFocused(false)}
             onPaste={handlePaste}
             data-placeholder={
               isInputEnabled
@@ -1555,7 +1563,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </div>
       </div>
 
-      {mentionState.active && (
+      {(isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
           files={mentionableFiles}
           onSelect={handleFileMentionSelect}
@@ -1565,7 +1573,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
       )}
 
-      {slashCommandState.active && <SlashCommandDropdown onSelect={handleSlashCommandSelect} />}
+      {(isActiveSurface || isComposerFocused) && slashCommandState.active && (
+        <SlashCommandDropdown onSelect={handleSlashCommandSelect} />
+      )}
 
       <SkillsCommand
         isOpen={isSkillsOpen}

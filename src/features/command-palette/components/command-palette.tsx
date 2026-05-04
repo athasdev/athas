@@ -44,6 +44,7 @@ import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
 import { createSettingsActions } from "../constants/settings-actions";
+import { createSidebarBuilderActions } from "../constants/sidebar-builder-actions";
 import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../models/action.types";
@@ -197,6 +198,13 @@ const CommandPalette = () => {
       openSettingsDialog,
       onClose,
     }),
+    ...(settings.coreFeatures.sidebarBuilder
+      ? createSidebarBuilderActions({
+          setIsSidebarVisible,
+          setActiveView,
+          onClose,
+        })
+      : []),
     ...createFileActions({
       activeBufferId,
       buffers,
