@@ -2,7 +2,10 @@ import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-c
 import { primitiveChoice } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
 
-export type ProjectTransitionAction = "switching projects" | "closing this project";
+export type ProjectTransitionAction =
+  | "switching projects"
+  | "closing this project"
+  | "restarting to update";
 
 type UnsavedProjectTransitionChoice = "cancel" | "discard" | "save";
 

@@ -1,6 +1,8 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { prepareProjectTransitionWithUnsavedBuffers } from "@/features/file-system/controllers/workspace-project-transition";
 import { recordUpdateCheckTelemetry } from "@/features/telemetry/services/telemetry";
 import { useWhatsNewStore } from "../stores/whats-new-store";
 
@@ -118,6 +120,15 @@ export const useUpdater = (checkOnMount = true) => {
           body: newUpdate.body,
           date: newUpdate.date,
         };
+      }
+
+      const canRestart = await prepareProjectTransitionWithUnsavedBuffers(
+        "restarting to update",
+        useBufferStore.getState().buffers,
+      );
+
+      if (!canRestart) {
+        return;
       }
 
       setState((prev) => ({

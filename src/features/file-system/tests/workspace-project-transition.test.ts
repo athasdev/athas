@@ -69,6 +69,16 @@ describe("workspace project transition guards", () => {
     );
   });
 
+  it("builds a save prompt for update restarts", () => {
+    const buffers: PaneContent[] = [
+      createEditorBuffer({ id: "dirty", name: "app.ts", isDirty: true }),
+    ];
+
+    expect(getUnsavedProjectTransitionMessage("restarting to update", buffers)).toBe(
+      'Save changes to "app.ts" before restarting to update?',
+    );
+  });
+
   it("does not block when there are no dirty editor buffers", () => {
     const buffers: PaneContent[] = [
       createEditorBuffer({ id: "clean", isDirty: false }),
