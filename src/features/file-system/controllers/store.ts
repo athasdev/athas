@@ -2102,6 +2102,19 @@ export const useFileSystemStore = createSelectors(
                     if (activeSessionBuffer.isPinned) {
                       bufferActions.handleTabPin(restoredBufferId);
                     }
+                  } else if (activeSessionBuffer.type === "terminal") {
+                    const restoredBufferId = bufferActions.openContent({
+                      type: "terminal",
+                      name: activeSessionBuffer.name,
+                      command: activeSessionBuffer.initialCommand,
+                      workingDirectory: activeSessionBuffer.workingDirectory,
+                      remoteConnectionId: activeSessionBuffer.remoteConnectionId,
+                      sessionId: activeSessionBuffer.sessionId,
+                      path: activeSessionBuffer.path,
+                    });
+                    if (activeSessionBuffer.isPinned) {
+                      bufferActions.handleTabPin(restoredBufferId);
+                    }
                   } else {
                     const restoreActiveStartedAt = performance.now();
                     logWorkspaceOpenStep(
