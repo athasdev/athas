@@ -27,6 +27,7 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-s
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
+import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
@@ -143,9 +144,32 @@ export function MainLayout() {
   useEffect(() => {
     if (hasRestoredWorkspace.current) return;
 
+    const resolveRestorableActiveTab = async () => {
+      while (true) {
+        const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+        if (!activeTab) return null;
+
+        if (activeTab.path.startsWith("remote://")) {
+          return activeTab;
+        }
+
+        try {
+          const info = await getSymlinkInfo(activeTab.path);
+          if (info.is_dir) {
+            return activeTab;
+          }
+        } catch (error) {
+          console.warn("Persisted workspace no longer exists:", activeTab.path, error);
+        }
+
+        useWorkspaceTabsStore.getState().removeProjectTab(activeTab.id);
+        toast.warning(`Removed missing project "${activeTab.name}"`);
+      }
+    };
+
     const restoreWorkspace = async () => {
       // Get the active project tab from persisted state
-      const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+      const activeTab = await resolveRestorableActiveTab();
       frontendTrace("info", "workspace-open", "startupRestore:checked", {
         hasActiveTab: !!activeTab,
         tabPath: activeTab?.path ?? null,
