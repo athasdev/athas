@@ -132,6 +132,12 @@ const MAX_PROJECT_SCAN_DEPTH = 8;
 const shouldSkipLargeWorkspaceRestore = (gitFilesCount: number) =>
   gitFilesCount > LARGE_WORKSPACE_GIT_STATUS_THRESHOLD;
 
+const notifyLargeWorkspaceRestoreSkipped = (gitFilesCount: number) => {
+  toast.warning(
+    `Skipped restoring tabs for this large workspace (${gitFilesCount.toLocaleString()} git files).`,
+  );
+};
+
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
 
@@ -251,6 +257,7 @@ const initializeLocalWorkspaceInBackground = (
 
       useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
       if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
+        notifyLargeWorkspaceRestoreSkipped(gitStatus?.files.length ?? 0);
         console.warn("[workspace-open] skipping restoreSession for large workspace", {
           path,
           gitFiles: gitStatus?.files.length ?? 0,
@@ -2062,6 +2069,7 @@ export const useFileSystemStore = createSelectors(
                 useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, tab.path);
 
                 if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
+                  notifyLargeWorkspaceRestoreSkipped(gitStatus?.files.length ?? 0);
                   frontendTrace(
                     "warn",
                     "workspace-open",
