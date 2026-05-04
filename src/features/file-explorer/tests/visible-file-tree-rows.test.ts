@@ -4,7 +4,7 @@ import {
   getGuideAncestorRows,
   getStickyAncestorRow,
   getStickyAncestorRows,
-} from "./visible-file-tree-rows";
+} from "../lib/visible-file-tree-rows";
 
 const tree = [
   {

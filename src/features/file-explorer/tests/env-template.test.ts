@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildEnvTemplateContent, isEnvFileName, normalizeEnvTargetFileName } from "./env-template";
+import {
+  buildEnvTemplateContent,
+  isEnvFileName,
+  normalizeEnvTargetFileName,
+} from "../lib/env-template";
 
 describe("env-template helpers", () => {
   it("detects env file names", () => {

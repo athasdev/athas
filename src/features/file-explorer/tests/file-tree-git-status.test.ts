@@ -5,7 +5,7 @@ import {
   createFileTreeGitStatusLookup,
   getFileTreeEntryGitStatusDecoration,
   getFileTreeGitStatusDecoration,
-} from "./file-tree-git-status";
+} from "../lib/file-tree-git-status";
 
 const gitFile = (path: string, status: GitFile["status"], staged = false): GitFile => ({
   path,
