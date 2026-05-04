@@ -8,7 +8,7 @@ import {
   Sparkle,
   X,
 } from "@phosphor-icons/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -82,6 +82,7 @@ function placeAiChatBeforeAccount<T extends string>(items: Array<HeaderItem<T>>)
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const {
     isGitViewActive,
@@ -218,6 +219,14 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     });
   };
 
+  const handleCloseAllProjects = useCallback(async () => {
+    const tabsToClose = [...useWorkspaceTabsStore.getState().projectTabs];
+
+    for (const tab of tabsToClose) {
+      await closeProject(tab.id);
+    }
+  }, [closeProject]);
+
   const titleBarContextMenuItems: ContextMenuItem[] = [
     {
       id: "new-window",
@@ -253,7 +262,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             id: "close-all-projects",
             label: "Close All Projects",
             onClick: () => {
-              useWorkspaceTabsStore.getState().closeAllProjectTabs();
+              void handleCloseAllProjects();
             },
           },
         ]

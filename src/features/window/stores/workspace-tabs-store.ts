@@ -22,7 +22,6 @@ interface WorkspaceTabsActions {
   removeProjectTab: (projectId: string) => void;
   setActiveProjectTab: (projectId: string) => void;
   reorderProjectTabs: (fromIndex: number, toIndex: number) => void;
-  closeAllProjectTabs: () => void;
   getActiveProjectTab: () => ProjectTab | undefined;
   hasProjectTab: (path: string) => boolean;
   setProjectIcon: (projectId: string, iconPath: string | undefined) => void;
@@ -99,12 +98,6 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
         set((state) => {
           const [movedTab] = state.projectTabs.splice(fromIndex, 1);
           state.projectTabs.splice(toIndex, 0, movedTab);
-        });
-      },
-
-      closeAllProjectTabs: () => {
-        set((state) => {
-          state.projectTabs = [];
         });
       },
 
