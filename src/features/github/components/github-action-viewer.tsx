@@ -12,7 +12,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
-import type { WorkflowRunDetails } from "../types/github";
+import type { WorkflowRunDetails, WorkflowRunJob } from "../types/github";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/pr-viewer-utils";
 
@@ -21,6 +21,9 @@ interface GitHubActionViewerProps {
   repoPath?: string;
   bufferId: string;
 }
+
+const areJobLogsDownloadable = (job: WorkflowRunJob | null) =>
+  Boolean(job?.completedAt || job?.conclusion || job?.status?.toLowerCase() === "completed");
 
 const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionViewerProps) => {
   const buffers = useBufferStore.use.buffers();
@@ -41,6 +44,10 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   const selectedJob = useMemo(
     () => details?.jobs.find((job) => job.id === selectedJobId) ?? null,
     [details?.jobs, selectedJobId],
+  );
+  const selectedJobLogsDownloadable = useMemo(
+    () => areJobLogsDownloadable(selectedJob),
+    [selectedJob],
   );
 
   const fetchWorkflowRun = useCallback(
@@ -178,6 +185,11 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
         return;
       }
 
+      const job = details?.jobs.find((item) => item.id === jobId) ?? null;
+      if (!areJobLogsDownloadable(job)) {
+        return;
+      }
+
       if (jobLogs[jobId] && !force) {
         return;
       }
@@ -204,13 +216,13 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
         setLoadingJobLogId((current) => (current === jobId ? null : current));
       }
     },
-    [jobLogs, repoPath],
+    [details?.jobs, jobLogs, repoPath],
   );
 
   useEffect(() => {
-    if (selectedJobId === null) return;
+    if (selectedJobId === null || !selectedJobLogsDownloadable) return;
     void loadJobLogs(selectedJobId);
-  }, [loadJobLogs, selectedJobId]);
+  }, [loadJobLogs, selectedJobId, selectedJobLogsDownloadable]);
 
   const handleSelectJob = useCallback((jobId: number | null) => {
     setSelectedJobId(jobId);
@@ -434,6 +446,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                         variant="ghost"
                         size="icon-sm"
                         aria-label="Refresh job logs"
+                        disabled={!selectedJobLogsDownloadable}
                       >
                         <RefreshCw
                           className={loadingJobLogId === selectedJob.id ? "animate-spin" : ""}
@@ -446,15 +459,20 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                       variant="ghost"
                       size="icon-sm"
                       aria-label="Copy job logs"
+                      disabled={!selectedJob.id || !jobLogs[selectedJob.id]}
                     >
                       <Copy />
                     </Button>
                   </div>
                 </div>
                 <div className="max-h-[55vh] overflow-auto p-3">
-                  {selectedJob.id &&
-                  loadingJobLogId === selectedJob.id &&
-                  !jobLogs[selectedJob.id] ? (
+                  {!selectedJobLogsDownloadable ? (
+                    <p className="ui-text-sm text-text-lighter">
+                      Logs are available after this job finishes.
+                    </p>
+                  ) : selectedJob.id &&
+                    loadingJobLogId === selectedJob.id &&
+                    !jobLogs[selectedJob.id] ? (
                     <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
                       <RefreshCw className="animate-spin" />
                       Loading logs...
