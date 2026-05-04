@@ -25,7 +25,6 @@ import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wr
 import { WindowCloseGuard } from "@/features/window/components/window-close-guard";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -68,32 +67,30 @@ export function MainLayout() {
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
-    const droppedPaths = parseDroppedPaths(paths);
-    if (droppedPaths.length === 0) return;
+    let openedPathCount = 0;
 
-    try {
-      const info = await getSymlinkInfo(droppedPaths[0]);
-      if (info?.is_dir) {
-        if (handleOpenFolderByPath) {
-          await handleOpenFolderByPath(droppedPaths[0]);
-        }
-        return;
-      }
-
-      if (handleFileOpen) {
-        for (const p of droppedPaths) {
-          try {
-            const pInfo = await getSymlinkInfo(p);
-            if (!pInfo?.is_dir) {
-              await handleFileOpen(p, false);
-            }
-          } catch (e) {
-            console.error("Failed to open dropped path:", p, e);
+    for (const path of paths) {
+      try {
+        const info = await getSymlinkInfo(path);
+        if (info?.is_dir) {
+          if (handleOpenFolderByPath) {
+            await handleOpenFolderByPath(path);
+            openedPathCount++;
           }
+          return;
         }
+
+        if (handleFileOpen) {
+          await handleFileOpen(path, false);
+          openedPathCount++;
+        }
+      } catch (error) {
+        console.error("Failed to open dropped path:", path, error);
       }
-    } catch (error) {
-      console.error("Error handling drag-and-drop:", error);
+    }
+
+    if (openedPathCount === 0) {
+      toast.warning("No supported dropped files or folders could be opened.");
     }
   });
 
