@@ -50,12 +50,7 @@ function handleDeepLink(url: string) {
   }
 }
 
-const SUPPORTED_DEEP_LINK_PROTOCOLS = new Set([
-  "athas:",
-  "athas-alpha:",
-  "athas-dev:",
-  "athas-preview:",
-]);
+const SUPPORTED_DEEP_LINK_PROTOCOLS = new Set(["athas:", "athas-dev:", "athas-preview:"]);
 
 function isSupportedDeepLinkProtocol(protocol: string) {
   return SUPPORTED_DEEP_LINK_PROTOCOLS.has(protocol);
