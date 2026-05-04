@@ -2246,6 +2246,38 @@ export const useFileSystemStore = createSelectors(
       },
 
       closeProject: async (projectId: string) => {
+        const switchToNextAvailableProject = async (initialProjectId: string) => {
+          const attemptedProjectIds = new Set<string>();
+          let nextProjectId: string | undefined = initialProjectId;
+
+          while (nextProjectId && !attemptedProjectIds.has(nextProjectId)) {
+            attemptedProjectIds.add(nextProjectId);
+
+            if (await get().switchToProject(nextProjectId)) {
+              return true;
+            }
+
+            nextProjectId = useWorkspaceTabsStore
+              .getState()
+              .projectTabs.find((projectTab) => !attemptedProjectIds.has(projectTab.id))?.id;
+
+            if (nextProjectId) {
+              useWorkspaceTabsStore.getState().setActiveProjectTab(nextProjectId);
+            }
+          }
+
+          const projectIdsToRemove = useWorkspaceTabsStore
+            .getState()
+            .projectTabs.map((projectTab) => projectTab.id);
+
+          for (const projectTabId of projectIdsToRemove) {
+            useWorkspaceTabsStore.getState().removeProjectTab(projectTabId);
+          }
+
+          await get().resetWorkspace();
+          return false;
+        };
+
         const tabs = useWorkspaceTabsStore.getState().projectTabs;
 
         const tab = tabs.find((t: { id: string }) => t.id === projectId);
@@ -2325,7 +2357,7 @@ export const useFileSystemStore = createSelectors(
         if (wasActive) {
           const newActiveTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
           if (newActiveTab) {
-            await get().switchToProject(newActiveTab.id);
+            return await switchToNextAvailableProject(newActiveTab.id);
           } else {
             // If no active tab (we closed the last one), clear the workspace
             await get().resetWorkspace();
