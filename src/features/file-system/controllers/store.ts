@@ -75,7 +75,7 @@ import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platfor
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 import { prepareProjectTransitionWithUnsavedBuffers } from "./workspace-project-transition";
-import { buildWorkspaceRestorePlan } from "./workspace-session";
+import { buildWorkspaceRestoreBatch, buildWorkspaceRestorePlan } from "./workspace-session";
 
 const logWorkspaceOpenStep = (
   phase: "start" | "end" | "error",
@@ -454,15 +454,86 @@ export const useFileSystemStore = createSelectors(
               !!buffer && buffer.path !== skipBufferPath,
           );
 
-          const buffersToRestore = candidateBuffersToRestore.slice(
-            0,
+          const { buffersToRestore, deferredBuffers } = buildWorkspaceRestoreBatch(
+            candidateBuffersToRestore,
             MAX_SESSION_BUFFERS_TO_RESTORE,
           );
 
-          if (candidateBuffersToRestore.length > MAX_SESSION_BUFFERS_TO_RESTORE) {
-            toast.warning(
-              `Restored ${MAX_SESSION_BUFFERS_TO_RESTORE} of ${candidateBuffersToRestore.length} saved tabs for this workspace.`,
-            );
+          const restoreBuffers = async (buffers: typeof buffersToRestore) => {
+            for (const buffer of buffers) {
+              if (buffer.type === "terminal") {
+                const restoredBufferId = bufferActions.openContent({
+                  type: "terminal",
+                  name: buffer.name,
+                  command: buffer.initialCommand,
+                  workingDirectory: buffer.workingDirectory,
+                  remoteConnectionId: buffer.remoteConnectionId,
+                  sessionId: buffer.sessionId,
+                  path: buffer.path,
+                });
+
+                if (buffer.isPinned) {
+                  bufferActions.handleTabPin(restoredBufferId);
+                }
+
+                continue;
+              }
+
+              if (buffer.type === "webViewer") {
+                const restoredBufferId = bufferActions.openContent({
+                  type: "webViewer",
+                  url: buffer.url ?? "about:blank",
+                  zoomLevel: buffer.zoomLevel,
+                });
+
+                if (buffer.isPinned) {
+                  bufferActions.handleTabPin(restoredBufferId);
+                }
+
+                continue;
+              }
+
+              frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
+                projectPath,
+                bufferPath: buffer.path,
+              });
+              // Use handleFileSelect to open the file (it handles reading content)
+              await get().handleFileSelect(buffer.path, false);
+              frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
+                projectPath,
+                bufferPath: buffer.path,
+              });
+
+              // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
+              // We can pin it after opening if needed.
+              if (buffer.isPinned) {
+                const newBuffers = useBufferStore.getState().buffers;
+                const openedBuffer = newBuffers.find((b) => b.path === buffer.path);
+                if (openedBuffer) {
+                  bufferActions.handleTabPin(openedBuffer.id);
+                }
+              }
+            }
+          };
+
+          if (deferredBuffers.length > 0) {
+            toast.show({
+              type: "warning",
+              message: `Restored ${buffersToRestore.length} of ${candidateBuffersToRestore.length} saved tabs for this workspace.`,
+              action: {
+                label: "Restore Rest",
+                onClick: () => {
+                  void (async () => {
+                    if (get().rootFolderPath !== projectPath) {
+                      toast.warning("Switch back to this workspace before restoring its tabs.");
+                      return;
+                    }
+
+                    await restoreBuffers(deferredBuffers);
+                  })();
+                },
+              },
+            });
             console.warn("[workspace-open] restoreSession:truncated", {
               projectPath,
               totalBuffers: candidateBuffersToRestore.length,
@@ -475,61 +546,7 @@ export const useFileSystemStore = createSelectors(
             });
           }
 
-          // Restore buffers
-          for (const buffer of buffersToRestore) {
-            if (buffer.type === "terminal") {
-              const restoredBufferId = bufferActions.openContent({
-                type: "terminal",
-                name: buffer.name,
-                command: buffer.initialCommand,
-                workingDirectory: buffer.workingDirectory,
-                remoteConnectionId: buffer.remoteConnectionId,
-                sessionId: buffer.sessionId,
-                path: buffer.path,
-              });
-
-              if (buffer.isPinned) {
-                bufferActions.handleTabPin(restoredBufferId);
-              }
-
-              continue;
-            }
-
-            if (buffer.type === "webViewer") {
-              const restoredBufferId = bufferActions.openContent({
-                type: "webViewer",
-                url: buffer.url ?? "about:blank",
-                zoomLevel: buffer.zoomLevel,
-              });
-
-              if (buffer.isPinned) {
-                bufferActions.handleTabPin(restoredBufferId);
-              }
-
-              continue;
-            }
-
-            frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
-              projectPath,
-              bufferPath: buffer.path,
-            });
-            // Use handleFileSelect to open the file (it handles reading content)
-            await get().handleFileSelect(buffer.path, false);
-            frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
-              projectPath,
-              bufferPath: buffer.path,
-            });
-
-            // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
-            // We can pin it after opening if needed.
-            if (buffer.isPinned) {
-              const newBuffers = useBufferStore.getState().buffers;
-              const openedBuffer = newBuffers.find((b) => b.path === buffer.path);
-              if (openedBuffer) {
-                bufferActions.handleTabPin(openedBuffer.id);
-              }
-            }
-          }
+          await restoreBuffers(buffersToRestore);
 
           // Restore active buffer
           if (restorePlan.activeBufferPath) {

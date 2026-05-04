@@ -24,6 +24,11 @@ export interface WorkspaceRestorePlan {
   remainingBuffers: WorkspaceSessionBuffer[];
 }
 
+export interface WorkspaceRestoreBatch {
+  buffersToRestore: WorkspaceSessionBuffer[];
+  deferredBuffers: WorkspaceSessionBuffer[];
+}
+
 type WorkspaceRestoreSession = Pick<WorkspaceSessionSnapshot, "activeBufferPath"> & {
   buffers: BufferSession[];
 };
@@ -48,5 +53,22 @@ export const buildWorkspaceRestorePlan = (
     activeBufferPath: session.activeBufferPath,
     initialBuffer,
     remainingBuffers: session.buffers.filter((buffer) => buffer.path !== initialBuffer.path),
+  };
+};
+
+export const buildWorkspaceRestoreBatch = (
+  candidateBuffers: WorkspaceSessionBuffer[],
+  restoreLimit: number,
+): WorkspaceRestoreBatch => {
+  if (restoreLimit <= 0) {
+    return {
+      buffersToRestore: [],
+      deferredBuffers: candidateBuffers,
+    };
+  }
+
+  return {
+    buffersToRestore: candidateBuffers.slice(0, restoreLimit),
+    deferredBuffers: candidateBuffers.slice(restoreLimit),
   };
 };

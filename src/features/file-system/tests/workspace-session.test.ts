@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildWorkspaceRestorePlan } from "../controllers/workspace-session";
+import {
+  buildWorkspaceRestoreBatch,
+  buildWorkspaceRestorePlan,
+} from "../controllers/workspace-session";
 
 describe("buildWorkspaceRestorePlan", () => {
   it("prioritizes the active buffer and defers the rest in order", () => {
@@ -67,5 +70,27 @@ describe("buildWorkspaceRestorePlan", () => {
       initialCommand: "claude",
     });
     expect(plan.remainingBuffers.map((buffer) => buffer.path)).toEqual(["/next/src/app.ts"]);
+  });
+});
+
+describe("buildWorkspaceRestoreBatch", () => {
+  const buffers = [
+    { type: "editor" as const, path: "/next/one.ts", name: "one.ts", isPinned: false },
+    { type: "editor" as const, path: "/next/two.ts", name: "two.ts", isPinned: false },
+    { type: "editor" as const, path: "/next/three.ts", name: "three.ts", isPinned: false },
+  ];
+
+  it("splits immediate and deferred restore buffers by limit", () => {
+    expect(buildWorkspaceRestoreBatch(buffers, 2)).toEqual({
+      buffersToRestore: buffers.slice(0, 2),
+      deferredBuffers: buffers.slice(2),
+    });
+  });
+
+  it("defers all buffers when restore limit is disabled", () => {
+    expect(buildWorkspaceRestoreBatch(buffers, 0)).toEqual({
+      buffersToRestore: [],
+      deferredBuffers: buffers,
+    });
   });
 });
