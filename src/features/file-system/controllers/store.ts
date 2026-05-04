@@ -460,6 +460,9 @@ export const useFileSystemStore = createSelectors(
           );
 
           if (candidateBuffersToRestore.length > MAX_SESSION_BUFFERS_TO_RESTORE) {
+            toast.warning(
+              `Restored ${MAX_SESSION_BUFFERS_TO_RESTORE} of ${candidateBuffersToRestore.length} saved tabs for this workspace.`,
+            );
             console.warn("[workspace-open] restoreSession:truncated", {
               projectPath,
               totalBuffers: candidateBuffersToRestore.length,
