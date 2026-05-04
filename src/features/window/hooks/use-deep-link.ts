@@ -50,8 +50,15 @@ function handleDeepLink(url: string) {
   }
 }
 
+const SUPPORTED_DEEP_LINK_PROTOCOLS = new Set([
+  "athas:",
+  "athas-alpha:",
+  "athas-dev:",
+  "athas-preview:",
+]);
+
 function isSupportedDeepLinkProtocol(protocol: string) {
-  return protocol === "athas:" || protocol === "athas-alpha:" || protocol === "athas-dev:";
+  return SUPPORTED_DEEP_LINK_PROTOCOLS.has(protocol);
 }
 
 async function installExtensionFromDeepLink(extensionId: string) {
@@ -79,3 +86,5 @@ async function installExtensionFromDeepLink(extensionId: string) {
     toast.error(`Failed to install extension: ${message}`);
   }
 }
+
+export const __test__ = { isSupportedDeepLinkProtocol };
