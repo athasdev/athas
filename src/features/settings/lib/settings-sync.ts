@@ -54,7 +54,10 @@ type SyncableSettingsKey =
   | "aiChatWidth"
   | "isAIChatVisible"
   | "aiCompletion"
+  | "aiAutocompleteProvider"
   | "aiAutocompleteModelId"
+  | "aiAutocompleteCustomBaseUrl"
+  | "aiAutocompleteCustomModelId"
   | "aiDefaultSessionMode"
   | "aiSkills"
   | "ollamaBaseUrl"
@@ -136,7 +139,10 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "aiChatWidth",
   "isAIChatVisible",
   "aiCompletion",
+  "aiAutocompleteProvider",
   "aiAutocompleteModelId",
+  "aiAutocompleteCustomBaseUrl",
+  "aiAutocompleteCustomModelId",
   "aiDefaultSessionMode",
   "aiSkills",
   "ollamaBaseUrl",
