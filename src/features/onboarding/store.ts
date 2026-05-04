@@ -12,6 +12,7 @@ interface OnboardingStoreState {
   isOpen: boolean;
   context: OnboardingContext | null;
   initialize: () => Promise<void>;
+  consumeOpenRequest: () => void;
   dismiss: () => Promise<void>;
   complete: () => Promise<void>;
   openPreview: () => Promise<void>;
@@ -33,6 +34,12 @@ export const useOnboardingStore = create<OnboardingStoreState>()((set, get) => (
       initialized: true,
       isOpen: context !== null,
       context,
+    });
+  },
+
+  consumeOpenRequest: () => {
+    set({
+      isOpen: false,
     });
   },
 

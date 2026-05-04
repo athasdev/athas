@@ -61,7 +61,7 @@ export function MainLayout() {
   const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
   const onboardingOpen = useOnboardingStore((state) => state.isOpen);
   const onboardingContext = useOnboardingStore((state) => state.context);
-  const dismissOnboarding = useOnboardingStore((state) => state.dismiss);
+  const consumeOnboardingOpenRequest = useOnboardingStore((state) => state.consumeOpenRequest);
   const openOnboardingBuffer = useBufferStore.use.actions().openOnboardingBuffer;
 
   const hasRestoredWorkspace = useRef(false);
@@ -100,8 +100,8 @@ export function MainLayout() {
     if (!onboardingOpen || !onboardingContext) return;
 
     openOnboardingBuffer(onboardingContext);
-    void dismissOnboarding();
-  }, [dismissOnboarding, onboardingContext, onboardingOpen, openOnboardingBuffer]);
+    consumeOnboardingOpenRequest();
+  }, [consumeOnboardingOpenRequest, onboardingContext, onboardingOpen, openOnboardingBuffer]);
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
