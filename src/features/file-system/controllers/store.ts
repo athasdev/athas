@@ -32,6 +32,7 @@ import {
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { loadWorkspaceTerminalsFromStorage } from "@/features/terminal/lib/terminal-session-storage";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 import { primitiveAlert, primitivePrompt } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -73,8 +74,11 @@ import { fffSetWorkspace, fffTrackAccess } from "@/features/global-search/lib/ru
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
+import {
+  getBlockedProjectTransitionMessage,
+  getDirtyEditorBuffers,
+} from "./workspace-project-transition";
 import { buildWorkspaceRestorePlan } from "./workspace-session";
-import type { PaneContent } from "@/features/panes/types/pane-content";
 
 const logWorkspaceOpenStep = (
   phase: "start" | "end" | "error",
@@ -133,6 +137,14 @@ const shouldSkipLargeWorkspaceRestore = (gitFilesCount: number) =>
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
+
+const showBlockedProjectTransitionToast = (
+  action: "switching projects" | "closing this project",
+  dirtyBuffers: PaneContent[],
+) => {
+  const message = getBlockedProjectTransitionMessage(action, dirtyBuffers);
+  if (message) toast.warning(message);
+};
 
 const readPersistedTerminalSessions = (workspacePath: string | undefined) => {
   try {
@@ -1955,6 +1967,12 @@ export const useFileSystemStore = createSelectors(
         const { buffers, actions: bufferActions } = useBufferStore.getState();
         const currentBuffers = [...buffers];
         const currentBufferIds = currentBuffers.map((buffer) => buffer.id);
+        const dirtyEditorBuffers = getDirtyEditorBuffers(currentBuffers);
+        if (dirtyEditorBuffers.length > 0) {
+          showBlockedProjectTransitionToast("switching projects", dirtyEditorBuffers);
+          return false;
+        }
+
         const session = useSessionStore.getState().getSession(tab.path);
         const restorePlan = buildWorkspaceRestorePlan(session);
 
@@ -2229,6 +2247,14 @@ export const useFileSystemStore = createSelectors(
         const wasActive = tab.isActive;
         const isLastTab = tabs.length <= 1;
         const remoteTabInfo = parseRemotePath(tab.path);
+
+        if (wasActive) {
+          const dirtyEditorBuffers = getDirtyEditorBuffers(useBufferStore.getState().buffers);
+          if (dirtyEditorBuffers.length > 0) {
+            showBlockedProjectTransitionToast("closing this project", dirtyEditorBuffers);
+            return false;
+          }
+        }
 
         // Save session before closing if it's the active project
         if (wasActive) {
