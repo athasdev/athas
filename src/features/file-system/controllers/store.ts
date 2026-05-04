@@ -36,7 +36,10 @@ import {
 } from "@/features/window/stores/workspace-ui-session";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { loadWorkspaceTerminalsFromStorage } from "@/features/terminal/lib/terminal-session-storage";
+import {
+  buildTerminalRestorePayload,
+  loadWorkspaceTerminalsFromStorage,
+} from "@/features/terminal/lib/terminal-session-storage";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { primitiveAlert, primitivePrompt } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
@@ -512,9 +515,14 @@ export const useFileSystemStore = createSelectors(
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
         const session = useSessionStore.getState().getSession(projectPath);
+        const terminalsToRestore = buildTerminalRestorePayload({
+          projectSessionTerminals: session?.terminals,
+          storageTerminals: session ? [] : readPersistedTerminalSessions(projectPath),
+          preferProjectSession: !!session,
+        });
         window.dispatchEvent(
           new CustomEvent("restore-terminals", {
-            detail: { terminals: session?.terminals || [] },
+            detail: { terminals: terminalsToRestore },
           }),
         );
 

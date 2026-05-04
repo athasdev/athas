@@ -8,6 +8,7 @@ import type {
 } from "@/features/terminal/types/terminal";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import {
+  dedupePersistedTerminals,
   loadWorkspaceTerminalsFromStorage,
   saveWorkspaceTerminalsToStorage,
 } from "@/features/terminal/lib/terminal-session-storage";
@@ -21,6 +22,15 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
     case "CREATE_TERMINAL": {
       const { name, currentDirectory, shell, id, remoteConnectionId, profileId, initialCommand } =
         action.payload;
+      if (id && state.terminals.some((terminal) => terminal.id === id)) {
+        return {
+          terminals: state.terminals.map((terminal) => ({
+            ...terminal,
+            isActive: terminal.id === id,
+          })),
+          activeTerminalId: id,
+        };
+      }
 
       // Generate a unique name if needed
       const existingNames = state.terminals.map((t) => t.name);
@@ -181,7 +191,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
 
     case "RESTORE_TERMINALS": {
       const { terminals } = action.payload;
-      const newTerminals: Terminal[] = terminals.map((pt) => ({
+      const newTerminals: Terminal[] = dedupePersistedTerminals(terminals).map((pt) => ({
         id: pt.id,
         name: pt.name,
         currentDirectory: pt.currentDirectory,
@@ -356,7 +366,7 @@ export const useTerminalTabs = () => {
   }, [rootFolderPath]);
 
   const restoreTerminalsFromPersisted = useCallback((persistedTerminals: PersistedTerminal[]) => {
-    persistedTerminals.forEach((pt) => {
+    dedupePersistedTerminals(persistedTerminals).forEach((pt) => {
       dispatch({
         type: "CREATE_TERMINAL",
         payload: {

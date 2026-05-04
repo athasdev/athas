@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
+  buildTerminalRestorePayload,
+  dedupePersistedTerminals,
   getTerminalSessionStorageKey,
   loadWorkspaceTerminalsFromStorage,
   saveWorkspaceTerminalsToStorage,
@@ -7,6 +9,13 @@ import {
 
 const WORKSPACE_A = "/workspace-a";
 const WORKSPACE_B = "/workspace-b";
+
+const persistedTerminal = (id: string, name = id) => ({
+  id,
+  name,
+  currentDirectory: WORKSPACE_A,
+  isPinned: false,
+});
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -72,5 +81,33 @@ describe("terminal session storage", () => {
     expect(getTerminalSessionStorageKey(WORKSPACE_A)).not.toBe(
       getTerminalSessionStorageKey(WORKSPACE_B),
     );
+  });
+
+  it("dedupes restored terminal snapshots by id", () => {
+    expect(
+      dedupePersistedTerminals([
+        persistedTerminal("terminal-a", "A"),
+        persistedTerminal("terminal-a", "A duplicate"),
+        persistedTerminal("terminal-b", "B"),
+      ]),
+    ).toEqual([persistedTerminal("terminal-a", "A"), persistedTerminal("terminal-b", "B")]);
+  });
+
+  it("prefers project session terminals over storage fallback", () => {
+    expect(
+      buildTerminalRestorePayload({
+        projectSessionTerminals: [],
+        storageTerminals: [persistedTerminal("stale-storage")],
+        preferProjectSession: true,
+      }),
+    ).toEqual([]);
+
+    expect(
+      buildTerminalRestorePayload({
+        projectSessionTerminals: null,
+        storageTerminals: [persistedTerminal("storage")],
+        preferProjectSession: false,
+      }),
+    ).toEqual([persistedTerminal("storage")]);
   });
 });
