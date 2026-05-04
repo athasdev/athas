@@ -9,6 +9,7 @@ import {
   getInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { parseDroppedPaths } from "../utils/file-system-dropped-paths";
 
 function resolveClientPoint(position: { x: number; y: number }) {
   const rawPoint = { x: position.x, y: position.y };
@@ -99,6 +100,17 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
     let unlistenWebview: (() => void) | null = null;
     let domTeardown: (() => void) | null = null;
 
+    const handleExternalPathDrop = async (rawPaths: string[]) => {
+      const paths = parseDroppedPaths(rawPaths);
+      if (paths.length === 0) return;
+
+      try {
+        await onDrop(paths);
+      } catch (error) {
+        console.error("Error handling dropped items:", error);
+      }
+    };
+
     const setupListener = async () => {
       unlistenWindow = await currentWindow.onDragDropEvent(async (event) => {
         if (getInternalTabDragData()) {
@@ -116,14 +128,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           return;
         }
         if (event.payload.type === "drop" && "paths" in event.payload) {
-          const paths = event.payload.paths || [];
-          if (paths.length > 0) {
-            try {
-              await onDrop(paths);
-            } catch (error) {
-              console.error("Error handling dropped items:", error);
-            }
-          }
+          await handleExternalPathDrop(event.payload.paths || []);
           setIsDraggingOver(false);
         } else if (event.payload.type === "enter") {
           setIsDraggingOver(true);
@@ -149,14 +154,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           return;
         }
         if (event.payload.type === "drop" && "paths" in event.payload) {
-          const paths = event.payload.paths || [];
-          if (paths.length > 0) {
-            try {
-              await onDrop(paths);
-            } catch (error) {
-              console.error("Error handling dropped items:", error);
-            }
-          }
+          await handleExternalPathDrop(event.payload.paths || []);
           setIsDraggingOver(false);
         } else if (event.payload.type === "enter") {
           setIsDraggingOver(true);
