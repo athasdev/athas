@@ -351,7 +351,12 @@ const openLocalWorkspace = async (
       restoreProjectUiState(path);
     }
 
-    useRecentFoldersStore.getState().addToRecents(path);
+    const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+    useRecentFoldersStore.getState().addToRecents(path, {
+      activeProjectTabId: activeProjectTab?.id,
+      customIcon: activeProjectTab?.customIcon,
+      missing: false,
+    });
     gitDiffCache.clear();
 
     set((state) => {

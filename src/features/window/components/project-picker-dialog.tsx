@@ -4,9 +4,12 @@ import {
   PencilSimple as Edit,
   Folder,
   Plus,
+  PushPin,
+  PushPinSlash,
   HardDrives as Server,
   ArrowSquareOut as SquareArrowOutUpRight,
   Trash as Trash2,
+  WarningCircle,
   X,
 } from "@phosphor-icons/react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
@@ -46,7 +49,8 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const { openRecentFolder, removeFromRecents } = useRecentFoldersStore();
+  const { addToRecents, openRecentFolder, removeFromRecents, togglePinned } =
+    useRecentFoldersStore();
   const { handleOpenFolder } = useFileSystemStore();
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
@@ -113,6 +117,11 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
     await createAppWindow({
       path: folder.path,
       isDirectory: true,
+    });
+    addToRecents(folder.path, {
+      customIcon: folder.customIcon,
+      missing: false,
+      openInNewWindow: true,
     });
   };
 
@@ -206,59 +215,85 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
               </PaneIconButton>
             </div>
             {recentFolders.length > 0 ? (
-              recentFolders.map((folder) => (
-                <div key={folder.path} className="group flex items-center hover:bg-hover">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRecentFolderClick(folder)}
-                    className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent"
+              recentFolders.map((folder) => {
+                const matchingTab = projectTabs.find((t) => t.path === folder.path);
+                const iconPath = folder.customIcon ?? matchingTab?.customIcon;
+
+                return (
+                  <div
+                    key={folder.path}
+                    className={cn(
+                      "group flex items-center hover:bg-hover",
+                      folder.missing && "text-text-lighter",
+                    )}
                   >
-                    {(() => {
-                      const matchingTab = projectTabs.find((t) => t.path === folder.path);
-                      if (matchingTab?.customIcon) {
-                        return (
-                          <img
-                            src={convertFileSrc(matchingTab.customIcon)}
-                            alt=""
-                            className="shrink-0 rounded-sm object-contain"
-                            style={{
-                              width: "var(--app-ui-font-size)",
-                              height: "var(--app-ui-font-size)",
-                            }}
-                          />
-                        );
-                      }
-                      return <Folder className="shrink-0 text-text-lighter" />;
-                    })()}
-                    <span className="ui-text-sm truncate text-text">{folder.name}</span>
-                    <span className="ui-text-sm ml-auto truncate text-text-lighter">
-                      {folder.path}
-                    </span>
-                  </Button>
-                  <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
                     <Button
-                      onClick={() => void handleRecentFolderNewWindowClick(folder)}
+                      type="button"
                       variant="ghost"
-                      size="icon-xs"
-                      tooltip="Open in new window"
-                      tooltipSide="bottom"
+                      size="sm"
+                      onClick={() => handleRecentFolderClick(folder)}
+                      className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent"
                     >
-                      <SquareArrowOutUpRight />
+                      {iconPath ? (
+                        <img
+                          src={convertFileSrc(iconPath)}
+                          alt=""
+                          className="shrink-0 rounded-sm object-contain"
+                          style={{
+                            width: "var(--app-ui-font-size)",
+                            height: "var(--app-ui-font-size)",
+                          }}
+                        />
+                      ) : folder.missing ? (
+                        <WarningCircle className="shrink-0 text-warning" />
+                      ) : (
+                        <Folder className="shrink-0 text-text-lighter" />
+                      )}
+                      <span className="ui-text-sm truncate text-text">{folder.name}</span>
+                      {folder.pinned ? (
+                        <PushPin className="shrink-0 fill-current text-accent" />
+                      ) : null}
+                      {folder.missing ? (
+                        <span className="ui-text-sm shrink-0 rounded bg-warning/10 px-1 text-warning">
+                          Missing
+                        </span>
+                      ) : null}
+                      <span className="ui-text-sm ml-auto truncate text-text-lighter">
+                        {folder.path}
+                      </span>
                     </Button>
-                    <Button
-                      onClick={() => removeFromRecents(folder.path)}
-                      variant="ghost"
-                      size="icon-xs"
-                      tooltip="Remove from recents"
-                      tooltipSide="bottom"
-                    >
-                      <X />
-                    </Button>
+                    <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
+                      <Button
+                        onClick={() => togglePinned(folder.path)}
+                        variant="ghost"
+                        size="icon-xs"
+                        tooltip={folder.pinned ? "Unpin recent project" : "Pin recent project"}
+                        tooltipSide="bottom"
+                      >
+                        {folder.pinned ? <PushPinSlash /> : <PushPin />}
+                      </Button>
+                      <Button
+                        onClick={() => void handleRecentFolderNewWindowClick(folder)}
+                        variant="ghost"
+                        size="icon-xs"
+                        tooltip="Open in new window"
+                        tooltipSide="bottom"
+                      >
+                        <SquareArrowOutUpRight />
+                      </Button>
+                      <Button
+                        onClick={() => removeFromRecents(folder.path)}
+                        variant="ghost"
+                        size="icon-xs"
+                        tooltip="Remove from recents"
+                        tooltipSide="bottom"
+                      >
+                        <X />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 No recent projects
