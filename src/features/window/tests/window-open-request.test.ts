@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { __test__ } from "../utils/window-open-request";
 
 const { parseWindowOpenUrl } = __test__;
+const { resolveWindowOpenPathTarget } = __test__;
 
 describe("parseWindowOpenUrl", () => {
   it("parses file with line number", () => {
@@ -126,5 +127,26 @@ describe("parseWindowOpenUrl", () => {
     const result = parseWindowOpenUrl(url);
     expect(result?.line).toBeUndefined();
     expect(result?.column).toBeUndefined();
+  });
+});
+
+describe("resolveWindowOpenPathTarget", () => {
+  it("opens detected folders as directories even without an explicit directory request", () => {
+    expect(resolveWindowOpenPathTarget(false, { is_dir: true })).toEqual({
+      type: "directory",
+    });
+  });
+
+  it("opens detected files as files", () => {
+    expect(resolveWindowOpenPathTarget(false, { is_dir: false })).toEqual({
+      type: "file",
+    });
+  });
+
+  it("rejects explicit directory requests that point to files", () => {
+    expect(resolveWindowOpenPathTarget(true, { is_dir: false })).toEqual({
+      type: "invalid",
+      message: "Path is not a folder.",
+    });
   });
 });

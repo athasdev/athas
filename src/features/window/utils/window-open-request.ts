@@ -11,6 +11,10 @@ export interface WindowOpenRequest {
   workingDirectory?: string;
 }
 
+interface PathInfo {
+  is_dir: boolean;
+}
+
 const parsePositiveInteger = (value: string | null | undefined) => {
   if (!value) return undefined;
 
@@ -28,6 +32,19 @@ function parseOpenPosition(searchParams: URLSearchParams) {
   return {
     line,
     column: line ? column : undefined,
+  };
+}
+
+function resolveWindowOpenPathTarget(isDirectoryRequest: boolean | undefined, pathInfo: PathInfo) {
+  if (isDirectoryRequest && !pathInfo.is_dir) {
+    return {
+      type: "invalid" as const,
+      message: "Path is not a folder.",
+    };
+  }
+
+  return {
+    type: pathInfo.is_dir ? ("directory" as const) : ("file" as const),
   };
 }
 
@@ -107,11 +124,36 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
 
   if (!request.path) return;
 
-  if (request.isDirectory) {
+  if (request.path.startsWith("remote://")) {
+    await handleFileSelect(request.path, false, request.line, request.column);
+    return;
+  }
+
+  const { getSymlinkInfo } = await import("@/features/file-system/controllers/platform");
+  const { toast } = await import("@/ui/toast");
+
+  let pathTarget: ReturnType<typeof resolveWindowOpenPathTarget>;
+  try {
+    pathTarget = resolveWindowOpenPathTarget(
+      request.isDirectory,
+      await getSymlinkInfo(request.path),
+    );
+  } catch (error) {
+    console.error("Failed to validate open path:", request.path, error);
+    toast.error(`Cannot open "${request.path}". Check that it exists and is accessible.`);
+    return;
+  }
+
+  if (pathTarget.type === "invalid") {
+    toast.error(`${pathTarget.message} ${request.path}`);
+    return;
+  }
+
+  if (pathTarget.type === "directory") {
     await handleOpenFolderByPath(request.path);
   } else {
     await handleFileSelect(request.path, false, request.line, request.column);
   }
 }
 
-export const __test__ = { parseWindowOpenUrl };
+export const __test__ = { parseWindowOpenUrl, resolveWindowOpenPathTarget };
