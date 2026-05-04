@@ -28,6 +28,16 @@ describe("getActiveSidebarView", () => {
       }),
     ).toBe("github-prs");
   });
+
+  test("returns the generic active sidebar view when no legacy pane is active", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "multi-agents",
+      }),
+    ).toBe("multi-agents");
+  });
 });
 
 describe("resolveSidebarPaneClick", () => {
@@ -92,6 +102,23 @@ describe("resolveSidebarPaneClick", () => {
     ).toEqual({
       nextIsSidebarVisible: true,
       nextView: "github-prs",
+    });
+  });
+
+  test("hides the sidebar when clicking an active generic tab", () => {
+    expect(
+      resolveSidebarPaneClick(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "multi-agents",
+        },
+        "multi-agents",
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: false,
+      nextView: "multi-agents",
     });
   });
 });

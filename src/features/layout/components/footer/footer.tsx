@@ -33,13 +33,15 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const FOOTER_ICON_TAB_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
-const FOOTER_PILL_TAB_CLASS_NAME = "px-2.5 [&_svg]:size-4";
+const FOOTER_ICON_TAB_CLASS_NAME = "h-6 w-7 min-w-7 px-0 [&_svg]:size-4";
+const FOOTER_PILL_TAB_CLASS_NAME = "h-6 px-2 [&_svg]:size-4";
 const FOOTER_COUNT_PILL_CLASS_NAME =
   "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3";
 const FOOTER_CONTROL_GROUP_CLASS_NAME = "pointer-events-auto border-transparent bg-transparent p-0";
 const FOOTER_CONTROL_CLASS_NAME =
   "rounded-md border-0 bg-transparent hover:bg-hover/60 data-[active=true]:bg-hover/70";
+const FOOTER_GIT_TRIGGER_CLASS_NAME = "h-6 w-fit rounded-md";
+const FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME = "pl-7 ui-text-sm";
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -145,6 +147,9 @@ const Footer = () => {
                 repoPath={footerRepoPath}
                 paletteTarget
                 placement="up"
+                triggerIconSize={16}
+                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
+                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[220px]")}
                 onBranchChange={async () => {
                   const status = await getGitStatus(footerRepoPath);
                   actions.setWorkspaceGitStatus(status, footerRepoPath);
@@ -156,6 +161,9 @@ const Footer = () => {
               <GitWorktreeSwitcher
                 repoPath={footerRepoPath}
                 placement="up"
+                triggerIconSize={16}
+                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
+                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[118px]")}
                 onWorktreeChange={async (worktreePath) => {
                   selectRepository(worktreePath);
                   const status = await getGitStatus(worktreePath);
@@ -299,7 +307,7 @@ const Footer = () => {
   const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [];
 
   return (
-    <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+    <div className="relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerLeadingItems, settings.footerLeadingItemsOrder).map((item) => (
           <div key={item.id}>{item.content}</div>

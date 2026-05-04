@@ -5,7 +5,10 @@ use super::{
    client::{AthasAcpClient, PermissionResponse},
    config::AgentRegistry,
    process::{stop_child_tree, terminate_process_group},
-   types::{AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption},
+   types::{
+      AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AcpSessionInfo, AcpSessionList, AgentConfig,
+      SessionConfigOption,
+   },
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
@@ -249,6 +252,55 @@ impl AcpWorker {
          .context("Failed to set session config option")?;
 
       Ok(())
+   }
+
+   pub(super) async fn list_sessions(
+      &mut self,
+      cwd: Option<String>,
+      cursor: Option<String>,
+   ) -> Result<AcpSessionList> {
+      self.ensure_process_alive().await?;
+
+      if !self.supports_session_list() {
+         bail!("ACP agent does not support session/list");
+      }
+
+      let connection = self.connection.as_ref().context("No active connection")?;
+      let mut request = acp::ListSessionsRequest::new();
+      if let Some(cwd) = cwd {
+         request = request.cwd(std::path::PathBuf::from(cwd));
+      }
+      if let Some(cursor) = cursor {
+         request = request.cursor(cursor);
+      }
+
+      let response = connection
+         .list_sessions(request)
+         .await
+         .context("Failed to list ACP sessions")?;
+
+      Ok(AcpSessionList {
+         sessions: response
+            .sessions
+            .into_iter()
+            .map(|session| AcpSessionInfo {
+               session_id: session.session_id.to_string(),
+               cwd: session.cwd.to_string_lossy().to_string(),
+               title: session.title,
+               updated_at: session.updated_at,
+               meta: session.meta.map(serde_json::Value::Object),
+            })
+            .collect(),
+         next_cursor: response.next_cursor,
+      })
+   }
+
+   fn supports_session_list(&self) -> bool {
+      self
+         .agent_capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.session_capabilities.get("list"))
+         .is_some()
    }
 
    pub(super) async fn stop(&mut self) -> Result<()> {
@@ -496,6 +548,27 @@ impl AcpAgentBridge {
          .send(AcpCommand::SetConfigOption {
             config_id: config_id.to_string(),
             value: value.to_string(),
+            response_tx,
+         })
+         .await
+         .context("Failed to send command to ACP worker")?;
+
+      response_rx.await.context("Worker disconnected")?
+   }
+
+   /// List sessions known to the active agent
+   pub async fn list_sessions(
+      &self,
+      cwd: Option<String>,
+      cursor: Option<String>,
+   ) -> Result<AcpSessionList> {
+      let (response_tx, response_rx) = oneshot::channel();
+
+      self
+         .command_tx
+         .send(AcpCommand::ListSessions {
+            cwd,
+            cursor,
             response_tx,
          })
          .await

@@ -219,6 +219,10 @@ function isStandardEditorBuffer(buffer: Buffer): buffer is EditorContent {
   return buffer.type === "editor";
 }
 
+function EmptyPaneState() {
+  return <div className="h-full w-full bg-primary-bg" />;
+}
+
 export function PaneContainer({ pane }: PaneContainerProps) {
   const buffers = useBufferStore.use.buffers();
   const activePaneId = usePaneStore.use.activePaneId();
@@ -230,7 +234,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     reorderPaneBuffers,
     splitPane,
   } = usePaneStore.use.actions();
-  const { closeBufferForce, openBuffer, openTerminalBuffer } = useBufferStore.use.actions();
+  const { closeBufferForce, openBuffer, openTerminalBuffer, showNewTabView } =
+    useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
@@ -242,6 +247,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const [isCarouselResizing, setIsCarouselResizing] = useState(false);
   const [draggedCarouselBufferId, setDraggedCarouselBufferId] = useState<string | null>(null);
   const [carouselDropBufferId, setCarouselDropBufferId] = useState<string | null>(null);
+  const [suppressAutoNewTab, setSuppressAutoNewTab] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const carouselViewportRef = useRef<HTMLDivElement>(null);
   const lastCarouselBufferIdRef = useRef<string | null>(null);
@@ -260,6 +266,23 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     if (!pane.activeBufferId) return null;
     return paneBuffers.find((b) => b.id === pane.activeBufferId) || null;
   }, [paneBuffers, pane.activeBufferId]);
+
+  const hasNonNewTabBuffer = paneBuffers.some((buffer) => buffer.type !== "newTab");
+
+  useEffect(() => {
+    if (hasNonNewTabBuffer) {
+      setSuppressAutoNewTab(false);
+    }
+  }, [hasNonNewTabBuffer]);
+
+  useEffect(() => {
+    if (pane.id === BOTTOM_PANE_ID) return;
+    if (paneBuffers.length > 0) return;
+    if (suppressAutoNewTab) return;
+
+    setActivePane(pane.id);
+    showNewTabView();
+  }, [pane.id, paneBuffers.length, setActivePane, showNewTabView, suppressAutoNewTab]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
@@ -961,12 +984,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       <TabBar
         paneId={pane.id}
         onTabClick={handleTabClick}
+        onNewTabClose={() => setSuppressAutoNewTab(true)}
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {(!activeBuffer || activeBuffer.type === "newTab") && !shouldRenderCarousel && (
-          <EmptyEditorState />
-        )}
+        {!activeBuffer && !shouldRenderCarousel && <EmptyPaneState />}
+        {activeBuffer?.type === "newTab" && !shouldRenderCarousel && <EmptyEditorState />}
 
         <Suspense fallback={null}>
           {shouldRenderCarousel ? (

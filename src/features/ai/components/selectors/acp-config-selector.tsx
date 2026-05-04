@@ -39,6 +39,7 @@ export function AcpConfigSelector({
       onChange={onChange}
       size="xs"
       variant="ghost"
+      openDirection="up"
       open={open}
       onOpenChange={onOpenChange}
       leftIcon={
@@ -48,7 +49,7 @@ export function AcpConfigSelector({
       triggerClassName={chatComposerControlClassName("w-fit max-w-[160px]")}
       hideChevron
       menuClassName={menuClassName}
-      tooltip="Select model"
+      tooltip={`Select ${option.name}`}
       aria-label={option.name}
       title={option.description || option.name}
     />

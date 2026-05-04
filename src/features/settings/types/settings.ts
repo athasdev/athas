@@ -108,7 +108,7 @@ export interface Settings {
     | "snippet"
     | "database"
     | "skill"
-    | "ui";
+    | "agent";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree

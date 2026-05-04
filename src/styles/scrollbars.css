@@ -32,12 +32,14 @@
   }
 }
 
-:where(*) {
+:where(*),
+* {
   scrollbar-color: var(--app-scrollbar-color);
   scrollbar-width: thin;
 }
 
-:where(*)::-webkit-scrollbar {
+:where(*)::-webkit-scrollbar,
+*::-webkit-scrollbar {
   -webkit-appearance: none;
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
@@ -45,12 +47,15 @@
 }
 
 :where(*)::-webkit-scrollbar-track,
-:where(*)::-webkit-scrollbar-corner {
+:where(*)::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
   -webkit-appearance: none;
   background: var(--app-scrollbar-track);
 }
 
-:where(*)::-webkit-scrollbar-thumb {
+:where(*)::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
   -webkit-appearance: none;
   min-height: 32px;
   min-width: 32px;
@@ -60,17 +65,20 @@
   background-clip: content-box;
 }
 
-:where(*)::-webkit-scrollbar-thumb:hover {
+:where(*)::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
   background: var(--app-scrollbar-thumb-hover);
   background-clip: content-box;
 }
 
-:where(*)::-webkit-scrollbar-thumb:active {
+:where(*)::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
   background: var(--app-scrollbar-thumb-active);
   background-clip: content-box;
 }
 
-:where(*)::-webkit-scrollbar-button {
+:where(*)::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;

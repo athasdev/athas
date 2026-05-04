@@ -1310,11 +1310,9 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          // Get the cyclable buffer IDs (skip newTab placeholders)
-          const cyclableIds = paneBufferIds.filter((id) => {
-            const b = buffers.find((buf) => buf.id === id);
-            return b && b.type !== "newTab";
-          });
+          const cyclableIds = paneBufferIds.filter((id) =>
+            buffers.some((buffer) => buffer.id === id),
+          );
 
           if (cyclableIds.length <= 1) return;
 
@@ -1341,11 +1339,9 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          // Get the cyclable buffer IDs (skip newTab placeholders)
-          const cyclableIds = paneBufferIds.filter((id) => {
-            const b = buffers.find((buf) => buf.id === id);
-            return b && b.type !== "newTab";
-          });
+          const cyclableIds = paneBufferIds.filter((id) =>
+            buffers.some((buffer) => buffer.id === id),
+          );
 
           if (cyclableIds.length <= 1) return;
 

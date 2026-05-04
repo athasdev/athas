@@ -343,6 +343,24 @@ pub struct SessionConfigOption {
    pub kind: SessionConfigOptionKind,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpSessionInfo {
+   pub session_id: String,
+   pub cwd: String,
+   pub title: Option<String>,
+   pub updated_at: Option<String>,
+   #[serde(rename = "_meta")]
+   pub meta: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpSessionList {
+   pub sessions: Vec<AcpSessionInfo>,
+   pub next_cursor: Option<String>,
+}
+
 /// Events emitted to the frontend via Tauri
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]

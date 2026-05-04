@@ -10,7 +10,7 @@ import {
   ComboboxList,
 } from "@/ui/combobox";
 import { cn } from "@/utils/cn";
-import { getFolderName, getRelativePath } from "@/utils/path-helpers";
+import { getFolderName } from "@/utils/path-helpers";
 import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
 import type { GitWorktree } from "../types/git-types";
 
@@ -18,6 +18,9 @@ interface GitWorktreeSwitcherProps {
   repoPath?: string;
   onWorktreeChange?: (repoPath: string) => void;
   placement?: "up" | "down";
+  triggerIconSize?: number;
+  triggerClassName?: string;
+  triggerInputClassName?: string;
 }
 
 const WORKTREE_SWITCHER_DROPDOWN_WIDTH = 380;
@@ -67,6 +70,9 @@ const GitWorktreeSwitcher = ({
   repoPath,
   onWorktreeChange,
   placement = "down",
+  triggerIconSize,
+  triggerClassName,
+  triggerInputClassName,
 }: GitWorktreeSwitcherProps) => {
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
   const [worktreeQuery, setWorktreeQuery] = useState("");
@@ -193,19 +199,21 @@ const GitWorktreeSwitcher = ({
         disabled={isLoading}
         readOnly={!isDropdownOpen}
         leftIcon={GitFork}
+        leftIconSize={triggerIconSize}
+        htmlSize={triggerTextWidthCh}
         variant="ghost"
         showTrigger={false}
         showClear={false}
         className={cn(
-          "inline-flex w-fit max-w-[360px] shrink-0 hover:bg-hover/80",
+          "inline-flex w-fit shrink-0 hover:bg-hover/80",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
+          triggerClassName,
         )}
         inputClassName={cn(
-          "truncate pr-0 pl-7 font-normal",
+          "max-w-[360px] truncate pr-0 pl-7 font-normal",
           isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
+          triggerInputClassName,
         )}
-        containerStyle={{ width: "fit-content", maxWidth: "360px" }}
-        inputStyle={{ width: `calc(${triggerTextWidthCh}ch + 1.75rem)`, flex: "0 0 auto" }}
         placeholder={getWorktreeLabel(activeWorktree, repoPath)}
         aria-label="Search worktrees"
       />
@@ -244,7 +252,6 @@ const GitWorktreeSwitcher = ({
                 <WorktreeRow
                   key={worktree.path}
                   worktree={worktree}
-                  repoPath={repoPath}
                   isCurrent={worktree.path === repoPath}
                 />
               ))}
@@ -256,23 +263,13 @@ const GitWorktreeSwitcher = ({
   );
 };
 
-function WorktreeRow({
-  worktree,
-  repoPath,
-  isCurrent,
-}: {
-  worktree: GitWorktree;
-  repoPath: string;
-  isCurrent: boolean;
-}) {
-  const relativePath = getRelativePath(worktree.path, repoPath);
-
+function WorktreeRow({ worktree, isCurrent }: { worktree: GitWorktree; isCurrent: boolean }) {
   return (
     <ComboboxItem
       value={worktree.path}
       showIndicator={false}
       className={cn(
-        "group",
+        "group min-h-7 py-1",
         isCurrent ? "font-medium text-text" : "text-text-lighter hover:text-text",
       )}
     >
@@ -281,16 +278,10 @@ function WorktreeRow({
       ) : (
         <GitFork className="shrink-0 text-text-lighter" />
       )}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate">{getFolderName(worktree.path)}</span>
-        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-text-lighter/80 ui-text-sm">
-          <GitBranch className="size-3.5 shrink-0" />
-          <span className="truncate">{getBranchLabel(worktree)}</span>
-          <span className="shrink-0 text-text-lighter/50">/</span>
-          <span className="truncate">
-            {relativePath === worktree.path ? worktree.path : relativePath}
-          </span>
-        </span>
+      <span className="min-w-0 flex-1 truncate">{getFolderName(worktree.path)}</span>
+      <span className="flex max-w-[45%] shrink min-w-0 items-center gap-1.5 text-text-lighter/80 ui-text-sm">
+        <GitBranch className="size-3.5 shrink-0" />
+        <span className="truncate">{getBranchLabel(worktree)}</span>
       </span>
       {isCurrent ? <span className="ui-text-sm ml-auto shrink-0 text-success">current</span> : null}
     </ComboboxItem>

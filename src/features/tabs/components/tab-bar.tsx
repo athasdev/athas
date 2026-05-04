@@ -53,12 +53,14 @@ import TabContextMenu from "./tab-context-menu";
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
+  onNewTabClose?: () => void;
   disablePaneActions?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
+  onNewTabClose,
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
@@ -403,6 +405,18 @@ const TabBar = ({
     cancelPendingClose();
   }, [cancelPendingClose]);
 
+  const closeTab = useCallback(
+    (bufferId: string) => {
+      const buffer = buffers.find((item) => item.id === bufferId);
+      if (buffer?.type === "newTab") {
+        onNewTabClose?.();
+      }
+      handleTabClose(bufferId);
+      clearPositionCache(bufferId);
+    },
+    [buffers, clearPositionCache, handleTabClose, onNewTabClose],
+  );
+
   const handleTabSelect = useCallback(
     (buffer: PaneContent) => {
       if (externalTabClick) {
@@ -619,8 +633,7 @@ const TabBar = ({
           if (!buffer.isPinned) {
             e.preventDefault();
             setSrAnnouncement(`Closed ${buffer.name}`);
-            handleTabClose(buffer.id);
-            clearPositionCache(buffer.id);
+            closeTab(buffer.id);
           } else {
             setSrAnnouncement(`Cannot close pinned tab ${buffer.name}`);
           }
@@ -637,7 +650,7 @@ const TabBar = ({
           break;
       }
     },
-    [sortedBuffers, handleTabClick, updateActivePath, handleTabClose, clearPositionCache],
+    [sortedBuffers, handleTabClick, updateActivePath, closeTab],
   );
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
@@ -711,10 +724,7 @@ const TabBar = ({
                     onDoubleClick={(e) => handleDoubleClick(e, index)}
                     onContextMenu={(e) => handleContextMenu(e, buffer)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
-                    handleTabClose={(id) => {
-                      handleTabClose(id);
-                      clearPositionCache(id);
-                    }}
+                    handleTabClose={closeTab}
                     handleTabPin={handleTabPin}
                   />
                 </SortableEditorTab>
@@ -790,7 +800,7 @@ const TabBar = ({
         onCloseTab={(bufferId) => {
           const buffer = buffers.find((b) => b.id === bufferId);
           if (buffer) {
-            handleTabClose(bufferId);
+            closeTab(bufferId);
           }
         }}
         onCloseOthers={handleCloseOtherTabs}
