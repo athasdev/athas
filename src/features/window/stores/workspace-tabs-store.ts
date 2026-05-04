@@ -1,4 +1,4 @@
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getAllWebviewWindows, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -9,6 +9,10 @@ import {
   createProjectTabId,
   normalizeProjectTabPath,
 } from "../utils/project-tab-path";
+import {
+  getWorkspaceTabsStorageKey,
+  removeStaleWorkspaceTabsStorageKeys,
+} from "../utils/workspace-tabs-storage";
 
 export interface ProjectTab {
   id: string;
@@ -33,7 +37,20 @@ interface WorkspaceTabsActions {
   setProjectIcon: (projectId: string, iconPath: string | undefined) => void;
 }
 
-const workspaceTabsStorageKey = `workspace-tabs-storage-${getCurrentWebviewWindow().label}`;
+const currentWebviewWindow = getCurrentWebviewWindow();
+const workspaceTabsStorageKey = getWorkspaceTabsStorageKey(currentWebviewWindow.label);
+
+void (async () => {
+  try {
+    const activeWindowLabels = new Set(
+      (await getAllWebviewWindows()).map((window) => window.label),
+    );
+    activeWindowLabels.add(currentWebviewWindow.label);
+    removeStaleWorkspaceTabsStorageKeys(localStorage, activeWindowLabels);
+  } catch (error) {
+    console.warn("[workspace-tabs] failed to clean stale tab storage", error);
+  }
+})();
 
 const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActions>()(
   persist(
