@@ -223,6 +223,9 @@ const serializeWorkspaceBuffer = (
       isPinned: buffer.isPinned,
       url: buffer.url,
       zoomLevel: buffer.zoomLevel,
+      profileKey: buffer.profileKey,
+      history: buffer.history,
+      historyIndex: buffer.historyIndex,
     };
   }
 
@@ -568,6 +571,9 @@ export const useFileSystemStore = createSelectors(
                   type: "webViewer",
                   url: buffer.url ?? "about:blank",
                   zoomLevel: buffer.zoomLevel,
+                  profileKey: buffer.profileKey,
+                  history: buffer.history,
+                  historyIndex: buffer.historyIndex,
                 });
 
                 if (buffer.isPinned) {

@@ -146,6 +146,7 @@ fn main() {
          create_embedded_webview,
          close_embedded_webview,
          close_all_embedded_webviews,
+         clear_embedded_webview_browsing_data,
          navigate_embedded_webview,
          resize_embedded_webview,
          set_webview_visible,

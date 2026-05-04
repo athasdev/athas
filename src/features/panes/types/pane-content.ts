@@ -79,6 +79,9 @@ export interface WebViewerContent extends PaneContentBase {
   title?: string;
   favicon?: string;
   zoomLevel?: number;
+  profileKey?: string;
+  history?: string[];
+  historyIndex?: number;
 }
 
 export interface NewTabContent extends PaneContentBase {
@@ -316,7 +319,14 @@ export type OpenContentSpec =
       path?: string;
     }
   | { type: "agent"; sessionId?: string }
-  | { type: "webViewer"; url: string; zoomLevel?: number }
+  | {
+      type: "webViewer";
+      url: string;
+      zoomLevel?: number;
+      profileKey?: string;
+      history?: string[];
+      historyIndex?: number;
+    }
   | { type: "newTab" }
   | {
       type: "diff";

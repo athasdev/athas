@@ -1086,6 +1086,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           <WebViewer
                             url={buffer.url}
                             bufferId={buffer.id}
+                            profileKey={buffer.profileKey}
+                            history={buffer.history}
+                            historyIndex={buffer.historyIndex}
                             isActive={isActivePane && isActiveBuffer}
                             isVisible={true}
                           />
@@ -1167,6 +1170,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         <WebViewer
                           url={b.url}
                           bufferId={b.id}
+                          profileKey={b.profileKey}
+                          history={b.history}
+                          historyIndex={b.historyIndex}
                           isActive={isActive && isActivePane}
                           isVisible={isActive}
                         />

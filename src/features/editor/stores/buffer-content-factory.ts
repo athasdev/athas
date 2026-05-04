@@ -55,6 +55,9 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isPreview: false,
         url: spec.url,
         zoomLevel: spec.zoomLevel,
+        profileKey: spec.profileKey,
+        history: spec.history,
+        historyIndex: spec.historyIndex,
       };
     case "newTab":
       return {

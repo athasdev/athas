@@ -45,6 +45,9 @@ const serializeBufferForSession = (
       isPinned: buffer.isPinned,
       url: buffer.url,
       zoomLevel: buffer.zoomLevel,
+      profileKey: buffer.profileKey,
+      history: buffer.history,
+      historyIndex: buffer.historyIndex,
     };
   }
 
