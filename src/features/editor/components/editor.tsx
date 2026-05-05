@@ -39,6 +39,7 @@ import { useResolvedEditorSettings } from "../hooks/use-resolved-settings";
 import { useSelectionScope } from "../hooks/use-selection-scope";
 import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
+import type { InlayHint } from "../lsp/use-inlay-hints";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { useFoldStore } from "../stores/fold-store";
@@ -87,6 +88,7 @@ interface EditorProps {
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
   onContentChange?: (content: string) => void;
+  inlayHints?: InlayHint[];
 }
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
@@ -111,6 +113,7 @@ export function Editor({
   lineNumberStart = 1,
   lineNumberMap,
   onContentChange,
+  inlayHints = [],
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -308,6 +311,16 @@ export function Editor({
   const shouldVirtualizeRendering =
     lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
+  const visualInlayHints = useMemo(() => {
+    if (!foldTransform.hasActiveFolds) return inlayHints;
+
+    return inlayHints
+      .map((hint) => {
+        const visualLine = foldTransform.mapping.actualToVirtual.get(hint.line);
+        return visualLine == null ? null : { ...hint, line: visualLine };
+      })
+      .filter((hint): hint is InlayHint => hint !== null);
+  }, [foldTransform, inlayHints]);
 
   const {
     viewportRange,
@@ -1173,6 +1186,7 @@ export function Editor({
             tabSize={tabSize}
             wordWrap={wordWrap}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            inlayHints={visualInlayHints}
           />
         )}
         <InputLayer
@@ -1209,6 +1223,7 @@ export function Editor({
             tabSize={tabSize}
             content={displayContent}
             textareaRef={inputRef}
+            inlayHints={visualInlayHints}
             hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
         )}

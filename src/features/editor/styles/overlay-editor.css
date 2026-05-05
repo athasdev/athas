@@ -147,6 +147,22 @@ textarea.input-layer.selection-transparent::-moz-selection {
   box-sizing: border-box;
 }
 
+.inlay-hint {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  padding: 0 3px;
+  max-height: 1.45em;
+  border: 1px solid color-mix(in srgb, var(--color-border, #8a8f98) 42%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-primary-bg, #ffffff) 94%, transparent);
+  color: var(--color-text-lighter, #8a8f98);
+  font-size: 0.85em;
+  line-height: 1.25;
+  vertical-align: 0.08em;
+  box-shadow: 0 1px 3px color-mix(in srgb, #000 12%, transparent);
+}
+
 .editor-selection-box {
   background-color: rgba(106, 155, 204, 0.42);
   background-color: color-mix(in srgb, var(--accent, #6a9bcc) 44%, transparent);

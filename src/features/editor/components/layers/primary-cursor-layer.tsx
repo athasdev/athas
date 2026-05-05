@@ -1,5 +1,6 @@
 import { forwardRef, memo, useEffect, useState, type RefObject } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
+import type { InlayHint } from "../../lsp/use-inlay-hints";
 import type { Position } from "../../types/editor";
 import { getAccurateCursorX } from "../../utils/position";
 
@@ -13,6 +14,11 @@ interface PrimaryCursorLayerProps {
   content: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   hidden?: boolean;
+  inlayHints?: InlayHint[];
+}
+
+function estimateInlayHintWidth(label: string, fontSize: number): number {
+  return label.length * fontSize * 0.85 * 0.6 + 10;
 }
 
 const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLayerProps>(
@@ -27,6 +33,7 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
       content,
       textareaRef,
       hidden = false,
+      inlayHints = [],
     },
     ref,
   ) => {
@@ -67,8 +74,12 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
     const lines = content.split("\n");
     const lineText = lines[visualLine] || "";
     const cursorColumn = Math.min(cursorPosition.column, lineText.length);
+    const inlayOffset = inlayHints
+      .filter((hint) => hint.line === visualLine && hint.character <= cursorColumn)
+      .reduce((width, hint) => width + estimateInlayHintWidth(hint.label, fontSize), 0);
     const left =
       getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
+      inlayOffset +
       EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
     const top = visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
@@ -101,6 +112,7 @@ export const PrimaryCursorLayer = memo(PrimaryCursorLayerComponent, (prev, next)
     prev.tabSize === next.tabSize &&
     prev.content === next.content &&
     prev.textareaRef === next.textareaRef &&
-    prev.hidden === next.hidden
+    prev.hidden === next.hidden &&
+    prev.inlayHints === next.inlayHints
   );
 });

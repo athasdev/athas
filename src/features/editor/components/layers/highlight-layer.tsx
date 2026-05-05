@@ -6,6 +6,7 @@ import {
   FileText,
 } from "@phosphor-icons/react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
+import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
 
 interface HighlightLayerProps {
@@ -18,6 +19,7 @@ interface HighlightLayerProps {
   tabSize?: number;
   wordWrap?: boolean;
   viewportRange?: { startLine: number; endLine: number };
+  inlayHints?: InlayHint[];
 }
 
 interface LineProps {
@@ -26,10 +28,11 @@ interface LineProps {
   foldedCount?: number;
   lineStart: number;
   lineIndex: number;
+  inlayHints?: InlayHint[];
 }
 
 const Line = memo<LineProps>(
-  ({ lineContent, tokens, foldedCount, lineStart, lineIndex }) => {
+  ({ lineContent, tokens, foldedCount, lineStart, lineIndex, inlayHints = [] }) => {
     const accordionMeta = useMemo(() => parseDiffAccordionLine(lineContent), [lineContent]);
 
     const spans = useMemo((): ReactNode[] => {
@@ -37,14 +40,71 @@ const Line = memo<LineProps>(
         return [];
       }
 
-      if (tokens.length === 0) {
-        return [];
-      }
-
       const result: ReactNode[] = [];
       let lastIndex = 0;
       let spanKey = 0;
       let lastTokenClass: string | undefined;
+      let hintIndex = 0;
+
+      const lineHints = [...inlayHints]
+        .map((hint) => ({
+          ...hint,
+          character: Math.max(0, Math.min(lineContent.length, hint.character)),
+        }))
+        .sort((a, b) => a.character - b.character || a.label.localeCompare(b.label));
+
+      const appendHint = (hint: InlayHint) => {
+        result.push(
+          <span
+            key={`${lineIndex}-hint-${hint.character}-${spanKey++}`}
+            className="inlay-hint editor-font"
+          >
+            {hint.label}
+          </span>,
+        );
+      };
+
+      const appendHintsThrough = (character: number) => {
+        while (hintIndex < lineHints.length && lineHints[hintIndex].character <= character) {
+          appendHint(lineHints[hintIndex]);
+          hintIndex++;
+        }
+      };
+
+      const appendText = (start: number, end: number, className: string) => {
+        if (end <= start) return;
+
+        appendHintsThrough(start);
+
+        let cursor = start;
+        while (hintIndex < lineHints.length && lineHints[hintIndex].character < end) {
+          const hint = lineHints[hintIndex];
+          if (hint.character > cursor) {
+            result.push(
+              <span key={`${lineIndex}-${spanKey++}`} className={className}>
+                {lineContent.substring(cursor, hint.character)}
+              </span>,
+            );
+          }
+          appendHint(hint);
+          hintIndex++;
+          cursor = hint.character;
+        }
+
+        if (cursor < end) {
+          result.push(
+            <span key={`${lineIndex}-${spanKey++}`} className={className}>
+              {lineContent.substring(cursor, end)}
+            </span>,
+          );
+        }
+      };
+
+      if (tokens.length === 0) {
+        appendText(0, lineContent.length, "token-text");
+        appendHintsThrough(lineContent.length);
+        return result;
+      }
 
       for (const token of tokens) {
         // Calculate token position relative to this line
@@ -63,23 +123,17 @@ const Line = memo<LineProps>(
 
         // Add text before token - use last token's class to avoid flash
         if (tokenStartInLine > lastIndex) {
-          const text = lineContent.substring(lastIndex, Math.max(lastIndex, tokenStartInLine));
-          result.push(
-            <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass ?? "token-text"}>
-              {text}
-            </span>,
+          appendText(
+            lastIndex,
+            Math.max(lastIndex, tokenStartInLine),
+            lastTokenClass ?? "token-text",
           );
         }
 
         // Add token (start from lastIndex if token overlaps with previous)
         const start = Math.max(lastIndex, Math.max(0, tokenStartInLine));
         const end = Math.min(lineContent.length, tokenEndInLine);
-        const tokenText = lineContent.substring(start, end);
-        result.push(
-          <span key={`${lineIndex}-${spanKey++}`} className={token.class_name}>
-            {tokenText}
-          </span>,
-        );
+        appendText(start, end, token.class_name);
 
         lastIndex = end;
         lastTokenClass = token.class_name;
@@ -88,16 +142,13 @@ const Line = memo<LineProps>(
       // Add remaining text - use the last token's class to avoid white flash
       // This handles the case where content is added but tokens haven't updated yet
       if (lastIndex < lineContent.length) {
-        const text = lineContent.substring(lastIndex);
-        result.push(
-          <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass ?? "token-text"}>
-            {text}
-          </span>,
-        );
+        appendText(lastIndex, lineContent.length, lastTokenClass ?? "token-text");
       }
 
+      appendHintsThrough(lineContent.length);
+
       return result;
-    }, [lineContent, tokens, lineStart, lineIndex]);
+    }, [lineContent, tokens, lineStart, lineIndex, inlayHints]);
 
     if (accordionMeta) {
       const Icon = accordionMeta.name.endsWith(".json") ? FileJson2 : FileText;
@@ -138,6 +189,7 @@ const Line = memo<LineProps>(
       prev.lineContent === next.lineContent &&
       prev.lineStart === next.lineStart &&
       prev.tokens === next.tokens &&
+      prev.inlayHints === next.inlayHints &&
       prev.foldedCount === next.foldedCount
     );
   },
@@ -157,6 +209,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       tabSize = 2,
       wordWrap = false,
       viewportRange,
+      inlayHints = [],
     },
     ref,
   ) => {
@@ -208,6 +261,21 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       return map;
     }, [lines, sortedTokens, lineOffsets, viewportRange]);
 
+    const lineHintsMap = useMemo(() => {
+      const map = new Map<number, InlayHint[]>();
+      const startLine = viewportRange?.startLine ?? 0;
+      const endLine = viewportRange?.endLine ?? lines.length;
+
+      for (const hint of inlayHints) {
+        if (hint.line < startLine || hint.line >= endLine) continue;
+        const existing = map.get(hint.line) || [];
+        existing.push(hint);
+        map.set(hint.line, existing);
+      }
+
+      return map;
+    }, [inlayHints, lines.length, viewportRange]);
+
     const renderedLines = useMemo(() => {
       const startLine = viewportRange?.startLine ?? 0;
       const endLine = viewportRange?.endLine ?? lines.length;
@@ -229,6 +297,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       for (let i = startLine; i < Math.min(endLine, lines.length); i++) {
         const line = lines[i];
         const lineTokens = lineTokensMap.get(i) || [];
+        const lineHints = lineHintsMap.get(i) || [];
         const lineStart = lineOffsets[i];
         const foldedCount = foldMarkers?.get(i);
 
@@ -237,6 +306,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
             key={i}
             lineContent={line}
             tokens={lineTokens}
+            inlayHints={lineHints}
             foldedCount={foldedCount}
             lineStart={lineStart}
             lineIndex={i}
@@ -257,7 +327,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       }
 
       return result;
-    }, [lines, lineTokensMap, lineOffsets, viewportRange, lineHeight, foldMarkers]);
+    }, [lines, lineTokensMap, lineHintsMap, lineOffsets, viewportRange, lineHeight, foldMarkers]);
 
     return (
       <div
@@ -309,6 +379,7 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
   const shouldSkipRender =
     prev.content === next.content &&
     prev.tokens === next.tokens &&
+    prev.inlayHints === next.inlayHints &&
     prev.foldMarkers === next.foldMarkers &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&

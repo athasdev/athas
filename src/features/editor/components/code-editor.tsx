@@ -1,13 +1,5 @@
 import type React from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -25,7 +17,6 @@ import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
-import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
 import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
@@ -97,10 +88,8 @@ const CodeEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const codeLensRef = useRef<HTMLDivElement>(null);
-  const inlayHintsRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
-  const [contentOffsetLeft, setContentOffsetLeft] = useState(0);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -264,7 +253,7 @@ const CodeEditor = ({
   // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
   const syncLspOverlayTransform = useCallback((scrollTop: number, scrollLeft: number) => {
     const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-    for (const ref of [codeLensRef, inlayHintsRef, renameInputRef]) {
+    for (const ref of [codeLensRef, renameInputRef]) {
       if (ref.current) {
         ref.current.style.transform = transform;
       }
@@ -300,45 +289,6 @@ const CodeEditor = ({
       }
     };
   }, [syncLspOverlayTransform, updateLspVisibleLineRange]);
-
-  useLayoutEffect(() => {
-    const container = editorRef.current;
-    if (!container) return;
-
-    const updateContentOffset = () => {
-      const contentContainer = container.querySelector(
-        "[data-editor-content-container]",
-      ) as HTMLElement | null;
-
-      if (!contentContainer) {
-        setContentOffsetLeft(0);
-        return;
-      }
-
-      const containerRect = container.getBoundingClientRect();
-      const contentRect = contentContainer.getBoundingClientRect();
-      const nextOffset = Math.max(0, contentRect.left - containerRect.left);
-      setContentOffsetLeft((current) =>
-        Math.abs(current - nextOffset) < 0.5 ? current : nextOffset,
-      );
-    };
-
-    const frame = requestAnimationFrame(updateContentOffset);
-    const resizeObserver =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateContentOffset);
-    resizeObserver?.observe(container);
-    const contentContainer = container.querySelector(
-      "[data-editor-content-container]",
-    ) as HTMLElement | null;
-    if (contentContainer) {
-      resizeObserver?.observe(contentContainer);
-    }
-
-    return () => {
-      cancelAnimationFrame(frame);
-      resizeObserver?.disconnect();
-    };
-  }, [activeBufferId, showMarkdownPreview, showHtmlPreview, showCsvPreview]);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -559,20 +509,6 @@ const CodeEditor = ({
             />
           )}
 
-          {/* Inlay Hints */}
-          {enableInlayHints && inlayHints.length > 0 && (
-            <InlayHintsOverlay
-              ref={inlayHintsRef}
-              hints={inlayHints}
-              fontSize={zoomedFontSize}
-              lineHeight={zoomedLineHeight}
-              charWidth={zoomedFontSize * 0.6}
-              contentOffsetLeft={contentOffsetLeft}
-              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              viewportHeight={editorRef.current?.clientHeight ?? 600}
-            />
-          )}
-
           {/* Signature Help */}
           {enableInteractiveServices && (
             <SignatureHelpTooltip
@@ -621,6 +557,7 @@ const CodeEditor = ({
                 lineNumberStart={lineNumberStart}
                 lineNumberMap={lineNumberMap}
                 onContentChange={onContentChange}
+                inlayHints={enableInlayHints ? inlayHints : []}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={
