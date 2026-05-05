@@ -24,19 +24,26 @@
 /* Style the terminal viewport for better appearance */
 .xterm-container .xterm-viewport {
   overflow-y: auto !important;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overscroll-behavior: none;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .xterm-container .xterm-viewport {
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+    scrollbar-width: thin;
+  }
 }
 
 /* Improve scrollbar styling */
 .xterm-container .xterm-viewport::-webkit-scrollbar {
+  -webkit-appearance: none !important;
   width: var(--app-scrollbar-size) !important;
   height: var(--app-scrollbar-size) !important;
   background-color: var(--app-scrollbar-track) !important;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-track {
+  -webkit-appearance: none !important;
   background-color: var(--app-scrollbar-track) !important;
 }
 
@@ -45,6 +52,7 @@
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb {
+  -webkit-appearance: none !important;
   min-height: 36px !important;
   border: var(--app-scrollbar-thumb-border) !important;
   border-radius: var(--app-scrollbar-radius) !important;

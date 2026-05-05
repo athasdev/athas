@@ -56,9 +56,14 @@
   tab-size: inherit;
 
   scroll-behavior: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb, rgba(128, 128, 128, 0.42)) transparent;
   scrollbar-gutter: stable;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .input-layer {
+    scrollbar-color: var(--app-scrollbar-thumb, rgba(128, 128, 128, 0.42)) transparent;
+    scrollbar-width: thin;
+  }
 }
 
 /* Keep passive layers visually clean */
@@ -72,16 +77,19 @@
 }
 
 .input-layer::-webkit-scrollbar {
+  -webkit-appearance: none !important;
   width: var(--app-scrollbar-size, 11px) !important;
   height: var(--app-scrollbar-size, 11px) !important;
   background-color: transparent !important;
 }
 
 .input-layer::-webkit-scrollbar-track {
+  -webkit-appearance: none !important;
   background-color: transparent !important;
 }
 
 .input-layer::-webkit-scrollbar-thumb {
+  -webkit-appearance: none !important;
   background-color: rgba(128, 128, 128, 0.42) !important;
   background-color: var(--app-scrollbar-thumb, rgba(128, 128, 128, 0.42)) !important;
   border: var(--app-scrollbar-thumb-border, 3px solid transparent) !important;

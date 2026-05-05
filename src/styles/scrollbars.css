@@ -18,18 +18,30 @@
   --app-scrollbar-thumb-active: rgba(210, 210, 210, 0.68);
 }
 
-:root,
-body,
-#root,
-:where(*) {
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
-  scrollbar-width: thin;
+@supports not selector(::-webkit-scrollbar) {
+  :root,
+  body,
+  #root,
+  * {
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+    scrollbar-width: thin;
+  }
+
+  .custom-scrollbar,
+  .custom-scrollbar-thin,
+  .custom-scrollbar-auto,
+  .editor-scrollable,
+  .tab-scroll-container {
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+    scrollbar-width: thin;
+  }
 }
 
 :root::-webkit-scrollbar,
 body::-webkit-scrollbar,
 #root::-webkit-scrollbar,
-:where(*)::-webkit-scrollbar {
+*::-webkit-scrollbar {
+  -webkit-appearance: none !important;
   width: var(--app-scrollbar-size) !important;
   height: var(--app-scrollbar-size) !important;
   background-color: var(--app-scrollbar-track) !important;
@@ -41,15 +53,17 @@ body::-webkit-scrollbar-track,
 body::-webkit-scrollbar-corner,
 #root::-webkit-scrollbar-track,
 #root::-webkit-scrollbar-corner,
-:where(*)::-webkit-scrollbar-track,
-:where(*)::-webkit-scrollbar-corner {
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  -webkit-appearance: none !important;
   background-color: var(--app-scrollbar-track) !important;
 }
 
 :root::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
 #root::-webkit-scrollbar-thumb,
-:where(*)::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
+  -webkit-appearance: none !important;
   min-height: 36px !important;
   min-width: 36px !important;
   border: var(--app-scrollbar-thumb-border) !important;
@@ -62,7 +76,7 @@ body::-webkit-scrollbar-thumb,
 :root::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover,
 #root::-webkit-scrollbar-thumb:hover,
-:where(*)::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background-color: rgba(105, 105, 105, 0.62) !important;
   background-color: var(--app-scrollbar-thumb-hover) !important;
   background-clip: content-box !important;
@@ -71,7 +85,7 @@ body::-webkit-scrollbar-thumb:hover,
 :root::-webkit-scrollbar-thumb:active,
 body::-webkit-scrollbar-thumb:active,
 #root::-webkit-scrollbar-thumb:active,
-:where(*)::-webkit-scrollbar-thumb:active {
+*::-webkit-scrollbar-thumb:active {
   background-color: rgba(85, 85, 85, 0.72) !important;
   background-color: var(--app-scrollbar-thumb-active) !important;
   background-clip: content-box !important;
@@ -80,7 +94,7 @@ body::-webkit-scrollbar-thumb:active,
 :root::-webkit-scrollbar-button,
 body::-webkit-scrollbar-button,
 #root::-webkit-scrollbar-button,
-:where(*)::-webkit-scrollbar-button {
+*::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
@@ -100,8 +114,6 @@ body::-webkit-scrollbar-button,
 }
 
 .custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overflow: auto;
 }
 
@@ -133,8 +145,6 @@ body::-webkit-scrollbar-button,
 }
 
 .custom-scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overflow: auto;
 }
 
@@ -162,8 +172,6 @@ body::-webkit-scrollbar-button,
 }
 
 .custom-scrollbar-auto {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overflow: auto;
 }
 
@@ -201,8 +209,6 @@ body::-webkit-scrollbar-button,
 }
 
 .editor-scrollable {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overscroll-behavior: none;
 }
 
@@ -251,8 +257,6 @@ body::-webkit-scrollbar-button,
 .tab-scroll-container {
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overscroll-behavior-x: contain;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
