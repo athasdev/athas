@@ -1,3 +1,17 @@
+export interface TerminalViewSnapshot {
+  version: number;
+  serializedContent: string;
+  viewportY: number;
+  baseY: number;
+  rows: number;
+  cols: number;
+  isAtBottom: boolean;
+  bufferType: "normal" | "alternate";
+  capturedAt: number;
+}
+
+export type TerminalViewSnapshotInput = Omit<TerminalViewSnapshot, "version">;
+
 export interface Terminal {
   id: string;
   name: string;
@@ -12,6 +26,7 @@ export interface Terminal {
   connectionId?: string;
   selection?: string;
   serializedContent?: string;
+  viewSnapshot?: TerminalViewSnapshot;
   title?: string;
   ref?: any;
   splitMode?: boolean;

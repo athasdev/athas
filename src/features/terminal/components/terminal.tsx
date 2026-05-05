@@ -18,6 +18,7 @@ import {
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import { useTerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal-store";
+import type { TerminalViewSnapshot } from "../types/terminal";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
@@ -56,8 +57,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
+  const restoredSnapshotVersionRef = useRef<number | null>(null);
 
-  const { updateSession, getSession } = useTerminalStore();
+  const { updateSession, getSession, saveSessionSnapshot } = useTerminalStore();
   const session = getSession(sessionId);
   const connectionId = session?.connectionId;
   const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
@@ -126,6 +128,48 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminal: xtermRef.current,
     updateSession,
   });
+
+  const restoreSnapshotViewport = useCallback(
+    (terminal: Terminal, snapshot: TerminalViewSnapshot) => {
+      if (restoredSnapshotVersionRef.current === snapshot.version) return;
+      restoredSnapshotVersionRef.current = snapshot.version;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (xtermRef.current !== terminal) return;
+
+          const baseY = terminal.buffer.active.baseY;
+          const targetLine = snapshot.isAtBottom
+            ? baseY
+            : Math.min(Math.max(0, snapshot.viewportY), baseY);
+
+          terminal.scrollToLine(targetLine);
+        });
+      });
+    },
+    [],
+  );
+
+  const captureTerminalSnapshot = useCallback(() => {
+    const terminal = xtermRef.current;
+    const addons = addonsRef.current;
+    if (!terminal || !addons || !getSession(sessionId)?.connectionId) return;
+
+    const serializedContent = addons.serializeAddon.serialize();
+    if (!serializedContent) return;
+
+    const activeBuffer = terminal.buffer.active;
+    saveSessionSnapshot(sessionId, {
+      serializedContent,
+      viewportY: activeBuffer.viewportY,
+      baseY: activeBuffer.baseY,
+      rows: terminal.rows,
+      cols: terminal.cols,
+      isAtBottom: activeBuffer.viewportY >= activeBuffer.baseY,
+      bufferType: activeBuffer.type,
+      capturedAt: Date.now(),
+    });
+  }, [getSession, saveSessionSnapshot, sessionId]);
 
   const initializeTerminal = useCallback(async () => {
     const container = terminalContainerRef.current;
@@ -280,7 +324,12 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         });
       }
 
-      if (existingSession?.serializedContent) {
+      const snapshot = existingSession?.viewSnapshot;
+      if (snapshot?.serializedContent) {
+        terminal.write(snapshot.serializedContent, () => {
+          restoreSnapshotViewport(terminal, snapshot);
+        });
+      } else if (existingSession?.serializedContent) {
         terminal.write(existingSession.serializedContent);
       }
 
@@ -316,6 +365,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     onTerminalRef,
     rootFolderPath,
     remoteConnectionId,
+    restoreSnapshotViewport,
     sessionId,
     terminalCursorBlink,
     terminalCursorStyle,
@@ -434,16 +484,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     return () => {
       if (xtermRef.current) {
-        const serializedContent = addonsRef.current?.serializeAddon.serialize();
-        if (serializedContent && getSession(sessionId)?.connectionId) {
-          updateSession(sessionId, { serializedContent });
-        }
+        captureTerminalSnapshot();
         xtermRef.current.dispose();
         xtermRef.current = null;
         addonsRef.current = null;
       }
     };
-  }, [getSession, sessionId, updateSession]);
+  }, [captureTerminalSnapshot]);
 
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;
