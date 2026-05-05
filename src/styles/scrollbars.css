@@ -1,229 +1,242 @@
+:root {
+  --app-scrollbar-size: 11px;
+  --app-scrollbar-thin-size: 9px;
+  --app-scrollbar-radius: 999px;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: rgba(120, 120, 120, 0.42);
+  --app-scrollbar-thumb-subtle: rgba(120, 120, 120, 0.28);
+  --app-scrollbar-thumb-hover: rgba(105, 105, 105, 0.62);
+  --app-scrollbar-thumb-active: rgba(85, 85, 85, 0.72);
+  --app-scrollbar-border-size: 3px;
+  --app-scrollbar-thumb-border: 3px solid transparent;
+}
+
+.dark {
+  --app-scrollbar-thumb: rgba(166, 166, 166, 0.38);
+  --app-scrollbar-thumb-subtle: rgba(166, 166, 166, 0.24);
+  --app-scrollbar-thumb-hover: rgba(188, 188, 188, 0.58);
+  --app-scrollbar-thumb-active: rgba(210, 210, 210, 0.68);
+}
+
+:root,
+body,
+#root,
+:where(*) {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+:root::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+:where(*)::-webkit-scrollbar {
+  width: var(--app-scrollbar-size) !important;
+  height: var(--app-scrollbar-size) !important;
+  background-color: var(--app-scrollbar-track) !important;
+}
+
+:root::-webkit-scrollbar-track,
+:root::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-track,
+body::-webkit-scrollbar-corner,
+#root::-webkit-scrollbar-track,
+#root::-webkit-scrollbar-corner,
+:where(*)::-webkit-scrollbar-track,
+:where(*)::-webkit-scrollbar-corner {
+  background-color: var(--app-scrollbar-track) !important;
+}
+
+:root::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+#root::-webkit-scrollbar-thumb,
+:where(*)::-webkit-scrollbar-thumb {
+  min-height: 36px !important;
+  min-width: 36px !important;
+  border: var(--app-scrollbar-thumb-border) !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
+}
+
+:root::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+#root::-webkit-scrollbar-thumb:hover,
+:where(*)::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
+}
+
+:root::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active,
+#root::-webkit-scrollbar-thumb:active,
+:where(*)::-webkit-scrollbar-thumb:active {
+  background-color: rgba(85, 85, 85, 0.72) !important;
+  background-color: var(--app-scrollbar-thumb-active) !important;
+  background-clip: content-box !important;
+}
+
+:root::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+#root::-webkit-scrollbar-button,
+:where(*)::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .scrollbar-none,
 .scrollbar-hidden {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .scrollbar-none::-webkit-scrollbar,
 .scrollbar-hidden::-webkit-scrollbar {
-  display: none;
-}
-
-:root {
-  --app-scrollbar-size: 10px;
-  --app-scrollbar-thin-size: 8px;
-  --app-scrollbar-radius: 999px;
-  --app-scrollbar-track: transparent;
-  --app-scrollbar-thumb: var(--color-border);
-  --app-scrollbar-thumb-subtle: var(--color-border);
-  --app-scrollbar-thumb-hover: var(--color-text-lighter);
-  --app-scrollbar-thumb-active: var(--color-text-light);
-  --app-scrollbar-border-size: 3px;
-  --app-scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
-  --app-scrollbar-thumb-border: var(--app-scrollbar-border-size) solid transparent;
-}
-
-@supports (color: color-mix(in srgb, black, transparent)) {
-  :root {
-    --app-scrollbar-thumb: color-mix(in srgb, var(--color-border) 68%, transparent);
-    --app-scrollbar-thumb-subtle: color-mix(in srgb, var(--app-scrollbar-thumb) 62%, transparent);
-    --app-scrollbar-thumb-hover: color-mix(in srgb, var(--color-text-lighter) 86%, transparent);
-    --app-scrollbar-thumb-active: color-mix(in srgb, var(--color-text-light) 90%, transparent);
-  }
-}
-
-:where(*),
-* {
-  scrollbar-color: var(--app-scrollbar-color);
-  scrollbar-width: thin;
-}
-
-:where(*)::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: var(--app-scrollbar-size);
-  height: var(--app-scrollbar-size);
-  background: var(--app-scrollbar-track);
-}
-
-:where(*)::-webkit-scrollbar-track,
-:where(*)::-webkit-scrollbar-corner,
-*::-webkit-scrollbar-track,
-*::-webkit-scrollbar-corner {
-  -webkit-appearance: none;
-  background: var(--app-scrollbar-track);
-}
-
-:where(*)::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-  -webkit-appearance: none;
-  min-height: 32px;
-  min-width: 32px;
-  border: var(--app-scrollbar-thumb-border);
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
-}
-
-:where(*)::-webkit-scrollbar-thumb:hover,
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
-}
-
-:where(*)::-webkit-scrollbar-thumb:active,
-*::-webkit-scrollbar-thumb:active {
-  background: var(--app-scrollbar-thumb-active);
-  background-clip: content-box;
-}
-
-:where(*)::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button {
-  display: none;
-  width: 0;
-  height: 0;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-color);
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overflow: auto;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: var(--app-scrollbar-size);
-  height: var(--app-scrollbar-size);
+  width: var(--app-scrollbar-size) !important;
+  height: var(--app-scrollbar-size) !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  -webkit-appearance: none;
-  background: var(--app-scrollbar-track);
+  background-color: var(--app-scrollbar-track) !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  -webkit-appearance: none;
-  border: var(--app-scrollbar-thumb-border);
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  border: var(--app-scrollbar-thumb-border) !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-corner {
-  background: var(--app-scrollbar-track);
+  background-color: var(--app-scrollbar-track) !important;
 }
 
 .custom-scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-color);
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overflow: auto;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: var(--app-scrollbar-thin-size);
-  height: var(--app-scrollbar-thin-size);
+  width: var(--app-scrollbar-thin-size) !important;
+  height: var(--app-scrollbar-thin-size) !important;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-track {
-  -webkit-appearance: none;
-  background: transparent;
+  background-color: transparent !important;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb {
-  -webkit-appearance: none;
-  border: 2px solid transparent;
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  border: 2px solid transparent !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar-auto {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-color);
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overflow: auto;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: var(--app-scrollbar-size);
-  height: var(--app-scrollbar-size);
+  width: var(--app-scrollbar-size) !important;
+  height: var(--app-scrollbar-size) !important;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-track {
-  -webkit-appearance: none;
-  background: transparent;
+  background-color: transparent !important;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-thumb {
-  -webkit-appearance: none;
-  border: var(--app-scrollbar-thumb-border);
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb-subtle);
-  background-clip: content-box;
+  border: var(--app-scrollbar-thumb-border) !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.28) !important;
+  background-color: var(--app-scrollbar-thumb-subtle) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar-auto:hover::-webkit-scrollbar-thumb {
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-corner {
-  background: transparent;
+  background-color: transparent !important;
 }
 
 .editor-scrollable {
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-color);
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overscroll-behavior: none;
 }
 
 .editor-scrollable::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: var(--app-scrollbar-thin-size);
-  height: var(--app-scrollbar-thin-size);
+  width: var(--app-scrollbar-thin-size) !important;
+  height: var(--app-scrollbar-thin-size) !important;
 }
 
 .editor-scrollable::-webkit-scrollbar-track {
-  -webkit-appearance: none;
-  background: transparent;
+  background-color: transparent !important;
 }
 
 .editor-scrollable::-webkit-scrollbar-thumb {
-  -webkit-appearance: none;
-  border: 2px solid transparent;
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb-subtle);
-  background-clip: content-box;
+  border: 2px solid transparent !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.28) !important;
+  background-color: var(--app-scrollbar-thumb-subtle) !important;
+  background-clip: content-box !important;
 }
 
 .editor-scrollable:hover::-webkit-scrollbar-thumb {
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .editor-scrollable::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
 }
 
 .editor-scrollable::-webkit-scrollbar-corner {
-  background: transparent;
+  background-color: transparent !important;
 }
 
 .custom-scrollbar,
@@ -239,38 +252,38 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-color);
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overscroll-behavior-x: contain;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
 .tab-scroll-container::-webkit-scrollbar {
-  -webkit-appearance: none;
-  height: var(--app-scrollbar-thin-size);
+  height: var(--app-scrollbar-thin-size) !important;
 }
 
 .tab-scroll-container::-webkit-scrollbar-track {
-  -webkit-appearance: none;
-  background: transparent;
+  background-color: transparent !important;
 }
 
 .tab-scroll-container::-webkit-scrollbar-thumb {
-  -webkit-appearance: none;
-  border: 2px solid transparent;
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  border: 2px solid transparent !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .tab-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
 }
 
 .tab-scroll-container:hover::-webkit-scrollbar-thumb {
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .tab-scroll-container > * {
