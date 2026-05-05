@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -45,23 +45,22 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const pdfFile = useMemo(() => {
+    if (!fileData) return null;
+
+    // PDF.js can fail to fetch blob:tauri URLs in the Tauri WebView, so hand
+    // it local bytes directly instead of routing the already-read file through a blob URL.
+    return { data: fileData.slice() };
+  }, [fileData]);
 
   // Load file content
   useEffect(() => {
-    let url: string | null = null;
     const loadFile = async () => {
       try {
         setFileData(null);
-        setPdfUrl(null);
         setError(null);
         const data = await readFile(filePath);
         setFileData(data);
-
-        // Create Blob URL for better worker compatibility
-        const blob = new Blob([data], { type: "application/pdf" });
-        url = URL.createObjectURL(blob);
-        setPdfUrl(url);
       } catch (err) {
         console.error("Failed to read PDF file:", err);
         setError("Failed to load PDF file.");
@@ -69,12 +68,6 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
     };
 
     loadFile();
-
-    return () => {
-      if (url) {
-        URL.revokeObjectURL(url);
-      }
-    };
   }, [filePath]);
 
   // Handle wheel zoom
@@ -206,9 +199,9 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       >
         {error ? (
           <div className="flex items-center justify-center text-error">{error}</div>
-        ) : pdfUrl ? (
+        ) : pdfFile ? (
           <Document
-            file={pdfUrl}
+            file={pdfFile}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             loading={
