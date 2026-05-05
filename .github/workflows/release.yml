@@ -203,6 +203,8 @@ jobs:
 
       - name: Install Tauri CEF CLI (Linux only)
         if: matrix.os == 'linux'
+        env:
+          RUSTFLAGS: "--cfg rustix_use_libc"
         run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/cef --locked
 
       - name: Install frontend dependencies
