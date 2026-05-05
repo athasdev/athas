@@ -93,6 +93,16 @@ interface EditorProps {
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
 const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
+const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
+
+function estimateInlayHintWidth(
+  label: string,
+  fontSize: number,
+  fontFamily: string,
+  tabSize: number,
+) {
+  return getAccurateCursorX(label, label.length, fontSize * 0.85, fontFamily, tabSize) + 12;
+}
 
 export function Editor({
   bufferId: propBufferId,
@@ -179,9 +189,11 @@ export function Editor({
   const filePath = buffer?.path;
   const languageIdOverride = buffer?.languageOverride;
   const useGlobalEditorState = isActiveSurface;
+  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
+  const [suppressInlayHintsForTyping, setSuppressInlayHintsForTyping] = useState(false);
 
   useGitGutter({
     filePath: filePath || "",
@@ -311,16 +323,6 @@ export function Editor({
   const shouldVirtualizeRendering =
     lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
-  const visualInlayHints = useMemo(() => {
-    if (!foldTransform.hasActiveFolds) return inlayHints;
-
-    return inlayHints
-      .map((hint) => {
-        const visualLine = foldTransform.mapping.actualToVirtual.get(hint.line);
-        return visualLine == null ? null : { ...hint, line: visualLine };
-      })
-      .filter((hint): hint is InlayHint => hint !== null);
-  }, [foldTransform, inlayHints]);
 
   const {
     viewportRange,
@@ -396,6 +398,32 @@ export function Editor({
     }
     return cursorPosition.line;
   }, [cursorPosition.line, foldTransform]);
+
+  useEffect(() => {
+    if (lastInputTimestamp === 0) return;
+
+    setSuppressInlayHintsForTyping(true);
+    const timeout = setTimeout(() => {
+      setSuppressInlayHintsForTyping(false);
+    }, INLAY_HINT_TYPING_SUPPRESS_MS);
+
+    return () => clearTimeout(timeout);
+  }, [lastInputTimestamp]);
+
+  const visualInlayHints = useMemo(() => {
+    if (suppressInlayHintsForTyping) return [];
+
+    const mappedHints = foldTransform.hasActiveFolds
+      ? inlayHints
+          .map((hint) => {
+            const visualLine = foldTransform.mapping.actualToVirtual.get(hint.line);
+            return visualLine == null ? null : { ...hint, line: visualLine };
+          })
+          .filter((hint): hint is InlayHint => hint !== null)
+      : inlayHints;
+
+    return mappedHints.filter((hint) => hint.line !== visualCursorLine);
+  }, [foldTransform, inlayHints, suppressInlayHintsForTyping, visualCursorLine]);
 
   const setEditorCursorPosition = useCallback(
     (position: Parameters<typeof setCursorPosition>[0]) => {
@@ -644,6 +672,106 @@ export function Editor({
     vimVisualSelection,
   ]);
 
+  const getColumnForInlayAdjustedX = useCallback(
+    (lineText: string, lineHints: InlayHint[], x: number) => {
+      const sortedHints = [...lineHints]
+        .map((hint) => ({
+          ...hint,
+          character: Math.max(0, Math.min(lineText.length, hint.character)),
+        }))
+        .sort((a, b) => a.character - b.character || a.label.localeCompare(b.label));
+
+      let bestColumn = 0;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (let column = 0; column <= lineText.length; column++) {
+        const hintWidth = sortedHints
+          .filter((hint) => hint.character <= column)
+          .reduce(
+            (width, hint) =>
+              width + estimateInlayHintWidth(hint.label, fontSize, fontFamily, tabSize),
+            0,
+          );
+        const boundaryX =
+          getAccurateCursorX(lineText, column, fontSize, fontFamily, tabSize) + hintWidth;
+        const distance = Math.abs(boundaryX - x);
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestColumn = column;
+        }
+      }
+
+      return bestColumn;
+    },
+    [fontFamily, fontSize, tabSize],
+  );
+
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLTextAreaElement>) => {
+      if (!useGlobalEditorState || readOnly || wordWrap || event.button !== 0) return;
+      if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey || event.detail > 1) {
+        return;
+      }
+
+      const textarea = inputRef.current;
+      if (!textarea || visualInlayHints.length === 0) return;
+
+      const rect = textarea.getBoundingClientRect();
+      const x =
+        event.clientX - rect.left - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + textarea.scrollLeft;
+      const y = event.clientY - rect.top - EDITOR_CONSTANTS.EDITOR_PADDING_TOP + textarea.scrollTop;
+      const visualLine = Math.max(0, Math.min(lines.length - 1, Math.floor(y / lineHeight)));
+      const lineHints = visualInlayHints.filter((hint) => hint.line === visualLine);
+      if (lineHints.length === 0) return;
+
+      event.preventDefault();
+
+      const lineText = lines[visualLine] || "";
+      const column = getColumnForInlayAdjustedX(lineText, lineHints, Math.max(0, x));
+      const virtualOffset = Math.min(
+        calculateLineOffset(lines, visualLine) + column,
+        displayContent.length,
+      );
+
+      textarea.focus();
+      textarea.selectionStart = virtualOffset;
+      textarea.selectionEnd = virtualOffset;
+
+      if (foldTransform.hasActiveFolds) {
+        const actualLine = foldTransform.mapping.virtualToActual.get(visualLine) ?? visualLine;
+        const actualOffset = calculateActualOffset(actualLines, actualLine, column);
+        setEditorCursorPosition({
+          line: actualLine,
+          column,
+          offset: actualOffset,
+        });
+      } else {
+        setEditorCursorPosition({
+          line: visualLine,
+          column,
+          offset: virtualOffset,
+        });
+      }
+
+      setSelection(undefined);
+    },
+    [
+      actualLines,
+      displayContent.length,
+      foldTransform,
+      getColumnForInlayAdjustedX,
+      lineHeight,
+      lines,
+      readOnly,
+      setEditorCursorPosition,
+      setSelection,
+      useGlobalEditorState,
+      visualInlayHints,
+      wordWrap,
+    ],
+  );
+
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLTextAreaElement>) => {
       if (!bufferId || !inputRef.current) return;
@@ -735,7 +863,6 @@ export function Editor({
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
   const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
   const autocompleteCompletion = useEditorUIStore.use.autocompleteCompletion();
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
   const { setSelectedLspIndex, setIsLspCompletionVisible, setAutocompleteCompletion } =
     useEditorUIStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
@@ -1200,6 +1327,7 @@ export function Editor({
           onClick={
             useGlobalEditorState || readOnly || onReadonlySurfaceClick ? handleClick : undefined
           }
+          onMouseDown={useGlobalEditorState ? handleMouseDown : undefined}
           onContextMenu={useGlobalEditorState ? contextMenu.open : undefined}
           fontSize={fontSize}
           fontFamily={fontFamily}
@@ -1223,7 +1351,6 @@ export function Editor({
             tabSize={tabSize}
             content={displayContent}
             textareaRef={inputRef}
-            inlayHints={visualInlayHints}
             hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
         )}

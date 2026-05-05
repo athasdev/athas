@@ -14,6 +14,7 @@ interface InputLayerProps {
   onKeyUp?: () => void;
   onSelect?: () => void;
   onClick?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
+  onMouseDown?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   onMouseUp?: () => void;
   onContextMenu?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   fontSize: number;
@@ -38,6 +39,7 @@ const InputLayerComponent = ({
   onKeyUp,
   onSelect,
   onClick,
+  onMouseDown,
   onMouseUp,
   onContextMenu,
   fontSize,
@@ -72,6 +74,7 @@ const InputLayerComponent = ({
       onKeyUp={onKeyUp}
       onSelect={onSelect}
       onClick={onClick}
+      onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
       onContextMenu={onContextMenu}
       onScroll={onScroll}
@@ -128,6 +131,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.onSelect === next.onSelect &&
     prev.onKeyUp === next.onKeyUp &&
     prev.onClick === next.onClick &&
+    prev.onMouseDown === next.onMouseDown &&
     prev.onMouseUp === next.onMouseUp &&
     prev.onContextMenu === next.onContextMenu &&
     prev.readOnly === next.readOnly
