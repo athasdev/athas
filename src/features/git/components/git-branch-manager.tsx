@@ -286,12 +286,12 @@ const GitBranchManager = ({
         showTrigger={false}
         showClear={false}
         className={cn(
-          "inline-flex w-fit shrink-0 hover:bg-hover/80",
+          "inline-flex w-fit max-w-full shrink overflow-hidden hover:bg-hover/80",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
           triggerClassName,
         )}
         inputClassName={cn(
-          "max-w-[360px] truncate pr-0 pl-7 font-normal",
+          "min-w-0 max-w-full flex-initial truncate pr-0 pl-7 font-normal",
           isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
           triggerInputClassName,
         )}

@@ -936,13 +936,17 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("rounded-lg")}>
-          <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1")}>
-            <GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />
+        <div className={paneHeaderClassName("min-w-0 rounded-lg")}>
+          <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1 overflow-hidden")}>
+            <GitProjectSelector
+              className="shrink"
+              onRepositoryChange={() => setRepoSelectionError(null)}
+            />
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
               onBranchChange={refreshAfterAction}
+              triggerClassName="shrink"
             />
           </div>
 
@@ -969,20 +973,29 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             onReorder={(orderedIds) =>
               updateSetting("gitSidebarTabOrder", orderedIds as typeof settings.gitSidebarTabOrder)
             }
-            className={EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME}
+            className={cn(EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME, "min-w-0 overflow-hidden")}
             items={gitTabs.map((tab) => ({
               id: tab.id,
               isActive: activeTab === tab.id,
               onClick: () => setActiveTab(tab.id),
               role: "tab",
               tabIndex: 0,
-              icon: <div className="relative flex items-center justify-center">{tab.icon}</div>,
-              label: <span className="ui-text-sm text-center leading-none">{tab.label}</span>,
+              icon: (
+                <div className="relative flex min-w-0 items-center justify-center">{tab.icon}</div>
+              ),
+              label: (
+                <span className="ui-text-sm min-w-0 max-w-full truncate text-center leading-none">
+                  {tab.label}
+                </span>
+              ),
               tooltip: {
                 content: tab.label,
                 side: "bottom",
               },
-              className: EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
+              className: cn(
+                EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
+                "overflow-hidden px-1.5 [&>div]:min-w-0",
+              ),
             }))}
           />
 
