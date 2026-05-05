@@ -4,6 +4,8 @@ import {
   buildWorkspaceRestorePlan,
   getEditorWorkspaceScope,
   isLocalFileInWorkspace,
+  isWorkspaceFolderPath,
+  normalizeWorkspaceFolders,
 } from "../controllers/workspace-session";
 
 describe("buildWorkspaceRestorePlan", () => {
@@ -86,9 +88,35 @@ describe("workspace file scope", () => {
     expect(getEditorWorkspaceScope("/other/readme.md", "/workspace")).toBe("external");
   });
 
+  it("classifies files under added workspace folders as workspace files", () => {
+    expect(isLocalFileInWorkspace("/docs/readme.md", "/workspace", ["/docs"])).toBe(true);
+    expect(getEditorWorkspaceScope("/docs/readme.md", "/workspace", ["/docs"])).toBe("workspace");
+  });
+
   it("does not classify remote or virtual editor paths as local external files", () => {
     expect(getEditorWorkspaceScope("remote://conn/src/app.ts", "/workspace")).toBeUndefined();
     expect(getEditorWorkspaceScope("diff://unstaged/src%2Fapp.ts", "/workspace")).toBeUndefined();
+  });
+
+  it("normalizes workspace folders around the primary root", () => {
+    expect(
+      normalizeWorkspaceFolders("/workspace", [
+        { path: "/docs", name: "docs" },
+        { path: "/workspace", name: "workspace" },
+      ]),
+    ).toEqual([
+      { path: "/workspace", name: "workspace", isPrimary: true },
+      { path: "/docs", name: "docs", isPrimary: false },
+    ]);
+  });
+
+  it("matches added workspace folder paths with trailing separator differences", () => {
+    expect(
+      isWorkspaceFolderPath("/docs/", "/workspace", [
+        { path: "/workspace", name: "workspace", isPrimary: true },
+        { path: "/docs", name: "docs" },
+      ]),
+    ).toBe(true);
   });
 });
 

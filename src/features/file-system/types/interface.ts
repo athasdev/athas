@@ -1,9 +1,16 @@
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import type { FileEntry } from "./app";
 
+export interface WorkspaceFolder {
+  path: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
 export interface FsState {
   files: FileEntry[];
   rootFolderPath?: string;
+  workspaceFolders: WorkspaceFolder[];
   filesVersion: number;
   isFileTreeLoading: boolean;
   isSwitchingProject: boolean;
@@ -20,6 +27,8 @@ export interface FsActions {
   // Folder operations
   handleOpenFolder: () => Promise<boolean>;
   handleOpenFolderByPath: (path: string) => Promise<boolean>;
+  addFolderToWorkspace: (path?: string) => Promise<boolean>;
+  removeFolderFromWorkspace: (path: string) => Promise<boolean>;
   handleOpenRemoteProject: (connectionId: string, connectionName: string) => Promise<boolean>;
   closeFolder: () => Promise<boolean>;
   resetWorkspace: () => Promise<void>;

@@ -16,6 +16,7 @@ import {
   MagnifyingGlass as Search,
   TerminalWindow as Terminal,
   Trash,
+  X,
   Upload,
   Warning,
 } from "@phosphor-icons/react";
@@ -50,6 +51,10 @@ interface UseFileExplorerContextMenuOptions {
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
   onDuplicatePath?: (path: string) => void;
+  onAddFolderToWorkspace?: () => void;
+  onRemoveFolderFromWorkspace?: (path: string) => void;
+  isWorkspaceRootPath?: (path: string) => boolean;
+  canRemoveWorkspaceRootPath?: (path: string) => boolean;
   onDeleteRequested: (candidate: { path: string; isDir: boolean }) => void;
   onStartInlineEditing: (path: string, isFolder: boolean) => void;
   onOpenAllFilesInDirectory: (directoryPath: string) => Promise<void>;
@@ -96,6 +101,10 @@ export function useFileExplorerContextMenu({
   onRevealInFinder,
   onUploadFile,
   onDuplicatePath,
+  onAddFolderToWorkspace,
+  onRemoveFolderFromWorkspace,
+  isWorkspaceRootPath,
+  canRemoveWorkspaceRootPath,
   onDeleteRequested,
   onStartInlineEditing,
   onOpenAllFilesInDirectory,
@@ -215,6 +224,22 @@ export function useFileExplorerContextMenu({
           onClick: () => onRefreshDirectory?.(contextMenu.path),
         },
         {
+          id: "add-folder-to-workspace",
+          label: "Add Folder to Workspace",
+          icon: <FolderPlus />,
+          onClick: () => onAddFolderToWorkspace?.(),
+        },
+        ...(canRemoveWorkspaceRootPath?.(contextMenu.path)
+          ? [
+              {
+                id: "remove-folder-from-workspace",
+                label: "Remove Folder from Workspace",
+                icon: <X />,
+                onClick: () => onRemoveFolderFromWorkspace?.(contextMenu.path),
+              },
+            ]
+          : []),
+        {
           id: "open-all-files",
           label: "Open All Files",
           icon: <FolderOpen />,
@@ -326,6 +351,9 @@ export function useFileExplorerContextMenu({
       );
     }
 
+    const shouldShowFileManagementItems =
+      !contextMenu.isDir || !isWorkspaceRootPath?.(contextMenu.path);
+
     items.push(
       {
         id: "copy-path",
@@ -377,38 +405,48 @@ export function useFileExplorerContextMenu({
       });
     }
 
-    items.push(
-      {
-        id: "rename",
-        label: "Rename",
-        icon: <Edit />,
-        onClick: () => onRenamePath?.(contextMenu.path),
-      },
-      {
+    if (shouldShowFileManagementItems) {
+      items.push(
+        {
+          id: "rename",
+          label: "Rename",
+          icon: <Edit />,
+          onClick: () => onRenamePath?.(contextMenu.path),
+        },
+        {
+          id: "reveal",
+          label: "Reveal in Finder",
+          icon: <Eye />,
+          onClick: () => {
+            if (onRevealInFinder) onRevealInFinder(contextMenu.path);
+            else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
+            else {
+              const parentDir = getDirName(contextMenu.path);
+              window.open(`file://${parentDir}`, "_blank");
+            }
+          },
+        },
+        { id: "sep-end", label: "", separator: true, onClick: () => {} },
+        {
+          id: "delete",
+          label: "Delete",
+          icon: <Trash />,
+          className: "text-red-400",
+          onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
+        },
+      );
+    } else {
+      items.push({
         id: "reveal",
         label: "Reveal in Finder",
         icon: <Eye />,
-        onClick: () => {
-          if (onRevealInFinder) onRevealInFinder(contextMenu.path);
-          else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
-          else {
-            const parentDir = getDirName(contextMenu.path);
-            window.open(`file://${parentDir}`, "_blank");
-          }
-        },
-      },
-      { id: "sep-end", label: "", separator: true, onClick: () => {} },
-      {
-        id: "delete",
-        label: "Delete",
-        icon: <Trash />,
-        className: "text-red-400",
-        onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
-      },
-    );
+        onClick: () => onRevealInFinder?.(contextMenu.path),
+      });
+    }
 
     return items;
   }, [
+    canRemoveWorkspaceRootPath,
     clipboard,
     clipboardActions,
     contextMenu,
@@ -420,11 +458,14 @@ export function useFileExplorerContextMenu({
     onFileSelect,
     onGenerateImage,
     onOpenAllFilesInDirectory,
+    onAddFolderToWorkspace,
+    onRemoveFolderFromWorkspace,
     onRefreshDirectory,
     onRenamePath,
     onRevealInFinder,
     onStartInlineEditing,
     onUploadFile,
+    isWorkspaceRootPath,
     rootFolderPath,
   ]);
 
@@ -438,7 +479,7 @@ export function useFileExplorerContextMenu({
             position={{ x: contextMenu.x, y: contextMenu.y }}
             items={contextMenuItems}
             onClose={() => setContextMenu(null)}
-            className="min-w-[220px]"
+            className="file-tree-context-menu min-w-[220px]"
           />
         )}
 

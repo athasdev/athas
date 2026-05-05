@@ -240,12 +240,14 @@ export function QuickQuestionCommandContent({
           <CommandItem
             isSelected
             onClick={() => void handleSubmit()}
-            className="px-3 py-2"
+            className="h-8 px-3 py-0"
             disabled={!question.trim()}
           >
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs">Ask quick question</div>
-              <div className="truncate text-[11px] text-text-lighter">{modelLabel}</div>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="shrink-0 truncate text-xs leading-none">Ask quick question</div>
+              <div className="min-w-0 truncate text-[11px] leading-none text-text-lighter">
+                {modelLabel}
+              </div>
             </div>
           </CommandItem>
         )}

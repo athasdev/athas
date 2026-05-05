@@ -7,6 +7,10 @@ import {
 
 const previousSession: ProjectSession = {
   projectPath: "/workspace",
+  workspaceFolders: [
+    { path: "/workspace", name: "workspace", isPrimary: true },
+    { path: "/docs", name: "docs" },
+  ],
   activeBufferPath: "/workspace/old.ts",
   buffers: [{ type: "editor", path: "/workspace/old.ts", name: "old.ts", isPinned: false }],
   terminals: [
@@ -62,6 +66,7 @@ describe("project session persistence helpers", () => {
     expect(nextSession.terminals).toBe(previousSession.terminals);
     expect(nextSession.aiSession).toBe(previousSession.aiSession);
     expect(nextSession.uiState).toBe(previousSession.uiState);
+    expect(nextSession.workspaceFolders).toBe(previousSession.workspaceFolders);
     expect(nextSession.lastSaved).toBe(2);
   });
 
@@ -77,6 +82,25 @@ describe("project session persistence helpers", () => {
 
     expect(nextSession.aiSession).toBeNull();
     expect(nextSession.terminals).toBe(previousSession.terminals);
+  });
+
+  it("updates workspace folders when explicitly saved", () => {
+    const nextSession = buildSavedProjectSession({
+      previousSession,
+      projectPath: "/workspace",
+      activeBufferPath: null,
+      buffers: [],
+      workspaceFolders: [
+        { path: "/workspace", name: "workspace", isPrimary: true },
+        { path: "/packages/api", name: "api" },
+      ],
+      now: 2,
+    });
+
+    expect(nextSession.workspaceFolders).toEqual([
+      { path: "/workspace", name: "workspace", isPrimary: true },
+      { path: "/packages/api", name: "api" },
+    ]);
   });
 
   it("updates UI state without dropping buffer and terminal snapshots", () => {

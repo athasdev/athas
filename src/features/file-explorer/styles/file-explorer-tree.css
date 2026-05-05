@@ -60,6 +60,11 @@
   isolation: isolate;
 }
 
+.file-tree-context-menu [role="menuitem"],
+.file-tree-context-menu [role="menuitem"] .ui-text-sm {
+  font-size: var(--ui-text-xs);
+}
+
 .file-tree-row:hover {
   background-color: var(
     --file-tree-hover-bg,

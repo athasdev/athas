@@ -31,6 +31,7 @@ import {
   getDirName,
   getRelativePath,
   joinPath,
+  pathStartsWithRoot,
   stripTrailingPathSeparators,
 } from "@/utils/path-helpers";
 import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
@@ -131,6 +132,8 @@ function FileExplorerTreeComponent({
   const { settings } = useSettingsStore();
   const fileTreeDensity = settings.fileTreeDensity;
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
+  const removeFolderFromWorkspace = useFileSystemStore((state) => state.removeFolderFromWorkspace);
   const revealPathInTree = useFileSystemStore((state) => state.revealPathInTree);
 
   const handleAutoExpandDirectory = useCallback(
@@ -174,14 +177,30 @@ function FileExplorerTreeComponent({
     return ig;
   }, [settings.hiddenFilePatterns, settings.hiddenDirectoryPatterns]);
 
+  const workspaceRootPaths = useMemo(() => {
+    const roots = files.filter((file) => file.isDir).map((file) => file.path);
+    if (rootFolderPath && !roots.includes(rootFolderPath)) {
+      roots.unshift(rootFolderPath);
+    }
+    return roots;
+  }, [files, rootFolderPath]);
+
+  const getWorkspaceRootForPath = useCallback(
+    (path: string) => workspaceRootPaths.find((rootPath) => pathStartsWithRoot(path, rootPath)),
+    [workspaceRootPaths],
+  );
+
   const isUserHidden = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
-      let relative = getRelativePath(fullPath, rootFolderPath);
+      const matchedRootPath = getWorkspaceRootForPath(fullPath);
+      if (!matchedRootPath) return false;
+
+      let relative = getRelativePath(fullPath, matchedRootPath);
       if (!relative || relative.trim() === "") return false;
       if (isDir && !relative.endsWith("/")) relative += "/";
       return userIgnore.ignores(relative);
     },
-    [userIgnore, rootFolderPath],
+    [getWorkspaceRootForPath, userIgnore],
   );
 
   // removed scroll-time DOM scanning for sticky folders
@@ -219,13 +238,15 @@ function FileExplorerTreeComponent({
   const isGitIgnored = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
       if (!gitIgnore || !rootFolderPath) return false;
+      if (getWorkspaceRootForPath(fullPath) !== rootFolderPath) return false;
+
       let relative = getRelativePath(fullPath, rootFolderPath);
       if (!relative || relative.trim() === "") return false;
       if (isDir && !relative.endsWith("/")) relative += "/";
       if (relative === ".git/" || relative === ".git") return false;
       return gitIgnore.ignores(relative);
     },
-    [gitIgnore, rootFolderPath],
+    [getWorkspaceRootForPath, gitIgnore, rootFolderPath],
   );
 
   const gitStatusDecorationLookup = useMemo(() => {
@@ -246,8 +267,10 @@ function FileExplorerTreeComponent({
 
   const getGitStatusDecoration = useCallback(
     (file: FileEntry): FileTreeGitStatusDecoration | null =>
-      getFileTreeEntryGitStatusDecoration(file, rootFolderPath, gitStatusDecorationLookup),
-    [gitStatusDecorationLookup, rootFolderPath],
+      getWorkspaceRootForPath(file.path) === rootFolderPath
+        ? getFileTreeEntryGitStatusDecoration(file, rootFolderPath, gitStatusDecorationLookup)
+        : null,
+    [getWorkspaceRootForPath, gitStatusDecorationLookup, rootFolderPath],
   );
 
   const filteredFiles = useMemo(() => {
@@ -568,6 +591,15 @@ function FileExplorerTreeComponent({
     onRevealInFinder,
     onUploadFile,
     onDuplicatePath,
+    onAddFolderToWorkspace: () => {
+      void addFolderToWorkspace();
+    },
+    onRemoveFolderFromWorkspace: (path) => {
+      void removeFolderFromWorkspace(path);
+    },
+    isWorkspaceRootPath: (path) => workspaceRootPaths.includes(path),
+    canRemoveWorkspaceRootPath: (path) =>
+      path !== rootFolderPath && workspaceRootPaths.includes(path),
     onDeleteRequested: setDeleteCandidate,
     onStartInlineEditing: startInlineEditing,
     onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
@@ -977,7 +1009,7 @@ function FileExplorerTreeComponent({
                             data-depth={stickyAncestor.depth}
                             title={stickyAncestor.file.path}
                             className={cn(
-                              "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+                              "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
                               densityConfig.rowClassName,
                             )}
                             style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}

@@ -48,6 +48,10 @@ export function GitHubAuthStatusMessage() {
         <p className="ui-text-sm mt-1 text-text-lighter">
           Connect GitHub in Athas, then retry this view.
         </p>
+        <p className="ui-text-xs mt-2 max-w-sm text-text-lighter">
+          Athas stores your connected GitHub token encrypted and syncs it to this desktop app for
+          Issues, Pull Requests, Actions, and Releases.
+        </p>
         <div className="mt-2 flex items-center gap-2">
           <Button
             onClick={openGitHubConnection}
@@ -79,6 +83,10 @@ export function GitHubAuthStatusMessage() {
       <p className="ui-text-sm text-text">GitHub account not authenticated</p>
       <p className="ui-text-sm mt-1 text-text-lighter">
         Connect GitHub in Athas, then retry this view.
+      </p>
+      <p className="ui-text-xs mt-2 max-w-sm text-text-lighter">
+        Athas stores your connected GitHub token encrypted and syncs it to this desktop app for
+        Issues, Pull Requests, Actions, and Releases.
       </p>
       <div className="mt-2 flex items-center gap-2">
         <Button

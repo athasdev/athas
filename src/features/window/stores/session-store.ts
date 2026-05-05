@@ -44,8 +44,15 @@ interface WebViewerBufferSession {
 
 export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;
 
+export interface WorkspaceFolderSession {
+  path: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
 export interface ProjectSession {
   projectPath: string;
+  workspaceFolders?: WorkspaceFolderSession[];
   activeBufferPath: string | null;
   buffers: BufferSession[];
   terminals: PersistedTerminal[];
@@ -94,6 +101,7 @@ interface SessionState {
     activeBufferPath: string | null,
     terminals?: PersistedTerminal[],
     aiSession?: AIWorkspaceSessionSnapshot | null,
+    workspaceFolders?: WorkspaceFolderSession[],
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
   saveUiState: (projectPath: string, uiState: ProjectUiSession) => void;
@@ -109,6 +117,7 @@ export function buildSavedProjectSession({
   activeBufferPath,
   terminals,
   aiSession,
+  workspaceFolders,
   now,
 }: {
   previousSession?: ProjectSession;
@@ -117,11 +126,14 @@ export function buildSavedProjectSession({
   activeBufferPath: string | null;
   terminals?: PersistedTerminal[];
   aiSession?: AIWorkspaceSessionSnapshot | null;
+  workspaceFolders?: WorkspaceFolderSession[];
   now: number;
 }): ProjectSession {
   return {
     ...previousSession,
     projectPath,
+    workspaceFolders:
+      workspaceFolders === undefined ? previousSession?.workspaceFolders : workspaceFolders,
     activeBufferPath,
     buffers,
     terminals: terminals === undefined ? (previousSession?.terminals ?? []) : terminals,
@@ -167,7 +179,14 @@ const useSessionStoreBase = create<SessionState>()(
     (set, get) => ({
       sessions: {},
 
-      saveSession: (projectPath, buffers, activeBufferPath, terminals, aiSession) => {
+      saveSession: (
+        projectPath,
+        buffers,
+        activeBufferPath,
+        terminals,
+        aiSession,
+        workspaceFolders,
+      ) => {
         set((state) => ({
           sessions: {
             ...state.sessions,
@@ -178,6 +197,7 @@ const useSessionStoreBase = create<SessionState>()(
               activeBufferPath,
               terminals,
               aiSession,
+              workspaceFolders,
               now: Date.now(),
             }),
           },

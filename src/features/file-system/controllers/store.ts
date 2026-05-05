@@ -91,6 +91,8 @@ import {
   buildWorkspaceRestorePlan,
   getEditorWorkspaceScope,
   isLocalFileInWorkspace,
+  isWorkspaceFolderPath,
+  normalizeWorkspaceFolders,
 } from "./workspace-session";
 import type { WorkspaceSessionBuffer } from "./workspace-session";
 
@@ -139,6 +141,18 @@ const wrapWithRootFolder = (
   ];
 };
 
+const getWorkspaceFolderPaths = (get: FileSystemGet) =>
+  normalizeWorkspaceFolders(get().rootFolderPath, get().workspaceFolders).map(
+    (folder) => folder.path,
+  );
+
+const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
+  const projectName = getFolderName(path);
+  const entries = await readDirectoryContents(path);
+  const fileTree = sortFileEntries(entries);
+  return wrapWithRootFolder(fileTree, path, projectName)[0];
+};
+
 let latestFileOpenRequestId = 0;
 const textFileDecoder = new TextDecoder("utf-8");
 const MAX_SESSION_BUFFERS_TO_RESTORE = 8;
@@ -174,6 +188,7 @@ const recordLocalFileAccess = (
   path: string,
   name: string,
   workspaceRootPath: string | undefined,
+  workspaceFolderPaths: string[] = [],
 ) => {
   if (path.startsWith("remote://") || path.startsWith("diff://")) {
     return;
@@ -181,13 +196,14 @@ const recordLocalFileAccess = (
 
   useRecentFilesStore.getState().addOrUpdateRecentFile(path, name, {
     workspacePath: workspaceRootPath ?? null,
-    external: !isLocalFileInWorkspace(path, workspaceRootPath),
+    external: !isLocalFileInWorkspace(path, workspaceRootPath, workspaceFolderPaths),
   });
 };
 
 const serializeWorkspaceBuffer = (
   buffer: PaneContent,
   workspaceRootPath: string | undefined,
+  workspaceFolderPaths: string[] = [],
 ): BufferSession | null => {
   if (buffer.type === "editor" && !buffer.isVirtual) {
     return {
@@ -197,7 +213,7 @@ const serializeWorkspaceBuffer = (
       path: buffer.path,
       isPinned: buffer.isPinned,
       isPreview: buffer.isPreview,
-      workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath),
+      workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath, workspaceFolderPaths),
       editorState: buildPersistedEditorViewState(buffer),
     };
   }
@@ -395,6 +411,7 @@ const openLocalWorkspace = async (
       state.isFileTreeLoading = false;
       state.files = wrappedFileTree;
       state.rootFolderPath = path;
+      state.workspaceFolders = [{ path, name: projectName, isPrimary: true }];
       state.filesVersion++;
       state.projectFilesCache = undefined;
     });
@@ -446,6 +463,7 @@ export const useFileSystemStore = createSelectors(
       // State
       files: [],
       rootFolderPath: undefined,
+      workspaceFolders: [],
       filesVersion: 0,
       isFileTreeLoading: false,
       isSwitchingProject: false,
@@ -487,6 +505,7 @@ export const useFileSystemStore = createSelectors(
           state.isFileTreeLoading = false;
           state.filesVersion++;
           state.rootFolderPath = undefined;
+          state.workspaceFolders = [];
           state.projectFilesCache = undefined;
         });
 
@@ -518,6 +537,42 @@ export const useFileSystemStore = createSelectors(
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
         const session = useSessionStore.getState().getSession(projectPath);
+        if (session?.workspaceFolders && session.workspaceFolders.length > 1) {
+          const foldersToRestore = normalizeWorkspaceFolders(projectPath, session.workspaceFolders);
+          const currentRootPaths = new Set(
+            get()
+              .files.filter((file) => file.isDir)
+              .map((file) => file.path),
+          );
+          const restoredRootEntries: FileEntry[] = [];
+
+          for (const folder of foldersToRestore) {
+            if (folder.path === projectPath || currentRootPaths.has(folder.path)) {
+              continue;
+            }
+
+            try {
+              restoredRootEntries.push(await readWorkspaceRootEntry(folder.path));
+            } catch (error) {
+              console.warn("Failed to restore workspace folder:", folder.path, error);
+              toast.warning(`Could not restore workspace folder "${folder.name}".`);
+            }
+          }
+
+          if (restoredRootEntries.length > 0) {
+            set((state) => {
+              state.files = [...state.files, ...restoredRootEntries];
+              state.workspaceFolders = foldersToRestore;
+              state.filesVersion++;
+              state.projectFilesCache = undefined;
+            });
+          } else {
+            set((state) => {
+              state.workspaceFolders = foldersToRestore;
+            });
+          }
+        }
+
         const terminalsToRestore = buildTerminalRestorePayload({
           projectSessionTerminals: session?.terminals,
           storageTerminals: session ? [] : readPersistedTerminalSessions(projectPath),
@@ -674,16 +729,21 @@ export const useFileSystemStore = createSelectors(
 
         const { buffers, activeBufferId } = useBufferStore.getState();
         const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+        const workspaceFolders = normalizeWorkspaceFolders(currentRootPath, get().workspaceFolders);
+        const workspaceFolderPaths = workspaceFolders.map((folder) => folder.path);
 
         clearQueuedWorkspaceSessionSave(currentRootPath);
         useSessionStore.getState().saveSession(
           currentRootPath,
           buffers
-            .map((buffer) => serializeWorkspaceBuffer(buffer, currentRootPath))
+            .map((buffer) =>
+              serializeWorkspaceBuffer(buffer, currentRootPath, workspaceFolderPaths),
+            )
             .filter((buffer): buffer is BufferSession => buffer !== null),
           activeBuffer?.path || null,
           readPersistedTerminalSessions(currentRootPath),
           readPersistedAiWorkspaceSession(),
+          workspaceFolders,
         );
       },
 
@@ -714,6 +774,99 @@ export const useFileSystemStore = createSelectors(
           set,
           get,
         );
+      },
+
+      addFolderToWorkspace: async (path?: string) => {
+        const selectedPath = path ?? (await openFolder());
+        if (!selectedPath) return false;
+
+        const rootFolderPath = get().rootFolderPath;
+        if (!rootFolderPath) {
+          return await get().handleOpenFolderByPath(selectedPath);
+        }
+
+        if (selectedPath.startsWith("remote://")) {
+          toast.warning("Add Folder to Workspace is only available for local folders.");
+          return false;
+        }
+
+        const workspaceFolders = normalizeWorkspaceFolders(rootFolderPath, get().workspaceFolders);
+        if (isWorkspaceFolderPath(selectedPath, rootFolderPath, workspaceFolders)) {
+          toast.info("Folder is already in this workspace.");
+          return true;
+        }
+
+        set((state) => {
+          state.isFileTreeLoading = true;
+        });
+
+        try {
+          const rootEntry = await readWorkspaceRootEntry(selectedPath);
+          const nextFolders = normalizeWorkspaceFolders(rootFolderPath, [
+            ...workspaceFolders,
+            { path: selectedPath, name: rootEntry.name },
+          ]);
+
+          set((state) => {
+            state.files = [...state.files, rootEntry];
+            state.workspaceFolders = nextFolders;
+            state.filesVersion++;
+            state.isFileTreeLoading = false;
+            state.projectFilesCache = undefined;
+          });
+
+          const expandedPaths = new Set(useFileTreeStore.getState().getExpandedPaths());
+          expandedPaths.add(selectedPath);
+          useFileTreeStore.getState().setExpandedPaths(expandedPaths);
+          useRecentFoldersStore.getState().addToRecents(selectedPath, {
+            missing: false,
+          });
+          get().persistActiveProjectSession();
+          toast.success(`Added "${rootEntry.name}" to workspace.`);
+          return true;
+        } catch (error) {
+          console.error("Failed to add folder to workspace:", error);
+          toast.error(`Failed to add folder to workspace: ${selectedPath}`);
+          set((state) => {
+            state.isFileTreeLoading = false;
+          });
+          return false;
+        }
+      },
+
+      removeFolderFromWorkspace: async (path: string) => {
+        const rootFolderPath = get().rootFolderPath;
+        if (!rootFolderPath) {
+          return false;
+        }
+
+        const workspaceFolders = normalizeWorkspaceFolders(rootFolderPath, get().workspaceFolders);
+        const folder = workspaceFolders.find((workspaceFolder) =>
+          isWorkspaceFolderPath(path, workspaceFolder.path, [workspaceFolder]),
+        );
+
+        if (!folder) {
+          return false;
+        }
+
+        if (folder.isPrimary || folder.path === rootFolderPath) {
+          toast.warning("Primary workspace folder cannot be removed.");
+          return false;
+        }
+
+        set((state) => {
+          state.files = state.files.filter((file) => file.path !== folder.path);
+          state.workspaceFolders = workspaceFolders.filter(
+            (workspaceFolder) => workspaceFolder.path !== folder.path,
+          );
+          state.filesVersion++;
+          state.projectFilesCache = undefined;
+        });
+
+        useFileTreeStore.getState().collapsePath(folder.path);
+        get().persistActiveProjectSession();
+        toast.success(`Removed "${folder.name}" from workspace.`);
+        return true;
       },
 
       handleOpenRemoteProject: async (connectionId: string, _connectionName: string) => {
@@ -757,6 +910,7 @@ export const useFileSystemStore = createSelectors(
             state.isFileTreeLoading = false;
             state.files = wrappedFileTree;
             state.rootFolderPath = remotePath;
+            state.workspaceFolders = [{ path: remotePath, name: connection.name, isPrimary: true }];
             state.filesVersion++;
             state.projectFilesCache = undefined;
           });
@@ -809,7 +963,7 @@ export const useFileSystemStore = createSelectors(
         if (existingBuffer) {
           fileOpenBenchmark.finish(path, "existing-buffer");
           setActiveBuffer(existingBuffer.id);
-          recordLocalFileAccess(path, fileName, workspaceRootPath);
+          recordLocalFileAccess(path, fileName, workspaceRootPath, getWorkspaceFolderPaths(get));
 
           if (existingBuffer.isPreview && !isPreview) {
             convertPreviewToDefinite(existingBuffer.id);
@@ -977,7 +1131,12 @@ export const useFileSystemStore = createSelectors(
                   false,
                   true,
                 );
-                recordLocalFileAccess(path, fileName, workspaceRootPath);
+                recordLocalFileAccess(
+                  path,
+                  fileName,
+                  workspaceRootPath,
+                  getWorkspaceFolderPaths(get),
+                );
                 fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
                 return;
               }
@@ -1010,7 +1169,12 @@ export const useFileSystemStore = createSelectors(
 
               // Open external editor buffer
               openExternalEditorBuffer(resolvedPath, fileName, connectionId);
-              recordLocalFileAccess(path, fileName, workspaceRootPath);
+              recordLocalFileAccess(
+                path,
+                fileName,
+                workspaceRootPath,
+                getWorkspaceFolderPaths(get),
+              );
               fileOpenBenchmark.finish(path, "external-editor-buffer-opened");
               return;
             } catch (error) {
@@ -1102,7 +1266,7 @@ export const useFileSystemStore = createSelectors(
           }
         }
 
-        recordLocalFileAccess(path, fileName, workspaceRootPath);
+        recordLocalFileAccess(path, fileName, workspaceRootPath, getWorkspaceFolderPaths(get));
 
         // Dispatch go-to-line event to center the line in viewport
         if (line) {
@@ -1635,18 +1799,24 @@ export const useFileSystemStore = createSelectors(
       getAllProjectFiles: async (): Promise<FileEntry[]> => {
         const { rootFolderPath, projectFilesCache } = get();
         if (!rootFolderPath) return [];
+        const workspaceFolderPaths = getWorkspaceFolderPaths(get);
+        const cachePath = workspaceFolderPaths.join("\n");
         const scanStartedAt = performance.now();
-        frontendTrace("info", "project-files", "getAllProjectFiles:start", { rootFolderPath });
+        frontendTrace("info", "project-files", "getAllProjectFiles:start", {
+          rootFolderPath,
+          workspaceFolders: workspaceFolderPaths,
+        });
 
         // Check cache first (cache for 5 minutes for better UX)
         const now = Date.now();
         if (
           projectFilesCache &&
-          projectFilesCache.path === rootFolderPath &&
+          projectFilesCache.path === cachePath &&
           now - projectFilesCache.timestamp < 300000 // 5 minutes
         ) {
           frontendTrace("info", "project-files", "getAllProjectFiles:cache-hit", {
             rootFolderPath,
+            workspaceFolders: workspaceFolderPaths,
             files: projectFilesCache.files.length,
             durationMs: Math.round((performance.now() - scanStartedAt) * 100) / 100,
           });
@@ -1726,11 +1896,18 @@ export const useFileSystemStore = createSelectors(
               return true;
             };
 
-            await scanDirectory(rootFolderPath);
+            for (const workspaceFolderPath of workspaceFolderPaths) {
+              if (processedFiles > MAX_PROJECT_FILES_TO_SCAN) {
+                didHitScanLimit = true;
+                break;
+              }
+              await scanDirectory(workspaceFolderPath);
+            }
 
             if (didHitScanLimit) {
               frontendTrace("warn", "project-files", "getAllProjectFiles:scan-truncated", {
                 rootFolderPath,
+                workspaceFolders: workspaceFolderPaths,
                 processedFiles,
                 maxFiles: MAX_PROJECT_FILES_TO_SCAN,
                 maxDepth: MAX_PROJECT_SCAN_DEPTH,
@@ -1740,13 +1917,14 @@ export const useFileSystemStore = createSelectors(
             // Update cache with new results
             set((state) => {
               state.projectFilesCache = {
-                path: rootFolderPath,
+                path: cachePath,
                 files: allFiles,
                 timestamp: now,
               };
             });
             frontendTrace("info", "project-files", "getAllProjectFiles:end", {
               rootFolderPath,
+              workspaceFolders: workspaceFolderPaths,
               files: allFiles.length,
               processedFiles,
               durationMs: Math.round((performance.now() - scanStartedAt) * 100) / 100,
@@ -1755,6 +1933,7 @@ export const useFileSystemStore = createSelectors(
             console.error("Failed to index project files:", error);
             frontendTrace("error", "project-files", "getAllProjectFiles:error", {
               rootFolderPath,
+              workspaceFolders: workspaceFolderPaths,
               durationMs: Math.round((performance.now() - scanStartedAt) * 100) / 100,
             });
           }
@@ -2137,6 +2316,7 @@ export const useFileSystemStore = createSelectors(
               state.isFileTreeLoading = false;
               state.files = wrappedFileTree;
               state.rootFolderPath = tab.path;
+              state.workspaceFolders = [{ path: tab.path, name: tab.name, isPrimary: true }];
               state.filesVersion++;
               state.projectFilesCache = undefined;
             });
@@ -2398,6 +2578,7 @@ export const useFileSystemStore = createSelectors(
           set((state) => {
             state.files = [];
             state.rootFolderPath = undefined;
+            state.workspaceFolders = [];
             state.filesVersion = 0;
           });
 

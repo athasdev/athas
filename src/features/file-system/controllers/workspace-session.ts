@@ -19,27 +19,83 @@ export interface WorkspaceSessionBuffer {
   remoteConnectionId?: string;
 }
 
+export interface WorkspaceFolderSession {
+  path: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
 function normalizeWorkspacePath(path: string) {
   return path.replace(/\\/g, "/").replace(/\/+$/, "");
 }
 
-export function isLocalFileInWorkspace(filePath: string, workspaceRootPath: string | undefined) {
-  if (!workspaceRootPath) {
+export function isLocalFileInWorkspace(
+  filePath: string,
+  workspaceRootPath: string | undefined,
+  workspaceFolderPaths: string[] = [],
+) {
+  const workspaceRoots = [
+    workspaceRootPath,
+    ...workspaceFolderPaths.filter((folderPath) => folderPath !== workspaceRootPath),
+  ].filter((folderPath): folderPath is string => !!folderPath);
+
+  if (workspaceRoots.length === 0) {
     return false;
   }
 
   const normalizedFilePath = normalizeWorkspacePath(filePath);
-  const normalizedWorkspaceRoot = normalizeWorkspacePath(workspaceRootPath);
 
-  return (
-    normalizedFilePath === normalizedWorkspaceRoot ||
-    normalizedFilePath.startsWith(`${normalizedWorkspaceRoot}/`)
+  return workspaceRoots.some((workspaceRoot) => {
+    const normalizedWorkspaceRoot = normalizeWorkspacePath(workspaceRoot);
+    return (
+      normalizedFilePath === normalizedWorkspaceRoot ||
+      normalizedFilePath.startsWith(`${normalizedWorkspaceRoot}/`)
+    );
+  });
+}
+
+export function normalizeWorkspaceFolders(
+  rootFolderPath: string | undefined,
+  workspaceFolders: WorkspaceFolderSession[] | undefined,
+): WorkspaceFolderSession[] {
+  const normalizedFolders = new Map<string, WorkspaceFolderSession>();
+
+  if (rootFolderPath) {
+    normalizedFolders.set(normalizeWorkspacePath(rootFolderPath), {
+      path: rootFolderPath,
+      name: rootFolderPath.split(/[\\/]/).filter(Boolean).pop() || rootFolderPath,
+      isPrimary: true,
+    });
+  }
+
+  for (const folder of workspaceFolders ?? []) {
+    const key = normalizeWorkspacePath(folder.path);
+    normalizedFolders.set(key, {
+      ...folder,
+      isPrimary: folder.isPrimary || folder.path === rootFolderPath,
+    });
+  }
+
+  return Array.from(normalizedFolders.values()).map((folder, index) => ({
+    ...folder,
+    isPrimary: index === 0 ? true : folder.isPrimary,
+  }));
+}
+
+export function isWorkspaceFolderPath(
+  path: string,
+  rootFolderPath: string | undefined,
+  workspaceFolders: WorkspaceFolderSession[],
+) {
+  return normalizeWorkspaceFolders(rootFolderPath, workspaceFolders).some(
+    (folder) => normalizeWorkspacePath(folder.path) === normalizeWorkspacePath(path),
   );
 }
 
 export function getEditorWorkspaceScope(
   filePath: string,
   workspaceRootPath: string | undefined,
+  workspaceFolderPaths: string[] = [],
 ): "workspace" | "external" | undefined {
   if (
     filePath.startsWith("remote://") ||
@@ -50,7 +106,9 @@ export function getEditorWorkspaceScope(
     return undefined;
   }
 
-  return isLocalFileInWorkspace(filePath, workspaceRootPath) ? "workspace" : "external";
+  return isLocalFileInWorkspace(filePath, workspaceRootPath, workspaceFolderPaths)
+    ? "workspace"
+    : "external";
 }
 
 export interface WorkspaceSessionSnapshot {
