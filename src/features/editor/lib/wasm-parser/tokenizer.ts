@@ -131,6 +131,11 @@ const CAPTURE_TO_CLASS: Record<string, string> = {
   "keyword.exception": "token-keyword",
   "keyword.modifier": "token-keyword",
   "keyword.directive": "token-keyword",
+  conditional: "token-keyword",
+  repeat: "token-keyword",
+  include: "token-keyword",
+  exception: "token-keyword",
+  storageclass: "token-keyword",
 
   // Functions
   function: "token-function",
