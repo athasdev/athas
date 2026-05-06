@@ -33,6 +33,9 @@ fn main() {
    bootstrap::macos::disable_macos_autofill_heuristics();
 
    tauri::Builder::<AthasRuntime>::new()
+      .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+         app_setup::handle_single_instance_open(app, args, cwd);
+      }))
       .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
@@ -50,9 +53,15 @@ fn main() {
       .invoke_handler(tauri::generate_handler![
          // File system commands
          open_file_external,
+         open_folder_dialog,
          move_file,
          rename_file,
          get_symlink_info,
+         local_history_record_file,
+         local_history_list_file,
+         local_history_read_entry,
+         local_history_delete_entry,
+         local_history_rename_entry,
          // Clipboard commands
          clipboard_set,
          clipboard_get,
@@ -138,8 +147,11 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_app_window,
+         uses_native_window_chrome,
          create_embedded_webview,
          close_embedded_webview,
+         close_all_embedded_webviews,
+         clear_embedded_webview_browsing_data,
          navigate_embedded_webview,
          resize_embedded_webview,
          set_webview_visible,
@@ -186,6 +198,7 @@ fn main() {
          respond_acp_permission,
          set_acp_session_mode,
          set_acp_session_config_option,
+         list_acp_sessions,
          cancel_acp_prompt,
          // Theme commands
          get_system_theme,
@@ -200,24 +213,8 @@ fn main() {
          get_system_fonts,
          get_monospace_fonts,
          validate_font,
-         // SQLite commands
-         get_sqlite_tables,
-         query_sqlite,
-         query_sqlite_filtered,
-         execute_sqlite,
-         insert_sqlite_row,
-         update_sqlite_row,
-         delete_sqlite_row,
-         get_sqlite_foreign_keys,
-         // DuckDB commands
-         get_duckdb_tables,
-         query_duckdb,
-         query_duckdb_filtered,
-         execute_duckdb,
-         insert_duckdb_row,
-         update_duckdb_row,
-         delete_duckdb_row,
-         get_duckdb_foreign_keys,
+         // Database provider sidecar commands
+         run_database_provider_command,
          // Connection management
          connect_database,
          disconnect_database,
@@ -229,45 +226,6 @@ fn main() {
          save_connection,
          list_saved_connections,
          delete_saved_connection,
-         // PostgreSQL commands
-         get_postgres_tables,
-         query_postgres,
-         query_postgres_filtered,
-         execute_postgres,
-         get_postgres_foreign_keys,
-         get_postgres_table_schema,
-         get_postgres_subscription_info,
-         get_postgres_subscription_status,
-         create_postgres_subscription,
-         drop_postgres_subscription,
-         set_postgres_subscription_enabled,
-         refresh_postgres_subscription,
-         insert_postgres_row,
-         update_postgres_row,
-         delete_postgres_row,
-         // MySQL commands
-         get_mysql_tables,
-         query_mysql,
-         query_mysql_filtered,
-         execute_mysql,
-         get_mysql_foreign_keys,
-         get_mysql_table_schema,
-         insert_mysql_row,
-         update_mysql_row,
-         delete_mysql_row,
-         // MongoDB commands
-         get_mongo_databases,
-         get_mongo_collections,
-         query_mongo_documents,
-         insert_mongo_document,
-         update_mongo_document,
-         delete_mongo_document,
-         // Redis commands
-         redis_scan_keys,
-         redis_get_value,
-         redis_set_value,
-         redis_delete_key,
-         redis_get_info,
          // LSP commands
          lsp_start,
          lsp_stop,
@@ -278,6 +236,7 @@ fn main() {
          lsp_get_definition,
          lsp_get_semantic_tokens,
          lsp_get_code_lens,
+         lsp_format_document,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
@@ -289,6 +248,7 @@ fn main() {
          lsp_apply_code_action,
          lsp_document_open,
          lsp_document_change,
+         lsp_document_save,
          lsp_document_close,
          lsp_is_language_supported,
          // Debugger commands

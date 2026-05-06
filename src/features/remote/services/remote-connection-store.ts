@@ -38,6 +38,16 @@ class ConnectionStore {
     await invoke("remove_remote_credential", { connectionId });
   }
 
+  private async syncWorkspaceTabName(connectionId: string, connectionName: string) {
+    try {
+      const { useWorkspaceTabsStore } =
+        await import("@/features/window/stores/workspace-tabs-store");
+      useWorkspaceTabsStore.getState().renameRemoteProjectTabs(connectionId, connectionName);
+    } catch (error) {
+      console.warn("Failed to sync remote workspace tab name:", error);
+    }
+  }
+
   async saveConnection(connection: {
     id: string;
     name: string;
@@ -72,6 +82,7 @@ class ConnectionStore {
     }
 
     await connectionsStore.save();
+    await this.syncWorkspaceTabName(connection.id, connection.name);
   }
 
   async getConnection(connectionId: string) {

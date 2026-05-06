@@ -24,13 +24,20 @@ export interface ThemeExtension extends EditorExtension {
 }
 
 export interface ThemeRegistryAPI {
-  registerTheme(theme: ThemeDefinition): void;
+  registerTheme(theme: ThemeDefinition, source?: ThemeSource): void;
   unregisterTheme(id: string): void;
+  unregisterThemesByExtension(extensionId: string): void;
   getTheme(id: string): ThemeDefinition | undefined;
+  getThemeSource(id: string): ThemeSource | undefined;
   getAllThemes(): ThemeDefinition[];
   getThemesByCategory(category: ThemeDefinition["category"]): ThemeDefinition[];
   applyTheme(id: string): void;
   getCurrentTheme(): string | null;
   onThemeChange(callback: (themeId: string) => void): () => void;
   onRegistryChange(callback: () => void): () => void;
+}
+
+export interface ThemeSource {
+  extensionId: string;
+  isBundled?: boolean;
 }

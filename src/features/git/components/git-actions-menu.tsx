@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
 import {
   fetchChanges,
@@ -36,6 +37,8 @@ interface GitActionsMenuProps {
   onViewStashes?: () => void;
   onSelectRepository?: () => Promise<void> | void;
   isSelectingRepository?: boolean;
+  onInitializeRepository?: () => Promise<void> | void;
+  isInitializingRepository?: boolean;
 }
 
 const GitActionsMenu = ({
@@ -50,6 +53,8 @@ const GitActionsMenu = ({
   onViewStashes,
   onSelectRepository,
   isSelectingRepository,
+  onInitializeRepository,
+  isInitializingRepository,
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { isRefreshing } = useGitStore();
@@ -130,7 +135,10 @@ const GitActionsMenu = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !window.confirm("Discard all unstaged changes? This cannot be undone.")
+      !(await primitiveConfirm("Discard all unstaged changes? This cannot be undone.", {
+        title: "Discard Changes",
+        confirmLabel: "Discard",
+      }))
     ) {
       return;
     }
@@ -138,6 +146,12 @@ const GitActionsMenu = ({
   };
 
   const handleInitRepository = () => {
+    if (onInitializeRepository) {
+      void onInitializeRepository();
+      onClose();
+      return;
+    }
+
     handleAction(() => initRepository(repoPath!), "Initialize repository");
   };
 
@@ -241,9 +255,9 @@ const GitActionsMenu = ({
     : [
         {
           id: "init-repository",
-          label: "Initialize Repository",
+          label: isInitializingRepository ? "Initializing..." : "Initialize Repository",
           icon: <Settings />,
-          disabled: isLoading,
+          disabled: isLoading || isInitializingRepository,
           onClick: handleInitRepository,
         },
         { id: "sep-1", label: "", separator: true, onClick: () => {} },

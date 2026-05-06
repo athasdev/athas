@@ -1,4 +1,12 @@
-import { Monitor, Moon, Palette, GearSix as Settings, Sun, Upload } from "@phosphor-icons/react";
+import {
+  CaretLeft,
+  Monitor,
+  Moon,
+  Palette,
+  GearSix as Settings,
+  Sun,
+  Upload,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
@@ -6,13 +14,7 @@ import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import Command, {
-  CommandEmpty,
-  CommandHeader,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/ui/command";
+import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
@@ -23,8 +25,9 @@ interface ThemeInfo {
   icon?: React.ReactNode;
 }
 
-interface ThemeSelectorProps {
-  isVisible: boolean;
+interface ThemeSelectorContentProps {
+  isActive: boolean;
+  onBack: () => void;
   onClose: () => void;
   onThemeChange: (theme: string) => void;
   currentTheme?: string;
@@ -48,13 +51,21 @@ const clampSelectedIndex = (index: number, size: number): number => {
   return Math.min(Math.max(index, 0), size - 1);
 };
 
-const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: ThemeSelectorProps) => {
+export const ThemeSelectorContent = ({
+  isActive,
+  onBack,
+  onClose,
+  onThemeChange,
+  currentTheme,
+}: ThemeSelectorContentProps) => {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [initialTheme, setInitialTheme] = useState(currentTheme);
   const [themes, setThemes] = useState<ThemeInfo[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const activeThemeSnapshotRef = useRef<string | undefined>(undefined);
+  const didCommitRef = useRef(false);
 
   // Load themes from theme registry
   useEffect(() => {
@@ -86,23 +97,42 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
       matchesSearchQuery(query, [theme.name, theme.description ?? "", theme.category]),
   );
 
-  // Handle keyboard navigation
-  useEffect(() => {
-    if (isVisible) {
-      setInitialTheme(currentTheme);
-      setQuery("");
-
-      const initialIndex = themes.findIndex((t) => t.id === currentTheme);
-      setSelectedIndex(initialIndex >= 0 ? initialIndex : 0);
-
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [isVisible, themes, currentTheme]);
-
   const applyPreviewTheme = useCallback((themeId: string) => {
     if (!themeRegistry.getTheme(themeId)) return;
     themeRegistry.applyTheme(themeId);
   }, []);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    if (!isActive) {
+      if (activeThemeSnapshotRef.current && !didCommitRef.current) {
+        applyPreviewTheme(activeThemeSnapshotRef.current);
+      }
+      activeThemeSnapshotRef.current = undefined;
+      return;
+    }
+
+    if (activeThemeSnapshotRef.current !== undefined) return;
+
+    const snapshotTheme = currentTheme;
+    activeThemeSnapshotRef.current = snapshotTheme;
+    didCommitRef.current = false;
+    setInitialTheme(snapshotTheme);
+    setQuery("");
+
+    const initialIndex = themes.findIndex((t) => t.id === snapshotTheme);
+    setSelectedIndex(initialIndex >= 0 ? initialIndex : 0);
+
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [isActive, themes, currentTheme, applyPreviewTheme]);
+
+  useEffect(() => {
+    return () => {
+      if (activeThemeSnapshotRef.current && !didCommitRef.current) {
+        applyPreviewTheme(activeThemeSnapshotRef.current);
+      }
+    };
+  }, [applyPreviewTheme]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -119,6 +149,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
         e.preventDefault();
         const selectedTheme = filteredThemes[selectedIndex];
         if (!selectedTheme) return;
+        didCommitRef.current = true;
         onThemeChange(selectedTheme.id);
         onClose();
         return;
@@ -144,11 +175,11 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
 
   // Reset state when visibility changes
   useEffect(() => {
-    if (isVisible) {
+    if (isActive) {
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
     }
-  }, [isVisible, handleKeyDown]);
+  }, [isActive, handleKeyDown]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -166,11 +197,20 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
   }, [selectedIndex]);
 
   const handleClose = useCallback(() => {
+    didCommitRef.current = false;
     if (initialTheme) {
       applyPreviewTheme(initialTheme);
     }
     onClose();
   }, [initialTheme, onClose, applyPreviewTheme]);
+
+  const handleBack = useCallback(() => {
+    didCommitRef.current = false;
+    if (initialTheme) {
+      applyPreviewTheme(initialTheme);
+    }
+    onBack();
+  }, [initialTheme, onBack, applyPreviewTheme]);
 
   const handleUploadTheme = async () => {
     // Create file input element
@@ -186,6 +226,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
           console.log("Theme uploaded successfully:", result.theme?.name);
           // Optionally switch to the newly uploaded theme
           if (result.theme) {
+            didCommitRef.current = true;
             onThemeChange(result.theme.id);
             onClose();
           }
@@ -197,12 +238,20 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     input.click();
   };
 
-  if (!isVisible) return null;
-
   return (
-    <Command isVisible={isVisible} onClose={handleClose}>
+    <>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="rounded"
+            onClick={handleBack}
+            aria-label="Back to commands"
+          >
+            <CaretLeft className="text-text-lighter" />
+          </Button>
           <CommandInput
             ref={inputRef}
             value={query}
@@ -247,6 +296,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 key={theme.id}
                 data-index={index}
                 onClick={() => {
+                  didCommitRef.current = true;
                   onThemeChange(theme.id);
                   onClose();
                 }}
@@ -272,10 +322,10 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
           })
         )}
       </CommandList>
-    </Command>
+    </>
   );
 };
 
-ThemeSelector.displayName = "ThemeSelector";
+ThemeSelectorContent.displayName = "ThemeSelectorContent";
 
-export default ThemeSelector;
+export default ThemeSelectorContent;

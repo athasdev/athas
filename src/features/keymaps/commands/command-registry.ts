@@ -13,11 +13,13 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { primitivePrompt } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
 import { isMac } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
@@ -188,6 +190,12 @@ const fileCommands: Command[] = [
     execute: () => {
       useUIState.getState().setIsQuickOpenVisible(true);
     },
+  },
+  {
+    id: "file.localHistory",
+    title: "Show Local History",
+    category: "File",
+    execute: openLocalHistoryForActiveFile,
   },
 ];
 
@@ -605,7 +613,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+k cmd+t",
     execute: () => {
-      useUIState.getState().setIsThemeSelectorVisible(true);
+      useUIState.getState().openCommandPaletteView("color-theme");
     },
   },
   {
@@ -712,8 +720,11 @@ const navigationCommands: Command[] = [
     title: "Go to Line",
     category: "Navigation",
     keybinding: "cmd+g",
-    execute: () => {
-      const lineText = window.prompt("Go to line");
+    execute: async () => {
+      const lineText = await primitivePrompt("Go to line", {
+        title: "Go to Line",
+        placeholder: "Line number",
+      });
       if (!lineText) return;
 
       const line = Number.parseInt(lineText, 10);
@@ -1069,8 +1080,8 @@ const windowCommands: Command[] = [
     keybinding: "cmd+q",
     execute: async () => {
       if (isMac()) {
-        const { exit } = await import("@tauri-apps/plugin-process");
-        exit(0);
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().close();
       }
     },
   },

@@ -32,7 +32,8 @@ export type PaneContentType =
   | "csvPreview"
   | "externalEditor"
   | "globalSearch"
-  | "diagnostics";
+  | "diagnostics"
+  | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
 
@@ -78,6 +79,9 @@ export interface WebViewerContent extends PaneContentBase {
   title?: string;
   favicon?: string;
   zoomLevel?: number;
+  profileKey?: string;
+  history?: string[];
+  historyIndex?: number;
 }
 
 export interface NewTabContent extends PaneContentBase {
@@ -161,6 +165,13 @@ export interface DiagnosticsContent extends PaneContentBase {
   type: "diagnostics";
 }
 
+export interface OnboardingContent extends PaneContentBase {
+  type: "onboarding";
+  mode: import("@/features/onboarding/lib/onboarding-state").OnboardingMode;
+  currentVersion: string;
+  previousVersion?: string;
+}
+
 // ── Discriminated union ─────────────────────────────────────────────
 
 export type PaneContent =
@@ -182,7 +193,8 @@ export type PaneContent =
   | CsvPreviewContent
   | ExternalEditorContent
   | GlobalSearchContent
-  | DiagnosticsContent;
+  | DiagnosticsContent
+  | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
 
@@ -248,6 +260,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubAction",
   "globalSearch",
   "diagnostics",
+  "onboarding",
 ]);
 
 export function isVirtualContent(c: PaneContent): boolean {
@@ -306,7 +319,14 @@ export type OpenContentSpec =
       path?: string;
     }
   | { type: "agent"; sessionId?: string }
-  | { type: "webViewer"; url: string; zoomLevel?: number }
+  | {
+      type: "webViewer";
+      url: string;
+      zoomLevel?: number;
+      profileKey?: string;
+      history?: string[];
+      historyIndex?: number;
+    }
   | { type: "newTab" }
   | {
       type: "diff";
@@ -379,4 +399,8 @@ export type OpenContentSpec =
     }
   | {
       type: "diagnostics";
+    }
+  | {
+      type: "onboarding";
+      context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext;
     };

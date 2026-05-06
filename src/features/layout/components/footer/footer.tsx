@@ -1,7 +1,15 @@
-import { DownloadSimple, PuzzlePiece, TerminalWindow, WarningCircle } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import {
+  ArrowClockwise,
+  CaretUp,
+  DownloadSimple,
+  PuzzlePiece,
+  TerminalWindow,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
+import { Dropdown } from "@/ui/dropdown";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -10,7 +18,7 @@ import GitBranchManager from "@/features/git/components/git-branch-manager";
 import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { useUpdater } from "@/features/settings/hooks/use-updater";
+import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
@@ -27,13 +35,15 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const FOOTER_ICON_TAB_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
-const FOOTER_PILL_TAB_CLASS_NAME = "px-2.5 [&_svg]:size-4";
+const FOOTER_ICON_TAB_CLASS_NAME = "h-6 w-7 min-w-7 px-0 [&_svg]:size-4";
+const FOOTER_PILL_TAB_CLASS_NAME = "h-6 px-2 [&_svg]:size-4";
 const FOOTER_COUNT_PILL_CLASS_NAME =
   "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3";
 const FOOTER_CONTROL_GROUP_CLASS_NAME = "pointer-events-auto border-transparent bg-transparent p-0";
 const FOOTER_CONTROL_CLASS_NAME =
   "rounded-md border-0 bg-transparent hover:bg-hover/60 data-[active=true]:bg-hover/70";
+const FOOTER_GIT_TRIGGER_CLASS_NAME = "h-6 w-fit rounded-md";
+const FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME = "pl-7 ui-text-sm";
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -50,6 +60,7 @@ function FooterTabControl({
   className,
   onClick,
   commandId,
+  controlRef,
   children,
 }: {
   tooltip: string;
@@ -57,6 +68,7 @@ function FooterTabControl({
   className?: string;
   onClick: () => void;
   commandId?: string;
+  controlRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }) {
   const shortcut = useCommandShortcut(commandId);
@@ -65,6 +77,7 @@ function FooterTabControl({
     <TabsList variant="segmented" className={FOOTER_CONTROL_GROUP_CLASS_NAME}>
       <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
+          ref={controlRef}
           role="button"
           aria-label={tooltip}
           tabIndex={0}
@@ -101,7 +114,21 @@ const Footer = () => {
   const currentRepoPath = useGitStore((state) => state.currentRepoPath);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   const { actions } = useGitStore();
-  const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
+  const {
+    showUpdateIndicator,
+    downloading,
+    installing,
+    error: updateError,
+    updateInfo,
+    downloadProgress,
+    onDownload: downloadAndInstall,
+    onDismiss: dismissUpdate,
+    onRemindLater,
+    onSkipVersion,
+    onViewReleaseNotes,
+  } = useAutoUpdate();
+  const [isUpdateMenuOpen, setIsUpdateMenuOpen] = useState(false);
+  const updateMenuRef = useRef<HTMLDivElement>(null);
 
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
@@ -118,6 +145,43 @@ const Footer = () => {
       ? gitStatus
       : workspaceGitStatus;
   const footerBranch = footerGitStatus?.branch;
+  const updateMenuItems = useMemo(
+    () => [
+      {
+        id: "release-notes",
+        label: "View Release Notes",
+        onClick: onViewReleaseNotes,
+        disabled: downloading || installing,
+      },
+      {
+        id: "download-later",
+        label: "Download Later",
+        onClick: dismissUpdate,
+        disabled: downloading || installing,
+      },
+      {
+        id: "remind-later",
+        label: "Remind Me Tomorrow",
+        onClick: onRemindLater,
+        disabled: downloading || installing,
+      },
+      {
+        id: "skip-version",
+        label: `Skip ${updateInfo?.version ?? "Version"}`,
+        onClick: onSkipVersion,
+        disabled: downloading || installing,
+      },
+    ],
+    [
+      dismissUpdate,
+      downloading,
+      installing,
+      onRemindLater,
+      onSkipVersion,
+      onViewReleaseNotes,
+      updateInfo?.version,
+    ],
+  );
 
   const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
     footerRepoPath && footerBranch
@@ -131,6 +195,9 @@ const Footer = () => {
                 repoPath={footerRepoPath}
                 paletteTarget
                 placement="up"
+                triggerIconSize={16}
+                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
+                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[220px]")}
                 onBranchChange={async () => {
                   const status = await getGitStatus(footerRepoPath);
                   actions.setWorkspaceGitStatus(status, footerRepoPath);
@@ -142,6 +209,9 @@ const Footer = () => {
               <GitWorktreeSwitcher
                 repoPath={footerRepoPath}
                 placement="up"
+                triggerIconSize={16}
+                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
+                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[118px]")}
                 onWorktreeChange={async (worktreePath) => {
                   selectRepository(worktreePath);
                   const status = await getGitStatus(worktreePath);
@@ -230,36 +300,75 @@ const Footer = () => {
           ),
         }
       : null,
-    available
+    showUpdateIndicator && updateInfo
       ? {
           id: "updates",
           label: "App updates",
           content: (
-            <FooterTabControl
-              tooltip={
-                downloading
-                  ? "Downloading update..."
-                  : installing
-                    ? "Installing update..."
-                    : `Update available: ${updateInfo?.version}`
-              }
-              className={cn(
-                FOOTER_ICON_TAB_CLASS_NAME,
-                downloading || installing
-                  ? "cursor-not-allowed opacity-60"
-                  : "text-blue-400 hover:text-blue-300",
-              )}
-              onClick={() => {
-                if (!downloading && !installing) {
-                  void downloadAndInstall();
+            <div className="flex items-center gap-0.5">
+              <FooterTabControl
+                tooltip={
+                  updateError
+                    ? updateError
+                    : downloading
+                      ? `Updating Athas ${downloadProgress?.percentage ?? 0}%`
+                      : installing
+                        ? "Installing update..."
+                        : `Update available: ${updateInfo.version}`
                 }
-              }}
-            >
-              <DownloadSimple
-                className={cn(downloading || (installing && "animate-pulse"))}
-                weight="duotone"
+                className={cn(
+                  FOOTER_PILL_TAB_CLASS_NAME,
+                  downloading || installing
+                    ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
+                    : updateError
+                      ? "text-error hover:bg-error/10 hover:text-error"
+                      : "text-accent hover:bg-accent/10 hover:text-accent",
+                )}
+                onClick={() => {
+                  if (!downloading && !installing) {
+                    void downloadAndInstall();
+                  }
+                }}
+              >
+                {downloading || installing ? (
+                  <ArrowClockwise className="animate-spin" weight="duotone" />
+                ) : (
+                  <DownloadSimple weight="duotone" />
+                )}
+                <span className="ui-font ui-text-xs font-medium">
+                  {downloading
+                    ? `Updating ${downloadProgress?.percentage ?? 0}%`
+                    : installing
+                      ? "Installing"
+                      : updateError
+                        ? "Update failed"
+                        : "Update available"}
+                </span>
+              </FooterTabControl>
+              <FooterTabControl
+                tooltip="Update Options"
+                active={isUpdateMenuOpen}
+                className={cn(
+                  FOOTER_ICON_TAB_CLASS_NAME,
+                  updateError
+                    ? "text-error hover:bg-error/10 hover:text-error"
+                    : "text-accent hover:bg-accent/10 hover:text-accent",
+                )}
+                controlRef={updateMenuRef}
+                onClick={() => setIsUpdateMenuOpen((open) => !open)}
+              >
+                <CaretUp weight="bold" />
+              </FooterTabControl>
+              <Dropdown
+                isOpen={isUpdateMenuOpen}
+                onClose={() => setIsUpdateMenuOpen(false)}
+                anchorRef={updateMenuRef}
+                anchorSide="top"
+                anchorAlign="start"
+                items={updateMenuItems}
+                className="min-w-[210px]"
               />
-            </FooterTabControl>
+            </div>
           ),
         }
       : null,
@@ -271,7 +380,7 @@ const Footer = () => {
   const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [];
 
   return (
-    <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+    <div className="relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerLeadingItems, settings.footerLeadingItemsOrder).map((item) => (
           <div key={item.id}>{item.content}</div>

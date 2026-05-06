@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -173,7 +173,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, pathOrConnectionId);
-            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
             set({ tables });
 
             if (tables.length > 0) {
@@ -187,7 +187,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               if (dbType === "sqlite" || dbType === "duckdb") {
                 const versionQuery =
                   dbType === "sqlite" ? "PRAGMA user_version;" : "PRAGMA version;";
-                const versionResult = (await invoke(cmds.query, {
+                const versionResult = (await invokeDatabaseProvider(cmds.query, {
                   ...connArg,
                   query: versionQuery,
                 })) as QueryResult;
@@ -196,7 +196,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
                   dbType === "sqlite"
                     ? "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%';"
                     : "SELECT COUNT(*) FROM duckdb_indexes();";
-                const indexResult = (await invoke(cmds.query, {
+                const indexResult = (await invokeDatabaseProvider(cmds.query, {
                   ...connArg,
                   query: indexQuery,
                 })) as QueryResult;
@@ -257,11 +257,11 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             if (selectedObjectKind === "subscription" && dbType === "postgres") {
               const [subscriptionInfo, queryResult] = await Promise.all([
-                invoke("get_postgres_subscription_info", {
+                invokeDatabaseProvider("get_postgres_subscription_info", {
                   ...connArg,
                   subscription: tableName,
                 }) as Promise<PostgresSubscriptionInfo>,
-                invoke("get_postgres_subscription_status", {
+                invokeDatabaseProvider("get_postgres_subscription_status", {
                   ...connArg,
                   subscription: tableName,
                 }) as Promise<QueryResult>,
@@ -288,7 +288,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
             // Get table schema - provider-specific PRAGMA or information_schema
             let tableMeta: ColumnInfo[];
             if (dbType === "sqlite" || dbType === "duckdb") {
-              const result = (await invoke(cmds.query, {
+              const result = (await invokeDatabaseProvider(cmds.query, {
                 ...connArg,
                 query: `PRAGMA table_info("${tableName.replace(/"/g, '""')}")`,
               })) as QueryResult;
@@ -302,7 +302,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               }));
             } else {
               // For postgres/mysql, the get_tables command returns column info via a dedicated command
-              const result = (await invoke(`get_${dbType}_table_schema`, {
+              const result = (await invokeDatabaseProvider(`get_${dbType}_table_schema`, {
                 ...connArg,
                 table: tableName,
               })) as ColumnInfo[];
@@ -313,7 +313,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             // Load foreign keys
             try {
-              const foreignKeys = (await invoke(cmds.getForeignKeys, {
+              const foreignKeys = (await invokeDatabaseProvider(cmds.getForeignKeys, {
                 ...connArg,
                 table: tableName,
               })) as ForeignKeyInfo[];
@@ -342,11 +342,11 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             if (state.selectedObjectKind === "subscription" && dbType === "postgres") {
               const [subscriptionInfo, queryResult] = await Promise.all([
-                invoke("get_postgres_subscription_info", {
+                invokeDatabaseProvider("get_postgres_subscription_info", {
                   ...connArg,
                   subscription: state.selectedTable,
                 }) as Promise<PostgresSubscriptionInfo>,
-                invoke("get_postgres_subscription_status", {
+                invokeDatabaseProvider("get_postgres_subscription_status", {
                   ...connArg,
                   subscription: state.selectedTable,
                 }) as Promise<QueryResult>,
@@ -369,7 +369,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             const offset = (state.currentPage - 1) * state.pageSize;
 
-            const result = (await invoke(cmds.queryFiltered, {
+            const result = (await invokeDatabaseProvider(cmds.queryFiltered, {
               ...connArg,
               params: {
                 table: state.selectedTable,
@@ -476,7 +476,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            const queryResult = (await invoke(cmds.query, {
+            const queryResult = (await invokeDatabaseProvider(cmds.query, {
               ...connArg,
               query: state.customQuery,
             })) as QueryResult;
@@ -500,7 +500,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke(cmds.insertRow, {
+            await invokeDatabaseProvider(cmds.insertRow, {
               ...connArg,
               table: state.selectedTable,
               columns: Object.keys(values),
@@ -522,7 +522,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke(cmds.updateRow, {
+            await invokeDatabaseProvider(cmds.updateRow, {
               ...connArg,
               table: state.selectedTable,
               setColumns: Object.keys(updateValues),
@@ -544,7 +544,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke(cmds.deleteRow, {
+            await invokeDatabaseProvider(cmds.deleteRow, {
               ...connArg,
               table: state.selectedTable,
               whereColumn: pkColumn,
@@ -585,7 +585,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke(cmds.updateRow, {
+            await invokeDatabaseProvider(cmds.updateRow, {
               ...connArg,
               table: state.selectedTable,
               setColumns: [columnName],
@@ -616,12 +616,12 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               )
               .join(", ");
 
-            await invoke(cmds.execute, {
+            await invokeDatabaseProvider(cmds.execute, {
               ...connArg,
               statement: `CREATE TABLE "${name.replace(/"/g, '""')}" (${columnDefs})`,
             });
 
-            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
             set({ tables, error: null });
             await get().actions.selectTable(name);
           } catch (err) {
@@ -636,12 +636,12 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke(cmds.execute, {
+            await invokeDatabaseProvider(cmds.execute, {
               ...connArg,
               statement: `DROP TABLE "${name.replace(/"/g, '""')}"`,
             });
 
-            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
             set({ tables, error: null });
 
             if (state.selectedTable === name) {
@@ -672,12 +672,12 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke("create_postgres_subscription", {
+            await invokeDatabaseProvider("create_postgres_subscription", {
               ...connArg,
               params,
             });
 
-            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
             set({ tables, error: null });
             await get().actions.selectTable(params.name);
           } catch (err) {
@@ -692,13 +692,13 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke("drop_postgres_subscription", {
+            await invokeDatabaseProvider("drop_postgres_subscription", {
               ...connArg,
               subscription: name,
               withDropSlot,
             });
 
-            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
             set({ tables, error: null });
 
             if (state.selectedTable === name) {
@@ -729,7 +729,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke("set_postgres_subscription_enabled", {
+            await invokeDatabaseProvider("set_postgres_subscription_enabled", {
               ...connArg,
               subscription: name,
               enabled,
@@ -750,7 +750,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invoke("refresh_postgres_subscription", {
+            await invokeDatabaseProvider("refresh_postgres_subscription", {
               ...connArg,
               subscription: name,
               copyData,

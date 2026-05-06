@@ -5,7 +5,9 @@ import {
   TerminalWindow as Terminal,
 } from "@phosphor-icons/react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { primitiveAlert } from "@/ui/primitive-dialog-service";
 import type { Action } from "../models/action.types";
+import type { CommandPaletteViewId } from "../models/view.types";
 
 interface AdvancedActionsParams {
   lspStatus: {
@@ -29,6 +31,7 @@ interface AdvancedActionsParams {
     cursorPosition: { x: number; y: number };
     selectionRange: { start: number; end: number };
   }) => void;
+  pushPaletteView: (view: CommandPaletteViewId) => void;
   showToast: (params: { message: string; type: "success" | "error" | "info" }) => void;
   onClose: () => void;
 }
@@ -43,11 +46,22 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
     vimCommands,
     setMode,
     openQuickEdit,
+    pushPaletteView,
     showToast,
     onClose,
   } = params;
 
   const baseActions: Action[] = [
+    {
+      id: "ai-quick-question",
+      label: "AI: Quick Question",
+      description: "Ask a small question using the configured AI provider",
+      icon: <Sparkles />,
+      category: "AI",
+      action: () => {
+        pushPaletteView("quick-question");
+      },
+    },
     {
       id: "ai-new-agent",
       label: "AI: New Agent",
@@ -84,9 +98,10 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       description: `Status: ${lspStatus.status} (${lspStatus.activeWorkspaces.length} workspaces)`,
       icon: <Terminal />,
       category: "LSP",
-      action: () => {
-        alert(
+      action: async () => {
+        await primitiveAlert(
           `LSP Status: ${lspStatus.status}\nActive workspaces: ${lspStatus.activeWorkspaces.join(", ") || "None"}\nError: ${lspStatus.lastError || "None"}`,
+          "LSP Status",
         );
         onClose();
       },

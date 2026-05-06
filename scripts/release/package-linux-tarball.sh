@@ -97,7 +97,23 @@ icon_base_dir="${app_root}/share/icons/hicolor"
 
 install -d "$bin_dir" "$libexec_dir" "$resource_dir" "$desktop_dir"
 install -m 755 "$binary" "${libexec_dir}/athas"
-ln -s ../libexec/athas "${bin_dir}/athas"
+cat > "${bin_dir}/athas" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_path="${BASH_SOURCE[0]}"
+if resolved_path="$(readlink -f "$script_path" 2>/dev/null)"; then
+  script_path="$resolved_path"
+fi
+
+bin_dir="$(cd "$(dirname "$script_path")" && pwd)"
+exec "${bin_dir}/../libexec/athas" \
+  --ozone-platform=x11 \
+  --disable-vulkan \
+  --disable-features=Vulkan \
+  "$@"
+EOF
+chmod 755 "${bin_dir}/athas"
 
 cp -R src/extensions/bundled "${resource_dir}/bundled"
 

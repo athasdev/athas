@@ -67,6 +67,22 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
     };
   }
 
+  if (requestedProvider?.id === "custom") {
+    const customModelId = useSettingsStore.getState().settings.aiCustomModelId || modelId;
+    if (customModelId.trim().length > 0) {
+      return {
+        providerId,
+        modelId: customModelId,
+        provider: requestedProvider,
+        model: {
+          id: customModelId,
+          name: customModelId,
+          maxTokens: 4096,
+        },
+      };
+    }
+  }
+
   for (const provider of getAvailableProviders()) {
     const staticModel = provider.models.find((model) => model.id === modelId);
     if (staticModel) {
@@ -122,6 +138,7 @@ export const getChatCompletionStream = async (
   onImageChunk?: (data: string, mediaType: string) => void,
   onResourceChunk?: (uri: string, name: string | null) => void,
   chatId?: string,
+  systemPromptOverride?: string,
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
@@ -155,6 +172,10 @@ export const getChatCompletionStream = async (
     const provider = resolved.provider;
     const model = resolved.model;
 
+    if (providerId === "custom" && !model) {
+      throw new Error("Custom provider model is required. Add one in Settings → AI.");
+    }
+
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
@@ -164,6 +185,10 @@ export const getChatCompletionStream = async (
     const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
     if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
       throw new Error(`${provider.name} API key not found`);
+    }
+
+    if (providerId === "custom" && !useSettingsStore.getState().settings.aiCustomBaseUrl) {
+      throw new Error("Custom provider base URL is required. Add one in Settings → AI.");
     }
 
     // Ollama Cloud requires auth even though the provider config marks the
@@ -176,7 +201,8 @@ export const getChatCompletionStream = async (
     }
 
     const contextPrompt = buildContextPrompt(context);
-    const systemPrompt = buildSystemPrompt(contextPrompt, mode, outputStyle);
+    const systemPrompt =
+      systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
 
     // Build messages array with conversation history
     const messages: AIMessage[] = [
@@ -269,4 +295,50 @@ export const getChatCompletionStream = async (
     console.error(`${providerId} streaming chat completion error:`, error);
     onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
   }
+};
+
+export const getQuickQuestionCompletionStream = async (
+  providerId: string,
+  modelId: string,
+  question: string,
+  context: ContextInfo,
+  onChunk: (chunk: string) => void,
+  onComplete: () => void,
+  onError: (error: string, canReconnect?: boolean) => void,
+): Promise<void> => {
+  const contextPrompt = buildContextPrompt(context);
+  const systemPrompt = `You are a lightweight AI question-answering assistant inside Athas.
+
+This is a quick question flow, not an agent session.
+- Answer the user's question directly and concisely.
+- Do not claim you can edit files, open files, run commands, call tools, or take actions.
+- Use the provided editor context only when it is relevant.
+- If the question asks you to change code or perform work, explain the likely answer or next step without saying you performed it.
+
+Current context:
+${contextPrompt}`;
+
+  await getChatCompletionStream(
+    "custom",
+    providerId,
+    modelId,
+    question,
+    context,
+    onChunk,
+    onComplete,
+    onError,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    "chat",
+    "default",
+    undefined,
+    undefined,
+    undefined,
+    systemPrompt,
+  );
 };

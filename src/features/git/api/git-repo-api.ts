@@ -230,13 +230,6 @@ export async function discoverWorkspaceRepositories(
     }
   }
 
-  if (discoveredRepos.size === 0) {
-    const fallbackRepo = await discoverRepo(normalizedWorkspacePath);
-    if (fallbackRepo) {
-      discoveredRepos.add(fallbackRepo);
-    }
-  }
-
   const repositories = sortWorkspaceRepositories(
     Array.from(discoveredRepos),
     normalizedWorkspacePath,

@@ -4,44 +4,38 @@ import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
+import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
-import type { Position } from "@/features/editor/types/editor";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { EditorUndoGroupTracker } from "../history/undo-group-tracker";
+import type { Position, Range } from "../types/editor";
+import { useHistoryStore } from "./history-store";
 
-const HISTORY_DEBOUNCE_MS = 500;
-const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
-const lastBufferContent = new Map<string, string>();
-const lastBufferCursor = new Map<string, Position>();
+const undoGroupTracker = new EditorUndoGroupTracker();
 
-let autoHistoryPaused = false;
-
-export function pauseAutoHistory(): void {
-  autoHistoryPaused = true;
-}
-
-export function resumeAutoHistory(): void {
-  autoHistoryPaused = false;
+async function recordLocalHistoryBeforeWrite(
+  path: string,
+  reason: "save" | "auto-save" | "restore",
+): Promise<void> {
+  try {
+    await recordLocalHistoryFile(path, reason);
+  } catch (error) {
+    console.warn("Failed to record local history:", error);
+  }
 }
 
 export function cleanupBufferHistoryTracking(bufferId: string): void {
-  const timer = historyDebounceTimers.get(bufferId);
-  if (timer) {
-    clearTimeout(timer);
-    historyDebounceTimers.delete(bufferId);
-  }
-  lastBufferContent.delete(bufferId);
-  lastBufferCursor.delete(bufferId);
+  undoGroupTracker.cleanup(bufferId);
 }
 
-export function syncLastBufferContent(bufferId: string, content: string): void {
-  const timer = historyDebounceTimers.get(bufferId);
-  if (timer) {
-    clearTimeout(timer);
-    historyDebounceTimers.delete(bufferId);
-  }
-  lastBufferContent.set(bufferId, content);
+export function flushPendingBufferHistory(bufferId: string, currentContent: string): void {
+  const entry = undoGroupTracker.flush(bufferId, currentContent);
+  if (entry) useHistoryStore.getState().actions.pushHistory(bufferId, entry);
+}
+
+export function syncBufferHistoryContent(bufferId: string, content: string): void {
+  undoGroupTracker.sync(bufferId, content);
 }
 
 interface AppState {
@@ -56,7 +50,12 @@ interface AppState {
 }
 
 interface AppActions {
-  handleContentChange: (content: string) => Promise<void>;
+  handleContentChange: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => Promise<void>;
   handleSave: () => Promise<void>;
   openQuickEdit: (params: {
     text: string;
@@ -77,13 +76,16 @@ export const useEditorAppStore = createSelectors(
         selectionRange: { start: 0, end: 0 },
       },
       actions: {
-        handleContentChange: async (content: string) => {
+        handleContentChange: async (
+          content: string,
+          previousContent?: string,
+          previousCursorPosition?: Position,
+          previousSelection?: Range,
+        ) => {
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } =
             await import("@/features/file-system/controllers/file-watcher-store");
           const { useSettingsStore } = await import("@/features/settings/store");
-          const { useHistoryStore } = await import("@/features/editor/stores/history-store");
-
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
@@ -93,48 +95,26 @@ export const useEditorAppStore = createSelectors(
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           if (activeBufferId) {
-            const lastContent = lastBufferContent.get(activeBufferId);
+            const lastTrackedContent = undoGroupTracker.getTrackedContent(activeBufferId);
+            const contentBeforeChange =
+              lastTrackedContent ?? previousContent ?? activeBuffer.content;
 
-            if (lastContent === undefined) {
-              lastBufferContent.set(activeBufferId, activeBuffer.content);
+            if (lastTrackedContent === undefined) {
+              undoGroupTracker.sync(activeBufferId, contentBeforeChange);
             }
 
-            if (content !== lastContent) {
-              const existingTimer = historyDebounceTimers.get(activeBufferId);
-              if (existingTimer) {
-                clearTimeout(existingTimer);
-              }
-
-              // Capture cursor position now (before any further edits)
-              lastBufferCursor.set(activeBufferId, {
-                ...useEditorStateStore.getState().cursorPosition,
-              });
-
-              const timer = setTimeout(async () => {
-                if (autoHistoryPaused) {
-                  historyDebounceTimers.delete(activeBufferId);
-                  lastBufferContent.set(activeBufferId, content);
-                  return;
-                }
-
-                const { pushHistory } = useHistoryStore.getState().actions;
-                const oldContent = lastBufferContent.get(activeBufferId);
-                const oldCursor = lastBufferCursor.get(activeBufferId);
-
-                if (oldContent !== undefined) {
-                  pushHistory(activeBufferId, {
-                    content: oldContent,
-                    cursorPosition: oldCursor,
-                    timestamp: Date.now(),
-                  });
-                }
-
-                lastBufferContent.set(activeBufferId, content);
-                lastBufferCursor.delete(activeBufferId);
-                historyDebounceTimers.delete(activeBufferId);
-              }, HISTORY_DEBOUNCE_MS);
-
-              historyDebounceTimers.set(activeBufferId, timer);
+            const historyEntries = undoGroupTracker.track(
+              activeBufferId,
+              contentBeforeChange,
+              content,
+              {
+                previousCursorPosition,
+                previousSelection,
+              },
+            );
+            const { pushHistory } = useHistoryStore.getState().actions;
+            for (const entry of historyEntries) {
+              pushHistory(activeBufferId, entry);
             }
           }
 
@@ -154,6 +134,7 @@ export const useEditorAppStore = createSelectors(
               const newTimeoutId = setTimeout(async () => {
                 try {
                   markPendingSave(activeBuffer.path);
+                  await recordLocalHistoryBeforeWrite(activeBuffer.path, "auto-save");
                   await writeFile(activeBuffer.path, content);
                   markBufferDirty(activeBuffer.id, false);
 
@@ -261,7 +242,10 @@ export const useEditorAppStore = createSelectors(
                 }
               }
 
+              await recordLocalHistoryBeforeWrite(activeBuffer.path, "save");
               await writeFile(activeBuffer.path, contentToSave);
+              const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+              await LspClient.getInstance().notifyDocumentSave(activeBuffer.path, contentToSave);
               markBufferDirty(activeBuffer.id, false);
 
               if (settings.lintOnSave) {

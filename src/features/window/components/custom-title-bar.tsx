@@ -8,7 +8,7 @@ import {
   Sparkle,
   X,
 } from "@phosphor-icons/react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -23,6 +23,7 @@ import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -81,6 +82,7 @@ function placeAiChatBeforeAccount<T extends string>(items: Array<HeaderItem<T>>)
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const {
     isGitViewActive,
@@ -94,6 +96,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -101,7 +104,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
   const isMacOS = IS_MAC;
   const isWindows = IS_WINDOWS;
-  const showCustomWindowControls = !isMacOS;
+  const usesNativeWindowChrome = useNativeWindowChrome();
+  const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && settings.nativeMenuBar;
   const titleBarProjectMode = settings.titleBarProjectMode;
   const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
@@ -183,6 +187,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         isSidebarVisible,
         isGitViewActive,
         isGitHubPRsViewActive,
+        activeSidebarView,
       },
       view,
     );
@@ -213,6 +218,14 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       isDirectory: true,
     });
   };
+
+  const handleCloseAllProjects = useCallback(async () => {
+    const tabsToClose = [...useWorkspaceTabsStore.getState().projectTabs];
+
+    for (const tab of tabsToClose) {
+      await closeProject(tab.id);
+    }
+  }, [closeProject]);
 
   const titleBarContextMenuItems: ContextMenuItem[] = [
     {
@@ -249,7 +262,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             id: "close-all-projects",
             label: "Close All Projects",
             onClick: () => {
-              useWorkspaceTabsStore.getState().closeAllProjectTabs();
+              void handleCloseAllProjects();
             },
           },
         ]
@@ -272,6 +285,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <Tooltip content="Menu" side="bottom">
           <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
             <Button
+              ref={menuButtonRef}
               onClick={() => {
                 setMenuBarActiveMenu("File");
               }}
@@ -291,6 +305,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           activeMenu={menuBarActiveMenu}
           setActiveMenu={setMenuBarActiveMenu}
           compactFloating
+          anchorRef={menuButtonRef}
         />
       </div>
     ) : (

@@ -8,7 +8,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
-import { getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
+import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
 import { PathBreadcrumb } from "./path-breadcrumb";
 
 interface DirectoryEntry {
@@ -45,6 +45,13 @@ export function FilePathBreadcrumb({
     if (filePath.startsWith("remote://")) {
       const pathWithoutRemote = filePath.replace(/^remote:\/\/[^/]+/, "");
       return pathWithoutRemote.split("/").filter(Boolean);
+    }
+
+    if (filePath.startsWith("local-history://")) {
+      const encodedSourcePath = filePath.replace(/^local-history:\/\/[^/]+\/?/, "");
+      const sourcePath = encodedSourcePath ? decodeURIComponent(encodedSourcePath) : "";
+      const fileName = sourcePath ? getBaseName(sourcePath, "snapshot") : "snapshot";
+      return ["Local History", fileName];
     }
 
     if (filePath.includes("://")) {

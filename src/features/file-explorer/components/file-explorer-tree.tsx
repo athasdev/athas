@@ -15,6 +15,13 @@ import {
   type FileTreeGitStatusDecoration,
   type FileTreeGitStatusLookup,
 } from "@/features/file-explorer/lib/file-tree-git-status";
+import {
+  collectGitIgnoreFileReferences,
+  createFileTreeGitIgnoreRules,
+  isPathGitIgnoredByFileTreeRules,
+  type FileTreeGitIgnoreRules,
+  type GitIgnoreFileContent,
+} from "@/features/file-explorer/lib/file-tree-gitignore";
 import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
@@ -31,6 +38,7 @@ import {
   getDirName,
   getRelativePath,
   joinPath,
+  pathStartsWithRoot,
   stripTrailingPathSeparators,
 } from "@/utils/path-helpers";
 import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
@@ -63,7 +71,10 @@ interface FileExplorerTreeProps {
   rootFolderPath?: string;
   onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
   onFileOpen?: (path: string, isDir: boolean) => void | Promise<void>;
-  onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
+  onCreateNewFileInDirectory: (
+    directoryPath: string,
+    fileName: string,
+  ) => void | string | Promise<string | undefined>;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
   onGenerateImage?: (directoryPath: string) => void;
@@ -74,6 +85,15 @@ interface FileExplorerTreeProps {
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
   onFileMove?: (oldPath: string, newPath: string) => void;
+}
+
+interface FileExplorerAlertDialogState {
+  title: string;
+  message: string;
+}
+
+interface OpenAllFilesDialogState {
+  filePaths: string[];
 }
 
 const FILE_TREE_CONTAINER_INSET = 4;
@@ -101,12 +121,17 @@ function FileExplorerTreeComponent({
     path: string;
     isDir: boolean;
   } | null>(null);
+  const [alertDialog, setAlertDialog] = useState<FileExplorerAlertDialogState | null>(null);
+  const [openAllFilesDialog, setOpenAllFilesDialog] = useState<OpenAllFilesDialogState | null>(
+    null,
+  );
   const [isDeletingPath, setIsDeletingPath] = useState(false);
+  const [isOpeningAllFiles, setIsOpeningAllFiles] = useState(false);
   const [editingValue, setEditingValue] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<Document>(document);
 
-  const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
+  const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   // sticky handled purely by CSS; no JS scanning
@@ -114,6 +139,8 @@ function FileExplorerTreeComponent({
   const { settings } = useSettingsStore();
   const fileTreeDensity = settings.fileTreeDensity;
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
+  const removeFolderFromWorkspace = useFileSystemStore((state) => state.removeFolderFromWorkspace);
   const revealPathInTree = useFileSystemStore((state) => state.revealPathInTree);
 
   const handleAutoExpandDirectory = useCallback(
@@ -124,10 +151,20 @@ function FileExplorerTreeComponent({
     [onFileSelect],
   );
 
+  const showAlertDialog = useCallback((title: string, message: string) => {
+    setAlertDialog({ title, message });
+  }, []);
+
+  const handleMoveError = useCallback(
+    (message: string) => showAlertDialog("Move Failed", message),
+    [showAlertDialog],
+  );
+
   const { dragState, startDrag } = useFileExplorerDragDrop(
     rootFolderPath,
     onFileMove,
     handleAutoExpandDirectory,
+    handleMoveError,
   );
 
   const [mouseDownInfo, setMouseDownInfo] = useState<{
@@ -147,42 +184,77 @@ function FileExplorerTreeComponent({
     return ig;
   }, [settings.hiddenFilePatterns, settings.hiddenDirectoryPatterns]);
 
+  const workspaceRootPaths = useMemo(() => {
+    const roots = files.filter((file) => file.isDir).map((file) => file.path);
+    if (rootFolderPath && !roots.includes(rootFolderPath)) {
+      roots.unshift(rootFolderPath);
+    }
+    return roots;
+  }, [files, rootFolderPath]);
+
+  const getWorkspaceRootForPath = useCallback(
+    (path: string) => workspaceRootPaths.find((rootPath) => pathStartsWithRoot(path, rootPath)),
+    [workspaceRootPaths],
+  );
+
   const isUserHidden = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
-      let relative = getRelativePath(fullPath, rootFolderPath);
+      const matchedRootPath = getWorkspaceRootForPath(fullPath);
+      if (!matchedRootPath) return false;
+
+      let relative = getRelativePath(fullPath, matchedRootPath);
       if (!relative || relative.trim() === "") return false;
       if (isDir && !relative.endsWith("/")) relative += "/";
       return userIgnore.ignores(relative);
     },
-    [userIgnore, rootFolderPath],
+    [getWorkspaceRootForPath, userIgnore],
   );
 
   // removed scroll-time DOM scanning for sticky folders
 
+  const gitIgnoreFileReferences = useMemo(
+    () => collectGitIgnoreFileReferences(files, rootFolderPath),
+    [files, rootFolderPath],
+  );
+
   useEffect(() => {
+    let cancelled = false;
+
     const loadGitignore = async () => {
       if (!rootFolderPath) {
-        setGitIgnore(null);
+        setGitIgnoreRules(null);
         return;
       }
 
-      try {
-        const content = await readFile(joinPath(rootFolderPath, ".gitignore"));
-        const ig = ignore();
-        ig.add(
-          content
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter((l) => l && !l.startsWith("#")),
+      const ignoreFiles = await Promise.all(
+        gitIgnoreFileReferences.map(async (file): Promise<GitIgnoreFileContent | null> => {
+          try {
+            return {
+              ...file,
+              content: await readFile(file.path),
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setGitIgnoreRules(
+          createFileTreeGitIgnoreRules(
+            rootFolderPath,
+            ignoreFiles.filter((file): file is GitIgnoreFileContent => file !== null),
+          ),
         );
-        setGitIgnore(ig);
-      } catch {
-        setGitIgnore(null);
       }
     };
 
     loadGitignore();
-  }, [rootFolderPath]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gitIgnoreFileReferences, rootFolderPath]);
 
   const gitStatus =
     currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath
@@ -191,14 +263,12 @@ function FileExplorerTreeComponent({
 
   const isGitIgnored = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
-      if (!gitIgnore || !rootFolderPath) return false;
-      let relative = getRelativePath(fullPath, rootFolderPath);
-      if (!relative || relative.trim() === "") return false;
-      if (isDir && !relative.endsWith("/")) relative += "/";
-      if (relative === ".git/" || relative === ".git") return false;
-      return gitIgnore.ignores(relative);
+      if (!gitIgnoreRules || !rootFolderPath) return false;
+      if (getWorkspaceRootForPath(fullPath) !== rootFolderPath) return false;
+
+      return isPathGitIgnoredByFileTreeRules(gitIgnoreRules, fullPath, isDir);
     },
-    [gitIgnore, rootFolderPath],
+    [getWorkspaceRootForPath, gitIgnoreRules, rootFolderPath],
   );
 
   const gitStatusDecorationLookup = useMemo(() => {
@@ -219,8 +289,10 @@ function FileExplorerTreeComponent({
 
   const getGitStatusDecoration = useCallback(
     (file: FileEntry): FileTreeGitStatusDecoration | null =>
-      getFileTreeEntryGitStatusDecoration(file, rootFolderPath, gitStatusDecorationLookup),
-    [gitStatusDecorationLookup, rootFolderPath],
+      getWorkspaceRootForPath(file.path) === rootFolderPath
+        ? getFileTreeEntryGitStatusDecoration(file, rootFolderPath, gitStatusDecorationLookup)
+        : null,
+    [getWorkspaceRootForPath, gitStatusDecorationLookup, rootFolderPath],
   );
 
   const filteredFiles = useMemo(() => {
@@ -330,7 +402,7 @@ function FileExplorerTreeComponent({
       if (!parentPath && rootFolderPath) parentPath = rootFolderPath;
 
       if (!parentPath) {
-        alert("Error: Cannot determine where to create the file");
+        showAlertDialog("Cannot Create File", "Cannot determine where to create the file.");
         return;
       }
 
@@ -342,14 +414,14 @@ function FileExplorerTreeComponent({
       if (item.isDir) {
         const folder = findFileInTree(files, joinPath(parentPath, newName.trim()));
         if (folder) {
-          alert("Folder already exists");
+          showAlertDialog("Folder Already Exists", "A folder with this name already exists.");
           return;
         }
         onCreateNewFolderInDirectory?.(parentPath, newName.trim());
       } else {
         const file = findFileInTree(files, joinPath(parentPath, newName.trim()));
         if (file) {
-          alert("File already exists");
+          showAlertDialog("File Already Exists", "A file with this name already exists.");
           return;
         }
         onCreateNewFileInDirectory(parentPath, newName.trim());
@@ -476,6 +548,17 @@ function FileExplorerTreeComponent({
     ],
   );
 
+  const openFilePathsInTabs = useCallback(
+    async (filePaths: string[]) => {
+      for (const filePath of filePaths) {
+        await openPathInTab(filePath);
+      }
+
+      updateActivePath?.(filePaths[filePaths.length - 1]);
+    },
+    [openPathInTab, updateActivePath],
+  );
+
   const handleOpenAllFilesInDirectory = useCallback(
     async (directoryPath: string) => {
       let filePaths: string[] = [];
@@ -498,24 +581,31 @@ function FileExplorerTreeComponent({
       if (uniqueFilePaths.length === 0) return;
 
       if (uniqueFilePaths.length > 100) {
-        const shouldProceed = window.confirm(
-          `${uniqueFilePaths.length} files will be opened in tabs. Continue?`,
-        );
-        if (!shouldProceed) return;
+        setOpenAllFilesDialog({ filePaths: uniqueFilePaths });
+        return;
       }
 
-      for (const filePath of uniqueFilePaths) {
-        await openPathInTab(filePath);
-      }
-
-      updateActivePath?.(uniqueFilePaths[uniqueFilePaths.length - 1]);
+      await openFilePathsInTabs(uniqueFilePaths);
     },
-    [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openPathInTab, updateActivePath],
+    [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openFilePathsInTabs],
   );
+
+  const handleOpenAllFilesConfirm = useCallback(async () => {
+    if (!openAllFilesDialog) return;
+
+    setIsOpeningAllFiles(true);
+    try {
+      await openFilePathsInTabs(openAllFilesDialog.filePaths);
+      setOpenAllFilesDialog(null);
+    } finally {
+      setIsOpeningAllFiles(false);
+    }
+  }, [openAllFilesDialog, openFilePathsInTabs]);
 
   const { setContextMenu, handleContextMenu, contextMenuElement } = useFileExplorerContextMenu({
     rootFolderPath,
     onFileSelect,
+    onCreateNewFileInDirectory,
     onCreateNewFolderInDirectory,
     onGenerateImage,
     onRefreshDirectory,
@@ -523,6 +613,15 @@ function FileExplorerTreeComponent({
     onRevealInFinder,
     onUploadFile,
     onDuplicatePath,
+    onAddFolderToWorkspace: () => {
+      void addFolderToWorkspace();
+    },
+    onRemoveFolderFromWorkspace: (path) => {
+      void removeFolderFromWorkspace(path);
+    },
+    isWorkspaceRootPath: (path) => workspaceRootPaths.includes(path),
+    canRemoveWorkspaceRootPath: (path) =>
+      path !== rootFolderPath && workspaceRootPaths.includes(path),
     onDeleteRequested: setDeleteCandidate,
     onStartInlineEditing: startInlineEditing,
     onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
@@ -932,7 +1031,7 @@ function FileExplorerTreeComponent({
                             data-depth={stickyAncestor.depth}
                             title={stickyAncestor.file.path}
                             className={cn(
-                              "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+                              "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
                               densityConfig.rowClassName,
                             )}
                             style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
@@ -1011,6 +1110,55 @@ function FileExplorerTreeComponent({
       )}
 
       {contextMenuElement}
+      {alertDialog && (
+        <Dialog
+          title={alertDialog.title}
+          icon={AlertTriangle}
+          onClose={() => setAlertDialog(null)}
+          size="sm"
+          footer={
+            <Button onClick={() => setAlertDialog(null)} variant="primary" size="sm">
+              OK
+            </Button>
+          }
+        >
+          <p className="text-text text-xs">{alertDialog.message}</p>
+        </Dialog>
+      )}
+      {openAllFilesDialog && (
+        <Dialog
+          title="Open All Files"
+          icon={AlertTriangle}
+          onClose={() => {
+            if (!isOpeningAllFiles) setOpenAllFilesDialog(null);
+          }}
+          size="sm"
+          footer={
+            <>
+              <Button
+                onClick={() => setOpenAllFilesDialog(null)}
+                disabled={isOpeningAllFiles}
+                variant="outline"
+                size="sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleOpenAllFilesConfirm()}
+                disabled={isOpeningAllFiles}
+                variant="primary"
+                size="sm"
+              >
+                {isOpeningAllFiles ? "Opening..." : "Open"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-text text-xs">
+            {openAllFilesDialog.filePaths.length} files will be opened in tabs. Continue?
+          </p>
+        </Dialog>
+      )}
       {deleteCandidate && (
         <Dialog
           title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}

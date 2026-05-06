@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -271,7 +272,10 @@ const GitStatusPanel = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !window.confirm(`Discard changes for "${filePath}"? This cannot be undone.`)
+      !(await primitiveConfirm(`Discard changes for "${filePath}"? This cannot be undone.`, {
+        title: "Discard File Changes",
+        confirmLabel: "Discard",
+      }))
     ) {
       return;
     }
@@ -406,7 +410,7 @@ const GitStatusPanel = ({
                 type="button"
                 onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
                 variant="ghost"
-                className="file-tree-row ui-font ui-text-sm mx-1 flex h-6 w-[calc(100%-8px)] cursor-grab justify-start gap-1.5 rounded-md px-1.5 py-1 text-left text-text hover:bg-hover active:cursor-grabbing"
+                className="file-tree-row ui-font ui-text-sm mx-1 flex min-h-7 w-[calc(100%-8px)] cursor-grab justify-start gap-1.5 rounded-md px-1.5 py-1 text-left leading-[1.35] text-text hover:bg-hover active:cursor-grabbing"
                 style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
                 draggable={!!repoPath}
                 onDragStart={(event) => {
@@ -426,7 +430,7 @@ const GitStatusPanel = ({
                   className="relative z-1 shrink-0 text-text-lighter"
                   size={14}
                 />
-                <span className="relative z-1 truncate leading-5">{folderNode.name}</span>
+                <span className="relative z-1 truncate leading-[1.35]">{folderNode.name}</span>
                 <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={areAllFolderFilesStaged}

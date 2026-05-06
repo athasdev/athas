@@ -1,13 +1,13 @@
 import { listen } from "@tauri-apps/api/event";
+import { Key as KeyRound } from "@phosphor-icons/react";
 import type React from "react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, type PanInfo, useAnimationControls } from "framer-motion";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
-import { MultiAgentPanel } from "@/features/ai/components/multi-agent-panel";
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
   truncateDetail,
+  updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
@@ -21,7 +21,7 @@ import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpEvent } from "@/features/ai/types/acp";
+import type { AcpEvent, AcpPermissionOption, AcpToolKind } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { AGENT_OPTIONS, type AIChatProps, type Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -30,8 +30,8 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { cn } from "@/utils/cn";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
@@ -55,8 +55,137 @@ function fallbackAgentSessionTitle(message: string): string {
   return message.length > 50 ? `${message.substring(0, 50)}...` : message;
 }
 
+function getPermissionSummary(permission: {
+  description: string;
+  permissionType: string;
+  resource: string;
+}) {
+  return (
+    permission.description ||
+    [permission.permissionType, permission.resource].filter(Boolean).join(" ")
+  ).trim();
+}
+
+function getFallbackPermissionOptions(): AcpPermissionOption[] {
+  return [
+    { id: "reject", name: "Deny", kind: "reject_once" },
+    { id: "allow", name: "Allow", kind: "allow_once" },
+  ];
+}
+
+function isPermissionApproval(option: AcpPermissionOption) {
+  return option.kind === "allow_once" || option.kind === "allow_always";
+}
+
+function getPermissionOptionLabel(option: AcpPermissionOption) {
+  switch (option.kind) {
+    case "allow_once":
+      return "Allow";
+    case "allow_always":
+      return "Always";
+    case "reject_once":
+      return "Deny";
+    case "reject_always":
+      return "Never";
+    default:
+      return option.name;
+  }
+}
+
+function getPermissionOptionTooltip(option: AcpPermissionOption) {
+  switch (option.kind) {
+    case "allow_once":
+      return "Allow once";
+    case "allow_always":
+      return "Always allow this request type";
+    case "reject_once":
+      return "Deny once";
+    case "reject_always":
+      return "Always deny this request type";
+    default:
+      return option.name;
+  }
+}
+
+function getPermissionOptionClassName(option: AcpPermissionOption) {
+  switch (option.kind) {
+    case "allow_always":
+      return "border-success/30 bg-success/10 text-success hover:border-success/40 hover:bg-success/15 hover:text-success";
+    case "allow_once":
+      return "border-border/70 bg-hover/50 text-text hover:bg-hover";
+    case "reject_always":
+      return "border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error";
+    case "reject_once":
+      return "";
+    default:
+      return "";
+  }
+}
+
+function getAcpToolTarget(event: Extract<AcpEvent, { type: "tool_start" | "tool_update" }>) {
+  const locations = "locations" in event ? event.locations : null;
+  const location = locations?.[0]?.path;
+  if (location) return location.split("/").pop() || location;
+
+  const input = event.input;
+  if (typeof input === "string") return input;
+  if (input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    const path =
+      typeof record.file_path === "string"
+        ? record.file_path
+        : typeof record.path === "string"
+          ? record.path
+          : typeof record.filename === "string"
+            ? record.filename
+            : undefined;
+
+    if (path) return path.split("/").pop() || path;
+    if (typeof record.command === "string") return truncateDetail(record.command, 120);
+    if (typeof record.query === "string") return truncateDetail(record.query, 120);
+  }
+
+  const output = "output" in event ? event.output : null;
+  if (Array.isArray(output)) {
+    const diffItems = output.filter(
+      (item) => item && typeof item === "object" && item.type === "diff",
+    );
+    if (diffItems.length > 0) {
+      const firstPath = (diffItems[0] as Record<string, unknown>).path;
+      const firstFile =
+        typeof firstPath === "string" ? firstPath.split("/").pop() || firstPath : "file";
+      return diffItems.length === 1 ? firstFile : `${diffItems.length} files`;
+    }
+  }
+
+  return undefined;
+}
+
+function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false) {
+  switch (kind) {
+    case "edit":
+      return completed ? "Edited file" : "Editing file";
+    case "read":
+      return completed ? "Read file" : "Reading file";
+    case "delete":
+      return completed ? "Deleted file" : "Deleting file";
+    case "move":
+      return completed ? "Moved file" : "Moving file";
+    case "search":
+      return completed ? "Searched" : "Searching";
+    case "execute":
+      return completed ? "Ran command" : "Running command";
+    case "fetch":
+      return completed ? "Fetched" : "Fetching";
+    default:
+      return completed ? "Tool completed" : "Using tool";
+  }
+}
+
 const AIChat = memo(function AIChat({
   className,
+  chatId,
+  isActiveSurface = true,
   activeBuffer,
   buffers = [],
   selectedFiles = [],
@@ -73,16 +202,12 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
-  const activeAgentChatIdsFromStore = useAIChatStore((state) => state.activeAgentChatIds);
   const { showToast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const carouselViewportRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const shouldAutoScrollRef = useRef(true);
-  const lastSwipeAtRef = useRef(0);
-  const carouselControls = useAnimationControls();
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{
       requestId: string;
@@ -93,131 +218,21 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
-  const [agentPickerOpenSignal, setAgentPickerOpenSignal] = useState(0);
-  const [carouselWidth, setCarouselWidth] = useState(0);
-  const [isDraggingCarousel, setIsDraggingCarousel] = useState(false);
-
-  const activeAgentChatIds = useMemo(() => {
-    const ids: string[] = [];
-    const addChat = (chatId: string) => {
-      if (!ids.includes(chatId)) ids.push(chatId);
-    };
-
-    for (const chatId of activeAgentChatIdsFromStore) {
-      const chat = chatState.chats.find((item) => item.id === chatId);
-      if (chat) {
-        addChat(chat.id);
-      }
-    }
-
-    if (chatState.currentChatId) {
-      addChat(chatState.currentChatId);
-    }
-
-    return ids;
-  }, [activeAgentChatIdsFromStore, chatState.chats, chatState.currentChatId]);
-
-  const activeAgentIndex = useMemo(() => {
-    const index = activeAgentChatIds.indexOf(chatState.currentChatId ?? "");
-    return index >= 0 ? index : 0;
-  }, [activeAgentChatIds, chatState.currentChatId]);
-  const carouselChatIds = activeAgentChatIds.length > 0 ? activeAgentChatIds : [null];
-
-  const switchAgentByOffset = useCallback(
-    (offset: number) => {
-      if (!chatState.currentChatId || activeAgentChatIds.length === 0) {
-        setAgentPickerOpenSignal((current) => current + 1);
-        return;
-      }
-
-      const currentIndex = activeAgentChatIds.indexOf(chatState.currentChatId);
-      const nextIndex = currentIndex + offset;
-
-      if (nextIndex >= 0 && nextIndex < activeAgentChatIds.length) {
-        chatActions.switchToChat(activeAgentChatIds[nextIndex]);
-        return;
-      }
-
-      setAgentPickerOpenSignal((current) => current + 1);
-    },
-    [activeAgentChatIds, chatActions, chatState.currentChatId],
-  );
-
-  const handleAgentDragEnd = useCallback(
-    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      setIsDraggingCarousel(false);
-
-      if (carouselWidth <= 0 || activeAgentChatIds.length === 0) {
-        void carouselControls.start({ x: 0 });
-        return;
-      }
-
-      const projectedIndex =
-        activeAgentIndex - info.offset.x / carouselWidth - info.velocity.x / 2600;
-      const nextIndex = Math.min(
-        activeAgentChatIds.length - 1,
-        Math.max(0, Math.round(projectedIndex)),
-      );
-
-      if (nextIndex !== activeAgentIndex) {
-        chatActions.switchToChat(activeAgentChatIds[nextIndex]);
-        return;
-      }
-
-      void carouselControls.start({
-        x: -activeAgentIndex * carouselWidth,
-        transition: { type: "spring", stiffness: 420, damping: 42, mass: 0.9 },
-      });
-    },
-    [activeAgentChatIds, activeAgentIndex, carouselControls, carouselWidth, chatActions],
-  );
-
-  const handleAgentWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      if (Math.abs(event.deltaX) < 32 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
-        return;
-      }
-
-      const now = Date.now();
-      if (now - lastSwipeAtRef.current < 360) {
-        return;
-      }
-      lastSwipeAtRef.current = now;
-      event.preventDefault();
-      switchAgentByOffset(event.deltaX > 0 ? 1 : -1);
-    },
-    [switchAgentByOffset],
-  );
+  const effectiveChatId =
+    chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
 
   useEffect(() => {
-    const element = carouselViewportRef.current;
-    if (!element) return;
-
-    const updateWidth = () => {
-      setCarouselWidth(element.clientWidth);
-    };
-
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (isDraggingCarousel || carouselWidth <= 0) return;
-
-    void carouselControls.start({
-      x: -activeAgentIndex * carouselWidth,
-      transition: { type: "spring", stiffness: 420, damping: 42, mass: 0.9 },
-    });
-  }, [activeAgentIndex, carouselControls, carouselWidth, isDraggingCarousel]);
-
-  useEffect(() => {
-    if (activeBuffer) {
+    if (isActiveSurface && activeBuffer) {
       chatActions.autoSelectBuffer(activeBuffer.id);
     }
-  }, [activeBuffer, chatActions.autoSelectBuffer]);
+  }, [activeBuffer, chatActions.autoSelectBuffer, isActiveSurface]);
+
+  useEffect(() => {
+    if (!isActiveSurface || !effectiveChatId || effectiveChatId === chatState.currentChatId) return;
+    if (!chatState.chats.some((chat) => chat.id === effectiveChatId)) return;
+
+    chatActions.switchToChat(effectiveChatId);
+  }, [chatActions, chatState.chats, chatState.currentChatId, effectiveChatId, isActiveSurface]);
 
   useEffect(() => {
     chatActions.checkApiKey(settings.aiProviderId);
@@ -227,7 +242,7 @@ const AIChat = memo(function AIChat({
   // Clear ACP events when switching chats
   useEffect(() => {
     setAcpEvents([]);
-  }, [chatState.currentChatId]);
+  }, [effectiveChatId]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -752,6 +767,13 @@ details: ${errorDetails || mainError}
           requestAnimationFrame(() => scrollToBottom(true));
         },
         (event) => {
+          appendAcpEvent({
+            id: `tool-${event.toolId}`,
+            kind: "tool",
+            label: getAcpToolLabel(event.kind),
+            detail: getAcpToolTarget(event),
+            state: event.status === "pending" ? "info" : "running",
+          });
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             isToolUse: true,
             toolName: event.toolName,
@@ -769,6 +791,48 @@ details: ${errorDetails || mainError}
           }));
         },
         (event) => {
+          if (
+            event.kind ||
+            event.input ||
+            event.output ||
+            event.locations?.length ||
+            event.status
+          ) {
+            setAcpEvents((prev) => {
+              const activityId = `tool-${event.toolId}`;
+              const nextState =
+                event.status === "failed"
+                  ? "error"
+                  : event.status === "completed"
+                    ? "success"
+                    : event.status === "pending"
+                      ? "info"
+                      : "running";
+              const detail = getAcpToolTarget(event);
+
+              if (!prev.some((activity) => activity.id === activityId)) {
+                return appendChatAcpEvent(prev, {
+                  id: activityId,
+                  kind: "tool",
+                  label: getAcpToolLabel(event.kind),
+                  detail,
+                  state: nextState,
+                });
+              }
+
+              return prev.map((activity) =>
+                activity.id === activityId
+                  ? {
+                      ...activity,
+                      label: event.kind ? getAcpToolLabel(event.kind) : activity.label,
+                      detail: detail ?? activity.detail,
+                      state: nextState,
+                      timestamp: new Date(),
+                    }
+                  : activity,
+              );
+            });
+          }
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
               id: event.toolId,
@@ -783,6 +847,9 @@ details: ${errorDetails || mainError}
           }));
         },
         (toolName: string, toolId?: string, output?: unknown, error?: string) => {
+          if (toolId) {
+            setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, `tool-${toolId}`, !error));
+          }
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             toolCalls: markToolCallComplete(
               currentMessage?.toolCalls || [],
@@ -826,7 +893,11 @@ details: ${errorDetails || mainError}
               break;
             case "tool_start":
             case "tool_update":
+              break;
             case "tool_complete":
+              setAcpEvents((prev) =>
+                updateToolCompletionAcpEvent(prev, `tool-${event.toolId}`, event.success),
+              );
               break;
             case "permission_request":
               break; // Handled separately with permission UI
@@ -975,7 +1046,7 @@ details: ${errorDetails || mainError}
   useEffect(() => {
     const pendingLaunch = chatState.pendingAgentLaunchRequest;
     if (!pendingLaunch) return;
-    if (pendingLaunch.chatId !== chatState.currentChatId) return;
+    if (pendingLaunch.chatId !== effectiveChatId) return;
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
     if (chatState.isTyping || chatState.streamingMessageId) return;
@@ -986,7 +1057,7 @@ details: ${errorDetails || mainError}
     void sendMessage(pendingLaunch.prompt);
   }, [
     chatActions,
-    chatState.currentChatId,
+    effectiveChatId,
     chatState.isTyping,
     chatState.pendingAgentLaunchRequest,
     chatState.streamingMessageId,
@@ -995,6 +1066,12 @@ details: ${errorDetails || mainError}
   ]);
 
   const currentPermission = permissionQueue[0];
+  const currentPermissionSummary = currentPermission ? getPermissionSummary(currentPermission) : "";
+  const currentPermissionOptions = currentPermission
+    ? currentPermission.options.length > 0
+      ? currentPermission.options
+      : getFallbackPermissionOptions()
+    : [];
   const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
     try {
@@ -1019,9 +1096,8 @@ details: ${errorDetails || mainError}
   return (
     <div
       className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
-      onWheel={handleAgentWheel}
     >
-      <ChatHeader onDeleteChat={handleDeleteChat} />
+      <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -1034,106 +1110,58 @@ details: ${errorDetails || mainError}
       ) : (
         <>
           <div
-            ref={carouselViewportRef}
-            className="scrollbar-hidden relative z-0 flex-1 overflow-hidden"
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto"
           >
-            <motion.div
-              className="flex h-full cursor-grab select-none active:cursor-grabbing"
-              style={{
-                width: carouselWidth > 0 ? carouselWidth * carouselChatIds.length : "100%",
-              }}
-              animate={carouselControls}
-              drag="x"
-              dragConstraints={{
-                left:
-                  carouselWidth > 0 ? -Math.max(0, carouselChatIds.length - 1) * carouselWidth : 0,
-                right: 0,
-              }}
-              dragElastic={0.18}
-              dragMomentum={false}
-              onDragStart={() => setIsDraggingCarousel(true)}
-              onDragEnd={handleAgentDragEnd}
-            >
-              {carouselChatIds.map((chatId) => {
-                const selected = chatId === chatState.currentChatId;
-
-                return (
-                  <div
-                    key={chatId ?? "empty-chat"}
-                    ref={selected ? messagesContainerRef : undefined}
-                    onScroll={selected ? handleMessagesScroll : undefined}
-                    className="h-full shrink-0 overflow-y-auto"
-                    style={{ width: carouselWidth > 0 ? carouselWidth : "100%" }}
-                  >
-                    <ChatMessages
-                      ref={selected ? messagesEndRef : undefined}
-                      chatId={chatId}
-                      onApplyCode={onApplyCode}
-                      acpEvents={selected ? acpEvents : []}
-                    />
-                  </div>
-                );
-              })}
-            </motion.div>
+            <ChatMessages
+              ref={messagesEndRef}
+              chatId={effectiveChatId}
+              onApplyCode={onApplyCode}
+              acpEvents={acpEvents}
+            />
           </div>
 
           {currentPermission && (
             <div className="bg-transparent px-3 pt-2 text-xs">
-              <div className="rounded-2xl border border-border bg-primary-bg/90 px-3 py-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        shape="pill"
-                        className="bg-secondary-bg/70 font-medium uppercase tracking-[0.16em] text-text-lighter"
+              <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-sm">
+                <KeyRound className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
+                <div
+                  className="min-w-0 flex-1 truncate text-text"
+                  title={`${currentPermission.permissionType} - ${currentPermission.resource}`}
+                >
+                  <span className="font-medium text-text-light">Permission</span>
+                  <span className="px-1.5 text-text-lighter">/</span>
+                  <span className="editor-font">{currentPermissionSummary}</span>
+                </div>
+                {permissionQueue.length > 1 ? (
+                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+                    +{permissionQueue.length - 1}
+                  </span>
+                ) : null}
+                <div className="flex shrink-0 items-center gap-1">
+                  {currentPermissionOptions.map((option) => {
+                    const approved = isPermissionApproval(option);
+                    return (
+                      <Button
+                        key={option.id}
+                        type="button"
+                        variant={approved ? "outline" : "danger"}
+                        size="xs"
+                        onClick={() =>
+                          handlePermission(
+                            approved,
+                            currentPermission.options.length > 0 ? option.id : undefined,
+                          )
+                        }
+                        className={cn("h-6 rounded-md px-2", getPermissionOptionClassName(option))}
+                        tooltip={getPermissionOptionTooltip(option)}
+                        tooltipSide="top"
                       >
-                        Permission
-                      </Badge>
-                      {permissionQueue.length > 1 ? (
-                        <span className="ui-text-xs text-text-lighter">
-                          {permissionQueue.length - 1} more queued
-                        </span>
-                      ) : null}
-                    </div>
-                    <div
-                      className="mt-2 break-words editor-font text-text"
-                      title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
-                    >
-                      {currentPermission.description}
-                    </div>
-                    <div className="ui-text-xs mt-1 text-text-lighter">
-                      Review this request before the agent can continue.
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {(currentPermission.options.length > 0
-                      ? currentPermission.options
-                      : [
-                          { id: "reject", name: "Deny", kind: "reject_once" as const },
-                          { id: "allow", name: "Allow", kind: "allow_once" as const },
-                        ]
-                    ).map((option) => {
-                      const approved =
-                        option.kind === "allow_once" || option.kind === "allow_always";
-                      return (
-                        <Button
-                          key={option.id}
-                          type="button"
-                          variant={approved ? "secondary" : "ghost"}
-                          size="sm"
-                          onClick={() =>
-                            handlePermission(
-                              approved,
-                              currentPermission.options.length > 0 ? option.id : undefined,
-                            )
-                          }
-                          className="rounded-full"
-                        >
-                          {option.name}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                        {getPermissionOptionLabel(option)}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1142,10 +1170,10 @@ details: ${errorDetails || mainError}
           <AIChatInputBar
             buffers={buffers}
             allProjectFiles={allProjectFiles}
+            isActiveSurface={isActiveSurface}
             onSendMessage={handleSendMessage}
             onStopStreaming={stopStreaming}
           />
-          <MultiAgentPanel openSignal={agentPickerOpenSignal} />
 
           <ProviderApiKeyCommand
             isOpen={chatState.apiKeyModalState.isOpen}

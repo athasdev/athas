@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
+  Copy,
   TerminalWindow as Terminal,
 } from "@phosphor-icons/react";
 import type React from "react";
@@ -159,6 +160,15 @@ type HighlightSegment = {
 
 const TREE_SITTER_QUERY_CACHE = new Map<string, string>();
 const TREE_SITTER_TOKEN_CACHE = new Map<string, HighlightSegment[]>();
+
+async function copyTextToClipboard(text: string) {
+  try {
+    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+    await writeText(text);
+  } catch {
+    await navigator.clipboard.writeText(text);
+  }
+}
 
 const TREE_SITTER_LANGUAGE_ALIASES: Record<string, string> = {
   csharp: "csharp",
@@ -327,17 +337,31 @@ function CodeBlock({
           {languageLabel && (
             <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
           )}
-          {onApplyCode && code.trim() && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="xs"
-              onClick={() => onApplyCode(code)}
-              className="whitespace-nowrap opacity-0 group-hover:opacity-100"
-              tooltip="Apply this code to current buffer"
-            >
-              Apply
-            </Button>
+          {code.trim() && (
+            <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="rounded"
+                onClick={() => void copyTextToClipboard(code)}
+                tooltip="Copy code"
+              >
+                <Copy className="text-text-lighter" size={12} />
+              </Button>
+              {onApplyCode && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => onApplyCode(code)}
+                  className="h-5 px-1.5 text-[11px]"
+                  tooltip="Apply this code to current buffer"
+                >
+                  Apply
+                </Button>
+              )}
+            </div>
           )}
         </div>
         <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">
@@ -561,6 +585,146 @@ function renderHeader(level: number, text: string, key: number): React.ReactNode
   }
 }
 
+type TableAlignment = "left" | "center" | "right";
+
+type MarkdownTable = {
+  headers: string[];
+  alignments: TableAlignment[];
+  rows: string[][];
+};
+
+function splitMarkdownTableRow(line: string): string[] {
+  let value = line.trim();
+  if (value.startsWith("|")) value = value.slice(1);
+  if (value.endsWith("|")) value = value.slice(0, -1);
+
+  const cells: string[] = [];
+  let current = "";
+
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    const next = value[i + 1];
+
+    if (char === "\\" && next === "|") {
+      current += "|";
+      i += 1;
+      continue;
+    }
+
+    if (char === "|") {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells;
+}
+
+function parseTableSeparatorCell(cell: string): TableAlignment | null {
+  const normalized = cell.replace(/\s+/g, "");
+  if (!/^:?-{3,}:?$/.test(normalized)) return null;
+
+  const startsWithColon = normalized.startsWith(":");
+  const endsWithColon = normalized.endsWith(":");
+  if (startsWithColon && endsWithColon) return "center";
+  if (endsWithColon) return "right";
+  return "left";
+}
+
+function normalizeTableRow(cells: string[], columnCount: number): string[] {
+  if (cells.length === columnCount) return cells;
+  if (cells.length > columnCount) return cells.slice(0, columnCount);
+  return [...cells, ...Array.from({ length: columnCount - cells.length }, () => "")];
+}
+
+function parseMarkdownTable(
+  lines: string[],
+  startIndex: number,
+): { table: MarkdownTable; endIndex: number } | null {
+  const headerLine = lines[startIndex] ?? "";
+  const separatorLine = lines[startIndex + 1] ?? "";
+
+  if (!headerLine?.includes("|") || !separatorLine?.includes("|")) return null;
+
+  const headers = splitMarkdownTableRow(headerLine);
+  const separatorCells = splitMarkdownTableRow(separatorLine);
+  if (headers.length < 2 || separatorCells.length !== headers.length) return null;
+
+  const alignments = separatorCells.map(parseTableSeparatorCell);
+  if (alignments.some((alignment) => alignment === null)) return null;
+
+  const rows: string[][] = [];
+  let endIndex = startIndex + 2;
+
+  while (endIndex < lines.length) {
+    const rowLine = lines[endIndex] ?? "";
+    const trimmedLine = rowLine.trim();
+    if (!trimmedLine || trimmedLine.startsWith("```") || !rowLine.includes("|")) break;
+
+    rows.push(normalizeTableRow(splitMarkdownTableRow(rowLine), headers.length));
+    endIndex += 1;
+  }
+
+  return {
+    table: {
+      headers,
+      alignments: alignments as TableAlignment[],
+      rows,
+    },
+    endIndex,
+  };
+}
+
+function getTableAlignmentClass(alignment: TableAlignment): string {
+  switch (alignment) {
+    case "center":
+      return "text-center";
+    case "right":
+      return "text-right";
+    default:
+      return "text-left";
+  }
+}
+
+function renderTable(table: MarkdownTable, key: number): React.ReactNode {
+  return (
+    <div key={key} className="my-2 max-w-full overflow-x-auto">
+      <table className="w-full min-w-max border-collapse text-xs">
+        <thead>
+          <tr className="border-border border-b">
+            {table.headers.map((header, index) => (
+              <th
+                key={index}
+                className={`bg-secondary-bg px-2 py-1.5 font-medium text-text ${getTableAlignmentClass(table.alignments[index])}`}
+              >
+                {renderInlineFormatting(header)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, rowIndex) => (
+            <tr key={rowIndex} className="border-border/70 border-b last:border-b-0">
+              {row.map((cell, cellIndex) => (
+                <td
+                  key={cellIndex}
+                  className={`px-2 py-1.5 text-text-light align-top ${getTableAlignmentClass(table.alignments[cellIndex])}`}
+                >
+                  {renderInlineFormatting(cell)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // Cursor-based inline formatting parser
 function renderInlineFormatting(text: string): React.ReactNode {
   const elements: React.ReactNode[] = [];
@@ -751,7 +915,8 @@ function renderContent(
     }
   };
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
     // Code block fence
     if (line.trimStart().startsWith("```")) {
       if (inCodeBlock) {
@@ -773,6 +938,15 @@ function renderContent(
     }
 
     const trimmedLine = line.trim();
+
+    const parsedTable = parseMarkdownTable(lines, i);
+    if (parsedTable) {
+      flushList();
+      flushParagraph();
+      elements.push(renderTable(parsedTable.table, key++));
+      i = parsedTable.endIndex - 1;
+      continue;
+    }
 
     // Header
     const headerMatch = trimmedLine.match(/^(#{1,6})\s+(.*)$/);

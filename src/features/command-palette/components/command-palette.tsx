@@ -1,9 +1,13 @@
 import { appDataDir } from "@tauri-apps/api/path";
 import { ClockCounterClockwise as History } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
+import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
+import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
 import { commitChanges } from "@/features/git/api/git-commits-api";
 import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/git-remotes-api";
 import {
@@ -41,19 +45,20 @@ import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
 import { createSettingsActions } from "../constants/settings-actions";
+import { createSidebarBuilderActions } from "../constants/sidebar-builder-actions";
 import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../models/action.types";
+import type { CommandPaletteViewId } from "../models/view.types";
 import { useActionsStore } from "../store";
 
 const CommandPalette = () => {
   // Get data from stores
   const {
     isCommandPaletteVisible,
+    commandPaletteInitialView,
     setIsCommandPaletteVisible,
     setIsSettingsDialogVisible,
-    setIsThemeSelectorVisible,
-    setIsIconThemeSelectorVisible,
     isSidebarVisible,
     setIsSidebarVisible,
     isBottomPaneVisible,
@@ -70,12 +75,38 @@ const CommandPalette = () => {
   const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const isVisible = isCommandPaletteVisible;
-  const onClose = () => setIsCommandPaletteVisible(false);
+  const onClose = () => {
+    setIsCommandPaletteVisible(false);
+    setViewStack(["root"]);
+  };
 
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [viewStack, setViewStack] = useState<CommandPaletteViewId[]>(["root"]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const currentView = viewStack[viewStack.length - 1] || "root";
+  const isRootView = currentView === "root";
+
+  const pushView = (view: CommandPaletteViewId) => {
+    setQuery("");
+    setSelectedIndex(0);
+    setViewStack((currentStack) => [...currentStack, view]);
+  };
+
+  const popView = () => {
+    setViewStack((currentStack) =>
+      currentStack.length > 1 ? currentStack.slice(0, -1) : currentStack,
+    );
+  };
+
+  const handleThemeChange = useCallback((theme: string) => {
+    void useSettingsStore.getState().updateSetting("theme", theme);
+  }, []);
+
+  const handleIconThemeChange = useCallback((iconTheme: string) => {
+    void useSettingsStore.getState().updateSetting("iconTheme", iconTheme);
+  }, []);
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.pushAction();
@@ -150,8 +181,7 @@ const CommandPalette = () => {
       setIsSettingsDialogVisible,
       openSettingsDialog,
       setSettingsSearchQuery: useSettingsStore.getState().setSearchQuery,
-      setIsThemeSelectorVisible,
-      setIsIconThemeSelectorVisible,
+      pushPaletteView: pushView,
       updateSetting: useSettingsStore.getState().updateSetting as (
         key: string,
         value: any,
@@ -169,6 +199,13 @@ const CommandPalette = () => {
       openSettingsDialog,
       onClose,
     }),
+    ...(settings.coreFeatures.sidebarBuilder
+      ? createSidebarBuilderActions({
+          setIsSidebarVisible,
+          setActiveView,
+          onClose,
+        })
+      : []),
     ...createFileActions({
       activeBufferId,
       buffers,
@@ -233,6 +270,7 @@ const CommandPalette = () => {
       vimCommands,
       setMode,
       openQuickEdit,
+      pushPaletteView: pushView,
       showToast,
       onClose,
     }),
@@ -260,7 +298,7 @@ const CommandPalette = () => {
 
   // Handle keyboard navigation
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || !isRootView) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -285,20 +323,23 @@ const CommandPalette = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, selectedIndex, prioritizedActions, pushAction]);
+  }, [isVisible, isRootView, selectedIndex, prioritizedActions, pushAction]);
 
   // Reset state when visibility changes
   useEffect(() => {
     if (isVisible) {
       setQuery("");
       setSelectedIndex(0);
+      setViewStack(
+        commandPaletteInitialView === "root" ? ["root"] : ["root", commandPaletteInitialView],
+      );
       requestAnimationFrame(() => {
         if (inputRef.current) {
           inputRef.current.focus();
         }
       });
     }
-  }, [isVisible]);
+  }, [isVisible, commandPaletteInitialView]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -322,49 +363,91 @@ const CommandPalette = () => {
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
-      <CommandHeader onClose={onClose} showClearButton={settings.coreFeatures.persistentCommands}>
-        <CommandInput
-          ref={inputRef}
-          value={query}
-          onChange={setQuery}
-          placeholder="Type a command..."
+      {currentView === "quick-question" ? (
+        <QuickQuestionCommandContent
+          isActive={currentView === "quick-question"}
+          onBack={popView}
+          onClose={onClose}
+          activeBuffer={activeBuffer}
+          buffers={buffers}
+          projectRoot={rootFolderPath}
         />
-      </CommandHeader>
+      ) : currentView === "color-theme" ? (
+        <ThemeSelectorContent
+          isActive={currentView === "color-theme"}
+          onBack={popView}
+          onClose={onClose}
+          onThemeChange={handleThemeChange}
+          currentTheme={settings.theme}
+        />
+      ) : currentView === "icon-theme" ? (
+        <IconThemeSelectorContent
+          isActive={currentView === "icon-theme"}
+          onBack={popView}
+          onClose={onClose}
+          onThemeChange={handleIconThemeChange}
+          currentTheme={settings.iconTheme}
+        />
+      ) : currentView === "local-history" ? (
+        <LocalHistoryCommandContent
+          isActive={currentView === "local-history"}
+          activeFilePath={
+            activeBuffer?.type === "editor" && !activeBuffer.isVirtual ? activeBuffer.path : null
+          }
+          onBack={popView}
+          onClose={onClose}
+        />
+      ) : (
+        <>
+          <CommandHeader
+            onClose={onClose}
+            showClearButton={settings.coreFeatures.persistentCommands}
+          >
+            <CommandInput
+              ref={inputRef}
+              value={query}
+              onChange={setQuery}
+              placeholder="Type a command..."
+            />
+          </CommandHeader>
 
-      <CommandList ref={resultsRef}>
-        {filteredActions.length === 0 ? (
-          <CommandEmpty>No commands found</CommandEmpty>
-        ) : (
-          prioritizedActions.map((action, index) => {
-            const isRecent =
-              settings.coreFeatures.persistentCommands && lastEnteredActions.includes(action.id);
-            const binding = action.commandId
-              ? keymapRegistry.getKeybinding(action.commandId)?.key
-              : undefined;
-            return (
-              <CommandItem
-                key={action.id}
-                onClick={() => {
-                  action.action();
-                  pushAction(action.id);
-                }}
-                isSelected={index === selectedIndex}
-                className="px-3 py-1.5"
-              >
-                {isRecent && <History className="shrink-0 text-text-lighter" />}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs">{action.label}</div>
-                </div>
-                {binding && (
-                  <div className="shrink-0">
-                    <Keybinding binding={binding} />
-                  </div>
-                )}
-              </CommandItem>
-            );
-          })
-        )}
-      </CommandList>
+          <CommandList ref={resultsRef}>
+            {filteredActions.length === 0 ? (
+              <CommandEmpty>No commands found</CommandEmpty>
+            ) : (
+              prioritizedActions.map((action, index) => {
+                const isRecent =
+                  settings.coreFeatures.persistentCommands &&
+                  lastEnteredActions.includes(action.id);
+                const binding = action.commandId
+                  ? keymapRegistry.getKeybinding(action.commandId)?.key
+                  : undefined;
+                return (
+                  <CommandItem
+                    key={action.id}
+                    onClick={() => {
+                      action.action();
+                      pushAction(action.id);
+                    }}
+                    isSelected={index === selectedIndex}
+                    className="px-3 py-1.5"
+                  >
+                    {isRecent && <History className="shrink-0 text-text-lighter" />}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs">{action.label}</div>
+                    </div>
+                    {binding && (
+                      <div className="shrink-0">
+                        <Keybinding binding={binding} />
+                      </div>
+                    )}
+                  </CommandItem>
+                );
+              })
+            )}
+          </CommandList>
+        </>
+      )}
     </Command>
   );
 };

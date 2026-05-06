@@ -65,7 +65,7 @@ export const GitFileItem = ({
       </div>
       <div
         className={cn(
-          "file-tree-row ui-text-sm group relative mx-1 flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-hover",
+          "file-tree-row ui-text-sm group relative mx-1 flex min-h-7 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 leading-[1.35] hover:bg-hover",
           repoPath && "cursor-grab active:cursor-grabbing",
           className,
         )}
@@ -99,7 +99,7 @@ export const GitFileItem = ({
         >
           <span
             className={cn(
-              "min-w-0 truncate leading-5",
+              "min-w-0 truncate leading-[1.35]",
               showDirectory ? "max-w-[55%]" : "flex-1",
               "text-text",
             )}
@@ -107,7 +107,7 @@ export const GitFileItem = ({
             {fileName}
           </span>
           {showDirectory && directory && (
-            <span className="ui-text-sm min-w-0 flex-1 truncate leading-5 text-text-lighter/80">
+            <span className="ui-text-sm min-w-0 flex-1 truncate leading-[1.35] text-text-lighter/80">
               {directory}
             </span>
           )}
@@ -116,7 +116,7 @@ export const GitFileItem = ({
           {hasDiffStats && (
             <div
               className={cn(
-                "flex items-center leading-5",
+                "flex items-center leading-[1.35]",
                 compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
               )}
             >

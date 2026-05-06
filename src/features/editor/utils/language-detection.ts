@@ -68,6 +68,10 @@ export function detectLanguageFromPath(filePath: string): string {
 export function detectLanguageFromFileName(fileName: string): string {
   const lowercaseName = fileName.toLowerCase();
 
+  if (lowercaseName === ".env" || lowercaseName.startsWith(".env.")) {
+    return "dotenv";
+  }
+
   // Special files without extensions
   if (lowercaseName === "dockerfile" || lowercaseName.startsWith("dockerfile.")) {
     return "dockerfile";

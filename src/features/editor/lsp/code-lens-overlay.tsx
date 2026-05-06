@@ -1,5 +1,6 @@
 import { type ForwardedRef, forwardRef, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import type { CodeLensItem } from "./use-code-lens";
 
 interface CodeLensOverlayProps {
@@ -9,35 +10,50 @@ interface CodeLensOverlayProps {
   scrollTop: number;
   viewportHeight: number;
   onExecute?: (lens: CodeLensItem) => void;
+  resolveModelPosition?: EditorModelPositionResolver;
 }
 
 const CodeLensOverlay = forwardRef(
   (
-    { lenses, fontSize, lineHeight, scrollTop, viewportHeight, onExecute }: CodeLensOverlayProps,
+    {
+      lenses,
+      fontSize,
+      lineHeight,
+      scrollTop,
+      viewportHeight,
+      onExecute,
+      resolveModelPosition,
+    }: CodeLensOverlayProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
     // Group lenses by line and only render visible ones
     const visibleGroups = useMemo(() => {
       const buffer = viewportHeight * 0.5;
-      const startLine = Math.floor(Math.max(0, scrollTop - buffer) / lineHeight);
-      const endLine = Math.ceil((scrollTop + viewportHeight + buffer) / lineHeight) + 1;
+      const visibleTop = Math.max(0, scrollTop - buffer);
+      const visibleBottom = scrollTop + viewportHeight + buffer;
 
       const byLine = new Map<number, CodeLensItem[]>();
       for (const lens of lenses) {
-        if (lens.line < startLine || lens.line > endLine) continue;
+        const top =
+          resolveModelPosition?.(lens.line, 0)?.top ??
+          EDITOR_CONSTANTS.EDITOR_PADDING_TOP + lens.line * lineHeight;
+        if (top < visibleTop || top > visibleBottom) continue;
         const existing = byLine.get(lens.line) || [];
         existing.push(lens);
         byLine.set(lens.line, existing);
       }
       return byLine;
-    }, [lenses, scrollTop, viewportHeight, lineHeight]);
+    }, [lenses, scrollTop, viewportHeight, lineHeight, resolveModelPosition]);
 
     if (visibleGroups.size === 0) return null;
 
     return (
       <div ref={ref} className="absolute inset-0 overflow-hidden" style={{ zIndex: 4 }}>
         {Array.from(visibleGroups.entries()).map(([line, items]) => {
-          const top = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + line * lineHeight - lineHeight * 0.2;
+          const top =
+            (resolveModelPosition?.(line, 0)?.top ??
+              EDITOR_CONSTANTS.EDITOR_PADDING_TOP + line * lineHeight) -
+            lineHeight * 0.2;
           const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
 
           return (

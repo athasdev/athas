@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -110,7 +110,9 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         set({ databasePath, fileName, isLoading: true, error: null });
 
         try {
-          const tables = (await invoke("get_sqlite_tables", { path: databasePath })) as TableInfo[];
+          const tables = (await invokeDatabaseProvider("get_sqlite_tables", {
+            path: databasePath,
+          })) as TableInfo[];
           set({ tables });
 
           if (tables.length > 0) {
@@ -118,12 +120,12 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
           }
 
           try {
-            const versionResult = (await invoke("query_sqlite", {
+            const versionResult = (await invokeDatabaseProvider("query_sqlite", {
               path: databasePath,
               query: "PRAGMA user_version;",
             })) as QueryResult;
 
-            const indexResult = (await invoke("query_sqlite", {
+            const indexResult = (await invokeDatabaseProvider("query_sqlite", {
               path: databasePath,
               query:
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%';",
@@ -164,7 +166,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         });
 
         try {
-          const result = (await invoke("query_sqlite", {
+          const result = (await invokeDatabaseProvider("query_sqlite", {
             path: databasePath,
             query: `PRAGMA table_info("${tableName.replace(/"/g, '""')}")`,
           })) as QueryResult;
@@ -181,7 +183,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
 
           // Load foreign keys
           try {
-            const foreignKeys = (await invoke("get_sqlite_foreign_keys", {
+            const foreignKeys = (await invokeDatabaseProvider("get_sqlite_foreign_keys", {
               path: databasePath,
               table: tableName,
             })) as ForeignKeyInfo[];
@@ -207,7 +209,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         try {
           const offset = (state.currentPage - 1) * state.pageSize;
 
-          const result = (await invoke("query_sqlite_filtered", {
+          const result = (await invokeDatabaseProvider("query_sqlite_filtered", {
             path: state.databasePath,
             params: {
               table: state.selectedTable,
@@ -304,7 +306,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         set({ isLoading: true, error: null, isCustomQuery: true });
 
         try {
-          const queryResult = (await invoke("query_sqlite", {
+          const queryResult = (await invokeDatabaseProvider("query_sqlite", {
             path: databasePath,
             query: customQuery,
           })) as QueryResult;
@@ -326,7 +328,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         if (!databasePath || !selectedTable) return;
 
         try {
-          await invoke("insert_sqlite_row", {
+          await invokeDatabaseProvider("insert_sqlite_row", {
             path: databasePath,
             table: selectedTable,
             columns: Object.keys(values),
@@ -346,7 +348,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         const { [pkColumn]: _, ...updateValues } = values;
 
         try {
-          await invoke("update_sqlite_row", {
+          await invokeDatabaseProvider("update_sqlite_row", {
             path: databasePath,
             table: selectedTable,
             setColumns: Object.keys(updateValues),
@@ -366,7 +368,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         if (!databasePath || !selectedTable) return;
 
         try {
-          await invoke("delete_sqlite_row", {
+          await invokeDatabaseProvider("delete_sqlite_row", {
             path: databasePath,
             table: selectedTable,
             whereColumn: pkColumn,
@@ -399,7 +401,7 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         }
 
         try {
-          await invoke("update_sqlite_row", {
+          await invokeDatabaseProvider("update_sqlite_row", {
             path: databasePath,
             table: selectedTable,
             setColumns: [columnName],
@@ -426,12 +428,14 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
             .map((c) => `"${c.name.replace(/"/g, '""')}" ${c.type}${c.notnull ? " NOT NULL" : ""}`)
             .join(", ");
 
-          await invoke("execute_sqlite", {
+          await invokeDatabaseProvider("execute_sqlite", {
             path: databasePath,
             statement: `CREATE TABLE "${name.replace(/"/g, '""')}" (${columnDefs})`,
           });
 
-          const tables = (await invoke("get_sqlite_tables", { path: databasePath })) as TableInfo[];
+          const tables = (await invokeDatabaseProvider("get_sqlite_tables", {
+            path: databasePath,
+          })) as TableInfo[];
           set({ tables, error: null });
           await get().actions.selectTable(name);
         } catch (err) {
@@ -444,12 +448,14 @@ const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
         if (!databasePath) return;
 
         try {
-          await invoke("execute_sqlite", {
+          await invokeDatabaseProvider("execute_sqlite", {
             path: databasePath,
             statement: `DROP TABLE "${name.replace(/"/g, '""')}"`,
           });
 
-          const tables = (await invoke("get_sqlite_tables", { path: databasePath })) as TableInfo[];
+          const tables = (await invokeDatabaseProvider("get_sqlite_tables", {
+            path: databasePath,
+          })) as TableInfo[];
           set({ tables, error: null });
 
           if (selectedTable === name) {

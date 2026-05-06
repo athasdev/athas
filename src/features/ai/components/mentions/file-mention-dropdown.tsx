@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileItem } from "@/features/global-search/models/types";
 import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { chatComposerDropdownClassName } from "../input/chat-composer-control-styles";
@@ -13,16 +14,22 @@ import { AIFileSelector } from "./ai-file-selector";
 interface FileMentionDropdownProps {
   files: FileEntry[];
   onSelect: (file: FileEntry) => void;
+  onVisibleFilesChange?: (files: FileEntry[]) => void;
 }
 
 const ATTACHED_DROPDOWN_GAP = -1;
+const MENTION_DROPDOWN_MAX_HEIGHT = 260;
+const MENTION_DROPDOWN_EMPTY_HEIGHT = 44;
+const MENTION_DROPDOWN_ROW_HEIGHT = 29;
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   files,
   onSelect,
+  onVisibleFilesChange,
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [fallbackFiles, setFallbackFiles] = useState<FileEntry[]>([]);
+  const [visibleResultCount, setVisibleResultCount] = useState(0);
 
   const { rootFolderPath } = useProjectStore();
   const { getAllProjectFiles } = useFileSystemStore();
@@ -60,20 +67,60 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     onSelect(fileEntry);
   };
 
+  const handleResultsChange = useCallback(
+    (items: FileItem[]) => {
+      setVisibleResultCount(items.length);
+      onVisibleFilesChange?.(
+        items.map((file) => ({
+          name: file.name,
+          path: file.path,
+          isDir: false,
+          children: undefined,
+        })),
+      );
+    },
+    [onVisibleFilesChange],
+  );
+
   useEffect(() => {
     const itemsContainer = dropdownRef.current?.querySelector(".items-container");
-    const selectedItem = itemsContainer?.children[selectedIndex] as HTMLElement;
+    const selectedItem = itemsContainer?.querySelector(
+      `[data-item-index="${selectedIndex}"]`,
+    ) as HTMLElement | null;
     if (selectedItem) {
       selectedItem.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [selectedIndex]);
 
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(Math.max(position.width, 280), window.innerWidth - 16);
-    const dropdownHeight = Math.min(210, EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT);
+    const activeElement = document.activeElement as HTMLElement | null;
+    const activeRect =
+      activeElement?.isContentEditable || activeElement?.tagName === "INPUT"
+        ? activeElement.getBoundingClientRect()
+        : null;
+    const basePosition =
+      position.bottom > 0
+        ? position
+        : activeRect && activeRect.width > 0 && activeRect.bottom > 0
+          ? {
+              top: Math.max(activeRect.top, activeRect.bottom - 24),
+              bottom: activeRect.bottom,
+              left: activeRect.left + 12,
+              width: Math.min(360, Math.max(220, activeRect.width - 24)),
+            }
+          : position;
+    const dropdownWidth = Math.min(Math.max(basePosition.width, 220), window.innerWidth - 16);
+    const dropdownHeight =
+      visibleResultCount === 0
+        ? MENTION_DROPDOWN_EMPTY_HEIGHT
+        : Math.min(
+            visibleResultCount * MENTION_DROPDOWN_ROW_HEIGHT + 12,
+            MENTION_DROPDOWN_MAX_HEIGHT,
+            EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
+          );
     const padding = 8;
 
-    let { left } = position;
+    let { left } = basePosition;
 
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
@@ -82,8 +129,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       left = padding;
     }
 
-    const attachedAboveTop = position.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
-    const attachedBelowTop = position.bottom + ATTACHED_DROPDOWN_GAP;
+    const attachedAboveTop = basePosition.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
+    const attachedBelowTop = basePosition.bottom + ATTACHED_DROPDOWN_GAP;
     const top =
       attachedAboveTop >= padding
         ? attachedAboveTop
@@ -93,8 +140,9 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       top: Math.max(padding, top),
       left: Math.max(padding, left),
       width: dropdownWidth,
+      height: dropdownHeight,
     };
-  }, [position.bottom, position.left, position.top, position.width]);
+  }, [position.bottom, position.left, position.top, position.width, visibleResultCount]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -125,16 +173,16 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className={chatComposerDropdownClassName("fixed z-[10040] flex select-none flex-col")}
+      className={chatComposerDropdownClassName(
+        "fixed z-[10040] flex select-none flex-col overflow-hidden",
+      )}
       style={{
-        maxHeight: "210px",
+        height: `${adjustedPosition.height}px`,
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,
         transformOrigin: "top left",
       }}
-      role="listbox"
-      aria-label="File suggestions"
     >
       <AIFileSelector
         files={effectiveFiles}
@@ -143,8 +191,9 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
         rootFolderPath={rootFolderPath}
         selectedIndex={selectedIndex}
         onSelectedIndexChange={setSelectedIndex}
+        onResultsChange={handleResultsChange}
         showSearchInput={false}
-        listClassName="max-h-[210px]"
+        listClassName="max-h-full"
         compact
       />
     </motion.div>,

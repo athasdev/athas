@@ -7,6 +7,7 @@ import { cn } from "@/utils/cn";
 import type { FileCategory, FileItem } from "../models/types";
 
 interface FileListItemProps {
+  id?: string;
   file: FileItem;
   category: FileCategory;
   index: number;
@@ -20,6 +21,7 @@ interface FileListItemProps {
 export const FileListItem = memo(
   ({
     file,
+    id,
     category,
     index,
     isSelected,
@@ -32,26 +34,34 @@ export const FileListItem = memo(
 
     return (
       <CommandItem
+        id={id}
         key={`${category}-${file.path}`}
         data-item-index={index}
+        role="option"
+        aria-selected={isSelected}
+        tabIndex={-1}
         onClick={() => onClick(file.path)}
         onMouseEnter={onPreview ? () => onPreview(file.path) : undefined}
         isSelected={isSelected}
-        className={compact ? "ui-font !h-6 !min-w-0 gap-1.5 rounded-md px-1.5 py-0" : "ui-font"}
+        className={
+          compact
+            ? "ui-font !h-auto min-h-6 !min-w-0 gap-1.5 rounded-md px-1.5 py-0.5 leading-[1.35]"
+            : "ui-font leading-[1.35]"
+        }
       >
         <FileExplorerIcon
           fileName={file.name}
           isDir={false}
-          size={compact ? 11 : 12}
+          size={compact ? 10 : 12}
           className="shrink-0"
         />
-        <div className="min-w-0 flex-1">
-          <div className={cn("truncate", compact ? "ui-text-xs" : "ui-text-sm")}>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <div className={cn("truncate leading-[1.35]", compact ? "ui-text-xs" : "ui-text-sm")}>
             <span className="text-text">{file.name}</span>
             {directoryPath && (
               <span
                 className={cn(
-                  "ml-1.5 text-text-lighter opacity-60",
+                  "ml-1.5 text-text-lighter leading-[1.35] opacity-60",
                   compact ? "ui-text-xs" : "ui-text-sm",
                 )}
               >
@@ -63,7 +73,7 @@ export const FileListItem = memo(
         {category === "open" && (
           <span
             className={cn(
-              "rounded bg-accent/20 px-1 font-medium text-accent",
+              "rounded bg-accent/20 px-1 font-medium leading-[1.35] text-accent",
               compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
             )}
           >
@@ -73,7 +83,7 @@ export const FileListItem = memo(
         {category === "recent" && (
           <span
             className={cn(
-              "rounded px-1 font-medium text-text-lighter",
+              "rounded px-1 font-medium leading-[1.35] text-text-lighter",
               compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
             )}
           >

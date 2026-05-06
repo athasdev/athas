@@ -24,10 +24,11 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
+import { SYNTAX_HIGHLIGHTING_REFRESH_EVENT } from "../extensions/builtin/syntax-highlighting";
 import { useAutocomplete } from "../hooks/use-autocomplete";
 import { useBufferSwitch } from "../hooks/use-buffer-switch";
 import { useContextMenu } from "../hooks/use-context-menu";
-import { useDragScroll } from "../hooks/use-drag-scroll";
+import { isDragScrolling, useDragScroll } from "../hooks/use-drag-scroll";
 import { useEditorKeyDown } from "../hooks/use-editor-keydown";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useEditorScroll } from "../hooks/use-editor-scroll";
@@ -39,6 +40,7 @@ import { useResolvedEditorSettings } from "../hooks/use-resolved-settings";
 import { useSelectionScope } from "../hooks/use-selection-scope";
 import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
+import type { InlayHint } from "../lsp/use-inlay-hints";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { useFoldStore } from "../stores/fold-store";
@@ -46,6 +48,7 @@ import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import type { Position, Range } from "../types/editor";
 import {
   applyVirtualEdit,
   calculateActualOffset,
@@ -54,6 +57,11 @@ import {
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
+import {
+  buildEditorViewLayout,
+  type EditorCoordinateResolver,
+  type EditorModelPositionResolver,
+} from "../view-model/view-layout";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
@@ -86,11 +94,29 @@ interface EditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string) => void;
+  onContentChange?: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => void;
+  inlayHints?: InlayHint[];
+  onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
+  onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
 }
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
 const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
+const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
+
+function estimateInlayHintWidth(
+  label: string,
+  fontSize: number,
+  fontFamily: string,
+  tabSize: number,
+) {
+  return getAccurateCursorX(label, label.length, fontSize * 0.85, fontFamily, tabSize) + 12;
+}
 
 export function Editor({
   bufferId: propBufferId,
@@ -111,6 +137,9 @@ export function Editor({
   lineNumberStart = 1,
   lineNumberMap,
   onContentChange,
+  inlayHints = [],
+  onCoordinateResolverChange,
+  onModelPositionResolverChange,
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -124,6 +153,7 @@ export function Editor({
   const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
   const gitBlameRef = useRef<HTMLDivElement>(null);
   const inlineDiffRef = useRef<HTMLDivElement>(null);
+  const suppressedNativeHistoryInputRef = useRef<"historyUndo" | "historyRedo" | null>(null);
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
@@ -153,7 +183,14 @@ export function Editor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
+  const aiAutocompleteProvider = useSettingsStore((state) => state.settings.aiAutocompleteProvider);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const aiAutocompleteCustomBaseUrl = useSettingsStore(
+    (state) => state.settings.aiAutocompleteCustomBaseUrl,
+  );
+  const aiAutocompleteCustomModelId = useSettingsStore(
+    (state) => state.settings.aiAutocompleteCustomModelId,
+  );
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const gitGutterEnabled = useSettingsStore((state) => state.settings.enableGitGutter);
   const vimMode = useVimStore.use.mode();
@@ -169,9 +206,11 @@ export function Editor({
   const filePath = buffer?.path;
   const languageIdOverride = buffer?.languageOverride;
   const useGlobalEditorState = isActiveSurface;
+  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
+  const [suppressInlayHintsForTyping, setSuppressInlayHintsForTyping] = useState(false);
 
   useGitGutter({
     filePath: filePath || "",
@@ -298,8 +337,23 @@ export function Editor({
     () => calculateLineHeight(fontSize, lineHeightMultiplier),
     [fontSize, lineHeightMultiplier],
   );
+  const measureEditorText = useCallback(
+    (text: string) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
+    [fontSize, fontFamily, tabSize],
+  );
+  const viewLayout = useMemo(
+    () =>
+      buildEditorViewLayout({
+        lines,
+        lineHeight,
+        wordWrap,
+        contentWidth,
+        measureText: measureEditorText,
+      }),
+    [lines, lineHeight, wordWrap, contentWidth, measureEditorText],
+  );
   const shouldVirtualizeRendering =
-    lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
+    !wordWrap && lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
 
   const {
@@ -354,19 +408,24 @@ export function Editor({
     resetTokenizer: resetForBufferSwitch,
   });
 
-  // Listen for extension installation to re-trigger tokenization
+  // Listen for extension and language changes to re-trigger tokenization
   useEffect(() => {
     if (!isActiveSurface) return;
-    const handleExtensionInstalled = (event: Event) => {
+    const handleSyntaxHighlightingRefresh = (event: Event) => {
       const customEvent = event as CustomEvent<{ extensionId: string; filePath: string }>;
       if (customEvent.detail.filePath === filePath && content) {
         forceFullTokenize(content);
       }
     };
 
-    window.addEventListener("extension-installed", handleExtensionInstalled);
+    window.addEventListener("extension-installed", handleSyntaxHighlightingRefresh);
+    window.addEventListener(SYNTAX_HIGHLIGHTING_REFRESH_EVENT, handleSyntaxHighlightingRefresh);
     return () => {
-      window.removeEventListener("extension-installed", handleExtensionInstalled);
+      window.removeEventListener("extension-installed", handleSyntaxHighlightingRefresh);
+      window.removeEventListener(
+        SYNTAX_HIGHLIGHTING_REFRESH_EVENT,
+        handleSyntaxHighlightingRefresh,
+      );
     };
   }, [filePath, content, forceFullTokenize, isActiveSurface]);
 
@@ -376,6 +435,108 @@ export function Editor({
     }
     return cursorPosition.line;
   }, [cursorPosition.line, foldTransform]);
+  const cursorViewPosition = useMemo(() => {
+    if (visualCursorLine < 0) return undefined;
+    const layoutLine = Math.min(visualCursorLine, Math.max(0, lines.length - 1));
+    return viewLayout.modelPositionToViewPosition(layoutLine, cursorPosition.column);
+  }, [viewLayout, visualCursorLine, cursorPosition.column, lines.length]);
+  const resolveEditorCoordinate = useCallback<EditorCoordinateResolver>(
+    (clientX, clientY) => {
+      const textarea = inputRef.current;
+      const container = contentContainerRef.current;
+      if (!textarea || !container) return null;
+
+      const rect = container.getBoundingClientRect();
+      const x = clientX - rect.left + textarea.scrollLeft;
+      const y = clientY - rect.top + textarea.scrollTop;
+      const position = viewLayout.editorPointToModelPosition(x, y);
+      const actualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.virtualToActual.get(position.modelLine) ?? position.modelLine)
+        : position.modelLine;
+
+      return {
+        ...position,
+        line: actualLine,
+        modelLine: actualLine,
+        height: position.segment.height,
+      };
+    },
+    [foldTransform, viewLayout],
+  );
+  const resolveModelPosition = useCallback<EditorModelPositionResolver>(
+    (line, column) => {
+      const virtualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.actualToVirtual.get(line) ?? line)
+        : line;
+
+      if (virtualLine < 0 || virtualLine >= lines.length) return null;
+
+      const position = viewLayout.modelPositionToViewPosition(virtualLine, column);
+
+      return {
+        ...position,
+        line,
+        modelLine: line,
+        height: position.segment.height,
+      };
+    },
+    [foldTransform, lines.length, viewLayout],
+  );
+
+  useEffect(() => {
+    onCoordinateResolverChange?.(resolveEditorCoordinate);
+    return () => onCoordinateResolverChange?.(null);
+  }, [onCoordinateResolverChange, resolveEditorCoordinate]);
+
+  useEffect(() => {
+    onModelPositionResolverChange?.(resolveModelPosition);
+    return () => onModelPositionResolverChange?.(null);
+  }, [onModelPositionResolverChange, resolveModelPosition]);
+
+  useEffect(() => {
+    if (!useGlobalEditorState || !cursorViewPosition || isDragScrolling()) return;
+
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const targetTop = cursorViewPosition.top;
+    const targetBottom = targetTop + cursorViewPosition.segment.height;
+    const currentScrollTop = textarea.scrollTop;
+    const viewportHeight = textarea.clientHeight || 0;
+    if (viewportHeight <= 0) return;
+
+    if (targetTop < currentScrollTop) {
+      textarea.scrollTop = targetTop;
+    } else if (targetBottom > currentScrollTop + viewportHeight) {
+      textarea.scrollTop = Math.max(0, targetBottom - viewportHeight);
+    }
+  }, [cursorViewPosition, useGlobalEditorState]);
+
+  useEffect(() => {
+    if (lastInputTimestamp === 0) return;
+
+    setSuppressInlayHintsForTyping(true);
+    const timeout = setTimeout(() => {
+      setSuppressInlayHintsForTyping(false);
+    }, INLAY_HINT_TYPING_SUPPRESS_MS);
+
+    return () => clearTimeout(timeout);
+  }, [lastInputTimestamp]);
+
+  const visualInlayHints = useMemo(() => {
+    if (suppressInlayHintsForTyping) return [];
+
+    const mappedHints = foldTransform.hasActiveFolds
+      ? inlayHints
+          .map((hint) => {
+            const visualLine = foldTransform.mapping.actualToVirtual.get(hint.line);
+            return visualLine == null ? null : { ...hint, line: visualLine };
+          })
+          .filter((hint): hint is InlayHint => hint !== null)
+      : inlayHints;
+
+    return mappedHints.filter((hint) => hint.line !== visualCursorLine);
+  }, [foldTransform, inlayHints, suppressInlayHintsForTyping, visualCursorLine]);
 
   const setEditorCursorPosition = useCallback(
     (position: Parameters<typeof setCursorPosition>[0]) => {
@@ -433,9 +594,26 @@ export function Editor({
   }, [cursorPosition, displayContent, getInputOffsetForPosition, selection]);
 
   const handleInput = useCallback(
-    (newVirtualContent: string) => {
+    (newVirtualContent: string, event?: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (readOnly) return;
       if (!bufferId || !inputRef.current) return;
+
+      const inputType = event ? (event.nativeEvent as InputEvent).inputType : undefined;
+      if (inputType === "historyUndo" || inputType === "historyRedo") {
+        inputRef.current.value = displayContent;
+
+        if (suppressedNativeHistoryInputRef.current === inputType) {
+          suppressedNativeHistoryInputRef.current = null;
+          return;
+        }
+
+        if (inputType === "historyUndo") {
+          editorAPI.undo();
+        } else {
+          editorAPI.redo();
+        }
+        return;
+      }
 
       const uiActions = useEditorUIStore.getState().actions;
       uiActions.setHoverInfo(null);
@@ -449,11 +627,25 @@ export function Editor({
         newActualContent = newVirtualContent;
       }
 
+      const previousActualContent = content;
+      const previousCursorPosition = cursorPosition;
+      const previousSelection = selection;
+
       updateBufferContent(bufferId, newActualContent);
       if (onContentChange) {
-        onContentChange(newActualContent);
+        onContentChange(
+          newActualContent,
+          previousActualContent,
+          previousCursorPosition,
+          previousSelection,
+        );
       } else {
-        onChange(newActualContent);
+        onChange(
+          newActualContent,
+          previousActualContent,
+          previousCursorPosition,
+          previousSelection,
+        );
       }
 
       if (!useGlobalEditorState) return;
@@ -487,13 +679,34 @@ export function Editor({
       updateBufferContent,
       setEditorCursorPosition,
       content,
+      cursorPosition,
+      displayContent,
       foldTransform,
       onContentChange,
       onChange,
       readOnly,
+      selection,
       useGlobalEditorState,
     ],
   );
+
+  const handleBeforeInput = useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
+    const inputEvent = event.nativeEvent as InputEvent;
+
+    if (inputEvent.inputType !== "historyUndo" && inputEvent.inputType !== "historyRedo") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    suppressedNativeHistoryInputRef.current = inputEvent.inputType;
+
+    if (inputEvent.inputType === "historyUndo") {
+      editorAPI.undo();
+    } else {
+      editorAPI.redo();
+    }
+  }, []);
 
   const editorOps = useEditorOperations({
     inputRef,
@@ -525,6 +738,7 @@ export function Editor({
       top: number;
       left: number;
     }>,
+    resolveModelPosition,
     setCursorPosition: setEditorCursorPosition,
     setSelection,
     updateBufferContent,
@@ -624,6 +838,106 @@ export function Editor({
     vimVisualSelection,
   ]);
 
+  const getColumnForInlayAdjustedX = useCallback(
+    (lineText: string, lineHints: InlayHint[], x: number) => {
+      const sortedHints = [...lineHints]
+        .map((hint) => ({
+          ...hint,
+          character: Math.max(0, Math.min(lineText.length, hint.character)),
+        }))
+        .sort((a, b) => a.character - b.character || a.label.localeCompare(b.label));
+
+      let bestColumn = 0;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (let column = 0; column <= lineText.length; column++) {
+        const hintWidth = sortedHints
+          .filter((hint) => hint.character <= column)
+          .reduce(
+            (width, hint) =>
+              width + estimateInlayHintWidth(hint.label, fontSize, fontFamily, tabSize),
+            0,
+          );
+        const boundaryX =
+          getAccurateCursorX(lineText, column, fontSize, fontFamily, tabSize) + hintWidth;
+        const distance = Math.abs(boundaryX - x);
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestColumn = column;
+        }
+      }
+
+      return bestColumn;
+    },
+    [fontFamily, fontSize, tabSize],
+  );
+
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLTextAreaElement>) => {
+      if (!useGlobalEditorState || readOnly || wordWrap || event.button !== 0) return;
+      if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey || event.detail > 1) {
+        return;
+      }
+
+      const textarea = inputRef.current;
+      if (!textarea || visualInlayHints.length === 0) return;
+
+      const rect = textarea.getBoundingClientRect();
+      const x =
+        event.clientX - rect.left - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + textarea.scrollLeft;
+      const y = event.clientY - rect.top - EDITOR_CONSTANTS.EDITOR_PADDING_TOP + textarea.scrollTop;
+      const visualLine = Math.max(0, Math.min(lines.length - 1, Math.floor(y / lineHeight)));
+      const lineHints = visualInlayHints.filter((hint) => hint.line === visualLine);
+      if (lineHints.length === 0) return;
+
+      event.preventDefault();
+
+      const lineText = lines[visualLine] || "";
+      const column = getColumnForInlayAdjustedX(lineText, lineHints, Math.max(0, x));
+      const virtualOffset = Math.min(
+        calculateLineOffset(lines, visualLine) + column,
+        displayContent.length,
+      );
+
+      textarea.focus();
+      textarea.selectionStart = virtualOffset;
+      textarea.selectionEnd = virtualOffset;
+
+      if (foldTransform.hasActiveFolds) {
+        const actualLine = foldTransform.mapping.virtualToActual.get(visualLine) ?? visualLine;
+        const actualOffset = calculateActualOffset(actualLines, actualLine, column);
+        setEditorCursorPosition({
+          line: actualLine,
+          column,
+          offset: actualOffset,
+        });
+      } else {
+        setEditorCursorPosition({
+          line: visualLine,
+          column,
+          offset: virtualOffset,
+        });
+      }
+
+      setSelection(undefined);
+    },
+    [
+      actualLines,
+      displayContent.length,
+      foldTransform,
+      getColumnForInlayAdjustedX,
+      lineHeight,
+      lines,
+      readOnly,
+      setEditorCursorPosition,
+      setSelection,
+      useGlobalEditorState,
+      visualInlayHints,
+      wordWrap,
+    ],
+  );
+
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLTextAreaElement>) => {
       if (!bufferId || !inputRef.current) return;
@@ -715,7 +1029,6 @@ export function Editor({
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
   const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
   const autocompleteCompletion = useEditorUIStore.use.autocompleteCompletion();
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
   const { setSelectedLspIndex, setIsLspCompletionVisible, setAutocompleteCompletion } =
     useEditorUIStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
@@ -723,7 +1036,10 @@ export function Editor({
 
   useAutocomplete({
     enabled: aiCompletionEnabled && !isPreviewMode && !readOnly,
-    model: aiAutocompleteModelId,
+    provider: aiAutocompleteProvider,
+    model:
+      aiAutocompleteProvider === "custom" ? aiAutocompleteCustomModelId : aiAutocompleteModelId,
+    customBaseUrl: aiAutocompleteCustomBaseUrl,
     filePath: filePath || null,
     languageId: filePath ? getLanguageId(filePath) : null,
     content,
@@ -1083,12 +1399,30 @@ export function Editor({
 
     const lineText = lines[visualCursorLine] || "";
     const cursorColumn = Math.min(cursorPosition.column, lineText.length);
-    const cursorX = getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize);
+    const textAfterCursorOnLine = lineText.slice(cursorColumn);
+    if (textAfterCursorOnLine.trim().length > 0) return null;
+
+    const previewLines: Array<{ text: string; index: number }> = [];
+
+    for (const [index, text] of normalized.split("\n").entries()) {
+      if (index > 0 && lines[visualCursorLine + index]?.trim()) {
+        break;
+      }
+      previewLines.push({ text, index });
+    }
+
+    if (previewLines.every((line) => line.text.length === 0)) return null;
 
     return {
-      text: normalized,
-      top: visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
-      left: cursorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      lines: previewLines,
+      top:
+        cursorViewPosition?.top ??
+        visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      firstLineLeft:
+        cursorViewPosition?.left ??
+        getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
+          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      continuationLeft: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
     };
   }, [
     autocompleteCompletion,
@@ -1101,6 +1435,7 @@ export function Editor({
     fontFamily,
     tabSize,
     lineHeight,
+    cursorViewPosition,
   ]);
 
   if (!buffer) return null;
@@ -1149,6 +1484,7 @@ export function Editor({
             tabSize={tabSize}
             wordWrap={wordWrap}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            inlayHints={visualInlayHints}
           />
         )}
         <InputLayer
@@ -1156,12 +1492,14 @@ export function Editor({
           content={displayContent}
           filePath={filePath}
           onInput={handleInput}
+          onBeforeInput={readOnly || !useGlobalEditorState ? undefined : handleBeforeInput}
           onKeyDown={readOnly || !useGlobalEditorState ? undefined : handleKeyDown}
           onScroll={handleScroll}
           onSelect={useGlobalEditorState ? handleCursorChange : undefined}
           onClick={
             useGlobalEditorState || readOnly || onReadonlySurfaceClick ? handleClick : undefined
           }
+          onMouseDown={useGlobalEditorState ? handleMouseDown : undefined}
           onContextMenu={useGlobalEditorState ? contextMenu.open : undefined}
           fontSize={fontSize}
           fontFamily={fontFamily}
@@ -1170,15 +1508,16 @@ export function Editor({
           wordWrap={wordWrap}
           readOnly={readOnly}
           scrollable={scrollable}
-          customCaret={useGlobalEditorState && !wordWrap && !readOnly}
+          customCaret={useGlobalEditorState && !readOnly}
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />
-        {useGlobalEditorState && !wordWrap && !readOnly && (
+        {useGlobalEditorState && !readOnly && (
           <PrimaryCursorLayer
             ref={primaryCursorRef}
             cursorPosition={cursorPosition}
             visualLine={visualCursorLine}
+            cursorViewPosition={cursorViewPosition}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -1198,6 +1537,7 @@ export function Editor({
             lineHeight={lineHeight}
             tabSize={tabSize}
             wordWrap={wordWrap}
+            viewLayout={viewLayout}
           />
         )}
         {inlineEditState.inlineEditVisible && inlineEditState.popoverPosition && (
@@ -1330,7 +1670,7 @@ export function Editor({
               style={{
                 position: "absolute",
                 top: `${inlineAutocompletePreview.top}px`,
-                left: `${inlineAutocompletePreview.left}px`,
+                left: 0,
                 fontSize: `${fontSize}px`,
                 fontFamily,
                 lineHeight: `${lineHeight}px`,
@@ -1339,7 +1679,24 @@ export function Editor({
                 color: "var(--text-lighter, #94a3b8)",
               }}
             >
-              {inlineAutocompletePreview.text}
+              {inlineAutocompletePreview.lines.map((line) => {
+                if (line.text.length === 0) return null;
+                return (
+                  <div
+                    key={line.index}
+                    style={{
+                      position: "absolute",
+                      top: `${line.index * lineHeight}px`,
+                      left:
+                        line.index === 0
+                          ? `${inlineAutocompletePreview.firstLineLeft}px`
+                          : `${inlineAutocompletePreview.continuationLeft}px`,
+                    }}
+                  >
+                    {line.text}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1353,16 +1710,18 @@ export function Editor({
             ref={multiCursorRef}
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
             lineHeight={lineHeight}
             content={displayContent}
+            measureText={measureEditorText}
+            viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
         {useGlobalEditorState && vimModeEnabled && (
           <VimCursorLayer
             ref={vimCursorRef}
+            visualLine={visualCursorLine}
+            cursorViewPosition={cursorViewPosition}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -1383,6 +1742,7 @@ export function Editor({
             tabSize={tabSize}
             content={displayContent}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
@@ -1393,6 +1753,7 @@ export function Editor({
             lineHeight={lineHeight}
             content={displayContent}
             textareaRef={inputRef}
+            viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
@@ -1412,6 +1773,7 @@ export function Editor({
               lineHeight={lineHeight}
               tabSize={tabSize}
               wordWrap={wordWrap}
+              cursorViewPosition={cursorViewPosition}
             />
           )}
 
@@ -1446,7 +1808,7 @@ export function Editor({
           tokens={effectiveTokens}
           scrollTop={editorScrollTop}
           viewportHeight={editorViewportHeight}
-          totalHeight={lines.length * lineHeight}
+          totalHeight={viewLayout.totalHeight}
           lineHeight={lineHeight}
           scale={minimapScale}
           width={minimapWidth}

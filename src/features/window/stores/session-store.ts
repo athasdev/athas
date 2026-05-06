@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { AIWorkspaceSessionSnapshot } from "@/features/ai/store/types";
+import type { PersistedEditorViewState } from "@/features/editor/types/editor-session";
+import type { PaneNode } from "@/features/panes/types/pane";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -12,6 +14,9 @@ interface EditorBufferSession {
   path: string;
   name: string;
   isPinned: boolean;
+  isPreview?: boolean;
+  workspaceScope?: "workspace" | "external";
+  editorState?: PersistedEditorViewState;
 }
 
 interface TerminalBufferSession {
@@ -32,12 +37,22 @@ interface WebViewerBufferSession {
   isPinned: boolean;
   url: string;
   zoomLevel?: number;
+  profileKey?: string;
+  history?: string[];
+  historyIndex?: number;
 }
 
 export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;
 
-interface ProjectSession {
+export interface WorkspaceFolderSession {
+  path: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
+export interface ProjectSession {
   projectPath: string;
+  workspaceFolders?: WorkspaceFolderSession[];
   activeBufferPath: string | null;
   buffers: BufferSession[];
   terminals: PersistedTerminal[];
@@ -51,6 +66,31 @@ export interface ProjectUiSession {
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: BottomPaneTab;
   activeSidebarView: SidebarView;
+  paneState?: ProjectPaneSession | null;
+}
+
+export interface ProjectPaneGroupSession {
+  id: string;
+  type: "group";
+  bufferPaths: string[];
+  activeBufferPath: string | null;
+}
+
+export interface ProjectPaneSplitSession {
+  id: string;
+  type: "split";
+  direction: Extract<PaneNode, { type: "split" }>["direction"];
+  children: [ProjectPaneSessionNode, ProjectPaneSessionNode];
+  sizes: [number, number];
+}
+
+export type ProjectPaneSessionNode = ProjectPaneGroupSession | ProjectPaneSplitSession;
+
+export interface ProjectPaneSession {
+  root: ProjectPaneSessionNode;
+  bottomRoot: ProjectPaneSessionNode;
+  activePaneId: string;
+  fullscreenPaneId: string | null;
 }
 
 interface SessionState {
@@ -61,6 +101,7 @@ interface SessionState {
     activeBufferPath: string | null,
     terminals?: PersistedTerminal[],
     aiSession?: AIWorkspaceSessionSnapshot | null,
+    workspaceFolders?: WorkspaceFolderSession[],
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
   saveUiState: (projectPath: string, uiState: ProjectUiSession) => void;
@@ -69,25 +110,96 @@ interface SessionState {
   clearAllSessions: () => void;
 }
 
+export function buildSavedProjectSession({
+  previousSession,
+  projectPath,
+  buffers,
+  activeBufferPath,
+  terminals,
+  aiSession,
+  workspaceFolders,
+  now,
+}: {
+  previousSession?: ProjectSession;
+  projectPath: string;
+  buffers: BufferSession[];
+  activeBufferPath: string | null;
+  terminals?: PersistedTerminal[];
+  aiSession?: AIWorkspaceSessionSnapshot | null;
+  workspaceFolders?: WorkspaceFolderSession[];
+  now: number;
+}): ProjectSession {
+  return {
+    ...previousSession,
+    projectPath,
+    workspaceFolders:
+      workspaceFolders === undefined ? previousSession?.workspaceFolders : workspaceFolders,
+    activeBufferPath,
+    buffers,
+    terminals: terminals === undefined ? (previousSession?.terminals ?? []) : terminals,
+    aiSession: aiSession === undefined ? (previousSession?.aiSession ?? null) : aiSession,
+    uiState: previousSession?.uiState ?? null,
+    lastSaved: now,
+  };
+}
+
+export function buildSavedProjectUiSession({
+  previousSession,
+  projectPath,
+  uiState,
+  now,
+}: {
+  previousSession?: ProjectSession;
+  projectPath: string;
+  uiState: ProjectUiSession;
+  now: number;
+}): ProjectSession {
+  const nextUiState: ProjectUiSession = {
+    ...uiState,
+    paneState:
+      uiState.paneState === undefined
+        ? (previousSession?.uiState?.paneState ?? null)
+        : uiState.paneState,
+  };
+
+  return {
+    ...previousSession,
+    projectPath,
+    activeBufferPath: previousSession?.activeBufferPath ?? null,
+    buffers: previousSession?.buffers ?? [],
+    terminals: previousSession?.terminals ?? [],
+    aiSession: previousSession?.aiSession ?? null,
+    uiState: nextUiState,
+    lastSaved: now,
+  };
+}
+
 const useSessionStoreBase = create<SessionState>()(
   persist(
     (set, get) => ({
       sessions: {},
 
-      saveSession: (projectPath, buffers, activeBufferPath, terminals, aiSession) => {
+      saveSession: (
+        projectPath,
+        buffers,
+        activeBufferPath,
+        terminals,
+        aiSession,
+        workspaceFolders,
+      ) => {
         set((state) => ({
           sessions: {
             ...state.sessions,
-            [projectPath]: {
-              ...state.sessions[projectPath],
+            [projectPath]: buildSavedProjectSession({
+              previousSession: state.sessions[projectPath],
               projectPath,
-              activeBufferPath,
               buffers,
-              terminals: terminals ?? state.sessions[projectPath]?.terminals ?? [],
-              aiSession: aiSession ?? state.sessions[projectPath]?.aiSession ?? null,
-              uiState: state.sessions[projectPath]?.uiState ?? null,
-              lastSaved: Date.now(),
-            },
+              activeBufferPath,
+              terminals,
+              aiSession,
+              workspaceFolders,
+              now: Date.now(),
+            }),
           },
         }));
       },
@@ -100,16 +212,12 @@ const useSessionStoreBase = create<SessionState>()(
         set((state) => ({
           sessions: {
             ...state.sessions,
-            [projectPath]: {
-              ...state.sessions[projectPath],
+            [projectPath]: buildSavedProjectUiSession({
+              previousSession: state.sessions[projectPath],
               projectPath,
-              activeBufferPath: state.sessions[projectPath]?.activeBufferPath ?? null,
-              buffers: state.sessions[projectPath]?.buffers ?? [],
-              terminals: state.sessions[projectPath]?.terminals ?? [],
-              aiSession: state.sessions[projectPath]?.aiSession ?? null,
               uiState,
-              lastSaved: Date.now(),
-            },
+              now: Date.now(),
+            }),
           },
         }));
       },

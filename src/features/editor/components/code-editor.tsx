@@ -1,13 +1,5 @@
 import type React from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -17,6 +9,10 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
+import type {
+  EditorCoordinateResolver,
+  EditorModelPositionResolver,
+} from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
@@ -25,7 +21,6 @@ import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
-import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
 import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
@@ -33,7 +28,7 @@ import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
-import type { Position } from "../types/editor";
+import type { Position, Range } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
@@ -60,7 +55,12 @@ interface CodeEditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string) => void;
+  onContentChange?: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => void;
 }
 
 export interface CodeEditorRef {
@@ -97,10 +97,10 @@ const CodeEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const codeLensRef = useRef<HTMLDivElement>(null);
-  const inlayHintsRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
-  const [contentOffsetLeft, setContentOffsetLeft] = useState(0);
+  const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
+  const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -204,6 +204,26 @@ const CodeEditor = ({
 
     return cachedCursor ?? { line: 0, column: 0, offset: 0 };
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
+  const resolveEditorPosition = useCallback<EditorCoordinateResolver>(
+    (clientX, clientY) => editorCoordinateResolverRef.current?.(clientX, clientY) ?? null,
+    [],
+  );
+  const resolveModelPosition = useCallback<EditorModelPositionResolver>(
+    (line, column) => editorModelPositionResolverRef.current?.(line, column) ?? null,
+    [],
+  );
+  const handleCoordinateResolverChange = useCallback(
+    (resolver: EditorCoordinateResolver | null) => {
+      editorCoordinateResolverRef.current = resolver;
+    },
+    [],
+  );
+  const handleModelPositionResolverChange = useCallback(
+    (resolver: EditorModelPositionResolver | null) => {
+      editorModelPositionResolverRef.current = resolver;
+    },
+    [],
+  );
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
@@ -212,6 +232,7 @@ const CodeEditor = ({
     value,
     cursorPosition,
     editorRef,
+    resolveEditorPosition,
   });
 
   // Rename symbol support
@@ -264,7 +285,7 @@ const CodeEditor = ({
   // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
   const syncLspOverlayTransform = useCallback((scrollTop: number, scrollLeft: number) => {
     const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-    for (const ref of [codeLensRef, inlayHintsRef, renameInputRef]) {
+    for (const ref of [codeLensRef, renameInputRef]) {
       if (ref.current) {
         ref.current.style.transform = transform;
       }
@@ -300,45 +321,6 @@ const CodeEditor = ({
       }
     };
   }, [syncLspOverlayTransform, updateLspVisibleLineRange]);
-
-  useLayoutEffect(() => {
-    const container = editorRef.current;
-    if (!container) return;
-
-    const updateContentOffset = () => {
-      const contentContainer = container.querySelector(
-        "[data-editor-content-container]",
-      ) as HTMLElement | null;
-
-      if (!contentContainer) {
-        setContentOffsetLeft(0);
-        return;
-      }
-
-      const containerRect = container.getBoundingClientRect();
-      const contentRect = contentContainer.getBoundingClientRect();
-      const nextOffset = Math.max(0, contentRect.left - containerRect.left);
-      setContentOffsetLeft((current) =>
-        Math.abs(current - nextOffset) < 0.5 ? current : nextOffset,
-      );
-    };
-
-    const frame = requestAnimationFrame(updateContentOffset);
-    const resizeObserver =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateContentOffset);
-    resizeObserver?.observe(container);
-    const contentContainer = container.querySelector(
-      "[data-editor-content-container]",
-    ) as HTMLElement | null;
-    if (contentContainer) {
-      resizeObserver?.observe(contentContainer);
-    }
-
-    return () => {
-      cancelAnimationFrame(frame);
-      resizeObserver?.disconnect();
-    };
-  }, [activeBufferId, showMarkdownPreview, showHtmlPreview, showCsvPreview]);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -498,7 +480,7 @@ const CodeEditor = ({
 
           // Calculate scroll position to center the match in viewport
           const lineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
-          const targetScrollTop = line * lineHeight;
+          const targetScrollTop = resolveModelPosition(line, 0)?.top ?? line * lineHeight;
           const viewportHeight = textarea.clientHeight;
           const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
 
@@ -506,7 +488,15 @@ const CodeEditor = ({
         }
       }
     }
-  }, [currentMatchIndex, enableInteractiveServices, searchMatches, value, zoomedFontSize]);
+  }, [
+    currentMatchIndex,
+    enableInteractiveServices,
+    resolveModelPosition,
+    searchMatches,
+    settings.editorLineHeight,
+    value,
+    zoomedFontSize,
+  ]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
@@ -556,20 +546,7 @@ const CodeEditor = ({
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
               onExecute={handleCodeLensExecute}
-            />
-          )}
-
-          {/* Inlay Hints */}
-          {enableInlayHints && inlayHints.length > 0 && (
-            <InlayHintsOverlay
-              ref={inlayHintsRef}
-              hints={inlayHints}
-              fontSize={zoomedFontSize}
-              lineHeight={zoomedLineHeight}
-              charWidth={zoomedFontSize * 0.6}
-              contentOffsetLeft={contentOffsetLeft}
-              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              viewportHeight={editorRef.current?.clientHeight ?? 600}
+              resolveModelPosition={resolveModelPosition}
             />
           )}
 
@@ -579,6 +556,7 @@ const CodeEditor = ({
               editorRef={editorRef}
               filePath={filePath}
               cursorPosition={displayCursorPosition}
+              resolveModelPosition={resolveModelPosition}
             />
           )}
 
@@ -592,6 +570,7 @@ const CodeEditor = ({
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
+              resolveModelPosition={resolveModelPosition}
               inputRef={rename.inputRef}
               onSubmit={(newName) => void rename.executeRename(newName)}
               onCancel={rename.cancelRename}
@@ -621,6 +600,9 @@ const CodeEditor = ({
                 lineNumberStart={lineNumberStart}
                 lineNumberMap={lineNumberMap}
                 onContentChange={onContentChange}
+                inlayHints={enableInlayHints ? inlayHints : []}
+                onCoordinateResolverChange={handleCoordinateResolverChange}
+                onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={

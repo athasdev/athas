@@ -1,6 +1,7 @@
 use crate::git::{FileStatus, GitFile, GitStatus, IntoStringError, get_ahead_behind_counts};
 use anyhow::{Context, Result};
-use git2::Repository;
+use git2::{ErrorCode, Repository};
+use std::fs;
 
 pub fn git_status(repo_path: String) -> Result<GitStatus, String> {
    _git_status(repo_path).into_string_error()
@@ -9,17 +10,7 @@ pub fn git_status(repo_path: String) -> Result<GitStatus, String> {
 fn _git_status(repo_path: String) -> Result<GitStatus> {
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
-   let branch = repo
-      .head()
-      .ok()
-      .and_then(|head| {
-         if head.is_branch() {
-            head.shorthand().map(|s| s.to_string())
-         } else {
-            Some("HEAD".to_string())
-         }
-      })
-      .unwrap_or_else(|| "unknown".to_string());
+   let branch = current_branch_name(&repo);
 
    let (ahead, behind) = get_ahead_behind_counts(&repo, &branch);
 
@@ -109,6 +100,41 @@ fn _git_status(repo_path: String) -> Result<GitStatus> {
    })
 }
 
+fn current_branch_name(repo: &Repository) -> String {
+   match repo.head() {
+      Ok(head) => {
+         if head.is_branch() {
+            head
+               .shorthand()
+               .map(|name| name.to_string())
+               .unwrap_or_else(|| "unknown".to_string())
+         } else {
+            "HEAD".to_string()
+         }
+      }
+      Err(error) if error.code() == ErrorCode::UnbornBranch => unborn_head_branch_name(repo),
+      Err(_) => "unknown".to_string(),
+   }
+}
+
+fn unborn_head_branch_name(repo: &Repository) -> String {
+   fs::read_to_string(repo.path().join("HEAD"))
+      .ok()
+      .and_then(|head| {
+         head
+            .trim()
+            .strip_prefix("ref: refs/heads/")
+            .map(|name| name.to_string())
+      })
+      .or_else(|| {
+         repo
+            .config()
+            .ok()
+            .and_then(|config| config.get_string("init.defaultBranch").ok())
+      })
+      .unwrap_or_else(|| "main".to_string())
+}
+
 pub fn git_init(repo_path: String) -> Result<(), String> {
    _git_init(repo_path).into_string_error()
 }
@@ -134,4 +160,20 @@ pub fn git_discover_repo(path: String) -> Result<Option<String>, String> {
    };
 
    Ok(discovered)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn current_branch_name_uses_unborn_head_name_for_empty_repositories() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let repo = Repository::init(temp_dir.path()).expect("repo init");
+
+      let branch = current_branch_name(&repo);
+
+      assert_ne!(branch, "unknown");
+      assert!(!branch.is_empty());
+   }
 }

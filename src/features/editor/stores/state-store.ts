@@ -10,6 +10,7 @@ import { useBufferStore } from "./buffer-store";
 // Types for editor state caching
 export interface EditorViewState {
   cursor: Position;
+  selection?: Range;
   scrollTop: number;
   scrollLeft: number;
 }
@@ -30,6 +31,19 @@ class EditorViewStateCacheManager {
     const existing = this.cache.get(bufferId);
     this.cache.set(bufferId, {
       cursor: { ...position },
+      selection: existing?.selection ? { ...existing.selection } : undefined,
+      scrollTop: existing?.scrollTop ?? 0,
+      scrollLeft: existing?.scrollLeft ?? 0,
+    });
+  }
+
+  setSelection(bufferId: string, selection?: Range): void {
+    const existing = this.cache.get(bufferId);
+    this.ensureCacheSize(bufferId);
+
+    this.cache.set(bufferId, {
+      cursor: existing?.cursor ?? { line: 0, column: 0, offset: 0 },
+      selection: selection ? { ...selection } : undefined,
       scrollTop: existing?.scrollTop ?? 0,
       scrollLeft: existing?.scrollLeft ?? 0,
     });
@@ -45,16 +59,28 @@ class EditorViewStateCacheManager {
 
     this.cache.set(bufferId, {
       cursor: existing?.cursor ?? { line: 0, column: 0, offset: 0 },
+      selection: existing?.selection ? { ...existing.selection } : undefined,
       scrollTop,
       scrollLeft,
     });
   }
 
+  set(bufferId: string, state: EditorViewState): void {
+    this.ensureCacheSize(bufferId);
+    this.cache.set(bufferId, {
+      cursor: { ...state.cursor },
+      selection: state.selection ? { ...state.selection } : undefined,
+      scrollTop: state.scrollTop,
+      scrollLeft: state.scrollLeft,
+    });
+  }
+
   get(bufferId: string): EditorViewState | null {
-    const cached = this.cache.get(bufferId);
+    const cached = this.getWithFallback(bufferId);
     if (!cached) return null;
     return {
       cursor: { ...cached.cursor },
+      selection: cached.selection ? { ...cached.selection } : undefined,
       scrollTop: cached.scrollTop,
       scrollLeft: cached.scrollLeft,
     };
@@ -72,6 +98,25 @@ class EditorViewStateCacheManager {
     } else {
       this.cache.clear();
     }
+  }
+
+  private getWithFallback(bufferId: string): EditorViewState | null {
+    const exact = this.cache.get(bufferId);
+    if (exact) return exact;
+
+    const viewKeySeparatorIndex = bufferId.lastIndexOf(":");
+    if (viewKeySeparatorIndex >= 0) {
+      const plainBufferId = bufferId.slice(viewKeySeparatorIndex + 1);
+      return this.cache.get(plainBufferId) ?? null;
+    }
+
+    for (const [cachedKey, cachedState] of this.cache.entries()) {
+      if (cachedKey.endsWith(`:${bufferId}`)) {
+        return cachedState;
+      }
+    }
+
+    return null;
   }
 
   private ensureCacheSize(bufferId: string): void {
@@ -143,7 +188,12 @@ interface EditorState {
 
   // Instance state
   value: string;
-  onChange: (value: string) => void;
+  onChange: (
+    value: string,
+    previousValue?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => void;
   filePath: string;
   editorRef: RefObject<HTMLDivElement | null> | null;
   placeholder?: string;
@@ -161,6 +211,8 @@ interface EditorStateActions {
   setDesiredColumn: (column?: number) => void;
   setCursorVisibility: (visible: boolean) => void;
   getCachedPosition: (bufferId: string) => Position | null;
+  getCachedViewState: (bufferId: string) => EditorViewState | null;
+  cacheViewStateForBuffer: (bufferId: string, state: EditorViewState) => void;
   clearPositionCache: (bufferId?: string) => void;
   restorePositionForFile: (bufferId: string) => EditorViewState;
   resetOnBufferSwitch: () => void;
@@ -180,7 +232,15 @@ interface EditorStateActions {
 
   // Instance actions
   setRefs: (refs: { editorRef: RefObject<HTMLDivElement | null> }) => void;
-  setContent: (value: string, onChange: (value: string) => void) => void;
+  setContent: (
+    value: string,
+    onChange: (
+      value: string,
+      previousValue?: string,
+      previousCursorPosition?: Position,
+      previousSelection?: Range,
+    ) => void,
+  ) => void;
   setFileInfo: (filePath: string) => void;
   setPlaceholder: (placeholder?: string) => void;
   setDisabled: (disabled: boolean) => void;
@@ -228,10 +288,22 @@ export const useEditorStateStore = createSelectors(
             ensureCursorVisible(position);
           }
         },
-        setSelection: (selection) => set({ selection }),
+        setSelection: (selection) => {
+          const { activeBufferId } = useBufferStore.getState();
+          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const viewKey = activeEditorViewKey ?? activeBufferId;
+          if (viewKey) {
+            viewStateCache.setSelection(viewKey, selection);
+          }
+          set({ selection });
+        },
         setDesiredColumn: (column) => set({ desiredColumn: column }),
         setCursorVisibility: (visible) => set({ cursorVisible: visible }),
         getCachedPosition: (bufferId) => viewStateCache.getCursor(bufferId),
+        getCachedViewState: (bufferId) => viewStateCache.get(bufferId),
+        cacheViewStateForBuffer: (bufferId, state) => {
+          viewStateCache.set(bufferId, state);
+        },
         clearPositionCache: (bufferId) => viewStateCache.clear(bufferId),
         restorePositionForFile: (bufferId) => {
           const cachedState = viewStateCache.get(bufferId);
@@ -243,6 +315,7 @@ export const useEditorStateStore = createSelectors(
 
           set({
             cursorPosition: restoredState.cursor,
+            selection: restoredState.selection,
             scrollTop: restoredState.scrollTop,
             scrollLeft: restoredState.scrollLeft,
           });

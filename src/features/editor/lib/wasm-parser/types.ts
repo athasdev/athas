@@ -16,6 +16,7 @@ export interface ParserConfig {
   languageId: string;
   wasmPath: string;
   highlightQuery?: string;
+  highlightQueryUrl?: string;
 }
 
 export interface LoadedParser {

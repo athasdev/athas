@@ -12,6 +12,35 @@ interface WhatsNewStorageState {
 
 const STORAGE_KEY = "athas-whats-new";
 
+export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
+  const lines = [`# What's New in Athas ${info.version}`, ""];
+
+  if (info.previousVersion) {
+    lines.push(`Updated from \`${info.previousVersion}\`.`, "");
+  }
+
+  if (info.date) {
+    lines.push(`Released: ${info.date}`, "");
+  }
+
+  if (info.body?.trim()) {
+    lines.push(info.body.trim(), "");
+  } else {
+    lines.push("Release notes were not bundled with this update.", "");
+    lines.push(
+      "You can still review the GitHub release page for downloads and changelog notes.",
+      "",
+    );
+  }
+
+  lines.push("---");
+  lines.push(
+    `[View release on GitHub](https://github.com/athasdev/athas/releases/tag/v${info.version})`,
+  );
+
+  return lines.join("\n");
+}
+
 function readState(): WhatsNewStorageState {
   if (typeof window === "undefined") {
     return {};

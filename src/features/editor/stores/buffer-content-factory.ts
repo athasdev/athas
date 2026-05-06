@@ -55,6 +55,9 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isPreview: false,
         url: spec.url,
         zoomLevel: spec.zoomLevel,
+        profileKey: spec.profileKey,
+        history: spec.history,
+        historyIndex: spec.historyIndex,
       };
     case "newTab":
       return {
@@ -198,6 +201,17 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         path: "diagnostics://problems",
         name: "Diagnostics",
         isPreview: false,
+      };
+    case "onboarding":
+      return {
+        ...base,
+        type: "onboarding",
+        path: `onboarding://${spec.context.mode}/${spec.context.currentVersion}`,
+        name: "Welcome",
+        isPreview: false,
+        mode: spec.context.mode,
+        currentVersion: spec.context.currentVersion,
+        previousVersion: spec.context.previousVersion,
       };
   }
 };

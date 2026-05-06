@@ -1,5 +1,5 @@
 use crate::app_runtime::AppHandle;
-use athas_ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig, AgentRuntime};
+use athas_ai::{AcpAgentBridge, AcpAgentStatus, AcpSessionList, AgentConfig, AgentRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
 use serde::Deserialize;
@@ -135,6 +135,12 @@ pub struct SessionConfigOptionArgs {
    value: String,
 }
 
+#[derive(Deserialize)]
+pub struct SessionListArgs {
+   cwd: Option<String>,
+   cursor: Option<String>,
+}
+
 #[tauri::command]
 pub async fn set_acp_session_config_option(
    bridge: State<'_, AcpBridgeState>,
@@ -143,6 +149,18 @@ pub async fn set_acp_session_config_option(
    let bridge = { bridge.lock().await.clone() };
    bridge
       .set_session_config_option(&args.config_id, &args.value)
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_acp_sessions(
+   bridge: State<'_, AcpBridgeState>,
+   args: SessionListArgs,
+) -> Result<AcpSessionList, String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .list_sessions(args.cwd, args.cursor)
       .await
       .map_err(|e| e.to_string())
 }
@@ -178,6 +196,7 @@ fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
       command: agent.install_command.clone(),
       runtime,
       package: Some(package),
+      packages: vec![],
       download_url: None,
       args: vec![],
       env: HashMap::new(),

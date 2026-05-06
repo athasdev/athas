@@ -23,6 +23,7 @@ interface BackendToolConfig {
   command?: string;
   runtime: BackendToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
   args?: string[];
   env?: Record<string, string>;
@@ -239,6 +240,7 @@ function toBackendToolConfig(
     name?: string;
     runtime?: ToolRuntime;
     package?: string;
+    packages?: string[];
     downloadUrl?: string;
     args?: string[];
     env?: Record<string, string>;
@@ -276,6 +278,7 @@ function toBackendToolConfig(
     ...(command ? { command } : {}),
     runtime: input.runtime,
     ...(input.package ? { package: input.package } : {}),
+    ...(input.packages ? { packages: input.packages } : {}),
     ...(downloadUrl ? { downloadUrl } : {}),
     ...(input.args ? { args: input.args } : {}),
     ...(input.env ? { env: input.env } : {}),
@@ -293,6 +296,7 @@ function getLanguageToolConfigSet(
           name: manifest.lsp.name || getCommandDefault(manifest.lsp.server),
           runtime: manifest.lsp.runtime,
           package: manifest.lsp.package,
+          packages: manifest.lsp.packages,
           downloadUrl: manifest.lsp.downloadUrl,
           args: manifest.lsp.args,
           env: manifest.lsp.env,
@@ -307,6 +311,7 @@ function getLanguageToolConfigSet(
           name: manifest.formatter.name || getCommandDefault(manifest.formatter.command),
           runtime: manifest.formatter.runtime,
           package: manifest.formatter.package,
+          packages: manifest.formatter.packages,
           downloadUrl: manifest.formatter.downloadUrl,
           args: manifest.formatter.args,
           env: manifest.formatter.env,
@@ -321,6 +326,7 @@ function getLanguageToolConfigSet(
           name: manifest.linter.name || getCommandDefault(manifest.linter.command),
           runtime: manifest.linter.runtime,
           package: manifest.linter.package,
+          packages: manifest.linter.packages,
           downloadUrl: manifest.linter.downloadUrl,
           args: manifest.linter.args,
           env: manifest.linter.env,
@@ -572,7 +578,13 @@ export async function registerLanguageProvider(params: {
     },
 
     getTokens: async (content: string) => {
-      const highlightTokens = await tokenizeCode(content, languageId);
+      const wasmPath = getWasmUrlForLanguage(languageId);
+      const highlightQueryUrl = getHighlightQueryUrl(languageId);
+      const highlightTokens = await tokenizeCode(content, languageId, {
+        languageId,
+        wasmPath,
+        highlightQueryUrl,
+      });
       return convertToEditorTokens(highlightTokens);
     },
   };

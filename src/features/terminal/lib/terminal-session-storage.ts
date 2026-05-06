@@ -27,6 +27,40 @@ export const serializeTerminals = (terminals: Terminal[]): PersistedTerminal[] =
     remoteConnectionId: terminal.remoteConnectionId,
   }));
 
+export const dedupePersistedTerminals = (
+  terminals: PersistedTerminal[] | null | undefined,
+): PersistedTerminal[] => {
+  const seen = new Set<string>();
+  const deduped: PersistedTerminal[] = [];
+
+  for (const terminal of terminals ?? []) {
+    if (seen.has(terminal.id)) {
+      continue;
+    }
+
+    seen.add(terminal.id);
+    deduped.push(terminal);
+  }
+
+  return deduped;
+};
+
+export const buildTerminalRestorePayload = ({
+  projectSessionTerminals,
+  storageTerminals,
+  preferProjectSession,
+}: {
+  projectSessionTerminals: PersistedTerminal[] | null | undefined;
+  storageTerminals: PersistedTerminal[] | null | undefined;
+  preferProjectSession: boolean;
+}): PersistedTerminal[] => {
+  if (preferProjectSession) {
+    return dedupePersistedTerminals(projectSessionTerminals);
+  }
+
+  return dedupePersistedTerminals(storageTerminals);
+};
+
 export const loadWorkspaceTerminalsFromStorage = (
   workspacePath: string | null | undefined,
 ): PersistedTerminal[] => {

@@ -51,10 +51,15 @@ type SyncableSettingsKey =
   | "openFoldersInNewWindow"
   | "aiProviderId"
   | "aiModelId"
+  | "aiCustomBaseUrl"
+  | "aiCustomModelId"
   | "aiChatWidth"
   | "isAIChatVisible"
   | "aiCompletion"
+  | "aiAutocompleteProvider"
   | "aiAutocompleteModelId"
+  | "aiAutocompleteCustomBaseUrl"
+  | "aiAutocompleteCustomModelId"
   | "aiDefaultSessionMode"
   | "aiSkills"
   | "ollamaBaseUrl"
@@ -133,10 +138,15 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "openFoldersInNewWindow",
   "aiProviderId",
   "aiModelId",
+  "aiCustomBaseUrl",
+  "aiCustomModelId",
   "aiChatWidth",
   "isAIChatVisible",
   "aiCompletion",
+  "aiAutocompleteProvider",
   "aiAutocompleteModelId",
+  "aiAutocompleteCustomBaseUrl",
+  "aiAutocompleteCustomModelId",
   "aiDefaultSessionMode",
   "aiSkills",
   "ollamaBaseUrl",

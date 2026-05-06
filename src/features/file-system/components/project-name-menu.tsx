@@ -1,5 +1,6 @@
 import {
   Clock as ClockIcon,
+  FolderPlus,
   FolderOpen,
   SidebarSimple as PanelTopClose,
 } from "@phosphor-icons/react";
@@ -7,12 +8,13 @@ import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
+import { MAX_RECENT_PROJECTS } from "@/features/file-system/utils/recent-folders";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const ProjectNameMenu = () => {
   const { projectNameMenu, setProjectNameMenu } = useUIState();
-  const { handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
+  const { addFolderToWorkspace, handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
 
   const items = useMemo<ContextMenuItem[]>(() => {
@@ -22,6 +24,14 @@ export const ProjectNameMenu = () => {
         label: "Open Folder in New Tab",
         icon: <FolderOpen />,
         onClick: () => handleOpenFolder(),
+      },
+      {
+        id: "add-folder-to-workspace",
+        label: "Add Folder to Workspace",
+        icon: <FolderPlus />,
+        onClick: () => {
+          void addFolderToWorkspace();
+        },
       },
       {
         id: "collapse-folders",
@@ -36,7 +46,7 @@ export const ProjectNameMenu = () => {
     }
 
     const recentItems: ContextMenuItem[] = recentFolders
-      .slice(0, 5)
+      .slice(0, MAX_RECENT_PROJECTS)
       .map((folder: RecentFolder) => ({
         id: `recent-${folder.path}`,
         label: folder.name,
@@ -49,7 +59,13 @@ export const ProjectNameMenu = () => {
       { id: "sep-recent", label: "", separator: true, onClick: () => {} },
       ...recentItems,
     ];
-  }, [handleCollapseAllFolders, handleOpenFolder, openRecentFolder, recentFolders]);
+  }, [
+    addFolderToWorkspace,
+    handleCollapseAllFolders,
+    handleOpenFolder,
+    openRecentFolder,
+    recentFolders,
+  ]);
 
   if (!projectNameMenu) return null;
 

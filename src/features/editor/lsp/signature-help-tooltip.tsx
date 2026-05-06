@@ -4,6 +4,7 @@ import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import type { Position } from "../types/editor";
+import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { LspClient } from "./lsp-client";
 
 interface SignatureInfo {
@@ -28,12 +29,14 @@ interface SignatureHelpTooltipProps {
   editorRef: RefObject<HTMLDivElement | null>;
   filePath: string | undefined;
   cursorPosition: Position;
+  resolveModelPosition?: EditorModelPositionResolver;
 }
 
 export const SignatureHelpTooltip = ({
   editorRef,
   filePath,
   cursorPosition,
+  resolveModelPosition,
 }: SignatureHelpTooltipProps) => {
   const [signatureHelp, setSignatureHelp] = useState<SignatureHelpResult | null>(null);
   const { charWidth, lineHeight } = useEditorLayout();
@@ -132,19 +135,21 @@ export const SignatureHelpTooltip = ({
   }, [cursorPosition.offset, signatureHelp, fetchSignatureHelp]);
 
   const position = useMemo(() => {
+    const resolvedPosition = resolveModelPosition?.(cursorPosition.line, cursorPosition.column);
+
     return {
       top:
-        EDITOR_CONSTANTS.EDITOR_PADDING_TOP +
-        cursorPosition.line * lineHeight -
+        (resolvedPosition?.top ??
+          EDITOR_CONSTANTS.EDITOR_PADDING_TOP + cursorPosition.line * lineHeight) -
         scrollOffsetRef.current.top -
         lineHeight -
         8,
       left:
-        EDITOR_CONSTANTS.EDITOR_PADDING_LEFT +
-        cursorPosition.column * charWidth -
+        (resolvedPosition?.left ??
+          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + cursorPosition.column * charWidth) -
         scrollOffsetRef.current.left,
     };
-  }, [cursorPosition.line, cursorPosition.column, charWidth, lineHeight]);
+  }, [cursorPosition.line, cursorPosition.column, charWidth, lineHeight, resolveModelPosition]);
 
   if (!signatureHelp || signatureHelp.signatures.length === 0) return null;
 

@@ -1,11 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-import { confirm } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
 import { ArrowSquareOut as ExternalLink, SpinnerGap as Loader2 } from "@phosphor-icons/react";
 // Configure PDF.js worker
@@ -15,6 +14,7 @@ import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
 
@@ -45,23 +45,22 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const pdfFile = useMemo(() => {
+    if (!fileData) return null;
+
+    // PDF.js can fail to fetch blob:tauri URLs in the Tauri WebView, so hand
+    // it local bytes directly instead of routing the already-read file through a blob URL.
+    return { data: fileData.slice() };
+  }, [fileData]);
 
   // Load file content
   useEffect(() => {
-    let url: string | null = null;
     const loadFile = async () => {
       try {
         setFileData(null);
-        setPdfUrl(null);
         setError(null);
         const data = await readFile(filePath);
         setFileData(data);
-
-        // Create Blob URL for better worker compatibility
-        const blob = new Blob([data], { type: "application/pdf" });
-        url = URL.createObjectURL(blob);
-        setPdfUrl(url);
       } catch (err) {
         console.error("Failed to read PDF file:", err);
         setError("Failed to load PDF file.");
@@ -69,12 +68,6 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
     };
 
     loadFile();
-
-    return () => {
-      if (url) {
-        URL.revokeObjectURL(url);
-      }
-    };
   }, [filePath]);
 
   // Handle wheel zoom
@@ -137,9 +130,9 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       e.preventDefault();
       // External links start with http etc.
       if (anchor.href.startsWith("http")) {
-        const confirmed = await confirm(
+        const confirmed = await primitiveConfirm(
           `Do you want to open this external link?\n\n${anchor.href}`,
-          { kind: "info", title: "External Link" },
+          { title: "External Link", confirmLabel: "Open" },
         );
         if (confirmed) {
           await openUrl(anchor.href);
@@ -206,9 +199,9 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       >
         {error ? (
           <div className="flex items-center justify-center text-error">{error}</div>
-        ) : pdfUrl ? (
+        ) : pdfFile ? (
           <Document
-            file={pdfUrl}
+            file={pdfFile}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             loading={

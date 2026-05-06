@@ -117,8 +117,17 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
    themes: Option<Vec<ThemeData>>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+   let close_tab_accelerator = close_tab_accelerator();
+
    // Unified File menu for all platforms - clean and consistent
    let file_menu = SubmenuBuilder::new(app, "File")
+      .item(&MenuItem::with_id(
+         app,
+         "command_new_tab",
+         "New Tab",
+         true,
+         Some("CmdOrCtrl+N"),
+      )?)
       .item(&MenuItem::with_id(
          app,
          "new_window",
@@ -163,13 +172,22 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+Shift+S"),
       )?)
+      .text("command_local_history", "Show Local History")
       .separator()
       .item(&MenuItem::with_id(
          app,
          "close_tab",
          "Close Tab",
          true,
-         Some("CmdOrCtrl+W"),
+         close_tab_accelerator,
+      )?)
+      .text("command_close_all_tabs", "Close All Tabs")
+      .item(&MenuItem::with_id(
+         app,
+         "command_reopen_closed_tab",
+         "Reopen Closed Tab",
+         true,
+         Some("CmdOrCtrl+Shift+T"),
       )?)
       .separator()
       .item(&MenuItem::with_id(
@@ -183,8 +201,20 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
 
    // Edit menu with native macOS items
    let edit_menu = SubmenuBuilder::new(app, "Edit")
-      .undo()
-      .redo()
+      .item(&MenuItem::with_id(
+         app,
+         "undo",
+         "Undo",
+         true,
+         Some("CmdOrCtrl+Z"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "redo",
+         "Redo",
+         true,
+         Some("CmdOrCtrl+Shift+Z"),
+      )?)
       .separator()
       .cut()
       .copy()
@@ -213,12 +243,30 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          Some("CmdOrCtrl+Slash"),
       )?)
       .separator()
+      .text("command_duplicate_line", "Duplicate Line")
+      .item(&MenuItem::with_id(
+         app,
+         "command_delete_line",
+         "Delete Line",
+         true,
+         Some("CmdOrCtrl+Shift+K"),
+      )?)
+      .text("command_move_line_up", "Move Line Up")
+      .text("command_move_line_down", "Move Line Down")
+      .item(&MenuItem::with_id(
+         app,
+         "command_format_document",
+         "Format Document",
+         true,
+         Some("Shift+Alt+F"),
+      )?)
+      .separator()
       .item(&MenuItem::with_id(
          app,
          "command_palette",
          "Command Palette",
          true,
-         Some("CmdOrCtrl+Shift+P"),
+         command_palette_accelerator(),
       )?)
       .build()?;
 
@@ -241,23 +289,46 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+J"),
       )?)
+      .separator()
       .item(&MenuItem::with_id(
          app,
-         "toggle_ai_chat",
-         "Toggle AI Chat",
+         "command_global_search",
+         "Global Search",
          true,
-         Some("CmdOrCtrl+R"),
+         Some("CmdOrCtrl+Shift+F"),
       )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_diagnostics",
+         "Diagnostics",
+         true,
+         Some("CmdOrCtrl+Shift+J"),
+      )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "command_file_explorer",
+         "File Explorer",
+         true,
+         Some("CmdOrCtrl+Shift+E"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_source_control",
+         "Source Control",
+         true,
+         Some("CmdOrCtrl+Shift+G"),
+      )?)
+      .text("command_github", "GitHub")
+      .text("command_debugger", "Run and Debug")
       .separator()
       .text("split_editor", "Split Editor")
+      .text("command_toggle_minimap", "Toggle Minimap")
+      .text("command_toggle_sidebar_position", "Toggle Sidebar Position")
       .separator()
-      .item(&MenuItem::with_id(
-         app,
-         "toggle_menu_bar",
-         "Toggle Menu Bar",
-         true,
-         Some("Alt+M"),
-      )?)
+      .text("command_zoom_in", "Zoom In")
+      .text("command_zoom_out", "Zoom Out")
+      .text("command_zoom_reset", "Reset Zoom")
       .separator()
       .item(&theme_menu)
       .build()?;
@@ -281,6 +352,43 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .separator()
       .item(&MenuItem::with_id(
          app,
+         "command_go_back",
+         "Go Back",
+         true,
+         None::<String>,
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_go_forward",
+         "Go Forward",
+         true,
+         None::<String>,
+      )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "command_go_to_definition",
+         "Go to Definition",
+         true,
+         Some("F12"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_go_to_references",
+         "Go to References",
+         true,
+         Some("Shift+F12"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_rename_symbol",
+         "Rename Symbol",
+         true,
+         Some("F2"),
+      )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
          "next_tab",
          "Next Tab",
          true,
@@ -293,6 +401,72 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+Option+Left"),
       )?)
+      .build()?;
+
+   // Terminal menu
+   let terminal_menu = SubmenuBuilder::new(app, "Terminal")
+      .text("command_new_terminal", "New Terminal")
+      .text("command_split_terminal", "Split Terminal")
+      .text("command_close_terminal", "Close Terminal")
+      .build()?;
+
+   // Run menu
+   let run_menu = SubmenuBuilder::new(app, "Run")
+      .item(&MenuItem::with_id(
+         app,
+         "command_start_debugging",
+         "Start Debugging",
+         true,
+         Some("F5"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_stop_debugging",
+         "Stop Debugging",
+         true,
+         Some("Shift+F5"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_toggle_breakpoint",
+         "Toggle Breakpoint",
+         true,
+         Some("F9"),
+      )?)
+      .build()?;
+
+   // AI menu
+   let ai_menu = SubmenuBuilder::new(app, "AI")
+      .item(&MenuItem::with_id(
+         app,
+         "toggle_ai_chat",
+         "Toggle AI Chat",
+         true,
+         Some("CmdOrCtrl+R"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_new_agent",
+         "New Agent",
+         true,
+         Some("CmdOrCtrl+Shift+Space"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_inline_edit",
+         "Inline Edit",
+         true,
+         Some("CmdOrCtrl+I"),
+      )?)
+      .build()?;
+
+   // Tools menu
+   let tools_menu = SubmenuBuilder::new(app, "Tools")
+      .text("command_connect_database", "Connect to Database")
+      .separator()
+      .text("open_settings", "Preferences")
+      .text("open_extensions", "Extensions")
+      .text("command_keyboard_shortcuts", "Keyboard Shortcuts")
       .build()?;
 
    // Window menu - cross-platform window management
@@ -322,10 +496,10 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .separator()
       .item(&MenuItem::with_id(
          app,
-         "quit_app",
-         "Quit",
+         "toggle_menu_bar",
+         "Toggle Menu Bar",
          true,
-         Some("CmdOrCtrl+Q"),
+         Some("Alt+M"),
       )?)
       .separator()
       .item(&MenuItem::with_id(
@@ -343,10 +517,15 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
 
    // Help menu
    let help_menu = SubmenuBuilder::new(app, "Help")
-      .text("help", "Help")
-      .text("report_bug", "Report a Bug")
+      .text("documentation", "Documentation")
+      .text("command_help_keyboard_shortcuts", "Keyboard Shortcuts")
+      .text("whats_new", "What's New")
+      .text("changelog", "Changelog")
       .separator()
-      .text("about_athas", "About Athas")
+      .text("report_bug", "Report a Bug")
+      .text("request_feature", "Request a Feature")
+      .separator()
+      .text("check_updates", "Check for Updates")
       .build()?;
 
    // Main menu - unified structure for all platforms
@@ -356,8 +535,36 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          &edit_menu,
          &view_menu,
          &go_menu,
+         &terminal_menu,
+         &run_menu,
+         &ai_menu,
+         &tools_menu,
          &window_menu,
          &help_menu,
       ])
       .build()
+}
+
+fn close_tab_accelerator() -> Option<&'static str> {
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   {
+      None
+   }
+
+   #[cfg(not(all(target_os = "linux", feature = "linux")))]
+   {
+      Some("CmdOrCtrl+W")
+   }
+}
+
+fn command_palette_accelerator() -> Option<&'static str> {
+   #[cfg(target_os = "macos")]
+   {
+      Some("Cmd+Shift+P")
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      None
+   }
 }

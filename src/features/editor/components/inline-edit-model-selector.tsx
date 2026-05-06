@@ -39,18 +39,20 @@ export const InlineEditModelSelector = ({
       })),
     [models],
   );
+  const hasOptions = options.length > 0;
+  const selectedValue = hasOptions && options.some((option) => option.value === value) ? value : "";
 
   return (
     <Select
-      value={value}
+      value={selectedValue}
       options={options}
       onChange={onChange}
-      disabled={disabled || isLoading}
+      disabled={disabled || isLoading || !hasOptions}
       menuClassName="inline-edit-model-selector-menu w-[240px] backdrop-blur-none"
       className="max-w-[170px] border-none px-2 text-text"
       size="xs"
       openDirection="auto"
-      placeholder={isLoading ? "Loading models..." : "Select model"}
+      placeholder={isLoading ? "Loading models..." : hasOptions ? "Select model" : "No models"}
       aria-label="Inline edit model"
     />
   );

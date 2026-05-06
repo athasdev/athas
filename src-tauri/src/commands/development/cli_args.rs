@@ -78,12 +78,22 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
    })
 }
 
+fn is_chromium_runtime_arg(arg: &str) -> bool {
+   arg == "--disable-vulkan" || arg == "--ozone-platform=x11" || arg == "--disable-features=Vulkan"
+}
+
 pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
+   let args = args
+      .iter()
+      .map(String::as_str)
+      .filter(|arg| !is_chromium_runtime_arg(arg))
+      .collect::<Vec<_>>();
+
    if args.is_empty() {
       return Vec::new();
    }
 
-   match args[0].as_str() {
+   match args[0] {
       "help" | "-h" | "--help" => Vec::new(),
       "open" => args[1..]
          .iter()
@@ -94,7 +104,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          .get(1)
          .map(|url| {
             vec![CliRequest::Web {
-               url: url.to_string(),
+               url: (*url).to_string(),
             }]
          })
          .unwrap_or_default(),
@@ -117,7 +127,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
       "remote" => args
          .get(1)
          .map(|connection_id| CliRequest::Remote {
-            connection_id: connection_id.to_string(),
+            connection_id: (*connection_id).to_string(),
             name: if args.len() > 2 {
                Some(args[2..].join(" "))
             } else {
@@ -132,6 +142,14 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          .filter_map(|arg| parse_open_arg(arg, cwd).map(CliRequest::from))
          .collect(),
    }
+}
+
+/// Parses a full process argv vector, dropping the executable path before routing user args.
+///
+/// Used by both cold app startup and the single-instance callback so platform routing keeps the
+/// same semantics whether Athas was already running or launched from scratch.
+pub fn parse_cli_argv(argv: &[String], cwd: &Path) -> Vec<CliRequest> {
+   parse_cli_args(argv.get(1..).unwrap_or_default(), cwd)
 }
 
 #[cfg(test)]
@@ -268,6 +286,25 @@ mod tests {
    }
 
    #[test]
+   fn parse_cli_args_ignores_linux_chromium_runtime_flags() {
+      let cwd = std::env::current_dir().unwrap();
+      let args = vec![
+         "--ozone-platform=x11".to_string(),
+         "--disable-vulkan".to_string(),
+         "--disable-features=Vulkan".to_string(),
+         "web".to_string(),
+         "https://athas.dev".to_string(),
+      ];
+
+      assert_eq!(
+         parse_cli_args(&args, &cwd),
+         vec![CliRequest::Web {
+            url: "https://athas.dev".to_string()
+         }]
+      );
+   }
+
+   #[test]
    fn parse_cli_args_terminal_command() {
       let cwd = std::env::current_dir().unwrap();
       let args = vec![
@@ -318,6 +355,37 @@ mod tests {
             is_directory: true,
             line: None,
          }
+      );
+   }
+
+   #[test]
+   fn parse_cli_argv_drops_executable_for_cold_start() {
+      let cwd = std::env::current_dir().unwrap();
+      let args = vec![
+         "/Applications/Athas.app/Contents/MacOS/athas".to_string(),
+         ".".to_string(),
+      ];
+      let requests = parse_cli_argv(&args, &cwd);
+
+      assert_eq!(requests.len(), 1);
+      assert!(matches!(requests[0], CliRequest::Path { .. }));
+   }
+
+   #[test]
+   fn parse_cli_argv_drops_executable_for_single_instance_forwarding() {
+      let cwd = std::env::current_dir().unwrap();
+      let args = vec![
+         "C:\\Program Files\\Athas\\athas.exe".to_string(),
+         "terminal".to_string(),
+         "bun test".to_string(),
+      ];
+
+      assert_eq!(
+         parse_cli_argv(&args, &cwd),
+         vec![CliRequest::Terminal {
+            command: Some("bun test".to_string()),
+            working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+         }]
       );
    }
 }

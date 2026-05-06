@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -67,7 +67,7 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
         set({ connectionId, fileName: connectionId, isLoading: true, error: null });
 
         try {
-          const databases = (await invoke("get_mongo_databases", {
+          const databases = (await invokeDatabaseProvider("get_mongo_databases", {
             connectionId,
           })) as string[];
           set({ databases });
@@ -91,7 +91,7 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
         set({ selectedDatabase: dbName, selectedCollection: null, isLoading: true });
 
         try {
-          const collections = (await invoke("get_mongo_collections", {
+          const collections = (await invokeDatabaseProvider("get_mongo_collections", {
             connectionId,
             database: dbName,
           })) as { name: string }[];
@@ -125,7 +125,7 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
 
         try {
           const offset = (state.currentPage - 1) * state.pageSize;
-          const result = (await invoke("query_mongo_documents", {
+          const result = (await invokeDatabaseProvider("query_mongo_documents", {
             connectionId: state.connectionId,
             database: state.selectedDatabase,
             collection: state.selectedCollection,
@@ -172,7 +172,7 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
         if (!connectionId || !selectedDatabase || !selectedCollection) return;
 
         try {
-          await invoke("insert_mongo_document", {
+          await invokeDatabaseProvider("insert_mongo_document", {
             connectionId,
             database: selectedDatabase,
             collection: selectedCollection,
@@ -190,7 +190,7 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
         if (!connectionId || !selectedDatabase || !selectedCollection) return;
 
         try {
-          await invoke("update_mongo_document", {
+          await invokeDatabaseProvider("update_mongo_document", {
             connectionId,
             database: selectedDatabase,
             collection: selectedCollection,
@@ -209,7 +209,7 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
         if (!connectionId || !selectedDatabase || !selectedCollection) return;
 
         try {
-          await invoke("delete_mongo_document", {
+          await invokeDatabaseProvider("delete_mongo_document", {
             connectionId,
             database: selectedDatabase,
             collection: selectedCollection,

@@ -176,12 +176,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
   },
   {
-    id: "file-tree-show-gitignored-files",
+    id: "file-tree-respect-gitignore",
     tab: "file-explorer",
     section: "Display",
-    label: "Show Gitignored Files",
-    description: "Show files matched by .gitignore in the file tree",
-    keywords: ["gitignore", "ignored", "git", "files", "visibility"],
+    label: "Respect .gitignore",
+    description: "Hide files matched by root and nested .gitignore files",
+    keywords: ["gitignore", ".gitignore", "ignored", "git", "files", "visibility", "exclude"],
   },
   {
     id: "file-tree-hidden-file-patterns",
@@ -471,6 +471,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ollama", "endpoint", "url", "local", "lan", "cloud", "host", "port"],
   },
   {
+    id: "ai-custom-provider",
+    tab: "ai",
+    section: "Custom Provider",
+    label: "Custom Provider",
+    description: "Configure an OpenAI-compatible base URL, model, and optional API key",
+    keywords: ["ai", "custom", "provider", "endpoint", "base", "url", "api", "key", "model"],
+  },
+  {
     id: "ai-ollama-api-key",
     tab: "ai",
     section: "Ollama",
@@ -733,6 +741,22 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "assistant", "chat"],
   },
   {
+    id: "features-multi-agents",
+    tab: "features",
+    section: "Features",
+    label: "Multi Agents",
+    description: "Multi-agent session sidebar",
+    keywords: ["ai", "agents", "multi", "sidebar", "experimental"],
+  },
+  {
+    id: "features-sidebar-builder",
+    tab: "features",
+    section: "Features",
+    label: "Sidebar Builder",
+    description: "Customizable vertical sidebar with Git, terminal, browser, and workspace items",
+    keywords: ["sidebar", "builder", "custom", "experimental", "git", "terminal", "browser"],
+  },
+  {
     id: "features-breadcrumbs",
     tab: "features",
     section: "Features",
@@ -904,7 +928,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "advanced",
     section: "Telemetry",
     label: "Anonymous Usage Telemetry",
-    description: "Send anonymous heartbeat, extension, and crash-report metadata",
+    description:
+      "Send anonymous heartbeat, extension, and crash-report metadata; update checks always send required delivery metadata",
     keywords: ["telemetry", "analytics", "tracking", "privacy", "crash", "updates", "extensions"],
   },
 ];

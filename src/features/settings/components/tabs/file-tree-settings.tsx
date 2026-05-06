@@ -118,8 +118,8 @@ export const FileTreeSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Show Gitignored Files"
-          description="Show files matched by .gitignore"
+          label="Respect .gitignore"
+          description="Hide files matched by root and nested .gitignore files"
           onReset={() =>
             updateSetting(
               "showGitignoredFilesInFileTree",
@@ -132,8 +132,8 @@ export const FileTreeSettings = () => {
           }
         >
           <Switch
-            checked={settings.showGitignoredFilesInFileTree}
-            onChange={(checked) => updateSetting("showGitignoredFilesInFileTree", checked)}
+            checked={!settings.showGitignoredFilesInFileTree}
+            onChange={(checked) => updateSetting("showGitignoredFilesInFileTree", !checked)}
             size="sm"
           />
         </SettingRow>

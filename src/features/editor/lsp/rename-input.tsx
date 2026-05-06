@@ -2,6 +2,7 @@ import type { ForwardedRef, RefObject } from "react";
 import { forwardRef, useCallback, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import Input from "@/ui/input";
+import type { EditorModelPositionResolver } from "../view-model/view-layout";
 
 interface RenameInputProps {
   symbol: string;
@@ -10,6 +11,7 @@ interface RenameInputProps {
   fontSize: number;
   lineHeight: number;
   charWidth: number;
+  resolveModelPosition?: EditorModelPositionResolver;
   inputRef: RefObject<HTMLInputElement | null>;
   onSubmit: (newName: string) => void;
   onCancel: () => void;
@@ -20,9 +22,11 @@ const RenameInput = forwardRef(
     {
       symbol,
       line,
+      column,
       fontSize,
       lineHeight,
       charWidth,
+      resolveModelPosition,
       inputRef,
       onSubmit,
       onCancel,
@@ -31,7 +35,9 @@ const RenameInput = forwardRef(
   ) => {
     const [value, setValue] = useState(symbol);
 
-    const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const resolvedPosition = resolveModelPosition?.(line, column);
+    const top = resolvedPosition?.top ?? line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const left = resolvedPosition?.left ?? EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -57,7 +63,7 @@ const RenameInput = forwardRef(
           className="absolute"
           style={{
             top: `${top}px`,
-            left: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px`,
+            left: `${left}px`,
           }}
         >
           <div className="flex items-center gap-1 rounded-md border border-accent/60 bg-secondary-bg p-0.5 shadow-lg">

@@ -32,6 +32,7 @@ import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
 import {
+  setCustomProviderBaseUrl,
   setOllamaApiKey,
   setOllamaBaseUrl,
 } from "@/features/ai/services/providers/ai-provider-registry";
@@ -47,12 +48,8 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
-const DEFAULT_AUTOCOMPLETE_MODELS = [
-  { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
-  { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
-  { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
-  { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-];
+const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
+const CUSTOM_CHAT_PROVIDER_ID = "custom";
 
 function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
   if (models.some((model) => model.id === DEFAULT_AUTOCOMPLETE_MODEL_ID)) {
@@ -72,9 +69,25 @@ export const AISettings = () => {
 
   const [sessionConfigOptions, setSessionConfigOptions] = useState<SessionConfigOption[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
-  const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
+  const [autocompleteModels, setAutocompleteModels] = useState<Array<{ id: string; name: string }>>(
+    [],
+  );
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
+  const [customAutocompleteModelInput, setCustomAutocompleteModelInput] = useState(
+    settings.aiAutocompleteCustomModelId,
+  );
+  const [customAutocompleteBaseUrlInput, setCustomAutocompleteBaseUrlInput] = useState(
+    settings.aiAutocompleteCustomBaseUrl,
+  );
+  const [customAutocompleteApiKeyInput, setCustomAutocompleteApiKeyInput] = useState("");
+  const [hasCustomAutocompleteApiKey, setHasCustomAutocompleteApiKey] = useState(false);
+  const [isSavingCustomAutocompleteApiKey, setIsSavingCustomAutocompleteApiKey] = useState(false);
+  const [customChatModelInput, setCustomChatModelInput] = useState(settings.aiCustomModelId);
+  const [customChatBaseUrlInput, setCustomChatBaseUrlInput] = useState(settings.aiCustomBaseUrl);
+  const [customChatApiKeyInput, setCustomChatApiKeyInput] = useState("");
+  const [hasCustomChatApiKey, setHasCustomChatApiKey] = useState(false);
+  const [isSavingCustomChatApiKey, setIsSavingCustomChatApiKey] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
 
   // Ollama URL state
@@ -199,6 +212,10 @@ export const AISettings = () => {
   const handleProviderChange = (newProviderId: string) => {
     const provider = providers.find((p) => p.id === newProviderId);
     updateSetting("aiProviderId", newProviderId);
+    if (newProviderId === CUSTOM_CHAT_PROVIDER_ID) {
+      updateSetting("aiModelId", settings.aiCustomModelId);
+      return;
+    }
     if (provider && provider.models.length > 0) {
       updateSetting("aiModelId", provider.models[0].id);
     }
@@ -211,15 +228,17 @@ export const AISettings = () => {
       const models = await fetchAutocompleteModels();
       if (models.length > 0) {
         setAutocompleteModels(models);
+        setAutocompleteModelError(null);
         if (!models.some((model) => model.id === settings.aiAutocompleteModelId)) {
           updateSetting("aiAutocompleteModelId", resolveAutocompleteDefaultModelId(models));
         }
       } else {
-        setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
+        setAutocompleteModels([]);
+        setAutocompleteModelError("Model list is empty. Refresh to try again.");
       }
     } catch {
-      setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
-      setAutocompleteModelError("Could not load model list. Showing defaults.");
+      setAutocompleteModels([]);
+      setAutocompleteModelError("Could not load model list. Refresh to try again.");
     } finally {
       setIsLoadingAutocompleteModels(false);
     }
@@ -229,11 +248,122 @@ export const AISettings = () => {
     void loadAutocompleteModels();
   }, []);
 
+  useEffect(() => {
+    setCustomAutocompleteModelInput(settings.aiAutocompleteCustomModelId);
+  }, [settings.aiAutocompleteCustomModelId]);
+
+  useEffect(() => {
+    setCustomAutocompleteBaseUrlInput(settings.aiAutocompleteCustomBaseUrl);
+  }, [settings.aiAutocompleteCustomBaseUrl]);
+
+  useEffect(() => {
+    setCustomChatModelInput(settings.aiCustomModelId);
+  }, [settings.aiCustomModelId]);
+
+  useEffect(() => {
+    setCustomChatBaseUrlInput(settings.aiCustomBaseUrl);
+  }, [settings.aiCustomBaseUrl]);
+
+  useEffect(() => {
+    void (async () => {
+      const token = await getProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID);
+      setHasCustomAutocompleteApiKey(Boolean(token));
+      const customChatToken = await getProviderApiToken(CUSTOM_CHAT_PROVIDER_ID);
+      setHasCustomChatApiKey(Boolean(customChatToken));
+    })();
+  }, []);
+
+  const handleSaveCustomAutocompleteApiKey = async () => {
+    const token = customAutocompleteApiKeyInput.trim();
+    if (!token) return;
+
+    setIsSavingCustomAutocompleteApiKey(true);
+    try {
+      await storeProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID, token);
+      setHasCustomAutocompleteApiKey(true);
+      setCustomAutocompleteApiKeyInput("");
+      showToast({ message: "Custom autocomplete API key saved", type: "success" });
+    } catch {
+      showToast({ message: "Failed to save custom autocomplete API key", type: "error" });
+    } finally {
+      setIsSavingCustomAutocompleteApiKey(false);
+    }
+  };
+
+  const handleRemoveCustomAutocompleteApiKey = async () => {
+    setIsSavingCustomAutocompleteApiKey(true);
+    try {
+      await removeProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID);
+      setHasCustomAutocompleteApiKey(false);
+      setCustomAutocompleteApiKeyInput("");
+      showToast({ message: "Custom autocomplete API key removed", type: "success" });
+    } catch {
+      showToast({ message: "Failed to remove custom autocomplete API key", type: "error" });
+    } finally {
+      setIsSavingCustomAutocompleteApiKey(false);
+    }
+  };
+
+  const handleSaveCustomChatApiKey = async () => {
+    const token = customChatApiKeyInput.trim();
+    if (!token) return;
+
+    setIsSavingCustomChatApiKey(true);
+    try {
+      await storeProviderApiToken(CUSTOM_CHAT_PROVIDER_ID, token);
+      setHasCustomChatApiKey(true);
+      setCustomChatApiKeyInput("");
+      showToast({ message: "Custom provider API key saved", type: "success" });
+    } catch {
+      showToast({ message: "Failed to save custom provider API key", type: "error" });
+    } finally {
+      setIsSavingCustomChatApiKey(false);
+    }
+  };
+
+  const handleRemoveCustomChatApiKey = async () => {
+    setIsSavingCustomChatApiKey(true);
+    try {
+      await removeProviderApiToken(CUSTOM_CHAT_PROVIDER_ID);
+      setHasCustomChatApiKey(false);
+      setCustomChatApiKeyInput("");
+      showToast({ message: "Custom provider API key removed", type: "success" });
+    } catch {
+      showToast({ message: "Failed to remove custom provider API key", type: "error" });
+    } finally {
+      setIsSavingCustomChatApiKey(false);
+    }
+  };
+
+  const commitCustomChatModel = () => {
+    updateSetting("aiCustomModelId", customChatModelInput);
+    if (settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID) {
+      updateSetting("aiModelId", customChatModelInput);
+    }
+  };
+
+  const commitCustomChatBaseUrl = () => {
+    updateSetting("aiCustomBaseUrl", customChatBaseUrlInput);
+    setCustomProviderBaseUrl(customChatBaseUrlInput);
+  };
+
+  const commitCustomAutocompleteModel = () => {
+    updateSetting("aiAutocompleteCustomModelId", customAutocompleteModelInput);
+  };
+
+  const commitCustomAutocompleteBaseUrl = () => {
+    updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
+  };
+
   const providersNeedingAuth = getAvailableProviders().filter(
     (p) => p.requiresAuth && !p.requiresApiKey,
   );
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
+  const isCustomProviderSelected = settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID;
+  const showCustomProviderSettings =
+    isCustomProviderSelected || Boolean(settings.aiCustomBaseUrl || settings.aiCustomModelId);
+  const hasAutocompleteModels = autocompleteModels.length > 0;
 
   return (
     <div className="space-y-4">
@@ -258,15 +388,47 @@ export const AISettings = () => {
 
         <SettingRow
           label="Model"
-          description="Choose the model used by Athas Agent"
-          onReset={() => updateSetting("aiModelId", getDefaultSetting("aiModelId"))}
-          canReset={settings.aiModelId !== getDefaultSetting("aiModelId")}
+          description={
+            isCustomProviderSelected
+              ? "Model name sent to the custom endpoint"
+              : "Choose the model used by Athas Agent"
+          }
+          onReset={() => {
+            if (isCustomProviderSelected) {
+              updateSetting("aiCustomModelId", getDefaultSetting("aiCustomModelId"));
+              updateSetting("aiModelId", getDefaultSetting("aiCustomModelId"));
+              return;
+            }
+            updateSetting("aiModelId", getDefaultSetting("aiModelId"));
+          }}
+          canReset={
+            isCustomProviderSelected
+              ? settings.aiCustomModelId !== getDefaultSetting("aiCustomModelId")
+              : settings.aiModelId !== getDefaultSetting("aiModelId")
+          }
         >
-          <ModelSelector
-            providerId={settings.aiProviderId}
-            modelId={settings.aiModelId}
-            onChange={(id) => updateSetting("aiModelId", id)}
-          />
+          {isCustomProviderSelected ? (
+            <Input
+              value={customChatModelInput}
+              onChange={(event) => setCustomChatModelInput(event.currentTarget.value)}
+              onBlur={commitCustomChatModel}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
+              placeholder="qwen2.5-coder:7b"
+              size="xs"
+              className={SETTINGS_CONTROL_WIDTHS.xwide}
+              spellCheck={false}
+            />
+          ) : (
+            <ModelSelector
+              providerId={settings.aiProviderId}
+              modelId={settings.aiModelId}
+              onChange={(id) => updateSetting("aiModelId", id)}
+            />
+          )}
         </SettingRow>
 
         <SettingRow label="API Keys" description="Manage provider API keys separately">
@@ -282,6 +444,78 @@ export const AISettings = () => {
           </Button>
         </SettingRow>
       </Section>
+
+      {showCustomProviderSettings && (
+        <Section title="Custom Provider">
+          <SettingRow
+            label="Base URL"
+            description="OpenAI-compatible endpoint base URL for Athas Agent"
+            onReset={() => {
+              updateSetting("aiCustomBaseUrl", getDefaultSetting("aiCustomBaseUrl"));
+              setCustomProviderBaseUrl(getDefaultSetting("aiCustomBaseUrl"));
+            }}
+            canReset={settings.aiCustomBaseUrl !== getDefaultSetting("aiCustomBaseUrl")}
+          >
+            <Input
+              value={customChatBaseUrlInput}
+              onChange={(event) => setCustomChatBaseUrlInput(event.currentTarget.value)}
+              onBlur={commitCustomChatBaseUrl}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
+              placeholder="http://localhost:11434/v1"
+              size="xs"
+              className={SETTINGS_CONTROL_WIDTHS.xwide}
+              spellCheck={false}
+              leftIcon={Globe}
+            />
+          </SettingRow>
+          <SettingRow
+            label="API Key"
+            description={
+              hasCustomChatApiKey
+                ? "Stored securely. Leave blank to keep the existing key."
+                : "Optional bearer token for the custom endpoint"
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Input
+                type="password"
+                value={customChatApiKeyInput}
+                onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
+                placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
+                size="xs"
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                spellCheck={false}
+                autoComplete="off"
+                disabled={isSavingCustomChatApiKey}
+              />
+              <Button
+                type="button"
+                variant="default"
+                size="xs"
+                onClick={handleSaveCustomChatApiKey}
+                disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
+              >
+                Save
+              </Button>
+              {hasCustomChatApiKey && (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="xs"
+                  onClick={handleRemoveCustomChatApiKey}
+                  disabled={isSavingCustomChatApiKey}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          </SettingRow>
+        </Section>
+      )}
 
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
@@ -480,41 +714,187 @@ export const AISettings = () => {
         {settings.aiCompletion && (
           <>
             <SettingRow
-              label="Autocomplete Model"
-              description="Choose any OpenRouter model for autocomplete"
+              label="Autocomplete Provider"
+              description="Use Athas/OpenRouter or an OpenAI-compatible endpoint"
               onReset={() =>
-                updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+                updateSetting("aiAutocompleteProvider", getDefaultSetting("aiAutocompleteProvider"))
               }
               canReset={
-                settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
+                settings.aiAutocompleteProvider !== getDefaultSetting("aiAutocompleteProvider")
               }
             >
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
+              <SegmentedControl
+                value={settings.aiAutocompleteProvider}
+                options={[
+                  { value: "openrouter", label: "OpenRouter" },
+                  { value: "custom", label: "Custom" },
+                ]}
+                onChange={(value) =>
+                  updateSetting(
+                    "aiAutocompleteProvider",
+                    value === "custom" ? "custom" : "openrouter",
+                  )
+                }
+                size="xs"
+                wrap={false}
+              />
+            </SettingRow>
+            <SettingRow
+              label={
+                settings.aiAutocompleteProvider === "custom" ? "Custom Model" : "Autocomplete Model"
+              }
+              description={
+                settings.aiAutocompleteProvider === "custom"
+                  ? "Model name sent to the custom endpoint"
+                  : "Choose any OpenRouter model for autocomplete"
+              }
+              onReset={() =>
+                settings.aiAutocompleteProvider === "custom"
+                  ? updateSetting(
+                      "aiAutocompleteCustomModelId",
+                      getDefaultSetting("aiAutocompleteCustomModelId"),
+                    )
+                  : updateSetting(
+                      "aiAutocompleteModelId",
+                      getDefaultSetting("aiAutocompleteModelId"),
+                    )
+              }
+              canReset={
+                settings.aiAutocompleteProvider === "custom"
+                  ? settings.aiAutocompleteCustomModelId !==
+                    getDefaultSetting("aiAutocompleteCustomModelId")
+                  : settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
+              }
+            >
+              {settings.aiAutocompleteProvider === "custom" ? (
+                <Input
+                  value={customAutocompleteModelInput}
+                  onChange={(event) => setCustomAutocompleteModelInput(event.currentTarget.value)}
+                  onBlur={commitCustomAutocompleteModel}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="qwen2.5-coder:7b"
                   size="xs"
-                  onClick={loadAutocompleteModels}
-                  disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-                  title="Refresh model list"
-                >
-                  <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
-                </Button>
-                <Select
-                  value={settings.aiAutocompleteModelId}
-                  options={autocompleteModels.map((model) => ({
-                    value: model.id,
-                    label: model.name,
-                  }))}
-                  onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                  size="xs"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
                   className={SETTINGS_CONTROL_WIDTHS.xwide}
                   disabled={!aiCompletionAllowedByPolicy}
                 />
-              </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="xs"
+                    onClick={loadAutocompleteModels}
+                    disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
+                    title="Refresh model list"
+                  >
+                    <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+                  </Button>
+                  <Select
+                    value={hasAutocompleteModels ? settings.aiAutocompleteModelId : ""}
+                    options={autocompleteModels.map((model) => ({
+                      value: model.id,
+                      label: model.name,
+                    }))}
+                    onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+                    size="xs"
+                    variant="default"
+                    searchable
+                    searchableTrigger="input"
+                    className={SETTINGS_CONTROL_WIDTHS.xwide}
+                    disabled={
+                      !aiCompletionAllowedByPolicy ||
+                      isLoadingAutocompleteModels ||
+                      !hasAutocompleteModels
+                    }
+                    placeholder={
+                      isLoadingAutocompleteModels ? "Loading models..." : "No models loaded"
+                    }
+                  />
+                </div>
+              )}
             </SettingRow>
+            {settings.aiAutocompleteProvider === "custom" && (
+              <>
+                <SettingRow
+                  label="Custom Base URL"
+                  description="OpenAI-compatible endpoint base URL"
+                  onReset={() =>
+                    updateSetting(
+                      "aiAutocompleteCustomBaseUrl",
+                      getDefaultSetting("aiAutocompleteCustomBaseUrl"),
+                    )
+                  }
+                  canReset={
+                    settings.aiAutocompleteCustomBaseUrl !==
+                    getDefaultSetting("aiAutocompleteCustomBaseUrl")
+                  }
+                >
+                  <Input
+                    value={customAutocompleteBaseUrlInput}
+                    onChange={(event) =>
+                      setCustomAutocompleteBaseUrlInput(event.currentTarget.value)
+                    }
+                    onBlur={commitCustomAutocompleteBaseUrl}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="http://localhost:11434/v1"
+                    size="xs"
+                    className={SETTINGS_CONTROL_WIDTHS.xwide}
+                    disabled={!aiCompletionAllowedByPolicy}
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Custom API Key"
+                  description={
+                    hasCustomAutocompleteApiKey
+                      ? "Stored securely. Leave blank to keep the existing key."
+                      : "Optional bearer token for the custom endpoint"
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="password"
+                      value={customAutocompleteApiKeyInput}
+                      onChange={(event) =>
+                        setCustomAutocompleteApiKeyInput(event.currentTarget.value)
+                      }
+                      placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
+                      size="xs"
+                      className={SETTINGS_CONTROL_WIDTHS.wide}
+                      disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                    />
+                    <Button
+                      variant="default"
+                      size="xs"
+                      onClick={handleSaveCustomAutocompleteApiKey}
+                      disabled={
+                        !customAutocompleteApiKeyInput.trim() ||
+                        !aiCompletionAllowedByPolicy ||
+                        isSavingCustomAutocompleteApiKey
+                      }
+                    >
+                      Save
+                    </Button>
+                    {hasCustomAutocompleteApiKey && (
+                      <Button
+                        variant="default"
+                        size="xs"
+                        onClick={handleRemoveCustomAutocompleteApiKey}
+                        disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </SettingRow>
+              </>
+            )}
             {autocompleteModelError && (
               <SettingRow label="Model List" description={autocompleteModelError}>
                 <Badge variant="default" size="default">

@@ -1,4 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { HistoryEntry } from "@/features/editor/history/types";
 import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
@@ -27,12 +28,21 @@ export interface VimEditingCommands {
 }
 
 export const createVimEditing = (): VimEditingCommands => {
-  const facade = createDomEditorFacade();
+  const getCursorPosition = () => useEditorStateStore.getState().cursorPosition;
+  const setCursorPosition = (position: any) =>
+    useEditorStateStore.getState().actions.setCursorPosition(position);
+  const getLines = () => useEditorViewStore.getState().lines;
+  const getContent = () => useEditorViewStore.getState().actions.getContent();
+  const getCurrentHistoryEntry = (): HistoryEntry => {
+    const editorState = useEditorStateStore.getState();
 
-  const getCursorPosition = () => facade.getCursorPosition();
-  const setCursorPosition = (position: any) => facade.setCursorPosition(position);
-  const getLines = () => facade.getLines();
-  const getContent = () => facade.getContent();
+    return {
+      content: getContent(),
+      cursorPosition: editorState.cursorPosition,
+      selection: editorState.selection,
+      timestamp: Date.now(),
+    };
+  };
 
   // Update buffer content
   const updateContent = (newContent: string, markDirty?: boolean) => {
@@ -172,7 +182,9 @@ export const createVimEditing = (): VimEditingCommands => {
         lastEntry = historyStore.actions.undo(activeBufferId);
       }
 
-      if (!lastEntry) return;
+      // Get previous state from history
+      const entry = historyStore.actions.undo(activeBufferId, getCurrentHistoryEntry());
+      if (!entry) return;
 
       // Restore content (markDirty=false so undo doesn't flag buffer as modified)
       updateContent(lastEntry.content, false);
@@ -206,12 +218,9 @@ export const createVimEditing = (): VimEditingCommands => {
 
       const historyStore = useHistoryStore.getState();
 
-      // Perform count redo operations
-      let lastEntry = null;
-      for (let i = 0; i < count; i++) {
-        if (!historyStore.actions.canRedo(activeBufferId)) break;
-        lastEntry = historyStore.actions.redo(activeBufferId);
-      }
+      // Get next state from history
+      const entry = historyStore.actions.redo(activeBufferId, getCurrentHistoryEntry());
+      if (!entry) return;
 
       if (!lastEntry) return;
 

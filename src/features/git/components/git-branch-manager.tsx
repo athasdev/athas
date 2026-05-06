@@ -12,6 +12,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
+import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
@@ -23,6 +24,9 @@ interface GitBranchManagerProps {
   onBranchChange?: () => void;
   paletteTarget?: boolean;
   placement?: "up" | "down";
+  triggerIconSize?: number;
+  triggerClassName?: string;
+  triggerInputClassName?: string;
 }
 
 const BRANCH_MANAGER_DROPDOWN_WIDTH = 360;
@@ -56,6 +60,9 @@ const GitBranchManager = ({
   onBranchChange,
   paletteTarget = false,
   placement = "down",
+  triggerIconSize,
+  triggerClassName,
+  triggerInputClassName,
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [branchQuery, setBranchQuery] = useState("");
@@ -67,8 +74,6 @@ const GitBranchManager = ({
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
       state.isSettingsDialogVisible ||
-      state.isThemeSelectorVisible ||
-      state.isIconThemeSelectorVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible,
   );
@@ -192,7 +197,10 @@ const GitBranchManager = ({
   const handleDeleteBranch = async (branchName: string) => {
     if (!repoPath || !branchName || branchName === currentBranch) return;
 
-    const confirmed = confirm(`Are you sure you want to delete branch "${branchName}"?`);
+    const confirmed = await primitiveConfirm(
+      `Are you sure you want to delete branch "${branchName}"?`,
+      { title: "Delete Branch", confirmLabel: "Delete" },
+    );
     if (!confirmed) return;
 
     setIsLoading(true);
@@ -272,19 +280,21 @@ const GitBranchManager = ({
         disabled={isLoading}
         readOnly={!isDropdownOpen}
         leftIcon={GitBranch}
+        leftIconSize={triggerIconSize}
+        htmlSize={triggerTextWidthCh}
         variant="ghost"
         showTrigger={false}
         showClear={false}
         className={cn(
-          "inline-flex w-fit max-w-[360px] shrink-0 hover:bg-hover/80",
+          "inline-flex w-fit max-w-full shrink overflow-hidden hover:bg-hover/80",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
+          triggerClassName,
         )}
         inputClassName={cn(
-          "truncate pr-0 pl-7 font-normal",
+          "min-w-0 max-w-full flex-initial truncate pr-0 pl-7 font-normal",
           isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
+          triggerInputClassName,
         )}
-        containerStyle={{ width: "fit-content", maxWidth: "360px" }}
-        inputStyle={{ width: `calc(${triggerTextWidthCh}ch + 1.75rem)`, flex: "0 0 auto" }}
         placeholder={currentBranch}
         aria-label="Search branches"
       />

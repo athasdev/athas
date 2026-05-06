@@ -6,7 +6,54 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { parseOSC7 } from "../utils/osc-parser";
 import { useTerminalWriteBuffer } from "./use-terminal-write-buffer";
 
+const ESCAPE_CODE = 27;
+const BEL_CODE = 7;
+const DELETE_CODE = 127;
+const C1_ESCAPE_CODE = 155;
+
+const isAsciiLetter = (charCode: number) =>
+  (charCode >= 65 && charCode <= 90) || (charCode >= 97 && charCode <= 122);
+
+const stripTerminalControlSequences = (rawTitle: string) => {
+  let title = "";
+
+  for (let index = 0; index < rawTitle.length; index += 1) {
+    const charCode = rawTitle.charCodeAt(index);
+
+    if (charCode === ESCAPE_CODE) {
+      const nextChar = rawTitle[index + 1];
+
+      if (nextChar === "[") {
+        index += 2;
+        while (index < rawTitle.length && !isAsciiLetter(rawTitle.charCodeAt(index))) {
+          index += 1;
+        }
+        continue;
+      }
+
+      if (nextChar === "]") {
+        index += 2;
+        while (index < rawTitle.length && rawTitle.charCodeAt(index) !== BEL_CODE) {
+          index += 1;
+        }
+        continue;
+      }
+
+      continue;
+    }
+
+    if (charCode <= 31 || charCode === DELETE_CODE || charCode === C1_ESCAPE_CODE) {
+      continue;
+    }
+
+    title += rawTitle[index];
+  }
+
+  return title.trim();
+};
+
 interface UseTerminalConnectionOptions {
+  captureTerminalSnapshot?: () => void;
   connectionId?: string;
   getTerminalTheme: () => NonNullable<XtermTerminal["options"]["theme"]>;
   initialCommand?: string;
@@ -27,6 +74,7 @@ interface UseTerminalConnectionOptions {
 }
 
 export function useTerminalConnection({
+  captureTerminalSnapshot,
   connectionId,
   getTerminalTheme,
   initialCommand,
@@ -201,12 +249,7 @@ export function useTerminalConnection({
 
     disposables.push(
       terminal.onTitleChange((rawTitle) => {
-        // Strip ANSI escape sequences and control characters from title
-        const title = rawTitle
-          .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
-          .replace(/\x1b\][^\x07]*\x07/g, "")
-          .replace(/[\x00-\x1f\x7f\x9b]/g, "")
-          .trim();
+        const title = stripTerminalControlSequences(rawTitle);
         if (title) {
           updateSession(sessionId, { title });
         }
@@ -263,6 +306,7 @@ export function useTerminalConnection({
         cancelAnimationFrame(outputFlushFrameRef.current);
         flushOutputBuffer();
       }
+      captureTerminalSnapshot?.();
       void flush();
       for (const disposable of disposables) {
         disposable.dispose();
@@ -275,6 +319,7 @@ export function useTerminalConnection({
     };
   }, [
     connectionId,
+    captureTerminalSnapshot,
     flush,
     getTerminalTheme,
     isInitialized,

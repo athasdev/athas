@@ -18,6 +18,7 @@ const PRELOAD_LANGUAGE_IDS = [
   "javascriptreact",
   "json",
   "bash",
+  "dotenv",
   "markdown",
   "html",
   "angular",

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-sidebar-view";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import DebuggerView from "@/features/debugger/components/debugger-view";
@@ -6,6 +7,7 @@ import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
+import { SidebarBuilderView } from "@/features/sidebar-builder/components/sidebar-builder-view";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -36,6 +38,7 @@ export const SidebarActivityRail = memo(() => {
         isSidebarVisible,
         isGitViewActive,
         isGitHubPRsViewActive,
+        activeSidebarView,
       },
       view,
     );
@@ -88,10 +91,28 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
+  const isMultiAgentsFeatureEnabled =
+    settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
+  const isSidebarBuilderFeatureEnabled = settings.coreFeatures.sidebarBuilder;
+  const isDisabledExperimentalViewActive =
+    (activeSidebarView === "multi-agents" && !isMultiAgentsFeatureEnabled) ||
+    (activeSidebarView === "sidebar-builder" && !isSidebarBuilderFeatureEnabled);
   const isFilesViewActive =
-    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    (activeSidebarView === "files" || isDisabledExperimentalViewActive);
   const isDebuggerViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
+  const isMultiAgentsViewActive =
+    isMultiAgentsFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "multi-agents";
+  const isSidebarBuilderViewActive =
+    isSidebarBuilderFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "sidebar-builder";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
   const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
 
@@ -161,6 +182,18 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
             <DebuggerView />
           </div>
         )}
+
+        {isMultiAgentsFeatureEnabled && (
+          <div className={cn("h-full", !isMultiAgentsViewActive && "hidden")}>
+            <MultiAgentsSidebarView />
+          </div>
+        )}
+
+        {isSidebarBuilderFeatureEnabled ? (
+          <div className={cn("h-full", !isSidebarBuilderViewActive && "hidden")}>
+            <SidebarBuilderView />
+          </div>
+        ) : null}
 
         {Array.from(extensionViews).map(([viewId, view]) => (
           <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>

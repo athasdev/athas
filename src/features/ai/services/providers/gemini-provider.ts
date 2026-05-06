@@ -1,10 +1,10 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
   type ProviderHeaders,
   type ProviderModel,
   type StreamRequest,
 } from "./ai-provider-interface";
+import { providerFetch } from "./provider-fetch";
 
 export class GeminiProvider extends AIProvider {
   async getModels(apiKey?: string): Promise<ProviderModel[]> {
@@ -13,7 +13,7 @@ export class GeminiProvider extends AIProvider {
     }
 
     try {
-      const response = await tauriFetch(
+      const response = await providerFetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
         {
           method: "GET",
@@ -99,7 +99,7 @@ export class GeminiProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await tauriFetch(
+      const response = await providerFetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
         {
           method: "GET",

@@ -7,6 +7,7 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "../utils/logger";
+import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface Definition {
   uri: string;
@@ -26,6 +27,7 @@ interface UseGoToDefinitionProps {
   filePath: string;
   lineHeight: number;
   charWidth: number;
+  resolveEditorPosition?: EditorCoordinateResolver;
 }
 
 export const useGoToDefinition = ({
@@ -34,6 +36,7 @@ export const useGoToDefinition = ({
   filePath,
   lineHeight,
   charWidth,
+  resolveEditorPosition,
 }: UseGoToDefinitionProps) => {
   const { centerCursorInViewport } = useCenterCursor();
 
@@ -67,8 +70,10 @@ export const useGoToDefinition = ({
       const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
       const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
-      const line = Math.floor((y - paddingTop + scrollTop) / lineHeight);
-      const character = Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
+      const resolvedPosition = resolveEditorPosition?.(e.clientX, e.clientY);
+      const line = resolvedPosition?.line ?? Math.floor((y - paddingTop + scrollTop) / lineHeight);
+      const character =
+        resolvedPosition?.column ?? Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
 
       if (line >= 0 && character >= 0) {
         try {
@@ -138,7 +143,15 @@ export const useGoToDefinition = ({
         }
       }
     },
-    [getDefinition, isLanguageSupported, filePath, lineHeight, charWidth, centerCursorInViewport],
+    [
+      getDefinition,
+      isLanguageSupported,
+      filePath,
+      lineHeight,
+      charWidth,
+      centerCursorInViewport,
+      resolveEditorPosition,
+    ],
   );
 
   return {

@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
+import { PLATFORM_ARCH } from "@/utils/platform";
 import { extensionInstaller } from "../installer/extension-installer";
+import {
+  activateExtensionContributions,
+  deactivateExtensionContributions,
+} from "../runtime/extension-contribution-runtime";
 import { extensionRegistry } from "./extension-registry";
 import {
   buildRuntimeManifest,
@@ -9,6 +14,7 @@ import {
   resolveToolPaths,
 } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
+import type { PlatformPackage } from "../types/extension-manifest";
 
 async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {
   if (!extension.manifest.languages?.length) {
@@ -23,9 +29,12 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
-  const matchesLanguage = extension.manifest.languages.some((language) =>
-    language.extensions.includes(fileExt),
+  const fileName = activeBuffer.path.split("/").pop() || activeBuffer.path;
+  const lastDotIndex = fileName.lastIndexOf(".");
+  const fileExt = lastDotIndex >= 0 ? fileName.substring(lastDotIndex).toLowerCase() : "";
+  const matchesLanguage = extension.manifest.languages.some(
+    (language) =>
+      language.extensions.includes(fileExt) || Boolean(language.filenames?.includes(fileName)),
   );
 
   if (!matchesLanguage) {
@@ -61,6 +70,28 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
       await extensionInstaller.uninstallLanguage(languageId);
     }),
   );
+}
+
+function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage {
+  const installation = extension.manifest.installation;
+  const platformPackage = installation?.platformArch?.[PLATFORM_ARCH];
+  const resolvedPackage =
+    platformPackage ??
+    (installation
+      ? {
+          downloadUrl: installation.downloadUrl,
+          checksum: installation.checksum,
+          size: installation.size,
+        }
+      : undefined);
+
+  if (!resolvedPackage?.downloadUrl) {
+    throw new Error(
+      `No compatible package for ${extension.manifest.displayName} on ${PLATFORM_ARCH}`,
+    );
+  }
+
+  return resolvedPackage;
 }
 
 export async function installExtensionLifecycle(params: {
@@ -124,14 +155,17 @@ export async function installExtensionLifecycle(params: {
     return;
   }
 
+  const extensionPackage = resolveExtensionPackage(extension);
+
   await invoke("install_extension_from_url", {
     extensionId,
-    url: extension.manifest.installation?.downloadUrl,
-    checksum: extension.manifest.installation?.checksum,
-    size: extension.manifest.installation?.size,
+    url: extensionPackage.downloadUrl,
+    checksum: extensionPackage.checksum,
+    size: extensionPackage.size,
   });
 
   await reloadInstalledExtensions();
+  await activateExtensionContributions(extensionId, extension.manifest);
   onNonLanguageInstalled();
 }
 
@@ -164,6 +198,7 @@ export async function uninstallExtensionLifecycle(params: {
     return;
   }
 
+  await deactivateExtensionContributions(extensionId, extension.manifest);
   await invoke("uninstall_extension_new", { extensionId });
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
@@ -179,8 +214,13 @@ export async function updateExtensionLifecycle(params: {
 
   const languageIds = extension.manifest.languages?.map((language) => language.id) || [];
 
-  await unloadLanguageProviders(extensionId, languageIds);
-  await uninstallLanguageArtifacts(languageIds);
+  if (languageIds.length > 0) {
+    await unloadLanguageProviders(extensionId, languageIds);
+    await uninstallLanguageArtifacts(languageIds);
+  } else {
+    await deactivateExtensionContributions(extensionId, extension.manifest);
+  }
+
   extensionRegistry.unregisterExtension(extensionId);
 
   clearInstalledStateForUpdate();

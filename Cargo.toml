@@ -6,7 +6,6 @@ members = [
   "crates/lsp",
   "crates/remote",
   "crates/project",
-  "crates/database",
   "crates/version-control",
   "crates/extensions",
   "crates/terminal",

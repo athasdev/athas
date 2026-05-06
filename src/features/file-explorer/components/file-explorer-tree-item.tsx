@@ -179,7 +179,7 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+          "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
           densityConfig.rowClassName,
           isActive && "bg-selected",
           dragOverPath === file.path &&

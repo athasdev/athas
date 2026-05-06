@@ -1,7 +1,9 @@
 use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
+use crate::app_runtime::AppHandle;
 use serde::Serialize;
 use std::{fs, path::Path};
 use tauri::command;
+use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
 #[command]
@@ -34,6 +36,24 @@ pub fn open_file_external(path: String) -> Result<(), String> {
          .map_err(|e| e.to_string())?;
    }
    Ok(())
+}
+
+#[command]
+pub async fn open_folder_dialog(app: AppHandle) -> Result<Option<String>, String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      app.dialog()
+         .file()
+         .blocking_pick_folder()
+         .map(|path| {
+            path
+               .into_path()
+               .map(|path| path.to_string_lossy().to_string())
+               .map_err(|e| format!("Failed to resolve selected folder path: {}", e))
+         })
+         .transpose()
+   })
+   .await
+   .map_err(|e| format!("Folder dialog task failed: {}", e))?
 }
 
 #[derive(Serialize)]

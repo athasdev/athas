@@ -12,6 +12,7 @@ import type {
   PlatformExecutable,
   ToolRuntime,
 } from "../types/extension-manifest";
+import { registerLanguageAssetOverride } from "@/features/editor/lib/wasm-parser/extension-assets";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
 const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
@@ -28,6 +29,7 @@ interface ExternalToolConfig {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
   args?: string[];
   env?: Record<string, string>;
@@ -67,6 +69,10 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
   return rawCategories.map((category) => {
     const normalized = category.trim().toLowerCase();
     if (normalized === "language") return "Language";
+    if (normalized === "database") return "Database";
+    if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
+      return "Icon Theme";
+    }
     if (normalized === "linter") return "Linter";
     if (normalized === "formatter") return "Formatter";
     if (normalized === "theme") return "Theme";
@@ -117,6 +123,7 @@ function createLspConfig(manifest: ExternalLanguageManifest): LspConfiguration |
     name: lsp.name,
     runtime: lsp.runtime,
     package: lsp.package,
+    packages: lsp.packages,
     downloadUrl: lsp.downloadUrl,
     server: defaultCommand(lsp.name),
     args: lsp.args || [],
@@ -137,6 +144,7 @@ function createFormatterConfig(
     name: formatter.name,
     runtime: formatter.runtime,
     package: formatter.package,
+    packages: formatter.packages,
     downloadUrl: formatter.downloadUrl,
     command: defaultCommand(formatter.name),
     args: formatter.args || [],
@@ -156,6 +164,7 @@ function createLinterConfig(manifest: ExternalLanguageManifest): LinterConfigura
     name: linter.name,
     runtime: linter.runtime,
     package: linter.package,
+    packages: linter.packages,
     downloadUrl: linter.downloadUrl,
     command: defaultCommand(linter.name),
     args: linter.args || [],
@@ -251,6 +260,10 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
 
   for (const [folder, manifest] of Object.entries(manifests)) {
     try {
+      if (!manifest.languages?.length) {
+        continue;
+      }
+
       const syntheticPath = `/extensions/${folder}/extension.json`;
       const entry = convertLanguageManifest(syntheticPath, manifest);
       packagedEntries.push(entry);
@@ -261,6 +274,10 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
         manifestByLanguageId.set(languageId, entry.manifest);
         wasmUrlByLanguageId.set(languageId, entry.wasmUrl);
         highlightUrlByLanguageId.set(languageId, entry.highlightQueryUrl);
+        registerLanguageAssetOverride(languageId, {
+          wasmPath: entry.wasmUrl,
+          highlightQueryUrl: entry.highlightQueryUrl,
+        });
       }
     } catch (error) {
       console.error(`Failed to convert language manifest for ${folder}:`, error);

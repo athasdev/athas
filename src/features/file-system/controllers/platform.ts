@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
+import { homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
+import { useLinuxFolderPickerStore } from "@/features/file-system/controllers/linux-folder-picker-store";
+import { IS_LINUX } from "@/utils/platform";
 import {
   BaseDirectory,
   mkdir,
@@ -10,6 +13,23 @@ import {
 } from "@tauri-apps/plugin-fs";
 
 const utf8Decoder = new TextDecoder("utf-8");
+
+async function promptForPath(title: string): Promise<string | null> {
+  const defaultPath = await homeDir().catch(() => "");
+  const selected = window.prompt(title, defaultPath);
+  if (!selected) return null;
+
+  const trimmed = selected.trim();
+  if (!trimmed) return null;
+
+  if (trimmed === "~") return defaultPath || null;
+  if (trimmed.startsWith("~/") && defaultPath) {
+    return `${defaultPath.replace(/[/\\]+$/, "")}/${trimmed.slice(2)}`;
+  }
+
+  return trimmed;
+}
+
 /**
  * Read a text file from the filesystem
  * @param path The path to the file to read
@@ -59,8 +79,28 @@ export async function deletePath(path: string): Promise<void> {
  * Open a folder selection dialog
  */
 export async function openFolder(): Promise<string | null> {
+  if (IS_LINUX) {
+    return useLinuxFolderPickerStore.getState().actions.open();
+  }
+
   const selected = await open({
     directory: true,
+    multiple: false,
+  });
+
+  return selected as string | null;
+}
+
+/**
+ * Open a file selection dialog
+ */
+export async function openFile(): Promise<string | null> {
+  if (IS_LINUX) {
+    return promptForPath("File path");
+  }
+
+  const selected = await open({
+    directory: false,
     multiple: false,
   });
 

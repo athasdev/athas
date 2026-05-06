@@ -11,6 +11,7 @@ import {
   ArrowClockwise as RefreshCw,
 } from "@phosphor-icons/react";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
+import { primitiveConfirm, primitivePrompt } from "@/ui/primitive-dialog-service";
 import type { Action } from "../models/action.types";
 
 interface GitActionsParams {
@@ -202,7 +203,10 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           onClose();
           return;
         }
-        const message = prompt("Enter commit message:");
+        const message = await primitivePrompt("Enter commit message:", {
+          title: "Commit Changes",
+          placeholder: "Commit message",
+        });
         if (!message) {
           onClose();
           return;
@@ -320,7 +324,11 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           onClose();
           return;
         }
-        if (!confirm("Are you sure you want to discard all changes? This cannot be undone.")) {
+        const confirmed = await primitiveConfirm(
+          "Are you sure you want to discard all changes? This cannot be undone.",
+          { title: "Discard All Changes", confirmLabel: "Discard" },
+        );
+        if (!confirmed) {
           onClose();
           return;
         }

@@ -21,6 +21,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { logger } from "../utils/logger";
 import type { Position } from "../types/editor";
+import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface UseLspIntegrationOptions {
   enabled?: boolean;
@@ -28,6 +29,7 @@ interface UseLspIntegrationOptions {
   value: string;
   cursorPosition: Position;
   editorRef: RefObject<HTMLDivElement | null> | RefObject<HTMLTextAreaElement>;
+  resolveEditorPosition?: EditorCoordinateResolver;
 }
 
 /**
@@ -48,6 +50,7 @@ export const useLspIntegration = ({
   value,
   cursorPosition,
   editorRef,
+  resolveEditorPosition,
 }: UseLspIntegrationOptions) => {
   // Get LSP client instance (singleton)
   const lspClient = useMemo(() => LspClient.getInstance(), []);
@@ -104,6 +107,7 @@ export const useLspIntegration = ({
     filePath: filePath || "",
     lineHeight,
     charWidth,
+    resolveEditorPosition,
   });
 
   // Set up go-to-definition (Cmd+Click)
@@ -113,6 +117,7 @@ export const useLspIntegration = ({
     filePath: filePath || "",
     lineHeight,
     charWidth,
+    resolveEditorPosition,
   });
 
   // Set up definition link highlighting (Cmd+hover)
@@ -123,6 +128,7 @@ export const useLspIntegration = ({
     charWidth,
     isLanguageSupported: isLspSupported,
     getDefinition: lspClient.getDefinition.bind(lspClient),
+    resolveEditorPosition,
   });
 
   // Handle document lifecycle (open/close)

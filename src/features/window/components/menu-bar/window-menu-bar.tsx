@@ -16,9 +16,15 @@ interface Props {
   activeMenu: string | null;
   setActiveMenu: React.Dispatch<React.SetStateAction<string | null>>;
   compactFloating?: boolean;
+  anchorRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
-const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
+const CustomMenuBar = ({
+  activeMenu,
+  setActiveMenu,
+  compactFloating = false,
+  anchorRef,
+}: Props) => {
   const { settings } = useSettingsStore();
   const [themes, setThemes] = useState<ThemeDefinition[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
@@ -26,6 +32,14 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
   const handleClickEmit = (event: string, payload?: unknown) => {
     void getCurrentWebviewWindow().emit(event, payload);
     setActiveMenu(null);
+  };
+
+  const handleCommand = (commandId: string) => {
+    handleClickEmit("menu_execute_command", commandId);
+  };
+
+  const handleLocalAction = (action: () => unknown | Promise<unknown>) => {
+    void Promise.resolve(action()).finally(() => setActiveMenu(null));
   };
 
   useEffect(() => {
@@ -44,6 +58,9 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     () => ({
       File: (
         <Menu aria-label="File">
+          <MenuItem shortcut="mod+n" onClick={() => handleCommand("workbench.newTab")}>
+            New Tab
+          </MenuItem>
           <MenuItem shortcut="mod+shift+n" onClick={() => handleClickEmit("menu_new_window")}>
             New Window
           </MenuItem>
@@ -59,9 +76,14 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenuItem shortcut="mod+shift+s" onClick={() => handleClickEmit("menu_save_as")}>
             Save As...
           </MenuItem>
+          <MenuItem onClick={() => handleCommand("file.localHistory")}>Show Local History</MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+w" onClick={() => handleClickEmit("menu_close_tab")}>
             Close Tab
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("file.closeAll")}>Close All Tabs</MenuItem>
+          <MenuItem shortcut="mod+shift+t" onClick={() => handleCommand("file.reopenClosed")}>
+            Reopen Closed Tab
           </MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+q" onClick={async () => await exit(0)}>
@@ -78,16 +100,49 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             Redo
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="mod+x">Cut</MenuItem>
-          <MenuItem shortcut="mod+c">Copy</MenuItem>
-          <MenuItem shortcut="mod+v">Paste</MenuItem>
-          <MenuItem shortcut="mod+a">Select All</MenuItem>
+          <MenuItem
+            shortcut="mod+x"
+            onClick={() => handleLocalAction(() => document.execCommand("cut"))}
+          >
+            Cut
+          </MenuItem>
+          <MenuItem
+            shortcut="mod+c"
+            onClick={() => handleLocalAction(() => document.execCommand("copy"))}
+          >
+            Copy
+          </MenuItem>
+          <MenuItem shortcut="mod+v" onClick={() => handleCommand("editor.paste")}>
+            Paste
+          </MenuItem>
+          <MenuItem shortcut="mod+a" onClick={() => handleCommand("editor.selectAll")}>
+            Select All
+          </MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+f" onClick={() => handleClickEmit("menu_find")}>
             Find
           </MenuItem>
           <MenuItem shortcut="mod+alt+f" onClick={() => handleClickEmit("menu_find_replace")}>
             Find and Replace
+          </MenuItem>
+          <MenuItem shortcut="mod+/" onClick={() => handleClickEmit("menu_toggle_comment")}>
+            Toggle Comment
+          </MenuItem>
+          <MenuItem separator />
+          <MenuItem shortcut="mod+d" onClick={() => handleCommand("editor.duplicateLine")}>
+            Duplicate Line
+          </MenuItem>
+          <MenuItem shortcut="mod+shift+k" onClick={() => handleCommand("editor.deleteLine")}>
+            Delete Line
+          </MenuItem>
+          <MenuItem shortcut="alt+up" onClick={() => handleCommand("editor.moveLineUp")}>
+            Move Line Up
+          </MenuItem>
+          <MenuItem shortcut="alt+down" onClick={() => handleCommand("editor.moveLineDown")}>
+            Move Line Down
+          </MenuItem>
+          <MenuItem shortcut="shift+alt+f" onClick={() => handleCommand("editor.formatDocument")}>
+            Format Document
           </MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+shift+p" onClick={() => handleClickEmit("menu_command_palette")}>
@@ -103,17 +158,51 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenuItem shortcut="mod+j" onClick={() => handleClickEmit("menu_toggle_terminal")}>
             Toggle Terminal
           </MenuItem>
-          <MenuItem shortcut="mod+r" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
-            Toggle AI Chat
-          </MenuItem>
-          <MenuItem separator />
-          <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>
           <MenuItem separator />
           <MenuItem
-            shortcut="alt+m"
-            onClick={() => setActiveMenu((value) => (value ? null : "File"))}
+            shortcut="mod+shift+f"
+            onClick={() => handleCommand("workbench.showGlobalSearch")}
           >
-            Toggle Menu Bar
+            Global Search
+          </MenuItem>
+          <MenuItem
+            shortcut="mod+shift+j"
+            onClick={() => handleCommand("workbench.toggleDiagnostics")}
+          >
+            Diagnostics
+          </MenuItem>
+          <MenuItem separator />
+          <MenuItem
+            shortcut="mod+shift+e"
+            onClick={() => handleCommand("workbench.showFileExplorer")}
+          >
+            File Explorer
+          </MenuItem>
+          <MenuItem
+            shortcut="mod+shift+g"
+            onClick={() => handleCommand("workbench.showSourceControl")}
+          >
+            Source Control
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("workbench.showGitHub")}>GitHub</MenuItem>
+          <MenuItem onClick={() => handleCommand("workbench.showDebugger")}>Run and Debug</MenuItem>
+          <MenuItem separator />
+          <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>
+          <MenuItem onClick={() => handleCommand("workbench.toggleMinimap")}>
+            Toggle Minimap
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("workbench.toggleSidebarPosition")}>
+            Toggle Sidebar Position
+          </MenuItem>
+          <MenuItem separator />
+          <MenuItem shortcut="mod+=" onClick={() => handleCommand("workbench.zoomIn")}>
+            Zoom In
+          </MenuItem>
+          <MenuItem shortcut="mod+-" onClick={() => handleCommand("workbench.zoomOut")}>
+            Zoom Out
+          </MenuItem>
+          <MenuItem shortcut="mod+0" onClick={() => handleCommand("workbench.zoomReset")}>
+            Reset Zoom
           </MenuItem>
           <MenuItem separator />
           <Submenu title="Theme">
@@ -137,11 +226,75 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             Go to Line
           </MenuItem>
           <MenuItem separator />
+          <MenuItem shortcut="ctrl+-" onClick={() => handleCommand("navigation.goBack")}>
+            Go Back
+          </MenuItem>
+          <MenuItem shortcut="ctrl+shift+-" onClick={() => handleCommand("navigation.goForward")}>
+            Go Forward
+          </MenuItem>
+          <MenuItem separator />
+          <MenuItem shortcut="f12" onClick={() => handleCommand("editor.goToDefinition")}>
+            Go to Definition
+          </MenuItem>
+          <MenuItem shortcut="shift+f12" onClick={() => handleCommand("editor.goToReferences")}>
+            Go to References
+          </MenuItem>
+          <MenuItem shortcut="f2" onClick={() => handleCommand("editor.renameSymbol")}>
+            Rename Symbol
+          </MenuItem>
+          <MenuItem separator />
           <MenuItem shortcut="mod+alt+right" onClick={() => handleClickEmit("menu_next_tab")}>
             Next Tab
           </MenuItem>
           <MenuItem shortcut="mod+alt+left" onClick={() => handleClickEmit("menu_prev_tab")}>
             Previous Tab
+          </MenuItem>
+        </Menu>
+      ),
+      Terminal: (
+        <Menu aria-label="Terminal">
+          <MenuItem onClick={() => handleCommand("terminal.new")}>New Terminal</MenuItem>
+          <MenuItem onClick={() => handleCommand("terminal.split")}>Split Terminal</MenuItem>
+          <MenuItem onClick={() => handleCommand("terminal.close")}>Close Terminal</MenuItem>
+        </Menu>
+      ),
+      Run: (
+        <Menu aria-label="Run">
+          <MenuItem shortcut="f5" onClick={() => handleCommand("debug.start")}>
+            Start Debugging
+          </MenuItem>
+          <MenuItem shortcut="shift+f5" onClick={() => handleCommand("debug.stop")}>
+            Stop Debugging
+          </MenuItem>
+          <MenuItem shortcut="f9" onClick={() => handleCommand("debug.toggleBreakpoint")}>
+            Toggle Breakpoint
+          </MenuItem>
+        </Menu>
+      ),
+      AI: (
+        <Menu aria-label="AI">
+          <MenuItem shortcut="mod+r" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
+            Toggle AI Chat
+          </MenuItem>
+          <MenuItem
+            shortcut="mod+shift+space"
+            onClick={() => handleCommand("workbench.agentLauncher")}
+          >
+            New Agent
+          </MenuItem>
+          <MenuItem shortcut="mod+i" onClick={() => handleCommand("editor.inlineEdit")}>
+            Inline Edit
+          </MenuItem>
+        </Menu>
+      ),
+      Tools: (
+        <Menu aria-label="Tools">
+          <MenuItem onClick={() => handleCommand("database.connect")}>Connect to Database</MenuItem>
+          <MenuItem separator />
+          <MenuItem onClick={() => handleClickEmit("menu_open_settings")}>Preferences</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_open_extensions")}>Extensions</MenuItem>
+          <MenuItem onClick={() => handleCommand("workbench.openKeyboardShortcuts")}>
+            Keyboard Shortcuts
           </MenuItem>
         </Menu>
       ),
@@ -166,8 +319,8 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             Maximize
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="mod+q" onClick={async () => await exit(0)}>
-            Quit
+          <MenuItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
+            Toggle Menu Bar
           </MenuItem>
           <MenuItem separator />
           <MenuItem
@@ -185,59 +338,91 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
       ),
       Help: (
         <Menu aria-label="Help">
-          <MenuItem onClick={() => handleClickEmit("menu_help")}>Help</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_documentation")}>Documentation</MenuItem>
+          <MenuItem onClick={() => handleCommand("workbench.openKeyboardShortcuts")}>
+            Keyboard Shortcuts
+          </MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_whats_new")}>What's New</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_changelog")}>Changelog</MenuItem>
           <MenuItem separator />
-          <MenuItem onClick={() => handleClickEmit("menu_about_athas")}>About Athas</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_report_bug")}>Report a Bug</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_request_feature")}>
+            Request a Feature
+          </MenuItem>
+          <MenuItem separator />
+          <MenuItem onClick={() => handleClickEmit("menu_check_updates")}>
+            Check for Updates
+          </MenuItem>
         </Menu>
       ),
     }),
-    [handleClickEmit, setActiveMenu, themes],
+    [handleClickEmit, handleCommand, handleLocalAction, setActiveMenu, themes],
   );
 
   useEffect(() => {
     if (!activeMenu) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const isInsideMenuBar = menuBarRef.current?.contains(target);
+      const isAnchorButton = anchorRef?.current?.contains(target);
+      if (!isInsideMenuBar && !isAnchorButton) {
         setActiveMenu(null);
       }
     };
 
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [activeMenu, setActiveMenu]);
+  }, [activeMenu, setActiveMenu, anchorRef]);
 
+  // In compact mode, hide entirely when no menu is open
   if (settings.compactMenuBar && !activeMenu) return null;
 
   return (
     <div
       ref={menuBarRef}
       className={cn(
-        "z-[10030] flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65 px-0.5 py-0.5",
-        settings.compactMenuBar &&
-          compactFloating &&
-          "absolute top-[calc(100%+4px)] left-0 rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
-        settings.compactMenuBar &&
-          !compactFloating &&
-          "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
+        "z-[10030] flex flex-col",
+        settings.compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
+        settings.compactMenuBar && !compactFloating && "absolute inset-0",
       )}
     >
-      {Object.keys(menus).map((menuName) => (
-        <Button
-          key={menuName}
-          variant="ghost"
-          size="sm"
-          className={cn(
-            "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
-            activeMenu === menuName ? "bg-hover/80 text-text" : "hover:bg-hover/50 hover:text-text",
-          )}
-          onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
-        >
-          {menuName}
-        </Button>
-      ))}
+      {/* Horizontal tab bar */}
+      <div
+        className={cn(
+          "flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65 px-0.5 py-0.5",
+          settings.compactMenuBar &&
+            compactFloating &&
+            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
+          settings.compactMenuBar &&
+            !compactFloating &&
+            "h-full rounded-none border-none bg-transparent px-2 py-0",
+        )}
+      >
+        {Object.keys(menus).map((menuName) => (
+          <Button
+            key={menuName}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
+              activeMenu === menuName
+                ? "bg-hover/80 text-text"
+                : "hover:bg-hover/50 hover:text-text",
+            )}
+            onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
+          >
+            {menuName}
+          </Button>
+        ))}
+      </div>
 
-      {activeMenu && menus[activeMenu as keyof typeof menus]}
+      {/* Dropdown — rendered below the tab bar, not overlapping it */}
+      {activeMenu && (
+        <div className="z-[10031] mt-1 w-max min-w-[180px]">
+          {menus[activeMenu as keyof typeof menus]}
+        </div>
+      )}
     </div>
   );
 };

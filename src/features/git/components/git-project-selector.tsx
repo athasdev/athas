@@ -18,6 +18,7 @@ import { useRepositoryStore } from "../stores/git-repository-store";
 interface GitProjectSelectorProps {
   placement?: "up" | "down";
   className?: string;
+  inputClassName?: string;
   onRepositoryChange?: (repoPath: string | null) => void;
 }
 
@@ -50,6 +51,7 @@ function getFilteredRepositoryPaths(
 const GitProjectSelector = ({
   placement = "down",
   className,
+  inputClassName,
   onRepositoryChange,
 }: GitProjectSelectorProps) => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
@@ -169,20 +171,20 @@ const GitProjectSelector = ({
         readOnly={!isOpen}
         disabled={isSelectingRepo}
         leftIcon={FolderOpen}
+        htmlSize={triggerTextWidthCh}
         variant="ghost"
         showTrigger={false}
         showClear={false}
         className={cn(
-          "inline-flex w-fit max-w-[360px] shrink-0 hover:bg-hover/80",
+          "inline-flex w-fit max-w-full shrink overflow-hidden hover:bg-hover/80 sm:max-w-[360px]",
           isOpen ? "bg-hover/80" : "cursor-pointer",
           className,
         )}
         inputClassName={cn(
-          "truncate pr-0 pl-7 font-normal",
+          "min-w-0 max-w-full flex-initial truncate pr-0 pl-7 font-normal",
           isOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
+          inputClassName,
         )}
-        containerStyle={{ width: "fit-content", maxWidth: "360px" }}
-        inputStyle={{ width: `calc(${triggerTextWidthCh}ch + 1.75rem)`, flex: "0 0 auto" }}
         placeholder={getRepositoryLabel(activeRepoPath)}
         aria-label="Search repositories"
       />

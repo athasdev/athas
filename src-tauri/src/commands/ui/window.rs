@@ -1,6 +1,15 @@
 use crate::app_runtime::AthasRuntime;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicU32, Ordering};
+use sha2::{Digest, Sha256};
+use std::{
+   collections::HashSet,
+   fs,
+   path::PathBuf,
+   sync::{
+      LazyLock, Mutex,
+      atomic::{AtomicU32, Ordering},
+   },
+};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
@@ -8,6 +17,15 @@ use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::Page
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+static EMBEDDED_WEBVIEW_LABELS: LazyLock<Mutex<HashSet<String>>> =
+   LazyLock::new(|| Mutex::new(HashSet::new()));
+
+struct EmbeddedWebviewProfile {
+   #[cfg_attr(target_os = "macos", allow(dead_code))]
+   data_directory: PathBuf,
+   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+   data_store_identifier: [u8; 16],
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,6 +92,63 @@ fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
    format!("/?{}", serializer.finish())
 }
 
+fn profile_digest(profile_key: &str) -> [u8; 32] {
+   let mut hasher = Sha256::new();
+   hasher.update(b"athas:web-viewer-profile:");
+   hasher.update(profile_key.as_bytes());
+   hasher.finalize().into()
+}
+
+fn digest_hex(bytes: &[u8]) -> String {
+   let mut value = String::with_capacity(bytes.len() * 2);
+   for byte in bytes {
+      value.push_str(&format!("{byte:02x}"));
+   }
+   value
+}
+
+fn resolve_embedded_webview_profile(
+   app: &tauri::AppHandle<AthasRuntime>,
+   profile_key: &str,
+) -> Result<EmbeddedWebviewProfile, String> {
+   let digest = profile_digest(profile_key);
+   let data_directory = app
+      .path()
+      .app_data_dir()
+      .map_err(|e| format!("Failed to resolve app data directory: {e}"))?
+      .join("web-viewer")
+      .join("profiles")
+      .join(digest_hex(&digest));
+
+   fs::create_dir_all(&data_directory)
+      .map_err(|e| format!("Failed to create web viewer profile directory: {e}"))?;
+
+   let mut data_store_identifier = [0u8; 16];
+   data_store_identifier.copy_from_slice(&digest[..16]);
+
+   Ok(EmbeddedWebviewProfile {
+      data_directory,
+      data_store_identifier,
+   })
+}
+
+fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, String> {
+   let Some(user_agent) = user_agent else {
+      return Ok(None);
+   };
+
+   let trimmed = user_agent.trim();
+   if trimmed.is_empty() {
+      return Ok(None);
+   }
+
+   if trimmed.chars().any(char::is_control) {
+      return Err("User agent cannot contain control characters".to_string());
+   }
+
+   Ok(Some(trimmed.to_string()))
+}
+
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    #[cfg(target_os = "macos")]
    {
@@ -88,10 +163,15 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
       let _ = window.set_decorations(false);
    }
 
-   #[cfg(target_os = "linux")]
+   #[cfg(all(target_os = "linux", not(feature = "linux")))]
    {
       let _ = window.set_decorations(false);
    }
+}
+
+#[command]
+pub fn uses_native_window_chrome() -> bool {
+   cfg!(all(target_os = "linux", feature = "linux"))
 }
 
 pub fn create_app_window_internal(
@@ -113,7 +193,10 @@ pub fn create_app_window_internal(
       .resizable(true)
       .shadow(true);
 
-   #[cfg(any(target_os = "windows", target_os = "linux"))]
+   #[cfg(any(
+      target_os = "windows",
+      all(target_os = "linux", not(feature = "linux"))
+   ))]
    let builder = builder.decorations(false);
 
    #[cfg(target_os = "macos")]
@@ -153,7 +236,13 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
   function emit(event, payload) {{
     const invoke = window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke;
     if (typeof invoke !== 'function') return;
-    void invoke('plugin:event|emit', {{ event, payload }}).catch(() => {{}});
+
+    try {{
+      const result = invoke('plugin:event|emit', {{ event, payload }});
+      if (result && typeof result.catch === 'function') {{
+        void result.catch(() => {{}});
+      }}
+    }} catch (_) {{}}
   }}
 
   function emitShortcut(shortcut) {{
@@ -226,35 +315,39 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
     const isShift = e.shiftKey;
     let shortcut = null;
 
+    const key = typeof e.key === 'string' ? e.key.toLowerCase() : e.key;
+
     if (isMod && e.key === 'Tab') {{
       shortcut = 'global:switch-tab';
-    }} else if (isMod && e.key === 'j') {{
+    }} else if (isMod && !isShift && key === 'j') {{
       shortcut = 'global:toggle-terminal';
-    }} else if (isMod && e.key === 'b') {{
+    }} else if (isMod && !isShift && key === 'b') {{
       shortcut = 'global:toggle-sidebar';
-    }} else if (isMod && e.key === 'k') {{
+    }} else if (isMod && isShift && key === 'p') {{
       shortcut = 'global:command-palette';
-    }} else if (isMod && e.key === 'p') {{
+    }} else if (isMod && !isShift && key === 'k') {{
+      shortcut = 'global:command-palette';
+    }} else if (isMod && !isShift && key === 'p') {{
       shortcut = 'global:quick-open';
-    }} else if (isMod && e.key === 'w') {{
+    }} else if (isMod && !isShift && key === 'w') {{
       shortcut = 'global:close-tab';
-    }} else if (isMod && isShift && e.key === 'T') {{
+    }} else if (isMod && isShift && key === 't') {{
       shortcut = 'global:reopen-tab';
-    }} else if (isMod && e.key === 't') {{
+    }} else if (isMod && !isShift && key === 't') {{
       shortcut = 'global:new-tab';
-    }} else if (isMod && e.key === 'n') {{
-      shortcut = 'global:new-window';
-    }} else if (isMod && isShift && e.key === 'N') {{
+    }} else if (isMod && isShift && key === 'n') {{
       shortcut = 'global:new-private-window';
-    }} else if (isMod && e.key === 'f') {{
-      shortcut = 'global:find';
-    }} else if (isMod && isShift && e.key === 'F') {{
+    }} else if (isMod && !isShift && key === 'n') {{
+      shortcut = 'global:new-window';
+    }} else if (isMod && isShift && key === 'f') {{
       shortcut = 'global:find-in-files';
+    }} else if (isMod && !isShift && key === 'f') {{
+      shortcut = 'global:find';
     }} else if (isMod && e.key === ',') {{
       shortcut = 'global:settings';
-    }} else if (isMod && e.key === 'l') {{
+    }} else if (isMod && !isShift && key === 'l') {{
       shortcut = 'focus-url';
-    }} else if (isMod && e.key === 'r' && !isShift) {{
+    }} else if (isMod && key === 'r' && !isShift) {{
       shortcut = 'refresh';
     }} else if (isMod && e.key === '[') {{
       shortcut = 'go-back';
@@ -312,6 +405,8 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
    url: String,
+   profile_key: String,
+   user_agent: Option<String>,
    x: f64,
    y: f64,
    width: f64,
@@ -321,6 +416,8 @@ pub async fn create_embedded_webview(
    let webview_label = format!("web-viewer-{counter}");
 
    let parsed_url = normalize_webview_url(&url)?;
+   let profile = resolve_embedded_webview_profile(&app, &profile_key)?;
+   let user_agent = normalize_user_agent(user_agent)?;
 
    // Get the main window
    let main_webview_window = app
@@ -339,6 +436,20 @@ pub async fn create_embedded_webview(
             .map_err(|e| format!("Invalid URL: {e}"))?,
       ),
    );
+
+   #[cfg(target_os = "macos")]
+   {
+      webview_builder = webview_builder.data_store_identifier(profile.data_store_identifier);
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      webview_builder = webview_builder.data_directory(profile.data_directory);
+   }
+
+   if let Some(user_agent) = user_agent.as_deref() {
+      webview_builder = webview_builder.user_agent(user_agent);
+   }
 
    webview_builder =
       webview_builder.initialization_script(build_webview_bridge_script(&webview_label)?);
@@ -383,7 +494,26 @@ pub async fn create_embedded_webview(
       .set_auto_resize(false)
       .map_err(|e| format!("Failed to set auto resize: {e}"))?;
 
+   if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
+      labels.insert(webview_label.clone());
+   }
+
    Ok(webview_label)
+}
+
+#[command]
+pub async fn clear_embedded_webview_browsing_data(
+   app: tauri::AppHandle<AthasRuntime>,
+   webview_label: String,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      webview
+         .clear_all_browsing_data()
+         .map_err(|e| format!("Failed to clear webview browsing data: {e}"))?;
+      Ok(())
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
 }
 
 #[command]
@@ -396,7 +526,42 @@ pub async fn close_embedded_webview(
          .close()
          .map_err(|e| format!("Failed to close webview: {e}"))?;
    }
+   if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
+      labels.remove(&webview_label);
+   }
    Ok(())
+}
+
+#[command]
+pub async fn close_all_embedded_webviews(
+   app: tauri::AppHandle<AthasRuntime>,
+) -> Result<(), String> {
+   let labels = EMBEDDED_WEBVIEW_LABELS
+      .lock()
+      .map(|labels| labels.iter().cloned().collect::<Vec<_>>())
+      .unwrap_or_default();
+
+   let mut close_errors = Vec::new();
+   for label in labels {
+      if let Some(webview) = app.get_webview(&label) {
+         if let Err(error) = webview.close() {
+            close_errors.push(format!("{label}: {error}"));
+         }
+      }
+   }
+
+   if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
+      labels.clear();
+   }
+
+   if close_errors.is_empty() {
+      Ok(())
+   } else {
+      Err(format!(
+         "Failed to close embedded webviews: {}",
+         close_errors.join(", ")
+      ))
+   }
 }
 
 #[command]

@@ -4,41 +4,44 @@
  * This layer renders additional cursors when in multi-cursor mode
  */
 
-import type React from "react";
 import { forwardRef, memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Cursor } from "../../types/editor";
+import { buildLineOffsetMap } from "../../utils/html";
+import { calculateSelectionBoxes } from "../../utils/selection-boxes";
+import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface MultiCursorLayerProps {
   cursors: Cursor[];
   primaryCursorId: string;
-  fontSize: number;
-  fontFamily: string;
   lineHeight: number;
   content: string;
+  measureText: (text: string) => number;
+  viewLayout?: EditorViewLayout;
 }
 
 const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerProps>(
-  ({ cursors, primaryCursorId, fontSize, fontFamily, lineHeight, content }, ref) => {
+  ({ cursors, primaryCursorId, lineHeight, content, measureText, viewLayout }, ref) => {
     const lines = useMemo(() => content.split("\n"), [content]);
+    const lineOffsets = useMemo(() => buildLineOffsetMap(content), [content]);
 
     // Calculate pixel position for a cursor based on line/column
     // Adds padding offset to match textarea/highlight layer positioning
     const getCursorPosition = (line: number, column: number): { top: number; left: number } => {
+      if (viewLayout) {
+        const position = viewLayout.modelPositionToViewPosition(line, column);
+        return { top: position.top, left: position.left };
+      }
+
       const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
       const lineText = lines[line] || "";
       const textBeforeCursor = lineText.substring(0, column);
 
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      if (context) {
-        context.font = `${fontSize}px ${fontFamily}`;
-        const width = context.measureText(textBeforeCursor).width;
-        return { top, left: width + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
-      }
-
-      return { top, left: column * fontSize * 0.6 + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
+      return {
+        top,
+        left: measureText(textBeforeCursor) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      };
     };
 
     // Filter out primary cursor and cursors with invalid positions (out of bounds)
@@ -65,56 +68,39 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
             if (!cursor.selection) return null;
 
             const { start, end } = cursor.selection;
-            const startLine = Math.min(start.line, end.line);
-            const endLine = Math.max(start.line, end.line);
             const isReversed =
               start.line > end.line || (start.line === end.line && start.column > end.column);
             const actualStart = isReversed ? end : start;
             const actualEnd = isReversed ? start : end;
+            const boxes = calculateSelectionBoxes({
+              selectionOffsets: {
+                start: actualStart.offset,
+                end: actualEnd.offset,
+              },
+              lines,
+              lineOffsets,
+              contentLength: content.length,
+              lineHeight,
+              measureText,
+              viewLayout,
+            });
 
-            const boxes: React.ReactNode[] = [];
-
-            for (let line = startLine; line <= endLine; line++) {
-              const lineText = lines[line] || "";
-              let startCol: number;
-              let endCol: number;
-
-              if (startLine === endLine) {
-                // Single line selection
-                startCol = Math.min(actualStart.column, actualEnd.column);
-                endCol = Math.max(actualStart.column, actualEnd.column);
-              } else if (line === startLine) {
-                // First line: from start column to end of line
-                startCol = actualStart.column;
-                endCol = lineText.length;
-              } else if (line === endLine) {
-                // Last line: from beginning to end column
-                startCol = 0;
-                endCol = actualEnd.column;
-              } else {
-                // Middle lines: entire line
-                startCol = 0;
-                endCol = lineText.length;
-              }
-
-              const leftPos = getCursorPosition(line, startCol).left;
-              const rightPos = getCursorPosition(line, endCol).left;
-
-              boxes.push(
-                <div
-                  key={`${cursor.id}-selection-${line}`}
-                  className="absolute bg-selection-bg"
-                  style={{
-                    top: `${line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
-                    left: `${leftPos}px`,
-                    height: `${lineHeight}px`,
-                    width: `${Math.max(rightPos - leftPos, 2)}px`,
-                  }}
-                />,
-              );
-            }
-
-            return boxes;
+            return boxes.map((box, index) => (
+              <div
+                key={`${cursor.id}-selection-${index}`}
+                className="editor-selection-box absolute"
+                style={{
+                  top: `${box.top}px`,
+                  left: `${box.left}px`,
+                  height: `${box.height}px`,
+                  width: `${box.width}px`,
+                  borderTopLeftRadius: box.corners.topLeft ? undefined : 0,
+                  borderTopRightRadius: box.corners.topRight ? undefined : 0,
+                  borderBottomRightRadius: box.corners.bottomRight ? undefined : 0,
+                  borderBottomLeftRadius: box.corners.bottomLeft ? undefined : 0,
+                }}
+              />
+            ));
           };
 
           return (
@@ -124,6 +110,7 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
 
               {/* Render cursor */}
               <div
+                key={`${cursor.id}:${cursor.position.line}:${cursor.position.column}:${cursor.position.offset}`}
                 className="absolute w-0.5 animate-blink"
                 style={{
                   top: `${top}px`,
@@ -146,9 +133,9 @@ export const MultiCursorLayer = memo(MultiCursorLayerComponent, (prev, next) => 
   return (
     prev.cursors === next.cursors &&
     prev.primaryCursorId === next.primaryCursorId &&
-    prev.fontSize === next.fontSize &&
-    prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
-    prev.content === next.content
+    prev.content === next.content &&
+    prev.measureText === next.measureText &&
+    prev.viewLayout === next.viewLayout
   );
 });

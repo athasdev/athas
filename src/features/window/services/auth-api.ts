@@ -99,7 +99,7 @@ export class AuthApiError extends Error {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function isAuthInvalidError(error: unknown): boolean {
-  return error instanceof AuthApiError && error.status === 401;
+  return error instanceof AuthApiError && (error.status === 401 || error.status === 403);
 }
 
 function getApiBaseUnavailableMessage(apiBase = API_BASE): string {

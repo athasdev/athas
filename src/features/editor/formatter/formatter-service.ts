@@ -31,6 +31,14 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
     }
 
     if (!formatterConfig) {
+      const lspFormatted = await formatWithLsp(filePath, options.content);
+      if (lspFormatted !== null) {
+        return {
+          success: true,
+          formattedContent: lspFormatted,
+        };
+      }
+
       logger.debug("FormatterService", `No formatter configured for ${filePath}`);
       return {
         success: false,
@@ -95,12 +103,24 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
   }
 }
 
+async function formatWithLsp(filePath: string, content: string): Promise<string | null> {
+  try {
+    const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+    return await LspClient.getInstance().formatDocument(filePath, content);
+  } catch (error) {
+    logger.debug("FormatterService", `LSP formatter unavailable for ${filePath}:`, error);
+    return null;
+  }
+}
+
 /**
  * Check if formatting is available for a file
  */
 export function isFormattingAvailable(filePath: string, languageId?: string): boolean {
   const formatterConfig = extensionRegistry.getFormatterForFile(filePath);
   if (formatterConfig) return true;
+
+  if (extensionRegistry.getLspServerPath(filePath)) return true;
 
   if (languageId) {
     const langFormatterConfig = extensionRegistry.getFormatterForLanguage(languageId);

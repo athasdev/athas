@@ -9,11 +9,13 @@ import { useSettingsStore } from "@/features/settings/store";
 
 interface InputLayerProps {
   content: string;
-  onInput: (content: string) => void;
+  onInput: (content: string, event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onBeforeInput?: (e: React.FormEvent<HTMLTextAreaElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onKeyUp?: () => void;
   onSelect?: () => void;
   onClick?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
+  onMouseDown?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   onMouseUp?: () => void;
   onContextMenu?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   fontSize: number;
@@ -34,10 +36,12 @@ interface InputLayerProps {
 const InputLayerComponent = ({
   content,
   onInput,
+  onBeforeInput,
   onKeyDown,
   onKeyUp,
   onSelect,
   onClick,
+  onMouseDown,
   onMouseUp,
   onContextMenu,
   fontSize,
@@ -58,7 +62,7 @@ const InputLayerComponent = ({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onInput(e.target.value);
+      onInput(e.target.value, e);
     },
     [onInput],
   );
@@ -67,15 +71,19 @@ const InputLayerComponent = ({
     <textarea
       ref={ref as React.RefObject<HTMLTextAreaElement>}
       defaultValue={content}
+      onBeforeInput={onBeforeInput}
       onChange={handleChange}
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
       onSelect={onSelect}
       onClick={onClick}
+      onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
       onContextMenu={onContextMenu}
       onScroll={onScroll}
-      className={`input-layer editor-textarea editor-viewport ${wordWrap ? "native-selection" : "selection-transparent"}`}
+      className={`input-layer editor-textarea editor-viewport ${
+        customCaret || !wordWrap ? "selection-transparent" : "native-selection"
+      }`}
       style={{
         position: "absolute",
         top: 0,
@@ -123,11 +131,13 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.customCaret === next.customCaret &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
+    prev.onBeforeInput === next.onBeforeInput &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onScroll === next.onScroll &&
     prev.onSelect === next.onSelect &&
     prev.onKeyUp === next.onKeyUp &&
     prev.onClick === next.onClick &&
+    prev.onMouseDown === next.onMouseDown &&
     prev.onMouseUp === next.onMouseUp &&
     prev.onContextMenu === next.onContextMenu &&
     prev.readOnly === next.readOnly

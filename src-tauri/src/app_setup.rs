@@ -6,12 +6,11 @@ use crate::{
    terminal::ManagedTerminalManager as TerminalManager,
 };
 use athas_ai::AcpAgentBridge;
-use athas_database::ConnectionManager;
 use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 #[cfg(not(target_os = "windows"))]
 use tauri_plugin_os::platform;
@@ -82,14 +81,13 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(DebugManager::new(app.handle().clone()));
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
-   app.manage(Arc::new(ConnectionManager::new()));
    app.manage(FffSearchState::new());
 }
 
 fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
    let cwd = std::env::current_dir().unwrap_or_default();
-   let args: Vec<String> = std::env::args().skip(1).collect();
-   let open_requests = commands::development::cli_args::parse_cli_args(&args, &cwd);
+   let args: Vec<String> = std::env::args().collect();
+   let open_requests = commands::development::cli_args::parse_cli_argv(&args, &cwd);
 
    if open_requests.is_empty() {
       return;
@@ -98,12 +96,39 @@ fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
    let app_handle = app.handle().clone();
    tauri::async_runtime::spawn(async move {
       tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
-      for req in open_requests {
-         if let Err(e) = app_handle.emit("cli_open_request", &req) {
-            log::error!("Failed to emit cli_open_request: {}", e);
-         }
-      }
+      emit_cli_requests_to_frontend(&app_handle, open_requests);
    });
+}
+
+pub fn handle_single_instance_open(
+   app_handle: &tauri::AppHandle<AthasRuntime>,
+   args: Vec<String>,
+   cwd: String,
+) {
+   let cwd = PathBuf::from(cwd);
+   let open_requests = commands::development::cli_args::parse_cli_argv(&args, &cwd);
+   let app_handle = app_handle.clone();
+
+   tauri::async_runtime::spawn(async move {
+      focus_active_window(&app_handle);
+
+      if open_requests.is_empty() {
+         return;
+      }
+
+      emit_cli_requests_to_frontend(&app_handle, open_requests);
+   });
+}
+
+fn emit_cli_requests_to_frontend(
+   app_handle: &tauri::AppHandle<AthasRuntime>,
+   open_requests: Vec<commands::development::cli_args::CliRequest>,
+) {
+   for req in open_requests {
+      if let Err(e) = app_handle.emit("cli_open_request", &req) {
+         log::error!("Failed to emit cli_open_request: {}", e);
+      }
+   }
 }
 
 fn configure_initial_window(app: &tauri::App<AthasRuntime>) {
@@ -119,6 +144,56 @@ fn get_active_webview_window(
       .and_then(|window| app.get_webview_window(window.label()))
       .or_else(|| app.get_webview_window("main"))
       .or_else(|| app.webview_windows().into_values().next())
+}
+
+fn focus_active_window(app: &tauri::AppHandle<AthasRuntime>) {
+   if let Some(window) = get_active_webview_window(app) {
+      let _ = window.unminimize();
+      let _ = window.show();
+      let _ = window.set_focus();
+   }
+}
+
+fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
+   match event_id {
+      "command_new_tab" => Some("workbench.newTab"),
+      "command_reopen_closed_tab" => Some("file.reopenClosed"),
+      "command_close_all_tabs" => Some("file.closeAll"),
+      "command_local_history" => Some("file.localHistory"),
+      "command_format_document" => Some("editor.formatDocument"),
+      "command_duplicate_line" => Some("editor.duplicateLine"),
+      "command_delete_line" => Some("editor.deleteLine"),
+      "command_move_line_up" => Some("editor.moveLineUp"),
+      "command_move_line_down" => Some("editor.moveLineDown"),
+      "command_global_search" => Some("workbench.showGlobalSearch"),
+      "command_diagnostics" => Some("workbench.toggleDiagnostics"),
+      "command_file_explorer" => Some("workbench.showFileExplorer"),
+      "command_source_control" => Some("workbench.showSourceControl"),
+      "command_github" => Some("workbench.showGitHub"),
+      "command_debugger" => Some("workbench.showDebugger"),
+      "command_toggle_sidebar_position" => Some("workbench.toggleSidebarPosition"),
+      "command_toggle_minimap" => Some("workbench.toggleMinimap"),
+      "command_zoom_in" => Some("workbench.zoomIn"),
+      "command_zoom_out" => Some("workbench.zoomOut"),
+      "command_zoom_reset" => Some("workbench.zoomReset"),
+      "command_keyboard_shortcuts" => Some("workbench.openKeyboardShortcuts"),
+      "command_help_keyboard_shortcuts" => Some("workbench.openKeyboardShortcuts"),
+      "command_go_back" => Some("navigation.goBack"),
+      "command_go_forward" => Some("navigation.goForward"),
+      "command_go_to_definition" => Some("editor.goToDefinition"),
+      "command_go_to_references" => Some("editor.goToReferences"),
+      "command_rename_symbol" => Some("editor.renameSymbol"),
+      "command_new_terminal" => Some("terminal.new"),
+      "command_split_terminal" => Some("terminal.split"),
+      "command_close_terminal" => Some("terminal.close"),
+      "command_start_debugging" => Some("debug.start"),
+      "command_stop_debugging" => Some("debug.stop"),
+      "command_toggle_breakpoint" => Some("debug.toggleBreakpoint"),
+      "command_new_agent" => Some("workbench.agentLauncher"),
+      "command_inline_edit" => Some("editor.inlineEdit"),
+      "command_connect_database" => Some("database.connect"),
+      _ => None,
+   }
 }
 
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
@@ -137,13 +212,11 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
             match event_id {
                "quit" => {
                   info!("Quit menu item clicked");
-                  shutdown_background_services(app_handle);
-                  std::process::exit(0);
+                  let _ = window.emit("menu_quit_app", ());
                }
                "quit_app" => {
                   info!("Quit app menu item triggered");
-                  shutdown_background_services(app_handle);
-                  std::process::exit(0);
+                  let _ = window.emit("menu_quit_app", ());
                }
                "new_file" => {
                   let _ = window.emit("menu_new_file", ());
@@ -200,6 +273,10 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                      if let Err(e) = app_handle.remove_menu() {
                         log::error!("Failed to hide menu: {}", e);
                      } else {
+                        if let Ok(store) = app_handle.store("settings.json") {
+                           store.set("nativeMenuBar", false);
+                           let _ = store.save();
+                        }
                         log::info!("Menu bar hidden");
                      }
                   } else {
@@ -208,6 +285,10 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                            if let Err(e) = app_handle.set_menu(new_menu) {
                               log::error!("Failed to show menu: {}", e);
                            } else {
+                              if let Ok(store) = app_handle.store("settings.json") {
+                                 store.set("nativeMenuBar", true);
+                                 let _ = store.save();
+                              }
                               log::info!("Menu bar shown");
                            }
                         }
@@ -232,15 +313,33 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "prev_tab" => {
                   let _ = window.emit("menu_prev_tab", ());
                }
-               "about" => {}
-               "help" => {
-                  let _ = window.emit("menu_help", ());
+               command_event_id if command_id_for_menu_event(command_event_id).is_some() => {
+                  let command_id = command_id_for_menu_event(command_event_id).unwrap();
+                  let _ = window.emit("menu_execute_command", command_id);
+               }
+               "documentation" => {
+                  let _ = window.emit("menu_documentation", ());
+               }
+               "changelog" => {
+                  let _ = window.emit("menu_changelog", ());
+               }
+               "whats_new" => {
+                  let _ = window.emit("menu_whats_new", ());
                }
                "report_bug" => {
                   let _ = window.emit("menu_report_bug", ());
                }
-               "about_athas" => {
-                  let _ = window.emit("menu_about_athas", ());
+               "request_feature" => {
+                  let _ = window.emit("menu_request_feature", ());
+               }
+               "check_updates" => {
+                  let _ = window.emit("menu_check_updates", ());
+               }
+               "open_settings" => {
+                  let _ = window.emit("menu_open_settings", ());
+               }
+               "open_extensions" => {
+                  let _ = window.emit("menu_open_extensions", ());
                }
                "minimize_window" => {
                   if let Err(e) = window.minimize() {

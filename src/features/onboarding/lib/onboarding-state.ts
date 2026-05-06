@@ -10,7 +10,7 @@ export interface OnboardingContext {
   previousVersion?: string;
 }
 
-interface PersistedOnboardingState {
+export interface PersistedOnboardingState {
   lastSeenVersion?: string;
   completedVersion?: string;
 }
@@ -27,11 +27,10 @@ async function writePersistedOnboardingState(state: PersistedOnboardingState) {
   await store.save();
 }
 
-export async function resolveOnboardingContext(): Promise<OnboardingContext | null> {
-  const currentVersion = await getVersion();
-
-  const persistedState = await readPersistedOnboardingState();
-
+export function resolveOnboardingContextFromState(
+  currentVersion: string,
+  persistedState: PersistedOnboardingState,
+): OnboardingContext | null {
   if (!persistedState.lastSeenVersion) {
     return {
       mode: "first-run",
@@ -48,6 +47,12 @@ export async function resolveOnboardingContext(): Promise<OnboardingContext | nu
   }
 
   return null;
+}
+
+export async function resolveOnboardingContext(): Promise<OnboardingContext | null> {
+  const currentVersion = await getVersion();
+  const persistedState = await readPersistedOnboardingState();
+  return resolveOnboardingContextFromState(currentVersion, persistedState);
 }
 
 export async function markOnboardingSeen(currentVersion: string) {

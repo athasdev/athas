@@ -15,6 +15,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
+import { primitivePrompt } from "@/ui/primitive-dialog-service";
 import { IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../models/action.types";
 
@@ -280,7 +281,11 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       icon: <Globe />,
       category: "View",
       action: async () => {
-        const url = prompt("Enter URL:", "https://");
+        const url = await primitivePrompt("Enter URL:", {
+          title: "Open URL",
+          defaultValue: "https://",
+          placeholder: "https://",
+        });
         if (url?.trim()) {
           openWebViewerBuffer(url.trim());
         }

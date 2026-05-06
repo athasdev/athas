@@ -5,6 +5,7 @@ import type {
   AcpAgentStatus,
   AcpEvent,
   AcpPromptContentBlock,
+  AcpSessionList,
   AgentConfig,
 } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
@@ -571,6 +572,20 @@ export class AcpStreamHandler {
     }>
   > {
     return invoke("get_available_agents");
+  }
+
+  static async listSessions(
+    args: {
+      cwd?: string;
+      cursor?: string | null;
+    } = {},
+  ): Promise<AcpSessionList> {
+    return invoke<AcpSessionList>("list_acp_sessions", {
+      args: {
+        cwd: args.cwd,
+        cursor: args.cursor ?? undefined,
+      },
+    });
   }
 
   // Static method to stop the current agent

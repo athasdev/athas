@@ -1,26 +1,21 @@
-import {
-  SquaresFour as Blocks,
-  Plus,
-  ArrowClockwise as RefreshCw,
-  MagnifyingGlass as Search,
-} from "@phosphor-icons/react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   Brain,
   Database,
   Package,
   PaintBrush,
-  PuzzlePiece,
+  Plus,
+  Robot,
   TextT,
+  ArrowClockwise as RefreshCw,
+  MagnifyingGlass as Search,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
-import { CreateExtensionWizard } from "@/extensions/ui/components/create-extension-wizard";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
-import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { uiExtensionHost } from "@/extensions/ui/services/ui-extension-host";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import {
   createSkillFromMarketplace,
@@ -31,23 +26,22 @@ import {
   resetSkillLocalOverride,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
+import type { AgentConfig } from "@/features/ai/types/acp";
+import { AI_AGENTS, updateAgentStatus } from "@/features/ai/types/providers";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { SegmentedControl } from "@/ui/segmented-control";
-import { ProActionButton } from "../pro-action-button";
 
 interface UnifiedExtension {
   id: string;
   name: string;
   description: string;
-  category: "language" | "theme" | "icon-theme" | "database" | "ui" | "skill";
+  category: "language" | "theme" | "icon-theme" | "database" | "skill" | "agent";
   isInstalled: boolean;
   version?: string;
   extensions?: string[];
@@ -57,6 +51,8 @@ interface UnifiedExtension {
   runtimeIssues?: ExtensionRuntimeIssue[];
   skill?: AIChatSkill;
   marketplaceSkill?: MarketplaceSkill;
+  agentId?: string;
+  canInstall?: boolean;
 }
 
 const FILTER_TABS = [
@@ -66,8 +62,11 @@ const FILTER_TABS = [
   { id: "icon-theme", label: "Icon Themes", icon: Package },
   { id: "database", label: "Databases", icon: Database },
   { id: "skill", label: "Skills", icon: Brain },
-  { id: "ui", label: "Custom", icon: PuzzlePiece },
+  { id: "agent", label: "Agents", icon: Robot },
 ] as const;
+
+type ExtensionTabId = (typeof FILTER_TABS)[number]["id"];
+const FILTER_TAB_IDS = new Set<string>(FILTER_TABS.map((tab) => tab.id));
 
 const getCategoryLabel = (category: UnifiedExtension["category"]) => {
   switch (category) {
@@ -81,8 +80,8 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
       return "Database";
     case "skill":
       return "Skill";
-    case "ui":
-      return "Custom";
+    case "agent":
+      return "Agent";
     default:
       return category;
   }
@@ -109,6 +108,13 @@ const ExtensionRow = ({
 }) => {
   const installLabel = extension.category === "skill" ? "Add" : "Install";
   const uninstallLabel = extension.category === "skill" ? "Remove" : "Uninstall";
+  const isInstalledAgent = extension.category === "agent" && extension.isInstalled;
+  const isUnavailableAgent =
+    extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
+  const extensionLabels =
+    extension.category === "agent"
+      ? extension.extensions
+      : extension.extensions?.map((ext) => `.${ext}`);
 
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
@@ -143,16 +149,11 @@ const ExtensionRow = ({
         )}
         <div className="ui-font ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
           {extension.publisher && <span>by {extension.publisher}</span>}
-          {extension.publisher && extension.extensions && extension.extensions.length > 0 && (
-            <span>·</span>
-          )}
-          {extension.extensions && extension.extensions.length > 0 && (
+          {extension.publisher && extensionLabels && extensionLabels.length > 0 && <span>·</span>}
+          {extensionLabels && extensionLabels.length > 0 && (
             <span>
-              {extension.extensions
-                .slice(0, 5)
-                .map((ext) => `.${ext}`)
-                .join(" ")}
-              {extension.extensions.length > 5 && ` +${extension.extensions.length - 5}`}
+              {extensionLabels.slice(0, 5).join(" ")}
+              {extensionLabels.length > 5 && ` +${extensionLabels.length - 5}`}
             </span>
           )}
         </div>
@@ -163,6 +164,14 @@ const ExtensionRow = ({
         </Badge>
       ) : isInstalling ? (
         <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
+      ) : isInstalledAgent ? (
+        <Badge variant="accent" size="compact" className="shrink-0 rounded-full">
+          Installed
+        </Badge>
+      ) : isUnavailableAgent ? (
+        <Button disabled variant="secondary" size="xs" className="shrink-0" tooltip="Unavailable">
+          Unavailable
+        </Button>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
@@ -207,20 +216,44 @@ const ExtensionRow = ({
 
 export const ExtensionsSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
-  const activeSidebarView = useUIState((state) => state.activeSidebarView);
-  const setActiveView = useUIState((state) => state.setActiveView);
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
-  const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [agents, setAgents] = useState<AgentConfig[]>([]);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
+  const [installingAgentIds, setInstallingAgentIds] = useState<Set<string>>(new Set());
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
   const { showToast } = useToast();
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const extensionsWithUpdates = useExtensionStore.use.extensionsWithUpdates();
   const { installExtension, uninstallExtension, updateExtension } = useExtensionStore.use.actions();
-  const generatedUIExtensions = useUIExtensionStore.use.extensions();
+
+  useEffect(() => {
+    if (!FILTER_TAB_IDS.has(settings.extensionsActiveTab)) {
+      void updateSetting("extensionsActiveTab", "all");
+    }
+  }, [settings.extensionsActiveTab, updateSetting]);
+
+  const loadAgents = useCallback(async () => {
+    setIsLoadingAgents(true);
+    try {
+      const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+      setAgents(availableAgents);
+      updateAgentStatus(
+        availableAgents.map((agent) => ({
+          id: agent.id,
+          installed: agent.installed,
+        })),
+      );
+    } catch (error) {
+      console.error("Failed to load ACP agents:", error);
+      setAgents([]);
+    } finally {
+      setIsLoadingAgents(false);
+    }
+  }, []);
 
   const loadAllExtensions = useCallback(() => {
     const allExtensions: UnifiedExtension[] = [];
@@ -243,9 +276,60 @@ export const ExtensionsSettings = () => {
           runtimeIssues: ext.runtimeIssues,
         });
       }
+
+      if (ext.manifest.databaseProviders && ext.manifest.databaseProviders.length > 0) {
+        const provider = ext.manifest.databaseProviders[0];
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "database",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          extensions: provider.fileExtensions?.map((item) => item.replace(".", "")),
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+        });
+      }
+
+      if (ext.manifest.themes && ext.manifest.themes.length > 0) {
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "theme",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+        });
+      }
+
+      if (ext.manifest.iconThemes && ext.manifest.iconThemes.length > 0) {
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "icon-theme",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+        });
+      }
     }
 
     themeRegistry.getAllThemes().forEach((theme) => {
+      if (themeRegistry.getThemeSource(theme.id)) {
+        return;
+      }
+
       allExtensions.push({
         id: theme.id,
         name: theme.name,
@@ -257,6 +341,10 @@ export const ExtensionsSettings = () => {
     });
 
     iconThemeRegistry.getAllThemes().forEach((iconTheme) => {
+      if (iconThemeRegistry.getThemeSource(iconTheme.id)) {
+        return;
+      }
+
       allExtensions.push({
         id: iconTheme.id,
         name: iconTheme.name,
@@ -265,15 +353,6 @@ export const ExtensionsSettings = () => {
         isInstalled: true,
         version: "1.0.0",
       });
-    });
-
-    allExtensions.push({
-      id: "sqlite-viewer",
-      name: "SQLite Viewer",
-      description: "View and query SQLite databases",
-      category: "database",
-      isInstalled: true,
-      version: "1.0.0",
     });
 
     for (const skill of settings.aiSkills) {
@@ -317,48 +396,55 @@ export const ExtensionsSettings = () => {
       });
     }
 
-    for (const [, ext] of availableExtensions) {
-      if (ext.manifest.categories.includes("UI")) {
-        const isBundled = !ext.manifest.installation;
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "ui",
-          isInstalled: ext.isInstalled,
-          version: ext.manifest.version,
-          publisher: ext.manifest.publisher,
-          isMarketplace: !isBundled,
-          isBundled,
-          runtimeIssues: ext.runtimeIssues,
-        });
-      }
+    const detectedAgents = new Map(agents.map((agent) => [agent.id, agent]));
+    const agentIds = new Set<string>();
+
+    for (const fallbackAgent of AI_AGENTS) {
+      const agent = detectedAgents.get(fallbackAgent.id);
+      agentIds.add(fallbackAgent.id);
+      allExtensions.push({
+        id: `agent:${fallbackAgent.id}`,
+        name: agent?.name ?? fallbackAgent.name,
+        description: agent?.description ?? fallbackAgent.description,
+        category: "agent",
+        isInstalled: agent?.installed ?? fallbackAgent.installed ?? false,
+        extensions: [agent?.binaryName ?? fallbackAgent.binaryName],
+        publisher: "ACP",
+        isMarketplace: false,
+        agentId: fallbackAgent.id,
+        canInstall: agent?.canInstall ?? true,
+      });
     }
 
-    for (const [, ext] of generatedUIExtensions) {
-      if (allExtensions.some((existing) => existing.id === ext.extensionId)) {
+    for (const agent of agents) {
+      if (agentIds.has(agent.id)) {
         continue;
       }
 
       allExtensions.push({
-        id: ext.extensionId,
-        name: ext.name || ext.extensionId.replace(/^user\./, ""),
-        description: ext.description || "Generated UI extension",
-        category: "ui",
-        isInstalled: ext.state === "active" || ext.state === "loading",
-        version: "Local",
-        publisher: "You",
+        id: `agent:${agent.id}`,
+        name: agent.name,
+        description: agent.description ?? "ACP-compatible coding agent",
+        category: "agent",
+        isInstalled: agent.installed,
+        extensions: [agent.binaryName],
+        publisher: "ACP",
         isMarketplace: false,
-        isBundled: false,
+        agentId: agent.id,
+        canInstall: agent.canInstall,
       });
     }
 
     setExtensions(allExtensions);
-  }, [availableExtensions, generatedUIExtensions, marketplaceSkills, settings.aiSkills]);
+  }, [agents, availableExtensions, marketplaceSkills, settings.aiSkills]);
 
   useEffect(() => {
     loadAllExtensions();
   }, [settings.theme, settings.iconTheme, loadAllExtensions]);
+
+  useEffect(() => {
+    void loadAgents();
+  }, [loadAgents]);
 
   useEffect(() => {
     setIsLoadingSkills(true);
@@ -443,6 +529,54 @@ export const ExtensionsSettings = () => {
   };
 
   const handleToggle = async (extension: UnifiedExtension) => {
+    if (extension.category === "agent") {
+      if (extension.isInstalled) {
+        return;
+      }
+
+      if (extension.canInstall === false) {
+        showToast({
+          message: `${extension.name} cannot be installed automatically`,
+          type: "error",
+          duration: 5000,
+        });
+        return;
+      }
+
+      const agentId = extension.agentId ?? extension.id.replace(/^agent:/, "");
+      setInstallingAgentIds((current) => new Set(current).add(agentId));
+
+      try {
+        const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
+        setAgents((current) => {
+          const next = new Map(current.map((agent) => [agent.id, agent]));
+          next.set(installedAgent.id, installedAgent);
+          return Array.from(next.values());
+        });
+        updateAgentStatus([{ id: installedAgent.id, installed: installedAgent.installed }]);
+        void loadAgents();
+        showToast({
+          message: `${extension.name} installed successfully`,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to install ${extension.name}:`, error);
+        showToast({
+          message: `Failed to install ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          type: "error",
+          duration: 5000,
+        });
+      } finally {
+        setInstallingAgentIds((current) => {
+          const next = new Set(current);
+          next.delete(agentId);
+          return next;
+        });
+      }
+      return;
+    }
+
     if (extension.category === "skill") {
       try {
         if (extension.isInstalled) {
@@ -488,9 +622,6 @@ export const ExtensionsSettings = () => {
     if (extension.isMarketplace) {
       if (extension.isInstalled) {
         try {
-          if (extension.category === "ui") {
-            await uiExtensionHost.unloadExtension(extension.id);
-          }
           await uninstallExtension(extension.id);
           showToast({
             message: `${extension.name} uninstalled successfully`,
@@ -508,12 +639,6 @@ export const ExtensionsSettings = () => {
       } else {
         try {
           await installExtension(extension.id);
-          if (extension.category === "ui") {
-            const ext = availableExtensions.get(extension.id);
-            if (ext) {
-              await uiExtensionHost.loadExtension(ext.manifest, "");
-            }
-          }
           showToast({
             message: `${extension.name} installed successfully`,
             type: "success",
@@ -528,26 +653,6 @@ export const ExtensionsSettings = () => {
           });
         }
       }
-      return;
-    }
-
-    if (extension.category === "ui") {
-      const uiExtensionStore = useUIExtensionStore.getState();
-      const sidebarViewForExtension = Array.from(uiExtensionStore.sidebarViews.values()).find(
-        (view) => view.extensionId === extension.id,
-      );
-
-      uiExtensionStore.cleanupExtension(extension.id);
-
-      if (sidebarViewForExtension && activeSidebarView === sidebarViewForExtension.id) {
-        setActiveView("files");
-      }
-
-      showToast({
-        message: `${extension.name} uninstalled successfully`,
-        type: "success",
-        duration: 3000,
-      });
       return;
     }
 
@@ -585,7 +690,7 @@ export const ExtensionsSettings = () => {
       <div className="mb-3">
         <p className="ui-font ui-text-md font-medium text-text">Extensions</p>
         <p className="mt-1 ui-font ui-text-sm text-text-lighter">
-          Install built-in tools, manage marketplace extensions, skills, and generated custom tools.
+          Install built-in tools, manage marketplace extensions, skills, and agents.
         </p>
       </div>
 
@@ -603,9 +708,7 @@ export const ExtensionsSettings = () => {
       <div className="mb-3 overflow-x-auto">
         <SegmentedControl
           value={settings.extensionsActiveTab}
-          onChange={(value) =>
-            updateSetting("extensionsActiveTab", value as typeof settings.extensionsActiveTab)
-          }
+          onChange={(value) => updateSetting("extensionsActiveTab", value as ExtensionTabId)}
           className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
           options={FILTER_TABS.map((tab) => {
             const Icon = "icon" in tab ? tab.icon : undefined;
@@ -617,19 +720,6 @@ export const ExtensionsSettings = () => {
           })}
         />
       </div>
-
-      {(settings.extensionsActiveTab === "ui" || settings.extensionsActiveTab === "all") && (
-        <div className="mb-3">
-          <ProActionButton
-            onProClick={() => setShowCreateWizard(true)}
-            variant="secondary"
-            size="xs"
-          >
-            <Plus />
-            Generate Custom Extension
-          </ProActionButton>
-        </div>
-      )}
 
       {(settings.extensionsActiveTab === "skill" || settings.extensionsActiveTab === "all") && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -651,6 +741,14 @@ export const ExtensionsSettings = () => {
         </div>
       )}
 
+      {(settings.extensionsActiveTab === "agent" || settings.extensionsActiveTab === "all") &&
+      isLoadingAgents ? (
+        <div className="ui-text-sm mb-3 flex items-center gap-1.5 text-text-lighter">
+          <RefreshCw className="animate-spin" />
+          Loading agents
+        </div>
+      ) : null}
+
       <div className="flex-1 overflow-auto pr-1.5">
         {filteredExtensions.length === 0 ? (
           <div className="py-8 text-center text-text-lighter">
@@ -661,7 +759,10 @@ export const ExtensionsSettings = () => {
           <div className="space-y-2">
             {filteredExtensions.map((extension) => {
               const extensionFromStore = availableExtensions.get(extension.id);
-              const isInstalling = extensionFromStore?.isInstalling || false;
+              const isInstalling =
+                extensionFromStore?.isInstalling ||
+                (extension.category === "agent" &&
+                  installingAgentIds.has(extension.agentId ?? extension.id.replace(/^agent:/, "")));
               const hasSkillUpdate = Boolean(
                 extension.skill &&
                 extension.marketplaceSkill &&
@@ -691,17 +792,6 @@ export const ExtensionsSettings = () => {
         )}
       </div>
 
-      {showCreateWizard && (
-        <Dialog
-          title="Create UI Extension"
-          onClose={() => setShowCreateWizard(false)}
-          icon={Blocks}
-          size="lg"
-          classNames={{ content: "p-5" }}
-        >
-          <CreateExtensionWizard onClose={() => setShowCreateWizard(false)} />
-        </Dialog>
-      )}
       <SkillsCommand
         isOpen={isSkillsCommandOpen}
         initialView="editor"

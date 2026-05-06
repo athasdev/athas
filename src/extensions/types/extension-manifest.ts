@@ -29,6 +29,15 @@ export interface ExtensionManifest {
   // Language support
   languages?: LanguageContribution[];
 
+  // Database provider sidecars
+  databaseProviders?: DatabaseProviderContribution[];
+
+  // Color theme contributions
+  themes?: ThemeContribution[];
+
+  // File icon theme contributions
+  iconThemes?: IconThemeContribution[];
+
   // LSP configuration
   lsp?: LspConfiguration;
 
@@ -80,6 +89,8 @@ export interface ExtensionManifest {
 
 export type ExtensionCategory =
   | "Language"
+  | "Database"
+  | "Icon Theme"
   | "Linter"
   | "Formatter"
   | "Theme"
@@ -102,6 +113,7 @@ export interface LspConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Server executable paths per platform
@@ -153,6 +165,40 @@ export interface PlatformArchExecutable {
   "linux-x64"?: string;
   "linux-arm64"?: string;
   "win32-x64"?: string;
+}
+
+export type DatabaseProviderId = "sqlite" | "duckdb" | "postgres" | "mysql" | "mongodb" | "redis";
+
+export interface DatabaseProviderContribution {
+  id: DatabaseProviderId;
+  label: string;
+  isFileBased: boolean;
+  defaultPort?: number;
+  fileExtensions?: string[];
+  sidecar: PlatformArchExecutable;
+}
+
+export interface ThemeContribution {
+  id: string;
+  name: string;
+  description?: string;
+  appearance: "dark" | "light";
+  colors: Record<string, string>;
+  syntax?: Record<string, string>;
+}
+
+export interface IconThemeContribution {
+  id: string;
+  name: string;
+  description?: string;
+  iconDefinitions: Record<string, string>;
+  fileExtensions?: Record<string, string>;
+  filenames?: Record<string, string>;
+  folders?: Record<string, string>;
+  expandedFolders?: Record<string, string>;
+  defaultFile?: string;
+  defaultFolder?: string;
+  defaultFolderOpen?: string;
 }
 
 export interface PlatformExecutable {
@@ -236,6 +282,7 @@ export interface FormatterConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Formatter executable per platform
@@ -265,6 +312,7 @@ export interface LinterConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Linter executable per platform

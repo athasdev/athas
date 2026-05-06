@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vite-plus/test";
+import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
+
+describe("getLanguageIdFromPath", () => {
+  it("detects scm files as scheme", () => {
+    expect(getLanguageIdFromPath("/tmp/highlights.scm")).toBe("scheme");
+  });
+
+  it("detects nix files", () => {
+    expect(getLanguageIdFromPath("/tmp/flake.nix")).toBe("nix");
+  });
+
+  it("detects Angular component templates", () => {
+    expect(getLanguageIdFromPath("/tmp/src/app/app.component.html")).toBe("angular");
+    expect(getLanguageIdFromPath("/tmp/src/app/app.ng.html")).toBe("angular");
+  });
+
+  it("keeps regular html files as html", () => {
+    expect(getLanguageIdFromPath("/tmp/index.html")).toBe("html");
+  });
+
+  it("detects dotenv files", () => {
+    expect(getLanguageIdFromPath("/tmp/.env")).toBe("dotenv");
+    expect(getLanguageIdFromPath("/tmp/.env.local")).toBe("dotenv");
+    expect(getLanguageIdFromPath("/tmp/.env.production.local")).toBe("dotenv");
+    expect(getLanguageDisplayName("dotenv")).toBe("Dotenv");
+  });
+
+  it("detects extension-backed highlight languages without registry data", () => {
+    expect(getLanguageIdFromPath("/tmp/styles.scss")).toBe("scss");
+    expect(getLanguageIdFromPath("/tmp/Dockerfile")).toBe("dockerfile");
+    expect(getLanguageIdFromPath("/tmp/schema.graphql")).toBe("graphql");
+    expect(getLanguageIdFromPath("/tmp/message.proto")).toBe("protobuf");
+    expect(getLanguageIdFromPath("/tmp/query.ql")).toBe("ql");
+    expect(getLanguageIdFromPath("/tmp/main.tf")).toBe("terraform");
+    expect(getLanguageIdFromPath("/tmp/icon.svg")).toBe("xml");
+    expect(getLanguageIdFromPath("/tmp/project.csproj")).toBe("xml");
+  });
+});

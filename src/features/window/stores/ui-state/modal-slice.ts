@@ -1,14 +1,14 @@
 import type { StateCreator } from "zustand";
+import type { CommandPaletteViewId } from "@/features/command-palette/models/view.types";
 import type { SettingsTab } from "./types";
 
 export interface ModalState {
   isQuickOpenVisible: boolean;
   isCommandPaletteVisible: boolean;
+  commandPaletteInitialView: CommandPaletteViewId;
   isAgentLauncherVisible: boolean;
   isGlobalSearchVisible: boolean;
   isSettingsDialogVisible: boolean;
-  isThemeSelectorVisible: boolean;
-  isIconThemeSelectorVisible: boolean;
   isBranchManagerVisible: boolean;
   isProjectPickerVisible: boolean;
   isDatabaseConnectionVisible: boolean;
@@ -18,11 +18,10 @@ export interface ModalState {
 export interface ModalActions {
   setIsQuickOpenVisible: (v: boolean) => void;
   setIsCommandPaletteVisible: (v: boolean) => void;
+  openCommandPaletteView: (view: CommandPaletteViewId) => void;
   setIsAgentLauncherVisible: (v: boolean) => void;
   setIsGlobalSearchVisible: (v: boolean) => void;
   setIsSettingsDialogVisible: (v: boolean) => void;
-  setIsThemeSelectorVisible: (v: boolean) => void;
-  setIsIconThemeSelectorVisible: (v: boolean) => void;
   setIsBranchManagerVisible: (v: boolean) => void;
   setIsProjectPickerVisible: (v: boolean) => void;
   setIsDatabaseConnectionVisible: (v: boolean) => void;
@@ -38,11 +37,10 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   // State
   isQuickOpenVisible: false,
   isCommandPaletteVisible: false,
+  commandPaletteInitialView: "root",
   isAgentLauncherVisible: false,
   isGlobalSearchVisible: false,
   isSettingsDialogVisible: false,
-  isThemeSelectorVisible: false,
-  isIconThemeSelectorVisible: false,
   isBranchManagerVisible: false,
   isProjectPickerVisible: false,
   isDatabaseConnectionVisible: false,
@@ -56,8 +54,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       state.isCommandPaletteVisible ||
       state.isAgentLauncherVisible ||
       state.isGlobalSearchVisible ||
-      state.isThemeSelectorVisible ||
-      state.isIconThemeSelectorVisible ||
       state.isSettingsDialogVisible ||
       state.isBranchManagerVisible ||
       state.isProjectPickerVisible ||
@@ -68,14 +64,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   closeTopModal: () => {
     const state = get();
     // Priority order: most recently opened first
-    if (state.isThemeSelectorVisible) {
-      set({ isThemeSelectorVisible: false });
-      return true;
-    }
-    if (state.isIconThemeSelectorVisible) {
-      set({ isIconThemeSelectorVisible: false });
-      return true;
-    }
     if (state.isCommandPaletteVisible) {
       set({ isCommandPaletteVisible: false });
       return true;
@@ -118,8 +106,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isCommandPaletteVisible: false,
         isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
@@ -134,11 +120,10 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     if (v) {
       set({
         isCommandPaletteVisible: true,
+        commandPaletteInitialView: "root",
         isQuickOpenVisible: false,
         isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
@@ -149,6 +134,20 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     }
   },
 
+  openCommandPaletteView: (view: CommandPaletteViewId) => {
+    set({
+      isCommandPaletteVisible: true,
+      commandPaletteInitialView: view,
+      isQuickOpenVisible: false,
+      isAgentLauncherVisible: false,
+      isGlobalSearchVisible: false,
+      isSettingsDialogVisible: false,
+      isBranchManagerVisible: false,
+      isProjectPickerVisible: false,
+      isDatabaseConnectionVisible: false,
+    });
+  },
+
   setIsAgentLauncherVisible: (v: boolean) => {
     if (v) {
       set({
@@ -156,8 +155,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
@@ -175,8 +172,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
         isAgentLauncherVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
@@ -195,52 +190,12 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isCommandPaletteVisible: false,
         isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
         isDatabaseConnectionVisible: false,
       });
     } else {
       set({ isSettingsDialogVisible: v });
-    }
-  },
-
-  setIsThemeSelectorVisible: (v: boolean) => {
-    if (v) {
-      set({
-        isThemeSelectorVisible: true,
-        isQuickOpenVisible: false,
-        isCommandPaletteVisible: false,
-        isAgentLauncherVisible: false,
-        isGlobalSearchVisible: false,
-        isIconThemeSelectorVisible: false,
-        isSettingsDialogVisible: false,
-        isBranchManagerVisible: false,
-        isProjectPickerVisible: false,
-        isDatabaseConnectionVisible: false,
-      });
-    } else {
-      set({ isThemeSelectorVisible: v });
-    }
-  },
-
-  setIsIconThemeSelectorVisible: (v: boolean) => {
-    if (v) {
-      set({
-        isIconThemeSelectorVisible: true,
-        isQuickOpenVisible: false,
-        isCommandPaletteVisible: false,
-        isAgentLauncherVisible: false,
-        isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isSettingsDialogVisible: false,
-        isBranchManagerVisible: false,
-        isProjectPickerVisible: false,
-        isDatabaseConnectionVisible: false,
-      });
-    } else {
-      set({ isIconThemeSelectorVisible: v });
     }
   },
 
@@ -252,8 +207,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isCommandPaletteVisible: false,
         isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isProjectPickerVisible: false,
         isDatabaseConnectionVisible: false,
@@ -270,8 +223,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isDatabaseConnectionVisible: false,
@@ -288,8 +239,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
         isGlobalSearchVisible: false,
-        isThemeSelectorVisible: false,
-        isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
@@ -307,8 +256,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
       isGlobalSearchVisible: false,
-      isThemeSelectorVisible: false,
-      isIconThemeSelectorVisible: false,
       isBranchManagerVisible: false,
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,

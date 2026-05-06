@@ -35,6 +35,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
+import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-viewer-navigation-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
@@ -53,12 +54,14 @@ import TabContextMenu from "./tab-context-menu";
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
+  onNewTabClose?: () => void;
   disablePaneActions?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
+  onNewTabClose,
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
@@ -96,8 +99,20 @@ const TabBar = ({
   const { updateActivePath } = useSidebarStore();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
   const jumpListActions = useJumpListStore.use.actions();
-  const canGoBack = jumpListActions.canGoBack();
-  const canGoForward = jumpListActions.canGoForward();
+  const activeBuffer = useMemo(
+    () => buffers.find((buffer) => buffer.id === activeBufferId) ?? null,
+    [activeBufferId, buffers],
+  );
+  const activeWebViewerNavigation = useWebViewerNavigationStore((state) =>
+    activeBuffer?.type === "webViewer" ? state.navigationByBufferId[activeBuffer.id] : undefined,
+  );
+  const usesWebViewerNavigation = activeBuffer?.type === "webViewer";
+  const canGoBack = usesWebViewerNavigation
+    ? Boolean(activeWebViewerNavigation?.canGoBack)
+    : jumpListActions.canGoBack();
+  const canGoForward = usesWebViewerNavigation
+    ? Boolean(activeWebViewerNavigation?.canGoForward)
+    : jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
   const isInSplit = paneRoot.type === "split";
   const isBottomPane = paneId === BOTTOM_PANE_ID;
@@ -158,6 +173,11 @@ const TabBar = ({
   }, []);
 
   const handleJumpBack = useCallback(async () => {
+    if (usesWebViewerNavigation) {
+      activeWebViewerNavigation?.goBack?.();
+      return;
+    }
+
     const bufferStore = useBufferStore.getState();
     const editorState = useEditorStateStore.getState();
     const currentActiveBufferId = bufferStore.activeBufferId;
@@ -180,21 +200,25 @@ const TabBar = ({
     if (entry) {
       await navigateToJumpEntry(entry);
     }
-  }, [jumpListActions]);
+  }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
 
   const handleJumpForward = useCallback(async () => {
+    if (usesWebViewerNavigation) {
+      activeWebViewerNavigation?.goForward?.();
+      return;
+    }
+
     const entry = jumpListActions.goForward();
     if (entry) {
       await navigateToJumpEntry(entry);
     }
-  }, [jumpListActions]);
+  }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
 
   const handleSplitActivePane = useCallback(() => {
     if (!paneId) return;
 
     // Terminal, agent, and other session-based buffers cannot be shared
     // across panes — open the new split with an empty new-tab view instead.
-    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
     const isSessionBuffer =
       activeBuffer &&
       (activeBuffer.type === "terminal" ||
@@ -202,7 +226,7 @@ const TabBar = ({
         activeBuffer.type === "webViewer");
 
     splitPane(paneId, "horizontal", isSessionBuffer ? undefined : (activeBufferId ?? undefined));
-  }, [activeBufferId, buffers, paneId, splitPane]);
+  }, [activeBuffer, activeBufferId, paneId, splitPane]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -402,6 +426,18 @@ const TabBar = ({
   const handleCancelClose = useCallback(() => {
     cancelPendingClose();
   }, [cancelPendingClose]);
+
+  const closeTab = useCallback(
+    (bufferId: string) => {
+      const buffer = buffers.find((item) => item.id === bufferId);
+      if (buffer?.type === "newTab") {
+        onNewTabClose?.();
+      }
+      handleTabClose(bufferId);
+      clearPositionCache(bufferId);
+    },
+    [buffers, clearPositionCache, handleTabClose, onNewTabClose],
+  );
 
   const handleTabSelect = useCallback(
     (buffer: PaneContent) => {
@@ -619,8 +655,7 @@ const TabBar = ({
           if (!buffer.isPinned) {
             e.preventDefault();
             setSrAnnouncement(`Closed ${buffer.name}`);
-            handleTabClose(buffer.id);
-            clearPositionCache(buffer.id);
+            closeTab(buffer.id);
           } else {
             setSrAnnouncement(`Cannot close pinned tab ${buffer.name}`);
           }
@@ -637,7 +672,7 @@ const TabBar = ({
           break;
       }
     },
-    [sortedBuffers, handleTabClick, updateActivePath, handleTabClose, clearPositionCache],
+    [sortedBuffers, handleTabClick, updateActivePath, closeTab],
   );
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
@@ -711,10 +746,7 @@ const TabBar = ({
                     onDoubleClick={(e) => handleDoubleClick(e, index)}
                     onContextMenu={(e) => handleContextMenu(e, buffer)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
-                    handleTabClose={(id) => {
-                      handleTabClose(id);
-                      clearPositionCache(id);
-                    }}
+                    handleTabClose={closeTab}
                     handleTabPin={handleTabPin}
                   />
                 </SortableEditorTab>
@@ -790,7 +822,7 @@ const TabBar = ({
         onCloseTab={(bufferId) => {
           const buffer = buffers.find((b) => b.id === bufferId);
           if (buffer) {
-            handleTabClose(bufferId);
+            closeTab(bufferId);
           }
         }}
         onCloseOthers={handleCloseOtherTabs}

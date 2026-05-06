@@ -119,6 +119,9 @@ interface BufferActions {
   openAgentBuffer: (sessionId?: string) => string;
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
+  openOnboardingBuffer: (
+    context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
+  ) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -368,7 +371,7 @@ export const useBufferStore = createSelectors(
                       isActive: b.id === existing.id,
                     }));
                   });
-                  syncBufferToPane(existing.id);
+                  syncAndFocusBufferInPane(existing.id);
                   return existing.id;
                 }
               }
@@ -395,6 +398,7 @@ export const useBufferStore = createSelectors(
               });
 
               syncBufferToPane(newBuffer.id);
+              saveSessionToStore(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 
@@ -683,6 +687,36 @@ export const useBufferStore = createSelectors(
               return newBuffer.id;
             }
 
+            case "onboarding": {
+              const path = `onboarding://${spec.context.mode}/${spec.context.currentVersion}`;
+              const existing = buffers.find((b) => b.path === path);
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncAndFocusBufferInPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
             case "diff":
             case "image":
             case "pdf":
@@ -912,6 +946,10 @@ export const useBufferStore = createSelectors(
 
         openDiagnosticsBuffer: (): string => {
           return get().actions.openContent({ type: "diagnostics" });
+        },
+
+        openOnboardingBuffer: (context): string => {
+          return get().actions.openContent({ type: "onboarding", context });
         },
 
         closeBuffer: (bufferId: string) => {
@@ -1273,11 +1311,9 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          // Get the cyclable buffer IDs (skip newTab placeholders)
-          const cyclableIds = paneBufferIds.filter((id) => {
-            const b = buffers.find((buf) => buf.id === id);
-            return b && b.type !== "newTab";
-          });
+          const cyclableIds = paneBufferIds.filter((id) =>
+            buffers.some((buffer) => buffer.id === id),
+          );
 
           if (cyclableIds.length <= 1) return;
 
@@ -1304,11 +1340,9 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          // Get the cyclable buffer IDs (skip newTab placeholders)
-          const cyclableIds = paneBufferIds.filter((id) => {
-            const b = buffers.find((buf) => buf.id === id);
-            return b && b.type !== "newTab";
-          });
+          const cyclableIds = paneBufferIds.filter((id) =>
+            buffers.some((buffer) => buffer.id === id),
+          );
 
           if (cyclableIds.length <= 1) return;
 

@@ -13,6 +13,7 @@ import {
   FloppyDisk as Save,
   MagnifyingGlass as Search,
   GearSix as Settings,
+  SidebarSimple,
   Sparkle as Sparkles,
   TerminalWindow as Terminal,
   TextAlignJustify as WrapText,
@@ -22,6 +23,7 @@ import type { Settings as AppSettings } from "@/features/settings/store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../models/action.types";
+import type { CommandPaletteViewId } from "../models/view.types";
 
 interface SettingsActionsParams {
   query: string;
@@ -29,8 +31,7 @@ interface SettingsActionsParams {
   setIsSettingsDialogVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   setSettingsSearchQuery: (query: string) => void;
-  setIsThemeSelectorVisible: (v: boolean) => void;
-  setIsIconThemeSelectorVisible: (v: boolean) => void;
+  pushPaletteView: (view: CommandPaletteViewId) => void;
   updateSetting: (key: string, value: any) => void | Promise<void>;
   handleFileSelect: ((path: string, isDir: boolean) => void) | undefined;
   getAppDataDir: () => Promise<string>;
@@ -93,8 +94,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     setIsSettingsDialogVisible,
     openSettingsDialog,
     setSettingsSearchQuery,
-    setIsThemeSelectorVisible,
-    setIsIconThemeSelectorVisible,
+    pushPaletteView,
     updateSetting,
     handleFileSelect,
     getAppDataDir,
@@ -223,8 +223,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       category: "Theme",
       commandId: "workbench.showThemeSelector",
       action: () => {
-        onClose();
-        setIsThemeSelectorVisible(true);
+        pushPaletteView("color-theme");
       },
     },
     {
@@ -234,8 +233,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       icon: <Palette />,
       category: "Theme",
       action: () => {
-        onClose();
-        setIsIconThemeSelectorVisible(true);
+        pushPaletteView("icon-theme");
       },
     },
     {
@@ -516,6 +514,42 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           aiChat: !settings.coreFeatures.aiChat,
+        });
+        onClose();
+      },
+    },
+    {
+      id: "toggle-multi-agents-feature",
+      label: settings.coreFeatures.multiAgents
+        ? "Features: Disable Multi Agents"
+        : "Features: Enable Multi Agents",
+      description: settings.coreFeatures.multiAgents
+        ? "Disable multi-agent sidebar"
+        : "Enable multi-agent sidebar",
+      icon: <Sparkles />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          multiAgents: !settings.coreFeatures.multiAgents,
+        });
+        onClose();
+      },
+    },
+    {
+      id: "toggle-sidebar-builder-feature",
+      label: settings.coreFeatures.sidebarBuilder
+        ? "Features: Disable Sidebar Builder"
+        : "Features: Enable Sidebar Builder",
+      description: settings.coreFeatures.sidebarBuilder
+        ? "Disable the custom sidebar builder"
+        : "Enable the custom sidebar builder",
+      icon: <SidebarSimple />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          sidebarBuilder: !settings.coreFeatures.sidebarBuilder,
         });
         onClose();
       },

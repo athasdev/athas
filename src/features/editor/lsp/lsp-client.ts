@@ -20,8 +20,10 @@ import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
 import {
   applyWorkspaceEdit,
+  applyTextEditsToContent,
   filePathFromUri,
   isWorkspaceEdit,
+  type LspTextEdit,
   type WorkspaceEdit,
 } from "./workspace-edit";
 
@@ -120,6 +122,7 @@ export class LspClient {
   private activeLanguages = new Set<string>(); // Track active language IDs for status
   private activeServerFiles = new Map<string, Set<string>>(); // workspace:language -> tracked files
   private failedLanguageServers = new Set<string>(); // workspace:language format
+  private repairLanguageServerPromises = new Map<string, Promise<boolean>>();
 
   private constructor() {
     this.setupDiagnosticsListener();
@@ -138,6 +141,93 @@ export class LspClient {
       actions.updateLspStatus("connected", workspaces, undefined, languages);
     } else {
       actions.updateLspStatus("disconnected", [], undefined, []);
+    }
+  }
+
+  private isRepairableStartupError(error: unknown): boolean {
+    const normalized = normalizeLspError(error);
+    return normalized.code === "tool_not_found" || normalized.code === "tool_not_executable";
+  }
+
+  private async repairLanguageServerForFile(
+    filePath: string,
+    languageId: string,
+  ): Promise<boolean> {
+    const repairKey = `${filePath}:${languageId}`;
+    const existingRepair = this.repairLanguageServerPromises.get(repairKey);
+    if (existingRepair) {
+      return existingRepair;
+    }
+
+    const repairPromise = this.runLanguageServerRepair(filePath, languageId).finally(() => {
+      this.repairLanguageServerPromises.delete(repairKey);
+    });
+
+    this.repairLanguageServerPromises.set(repairKey, repairPromise);
+    return repairPromise;
+  }
+
+  private async runLanguageServerRepair(filePath: string, languageId: string): Promise<boolean> {
+    try {
+      const [
+        { useExtensionStore, waitForExtensionStoreInitialization },
+        { buildRuntimeManifest, resolveToolPaths },
+        { extensionRegistry },
+      ] = await Promise.all([
+        import("@/extensions/registry/extension-store"),
+        import("@/extensions/registry/extension-store-runtime"),
+        import("@/extensions/registry/extension-registry"),
+      ]);
+
+      await waitForExtensionStoreInitialization();
+
+      const extension = useExtensionStore.getState().actions.getExtensionForFile(filePath);
+      if (!extension?.isInstalled || !extension.manifest.lsp) {
+        return false;
+      }
+
+      logger.info(
+        "LSPClient",
+        `Repairing language server tools for ${languageId} (${extension.manifest.id})`,
+      );
+
+      const resolvedTools = await resolveToolPaths(languageId, extension.manifest, {
+        ensureInstalled: true,
+        repairMissing: true,
+      });
+      const runtimeManifest = buildRuntimeManifest(extension.manifest, resolvedTools.toolPaths);
+
+      useExtensionStore.setState((state) => {
+        const availableExtensions = new Map(state.availableExtensions);
+        const current = availableExtensions.get(extension.manifest.id);
+        if (current) {
+          availableExtensions.set(extension.manifest.id, {
+            ...current,
+            runtimeIssues: resolvedTools.issues,
+            isInstalled: true,
+            manifest: runtimeManifest.lsp ? runtimeManifest : current.manifest,
+          });
+        }
+        return {
+          availableExtensions,
+        };
+      });
+
+      if (!runtimeManifest.lsp) {
+        logger.warn("LSPClient", `Language server repair did not resolve an LSP for ${languageId}`);
+        return false;
+      }
+
+      extensionRegistry.registerExtension(runtimeManifest, {
+        isBundled: false,
+        isEnabled: true,
+        state: "installed",
+      });
+
+      return true;
+    } catch (error) {
+      logger.error("LSPClient", "Language server repair failed:", error);
+      return false;
     }
   }
 
@@ -411,7 +501,7 @@ export class LspClient {
   async startForFile(
     filePath: string,
     workspacePath: string,
-    options: { forceRetry?: boolean } = {},
+    options: { forceRetry?: boolean; repairAttempted?: boolean } = {},
   ): Promise<boolean> {
     try {
       logger.debug("LSPClient", "Starting LSP for file:", filePath);
@@ -426,6 +516,16 @@ export class LspClient {
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
+        if (languageId && !options.repairAttempted) {
+          const repaired = await this.repairLanguageServerForFile(filePath, languageId);
+          if (repaired) {
+            return this.startForFile(filePath, workspacePath, {
+              forceRetry: true,
+              repairAttempted: true,
+            });
+          }
+        }
+
         const message = languageId
           ? `Language server for ${this.getLanguageDisplayName(languageId)} could not be resolved.`
           : "No language server is configured for this file.";
@@ -488,6 +588,15 @@ export class LspClient {
         if (languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
           this.failedLanguageServers.add(serverKey);
+        }
+        if (languageId && !options.repairAttempted && this.isRepairableStartupError(error)) {
+          const repaired = await this.repairLanguageServerForFile(filePath, languageId);
+          if (repaired) {
+            return this.startForFile(filePath, workspacePath, {
+              forceRetry: true,
+              repairAttempted: true,
+            });
+          }
         }
         throw error;
       }
@@ -857,6 +966,17 @@ export class LspClient {
     }
   }
 
+  async formatDocument(filePath: string, content: string): Promise<string | null> {
+    try {
+      const edits = await invoke<LspTextEdit[]>("lsp_format_document", { filePath });
+      if (!edits.length) return content;
+      return applyTextEditsToContent(content, edits);
+    } catch (error) {
+      logger.debug("LSPClient", "LSP document formatting unavailable:", error);
+      return null;
+    }
+  }
+
   async getReferences(
     filePath: string,
     line: number,
@@ -1012,6 +1132,14 @@ export class LspClient {
       });
     } catch (error) {
       logger.error("LSPClient", "LSP document change error:", error);
+    }
+  }
+
+  async notifyDocumentSave(filePath: string, content: string): Promise<void> {
+    try {
+      await invoke<void>("lsp_document_save", { filePath, content });
+    } catch (error) {
+      logger.debug("LSPClient", "LSP document save notification skipped:", error);
     }
   }
 

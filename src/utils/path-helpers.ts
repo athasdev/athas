@@ -63,7 +63,7 @@ export const getDirName = (path: string): string => {
   return strippedPath.slice(0, lastSeparatorIndex);
 };
 
-const pathStartsWithRoot = (fullPath: string, rootPath: string): boolean => {
+export const pathStartsWithRoot = (fullPath: string, rootPath: string): boolean => {
   const normalizedFullPath = normalizePath(stripTrailingPathSeparators(fullPath));
   const normalizedRootPath = normalizePath(stripTrailingPathSeparators(rootPath));
   const fullPathForCompare = /^[A-Za-z]:\//.test(normalizedFullPath)

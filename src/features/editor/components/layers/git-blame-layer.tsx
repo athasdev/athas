@@ -1,6 +1,7 @@
 import { forwardRef, memo, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { splitLines } from "@/features/editor/utils/lines";
+import type { ViewPosition } from "@/features/editor/view-model/view-layout";
 import { InlineGitBlame } from "@/features/git/components/git-inline-blame";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 
@@ -14,6 +15,7 @@ interface GitBlameLayerProps {
   lineHeight: number;
   tabSize?: number;
   wordWrap?: boolean;
+  cursorViewPosition?: ViewPosition;
 }
 
 const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
@@ -28,6 +30,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
       lineHeight,
       tabSize = 2,
       wordWrap = false,
+      cursorViewPosition,
     },
     ref,
   ) => {
@@ -54,7 +57,9 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
     const shouldShowBlame = !!blameLine && (wordWrap || lineContentWidth > 0);
 
     // Position at absolute content coordinates (scroll handled by container transform)
-    const top = visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const top =
+      cursorViewPosition?.top ??
+      visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
     const left = lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + 8;
 
     return (

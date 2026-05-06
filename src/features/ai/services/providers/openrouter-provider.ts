@@ -1,15 +1,15 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
   type ProviderHeaders,
   type ProviderModel,
   type StreamRequest,
 } from "./ai-provider-interface";
+import { providerFetch } from "./provider-fetch";
 
 export class OpenRouterProvider extends AIProvider {
   async getModels(apiKey?: string): Promise<ProviderModel[]> {
     try {
-      const response = await tauriFetch("https://openrouter.ai/api/v1/models", {
+      const response = await providerFetch("https://openrouter.ai/api/v1/models", {
         method: "GET",
         headers: this.buildHeaders(apiKey),
       });
@@ -63,7 +63,7 @@ export class OpenRouterProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await tauriFetch("https://openrouter.ai/api/v1/key", {
+      const response = await providerFetch("https://openrouter.ai/api/v1/key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,

@@ -13,6 +13,7 @@ interface CommandProps {
   className?: string;
   onClose?: () => void;
   placement?: "top" | "bottom";
+  title?: string;
 }
 
 const commandContentVariants = cva(
@@ -34,7 +35,14 @@ const commandItemVariants = cva(
   },
 );
 
-const Command = ({ isVisible, children, className, onClose, placement = "top" }: CommandProps) => {
+const Command = ({
+  isVisible,
+  children,
+  className,
+  onClose,
+  placement = "top",
+  title = "Command palette",
+}: CommandProps) => {
   const containerClassName =
     placement === "bottom"
       ? "fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
@@ -59,7 +67,7 @@ const Command = ({ isVisible, children, className, onClose, placement = "top" }:
                   tabIndex={-1}
                 />
               </DialogPrimitive.Overlay>
-              <DialogPrimitive.Content asChild aria-label="Command palette">
+              <DialogPrimitive.Content asChild aria-describedby={undefined}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: motionY }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -67,6 +75,7 @@ const Command = ({ isVisible, children, className, onClose, placement = "top" }:
                   transition={{ duration: 0.15, ease: "easeOut" }}
                   className={cn(commandContentVariants(), className)}
                 >
+                  <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
                   {children}
                 </motion.div>
               </DialogPrimitive.Content>
@@ -138,6 +147,7 @@ CommandList.displayName = "CommandList";
 interface CommandInputProps {
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   className?: string;
   ref?: React.Ref<HTMLInputElement>;
@@ -146,6 +156,7 @@ interface CommandInputProps {
 export const CommandInput = ({
   value,
   onChange,
+  onKeyDown,
   placeholder,
   className,
   ref,
@@ -155,6 +166,7 @@ export const CommandInput = ({
     type="text"
     value={value}
     onChange={(e) => onChange(e.target.value)}
+    onKeyDown={onKeyDown}
     placeholder={placeholder}
     className={cn(
       "ui-text-sm flex-1 bg-transparent text-text placeholder-text-lighter outline-none",
@@ -207,7 +219,7 @@ interface CommandEmptyProps {
 }
 
 export const CommandEmpty = ({ children }: CommandEmptyProps) => (
-  <div className="ui-text-sm p-3 text-center text-text-lighter">{children}</div>
+  <div className="ui-text-sm p-3 text-center leading-[1.35] text-text-lighter">{children}</div>
 );
 
 export default Command;

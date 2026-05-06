@@ -48,6 +48,9 @@ pub struct ToolConfig {
    /// Package name (for npm/pip/cargo)
    #[serde(default)]
    pub package: Option<String>,
+   /// Additional packages to install beside the primary package.
+   #[serde(default)]
+   pub packages: Vec<String>,
    /// Direct download URL (for binary tools)
    #[serde(default)]
    pub download_url: Option<String>,

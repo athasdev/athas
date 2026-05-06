@@ -19,7 +19,7 @@ jobs:
   release-metadata:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     outputs:
       tag_name: ${{ steps.release_meta.outputs.tag_name }}
@@ -203,6 +203,8 @@ jobs:
 
       - name: Install Tauri CEF CLI (Linux only)
         if: matrix.os == 'linux'
+        env:
+          RUSTFLAGS: "--cfg rustix_use_libc"
         run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/cef --locked
 
       - name: Install frontend dependencies
@@ -321,22 +323,28 @@ jobs:
         if: matrix.os == 'windows'
         run: node scripts/release/windows/prepare-tauri-signing.mjs
 
-      - name: Build Tauri bundles
+      - name: Build Linux Tauri bundles
+        if: matrix.os == 'linux'
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
+          NO_STRIP: "true"
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: |
+          cargo tauri build --no-bundle ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- ${{ matrix.cargo_features }}
+
+      - name: Build desktop Tauri bundles
+        if: matrix.os != 'linux'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPLE_ID: ${{ matrix.os == 'macos' && secrets.APPLE_ID || '' }}
           APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
-          CEF_PATH: ${{ matrix.os == 'linux' && format('{0}/.cache/tauri-cef', github.workspace) || '' }}
-          NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
-        run: |
-          if [[ "${{ matrix.os }}" == "linux" ]]; then
-            cargo tauri build --no-bundle ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- ${{ matrix.cargo_features }}
-          else
-            bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
-          fi
+        run: bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
 
       - name: Package Linux tarball (Linux only)
         if: matrix.os == 'linux'
@@ -369,9 +377,7 @@ jobs:
             throw "Could not find Windows setup installer."
           }
           Copy-Item $setup.FullName release-dist/
-          if (Test-Path "$($setup.FullName).sig") {
-            Copy-Item "$($setup.FullName).sig" release-dist/
-          } else {
+          if (-not (Test-Path "$($setup.FullName).sig")) {
             throw "Could not find updater signature for $($setup.Name)."
           }
 

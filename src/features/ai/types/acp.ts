@@ -38,6 +38,19 @@ export interface AcpAgentCapabilities {
   sessionCapabilities: unknown;
 }
 
+export interface AcpSessionInfo {
+  sessionId: string;
+  cwd: string;
+  title?: string | null;
+  updatedAt?: string | null;
+  _meta?: unknown;
+}
+
+export interface AcpSessionList {
+  sessions: AcpSessionInfo[];
+  nextCursor?: string | null;
+}
+
 export type AcpContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; data: string; mediaType: string }

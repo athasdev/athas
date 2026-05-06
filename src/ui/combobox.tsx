@@ -143,6 +143,8 @@ type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
   inputClassName?: string;
   inputStyle?: CSSProperties;
   leftIcon?: PhosphorIcon;
+  leftIconSize?: number;
+  htmlSize?: number;
   size?: ComboboxSize;
   variant?: ComboboxVariant;
   showTrigger?: boolean;
@@ -156,6 +158,8 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
     inputClassName,
     inputStyle,
     leftIcon: LeftIcon,
+    leftIconSize,
+    htmlSize,
     size = "sm",
     variant = "default",
     children,
@@ -168,7 +172,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
 ) {
   const hasLeftIcon = Boolean(LeftIcon);
   const hasEndActions = showTrigger || showClear;
-  const iconSize = controlFieldIconSizes[size];
+  const iconSize = leftIconSize ?? controlFieldIconSizes[size];
 
   return (
     <div
@@ -187,6 +191,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
         ref={ref}
         data-slot="combobox-input"
         disabled={disabled}
+        size={htmlSize}
         style={inputStyle}
         className={cn(
           comboboxInputPaddingVariants({ size, hasLeftIcon, hasEndActions }),

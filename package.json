@@ -1,6 +1,6 @@
 {
   "name": "athas",
-  "version": "0.4.7",
+  "version": "0.6.0-preview.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,7 +20,7 @@
     "dev": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.dev.conf.json",
     "dev:stable": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:preview": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.preview.conf.json",
-    "dev:linux": "bun scripts/check-zig.ts && cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux",
+    "dev:linux": "bun scripts/check-zig.ts && cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux -- --ozone-platform=x11 --disable-vulkan --disable-features=Vulkan",
     "build:stable": "bun scripts/check-zig.ts && tauri build",
     "build:linux": "bun scripts/check-zig.ts && cargo tauri build --no-bundle -- --no-default-features --features linux && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
     "build:preview": "bun scripts/check-zig.ts && tauri build --config src-tauri/tauri.preview.conf.json",
@@ -28,6 +28,10 @@
     "smoke": "bun scripts/smoke-app.ts",
     "smoke:stable": "bun scripts/smoke-app.ts stable",
     "smoke:preview": "bun scripts/smoke-app.ts preview",
+    "smoke:fast": "bun scripts/smoke-app.ts smoke",
+    "smoke:open": "bun scripts/smoke-app.ts preview --open-only",
+    "smoke:open:stable": "bun scripts/smoke-app.ts stable --open-only",
+    "smoke:open:fast": "bun scripts/smoke-app.ts smoke --open-only",
     "pre-commit": "bun scripts/hooks/pre-commit.ts",
     "release:check": "bun scripts/release/pre-release-check.ts",
     "release:verify": "bun scripts/release/release-assets.mjs verify --repo athasdev/athas",

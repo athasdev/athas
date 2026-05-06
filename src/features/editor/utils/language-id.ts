@@ -30,13 +30,24 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   php: "php",
   html: "html",
   htm: "html",
-  xml: "html",
-  xsl: "html",
-  xslt: "html",
-  svg: "html",
-  plist: "html",
+  xml: "xml",
+  xsl: "xml",
+  xslt: "xml",
+  xsd: "xml",
+  dtd: "xml",
+  wsdl: "xml",
+  svg: "xml",
+  plist: "xml",
+  csproj: "xml",
+  vbproj: "xml",
+  fsproj: "xml",
+  props: "xml",
+  targets: "xml",
   css: "css",
-  scss: "css",
+  scss: "scss",
+  sass: "sass",
+  less: "less",
+  dockerfile: "dockerfile",
   diff: "diff",
   json: "json",
   jsonc: "json",
@@ -58,12 +69,20 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   nix: "nix",
   scm: "scheme",
   dart: "dart",
+  elm: "elm",
+  graphql: "graphql",
+  gql: "graphql",
   ex: "elixir",
   exs: "elixir",
   ml: "ocaml",
   mli: "ocaml",
+  proto: "protobuf",
+  ql: "ql",
+  qll: "ql",
   sql: "sql",
   sol: "solidity",
+  tf: "terraform",
+  tfvars: "terraform",
   zig: "zig",
   vue: "vue",
   svelte: "svelte",
@@ -75,10 +94,16 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   ".zshrc": "bash",
   ".bash_profile": "bash",
   ".profile": "bash",
+  containerfile: "dockerfile",
+  dockerfile: "dockerfile",
   "go.mod": "go",
   "go.sum": "go",
   "go.work": "go",
 };
+
+function isEnvFileName(fileName: string): boolean {
+  return fileName === ".env" || fileName.startsWith(".env.");
+}
 
 export function normalizeLanguageId(languageId: string): string {
   switch (languageId) {
@@ -116,6 +141,7 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   html: "HTML",
   css: "CSS",
   diff: "Diff",
+  dotenv: "Dotenv",
   json: "JSON",
   yaml: "YAML",
   toml: "TOML",
@@ -137,6 +163,7 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   embedded_template: "ERB",
   text: "Plain Text",
   dockerfile: "Dockerfile",
+  graphql: "GraphQL",
   makefile: "Makefile",
   cmake: "CMake",
   gitignore: "Git Ignore",
@@ -156,7 +183,10 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   batch: "Batch",
   ini: "INI",
   csv: "CSV",
+  protobuf: "Protocol Buffers",
+  ql: "QL",
   r: "R",
+  terraform: "Terraform",
   vim: "Vim",
   elm: "Elm",
 };
@@ -182,6 +212,10 @@ export function getLanguageIdFromPath(filePath: string): string | null {
   }
 
   const fileName = filePath.split("/").pop()?.toLowerCase() || "";
+  if (isEnvFileName(fileName)) {
+    return "dotenv";
+  }
+
   const fromFilename = FILENAME_TO_LANGUAGE[fileName];
   if (fromFilename) {
     return fromFilename;

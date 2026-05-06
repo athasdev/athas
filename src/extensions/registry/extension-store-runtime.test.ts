@@ -148,4 +148,26 @@ describe("extension-store runtime manifest", () => {
 
     expect(runtimeManifest.lsp?.server.default).toBe("/tmp/athas-tools/bin/marksman");
   });
+
+  it("preserves companion packages when rewriting managed LSP commands", () => {
+    const manifest = createManifest({
+      lsp: {
+        name: "vtsls",
+        runtime: "bun",
+        package: "@vtsls/language-server",
+        packages: ["typescript"],
+        server: { default: "vtsls" },
+        args: ["--stdio"],
+        fileExtensions: [".js"],
+        languageIds: ["javascript"],
+      },
+    });
+
+    const runtimeManifest = buildRuntimeManifest(manifest, {
+      lsp: "/tmp/athas-tools/bun/@vtsls/language-server/node_modules/@vtsls/language-server/bin/vtsls.js",
+    });
+
+    expect(runtimeManifest.lsp?.server.default).toContain("vtsls.js");
+    expect(runtimeManifest.lsp?.packages).toEqual(["typescript"]);
+  });
 });

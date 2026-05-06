@@ -23,6 +23,20 @@ interface FontActions {
 
 const FONT_CACHE_KEY = "athas_font_cache";
 const FONT_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const FALLBACK_FONTS: FontInfo[] = [
+  {
+    name: "IBM Plex Sans Variable",
+    family: "IBM Plex Sans Variable",
+    style: "Regular",
+    is_monospace: false,
+  },
+  {
+    name: "JetBrains Mono Variable",
+    family: "JetBrains Mono Variable",
+    style: "Regular",
+    is_monospace: true,
+  },
+];
 
 interface FontCache {
   availableFonts: FontInfo[];
@@ -64,6 +78,19 @@ const saveFontsToCache = (availableFonts: FontInfo[], monospaceFonts: FontInfo[]
     console.error("Failed to save fonts to cache:", error);
   }
 };
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+};
+
+const isTauriBridgeError = (error: unknown): boolean => {
+  const message = getErrorMessage(error);
+  return message.includes("postMessage") || message.includes("__TAURI_INTERNALS__");
+};
+
+const getFallbackMonospaceFonts = () => FALLBACK_FONTS.filter((font) => font.is_monospace);
 
 export const useFontStore = createSelectors(
   create<FontState>()(
@@ -124,8 +151,21 @@ export const useFontStore = createSelectors(
               console.log("Loaded and cached", fonts.length, "fonts");
             } catch (error) {
               console.error("Failed to load fonts:", error);
+              if (isTauriBridgeError(error)) {
+                const monospaceFonts = getFallbackMonospaceFonts();
+                set((state) => {
+                  state.availableFonts = FALLBACK_FONTS;
+                  state.monospaceFonts = monospaceFonts;
+                  state.error = null;
+                  state.isLoading = false;
+                  state.lastCacheTime = Date.now();
+                });
+                saveFontsToCache(FALLBACK_FONTS, monospaceFonts);
+                return;
+              }
+
               set((state) => {
-                state.error = error instanceof Error ? error.message : "Failed to load fonts";
+                state.error = getErrorMessage(error) || "Failed to load fonts";
                 state.isLoading = false;
               });
             }
@@ -165,9 +205,27 @@ export const useFontStore = createSelectors(
               console.log("Loaded and cached", fonts.length, "monospace fonts");
             } catch (error) {
               console.error("Failed to load monospace fonts:", error);
+              if (isTauriBridgeError(error)) {
+                const fonts = getFallbackMonospaceFonts();
+                set((state) => {
+                  state.monospaceFonts = fonts;
+                  state.error = null;
+                  state.isLoading = false;
+                  state.lastCacheTime = Date.now();
+                });
+
+                const updatedState = get();
+                saveFontsToCache(
+                  updatedState.availableFonts.length > 0
+                    ? updatedState.availableFonts
+                    : FALLBACK_FONTS,
+                  fonts,
+                );
+                return;
+              }
+
               set((state) => {
-                state.error =
-                  error instanceof Error ? error.message : "Failed to load monospace fonts";
+                state.error = getErrorMessage(error) || "Failed to load monospace fonts";
                 state.isLoading = false;
               });
             }
@@ -178,6 +236,9 @@ export const useFontStore = createSelectors(
               return await invoke<boolean>("validate_font", { fontFamily });
             } catch (error) {
               console.error("Failed to validate font:", error);
+              if (isTauriBridgeError(error)) {
+                return FALLBACK_FONTS.some((font) => font.family === fontFamily);
+              }
               return false;
             }
           },

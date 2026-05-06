@@ -54,10 +54,15 @@ export interface Settings {
   // AI
   aiProviderId: string;
   aiModelId: string;
+  aiCustomBaseUrl: string;
+  aiCustomModelId: string;
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  aiAutocompleteProvider: "openrouter" | "custom";
   aiAutocompleteModelId: string;
+  aiAutocompleteCustomBaseUrl: string;
+  aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiSkills: AIChatSkill[];
   ollamaBaseUrl: string;
@@ -105,7 +110,7 @@ export interface Settings {
     | "snippet"
     | "database"
     | "skill"
-    | "ui";
+    | "agent";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree

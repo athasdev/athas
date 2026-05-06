@@ -24,37 +24,47 @@
 /* Style the terminal viewport for better appearance */
 .xterm-container .xterm-viewport {
   overflow-y: auto !important;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   overscroll-behavior: none;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .xterm-container .xterm-viewport {
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+    scrollbar-width: thin;
+  }
 }
 
 /* Improve scrollbar styling */
 .xterm-container .xterm-viewport::-webkit-scrollbar {
-  width: var(--app-scrollbar-size);
-  height: var(--app-scrollbar-size);
-  background: var(--app-scrollbar-track);
+  -webkit-appearance: none !important;
+  width: var(--app-scrollbar-size) !important;
+  height: var(--app-scrollbar-size) !important;
+  background-color: var(--app-scrollbar-track) !important;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-track {
-  background: var(--app-scrollbar-track);
+  -webkit-appearance: none !important;
+  background-color: var(--app-scrollbar-track) !important;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-corner {
-  background: var(--app-scrollbar-track);
+  background-color: var(--app-scrollbar-track) !important;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb {
-  min-height: 32px;
-  border: var(--app-scrollbar-border-size) solid transparent;
-  border-radius: var(--app-scrollbar-radius);
-  background: var(--app-scrollbar-thumb);
-  background-clip: content-box;
+  -webkit-appearance: none !important;
+  min-height: 36px !important;
+  border: var(--app-scrollbar-thumb-border) !important;
+  border-radius: var(--app-scrollbar-radius) !important;
+  background-color: rgba(120, 120, 120, 0.42) !important;
+  background-color: var(--app-scrollbar-thumb) !important;
+  background-clip: content-box !important;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: content-box;
+  background-color: rgba(105, 105, 105, 0.62) !important;
+  background-color: var(--app-scrollbar-thumb-hover) !important;
+  background-clip: content-box !important;
 }
 
 /* Terminal cursor improvements */

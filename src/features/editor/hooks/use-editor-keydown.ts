@@ -51,6 +51,7 @@ const LINE_COMMENT_TOKENS: Partial<Record<string, string>> = {
   cpp: "//",
   csharp: "//",
   dart: "//",
+  dotenv: "#",
   elixir: "#",
   go: "//",
   java: "//",
@@ -255,12 +256,14 @@ export function useEditorKeyDown({
 
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
+        e.stopPropagation();
         void useEditorAppStore.getState().actions.handleSave();
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "z") {
         e.preventDefault();
+        e.stopPropagation();
 
         if (e.shiftKey) {
           editorAPI.redo();
@@ -272,6 +275,7 @@ export function useEditorKeyDown({
 
       if (e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "y") {
         e.preventDefault();
+        e.stopPropagation();
         editorAPI.redo();
         return;
       }
