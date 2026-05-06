@@ -94,6 +94,26 @@ describe("buildEditorViewLayout", () => {
     expect(position.top).toBe(EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20);
   });
 
+  it("converts editor points on wrapped view lines back to model positions", () => {
+    const layout = buildEditorViewLayout({
+      lines: ["abcdefg"],
+      lineHeight: 20,
+      wordWrap: true,
+      contentWidth: contentWidthForColumns(3),
+      measureText,
+    });
+
+    const position = layout.editorPointToModelPosition(
+      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 11,
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 21,
+    );
+
+    expect(position.viewLine).toBe(1);
+    expect(position.modelLine).toBe(0);
+    expect(position.column).toBe(4);
+    expect(position.left).toBe(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 10);
+  });
+
   it("keeps empty model lines addressable", () => {
     const layout = buildEditorViewLayout({
       lines: [""],

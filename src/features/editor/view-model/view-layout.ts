@@ -18,6 +18,16 @@ export interface ViewPosition {
   segment: ViewLineSegment;
 }
 
+export interface EditorResolvedPosition extends ViewPosition {
+  line: number;
+  height: number;
+}
+
+export type EditorCoordinateResolver = (
+  clientX: number,
+  clientY: number,
+) => EditorResolvedPosition | null;
+
 export interface EditorViewLayout {
   segments: ViewLineSegment[];
   modelLineStartViewLines: number[];
@@ -27,6 +37,7 @@ export interface EditorViewLayout {
   getModelLineViewLineCount: (modelLine: number) => number;
   getSegmentForModelPosition: (modelLine: number, column: number) => ViewLineSegment;
   modelPositionToViewPosition: (modelLine: number, column: number) => ViewPosition;
+  editorPointToModelPosition: (x: number, y: number) => ViewPosition;
   viewLineToSegment: (viewLine: number) => ViewLineSegment;
 }
 
@@ -158,6 +169,30 @@ function findSegmentForModelPosition(
   return segments[lastViewLine] ?? firstSegment;
 }
 
+function findColumnForSegmentX(
+  lineText: string,
+  segment: ViewLineSegment,
+  x: number,
+  measureText: (text: string) => number,
+): number {
+  const localX = Math.max(0, x - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
+  let bestColumn = segment.startColumn;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (let column = segment.startColumn; column <= segment.endColumn; column++) {
+    const textBeforeColumn = lineText.slice(segment.startColumn, column);
+    const columnX = measureText(textBeforeColumn);
+    const distance = Math.abs(columnX - localX);
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestColumn = column;
+    }
+  }
+
+  return bestColumn;
+}
+
 export function buildEditorViewLayout({
   lines,
   lineHeight,
@@ -231,6 +266,31 @@ export function buildEditorViewLayout({
         left: measureText(textBeforeColumn) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
         segment,
       };
+    },
+    editorPointToModelPosition: (x, y) => {
+      const viewLine = Math.floor(
+        Math.max(0, y - EDITOR_CONSTANTS.EDITOR_PADDING_TOP) / lineHeight,
+      );
+      const segment = segments[Math.max(0, Math.min(viewLine, segments.length - 1))] ?? segments[0];
+
+      if (!segment) {
+        throw new Error("Editor view layout has no segments");
+      }
+
+      const lineText = sourceLines[segment.modelLine] ?? "";
+      const column = findColumnForSegmentX(lineText, segment, x, measureText);
+      const viewPosition = {
+        viewLine: segment.viewLine,
+        modelLine: segment.modelLine,
+        column,
+        top: segment.top,
+        left:
+          measureText(lineText.slice(segment.startColumn, column)) +
+          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        segment,
+      };
+
+      return viewPosition;
     },
     viewLineToSegment: (viewLine) =>
       segments[Math.max(0, Math.min(viewLine, segments.length - 1))] ?? segments[0],

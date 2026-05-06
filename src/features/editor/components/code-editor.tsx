@@ -9,6 +9,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
+import type { EditorCoordinateResolver } from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
@@ -90,6 +91,7 @@ const CodeEditor = ({
   const codeLensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
+  const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -193,6 +195,16 @@ const CodeEditor = ({
 
     return cachedCursor ?? { line: 0, column: 0, offset: 0 };
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
+  const resolveEditorPosition = useCallback<EditorCoordinateResolver>(
+    (clientX, clientY) => editorCoordinateResolverRef.current?.(clientX, clientY) ?? null,
+    [],
+  );
+  const handleCoordinateResolverChange = useCallback(
+    (resolver: EditorCoordinateResolver | null) => {
+      editorCoordinateResolverRef.current = resolver;
+    },
+    [],
+  );
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
@@ -201,6 +213,7 @@ const CodeEditor = ({
     value,
     cursorPosition,
     editorRef,
+    resolveEditorPosition,
   });
 
   // Rename symbol support
@@ -558,6 +571,7 @@ const CodeEditor = ({
                 lineNumberMap={lineNumberMap}
                 onContentChange={onContentChange}
                 inlayHints={enableInlayHints ? inlayHints : []}
+                onCoordinateResolverChange={handleCoordinateResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={

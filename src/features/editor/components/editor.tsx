@@ -55,7 +55,7 @@ import {
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
-import { buildEditorViewLayout } from "../view-model/view-layout";
+import { buildEditorViewLayout, type EditorCoordinateResolver } from "../view-model/view-layout";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
@@ -90,6 +90,7 @@ interface EditorProps {
   lineNumberMap?: Array<number | null>;
   onContentChange?: (content: string) => void;
   inlayHints?: InlayHint[];
+  onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
 }
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
@@ -125,6 +126,7 @@ export function Editor({
   lineNumberMap,
   onContentChange,
   inlayHints = [],
+  onCoordinateResolverChange,
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -419,6 +421,34 @@ export function Editor({
     const layoutLine = Math.min(visualCursorLine, Math.max(0, lines.length - 1));
     return viewLayout.modelPositionToViewPosition(layoutLine, cursorPosition.column);
   }, [viewLayout, visualCursorLine, cursorPosition.column, lines.length]);
+  const resolveEditorCoordinate = useCallback<EditorCoordinateResolver>(
+    (clientX, clientY) => {
+      const textarea = inputRef.current;
+      const container = contentContainerRef.current;
+      if (!textarea || !container) return null;
+
+      const rect = container.getBoundingClientRect();
+      const x = clientX - rect.left + textarea.scrollLeft;
+      const y = clientY - rect.top + textarea.scrollTop;
+      const position = viewLayout.editorPointToModelPosition(x, y);
+      const actualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.virtualToActual.get(position.modelLine) ?? position.modelLine)
+        : position.modelLine;
+
+      return {
+        ...position,
+        line: actualLine,
+        modelLine: actualLine,
+        height: position.segment.height,
+      };
+    },
+    [foldTransform, viewLayout],
+  );
+
+  useEffect(() => {
+    onCoordinateResolverChange?.(resolveEditorCoordinate);
+    return () => onCoordinateResolverChange?.(null);
+  }, [onCoordinateResolverChange, resolveEditorCoordinate]);
 
   useEffect(() => {
     if (!useGlobalEditorState || !cursorViewPosition || isDragScrolling()) return;
