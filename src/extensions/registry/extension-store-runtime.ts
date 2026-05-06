@@ -578,7 +578,13 @@ export async function registerLanguageProvider(params: {
     },
 
     getTokens: async (content: string) => {
-      const highlightTokens = await tokenizeCode(content, languageId);
+      const wasmPath = getWasmUrlForLanguage(languageId);
+      const highlightQueryUrl = getHighlightQueryUrl(languageId);
+      const highlightTokens = await tokenizeCode(content, languageId, {
+        languageId,
+        wasmPath,
+        highlightQueryUrl,
+      });
       return convertToEditorTokens(highlightTokens);
     },
   };

@@ -12,6 +12,7 @@ import type {
   PlatformExecutable,
   ToolRuntime,
 } from "../types/extension-manifest";
+import { registerLanguageAssetOverride } from "@/features/editor/lib/wasm-parser/extension-assets";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
 const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
@@ -273,6 +274,10 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
         manifestByLanguageId.set(languageId, entry.manifest);
         wasmUrlByLanguageId.set(languageId, entry.wasmUrl);
         highlightUrlByLanguageId.set(languageId, entry.highlightQueryUrl);
+        registerLanguageAssetOverride(languageId, {
+          wasmPath: entry.wasmUrl,
+          highlightQueryUrl: entry.highlightQueryUrl,
+        });
       }
     } catch (error) {
       console.error(`Failed to convert language manifest for ${folder}:`, error);

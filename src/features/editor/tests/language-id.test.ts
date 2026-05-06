@@ -25,4 +25,15 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageIdFromPath("/tmp/.env.production.local")).toBe("dotenv");
     expect(getLanguageDisplayName("dotenv")).toBe("Dotenv");
   });
+
+  it("detects extension-backed highlight languages without registry data", () => {
+    expect(getLanguageIdFromPath("/tmp/styles.scss")).toBe("scss");
+    expect(getLanguageIdFromPath("/tmp/Dockerfile")).toBe("dockerfile");
+    expect(getLanguageIdFromPath("/tmp/schema.graphql")).toBe("graphql");
+    expect(getLanguageIdFromPath("/tmp/message.proto")).toBe("protobuf");
+    expect(getLanguageIdFromPath("/tmp/query.ql")).toBe("ql");
+    expect(getLanguageIdFromPath("/tmp/main.tf")).toBe("terraform");
+    expect(getLanguageIdFromPath("/tmp/icon.svg")).toBe("xml");
+    expect(getLanguageIdFromPath("/tmp/project.csproj")).toBe("xml");
+  });
 });

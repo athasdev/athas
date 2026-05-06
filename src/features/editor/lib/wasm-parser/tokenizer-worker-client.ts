@@ -14,6 +14,8 @@ type WorkerRequest =
       bufferId: string;
       content: string;
       languageId: string;
+      wasmPath?: string;
+      highlightQueryUrl?: string;
       mode: "full" | "range";
       viewportRange?: ViewportRangePayload;
     };
@@ -96,6 +98,8 @@ class TokenizerWorkerClient {
     bufferId: string;
     content: string;
     languageId: string;
+    wasmPath?: string;
+    highlightQueryUrl?: string;
     mode: "full" | "range";
     viewportRange?: ViewportRangePayload;
   }): Promise<TokenizerWorkerResult> {

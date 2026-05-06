@@ -29,9 +29,12 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
-  const matchesLanguage = extension.manifest.languages.some((language) =>
-    language.extensions.includes(fileExt),
+  const fileName = activeBuffer.path.split("/").pop() || activeBuffer.path;
+  const lastDotIndex = fileName.lastIndexOf(".");
+  const fileExt = lastDotIndex >= 0 ? fileName.substring(lastDotIndex).toLowerCase() : "";
+  const matchesLanguage = extension.manifest.languages.some(
+    (language) =>
+      language.extensions.includes(fileExt) || Boolean(language.filenames?.includes(fileName)),
   );
 
   if (!matchesLanguage) {

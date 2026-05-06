@@ -1,7 +1,7 @@
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import {
   fetchHighlightQuery,
-  getDefaultParserWasmUrl,
+  getLanguageAssetConfig,
 } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizeCode } from "@/features/editor/lib/wasm-parser/tokenizer";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
@@ -41,18 +41,23 @@ function applyTokensToCode(code: string, tokens: HighlightToken[]): string {
 async function tokenizeForLanguage(code: string, lang: string): Promise<HighlightToken[] | null> {
   try {
     const cached = await indexedDBParserCache.get(lang);
-    let wasmPath = getDefaultParserWasmUrl(lang);
+    const assets = getLanguageAssetConfig(lang);
+    let wasmPath = assets.wasmPath;
     let highlightQuery: string | undefined;
+    let highlightQueryUrl = assets.highlightQueryUrl;
 
     if (cached) {
       wasmPath = cached.sourceUrl || wasmPath;
       highlightQuery = cached.highlightQuery;
+      highlightQueryUrl =
+        highlightQueryUrl || cached.sourceUrl?.replace(/parser\.wasm$/, "highlights.scm") || "";
     }
 
     if (!highlightQuery || highlightQuery.trim().length === 0) {
       try {
         const { query } = await fetchHighlightQuery(lang, {
           wasmUrl: wasmPath,
+          queryUrl: highlightQueryUrl,
           cacheMode: "no-store",
         });
         highlightQuery = query || highlightQuery;
@@ -61,7 +66,7 @@ async function tokenizeForLanguage(code: string, lang: string): Promise<Highligh
       }
     }
 
-    const config = { languageId: lang, wasmPath, highlightQuery };
+    const config = { languageId: lang, wasmPath, highlightQuery, highlightQueryUrl };
     return await tokenizeCode(code, lang, config);
   } catch {
     return null;

@@ -24,6 +24,7 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
+import { SYNTAX_HIGHLIGHTING_REFRESH_EVENT } from "../extensions/builtin/syntax-highlighting";
 import { useAutocomplete } from "../hooks/use-autocomplete";
 import { useBufferSwitch } from "../hooks/use-buffer-switch";
 import { useContextMenu } from "../hooks/use-context-menu";
@@ -407,19 +408,24 @@ export function Editor({
     resetTokenizer: resetForBufferSwitch,
   });
 
-  // Listen for extension installation to re-trigger tokenization
+  // Listen for extension and language changes to re-trigger tokenization
   useEffect(() => {
     if (!isActiveSurface) return;
-    const handleExtensionInstalled = (event: Event) => {
+    const handleSyntaxHighlightingRefresh = (event: Event) => {
       const customEvent = event as CustomEvent<{ extensionId: string; filePath: string }>;
       if (customEvent.detail.filePath === filePath && content) {
         forceFullTokenize(content);
       }
     };
 
-    window.addEventListener("extension-installed", handleExtensionInstalled);
+    window.addEventListener("extension-installed", handleSyntaxHighlightingRefresh);
+    window.addEventListener(SYNTAX_HIGHLIGHTING_REFRESH_EVENT, handleSyntaxHighlightingRefresh);
     return () => {
-      window.removeEventListener("extension-installed", handleExtensionInstalled);
+      window.removeEventListener("extension-installed", handleSyntaxHighlightingRefresh);
+      window.removeEventListener(
+        SYNTAX_HIGHLIGHTING_REFRESH_EVENT,
+        handleSyntaxHighlightingRefresh,
+      );
     };
   }, [filePath, content, forceFullTokenize, isActiveSurface]);
 
