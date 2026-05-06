@@ -1,6 +1,23 @@
+import { TERMINAL_NERD_FONT_FALLBACKS } from "./terminal-fonts";
+
 const WINDOWS_FALLBACK = "Consolas";
 const MAC_FALLBACK = "Menlo";
 const LINUX_FALLBACK = '"Liberation Mono"';
+const CSS_GENERIC_FONT_FAMILIES = new Set([
+  "cursive",
+  "emoji",
+  "fangsong",
+  "fantasy",
+  "math",
+  "monospace",
+  "sans-serif",
+  "serif",
+  "system-ui",
+  "ui-monospace",
+  "ui-rounded",
+  "ui-sans-serif",
+  "ui-serif",
+]);
 
 function getPlatform(): "windows" | "mac" | "linux" {
   if (typeof navigator === "undefined") return "linux";
@@ -17,20 +34,86 @@ function getPlatformFallback(): string {
   return LINUX_FALLBACK;
 }
 
+function stripWrappingQuotes(name: string): string {
+  return name.trim().replace(/^['"]+|['"]+$/g, "");
+}
+
 function quoteFontName(name: string): string {
-  return name.includes(" ") ? `"${name}"` : name;
+  const normalized = stripWrappingQuotes(name);
+  if (!normalized) return "";
+  if (CSS_GENERIC_FONT_FAMILIES.has(normalized.toLowerCase())) return normalized;
+  return `"${normalized.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function splitFontFamilyList(fontFamily: string): string[] {
+  const families: string[] = [];
+  let current = "";
+  let quote: string | null = null;
+
+  for (const char of fontFamily) {
+    if ((char === '"' || char === "'") && !quote) {
+      quote = char;
+      current += char;
+      continue;
+    }
+
+    if (char === quote) {
+      quote = null;
+      current += char;
+      continue;
+    }
+
+    if (char === "," && !quote) {
+      const family = stripWrappingQuotes(current);
+      if (family) families.push(family);
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  const family = stripWrappingQuotes(current);
+  if (family) families.push(family);
+  return families;
+}
+
+function uniqueFontFamilies(families: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const family of families) {
+    const normalized = stripWrappingQuotes(family);
+    const key = normalized.toLowerCase();
+    if (!normalized || seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+  }
+
+  return result;
 }
 
 /**
  * Build the terminal font-family string with platform-aware fallbacks.
  *
  * xterm.js measures character width from the *first* font it can resolve,
- * so the order matters: primary -> platform native -> generic monospace.
+ * so the order matters: primary -> Nerd Font glyph fallbacks -> platform native -> generic monospace.
  */
 export function buildTerminalFontFamily(primaryFont: string): string {
-  const quoted = quoteFontName(primaryFont);
+  const requestedFonts = splitFontFamilyList(primaryFont);
+  const concreteRequestedFonts = requestedFonts.filter(
+    (font) => !CSS_GENERIC_FONT_FAMILIES.has(stripWrappingQuotes(font).toLowerCase()),
+  );
   const platformFallback = getPlatformFallback();
-  return `${quoted}, ${platformFallback}, monospace`;
+  return uniqueFontFamilies([
+    ...concreteRequestedFonts,
+    ...TERMINAL_NERD_FONT_FALLBACKS,
+    platformFallback,
+    "monospace",
+  ])
+    .map(quoteFontName)
+    .filter(Boolean)
+    .join(", ");
 }
 
 /**
@@ -74,7 +157,7 @@ export async function resolveTerminalFont(
   // Font didn't load — use platform native monospace
   const fallback = getPlatformFallback();
   return {
-    fontFamily: `${fallback}, monospace`,
+    fontFamily: buildTerminalFontFamily(fallback),
     skipWebGL: false,
   };
 }
