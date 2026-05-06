@@ -67,6 +67,22 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
     };
   }
 
+  if (requestedProvider?.id === "custom") {
+    const customModelId = useSettingsStore.getState().settings.aiCustomModelId || modelId;
+    if (customModelId.trim().length > 0) {
+      return {
+        providerId,
+        modelId: customModelId,
+        provider: requestedProvider,
+        model: {
+          id: customModelId,
+          name: customModelId,
+          maxTokens: 4096,
+        },
+      };
+    }
+  }
+
   for (const provider of getAvailableProviders()) {
     const staticModel = provider.models.find((model) => model.id === modelId);
     if (staticModel) {
@@ -156,6 +172,10 @@ export const getChatCompletionStream = async (
     const provider = resolved.provider;
     const model = resolved.model;
 
+    if (providerId === "custom" && !model) {
+      throw new Error("Custom provider model is required. Add one in Settings → AI.");
+    }
+
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
@@ -165,6 +185,10 @@ export const getChatCompletionStream = async (
     const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
     if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
       throw new Error(`${provider.name} API key not found`);
+    }
+
+    if (providerId === "custom" && !useSettingsStore.getState().settings.aiCustomBaseUrl) {
+      throw new Error("Custom provider base URL is required. Add one in Settings → AI.");
     }
 
     // Ollama Cloud requires auth even though the provider config marks the

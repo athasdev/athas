@@ -69,6 +69,8 @@ export function ModelSelector({
   };
 
   const fetchDynamicModels = useCallback(async () => {
+    if (providerId === "custom") return;
+
     const config = getProviderById(providerId);
     const instance = getProvider(providerId);
 
@@ -149,7 +151,9 @@ export function ModelSelector({
     const selectedModel = availableModels.find((model) => model.id === modelId);
     if (selectedModel) return selectedModel.name;
     if (isLoadingModels) return "Loading models...";
-    if (providerId === "openrouter" && modelId.trim().length > 0) return modelId;
+    if ((providerId === "openrouter" || providerId === "custom") && modelId.trim().length > 0) {
+      return modelId;
+    }
     return "Select model";
   }, [availableModels, isLoadingModels, modelId, providerId]);
 

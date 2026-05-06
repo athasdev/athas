@@ -15,6 +15,8 @@ import type { Settings } from "@/features/settings/types/settings";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
 export const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
+export const DEFAULT_AI_CUSTOM_BASE_URL = "";
+export const DEFAULT_AI_CUSTOM_MODEL_ID = "";
 export const DEFAULT_AI_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 export const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
 
@@ -63,6 +65,8 @@ export const defaultSettings: Settings = {
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
   aiModelId: DEFAULT_AI_MODEL_ID,
+  aiCustomBaseUrl: DEFAULT_AI_CUSTOM_BASE_URL,
+  aiCustomModelId: DEFAULT_AI_CUSTOM_MODEL_ID,
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,

@@ -105,6 +105,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const acpStatus = useAIChatStore((state) => state.acpStatus);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const aiCustomModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
@@ -165,18 +166,25 @@ const AIChatInputBar = memo(function AIChatInputBar({
     (nextProviderId: string) => {
       const provider = getProviderById(nextProviderId);
       void updateSetting("aiProviderId", nextProviderId);
+      if (nextProviderId === "custom") {
+        void updateSetting("aiModelId", aiCustomModelId);
+        return;
+      }
       if (provider && provider.models.length > 0) {
         void updateSetting("aiModelId", provider.models[0].id);
       }
     },
-    [updateSetting],
+    [aiCustomModelId, updateSetting],
   );
 
   const handleAthasModelChange = useCallback(
     (nextModelId: string) => {
+      if (aiProviderId === "custom") {
+        void updateSetting("aiCustomModelId", nextModelId);
+      }
       void updateSetting("aiModelId", nextModelId);
     },
-    [updateSetting],
+    [aiProviderId, updateSetting],
   );
 
   // Pasted images state and actions

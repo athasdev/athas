@@ -55,6 +55,24 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
   });
 
+  it("preserves custom AI provider settings and mirrors the custom model into chat model", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      aiProviderId: "custom",
+      aiModelId: " old-model ",
+      aiCustomBaseUrl: " http://localhost:11434/v1/ ",
+      aiCustomModelId: " qwen2.5-coder:7b ",
+    });
+
+    expect(normalized.aiProviderId).toBe("custom");
+    expect(normalized.aiCustomBaseUrl).toBe("http://localhost:11434/v1");
+    expect(normalized.aiCustomModelId).toBe("qwen2.5-coder:7b");
+    expect(normalized.aiModelId).toBe("qwen2.5-coder:7b");
+    expect(normalizeSettingValue("aiCustomBaseUrl", " https://example.test/v1/ ")).toBe(
+      "https://example.test/v1",
+    );
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [

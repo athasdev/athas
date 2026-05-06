@@ -72,6 +72,10 @@ function normalizeFileTreeIndentSize(value: number): number {
   return Math.min(FILE_TREE_INDENT_SIZE_MAX, Math.max(FILE_TREE_INDENT_SIZE_MIN, snapped));
 }
 
+function normalizeBaseUrl(value: string | undefined): string {
+  return value?.trim().replace(/\/+$/, "") || "";
+}
+
 const MAX_SYNCED_AI_SKILLS = 200;
 
 function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
@@ -164,7 +168,12 @@ function normalizeAISettings(settings: Settings): Settings {
     AI_MODEL_MIGRATIONS[provider.id]?.[normalizedSettings.aiModelId] ||
     normalizedSettings.aiModelId;
 
-  if (
+  normalizedSettings.aiCustomBaseUrl = normalizeBaseUrl(normalizedSettings.aiCustomBaseUrl);
+  normalizedSettings.aiCustomModelId = normalizedSettings.aiCustomModelId?.trim() || "";
+
+  if (provider.id === "custom") {
+    normalizedSettings.aiModelId = normalizedSettings.aiCustomModelId;
+  } else if (
     provider.models.length > 0 &&
     !provider.models.some((model) => model.id === normalizedSettings.aiModelId)
   ) {
@@ -299,6 +308,14 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "aiSkills") {
     return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
+  }
+
+  if (key === "aiCustomBaseUrl") {
+    return normalizeBaseUrl(value as string) as Settings[K];
+  }
+
+  if (key === "aiCustomModelId") {
+    return (value as string).trim() as Settings[K];
   }
 
   if (key === "aiAutocompleteProvider") {

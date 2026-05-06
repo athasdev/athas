@@ -416,6 +416,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
     models: [],
   },
   {
+    id: "custom",
+    name: "Custom",
+    apiUrl: "",
+    requiresApiKey: false,
+    models: [],
+  },
+  {
     id: "ollama",
     name: "Ollama",
     apiUrl: "http://localhost:11434/v1/chat/completions",

@@ -471,6 +471,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ollama", "endpoint", "url", "local", "lan", "cloud", "host", "port"],
   },
   {
+    id: "ai-custom-provider",
+    tab: "ai",
+    section: "Custom Provider",
+    label: "Custom Provider",
+    description: "Configure an OpenAI-compatible base URL, model, and optional API key",
+    keywords: ["ai", "custom", "provider", "endpoint", "base", "url", "api", "key", "model"],
+  },
+  {
     id: "ai-ollama-api-key",
     tab: "ai",
     section: "Ollama",

@@ -54,6 +54,8 @@ export interface Settings {
   // AI
   aiProviderId: string;
   aiModelId: string;
+  aiCustomBaseUrl: string;
+  aiCustomModelId: string;
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
