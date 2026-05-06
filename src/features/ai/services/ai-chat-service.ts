@@ -3,7 +3,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpEvent } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
+import type { AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import {
   getAvailableProviders,
@@ -24,8 +24,7 @@ import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-build
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
-  const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
-  return agent?.isAcp ?? false;
+  return agentId !== "custom";
 };
 
 function resolveProviderModelPair(providerId: string, modelId: string) {

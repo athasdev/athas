@@ -397,6 +397,14 @@ impl AcpAgentBridge {
       self.registry.list_all()
    }
 
+   pub fn replace_registered_agents(&mut self, agents: Vec<AgentConfig>) {
+      self.registry.replace_agents(agents);
+   }
+
+   pub fn invalidate_agent_detection_cache(&mut self) {
+      self.registry.invalidate_detection_cache();
+   }
+
    /// Start an ACP agent by ID
    pub async fn start_agent(
       &self,

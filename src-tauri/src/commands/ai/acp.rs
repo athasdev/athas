@@ -5,13 +5,17 @@ use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
 use serde::Deserialize;
 use std::{
    collections::HashMap,
+   fs,
    path::{Path, PathBuf},
    sync::Arc,
+   time::{Duration, Instant},
 };
 use tauri::{Manager, State};
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
+const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
+const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -29,6 +33,7 @@ pub async fn get_available_agents(
    bridge: State<'_, AcpBridgeState>,
 ) -> Result<Vec<AgentConfig>, String> {
    let mut bridge = bridge.lock().await;
+   refresh_registered_agents(&mut bridge).await;
    Ok(bridge.detect_agents())
 }
 
@@ -39,7 +44,11 @@ pub async fn start_acp_agent(
    workspace_path: Option<String>,
    session_id: Option<String>,
 ) -> Result<AcpAgentStatus, String> {
-   let bridge = { bridge.lock().await.clone() };
+   let bridge = {
+      let mut bridge = bridge.lock().await;
+      refresh_registered_agents(&mut bridge).await;
+      bridge.clone()
+   };
    bridge
       .start_agent(&agent_id, workspace_path, session_id)
       .await
@@ -54,6 +63,7 @@ pub async fn install_acp_agent(
 ) -> Result<AgentConfig, String> {
    let agent = {
       let mut bridge = bridge.lock().await;
+      refresh_registered_agents(&mut bridge).await;
       let agents = bridge.detect_agents();
       agents
          .into_iter()
@@ -68,6 +78,7 @@ pub async fn install_acp_agent(
    write_acp_wrapper(&app_handle, &agent, &tool_config, &installed_binary).await?;
 
    let mut bridge = bridge.lock().await;
+   bridge.invalidate_agent_detection_cache();
    let installed = bridge
       .detect_agents()
       .into_iter()
@@ -75,6 +86,193 @@ pub async fn install_acp_agent(
       .ok_or_else(|| format!("Installed ACP agent disappeared: {}", agent_id))?;
 
    Ok(installed)
+}
+
+#[tauri::command]
+pub async fn uninstall_acp_agent(
+   app_handle: AppHandle,
+   bridge: State<'_, AcpBridgeState>,
+   agent_id: String,
+) -> Result<AgentConfig, String> {
+   let agent = {
+      let mut bridge = bridge.lock().await;
+      refresh_registered_agents(&mut bridge).await;
+      bridge.invalidate_agent_detection_cache();
+      let agents = bridge.detect_agents();
+      agents
+         .into_iter()
+         .find(|agent| agent.id == agent_id)
+         .ok_or_else(|| format!("Unknown ACP agent: {}", agent_id))?
+   };
+
+   let tool_config = tool_config_from_agent(&agent)?;
+   remove_acp_wrapper(&app_handle, &agent.id)?;
+   remove_managed_tool(&app_handle, &tool_config)?;
+
+   let mut bridge = bridge.lock().await;
+   bridge.invalidate_agent_detection_cache();
+   let detected = bridge
+      .detect_agents()
+      .into_iter()
+      .find(|candidate| candidate.id == agent_id)
+      .ok_or_else(|| format!("Uninstalled ACP agent disappeared: {}", agent_id))?;
+
+   Ok(detected)
+}
+
+#[derive(Clone)]
+struct CachedAgentCatalog {
+   loaded_at: Instant,
+   agents: Vec<AgentConfig>,
+}
+
+static AGENT_CATALOG_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<CachedAgentCatalog>>> =
+   std::sync::OnceLock::new();
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MarketplaceAgentInstall {
+   runtime: AgentRuntime,
+   package: String,
+   command: Option<String>,
+   download_url: Option<String>,
+   #[serde(default)]
+   download_urls: HashMap<String, String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MarketplaceAgentContribution {
+   id: String,
+   name: String,
+   binary_name: String,
+   #[serde(default)]
+   args: Vec<String>,
+   #[serde(default)]
+   env_vars: HashMap<String, String>,
+   icon: Option<String>,
+   description: Option<String>,
+   install: Option<MarketplaceAgentInstall>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MarketplaceExtensionManifest {
+   #[serde(default)]
+   agents: Vec<MarketplaceAgentContribution>,
+}
+
+fn extensions_manifest_url() -> String {
+   let base_url = std::env::var("ATHAS_EXTENSIONS_CDN_URL")
+      .unwrap_or_else(|_| EXTENSIONS_CDN_BASE_URL.to_string());
+   format!("{}/manifests.json", base_url.trim_end_matches('/'))
+}
+
+fn current_platform_arch() -> Option<&'static str> {
+   match (std::env::consts::OS, std::env::consts::ARCH) {
+      ("macos", "aarch64") => Some("darwin-arm64"),
+      ("macos", "x86_64") => Some("darwin-x64"),
+      ("linux", "aarch64") => Some("linux-arm64"),
+      ("linux", "x86_64") => Some("linux-x64"),
+      ("windows", "aarch64") => Some("win32-arm64"),
+      ("windows", "x86_64") => Some("win32-x64"),
+      _ => None,
+   }
+}
+
+fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
+   let mut agent = AgentConfig {
+      id: contribution.id,
+      name: contribution.name,
+      binary_name: contribution.binary_name,
+      binary_path: None,
+      args: contribution.args,
+      env_vars: contribution.env_vars,
+      icon: contribution.icon,
+      description: contribution.description,
+      installed: false,
+      install_runtime: None,
+      install_package: None,
+      install_download_url: None,
+      install_command: None,
+      can_install: false,
+   };
+
+   if let Some(install) = contribution.install {
+      let download_url = current_platform_arch()
+         .and_then(|platform_arch| install.download_urls.get(platform_arch).cloned())
+         .or(install.download_url);
+      let is_binary_install = install.runtime == AgentRuntime::Binary;
+
+      agent.install_runtime = Some(install.runtime);
+      agent.install_package = Some(install.package);
+      agent.install_command = install.command;
+      agent.install_download_url = download_url;
+      agent.can_install = agent.install_runtime.is_some()
+         && agent.install_package.is_some()
+         && (!is_binary_install || agent.install_download_url.is_some());
+   }
+
+   agent
+}
+
+async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
+   let cache = AGENT_CATALOG_CACHE.get_or_init(|| std::sync::Mutex::new(None));
+   {
+      let cached = cache
+         .lock()
+         .map_err(|_| "Agent catalog cache poisoned".to_string())?;
+      if let Some(catalog) = cached.as_ref() {
+         if catalog.loaded_at.elapsed() < Duration::from_secs(AGENT_CATALOG_CACHE_SECONDS) {
+            return Ok(catalog.agents.clone());
+         }
+      }
+   }
+
+   let response = reqwest::Client::new()
+      .get(extensions_manifest_url())
+      .timeout(Duration::from_secs(5))
+      .send()
+      .await
+      .map_err(|error| format!("Failed to load agent catalog: {}", error))?;
+
+   if !response.status().is_success() {
+      return Err(format!(
+         "Failed to load agent catalog: HTTP {}",
+         response.status()
+      ));
+   }
+
+   let manifests = response
+      .json::<HashMap<String, MarketplaceExtensionManifest>>()
+      .await
+      .map_err(|error| format!("Invalid agent catalog: {}", error))?;
+
+   let mut agents = manifests
+      .into_values()
+      .flat_map(|manifest| manifest.agents)
+      .map(to_agent_config)
+      .collect::<Vec<_>>();
+   agents.sort_by_key(|agent| agent.name.clone());
+
+   let mut cached = cache
+      .lock()
+      .map_err(|_| "Agent catalog cache poisoned".to_string())?;
+   *cached = Some(CachedAgentCatalog {
+      loaded_at: Instant::now(),
+      agents: agents.clone(),
+   });
+
+   Ok(agents)
+}
+
+async fn refresh_registered_agents(bridge: &mut AcpAgentBridge) {
+   match load_marketplace_agents().await {
+      Ok(agents) => bridge.replace_registered_agents(agents),
+      Err(error) => {
+         log::warn!("{}", error);
+      }
+   }
 }
 
 #[tauri::command]
@@ -186,21 +384,63 @@ fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
       }
    };
 
-   let package = agent
-      .install_package
-      .clone()
-      .ok_or_else(|| format!("{} is missing installation metadata", agent.name))?;
+   let package = if runtime == ToolRuntime::Binary {
+      agent.install_package.clone()
+   } else {
+      Some(
+         agent
+            .install_package
+            .clone()
+            .ok_or_else(|| format!("{} is missing installation metadata", agent.name))?,
+      )
+   };
 
    Ok(ToolConfig {
       name: agent.binary_name.clone(),
       command: agent.install_command.clone(),
       runtime,
-      package: Some(package),
+      package,
       packages: vec![],
-      download_url: None,
+      download_url: agent.install_download_url.clone(),
       args: vec![],
       env: HashMap::new(),
    })
+}
+
+fn remove_acp_wrapper(app_handle: &AppHandle, agent_id: &str) -> Result<(), String> {
+   let wrapper_path = acp_wrapper_path(app_handle, agent_id)?;
+   if wrapper_path.exists() {
+      fs::remove_file(&wrapper_path).map_err(|e| format!("Failed to remove ACP wrapper: {}", e))?;
+   }
+   Ok(())
+}
+
+fn remove_managed_tool(app_handle: &AppHandle, tool_config: &ToolConfig) -> Result<(), String> {
+   let Some(package) = tool_config.package.as_ref() else {
+      return Ok(());
+   };
+   let tools_dir = ToolInstaller::get_tools_dir(app_handle).map_err(|e| e.to_string())?;
+   let path = match tool_config.runtime {
+      ToolRuntime::Node => tools_dir.join("npm").join(package),
+      ToolRuntime::Python => tools_dir.join("python").join(package),
+      ToolRuntime::Go => {
+         ToolInstaller::get_tool_path(app_handle, tool_config).map_err(|e| e.to_string())?
+      }
+      ToolRuntime::Rust => {
+         ToolInstaller::get_tool_path(app_handle, tool_config).map_err(|e| e.to_string())?
+      }
+      ToolRuntime::Binary => tools_dir.join("binary").join(&tool_config.name),
+      ToolRuntime::Bun => tools_dir.join("bun").join(package),
+      ToolRuntime::Ruby => tools_dir.join("ruby").join(package),
+   };
+
+   if path.is_dir() {
+      fs::remove_dir_all(&path).map_err(|e| format!("Failed to remove managed tool: {}", e))?;
+   } else if path.exists() {
+      fs::remove_file(&path).map_err(|e| format!("Failed to remove managed tool: {}", e))?;
+   }
+
+   Ok(())
 }
 
 async fn write_acp_wrapper(

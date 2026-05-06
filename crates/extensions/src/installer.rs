@@ -74,11 +74,18 @@ impl ExtensionInstaller {
       // Download the file
       let response = reqwest::get(&download_info.url).await?;
       if !response.status().is_success() {
-         anyhow::bail!(
-            "Failed to download extension {}: HTTP {}",
-            extension_id,
-            response.status()
-         );
+         let status = response.status();
+         let hint = if status == reqwest::StatusCode::NOT_FOUND {
+            format!(
+               ". The package URL is missing from the extensions CDN: {}. Deploy the package or \
+                point Athas at a local extensions CDN.",
+               download_info.url
+            )
+         } else {
+            String::new()
+         };
+
+         anyhow::bail!("Failed to download extension {extension_id}: HTTP {status}{hint}");
       }
       let bytes = response.bytes().await?;
 

@@ -66,6 +66,10 @@ fn sidecar_for_platform(sidecar: &PlatformArchExecutable) -> Option<&str> {
    }
 }
 
+fn is_builtin_database_provider(provider_id: &str) -> bool {
+   provider_id == "sqlite"
+}
+
 fn resolve_sidecar_path(app_handle: AppHandle, provider_id: &str) -> Result<PathBuf, String> {
    let extension_id = database_extension_id(provider_id)?;
    let installer = ExtensionInstaller::new(app_handle)
@@ -149,6 +153,10 @@ pub async fn run_database_sidecar(
    payload: Value,
 ) -> Result<Value, String> {
    let payload = hydrate_connection_payload(&app_handle, payload)?;
+   if is_builtin_database_provider(&provider_id) {
+      return athas_database::sidecar::run_provider_command(provider_id, command, payload).await;
+   }
+
    let sidecar_path = resolve_sidecar_path(app_handle, &provider_id)?;
    let request = json!({
       "protocolVersion": 1,

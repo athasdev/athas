@@ -32,13 +32,15 @@ const CONNECTION_DB_TYPES: DatabaseType[] = [
 ];
 
 function getInstalledDatabaseTypes(
-  availableExtensions: Map<string, { manifest: { databaseProviders?: Array<{ id: string }> } }>,
-  isExtensionInstalled: (extensionId: string) => boolean,
+  availableExtensions: Map<
+    string,
+    { isInstalled?: boolean; manifest: { databaseProviders?: Array<{ id: string }> } }
+  >,
 ): DatabaseType[] {
   const installedTypes = new Set<DatabaseType>();
 
-  for (const [extensionId, extension] of availableExtensions) {
-    if (!isExtensionInstalled(extensionId)) {
+  for (const extension of availableExtensions.values()) {
+    if (!extension.isInstalled) {
       continue;
     }
 
@@ -55,7 +57,6 @@ function getInstalledDatabaseTypes(
 export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
   const { actions } = useConnectionStore();
   const availableExtensions = useExtensionStore.use.availableExtensions();
-  const isExtensionInstalled = useExtensionStore.use.actions().isExtensionInstalled;
   const [mode, setMode] = useState<"form" | "string">("form");
   const [dbType, setDbType] = useState<DatabaseType>("sqlite");
   const [name, setName] = useState("");
@@ -82,7 +83,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     }
   }, [isOpen, onClose]);
 
-  const installedDbTypes = getInstalledDatabaseTypes(availableExtensions, isExtensionInstalled);
+  const installedDbTypes = getInstalledDatabaseTypes(availableExtensions);
 
   useEffect(() => {
     if (!isOpen || installedDbTypes.length === 0 || installedDbTypes.includes(dbType)) {

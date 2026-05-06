@@ -23,50 +23,7 @@ export interface AIAgent {
   installed?: boolean;
 }
 
-export const AI_AGENTS: AIAgent[] = [
-  {
-    id: "claude-code",
-    name: "Claude Code",
-    binaryName: "claude-code-acp",
-    description: "Anthropic's Claude Code ACP adapter",
-    installed: false,
-  },
-  {
-    id: "codex-cli",
-    name: "Codex CLI",
-    binaryName: "codex-acp",
-    description: "OpenAI Codex agent via ACP adapter",
-    installed: false,
-  },
-  {
-    id: "gemini-cli",
-    name: "Gemini CLI",
-    binaryName: "gemini",
-    description: "Google's Gemini CLI agent",
-    installed: false,
-  },
-  {
-    id: "kimi-cli",
-    name: "Kimi CLI",
-    binaryName: "kimi",
-    description: "Moonshot Kimi CLI agent",
-    installed: false,
-  },
-  {
-    id: "opencode",
-    name: "OpenCode",
-    binaryName: "opencode",
-    description: "SST OpenCode agent",
-    installed: false,
-  },
-  {
-    id: "qwen-code",
-    name: "Qwen Code",
-    binaryName: "qwen",
-    description: "Alibaba Qwen Code agent",
-    installed: false,
-  },
-];
+export const AI_AGENTS: AIAgent[] = [];
 
 // Helper to check if a provider ID is an agent
 export const isAgentProvider = (id: string): boolean => {
@@ -80,12 +37,7 @@ export const getAgentById = (id: string): AIAgent | undefined => {
 
 // Update agent installation status
 export const updateAgentStatus = (agents: Array<{ id: string; installed: boolean }>) => {
-  for (const update of agents) {
-    const agent = AI_AGENTS.find((a) => a.id === update.id);
-    if (agent) {
-      agent.installed = update.installed;
-    }
-  }
+  void agents;
 };
 
 export const AI_PROVIDERS: ModelProvider[] = [

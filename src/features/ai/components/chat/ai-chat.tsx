@@ -23,7 +23,7 @@ import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-c
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpEvent, AcpPermissionOption, AcpToolKind } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { AGENT_OPTIONS, type AIChatProps, type Message } from "@/features/ai/types/ai-chat";
+import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -624,7 +624,8 @@ const AIChat = memo(function AIChat({
               return;
             }
 
-            const fallbackMessage = `${AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "Agent"} did not return a visible response. Try sending the message again.`;
+            const fallbackMessage =
+              "The selected agent did not return a visible response. Try sending the message again.";
             updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
               content: `[ERROR_BLOCK]
 title: No Response
@@ -703,9 +704,8 @@ details: The agent session started, but no content, tool output, or resource was
           if (isAcpAuthError) {
             errorTitle = "Authentication Required";
             errorCode = "AUTH_REQUIRED";
-            const agentName =
-              AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "This agent";
-            errorMessage = `${agentName} needs external authentication before it can accept prompts.`;
+            errorMessage =
+              "The selected agent needs external authentication before it can accept prompts.";
 
             if (
               mainError.includes("Method not implemented") ||

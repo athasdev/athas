@@ -73,6 +73,20 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
    }
 }
 
+pub async fn run_provider_command(
+   provider_id: String,
+   command: String,
+   payload: Value,
+) -> Result<Value, String> {
+   run_request(SidecarRequest {
+      protocol_version: 1,
+      provider_id,
+      command,
+      payload,
+   })
+   .await
+}
+
 fn read_field<T: DeserializeOwned>(payload: &Value, keys: &[&str]) -> Result<T, String> {
    for key in keys {
       if let Some(value) = payload.get(*key) {

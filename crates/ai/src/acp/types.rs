@@ -209,6 +209,8 @@ pub struct AgentConfig {
    pub installed: bool,
    pub install_runtime: Option<AgentRuntime>,
    pub install_package: Option<String>,
+   #[serde(default)]
+   pub install_download_url: Option<String>,
    pub install_command: Option<String>,
    pub can_install: bool,
 }
@@ -227,6 +229,7 @@ impl AgentConfig {
          installed: false,
          install_runtime: None,
          install_package: None,
+         install_download_url: None,
          install_command: None,
          can_install: false,
       }
@@ -251,6 +254,11 @@ impl AgentConfig {
 
    pub fn with_install_command(mut self, command: &str) -> Self {
       self.install_command = Some(command.to_string());
+      self
+   }
+
+   pub fn with_install_download_url(mut self, download_url: String) -> Self {
+      self.install_download_url = Some(download_url);
       self
    }
 }

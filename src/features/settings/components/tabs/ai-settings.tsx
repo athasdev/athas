@@ -17,7 +17,7 @@ import { ModelSelector } from "@/features/ai/components/selectors/model-selector
 import { ProviderSelector } from "@/features/ai/components/selectors/provider-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp";
-import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
+import { getAvailableProviders } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
@@ -107,7 +107,6 @@ export const AISettings = () => {
     const detectAgents = async () => {
       try {
         const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
-        updateAgentStatus(availableAgents.map((a) => ({ id: a.id, installed: a.installed })));
       } catch {
         // Failed to detect agents
       }

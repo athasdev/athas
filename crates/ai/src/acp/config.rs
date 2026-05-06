@@ -1,4 +1,4 @@
-use super::types::{AgentConfig, AgentRuntime};
+use super::types::AgentConfig;
 use crate::runtime::AthasAppHandle as AppHandle;
 use std::{
    collections::HashMap,
@@ -33,7 +33,7 @@ pub(crate) fn user_shell_path() -> Option<&'static str> {
       .as_deref()
 }
 
-/// Registry of known ACP-compatible agents
+/// Registry of ACP-compatible agents loaded from extension manifests.
 #[derive(Clone)]
 pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
@@ -43,66 +43,8 @@ pub struct AgentRegistry {
 
 impl AgentRegistry {
    pub fn new(app_handle: &AppHandle) -> Self {
-      let mut agents = HashMap::new();
-
-      // Claude Code - ACP adapter (Zed)
-      agents.insert(
-         "claude-code".to_string(),
-         AgentConfig::new("claude-code", "Claude Code", "claude-code-acp")
-            .with_description("Claude Code (ACP adapter)")
-            .with_install(AgentRuntime::Node, "@zed-industries/claude-code-acp"),
-      );
-
-      // Codex CLI (OpenAI) - ACP adapter
-      agents.insert(
-         "codex-cli".to_string(),
-         AgentConfig::new("codex-cli", "Codex CLI", "codex-acp")
-            .with_description("OpenAI Codex (ACP adapter)")
-            .with_install(AgentRuntime::Node, "@zed-industries/codex-acp"),
-      );
-
-      // Gemini CLI - native ACP support with --experimental-acp flag
-      agents.insert(
-         "gemini-cli".to_string(),
-         AgentConfig::new("gemini-cli", "Gemini CLI", "gemini")
-            .with_description("Google Gemini CLI")
-            .with_args(vec!["--experimental-acp"])
-            .with_install(AgentRuntime::Node, "@google/gemini-cli")
-            .with_install_command("gemini"),
-      );
-
-      // Kimi CLI - native ACP support with --acp flag
-      agents.insert(
-         "kimi-cli".to_string(),
-         AgentConfig::new("kimi-cli", "Kimi CLI", "kimi")
-            .with_description("Moonshot Kimi CLI")
-            .with_args(vec!["--acp"])
-            .with_install(AgentRuntime::Python, "kimi-cli")
-            .with_install_command("kimi-cli"),
-      );
-
-      // OpenCode - native ACP support with 'acp' subcommand
-      agents.insert(
-         "opencode".to_string(),
-         AgentConfig::new("opencode", "OpenCode", "opencode")
-            .with_description("SST OpenCode")
-            .with_args(vec!["acp"])
-            .with_install(AgentRuntime::Node, "opencode-ai")
-            .with_install_command("opencode"),
-      );
-
-      // Qwen Code - native ACP support with --acp flag
-      agents.insert(
-         "qwen-code".to_string(),
-         AgentConfig::new("qwen-code", "Qwen Code", "qwen")
-            .with_description("Alibaba Qwen Code")
-            .with_args(vec!["--acp"])
-            .with_install(AgentRuntime::Node, "@qwen-code/qwen-code")
-            .with_install_command("qwen"),
-      );
-
       Self {
-         agents,
+         agents: HashMap::new(),
          last_detection: None,
          managed_bin_dir: managed_acp_bin_dir(app_handle),
       }
@@ -116,6 +58,14 @@ impl AgentRegistry {
       let mut agents: Vec<_> = self.agents.values().cloned().collect();
       agents.sort_by_key(|agent| agent.name.clone());
       agents
+   }
+
+   pub fn replace_agents(&mut self, agents: Vec<AgentConfig>) {
+      self.agents = agents
+         .into_iter()
+         .map(|agent| (agent.id.clone(), agent))
+         .collect();
+      self.invalidate_detection_cache();
    }
 
    pub fn detect_installed(&mut self) {
@@ -154,6 +104,10 @@ impl AgentRegistry {
       }
 
       self.last_detection = Some(Instant::now());
+   }
+
+   pub fn invalidate_detection_cache(&mut self) {
+      self.last_detection = None;
    }
 }
 

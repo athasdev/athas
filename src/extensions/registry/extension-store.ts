@@ -33,6 +33,10 @@ import {
   recordExtensionUpdateCheck,
 } from "@/features/telemetry/services/telemetry";
 
+function isBuiltInDatabaseExtension(manifest: ExtensionManifest): boolean {
+  return manifest.databaseProviders?.some((provider) => provider.id === "sqlite") ?? false;
+}
+
 interface ExtensionStoreState {
   availableExtensions: Map<string, AvailableExtension>;
   installedExtensions: Map<string, ExtensionInstallationMetadata>;
@@ -97,19 +101,22 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               continue;
             }
 
+            const isBuiltInDatabase = isBuiltInDatabaseExtension(manifest);
             extensionRegistry.registerExtension(manifest, {
-              isBundled: false,
+              isBundled: isBuiltInDatabase,
               isEnabled: true,
-              state: installed.has(manifest.id) ? "installed" : "not-installed",
+              state:
+                installed.has(manifest.id) || isBuiltInDatabase ? "installed" : "not-installed",
             });
           }
 
           set((state) => {
             // Add all language extensions as installable
             for (const manifest of extensions) {
+              const isBuiltInDatabase = isBuiltInDatabaseExtension(manifest);
               state.availableExtensions.set(manifest.id, {
                 manifest,
-                isInstalled: installed.has(manifest.id),
+                isInstalled: installed.has(manifest.id) || isBuiltInDatabase,
                 isInstalling: false,
                 runtimeIssues: [],
               });
@@ -153,7 +160,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             state.isLoadingInstalled = false;
 
             for (const [id, ext] of state.availableExtensions) {
-              ext.isInstalled = state.installedExtensions.has(id);
+              ext.isInstalled =
+                state.installedExtensions.has(id) || isBuiltInDatabaseExtension(ext.manifest);
               ext.runtimeIssues = runtimeIssues.get(id) || [];
             }
           });
@@ -175,7 +183,11 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       },
 
       isExtensionInstalled: (extensionId: string) => {
-        return get().installedExtensions.has(extensionId);
+        const extension = get().availableExtensions.get(extensionId);
+        return (
+          get().installedExtensions.has(extensionId) ||
+          Boolean(extension && isBuiltInDatabaseExtension(extension.manifest))
+        );
       },
 
       getExtensionForFile: (filePath: string) => {

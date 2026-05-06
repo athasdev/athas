@@ -1,5 +1,5 @@
 export interface WindowOpenRequest {
-  type?: "path" | "remote" | "web" | "terminal";
+  type?: "path" | "remote" | "web" | "terminal" | "settings";
   source?: "app" | "cli" | "deepLink";
   path?: string;
   isDirectory?: boolean;
@@ -96,6 +96,12 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
       type: "terminal",
       command: url.searchParams.get("command") ?? undefined,
       workingDirectory: url.searchParams.get("cwd") ?? undefined,
+    };
+  }
+
+  if (type === "settings") {
+    return {
+      type: "settings",
     };
   }
 

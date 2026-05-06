@@ -38,6 +38,20 @@ describe("parseDeepLinkAction", () => {
     });
   });
 
+  it("maps settings URLs to settings dialog actions", () => {
+    expect(parseDeepLinkAction("athas://settings?tab=extensions&category=agent")).toEqual({
+      type: "settings",
+      tab: "extensions",
+      extensionsCategory: "agent",
+    });
+
+    expect(parseDeepLinkAction("athas://open?type=settings&tab=extensions")).toEqual({
+      type: "settings",
+      tab: "extensions",
+      extensionsCategory: undefined,
+    });
+  });
+
   it("drops unsupported schemes and malformed actions", () => {
     expect(parseDeepLinkAction("athas-alpha://open?path=/Users/test/file.ts")).toBeNull();
     expect(parseDeepLinkAction("athas://open")).toBeNull();

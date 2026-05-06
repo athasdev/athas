@@ -42,14 +42,7 @@ export interface Message {
 }
 
 // Agent types for AI chat
-export type AgentType =
-  | "claude-code"
-  | "codex-cli"
-  | "gemini-cli"
-  | "kimi-cli"
-  | "opencode"
-  | "qwen-code"
-  | "custom";
+export type AgentType = string;
 
 export interface AgentInfo {
   id: AgentType;
@@ -59,42 +52,6 @@ export interface AgentInfo {
 }
 
 export const AGENT_OPTIONS: AgentInfo[] = [
-  {
-    id: "claude-code",
-    name: "Claude Code",
-    description: "Anthropic Claude Code",
-    isAcp: true,
-  },
-  {
-    id: "codex-cli",
-    name: "Codex CLI",
-    description: "OpenAI Codex",
-    isAcp: true,
-  },
-  {
-    id: "gemini-cli",
-    name: "Gemini CLI",
-    description: "Google Gemini CLI",
-    isAcp: true,
-  },
-  {
-    id: "kimi-cli",
-    name: "Kimi CLI",
-    description: "Moonshot Kimi CLI",
-    isAcp: true,
-  },
-  {
-    id: "opencode",
-    name: "OpenCode",
-    description: "SST OpenCode",
-    isAcp: true,
-  },
-  {
-    id: "qwen-code",
-    name: "Qwen Code",
-    description: "Alibaba Qwen Code",
-    isAcp: true,
-  },
   {
     id: "custom",
     name: "Athas Agent",
