@@ -1,9 +1,16 @@
+#[cfg(any(
+   feature = "postgres",
+   feature = "mysql",
+   feature = "mongodb",
+   feature = "redis"
+))]
+use crate::connection_manager::{ConnectionManager, connect_database};
 #[cfg(feature = "postgres")]
 use crate::sql_common::CreatePostgresSubscriptionParams;
 #[cfg(any(feature = "duckdb", feature = "postgres"))]
 use crate::sql_common::FilteredQueryParams;
 use crate::{
-   connection_manager::{ConnectionConfig, ConnectionManager, connect_database, test_connection},
+   connection_manager::{ConnectionConfig, test_connection},
    providers::*,
 };
 use serde::{Deserialize, de::DeserializeOwned};
@@ -155,6 +162,12 @@ fn read_optional_field<T: DeserializeOwned>(
    Ok(None)
 }
 
+#[cfg(any(
+   feature = "postgres",
+   feature = "mysql",
+   feature = "mongodb",
+   feature = "redis"
+))]
 async fn manager_for_connection(payload: &Value) -> Result<ConnectionManager, String> {
    let config: ConnectionConfig = read_field(payload, &["connectionConfig", "connection_config"])?;
    let password: Option<String> = read_optional_field(payload, &["password"])?;
