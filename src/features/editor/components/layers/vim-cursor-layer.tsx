@@ -32,6 +32,7 @@ const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
     const textBeforeCursor = lineText.substring(0, column);
     const charUnderCursor = lineText[column] || " ";
     const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const cursorKey = `${cursorPosition.line}:${cursorPosition.column}:${cursorPosition.offset}`;
 
     // Determine if cursor should be visible
     const isVisible = vimMode === "normal" || vimMode === "visual";
@@ -78,6 +79,7 @@ const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
         {/* Cursor - only visible in normal/visual mode */}
         {isVisible && (
           <div
+            key={cursorKey}
             className="absolute animate-blink"
             style={{
               top: `${top}px`,

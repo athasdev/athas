@@ -71,10 +71,12 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
       getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
       EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
     const top = visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const cursorKey = `${cursorPosition.line}:${cursorPosition.column}:${cursorPosition.offset}`;
 
     return (
       <div ref={ref} className="pointer-events-none absolute inset-0 z-10">
         <div
+          key={cursorKey}
           className="absolute animate-blink"
           style={{
             top: `${top}px`,

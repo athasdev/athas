@@ -138,6 +138,7 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
 
               {/* Render cursor */}
               <div
+                key={`${cursor.id}:${cursor.position.line}:${cursor.position.column}:${cursor.position.offset}`}
                 className="absolute w-0.5 animate-blink"
                 style={{
                   top: `${top}px`,
