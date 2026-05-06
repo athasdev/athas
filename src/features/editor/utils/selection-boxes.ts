@@ -1,4 +1,5 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
+import type { EditorViewLayout, ViewLineSegment } from "../view-model/view-layout";
 
 export interface SelectionOffsets {
   start: number;
@@ -25,6 +26,7 @@ export interface CalculateSelectionBoxesOptions {
   contentLength: number;
   lineHeight: number;
   measureText: (text: string) => number;
+  viewLayout?: EditorViewLayout;
 }
 
 function findLineForOffset(offset: number, lineOffsets: number[]): number {
@@ -93,6 +95,7 @@ export function calculateSelectionBoxes({
   contentLength,
   lineHeight,
   measureText,
+  viewLayout,
 }: CalculateSelectionBoxesOptions): SelectionBox[] {
   const boxes: Array<Omit<SelectionBox, "corners">> = [];
   const minimumSelectionWidth = Math.max(measureText(" "), 4);
@@ -105,6 +108,54 @@ export function calculateSelectionBoxes({
 
   const startPos = offsetToLineColumn(selectionOffsets.start, lineOffsets, contentLength);
   const endPos = offsetToLineColumn(selectionOffsets.end, lineOffsets, contentLength);
+
+  const addWrappedLineBoxes = (
+    line: number,
+    startCol: number,
+    endCol: number,
+    hasSelectedLineBreak: boolean,
+  ) => {
+    if (!viewLayout) return false;
+
+    const lineText = lines[line] || "";
+    const lineStartViewLine = viewLayout.modelLineStartViewLines[line] ?? line;
+    const lineViewLineCount = viewLayout.modelLineViewLineCounts[line] ?? 1;
+    const lineEndViewLine = lineStartViewLine + lineViewLineCount - 1;
+    let addedBox = false;
+
+    const addSegmentBox = (segment: ViewLineSegment, boxStartCol: number, boxEndCol: number) => {
+      const textBeforeStart = lineText.substring(segment.startColumn, boxStartCol);
+      const selectedText = lineText.substring(boxStartCol, boxEndCol);
+      const width = selectedText.length > 0 ? measureText(selectedText) : minimumSelectionWidth;
+
+      boxes.push({
+        top: segment.top,
+        left: measureText(textBeforeStart) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        width: Math.max(width, minimumSelectionWidth),
+        height: segment.height,
+      });
+      addedBox = true;
+    };
+
+    for (let viewLine = lineStartViewLine; viewLine <= lineEndViewLine; viewLine++) {
+      const segment = viewLayout.viewLineToSegment(viewLine);
+      if (segment.modelLine !== line) continue;
+
+      const boxStartCol = Math.max(startCol, segment.startColumn);
+      const boxEndCol = Math.min(endCol, segment.endColumn);
+
+      if (boxEndCol > boxStartCol) {
+        addSegmentBox(segment, boxStartCol, boxEndCol);
+      }
+    }
+
+    if (!addedBox && hasSelectedLineBreak) {
+      const segment = viewLayout.getSegmentForModelPosition(line, endCol);
+      addSegmentBox(segment, endCol, endCol);
+    }
+
+    return true;
+  };
 
   for (let line = startPos.line; line <= endPos.line; line++) {
     const lineText = lines[line] || "";
@@ -125,6 +176,10 @@ export function calculateSelectionBoxes({
     const hasSelectedLineBreak = line < endPos.line;
 
     if (endCol <= startCol && !hasSelectedLineBreak) {
+      continue;
+    }
+
+    if (addWrappedLineBoxes(line, startCol, endCol, hasSelectedLineBreak)) {
       continue;
     }
 

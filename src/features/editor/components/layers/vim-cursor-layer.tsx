@@ -6,8 +6,11 @@
 import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
+import type { ViewPosition } from "../../view-model/view-layout";
 
 interface VimCursorLayerProps {
+  visualLine: number;
+  cursorViewPosition?: ViewPosition;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -17,7 +20,10 @@ interface VimCursorLayerProps {
 }
 
 const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
-  ({ fontSize, fontFamily, lineHeight, tabSize, content, vimMode }, ref) => {
+  (
+    { visualLine, cursorViewPosition, fontSize, fontFamily, lineHeight, tabSize, content, vimMode },
+    ref,
+  ) => {
     // Read cursor position directly from store to ensure we always have latest value
     const cursorPosition = useEditorStateStore.use.cursorPosition();
     const lines = useMemo(() => content.split("\n"), [content]);
@@ -28,10 +34,11 @@ const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
     });
 
     const { line, column } = cursorPosition;
-    const lineText = lines[line] || "";
+    const lineText = lines[visualLine] || lines[line] || "";
     const textBeforeCursor = lineText.substring(0, column);
     const charUnderCursor = lineText[column] || " ";
-    const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const top =
+      cursorViewPosition?.top ?? visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
     const cursorKey = `${cursorPosition.line}:${cursorPosition.column}:${cursorPosition.offset}`;
 
     // Determine if cursor should be visible
@@ -51,10 +58,10 @@ const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
       const charWidth = measureRef.current.getBoundingClientRect().width || fontSize * 0.6;
 
       setCursorStyle({
-        left: leftWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        left: cursorViewPosition?.left ?? leftWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
         width: charWidth,
       });
-    }, [textBeforeCursor, charUnderCursor, fontSize, fontFamily, tabSize]);
+    }, [textBeforeCursor, charUnderCursor, cursorViewPosition, fontSize, fontFamily, tabSize]);
 
     // Always render the container with measurement span, but only show cursor when visible
     return (
@@ -99,6 +106,8 @@ VimCursorLayerComponent.displayName = "VimCursorLayer";
 
 export const VimCursorLayer = memo(VimCursorLayerComponent, (prev, next) => {
   return (
+    prev.visualLine === next.visualLine &&
+    prev.cursorViewPosition === next.cursorViewPosition &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&

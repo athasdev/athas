@@ -27,7 +27,7 @@ import { editorAPI } from "../extensions/api";
 import { useAutocomplete } from "../hooks/use-autocomplete";
 import { useBufferSwitch } from "../hooks/use-buffer-switch";
 import { useContextMenu } from "../hooks/use-context-menu";
-import { useDragScroll } from "../hooks/use-drag-scroll";
+import { isDragScrolling, useDragScroll } from "../hooks/use-drag-scroll";
 import { useEditorKeyDown } from "../hooks/use-editor-keydown";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useEditorScroll } from "../hooks/use-editor-scroll";
@@ -55,6 +55,7 @@ import {
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
+import { buildEditorViewLayout } from "../view-model/view-layout";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
@@ -320,8 +321,19 @@ export function Editor({
     () => calculateLineHeight(fontSize, lineHeightMultiplier),
     [fontSize, lineHeightMultiplier],
   );
+  const viewLayout = useMemo(
+    () =>
+      buildEditorViewLayout({
+        lines,
+        lineHeight,
+        wordWrap,
+        contentWidth,
+        measureText: (text) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
+      }),
+    [lines, lineHeight, wordWrap, contentWidth, fontSize, fontFamily, tabSize],
+  );
   const shouldVirtualizeRendering =
-    lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
+    !wordWrap && lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
 
   const {
@@ -398,6 +410,30 @@ export function Editor({
     }
     return cursorPosition.line;
   }, [cursorPosition.line, foldTransform]);
+  const cursorViewPosition = useMemo(() => {
+    if (visualCursorLine < 0) return undefined;
+    const layoutLine = Math.min(visualCursorLine, Math.max(0, lines.length - 1));
+    return viewLayout.modelPositionToViewPosition(layoutLine, cursorPosition.column);
+  }, [viewLayout, visualCursorLine, cursorPosition.column, lines.length]);
+
+  useEffect(() => {
+    if (!useGlobalEditorState || !cursorViewPosition || isDragScrolling()) return;
+
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const targetTop = cursorViewPosition.top;
+    const targetBottom = targetTop + cursorViewPosition.segment.height;
+    const currentScrollTop = textarea.scrollTop;
+    const viewportHeight = textarea.clientHeight || 0;
+    if (viewportHeight <= 0) return;
+
+    if (targetTop < currentScrollTop) {
+      textarea.scrollTop = targetTop;
+    } else if (targetBottom > currentScrollTop + viewportHeight) {
+      textarea.scrollTop = Math.max(0, targetBottom - viewportHeight);
+    }
+  }, [cursorViewPosition, useGlobalEditorState]);
 
   useEffect(() => {
     if (lastInputTimestamp === 0) return;
@@ -1336,15 +1372,16 @@ export function Editor({
           wordWrap={wordWrap}
           readOnly={readOnly}
           scrollable={scrollable}
-          customCaret={useGlobalEditorState && !wordWrap && !readOnly}
+          customCaret={useGlobalEditorState && !readOnly}
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />
-        {useGlobalEditorState && !wordWrap && !readOnly && (
+        {useGlobalEditorState && !readOnly && (
           <PrimaryCursorLayer
             ref={primaryCursorRef}
             cursorPosition={cursorPosition}
             visualLine={visualCursorLine}
+            cursorViewPosition={cursorViewPosition}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -1364,6 +1401,7 @@ export function Editor({
             lineHeight={lineHeight}
             tabSize={tabSize}
             wordWrap={wordWrap}
+            viewLayout={viewLayout}
           />
         )}
         {inlineEditState.inlineEditVisible && inlineEditState.popoverPosition && (
@@ -1546,6 +1584,8 @@ export function Editor({
         {useGlobalEditorState && vimModeEnabled && (
           <VimCursorLayer
             ref={vimCursorRef}
+            visualLine={visualCursorLine}
+            cursorViewPosition={cursorViewPosition}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -1566,6 +1606,7 @@ export function Editor({
             tabSize={tabSize}
             content={displayContent}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
@@ -1629,7 +1670,7 @@ export function Editor({
           tokens={effectiveTokens}
           scrollTop={editorScrollTop}
           viewportHeight={editorViewportHeight}
-          totalHeight={lines.length * lineHeight}
+          totalHeight={viewLayout.totalHeight}
           lineHeight={lineHeight}
           scale={minimapScale}
           width={minimapWidth}

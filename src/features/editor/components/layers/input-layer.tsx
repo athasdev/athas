@@ -78,7 +78,9 @@ const InputLayerComponent = ({
       onMouseUp={onMouseUp}
       onContextMenu={onContextMenu}
       onScroll={onScroll}
-      className={`input-layer editor-textarea editor-viewport ${wordWrap ? "native-selection" : "selection-transparent"}`}
+      className={`input-layer editor-textarea editor-viewport ${
+        customCaret || !wordWrap ? "selection-transparent" : "native-selection"
+      }`}
       style={{
         position: "absolute",
         top: 0,

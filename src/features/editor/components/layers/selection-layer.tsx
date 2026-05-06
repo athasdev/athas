@@ -5,6 +5,7 @@ import {
   type SelectionBox,
   type SelectionOffsets,
 } from "../../utils/selection-boxes";
+import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface SelectionLayerProps {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -14,10 +15,23 @@ interface SelectionLayerProps {
   lineHeight: number;
   tabSize: number;
   wordWrap?: boolean;
+  viewLayout?: EditorViewLayout;
 }
 
 const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
-  ({ textareaRef, content, fontSize, fontFamily, lineHeight, tabSize, wordWrap = false }, ref) => {
+  (
+    {
+      textareaRef,
+      content,
+      fontSize,
+      fontFamily,
+      lineHeight,
+      tabSize,
+      wordWrap = false,
+      viewLayout,
+    },
+    ref,
+  ) => {
     const textarea = textareaRef.current;
     const lines = useMemo(() => content.split("\n"), [content]);
     const lineOffsets = useMemo(() => buildLineOffsetMap(content), [content]);
@@ -26,11 +40,6 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
     const [selectionBoxes, setSelectionBoxes] = useState<SelectionBox[]>([]);
 
     useEffect(() => {
-      if (wordWrap) {
-        setSelectionOffsets(null);
-        return;
-      }
-
       if (!textarea) {
         setSelectionOffsets(null);
         return;
@@ -71,10 +80,10 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         textarea.removeEventListener("blur", updateSelection);
         document.removeEventListener("selectionchange", updateSelection);
       };
-    }, [textarea, wordWrap]);
+    }, [textarea]);
 
     useEffect(() => {
-      if (wordWrap || !measureRef.current || !selectionOffsets) {
+      if (!measureRef.current || !selectionOffsets) {
         setSelectionBoxes([]);
         return;
       }
@@ -94,9 +103,10 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
           contentLength: content.length,
           lineHeight,
           measureText: getTextWidth,
+          viewLayout: wordWrap ? viewLayout : undefined,
         }),
       );
-    }, [selectionOffsets, lines, lineOffsets, content.length, lineHeight, wordWrap]);
+    }, [selectionOffsets, lines, lineOffsets, content.length, lineHeight, wordWrap, viewLayout]);
 
     return (
       <div
@@ -104,7 +114,6 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         className="selection-layer pointer-events-none absolute inset-0 z-[3]"
         style={{
           willChange: "transform",
-          display: wordWrap ? "none" : undefined,
         }}
       >
         <span
@@ -150,6 +159,7 @@ export const SelectionLayer = memo(SelectionLayerComponent, (prev, next) => {
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
-    prev.wordWrap === next.wordWrap
+    prev.wordWrap === next.wordWrap &&
+    prev.viewLayout === next.viewLayout
   );
 });

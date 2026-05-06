@@ -2,8 +2,12 @@ import { describe, expect, it } from "vite-plus/test";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import { buildLineOffsetMap } from "../utils/html";
 import { calculateSelectionBoxes } from "../utils/selection-boxes";
+import { buildEditorViewLayout } from "../view-model/view-layout";
 
 const measureText = (text: string) => text.length * 8;
+const measureWideText = (text: string) => text.length * 10;
+const contentWidthForColumns = (columns: number) =>
+  EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT + columns * 10;
 
 describe("calculateSelectionBoxes", () => {
   it("renders a visible box for selected empty middle lines", () => {
@@ -71,5 +75,49 @@ describe("calculateSelectionBoxes", () => {
       bottomRight: true,
       bottomLeft: true,
     });
+  });
+
+  it("splits selections across wrapped view lines", () => {
+    const content = "abcdefg";
+    const lines = content.split("\n");
+    const viewLayout = buildEditorViewLayout({
+      lines,
+      lineHeight: 20,
+      wordWrap: true,
+      contentWidth: contentWidthForColumns(3),
+      measureText: measureWideText,
+    });
+
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: 1, end: content.length },
+      lines,
+      lineOffsets: buildLineOffsetMap(content),
+      contentLength: content.length,
+      lineHeight: 20,
+      measureText: measureWideText,
+      viewLayout,
+    });
+
+    expect(boxes).toHaveLength(3);
+    expect(boxes.map(({ top, left, width, height }) => ({ top, left, width, height }))).toEqual([
+      {
+        top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+        left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 10,
+        width: 20,
+        height: 20,
+      },
+      {
+        top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20,
+        left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        width: 30,
+        height: 20,
+      },
+      {
+        top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 40,
+        left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        width: 10,
+        height: 20,
+      },
+    ]);
   });
 });
