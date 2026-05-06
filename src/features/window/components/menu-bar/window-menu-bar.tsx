@@ -95,6 +95,9 @@ const CustomMenuBar = ({
           <MenuItem shortcut="mod+alt+f" onClick={() => handleClickEmit("menu_find_replace")}>
             Find and Replace
           </MenuItem>
+          <MenuItem shortcut="mod+/" onClick={() => handleClickEmit("menu_toggle_comment")}>
+            Toggle Comment
+          </MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+shift+p" onClick={() => handleClickEmit("menu_command_palette")}>
             Command Palette
@@ -115,10 +118,7 @@ const CustomMenuBar = ({
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>
           <MenuItem separator />
-          <MenuItem
-            shortcut="alt+m"
-            onClick={() => setActiveMenu((value) => (value ? null : "File"))}
-          >
+          <MenuItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
             Toggle Menu Bar
           </MenuItem>
           <MenuItem separator />
@@ -192,6 +192,7 @@ const CustomMenuBar = ({
       Help: (
         <Menu aria-label="Help">
           <MenuItem onClick={() => handleClickEmit("menu_help")}>Help</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_report_bug")}>Report a Bug</MenuItem>
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_about_athas")}>About Athas</MenuItem>
         </Menu>

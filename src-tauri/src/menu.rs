@@ -220,7 +220,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "command_palette",
          "Command Palette",
          true,
-         Some("CmdOrCtrl+Shift+P"),
+         command_palette_accelerator(),
       )?)
       .build()?;
 
@@ -373,5 +373,17 @@ fn close_tab_accelerator() -> Option<&'static str> {
    #[cfg(not(all(target_os = "linux", feature = "linux")))]
    {
       Some("CmdOrCtrl+W")
+   }
+}
+
+fn command_palette_accelerator() -> Option<&'static str> {
+   #[cfg(target_os = "macos")]
+   {
+      Some("Cmd+Shift+P")
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      None
    }
 }

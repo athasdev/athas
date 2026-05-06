@@ -231,6 +231,10 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                      if let Err(e) = app_handle.remove_menu() {
                         log::error!("Failed to hide menu: {}", e);
                      } else {
+                        if let Ok(store) = app_handle.store("settings.json") {
+                           store.set("nativeMenuBar", false);
+                           let _ = store.save();
+                        }
                         log::info!("Menu bar hidden");
                      }
                   } else {
@@ -239,6 +243,10 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                            if let Err(e) = app_handle.set_menu(new_menu) {
                               log::error!("Failed to show menu: {}", e);
                            } else {
+                              if let Ok(store) = app_handle.store("settings.json") {
+                                 store.set("nativeMenuBar", true);
+                                 let _ = store.save();
+                              }
                               log::info!("Menu bar shown");
                            }
                         }
