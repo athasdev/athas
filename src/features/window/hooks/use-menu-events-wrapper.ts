@@ -7,8 +7,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { fetchRawAppVersion } from "@/features/window/utils/app-version";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
@@ -63,6 +63,7 @@ export function useMenuEventsWrapper() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
+  const openWhatsNew = useWhatsNewStore((state) => state.open);
   const isTerminalFocused = () => {
     const activeElement = document.activeElement as HTMLElement | null;
     return activeElement?.closest(".terminal-container") !== null;
@@ -279,48 +280,12 @@ export function useMenuEventsWrapper() {
       }
     },
     onThemeChange: (theme: string) => updateSetting("theme", theme),
-    onAbout: async () => {
-      const version = await fetchRawAppVersion();
-      const aboutText = `Athas Code Editor
-Version: ${version}
-Built with: React, TypeScript, Tauri
-License: MIT
-
-A lightweight, fast code editor for developers.
-
-GitHub: https://github.com/athasdev/athas`;
-
-      await primitiveAlert(aboutText, "About Athas");
+    onDocumentation: async () => {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl("https://athas.dev/docs");
     },
-    onHelp: async () => {
-      const helpText = `Athas Help - Keyboard Shortcuts
-
-File:
-• Ctrl+N (Cmd+N): New Tab
-• Ctrl+O (Cmd+O): Open Folder
-• Ctrl+S (Cmd+S): Save
-• Ctrl+Shift+S (Cmd+Shift+S): Save As
-• Ctrl+W (Cmd+W): Close Tab
-
-Edit:
-• Ctrl+Z (Cmd+Z): Undo
-• Ctrl+Y (Cmd+Y): Redo
-• Ctrl+F (Cmd+F): Find
-• Ctrl+H (Cmd+Alt+F): Find & Replace
-
-View:
-• Ctrl+B (Cmd+B): Toggle Sidebar
-• Ctrl+J (Cmd+J): Toggle Terminal
-• Ctrl+R (Cmd+R): Toggle AI Chat
-
-Go:
-• Ctrl+P (Cmd+P): Quick Open
-• Ctrl+G (Cmd+G): Go to Line
-• Ctrl+Shift+P (Cmd+Shift+P): Command Palette
-
-For more help: https://github.com/athasdev/athas`;
-
-      await primitiveAlert(helpText, "Help");
+    onWhatsNew: () => {
+      void openWhatsNew();
     },
     onReportBug: async () => {
       try {
@@ -350,19 +315,6 @@ For more help: https://github.com/athasdev/athas`;
       } catch (e) {
         console.error("Failed to prepare bug report:", e);
       }
-    },
-    onAboutAthas: async () => {
-      const version = await fetchRawAppVersion();
-      const aboutText = `Athas Code Editor
-Version: ${version}
-Built with: React, TypeScript, Tauri
-License: MIT
-
-A lightweight, fast code editor for developers.
-
-GitHub: https://github.com/athasdev/athas`;
-
-      await primitiveAlert(aboutText, "About Athas");
     },
     onToggleMenuBar: async () => {
       try {

@@ -271,15 +271,14 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "prev_tab" => {
                   let _ = window.emit("menu_prev_tab", ());
                }
-               "about" => {}
-               "help" => {
-                  let _ = window.emit("menu_help", ());
+               "documentation" => {
+                  let _ = window.emit("menu_documentation", ());
+               }
+               "whats_new" => {
+                  let _ = window.emit("menu_whats_new", ());
                }
                "report_bug" => {
                   let _ = window.emit("menu_report_bug", ());
-               }
-               "about_athas" => {
-                  let _ = window.emit("menu_about_athas", ());
                }
                "minimize_window" => {
                   if let Err(e) = window.minimize() {

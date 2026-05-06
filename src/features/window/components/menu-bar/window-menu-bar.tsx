@@ -191,10 +191,9 @@ const CustomMenuBar = ({
       ),
       Help: (
         <Menu aria-label="Help">
-          <MenuItem onClick={() => handleClickEmit("menu_help")}>Help</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_documentation")}>Documentation</MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_whats_new")}>What's New</MenuItem>
           <MenuItem onClick={() => handleClickEmit("menu_report_bug")}>Report a Bug</MenuItem>
-          <MenuItem separator />
-          <MenuItem onClick={() => handleClickEmit("menu_about_athas")}>About Athas</MenuItem>
         </Menu>
       ),
     }),
