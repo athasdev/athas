@@ -113,6 +113,7 @@ export interface LspConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Server executable paths per platform
@@ -281,6 +282,7 @@ export interface FormatterConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Formatter executable per platform
@@ -310,6 +312,7 @@ export interface LinterConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Linter executable per platform

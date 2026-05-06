@@ -196,6 +196,7 @@ fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
       command: agent.install_command.clone(),
       runtime,
       package: Some(package),
+      packages: vec![],
       download_url: None,
       args: vec![],
       env: HashMap::new(),

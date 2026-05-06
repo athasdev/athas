@@ -106,6 +106,7 @@ impl LspClient {
       let pending_requests = Arc::new(Mutex::new(HashMap::new()));
       let pending_requests_clone = Arc::clone(&pending_requests);
       let app_handle_clone = app_handle.clone();
+      let server_request_stdin_tx = stdin_tx.clone();
       let is_running = Arc::new(AtomicBool::new(true));
       let is_running_clone = Arc::clone(&is_running);
 
@@ -226,8 +227,9 @@ impl LspClient {
                   log::info!("LSP Notification received: {}", m);
                }
 
-               // Check if this is a response (has id) or notification (no id)
-               if message.get("id").is_some() {
+               if message.get("id").is_some() && message.get("method").is_some() {
+                  Self::handle_server_request(message, &server_request_stdin_tx);
+               } else if message.get("id").is_some() {
                   Self::handle_response(message, &pending_requests_clone);
                } else if message.get("method").is_some() {
                   Self::handle_notification(message, &app_handle_clone);
@@ -394,9 +396,11 @@ impl LspClient {
          capabilities: ClientCapabilities {
             text_document: Some(text_document_capabilities),
             workspace: Some(WorkspaceClientCapabilities {
+               configuration: Some(true),
                execute_command: Some(DynamicRegistrationClientCapabilities {
                   dynamic_registration: Some(true),
                }),
+               workspace_folders: Some(true),
                ..Default::default()
             }),
             ..Default::default()
@@ -418,6 +422,42 @@ impl LspClient {
       Ok(())
    }
 
+   fn send_json_rpc_message(stdin_tx: &Sender<String>, message: Value) -> Result<()> {
+      let payload = message.to_string();
+      let framed = format!("Content-Length: {}\r\n\r\n{}", payload.len(), payload);
+      stdin_tx.send(framed).context("Failed to send LSP response")
+   }
+
+   fn send_server_response(stdin_tx: &Sender<String>, id: Value, result: Value) -> Result<()> {
+      Self::send_json_rpc_message(
+         stdin_tx,
+         json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "result": result,
+         }),
+      )
+   }
+
+   fn send_server_error(
+      stdin_tx: &Sender<String>,
+      id: Value,
+      code: i32,
+      message: &str,
+   ) -> Result<()> {
+      Self::send_json_rpc_message(
+         stdin_tx,
+         json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "error": {
+               "code": code,
+               "message": message,
+            },
+         }),
+      )
+   }
+
    fn handle_response(response: Value, pending: &PendingRequests) {
       if let Some(id) = response.get("id").and_then(|id| id.as_u64())
          && let Some(tx) = pending.lock().unwrap().remove(&id)
@@ -427,6 +467,47 @@ impl LspClient {
          } else if let Some(result) = response.get("result") {
             let _ = tx.send(Ok(result.clone()));
          }
+      }
+   }
+
+   fn handle_server_request(request: Value, stdin_tx: &Sender<String>) {
+      let id = request.get("id").cloned().unwrap_or(Value::Null);
+      let method = request.get("method").and_then(|method| method.as_str());
+
+      let response = match method {
+         Some("workspace/configuration") => {
+            let item_count = request
+               .get("params")
+               .and_then(|params| params.get("items"))
+               .and_then(|items| items.as_array())
+               .map(|items| items.len())
+               .unwrap_or(0);
+            Self::send_server_response(stdin_tx, id, Value::Array(vec![Value::Null; item_count]))
+         }
+         Some("workspace/workspaceFolders") => Self::send_server_response(stdin_tx, id, json!([])),
+         Some("client/registerCapability" | "client/unregisterCapability") => {
+            Self::send_server_response(stdin_tx, id, Value::Null)
+         }
+         Some("window/showMessageRequest") => Self::send_server_response(stdin_tx, id, Value::Null),
+         Some("workspace/applyEdit") => Self::send_server_response(
+            stdin_tx,
+            id,
+            json!({
+               "applied": false,
+               "failureReason": "Athas does not support server-initiated workspace edits yet",
+            }),
+         ),
+         Some(method_name) => Self::send_server_error(
+            stdin_tx,
+            id,
+            -32601,
+            &format!("Unhandled server request: {}", method_name),
+         ),
+         None => Self::send_server_error(stdin_tx, id, -32600, "Invalid server request"),
+      };
+
+      if let Err(error) = response {
+         log::warn!("Failed to respond to LSP server request: {}", error);
       }
    }
 
@@ -652,6 +733,13 @@ impl LspClient {
       self.request::<request::SignatureHelpRequest>(params).await
    }
 
+   pub async fn text_document_formatting(
+      &self,
+      params: DocumentFormattingParams,
+   ) -> Result<Option<Vec<TextEdit>>> {
+      self.request::<request::Formatting>(params).await
+   }
+
    pub fn signature_help_trigger_characters(&self) -> Vec<String> {
       self
          .capabilities
@@ -694,6 +782,10 @@ impl LspClient {
 
    pub fn text_document_did_change(&self, params: DidChangeTextDocumentParams) -> Result<()> {
       self.notify::<notification::DidChangeTextDocument>(params)
+   }
+
+   pub fn text_document_did_save(&self, params: DidSaveTextDocumentParams) -> Result<()> {
+      self.notify::<notification::DidSaveTextDocument>(params)
    }
 
    pub fn text_document_did_close(&self, params: DidCloseTextDocumentParams) -> Result<()> {

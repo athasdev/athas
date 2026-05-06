@@ -236,6 +236,7 @@ fn main() {
          lsp_get_definition,
          lsp_get_semantic_tokens,
          lsp_get_code_lens,
+         lsp_format_document,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
@@ -247,6 +248,7 @@ fn main() {
          lsp_apply_code_action,
          lsp_document_open,
          lsp_document_change,
+         lsp_document_save,
          lsp_document_close,
          lsp_is_language_supported,
          // Debugger commands

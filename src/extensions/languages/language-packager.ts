@@ -28,6 +28,7 @@ interface ExternalToolConfig {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
   args?: string[];
   env?: Record<string, string>;
@@ -121,6 +122,7 @@ function createLspConfig(manifest: ExternalLanguageManifest): LspConfiguration |
     name: lsp.name,
     runtime: lsp.runtime,
     package: lsp.package,
+    packages: lsp.packages,
     downloadUrl: lsp.downloadUrl,
     server: defaultCommand(lsp.name),
     args: lsp.args || [],
@@ -141,6 +143,7 @@ function createFormatterConfig(
     name: formatter.name,
     runtime: formatter.runtime,
     package: formatter.package,
+    packages: formatter.packages,
     downloadUrl: formatter.downloadUrl,
     command: defaultCommand(formatter.name),
     args: formatter.args || [],
@@ -160,6 +163,7 @@ function createLinterConfig(manifest: ExternalLanguageManifest): LinterConfigura
     name: linter.name,
     runtime: linter.runtime,
     package: linter.package,
+    packages: linter.packages,
     downloadUrl: linter.downloadUrl,
     command: defaultCommand(linter.name),
     args: linter.args || [],

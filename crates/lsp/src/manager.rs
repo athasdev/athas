@@ -568,6 +568,37 @@ impl LspManager {
       }
    }
 
+   pub async fn format_document(&self, file_path: &str) -> Result<Option<Vec<TextEdit>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = DocumentFormattingParams {
+         text_document,
+         options: FormattingOptions {
+            tab_size: 3,
+            insert_spaces: true,
+            ..Default::default()
+         },
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_formatting(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/formatting") {
+               log::debug!("Formatting method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_signature_help(
       &self,
       file_path: &str,
@@ -900,6 +931,22 @@ impl LspManager {
       };
 
       client.text_document_did_change(params)
+   }
+
+   pub fn notify_document_save(&self, file_path: &str, content: Option<String>) -> Result<()> {
+      let path = PathBuf::from(file_path);
+      let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+
+      let client = self
+         .get_client_for_file(file_path)
+         .context("No LSP client for this file")?;
+
+      let params = DidSaveTextDocumentParams {
+         text_document: manager_support::text_document_identifier(file_path)?,
+         text: content,
+      };
+
+      client.text_document_did_save(params)
    }
 
    pub fn notify_document_close(&self, file_path: &str) -> Result<()> {
