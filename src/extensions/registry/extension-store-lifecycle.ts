@@ -72,6 +72,15 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
   );
 }
 
+function withCdnCacheBuster(url: string): string {
+  if (!url.startsWith("https://athas.dev/extensions/")) {
+    return url;
+  }
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${Date.now()}`;
+}
+
 function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage {
   const installation = extension.manifest.installation;
   const platformPackages = installation?.platformArch;
@@ -79,7 +88,10 @@ function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage
 
   if (platformPackages) {
     if (isCompleteExtensionPackage(platformPackage)) {
-      return platformPackage;
+      return {
+        ...platformPackage,
+        downloadUrl: withCdnCacheBuster(platformPackage.downloadUrl),
+      };
     }
 
     throw new Error(
@@ -96,7 +108,10 @@ function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage
     : undefined;
 
   if (isCompleteExtensionPackage(genericPackage)) {
-    return genericPackage;
+    return {
+      ...genericPackage,
+      downloadUrl: withCdnCacheBuster(genericPackage.downloadUrl),
+    };
   }
 
   throw new Error(

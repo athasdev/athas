@@ -1,15 +1,25 @@
 import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const ATHAS_EXTENSIONS_CDN_PREFIX = "https://athas.dev/extensions";
+const withCdnCacheBuster = (url: string) => {
+  if (!url.startsWith(ATHAS_EXTENSIONS_CDN_PREFIX)) {
+    return url;
+  }
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${Date.now()}`;
+};
+
 const MANIFEST_SOURCES = import.meta.env.VITE_PARSER_CDN_URL
-  ? [`${CDN_BASE_URL}/manifests.json`]
+  ? [withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`)]
   : import.meta.env.DEV
     ? [
         "http://localhost:3000/api/extensions/manifests",
         "http://localhost:3001/manifests.json",
-        `${CDN_BASE_URL}/manifests.json`,
+        withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`),
       ]
-    : [`${CDN_BASE_URL}/manifests.json`];
+    : [withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`)];
 
 function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCategory[] {
   if (!rawCategories || rawCategories.length === 0) return ["Other"];
