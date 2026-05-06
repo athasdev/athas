@@ -93,7 +93,7 @@ Examples:
 "#;
 
 #[cfg(unix)]
-fn unix_cli_script(open_command: &str, launch_app_block: &str, deep_link_scheme: &str) -> String {
+fn unix_cli_script(open_url_body: &str, launch_app_block: &str, deep_link_scheme: &str) -> String {
    let help = CLI_HELP_TEXT.replace('\'', r"'\''");
 
    format!(
@@ -121,7 +121,7 @@ urlencode() {{
 }}
 
 open_url() {{
-    {open_command} "$1"
+{open_url_body}
 }}
 
 open_path_arg() {{
@@ -394,19 +394,54 @@ fn macos_app_name(app: &AppHandle) -> &'static str {
 }
 
 #[cfg(target_os = "macos")]
+fn macos_open_url_body() -> &'static str {
+   r#"    local url="$1"
+    if open "$url"; then
+        return 0
+    fi
+
+    case "$url" in
+        *://*)
+            local current_scheme="${url%%://*}"
+            local rest="${url#*://}"
+            for fallback_scheme in athas athas-preview athas-dev; do
+                [ "$fallback_scheme" = "$current_scheme" ] && continue
+                if open "${fallback_scheme}://${rest}" 2>/dev/null; then
+                    return 0
+                fi
+            done
+            ;;
+    esac
+
+    return 1"#
+}
+
+#[cfg(target_os = "macos")]
+fn macos_launch_app_block(app_name: &str) -> String {
+   format!(
+      r#"    for app_name in "{app_name}" "Athas" "Athas Preview" "Athas Dev"; do
+        if [ -d "/Applications/${{app_name}}.app" ]; then
+            open -a "/Applications/${{app_name}}.app"
+            exit 0
+        elif [ -d "$HOME/Applications/${{app_name}}.app" ]; then
+            open -a "$HOME/Applications/${{app_name}}.app"
+            exit 0
+        elif open -a "$app_name" 2>/dev/null; then
+            exit 0
+        fi
+    done
+
+    echo "Athas installation not found" >&2
+    exit 1"#
+   )
+}
+
+#[cfg(target_os = "macos")]
 fn build_macos_cli_script(app: &AppHandle) -> String {
    let app_name = macos_app_name(app);
    let deep_link_scheme = deep_link_scheme(app);
-   let launch_app_block = format!(
-      r#"    if [ -d "/Applications/{app_name}.app" ]; then
-        open -a "/Applications/{app_name}.app"
-    elif [ -d "$HOME/Applications/{app_name}.app" ]; then
-        open -a "$HOME/Applications/{app_name}.app"
-    else
-        open -a "{app_name}"
-    fi"#
-   );
-   unix_cli_script("open", &launch_app_block, deep_link_scheme)
+   let launch_app_block = macos_launch_app_block(app_name);
+   unix_cli_script(macos_open_url_body(), &launch_app_block, deep_link_scheme)
 }
 
 #[cfg(target_os = "macos")]
@@ -454,7 +489,7 @@ pub fn install_cli_command() -> Result<String, String> {
         echo "Athas not found. Please ensure it is installed."
         exit 1
     fi"#;
-   let script_content = unix_cli_script("xdg-open", launch_app_block, "athas");
+   let script_content = unix_cli_script("    xdg-open \"$1\"", launch_app_block, "athas");
 
    if !bin_dir.exists() {
       fs::create_dir_all(bin_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
@@ -530,7 +565,7 @@ pub fn get_cli_install_command() -> Result<String, String> {
         echo "Athas not found. Please ensure it is installed."
         exit 1
     fi"#;
-   let script = unix_cli_script("xdg-open", launch_app_block, "athas");
+   let script = unix_cli_script("    xdg-open \"$1\"", launch_app_block, "athas");
    Ok(format!(
       "mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'EOF'\n{}\nEOF\nchmod +x \
        ~/.local/bin/athas",
