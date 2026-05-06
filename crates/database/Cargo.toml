@@ -3,6 +3,36 @@ name = "athas-database"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+
+[lib]
+name = "athas_database"
+path = "src/lib.rs"
+
+[[bin]]
+name = "athas-db-sqlite"
+path = "src/bin/athas-db-sqlite.rs"
+
+[[bin]]
+name = "athas-db-duckdb"
+path = "src/bin/athas-db-duckdb.rs"
+
+[[bin]]
+name = "athas-db-postgres"
+path = "src/bin/athas-db-postgres.rs"
+
+[[bin]]
+name = "athas-db-mysql"
+path = "src/bin/athas-db-mysql.rs"
+
+[[bin]]
+name = "athas-db-mongodb"
+path = "src/bin/athas-db-mongodb.rs"
+
+[[bin]]
+name = "athas-db-redis"
+path = "src/bin/athas-db-redis.rs"
+
 [dependencies]
 duckdb = { version = "1.4.4", features = ["bundled"] }
 futures-util = "0.3"
