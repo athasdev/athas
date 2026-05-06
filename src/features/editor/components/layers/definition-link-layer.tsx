@@ -4,10 +4,12 @@
 
 import type { RefObject } from "react";
 import { memo, useMemo } from "react";
-import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorSettingsStore } from "../../stores/settings-store";
 import { useEditorUIStore } from "../../stores/ui-store";
+import { buildLineOffsetMap } from "../../utils/html";
 import { getAccurateCursorX } from "../../utils/position";
+import { calculateSelectionBoxes } from "../../utils/selection-boxes";
+import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface DefinitionLinkLayerProps {
   fontSize: number;
@@ -15,58 +17,84 @@ interface DefinitionLinkLayerProps {
   lineHeight: number;
   content: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
+  viewLayout?: EditorViewLayout;
 }
 
 export const DefinitionLinkLayer = memo(
-  ({ fontSize, fontFamily, lineHeight, content, textareaRef }: DefinitionLinkLayerProps) => {
+  ({
+    fontSize,
+    fontFamily,
+    lineHeight,
+    content,
+    textareaRef,
+    viewLayout,
+  }: DefinitionLinkLayerProps) => {
     const definitionLinkRange = useEditorUIStore.use.definitionLinkRange();
     const tabSize = useEditorSettingsStore.use.tabSize();
 
-    const highlightStyle = useMemo(() => {
+    const highlightStyles = useMemo(() => {
       if (!definitionLinkRange) return null;
 
       const lines = content.split("\n");
+      const lineOffsets = buildLineOffsetMap(content);
       const { line, startColumn, endColumn } = definitionLinkRange;
 
       if (line < 0 || line >= lines.length) return null;
 
       const lineText = lines[line];
       if (startColumn < 0 || endColumn > lineText.length) return null;
-      const startX = getAccurateCursorX(lineText, startColumn, fontSize, fontFamily, tabSize);
-      const endX = getAccurateCursorX(lineText, endColumn, fontSize, fontFamily, tabSize);
-      const left = startX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
-      const width = Math.max(endX - startX, 2);
 
-      // Get current scroll position from textarea to position relative to viewport
       const scrollTop = textareaRef.current?.scrollTop ?? 0;
       const scrollLeft = textareaRef.current?.scrollLeft ?? 0;
+      const lineStartOffset = lineOffsets[line] ?? 0;
 
-      const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP - scrollTop;
+      return calculateSelectionBoxes({
+        selectionOffsets: {
+          start: lineStartOffset + startColumn,
+          end: lineStartOffset + endColumn,
+        },
+        lines,
+        lineOffsets,
+        contentLength: content.length,
+        lineHeight,
+        measureText: (text) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
+        viewLayout,
+      }).map((box) => ({
+        top: box.top - scrollTop,
+        left: box.left - scrollLeft,
+        width: box.width,
+        height: box.height,
+      }));
+    }, [
+      definitionLinkRange,
+      content,
+      fontSize,
+      fontFamily,
+      lineHeight,
+      tabSize,
+      textareaRef,
+      viewLayout,
+    ]);
 
-      return {
-        top,
-        left: left - scrollLeft,
-        width,
-        height: lineHeight,
-      };
-    }, [definitionLinkRange, content, fontSize, fontFamily, lineHeight, tabSize, textareaRef]);
-
-    if (!highlightStyle) return null;
+    if (!highlightStyles?.length) return null;
 
     return (
       <div className="definition-link-layer pointer-events-none absolute inset-0 z-10">
-        <div
-          className="definition-link-highlight"
-          style={{
-            position: "absolute",
-            top: `${highlightStyle.top}px`,
-            left: `${highlightStyle.left}px`,
-            width: `${highlightStyle.width}px`,
-            height: `${highlightStyle.height}px`,
-            borderBottom: "1px solid var(--accent)",
-            cursor: "pointer",
-          }}
-        />
+        {highlightStyles.map((highlightStyle, index) => (
+          <div
+            key={index}
+            className="definition-link-highlight"
+            style={{
+              position: "absolute",
+              top: `${highlightStyle.top}px`,
+              left: `${highlightStyle.left}px`,
+              width: `${highlightStyle.width}px`,
+              height: `${highlightStyle.height}px`,
+              borderBottom: "1px solid var(--accent)",
+              cursor: "pointer",
+            }}
+          />
+        ))}
       </div>
     );
   },

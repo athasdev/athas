@@ -1276,7 +1276,6 @@ export function Editor({
     const textAfterCursorOnLine = lineText.slice(cursorColumn);
     if (textAfterCursorOnLine.trim().length > 0) return null;
 
-    const cursorX = getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize);
     const previewLines: Array<{ text: string; index: number }> = [];
 
     for (const [index, text] of normalized.split("\n").entries()) {
@@ -1290,8 +1289,13 @@ export function Editor({
 
     return {
       lines: previewLines,
-      top: visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
-      firstLineLeft: cursorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      top:
+        cursorViewPosition?.top ??
+        visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      firstLineLeft:
+        cursorViewPosition?.left ??
+        getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
+          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
       continuationLeft: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
     };
   }, [
@@ -1305,6 +1309,7 @@ export function Editor({
     fontFamily,
     tabSize,
     lineHeight,
+    cursorViewPosition,
   ]);
 
   if (!buffer) return null;
@@ -1621,6 +1626,7 @@ export function Editor({
             lineHeight={lineHeight}
             content={displayContent}
             textareaRef={inputRef}
+            viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
