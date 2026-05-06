@@ -176,12 +176,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
   },
   {
-    id: "file-tree-show-gitignored-files",
+    id: "file-tree-respect-gitignore",
     tab: "file-explorer",
     section: "Display",
-    label: "Show Gitignored Files",
-    description: "Show files matched by .gitignore in the file tree",
-    keywords: ["gitignore", "ignored", "git", "files", "visibility"],
+    label: "Respect .gitignore",
+    description: "Hide files matched by root and nested .gitignore files",
+    keywords: ["gitignore", ".gitignore", "ignored", "git", "files", "visibility", "exclude"],
   },
   {
     id: "file-tree-hidden-file-patterns",
