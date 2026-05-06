@@ -54,6 +54,11 @@ export const useHistoryStore = createSelectors(
             }
 
             const history = state.bufferHistories[bufferId];
+            const lastEntry = history.past[history.past.length - 1];
+
+            if (lastEntry?.content === entry.content) {
+              return;
+            }
 
             // Add to past
             history.past.push(entry);

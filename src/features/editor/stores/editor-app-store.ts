@@ -8,11 +8,22 @@ import { recordLocalHistoryFile } from "@/features/local-history/api/local-histo
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
+import {
+  classifyUndoEdit,
+  shouldStartNewUndoGroup,
+  type UndoEditOperation,
+} from "../history/undo-grouping";
 import { useHistoryStore } from "./history-store";
 
-const HISTORY_DEBOUNCE_MS = 500;
-const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
 const lastBufferContent = new Map<string, string>();
+
+interface PendingUndoGroup {
+  baseContent: string;
+  latestContent: string;
+  operation: UndoEditOperation;
+}
+
+const pendingUndoGroups = new Map<string, PendingUndoGroup>();
 
 async function recordLocalHistoryBeforeWrite(
   path: string,
@@ -26,40 +37,70 @@ async function recordLocalHistoryBeforeWrite(
 }
 
 export function cleanupBufferHistoryTracking(bufferId: string): void {
-  const timer = historyDebounceTimers.get(bufferId);
-  if (timer) {
-    clearTimeout(timer);
-    historyDebounceTimers.delete(bufferId);
-  }
+  pendingUndoGroups.delete(bufferId);
   lastBufferContent.delete(bufferId);
 }
 
 export function flushPendingBufferHistory(bufferId: string, currentContent: string): void {
-  const timer = historyDebounceTimers.get(bufferId);
-  if (!timer) return;
-
-  clearTimeout(timer);
-  historyDebounceTimers.delete(bufferId);
-
-  const oldContent = lastBufferContent.get(bufferId);
-  if (oldContent !== undefined && oldContent !== currentContent) {
+  const pendingGroup = pendingUndoGroups.get(bufferId);
+  if (pendingGroup && pendingGroup.baseContent !== currentContent) {
     useHistoryStore.getState().actions.pushHistory(bufferId, {
-      content: oldContent,
+      content: pendingGroup.baseContent,
       timestamp: Date.now(),
     });
   }
 
+  pendingUndoGroups.delete(bufferId);
   lastBufferContent.set(bufferId, currentContent);
 }
 
 export function syncBufferHistoryContent(bufferId: string, content: string): void {
-  const timer = historyDebounceTimers.get(bufferId);
-  if (timer) {
-    clearTimeout(timer);
-    historyDebounceTimers.delete(bufferId);
+  pendingUndoGroups.delete(bufferId);
+  lastBufferContent.set(bufferId, content);
+}
+
+function pushPendingUndoGroup(bufferId: string, group: PendingUndoGroup): void {
+  if (group.baseContent === group.latestContent) return;
+
+  useHistoryStore.getState().actions.pushHistory(bufferId, {
+    content: group.baseContent,
+    timestamp: Date.now(),
+  });
+}
+
+function trackPendingUndoGroup(
+  bufferId: string,
+  previousContent: string,
+  nextContent: string,
+): void {
+  if (previousContent === nextContent) {
+    lastBufferContent.set(bufferId, nextContent);
+    return;
   }
 
-  lastBufferContent.set(bufferId, content);
+  const pendingGroup = pendingUndoGroups.get(bufferId);
+  const previousOperation = pendingGroup?.operation ?? "other";
+  const operation = classifyUndoEdit(previousContent, nextContent, previousOperation);
+
+  if (pendingGroup && shouldStartNewUndoGroup(pendingGroup.operation, operation)) {
+    pushPendingUndoGroup(bufferId, pendingGroup);
+    pendingUndoGroups.set(bufferId, {
+      baseContent: previousContent,
+      latestContent: nextContent,
+      operation,
+    });
+  } else if (pendingGroup) {
+    pendingGroup.latestContent = nextContent;
+    pendingGroup.operation = operation;
+  } else {
+    pendingUndoGroups.set(bufferId, {
+      baseContent: previousContent,
+      latestContent: nextContent,
+      operation,
+    });
+  }
+
+  lastBufferContent.set(bufferId, nextContent);
 }
 
 interface AppState {
@@ -109,35 +150,11 @@ export const useEditorAppStore = createSelectors(
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           if (activeBufferId) {
-            const lastContent = lastBufferContent.get(activeBufferId);
-
-            if (lastContent === undefined) {
+            if (!lastBufferContent.has(activeBufferId)) {
               lastBufferContent.set(activeBufferId, activeBuffer.content);
             }
 
-            if (content !== lastContent) {
-              const existingTimer = historyDebounceTimers.get(activeBufferId);
-              if (existingTimer) {
-                clearTimeout(existingTimer);
-              }
-
-              const timer = setTimeout(() => {
-                const { pushHistory } = useHistoryStore.getState().actions;
-                const oldContent = lastBufferContent.get(activeBufferId);
-
-                if (oldContent !== undefined) {
-                  pushHistory(activeBufferId, {
-                    content: oldContent,
-                    timestamp: Date.now(),
-                  });
-                }
-
-                lastBufferContent.set(activeBufferId, content);
-                historyDebounceTimers.delete(activeBufferId);
-              }, HISTORY_DEBOUNCE_MS);
-
-              historyDebounceTimers.set(activeBufferId, timer);
-            }
+            trackPendingUndoGroup(activeBufferId, activeBuffer.content, content);
           }
 
           const isRemoteFile = activeBuffer.path.startsWith("remote://");

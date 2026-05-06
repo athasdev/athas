@@ -41,4 +41,13 @@ describe("history store", () => {
 
     expect(canRedo("buffer-1")).toBe(false);
   });
+
+  it("ignores duplicate adjacent snapshots", () => {
+    const { pushHistory, getHistoryState } = useHistoryStore.getState().actions;
+
+    pushHistory("buffer-1", entry("same content"));
+    pushHistory("buffer-1", entry("same content"));
+
+    expect(getHistoryState("buffer-1")?.past).toHaveLength(1);
+  });
 });
