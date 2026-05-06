@@ -115,7 +115,7 @@ interface AppState {
 }
 
 interface AppActions {
-  handleContentChange: (content: string) => Promise<void>;
+  handleContentChange: (content: string, previousContent?: string) => Promise<void>;
   handleSave: () => Promise<void>;
   openQuickEdit: (params: {
     text: string;
@@ -136,7 +136,7 @@ export const useEditorAppStore = createSelectors(
         selectionRange: { start: 0, end: 0 },
       },
       actions: {
-        handleContentChange: async (content: string) => {
+        handleContentChange: async (content: string, previousContent?: string) => {
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } =
             await import("@/features/file-system/controllers/file-watcher-store");
@@ -150,11 +150,15 @@ export const useEditorAppStore = createSelectors(
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           if (activeBufferId) {
-            if (!lastBufferContent.has(activeBufferId)) {
-              lastBufferContent.set(activeBufferId, activeBuffer.content);
+            const lastTrackedContent = lastBufferContent.get(activeBufferId);
+            const contentBeforeChange =
+              lastTrackedContent ?? previousContent ?? activeBuffer.content;
+
+            if (lastTrackedContent === undefined) {
+              lastBufferContent.set(activeBufferId, contentBeforeChange);
             }
 
-            trackPendingUndoGroup(activeBufferId, activeBuffer.content, content);
+            trackPendingUndoGroup(activeBufferId, contentBeforeChange, content);
           }
 
           const isRemoteFile = activeBuffer.path.startsWith("remote://");

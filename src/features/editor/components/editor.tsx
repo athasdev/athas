@@ -92,7 +92,7 @@ interface EditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string) => void;
+  onContentChange?: (content: string, previousContent?: string) => void;
   inlayHints?: InlayHint[];
   onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
@@ -597,11 +597,13 @@ export function Editor({
         newActualContent = newVirtualContent;
       }
 
+      const previousActualContent = content;
+
       updateBufferContent(bufferId, newActualContent);
       if (onContentChange) {
-        onContentChange(newActualContent);
+        onContentChange(newActualContent, previousActualContent);
       } else {
-        onChange(newActualContent);
+        onChange(newActualContent, previousActualContent);
       }
 
       if (!useGlobalEditorState) return;

@@ -55,7 +55,7 @@ interface CodeEditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string) => void;
+  onContentChange?: (content: string, previousContent?: string) => void;
 }
 
 export interface CodeEditorRef {

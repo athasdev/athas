@@ -188,7 +188,7 @@ interface EditorState {
 
   // Instance state
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, previousValue?: string) => void;
   filePath: string;
   editorRef: RefObject<HTMLDivElement | null> | null;
   placeholder?: string;
@@ -227,7 +227,7 @@ interface EditorStateActions {
 
   // Instance actions
   setRefs: (refs: { editorRef: RefObject<HTMLDivElement | null> }) => void;
-  setContent: (value: string, onChange: (value: string) => void) => void;
+  setContent: (value: string, onChange: (value: string, previousValue?: string) => void) => void;
   setFileInfo: (filePath: string) => void;
   setPlaceholder: (placeholder?: string) => void;
   setDisabled: (disabled: boolean) => void;
