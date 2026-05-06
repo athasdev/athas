@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   classifyUndoEdit,
+  getUndoEditDelta,
+  shouldStartNewUndoGroupForDelta,
   shouldStartNewUndoGroup,
+  type UndoEditDelta,
   type UndoEditOperation,
 } from "@/features/editor/history/undo-grouping";
 
@@ -12,29 +15,37 @@ describe("undo grouping", () => {
       baseContent: string;
       latestContent: string;
       operation: UndoEditOperation;
+      lastDelta: UndoEditDelta;
     } | null = null;
     const snapshots: string[] = [];
 
     for (let index = 1; index < contents.length; index += 1) {
       const previousContent = contents[index - 1];
       const nextContent = contents[index];
-      const operation = classifyUndoEdit(previousContent, nextContent, previousOperation);
+      const delta = getUndoEditDelta(previousContent, nextContent, previousOperation);
+      const operation = delta.operation;
 
-      if (pendingGroup && shouldStartNewUndoGroup(pendingGroup.operation, operation)) {
+      if (
+        pendingGroup &&
+        shouldStartNewUndoGroupForDelta(pendingGroup.operation, pendingGroup.lastDelta, delta)
+      ) {
         snapshots.push(pendingGroup.baseContent);
         pendingGroup = {
           baseContent: previousContent,
           latestContent: nextContent,
           operation,
+          lastDelta: delta,
         };
       } else if (pendingGroup) {
         pendingGroup.latestContent = nextContent;
         pendingGroup.operation = operation;
+        pendingGroup.lastDelta = delta;
       } else {
         pendingGroup = {
           baseContent: previousContent,
           latestContent: nextContent,
           operation,
+          lastDelta: delta,
         };
       }
 
@@ -98,5 +109,9 @@ describe("undo grouping", () => {
     expect(
       collectSnapshots(["", "a", "as", "asd", "asd\n", "asd\na", "asd\nas", "asd\nasd"]),
     ).toEqual(["", "asd"]);
+  });
+
+  it("starts a new group when typing resumes at a different offset", () => {
+    expect(collectSnapshots(["", "a", "ab", "abc", "xabc"])).toEqual(["", "abc"]);
   });
 });

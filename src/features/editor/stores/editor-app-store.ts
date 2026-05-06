@@ -9,21 +9,38 @@ import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import {
-  classifyUndoEdit,
-  shouldStartNewUndoGroup,
+  getUndoEditDelta,
+  shouldStartNewUndoGroupForDelta,
+  type UndoEditDelta,
   type UndoEditOperation,
 } from "../history/undo-grouping";
+import type { HistoryEntry } from "../history/types";
+import type { Position, Range } from "../types/editor";
 import { useHistoryStore } from "./history-store";
 
 const lastBufferContent = new Map<string, string>();
 
 interface PendingUndoGroup {
-  baseContent: string;
+  baseEntry: HistoryEntry;
   latestContent: string;
   operation: UndoEditOperation;
+  lastEditDelta: UndoEditDelta;
 }
 
 const pendingUndoGroups = new Map<string, PendingUndoGroup>();
+
+function clonePosition(position?: Position): Position | undefined {
+  return position ? { ...position } : undefined;
+}
+
+function cloneRange(range?: Range): Range | undefined {
+  return range
+    ? {
+        start: { ...range.start },
+        end: { ...range.end },
+      }
+    : undefined;
+}
 
 async function recordLocalHistoryBeforeWrite(
   path: string,
@@ -43,11 +60,8 @@ export function cleanupBufferHistoryTracking(bufferId: string): void {
 
 export function flushPendingBufferHistory(bufferId: string, currentContent: string): void {
   const pendingGroup = pendingUndoGroups.get(bufferId);
-  if (pendingGroup && pendingGroup.baseContent !== currentContent) {
-    useHistoryStore.getState().actions.pushHistory(bufferId, {
-      content: pendingGroup.baseContent,
-      timestamp: Date.now(),
-    });
+  if (pendingGroup && pendingGroup.baseEntry.content !== currentContent) {
+    useHistoryStore.getState().actions.pushHistory(bufferId, pendingGroup.baseEntry);
   }
 
   pendingUndoGroups.delete(bufferId);
@@ -60,18 +74,21 @@ export function syncBufferHistoryContent(bufferId: string, content: string): voi
 }
 
 function pushPendingUndoGroup(bufferId: string, group: PendingUndoGroup): void {
-  if (group.baseContent === group.latestContent) return;
+  if (group.baseEntry.content === group.latestContent) return;
 
-  useHistoryStore.getState().actions.pushHistory(bufferId, {
-    content: group.baseContent,
-    timestamp: Date.now(),
-  });
+  useHistoryStore.getState().actions.pushHistory(bufferId, group.baseEntry);
+}
+
+interface TrackPendingUndoGroupOptions {
+  previousCursorPosition?: Position;
+  previousSelection?: Range;
 }
 
 function trackPendingUndoGroup(
   bufferId: string,
   previousContent: string,
   nextContent: string,
+  options: TrackPendingUndoGroupOptions = {},
 ): void {
   if (previousContent === nextContent) {
     lastBufferContent.set(bufferId, nextContent);
@@ -80,23 +97,36 @@ function trackPendingUndoGroup(
 
   const pendingGroup = pendingUndoGroups.get(bufferId);
   const previousOperation = pendingGroup?.operation ?? "other";
-  const operation = classifyUndoEdit(previousContent, nextContent, previousOperation);
+  const delta = getUndoEditDelta(previousContent, nextContent, previousOperation);
+  const operation = delta.operation;
+  const baseEntry: HistoryEntry = {
+    content: previousContent,
+    cursorPosition: clonePosition(options.previousCursorPosition),
+    selection: cloneRange(options.previousSelection),
+    timestamp: Date.now(),
+  };
 
-  if (pendingGroup && shouldStartNewUndoGroup(pendingGroup.operation, operation)) {
+  if (
+    pendingGroup &&
+    shouldStartNewUndoGroupForDelta(pendingGroup.operation, pendingGroup.lastEditDelta, delta)
+  ) {
     pushPendingUndoGroup(bufferId, pendingGroup);
     pendingUndoGroups.set(bufferId, {
-      baseContent: previousContent,
+      baseEntry,
       latestContent: nextContent,
       operation,
+      lastEditDelta: delta,
     });
   } else if (pendingGroup) {
     pendingGroup.latestContent = nextContent;
     pendingGroup.operation = operation;
+    pendingGroup.lastEditDelta = delta;
   } else {
     pendingUndoGroups.set(bufferId, {
-      baseContent: previousContent,
+      baseEntry,
       latestContent: nextContent,
       operation,
+      lastEditDelta: delta,
     });
   }
 
@@ -115,7 +145,12 @@ interface AppState {
 }
 
 interface AppActions {
-  handleContentChange: (content: string, previousContent?: string) => Promise<void>;
+  handleContentChange: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => Promise<void>;
   handleSave: () => Promise<void>;
   openQuickEdit: (params: {
     text: string;
@@ -136,7 +171,12 @@ export const useEditorAppStore = createSelectors(
         selectionRange: { start: 0, end: 0 },
       },
       actions: {
-        handleContentChange: async (content: string, previousContent?: string) => {
+        handleContentChange: async (
+          content: string,
+          previousContent?: string,
+          previousCursorPosition?: Position,
+          previousSelection?: Range,
+        ) => {
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } =
             await import("@/features/file-system/controllers/file-watcher-store");
@@ -158,7 +198,10 @@ export const useEditorAppStore = createSelectors(
               lastBufferContent.set(activeBufferId, contentBeforeChange);
             }
 
-            trackPendingUndoGroup(activeBufferId, contentBeforeChange, content);
+            trackPendingUndoGroup(activeBufferId, contentBeforeChange, content, {
+              previousCursorPosition,
+              previousSelection,
+            });
           }
 
           const isRemoteFile = activeBuffer.path.startsWith("remote://");

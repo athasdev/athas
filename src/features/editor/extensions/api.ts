@@ -120,9 +120,10 @@ class EditorAPIImpl implements EditorAPI {
     return this.selection;
   }
 
-  setSelection(range: Range): void {
-    this.selection = range;
-    this.emit("selectionChange", range);
+  setSelection(range?: Range | null): void {
+    this.selection = range ?? null;
+    useEditorStateStore.getState().actions.setSelection(range ?? undefined);
+    this.emit("selectionChange", range ?? null);
   }
 
   getCursorPosition(): Position {
@@ -486,6 +487,8 @@ class EditorAPIImpl implements EditorAPI {
       // Restore selection if it existed
       if (entry.selection) {
         this.setSelection(entry.selection);
+      } else {
+        this.setSelection(undefined);
       }
 
       // Emit content change event
@@ -532,6 +535,8 @@ class EditorAPIImpl implements EditorAPI {
       // Restore selection if it existed
       if (entry.selection) {
         this.setSelection(entry.selection);
+      } else {
+        this.setSelection(undefined);
       }
 
       // Emit content change event

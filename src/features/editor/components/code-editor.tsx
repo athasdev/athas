@@ -28,7 +28,7 @@ import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
-import type { Position } from "../types/editor";
+import type { Position, Range } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
@@ -55,7 +55,12 @@ interface CodeEditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string, previousContent?: string) => void;
+  onContentChange?: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => void;
 }
 
 export interface CodeEditorRef {

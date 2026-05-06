@@ -47,6 +47,7 @@ import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import type { Position, Range } from "../types/editor";
 import {
   applyVirtualEdit,
   calculateActualOffset,
@@ -92,7 +93,12 @@ interface EditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string, previousContent?: string) => void;
+  onContentChange?: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => void;
   inlayHints?: InlayHint[];
   onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
@@ -616,12 +622,24 @@ export function Editor({
       }
 
       const previousActualContent = content;
+      const previousCursorPosition = cursorPosition;
+      const previousSelection = selection;
 
       updateBufferContent(bufferId, newActualContent);
       if (onContentChange) {
-        onContentChange(newActualContent, previousActualContent);
+        onContentChange(
+          newActualContent,
+          previousActualContent,
+          previousCursorPosition,
+          previousSelection,
+        );
       } else {
-        onChange(newActualContent, previousActualContent);
+        onChange(
+          newActualContent,
+          previousActualContent,
+          previousCursorPosition,
+          previousSelection,
+        );
       }
 
       if (!useGlobalEditorState) return;
@@ -655,11 +673,13 @@ export function Editor({
       updateBufferContent,
       setEditorCursorPosition,
       content,
+      cursorPosition,
       displayContent,
       foldTransform,
       onContentChange,
       onChange,
       readOnly,
+      selection,
       useGlobalEditorState,
     ],
   );

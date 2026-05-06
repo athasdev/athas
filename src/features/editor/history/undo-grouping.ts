@@ -8,6 +8,7 @@ export type UndoEditOperation =
   | "other";
 
 interface ContentDelta {
+  startOffset: number;
   insertedText: string;
   removedText: string;
 }
@@ -51,8 +52,29 @@ function getContentDelta(previousContent: string, nextContent: string): ContentD
   }
 
   return {
+    startOffset: prefixLength,
     insertedText: nextContent.slice(prefixLength, nextContent.length - suffixLength),
     removedText: previousContent.slice(prefixLength, previousContent.length - suffixLength),
+  };
+}
+
+export interface UndoEditDelta extends ContentDelta {
+  operation: UndoEditOperation;
+  endOffset: number;
+}
+
+export function getUndoEditDelta(
+  previousContent: string,
+  nextContent: string,
+  previousOperation: UndoEditOperation = "other",
+): UndoEditDelta {
+  const delta = getContentDelta(previousContent, nextContent);
+  const operation = classifyUndoEdit(previousContent, nextContent, previousOperation);
+
+  return {
+    ...delta,
+    operation,
+    endOffset: delta.startOffset + delta.insertedText.length,
   };
 }
 
@@ -122,4 +144,27 @@ export function shouldStartNewUndoGroup(
   }
 
   return normalizeOperation(previousOperation) !== normalizeOperation(nextOperation);
+}
+
+export function shouldStartNewUndoGroupForDelta(
+  previousOperation: UndoEditOperation,
+  previousDelta: UndoEditDelta,
+  nextDelta: UndoEditDelta,
+): boolean {
+  if (shouldStartNewUndoGroup(previousOperation, nextDelta.operation)) {
+    return true;
+  }
+
+  if (nextDelta.operation.startsWith("typing.")) {
+    return nextDelta.startOffset !== previousDelta.endOffset;
+  }
+
+  if (nextDelta.operation === "delete") {
+    return (
+      nextDelta.startOffset !== previousDelta.startOffset &&
+      nextDelta.startOffset !== previousDelta.startOffset - nextDelta.removedText.length
+    );
+  }
+
+  return true;
 }
