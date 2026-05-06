@@ -533,6 +533,7 @@ const CodeEditor = ({
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
               onExecute={handleCodeLensExecute}
+              resolveModelPosition={resolveModelPosition}
             />
           )}
 
