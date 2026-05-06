@@ -73,7 +73,7 @@ async function fetchMarketplaceManifests(): Promise<Record<string, ExtensionMani
 }
 
 export async function loadMarketplaceContributionExtensions(): Promise<ExtensionManifest[]> {
-  if (cachedMarketplaceExtensions) {
+  if (cachedMarketplaceExtensions && !import.meta.env.DEV) {
     return cachedMarketplaceExtensions;
   }
 
