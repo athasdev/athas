@@ -116,19 +116,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     };
   }, []);
 
-  const { currentConnectionIdRef, writeBuffered } = useTerminalConnection({
-    connectionId,
-    getTerminalTheme,
-    initialCommand,
-    isInitialized,
-    onTerminalExit,
-    remoteConnectionId,
-    reuseExistingConnection: hadExistingConnectionOnMountRef.current,
-    sessionId,
-    terminal: xtermRef.current,
-    updateSession,
-  });
-
   const restoreSnapshotViewport = useCallback(
     (terminal: Terminal, snapshot: TerminalViewSnapshot) => {
       if (restoredSnapshotVersionRef.current === snapshot.version) return;
@@ -170,6 +157,20 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       capturedAt: Date.now(),
     });
   }, [getSession, saveSessionSnapshot, sessionId]);
+
+  const { currentConnectionIdRef, writeBuffered } = useTerminalConnection({
+    captureTerminalSnapshot,
+    connectionId,
+    getTerminalTheme,
+    initialCommand,
+    isInitialized,
+    onTerminalExit,
+    remoteConnectionId,
+    reuseExistingConnection: hadExistingConnectionOnMountRef.current,
+    sessionId,
+    terminal: xtermRef.current,
+    updateSession,
+  });
 
   const initializeTerminal = useCallback(async () => {
     const container = terminalContainerRef.current;
