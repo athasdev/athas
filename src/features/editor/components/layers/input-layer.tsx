@@ -9,7 +9,7 @@ import { useSettingsStore } from "@/features/settings/store";
 
 interface InputLayerProps {
   content: string;
-  onInput: (content: string) => void;
+  onInput: (content: string, event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onBeforeInput?: (e: React.FormEvent<HTMLTextAreaElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onKeyUp?: () => void;
@@ -62,7 +62,7 @@ const InputLayerComponent = ({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onInput(e.target.value);
+      onInput(e.target.value, e);
     },
     [onInput],
   );
@@ -131,6 +131,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.customCaret === next.customCaret &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
+    prev.onBeforeInput === next.onBeforeInput &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onScroll === next.onScroll &&
     prev.onSelect === next.onSelect &&

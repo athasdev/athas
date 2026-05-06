@@ -146,6 +146,7 @@ export function Editor({
   const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
   const gitBlameRef = useRef<HTMLDivElement>(null);
   const inlineDiffRef = useRef<HTMLDivElement>(null);
+  const suppressedNativeHistoryInputRef = useRef<"historyUndo" | "historyRedo" | null>(null);
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
@@ -581,9 +582,26 @@ export function Editor({
   }, [cursorPosition, displayContent, getInputOffsetForPosition, selection]);
 
   const handleInput = useCallback(
-    (newVirtualContent: string) => {
+    (newVirtualContent: string, event?: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (readOnly) return;
       if (!bufferId || !inputRef.current) return;
+
+      const inputType = event ? (event.nativeEvent as InputEvent).inputType : undefined;
+      if (inputType === "historyUndo" || inputType === "historyRedo") {
+        inputRef.current.value = displayContent;
+
+        if (suppressedNativeHistoryInputRef.current === inputType) {
+          suppressedNativeHistoryInputRef.current = null;
+          return;
+        }
+
+        if (inputType === "historyUndo") {
+          editorAPI.undo();
+        } else {
+          editorAPI.redo();
+        }
+        return;
+      }
 
       const uiActions = useEditorUIStore.getState().actions;
       uiActions.setHoverInfo(null);
@@ -637,6 +655,7 @@ export function Editor({
       updateBufferContent,
       setEditorCursorPosition,
       content,
+      displayContent,
       foldTransform,
       onContentChange,
       onChange,
@@ -654,6 +673,7 @@ export function Editor({
 
     event.preventDefault();
     event.stopPropagation();
+    suppressedNativeHistoryInputRef.current = inputEvent.inputType;
 
     if (inputEvent.inputType === "historyUndo") {
       editorAPI.undo();

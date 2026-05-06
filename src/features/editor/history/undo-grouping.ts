@@ -2,6 +2,7 @@ export type UndoEditOperation =
   | "typing.other"
   | "typing.first-space"
   | "typing.consecutive-space"
+  | "typing.line-break"
   | "delete"
   | "replace"
   | "other";
@@ -18,6 +19,10 @@ function isTypingOperation(operation: UndoEditOperation): boolean {
 function normalizeOperation(operation: UndoEditOperation): UndoEditOperation | "typing.space" {
   if (operation === "typing.first-space" || operation === "typing.consecutive-space") {
     return "typing.space";
+  }
+
+  if (operation === "typing.line-break") {
+    return "typing.other";
   }
 
   return operation;
@@ -70,6 +75,10 @@ export function classifyUndoEdit(
     return "delete";
   }
 
+  if (insertedText === "\n") {
+    return "typing.line-break";
+  }
+
   if (insertedText === " ") {
     return previousOperation === "typing.first-space" ||
       previousOperation === "typing.consecutive-space"
@@ -77,7 +86,12 @@ export function classifyUndoEdit(
       : "typing.first-space";
   }
 
-  if (insertedText && !insertedText.includes("\n") && !insertedText.includes("\t")) {
+  if (
+    insertedText &&
+    insertedText.length === 1 &&
+    !insertedText.includes("\n") &&
+    !insertedText.includes("\t")
+  ) {
     return "typing.other";
   }
 
@@ -90,6 +104,10 @@ export function shouldStartNewUndoGroup(
 ): boolean {
   const previousIsTyping = isTypingOperation(previousOperation);
   const nextIsTyping = isTypingOperation(nextOperation);
+
+  if (nextOperation === "typing.line-break") {
+    return true;
+  }
 
   if (previousIsTyping && !nextIsTyping) {
     return true;

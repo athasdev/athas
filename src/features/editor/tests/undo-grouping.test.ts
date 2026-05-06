@@ -6,6 +6,48 @@ import {
 } from "@/features/editor/history/undo-grouping";
 
 describe("undo grouping", () => {
+  function collectSnapshots(contents: string[]): string[] {
+    let previousOperation: UndoEditOperation = "other";
+    let pendingGroup: {
+      baseContent: string;
+      latestContent: string;
+      operation: UndoEditOperation;
+    } | null = null;
+    const snapshots: string[] = [];
+
+    for (let index = 1; index < contents.length; index += 1) {
+      const previousContent = contents[index - 1];
+      const nextContent = contents[index];
+      const operation = classifyUndoEdit(previousContent, nextContent, previousOperation);
+
+      if (pendingGroup && shouldStartNewUndoGroup(pendingGroup.operation, operation)) {
+        snapshots.push(pendingGroup.baseContent);
+        pendingGroup = {
+          baseContent: previousContent,
+          latestContent: nextContent,
+          operation,
+        };
+      } else if (pendingGroup) {
+        pendingGroup.latestContent = nextContent;
+        pendingGroup.operation = operation;
+      } else {
+        pendingGroup = {
+          baseContent: previousContent,
+          latestContent: nextContent,
+          operation,
+        };
+      }
+
+      previousOperation = operation;
+    }
+
+    if (pendingGroup) {
+      snapshots.push(pendingGroup.baseContent);
+    }
+
+    return snapshots;
+  }
+
   it("keeps continuous character typing in one undo group", () => {
     let previousOperation: UndoEditOperation = "other";
 
@@ -50,5 +92,11 @@ describe("undo grouping", () => {
   it("keeps non-typing replacements atomic", () => {
     expect(shouldStartNewUndoGroup("replace", "replace")).toBe(true);
     expect(shouldStartNewUndoGroup("other", "other")).toBe(true);
+  });
+
+  it("groups typing after a line break with the line break", () => {
+    expect(
+      collectSnapshots(["", "a", "as", "asd", "asd\n", "asd\na", "asd\nas", "asd\nasd"]),
+    ).toEqual(["", "asd"]);
   });
 });
