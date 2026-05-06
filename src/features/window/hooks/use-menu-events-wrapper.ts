@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect } from "react";
+import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -65,6 +66,24 @@ export function useMenuEventsWrapper() {
   const isTerminalFocused = () => {
     const activeElement = document.activeElement as HTMLElement | null;
     return activeElement?.closest(".terminal-container") !== null;
+  };
+  const shouldRouteEditMenuToEditor = () => {
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    if (activeElement?.classList.contains("editor-textarea")) {
+      return true;
+    }
+
+    const isTextField =
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.isContentEditable;
+
+    if (isTextField) {
+      return false;
+    }
+
+    return activeBuffer?.type === "editor";
   };
 
   useEffect(() => {
@@ -162,11 +181,19 @@ export function useMenuEventsWrapper() {
       }
     },
     onUndo: () => {
-      // Trigger browser's undo
+      if (shouldRouteEditMenuToEditor()) {
+        editorAPI.undo();
+        return;
+      }
+
       document.execCommand("undo");
     },
     onRedo: () => {
-      // Trigger browser's redo
+      if (shouldRouteEditMenuToEditor()) {
+        editorAPI.redo();
+        return;
+      }
+
       document.execCommand("redo");
     },
     onFind: () => uiState.setIsFindVisible(true),
