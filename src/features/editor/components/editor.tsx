@@ -645,6 +645,23 @@ export function Editor({
     ],
   );
 
+  const handleBeforeInput = useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
+    const inputEvent = event.nativeEvent as InputEvent;
+
+    if (inputEvent.inputType !== "historyUndo" && inputEvent.inputType !== "historyRedo") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (inputEvent.inputType === "historyUndo") {
+      editorAPI.undo();
+    } else {
+      editorAPI.redo();
+    }
+  }, []);
+
   const editorOps = useEditorOperations({
     inputRef,
     content,
@@ -1429,6 +1446,7 @@ export function Editor({
           content={displayContent}
           filePath={filePath}
           onInput={handleInput}
+          onBeforeInput={readOnly || !useGlobalEditorState ? undefined : handleBeforeInput}
           onKeyDown={readOnly || !useGlobalEditorState ? undefined : handleKeyDown}
           onScroll={handleScroll}
           onSelect={useGlobalEditorState ? handleCursorChange : undefined}

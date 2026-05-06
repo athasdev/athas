@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/features/settings/store";
 interface InputLayerProps {
   content: string;
   onInput: (content: string) => void;
+  onBeforeInput?: (e: React.FormEvent<HTMLTextAreaElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onKeyUp?: () => void;
   onSelect?: () => void;
@@ -35,6 +36,7 @@ interface InputLayerProps {
 const InputLayerComponent = ({
   content,
   onInput,
+  onBeforeInput,
   onKeyDown,
   onKeyUp,
   onSelect,
@@ -69,6 +71,7 @@ const InputLayerComponent = ({
     <textarea
       ref={ref as React.RefObject<HTMLTextAreaElement>}
       defaultValue={content}
+      onBeforeInput={onBeforeInput}
       onChange={handleChange}
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
