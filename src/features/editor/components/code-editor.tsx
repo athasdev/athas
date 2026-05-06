@@ -475,7 +475,7 @@ const CodeEditor = ({
 
           // Calculate scroll position to center the match in viewport
           const lineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
-          const targetScrollTop = line * lineHeight;
+          const targetScrollTop = resolveModelPosition(line, 0)?.top ?? line * lineHeight;
           const viewportHeight = textarea.clientHeight;
           const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
 
@@ -483,7 +483,15 @@ const CodeEditor = ({
         }
       }
     }
-  }, [currentMatchIndex, enableInteractiveServices, searchMatches, value, zoomedFontSize]);
+  }, [
+    currentMatchIndex,
+    enableInteractiveServices,
+    resolveModelPosition,
+    searchMatches,
+    settings.editorLineHeight,
+    value,
+    zoomedFontSize,
+  ]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;

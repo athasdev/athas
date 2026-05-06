@@ -15,6 +15,7 @@ import {
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position, Range } from "../types/editor";
 import { splitLines } from "../utils/lines";
+import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import {
   calculateCursorPosition,
   calculateOffsetFromPosition,
@@ -45,6 +46,7 @@ interface UseInlineEditOptions {
   lineHeight: number;
   tabSize: number;
   lastScrollRef: React.RefObject<{ top: number; left: number }>;
+  resolveModelPosition?: EditorModelPositionResolver;
   setCursorPosition: (position: Position) => void;
   setSelection: (selection?: Range) => void;
   updateBufferContent: (bufferId: string, content: string, snapshot?: boolean) => void;
@@ -60,6 +62,7 @@ export function useInlineEdit({
   lineHeight,
   tabSize,
   lastScrollRef,
+  resolveModelPosition,
   setCursorPosition,
   setSelection,
   updateBufferContent,
@@ -339,8 +342,13 @@ export function useInlineEdit({
 
     const lineText = lines[inlineEditSelectionAnchor.line] || "";
     const anchorColumn = Math.min(inlineEditSelectionAnchor.column, lineText.length);
-    const anchorX = getAccurateCursorX(lineText, anchorColumn, fontSize, fontFamily, tabSize);
+    const resolvedAnchor = resolveModelPosition?.(inlineEditSelectionAnchor.line, anchorColumn);
+    const anchorX =
+      resolvedAnchor?.left !== undefined
+        ? resolvedAnchor.left - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT
+        : getAccurateCursorX(lineText, anchorColumn, fontSize, fontFamily, tabSize);
     const anchorTop =
+      resolvedAnchor?.top ??
       inlineEditSelectionAnchor.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
     const textarea = inputRef.current;
     const scrollLeft = textarea?.scrollLeft ?? lastScrollRef.current.left;

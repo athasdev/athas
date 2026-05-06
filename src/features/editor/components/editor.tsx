@@ -673,6 +673,7 @@ export function Editor({
       top: number;
       left: number;
     }>,
+    resolveModelPosition,
     setCursorPosition: setEditorCursorPosition,
     setSelection,
     updateBufferContent,
