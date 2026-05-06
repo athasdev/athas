@@ -16,6 +16,8 @@ use std::{
 use tauri::{AppHandle, Emitter, Runtime};
 use uuid::Uuid;
 
+type DebugEventEmitter = Arc<dyn Fn(&str, Value) + Send + Sync>;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DebugAdapterLaunch {
@@ -66,7 +68,7 @@ struct DebugSessionHandle {
 }
 
 pub struct DebugManager {
-   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
+   emitter: DebugEventEmitter,
    sessions: Arc<Mutex<HashMap<String, DebugSessionHandle>>>,
 }
 
@@ -259,7 +261,7 @@ fn spawn_stdin_writer(
 }
 
 fn spawn_stdout_reader(
-   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
+   emitter: DebugEventEmitter,
    session_id: String,
    stdout: std::process::ChildStdout,
 ) {
@@ -293,7 +295,7 @@ fn spawn_stdout_reader(
 }
 
 fn spawn_stderr_reader(
-   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
+   emitter: DebugEventEmitter,
    session_id: String,
    stderr: std::process::ChildStderr,
 ) {
@@ -328,7 +330,7 @@ fn spawn_stderr_reader(
 }
 
 fn spawn_exit_watcher(
-   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
+   emitter: DebugEventEmitter,
    sessions: Arc<Mutex<HashMap<String, DebugSessionHandle>>>,
    session_id: String,
    child: Arc<Mutex<Child>>,
@@ -381,21 +383,13 @@ fn read_protocol_message(
    Ok(Some(serde_json::from_slice(&content)?))
 }
 
-fn emit_payload<S: Serialize>(
-   emitter: &Arc<dyn Fn(&str, Value) + Send + Sync>,
-   event: &str,
-   payload: S,
-) {
+fn emit_payload<S: Serialize>(emitter: &DebugEventEmitter, event: &str, payload: S) {
    if let Ok(value) = serde_json::to_value(payload) {
       emitter(event, value);
    }
 }
 
-fn emit_session_ended(
-   emitter: &Arc<dyn Fn(&str, Value) + Send + Sync>,
-   session_id: &str,
-   reason: &str,
-) {
+fn emit_session_ended(emitter: &DebugEventEmitter, session_id: &str, reason: &str) {
    emit_payload(
       emitter,
       "debugger_session_ended",

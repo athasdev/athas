@@ -402,6 +402,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 }
 
 #[command]
+#[allow(clippy::too_many_arguments)]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
    url: String,
@@ -543,10 +544,10 @@ pub async fn close_all_embedded_webviews(
 
    let mut close_errors = Vec::new();
    for label in labels {
-      if let Some(webview) = app.get_webview(&label) {
-         if let Err(error) = webview.close() {
-            close_errors.push(format!("{label}: {error}"));
-         }
+      if let Some(webview) = app.get_webview(&label)
+         && let Err(error) = webview.close()
+      {
+         close_errors.push(format!("{label}: {error}"));
       }
    }
 

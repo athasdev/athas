@@ -23,17 +23,16 @@ fn clean_stash_subject(subject: &str) -> String {
    };
 
    let mut message_parts = without_context.splitn(2, ' ');
-   if let Some(first_part) = message_parts.next() {
-      if first_part.len() >= 7
-         && first_part.len() <= 40
-         && first_part.chars().all(|c| c.is_ascii_hexdigit())
-      {
-         return message_parts
-            .next()
-            .unwrap_or(without_context)
-            .trim()
-            .to_string();
-      }
+   if let Some(first_part) = message_parts.next()
+      && first_part.len() >= 7
+      && first_part.len() <= 40
+      && first_part.chars().all(|c| c.is_ascii_hexdigit())
+   {
+      return message_parts
+         .next()
+         .unwrap_or(without_context)
+         .trim()
+         .to_string();
    }
 
    without_context.trim().to_string()

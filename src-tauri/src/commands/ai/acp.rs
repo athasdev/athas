@@ -222,10 +222,10 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       let cached = cache
          .lock()
          .map_err(|_| "Agent catalog cache poisoned".to_string())?;
-      if let Some(catalog) = cached.as_ref() {
-         if catalog.loaded_at.elapsed() < Duration::from_secs(AGENT_CATALOG_CACHE_SECONDS) {
-            return Ok(catalog.agents.clone());
-         }
+      if let Some(catalog) = cached.as_ref()
+         && catalog.loaded_at.elapsed() < Duration::from_secs(AGENT_CATALOG_CACHE_SECONDS)
+      {
+         return Ok(catalog.agents.clone());
       }
    }
 

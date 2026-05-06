@@ -64,7 +64,7 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       {
          #[cfg(not(feature = "sqlite"))]
          {
-            return Err("SQLite provider support is not enabled".to_string());
+            Err("SQLite provider support is not enabled".to_string())
          }
          #[cfg(feature = "sqlite")]
          run_sqlite(command, request.payload).await
@@ -77,7 +77,7 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       {
          #[cfg(not(feature = "duckdb"))]
          {
-            return Err("DuckDB provider support is not enabled".to_string());
+            Err("DuckDB provider support is not enabled".to_string())
          }
          #[cfg(feature = "duckdb")]
          run_duckdb(command, request.payload).await
@@ -85,7 +85,7 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       command if command.contains("postgres") => {
          #[cfg(not(feature = "postgres"))]
          {
-            return Err("PostgreSQL provider support is not enabled".to_string());
+            Err("PostgreSQL provider support is not enabled".to_string())
          }
          #[cfg(feature = "postgres")]
          run_postgres(command, request.payload).await
@@ -93,7 +93,7 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       command if command.contains("mysql") => {
          #[cfg(not(feature = "mysql"))]
          {
-            return Err("MySQL provider support is not enabled".to_string());
+            Err("MySQL provider support is not enabled".to_string())
          }
          #[cfg(feature = "mysql")]
          run_mysql(command, request.payload).await
@@ -101,7 +101,7 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       command if command.contains("mongo") => {
          #[cfg(not(feature = "mongodb"))]
          {
-            return Err("MongoDB provider support is not enabled".to_string());
+            Err("MongoDB provider support is not enabled".to_string())
          }
          #[cfg(feature = "mongodb")]
          run_mongodb(command, request.payload).await
@@ -109,7 +109,7 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       command if command.starts_with("redis_") => {
          #[cfg(not(feature = "redis"))]
          {
-            return Err("Redis provider support is not enabled".to_string());
+            Err("Redis provider support is not enabled".to_string())
          }
          #[cfg(feature = "redis")]
          run_redis(command, request.payload).await
