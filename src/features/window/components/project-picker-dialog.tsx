@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   PencilSimple as Edit,
@@ -38,6 +38,14 @@ interface ProjectPickerDialogProps {
   onClose: () => void;
 }
 
+interface VsCodeRecentProject {
+  name: string;
+  path: string;
+  source: string;
+}
+
+let hasImportedVsCodeRecents = false;
+
 const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps) => {
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
@@ -49,7 +57,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const { addToRecents, openRecentFolder, removeFromRecents, togglePinned } =
+  const { addToRecents, importRecentFolders, openRecentFolder, removeFromRecents, togglePinned } =
     useRecentFoldersStore();
   const { handleOpenFolder } = useFileSystemStore();
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
@@ -68,6 +76,19 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
       loadConnections();
     }
   }, [isOpen, loadConnections]);
+
+  useEffect(() => {
+    if (!isOpen || hasImportedVsCodeRecents) return;
+
+    hasImportedVsCodeRecents = true;
+    invoke<VsCodeRecentProject[]>("get_vscode_recent_projects")
+      .then((projects) => {
+        importRecentFolders(projects.map((project) => project.path));
+      })
+      .catch((error) => {
+        console.debug("Failed to import VS Code recent projects:", error);
+      });
+  }, [isOpen, importRecentFolders]);
 
   // Listen for connection status changes
   useEffect(() => {
