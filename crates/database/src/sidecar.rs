@@ -1,7 +1,10 @@
+#[cfg(feature = "postgres")]
+use crate::sql_common::CreatePostgresSubscriptionParams;
+#[cfg(any(feature = "duckdb", feature = "postgres"))]
+use crate::sql_common::FilteredQueryParams;
 use crate::{
    connection_manager::{ConnectionConfig, ConnectionManager, connect_database, test_connection},
    providers::*,
-   sql_common::{CreatePostgresSubscriptionParams, FilteredQueryParams},
 };
 use serde::{Deserialize, de::DeserializeOwned};
 use serde_json::{Value, json};
@@ -52,6 +55,11 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
             || command.starts_with("execute_sqlite")
             || command.ends_with("_sqlite_row") =>
       {
+         #[cfg(not(feature = "sqlite"))]
+         {
+            return Err("SQLite provider support is not enabled".to_string());
+         }
+         #[cfg(feature = "sqlite")]
          run_sqlite(command, request.payload).await
       }
       command
@@ -60,12 +68,45 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
             || command.starts_with("execute_duckdb")
             || command.ends_with("_duckdb_row") =>
       {
+         #[cfg(not(feature = "duckdb"))]
+         {
+            return Err("DuckDB provider support is not enabled".to_string());
+         }
+         #[cfg(feature = "duckdb")]
          run_duckdb(command, request.payload).await
       }
-      command if command.contains("postgres") => run_postgres(command, request.payload).await,
-      command if command.contains("mysql") => run_mysql(command, request.payload).await,
-      command if command.contains("mongo") => run_mongodb(command, request.payload).await,
-      command if command.starts_with("redis_") => run_redis(command, request.payload).await,
+      command if command.contains("postgres") => {
+         #[cfg(not(feature = "postgres"))]
+         {
+            return Err("PostgreSQL provider support is not enabled".to_string());
+         }
+         #[cfg(feature = "postgres")]
+         run_postgres(command, request.payload).await
+      }
+      command if command.contains("mysql") => {
+         #[cfg(not(feature = "mysql"))]
+         {
+            return Err("MySQL provider support is not enabled".to_string());
+         }
+         #[cfg(feature = "mysql")]
+         run_mysql(command, request.payload).await
+      }
+      command if command.contains("mongo") => {
+         #[cfg(not(feature = "mongodb"))]
+         {
+            return Err("MongoDB provider support is not enabled".to_string());
+         }
+         #[cfg(feature = "mongodb")]
+         run_mongodb(command, request.payload).await
+      }
+      command if command.starts_with("redis_") => {
+         #[cfg(not(feature = "redis"))]
+         {
+            return Err("Redis provider support is not enabled".to_string());
+         }
+         #[cfg(feature = "redis")]
+         run_redis(command, request.payload).await
+      }
       _ => Err(format!(
          "Unsupported {} database command: {}",
          request.provider_id, request.command
@@ -140,6 +181,7 @@ async fn test(payload: Value) -> Result<Value, String> {
    serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
+#[cfg(feature = "sqlite")]
 async fn run_sqlite(command: &str, payload: Value) -> Result<Value, String> {
    let path: String = read_field(&payload, &["path"])?;
    let value = match command {
@@ -192,6 +234,7 @@ async fn run_sqlite(command: &str, payload: Value) -> Result<Value, String> {
    value.map_err(|e| e.to_string())
 }
 
+#[cfg(feature = "duckdb")]
 async fn run_duckdb(command: &str, payload: Value) -> Result<Value, String> {
    let path: String = read_field(&payload, &["path"])?;
    let value = match command {
@@ -243,6 +286,7 @@ async fn run_duckdb(command: &str, payload: Value) -> Result<Value, String> {
    value.map_err(|e| e.to_string())
 }
 
+#[cfg(feature = "postgres")]
 async fn run_postgres(command: &str, payload: Value) -> Result<Value, String> {
    let connection_id: String = read_field(&payload, &["connectionId", "connection_id"])?;
    let manager = manager_for_connection(&payload).await?;
@@ -357,6 +401,7 @@ async fn run_postgres(command: &str, payload: Value) -> Result<Value, String> {
    value.map_err(|e| e.to_string())
 }
 
+#[cfg(feature = "mysql")]
 async fn run_mysql(command: &str, payload: Value) -> Result<Value, String> {
    let connection_id: String = read_field(&payload, &["connectionId", "connection_id"])?;
    let manager = manager_for_connection(&payload).await?;
@@ -419,6 +464,7 @@ async fn run_mysql(command: &str, payload: Value) -> Result<Value, String> {
    value.map_err(|e| e.to_string())
 }
 
+#[cfg(feature = "mongodb")]
 async fn run_mongodb(command: &str, payload: Value) -> Result<Value, String> {
    let connection_id: String = read_field(&payload, &["connectionId", "connection_id"])?;
    let manager = manager_for_connection(&payload).await?;
@@ -483,6 +529,7 @@ async fn run_mongodb(command: &str, payload: Value) -> Result<Value, String> {
    value.map_err(|e| e.to_string())
 }
 
+#[cfg(feature = "redis")]
 async fn run_redis(command: &str, payload: Value) -> Result<Value, String> {
    let connection_id: String = read_field(&payload, &["connectionId", "connection_id"])?;
    let manager = manager_for_connection(&payload).await?;

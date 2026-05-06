@@ -1,13 +1,25 @@
+#[cfg(feature = "duckdb")]
 pub mod duckdb;
+#[cfg(feature = "mongodb")]
 pub mod mongodb;
+#[cfg(feature = "mysql")]
 pub mod mysql;
+#[cfg(feature = "postgres")]
 pub mod postgres;
+#[cfg(feature = "redis")]
 pub mod redis_db;
+#[cfg(feature = "sqlite")]
 pub mod sqlite;
 
+#[cfg(feature = "duckdb")]
 pub use duckdb::*;
+#[cfg(feature = "mongodb")]
 pub use mongodb::*;
+#[cfg(feature = "mysql")]
 pub use mysql::*;
+#[cfg(feature = "postgres")]
 pub use postgres::*;
+#[cfg(feature = "redis")]
 pub use redis_db::*;
+#[cfg(feature = "sqlite")]
 pub use sqlite::*;

@@ -16,9 +16,13 @@ pub struct ConnectionConfig {
 }
 
 pub enum DatabasePool {
+   #[cfg(feature = "postgres")]
    Postgres(sqlx::Pool<sqlx::Postgres>),
+   #[cfg(feature = "mysql")]
    MySql(sqlx::Pool<sqlx::MySql>),
+   #[cfg(feature = "mongodb")]
    Mongo(mongodb::Client),
+   #[cfg(feature = "redis")]
    Redis(Box<redis::aio::ConnectionManager>),
 }
 
@@ -75,18 +79,22 @@ pub async fn connect_database(
    } else {
       let pass = password.unwrap_or_default();
       match config.db_type.as_str() {
+         #[cfg(feature = "postgres")]
          "postgres" => format!(
             "postgres://{}:{}@{}:{}/{}",
             config.username, pass, config.host, config.port, config.database
          ),
+         #[cfg(feature = "mysql")]
          "mysql" => format!(
             "mysql://{}:{}@{}:{}/{}",
             config.username, pass, config.host, config.port, config.database
          ),
+         #[cfg(feature = "mongodb")]
          "mongodb" => format!(
             "mongodb://{}:{}@{}:{}/{}",
             config.username, pass, config.host, config.port, config.database
          ),
+         #[cfg(feature = "redis")]
          "redis" => {
             if !config.username.is_empty() {
                format!(
@@ -104,6 +112,7 @@ pub async fn connect_database(
    };
 
    match config.db_type.as_str() {
+      #[cfg(feature = "postgres")]
       "postgres" => {
          let pool = sqlx::PgPool::connect(&conn_str)
             .await
@@ -112,6 +121,7 @@ pub async fn connect_database(
             .add_pool(connection_id.clone(), DatabasePool::Postgres(pool))
             .await;
       }
+      #[cfg(feature = "mysql")]
       "mysql" => {
          let pool = sqlx::MySqlPool::connect(&conn_str)
             .await
@@ -120,6 +130,7 @@ pub async fn connect_database(
             .add_pool(connection_id.clone(), DatabasePool::MySql(pool))
             .await;
       }
+      #[cfg(feature = "mongodb")]
       "mongodb" => {
          let client = mongodb::Client::with_uri_str(&conn_str)
             .await
@@ -133,6 +144,7 @@ pub async fn connect_database(
             .add_pool(connection_id.clone(), DatabasePool::Mongo(client))
             .await;
       }
+      #[cfg(feature = "redis")]
       "redis" => {
          let client = redis::Client::open(conn_str.as_str())
             .map_err(|e| format!("Failed to parse Redis URL: {}", e))?;
@@ -172,18 +184,22 @@ pub async fn test_connection(
    } else {
       let pass = password.unwrap_or_default();
       match config.db_type.as_str() {
+         #[cfg(feature = "postgres")]
          "postgres" => format!(
             "postgres://{}:{}@{}:{}/{}",
             config.username, pass, config.host, config.port, config.database
          ),
+         #[cfg(feature = "mysql")]
          "mysql" => format!(
             "mysql://{}:{}@{}:{}/{}",
             config.username, pass, config.host, config.port, config.database
          ),
+         #[cfg(feature = "mongodb")]
          "mongodb" => format!(
             "mongodb://{}:{}@{}:{}/{}",
             config.username, pass, config.host, config.port, config.database
          ),
+         #[cfg(feature = "redis")]
          "redis" => {
             if !pass.is_empty() {
                format!("redis://:{}@{}:{}", pass, config.host, config.port)
@@ -196,18 +212,21 @@ pub async fn test_connection(
    };
 
    match config.db_type.as_str() {
+      #[cfg(feature = "postgres")]
       "postgres" => {
          let pool = sqlx::PgPool::connect(&conn_str)
             .await
             .map_err(|e| format!("Connection failed: {}", e))?;
          pool.close().await;
       }
+      #[cfg(feature = "mysql")]
       "mysql" => {
          let pool = sqlx::MySqlPool::connect(&conn_str)
             .await
             .map_err(|e| format!("Connection failed: {}", e))?;
          pool.close().await;
       }
+      #[cfg(feature = "mongodb")]
       "mongodb" => {
          let client = mongodb::Client::with_uri_str(&conn_str)
             .await
@@ -217,6 +236,7 @@ pub async fn test_connection(
             .await
             .map_err(|e| format!("Connection failed: {}", e))?;
       }
+      #[cfg(feature = "redis")]
       "redis" => {
          let client = redis::Client::open(conn_str.as_str())
             .map_err(|e| format!("Connection failed: {}", e))?;
