@@ -321,6 +321,10 @@ export function Editor({
     () => calculateLineHeight(fontSize, lineHeightMultiplier),
     [fontSize, lineHeightMultiplier],
   );
+  const measureEditorText = useCallback(
+    (text: string) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
+    [fontSize, fontFamily, tabSize],
+  );
   const viewLayout = useMemo(
     () =>
       buildEditorViewLayout({
@@ -328,9 +332,9 @@ export function Editor({
         lineHeight,
         wordWrap,
         contentWidth,
-        measureText: (text) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
+        measureText: measureEditorText,
       }),
-    [lines, lineHeight, wordWrap, contentWidth, fontSize, fontFamily, tabSize],
+    [lines, lineHeight, wordWrap, contentWidth, measureEditorText],
   );
   const shouldVirtualizeRendering =
     !wordWrap && lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
@@ -1574,10 +1578,10 @@ export function Editor({
             ref={multiCursorRef}
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
             lineHeight={lineHeight}
             content={displayContent}
+            measureText={measureEditorText}
+            viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
