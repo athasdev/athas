@@ -52,9 +52,17 @@ async function setupMenuListeners(handlers: any) {
     currentWindow.listen("menu_theme_change", (event) =>
       currentHandlers.current.onThemeChange(event.payload as string),
     ),
+    currentWindow.listen("menu_execute_command", (event) =>
+      currentHandlers.current.onExecuteCommand(event.payload as string),
+    ),
     currentWindow.listen("menu_documentation", () => currentHandlers.current.onDocumentation()),
+    currentWindow.listen("menu_changelog", () => currentHandlers.current.onChangelog()),
     currentWindow.listen("menu_whats_new", () => currentHandlers.current.onWhatsNew()),
     currentWindow.listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
+    currentWindow.listen("menu_request_feature", () => currentHandlers.current.onRequestFeature()),
+    currentWindow.listen("menu_check_updates", () => currentHandlers.current.onCheckForUpdates()),
+    currentWindow.listen("menu_open_settings", () => currentHandlers.current.onOpenSettings()),
+    currentWindow.listen("menu_open_extensions", () => currentHandlers.current.onOpenExtensions()),
     currentWindow.listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
   ]);
 
@@ -87,9 +95,15 @@ interface UseMenuEventsProps {
   onNextTab: () => void;
   onPrevTab: () => void;
   onThemeChange: (theme: string) => void;
+  onExecuteCommand: (commandId: string) => void | Promise<void>;
   onDocumentation: () => void | Promise<void>;
+  onChangelog: () => void | Promise<void>;
   onWhatsNew: () => void | Promise<void>;
   onReportBug: () => void | Promise<void>;
+  onRequestFeature: () => void | Promise<void>;
+  onCheckForUpdates: () => void | Promise<void>;
+  onOpenSettings: () => void | Promise<void>;
+  onOpenExtensions: () => void | Promise<void>;
   onToggleMenuBar: () => void;
 }
 
