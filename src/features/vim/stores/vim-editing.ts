@@ -1,4 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { HistoryEntry } from "@/features/editor/history/types";
 import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
@@ -30,6 +31,16 @@ export const createVimEditing = (): VimEditingCommands => {
     useEditorStateStore.getState().actions.setCursorPosition(position);
   const getLines = () => useEditorViewStore.getState().lines;
   const getContent = () => useEditorViewStore.getState().actions.getContent();
+  const getCurrentHistoryEntry = (): HistoryEntry => {
+    const editorState = useEditorStateStore.getState();
+
+    return {
+      content: getContent(),
+      cursorPosition: editorState.cursorPosition,
+      selection: editorState.selection,
+      timestamp: Date.now(),
+    };
+  };
 
   // Update buffer content
   const updateContent = (newContent: string) => {
@@ -194,7 +205,7 @@ export const createVimEditing = (): VimEditingCommands => {
       const currentPos = getCursorPosition();
 
       // Get previous state from history
-      const entry = historyStore.actions.undo(activeBufferId);
+      const entry = historyStore.actions.undo(activeBufferId, getCurrentHistoryEntry());
       if (!entry) return;
 
       // Restore content
@@ -225,7 +236,7 @@ export const createVimEditing = (): VimEditingCommands => {
       if (!historyStore.actions.canRedo(activeBufferId)) return;
 
       // Get next state from history
-      const entry = historyStore.actions.redo(activeBufferId);
+      const entry = historyStore.actions.redo(activeBufferId, getCurrentHistoryEntry());
       if (!entry) return;
 
       // Restore content

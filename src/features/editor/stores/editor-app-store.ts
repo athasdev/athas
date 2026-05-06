@@ -4,13 +4,26 @@ import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
+import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
+import { useHistoryStore } from "./history-store";
 
 const HISTORY_DEBOUNCE_MS = 500;
 const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
 const lastBufferContent = new Map<string, string>();
+
+async function recordLocalHistoryBeforeWrite(
+  path: string,
+  reason: "save" | "auto-save" | "restore",
+): Promise<void> {
+  try {
+    await recordLocalHistoryFile(path, reason);
+  } catch (error) {
+    console.warn("Failed to record local history:", error);
+  }
+}
 
 export function cleanupBufferHistoryTracking(bufferId: string): void {
   const timer = historyDebounceTimers.get(bufferId);
@@ -19,6 +32,34 @@ export function cleanupBufferHistoryTracking(bufferId: string): void {
     historyDebounceTimers.delete(bufferId);
   }
   lastBufferContent.delete(bufferId);
+}
+
+export function flushPendingBufferHistory(bufferId: string, currentContent: string): void {
+  const timer = historyDebounceTimers.get(bufferId);
+  if (!timer) return;
+
+  clearTimeout(timer);
+  historyDebounceTimers.delete(bufferId);
+
+  const oldContent = lastBufferContent.get(bufferId);
+  if (oldContent !== undefined && oldContent !== currentContent) {
+    useHistoryStore.getState().actions.pushHistory(bufferId, {
+      content: oldContent,
+      timestamp: Date.now(),
+    });
+  }
+
+  lastBufferContent.set(bufferId, currentContent);
+}
+
+export function syncBufferHistoryContent(bufferId: string, content: string): void {
+  const timer = historyDebounceTimers.get(bufferId);
+  if (timer) {
+    clearTimeout(timer);
+    historyDebounceTimers.delete(bufferId);
+  }
+
+  lastBufferContent.set(bufferId, content);
 }
 
 interface AppState {
@@ -59,8 +100,6 @@ export const useEditorAppStore = createSelectors(
           const { useFileWatcherStore } =
             await import("@/features/file-system/controllers/file-watcher-store");
           const { useSettingsStore } = await import("@/features/settings/store");
-          const { useHistoryStore } = await import("@/features/editor/stores/history-store");
-
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
@@ -117,6 +156,7 @@ export const useEditorAppStore = createSelectors(
               const newTimeoutId = setTimeout(async () => {
                 try {
                   markPendingSave(activeBuffer.path);
+                  await recordLocalHistoryBeforeWrite(activeBuffer.path, "auto-save");
                   await writeFile(activeBuffer.path, content);
                   markBufferDirty(activeBuffer.id, false);
 
@@ -224,6 +264,7 @@ export const useEditorAppStore = createSelectors(
                 }
               }
 
+              await recordLocalHistoryBeforeWrite(activeBuffer.path, "save");
               await writeFile(activeBuffer.path, contentToSave);
               markBufferDirty(activeBuffer.id, false);
 

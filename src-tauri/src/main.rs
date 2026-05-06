@@ -57,6 +57,11 @@ fn main() {
          move_file,
          rename_file,
          get_symlink_info,
+         local_history_record_file,
+         local_history_list_file,
+         local_history_read_entry,
+         local_history_delete_entry,
+         local_history_rename_entry,
          // Clipboard commands
          clipboard_set,
          clipboard_get,

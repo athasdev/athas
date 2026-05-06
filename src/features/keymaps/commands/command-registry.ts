@@ -13,6 +13,7 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -189,6 +190,12 @@ const fileCommands: Command[] = [
     execute: () => {
       useUIState.getState().setIsQuickOpenVisible(true);
     },
+  },
+  {
+    id: "file.localHistory",
+    title: "Show Local History",
+    category: "File",
+    execute: openLocalHistoryForActiveFile,
   },
 ];
 

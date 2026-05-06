@@ -1,9 +1,12 @@
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
+import { flushPendingBufferHistory, syncBufferHistoryContent } from "../stores/editor-app-store";
 import { useHistoryStore } from "../stores/history-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorViewStore } from "../stores/view-store";
+import type { HistoryEntry } from "../history/types";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import type { Decoration, Position, Range } from "../types/editor";
 import { toggleLineComment, getLineCommentTokenForLanguage } from "../utils/comment-toggle";
 import { logger } from "../utils/logger";
@@ -433,6 +436,17 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   // History operations
+  private getCurrentHistoryEntry(content: string): HistoryEntry {
+    const editorState = useEditorStateStore.getState();
+
+    return {
+      content,
+      cursorPosition: editorState.cursorPosition,
+      selection: editorState.selection,
+      timestamp: Date.now(),
+    };
+  }
+
   undo(): void {
     const bufferStore = useBufferStore.getState();
     const activeBufferId = bufferStore.activeBufferId;
@@ -442,12 +456,21 @@ class EditorAPIImpl implements EditorAPI {
       return;
     }
 
+    const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
+    if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+
+    flushPendingBufferHistory(activeBufferId, activeBuffer.content);
+
     const historyStore = useHistoryStore.getState();
-    const entry = historyStore.actions.undo(activeBufferId);
+    const entry = historyStore.actions.undo(
+      activeBufferId,
+      this.getCurrentHistoryEntry(activeBuffer.content),
+    );
 
     if (entry) {
       // Restore content
       bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
+      syncBufferHistoryContent(activeBufferId, entry.content);
 
       if (this.textareaRef) {
         this.textareaRef.value = entry.content;
@@ -479,12 +502,21 @@ class EditorAPIImpl implements EditorAPI {
       return;
     }
 
+    const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
+    if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+
+    flushPendingBufferHistory(activeBufferId, activeBuffer.content);
+
     const historyStore = useHistoryStore.getState();
-    const entry = historyStore.actions.redo(activeBufferId);
+    const entry = historyStore.actions.redo(
+      activeBufferId,
+      this.getCurrentHistoryEntry(activeBuffer.content),
+    );
 
     if (entry) {
       // Restore content
       bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
+      syncBufferHistoryContent(activeBufferId, entry.content);
 
       if (this.textareaRef) {
         this.textareaRef.value = entry.content;
