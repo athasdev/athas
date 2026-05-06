@@ -135,6 +135,10 @@ const handleResizePointerDown = (
   event: PointerEvent<HTMLDivElement>,
   direction: ResizeDirection,
 ) => {
+  if (IS_LINUX) {
+    return;
+  }
+
   if (!event.isPrimary || !prepareResizeEvent(event)) {
     return;
   }
@@ -143,6 +147,18 @@ const handleResizePointerDown = (
 };
 
 const handleResizeMouseDown = (event: MouseEvent<HTMLDivElement>, direction: ResizeDirection) => {
+  if (IS_LINUX) {
+    // WebKitGTK on Linux/Wayland can alternate between firing and skipping
+    // pointerdown for compositor-driven window resize gestures, but mousedown
+    // remains reliable.
+    if (!prepareResizeEvent(event)) {
+      return;
+    }
+
+    void handleResizeStart(direction);
+    return;
+  }
+
   if (typeof window !== "undefined" && "PointerEvent" in window) {
     return;
   }
