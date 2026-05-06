@@ -21,6 +21,30 @@ Download the latest version from GitHub releases:
     4. Open Athas from Applications
   </Tab>
   <Tab value="Windows">
+    **Option 1: winget**
+
+    Athas is preparing for Windows Package Manager distribution. After the package is accepted in
+    `microsoft/winget-pkgs`, install it with the owner-approved package ID:
+
+    ```powershell
+    winget install --exact --id OWNER_APPROVED_PACKAGE_ID --source winget
+    ```
+
+    **Option 2: verified GitHub Releases installer**
+
+    If winget is unavailable or the package is not accepted yet, download and run the verified
+    installer helper:
+
+    ```powershell
+    curl.exe -L https://raw.githubusercontent.com/athasdev/athas/master/scripts/windows/install-athas.ps1 -o install-athas.ps1
+    powershell -ExecutionPolicy Bypass -File .\install-athas.ps1 -SkipWinget
+    ```
+
+    The helper detects `x64` or `arm64`, downloads the matching setup `.exe`, verifies it with
+    `SHA256SUMS.txt`, and runs the installer.
+
+    **Option 3: manual download**
+
     1. Download the installer from [releases](https://github.com/athasdev/athas/releases)
     2. Run the installer
     3. Follow the installation wizard

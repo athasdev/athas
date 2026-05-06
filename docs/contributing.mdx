@@ -120,6 +120,50 @@ The release workflow automatically:
 - Creates GitHub release
 - Uploads installers and binaries
 
+### Windows Package Manager
+
+Athas can be submitted to Windows Package Manager through a PR to
+[`microsoft/winget-pkgs`](https://github.com/microsoft/winget-pkgs). The package ID should be
+confirmed by the repo owner before submission. `AthasDev.Athas` is a recommended starting point,
+but do not treat it as final until the winget PR is reviewed.
+
+Required manifest details:
+
+- `PackageIdentifier`: owner-approved package ID, for example `AthasDev.Athas`
+- `PackageVersion`: the release version without the leading `v`
+- `Publisher`: Athas
+- `PackageName`: Athas
+- `License`: AGPL-3.0
+- `ShortDescription`: A lightweight, cross-platform code editor built with Tauri
+- `InstallerType`: `nullsoft`
+- `InstallerUrl`: GitHub Release setup `.exe`
+- `InstallerSha256`: matching SHA256 from `SHA256SUMS.txt`
+- Installer entries for both `x64` and `arm64`
+
+Example values from `v0.5.1`:
+
+```yaml
+PackageIdentifier: AthasDev.Athas
+PackageVersion: 0.5.1
+PackageName: Athas
+Publisher: Athas
+License: AGPL-3.0
+ShortDescription: A lightweight, cross-platform code editor built with Tauri
+Installers:
+  - Architecture: x64
+    InstallerType: nullsoft
+    InstallerUrl: https://github.com/athasdev/athas/releases/download/v0.5.1/Athas_0.5.1_x64-setup.exe
+    InstallerSha256: eb219d7802cf010a40de598a576c341c0746f8cc8f56226fe16d57e6873c6dc2
+  - Architecture: arm64
+    InstallerType: nullsoft
+    InstallerUrl: https://github.com/athasdev/athas/releases/download/v0.5.1/Athas_0.5.1_arm64-setup.exe
+    InstallerSha256: 0abd9d390c27a4adeaef22c6a73d28a91c9431d68adb13efb898f029c4a5da95
+```
+
+Refresh the version, installer URLs, and SHA256 values for the release being submitted. After the
+first package is accepted and the final package ID is known, release automation can be added with
+`wingetcreate update`.
+
 ### Versioning
 
 We use semantic versioning: `MAJOR.MINOR.PATCH`.
