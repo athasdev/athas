@@ -7,7 +7,7 @@
 use crate::connection_manager::{ConnectionManager, connect_database};
 #[cfg(feature = "postgres")]
 use crate::sql_common::CreatePostgresSubscriptionParams;
-#[cfg(any(feature = "duckdb", feature = "postgres"))]
+#[cfg(feature = "duckdb")]
 use crate::sql_common::FilteredQueryParams;
 use crate::{
    connection_manager::{ConnectionConfig, test_connection},

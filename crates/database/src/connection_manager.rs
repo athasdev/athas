@@ -24,6 +24,8 @@ pub enum DatabasePool {
    Mongo(mongodb::Client),
    #[cfg(feature = "redis")]
    Redis(Box<redis::aio::ConnectionManager>),
+   #[doc(hidden)]
+   Unsupported,
 }
 
 pub struct ConnectionManager {
