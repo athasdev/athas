@@ -8,39 +8,11 @@ import { recordLocalHistoryFile } from "@/features/local-history/api/local-histo
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
-import {
-  getUndoEditDelta,
-  shouldStartNewUndoGroupForDelta,
-  type UndoEditDelta,
-  type UndoEditOperation,
-} from "../history/undo-grouping";
-import type { HistoryEntry } from "../history/types";
+import { EditorUndoGroupTracker } from "../history/undo-group-tracker";
 import type { Position, Range } from "../types/editor";
 import { useHistoryStore } from "./history-store";
 
-const lastBufferContent = new Map<string, string>();
-
-interface PendingUndoGroup {
-  baseEntry: HistoryEntry;
-  latestContent: string;
-  operation: UndoEditOperation;
-  lastEditDelta: UndoEditDelta;
-}
-
-const pendingUndoGroups = new Map<string, PendingUndoGroup>();
-
-function clonePosition(position?: Position): Position | undefined {
-  return position ? { ...position } : undefined;
-}
-
-function cloneRange(range?: Range): Range | undefined {
-  return range
-    ? {
-        start: { ...range.start },
-        end: { ...range.end },
-      }
-    : undefined;
-}
+const undoGroupTracker = new EditorUndoGroupTracker();
 
 async function recordLocalHistoryBeforeWrite(
   path: string,
@@ -54,83 +26,16 @@ async function recordLocalHistoryBeforeWrite(
 }
 
 export function cleanupBufferHistoryTracking(bufferId: string): void {
-  pendingUndoGroups.delete(bufferId);
-  lastBufferContent.delete(bufferId);
+  undoGroupTracker.cleanup(bufferId);
 }
 
 export function flushPendingBufferHistory(bufferId: string, currentContent: string): void {
-  const pendingGroup = pendingUndoGroups.get(bufferId);
-  if (pendingGroup && pendingGroup.baseEntry.content !== currentContent) {
-    useHistoryStore.getState().actions.pushHistory(bufferId, pendingGroup.baseEntry);
-  }
-
-  pendingUndoGroups.delete(bufferId);
-  lastBufferContent.set(bufferId, currentContent);
+  const entry = undoGroupTracker.flush(bufferId, currentContent);
+  if (entry) useHistoryStore.getState().actions.pushHistory(bufferId, entry);
 }
 
 export function syncBufferHistoryContent(bufferId: string, content: string): void {
-  pendingUndoGroups.delete(bufferId);
-  lastBufferContent.set(bufferId, content);
-}
-
-function pushPendingUndoGroup(bufferId: string, group: PendingUndoGroup): void {
-  if (group.baseEntry.content === group.latestContent) return;
-
-  useHistoryStore.getState().actions.pushHistory(bufferId, group.baseEntry);
-}
-
-interface TrackPendingUndoGroupOptions {
-  previousCursorPosition?: Position;
-  previousSelection?: Range;
-}
-
-function trackPendingUndoGroup(
-  bufferId: string,
-  previousContent: string,
-  nextContent: string,
-  options: TrackPendingUndoGroupOptions = {},
-): void {
-  if (previousContent === nextContent) {
-    lastBufferContent.set(bufferId, nextContent);
-    return;
-  }
-
-  const pendingGroup = pendingUndoGroups.get(bufferId);
-  const previousOperation = pendingGroup?.operation ?? "other";
-  const delta = getUndoEditDelta(previousContent, nextContent, previousOperation);
-  const operation = delta.operation;
-  const baseEntry: HistoryEntry = {
-    content: previousContent,
-    cursorPosition: clonePosition(options.previousCursorPosition),
-    selection: cloneRange(options.previousSelection),
-    timestamp: Date.now(),
-  };
-
-  if (
-    pendingGroup &&
-    shouldStartNewUndoGroupForDelta(pendingGroup.operation, pendingGroup.lastEditDelta, delta)
-  ) {
-    pushPendingUndoGroup(bufferId, pendingGroup);
-    pendingUndoGroups.set(bufferId, {
-      baseEntry,
-      latestContent: nextContent,
-      operation,
-      lastEditDelta: delta,
-    });
-  } else if (pendingGroup) {
-    pendingGroup.latestContent = nextContent;
-    pendingGroup.operation = operation;
-    pendingGroup.lastEditDelta = delta;
-  } else {
-    pendingUndoGroups.set(bufferId, {
-      baseEntry,
-      latestContent: nextContent,
-      operation,
-      lastEditDelta: delta,
-    });
-  }
-
-  lastBufferContent.set(bufferId, nextContent);
+  undoGroupTracker.sync(bufferId, content);
 }
 
 interface AppState {
@@ -190,18 +95,27 @@ export const useEditorAppStore = createSelectors(
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           if (activeBufferId) {
-            const lastTrackedContent = lastBufferContent.get(activeBufferId);
+            const lastTrackedContent = undoGroupTracker.getTrackedContent(activeBufferId);
             const contentBeforeChange =
               lastTrackedContent ?? previousContent ?? activeBuffer.content;
 
             if (lastTrackedContent === undefined) {
-              lastBufferContent.set(activeBufferId, contentBeforeChange);
+              undoGroupTracker.sync(activeBufferId, contentBeforeChange);
             }
 
-            trackPendingUndoGroup(activeBufferId, contentBeforeChange, content, {
-              previousCursorPosition,
-              previousSelection,
-            });
+            const historyEntries = undoGroupTracker.track(
+              activeBufferId,
+              contentBeforeChange,
+              content,
+              {
+                previousCursorPosition,
+                previousSelection,
+              },
+            );
+            const { pushHistory } = useHistoryStore.getState().actions;
+            for (const entry of historyEntries) {
+              pushHistory(activeBufferId, entry);
+            }
           }
 
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
