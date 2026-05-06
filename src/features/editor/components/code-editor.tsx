@@ -9,7 +9,10 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
-import type { EditorCoordinateResolver } from "@/features/editor/view-model/view-layout";
+import type {
+  EditorCoordinateResolver,
+  EditorModelPositionResolver,
+} from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
@@ -92,6 +95,7 @@ const CodeEditor = ({
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
   const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
+  const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -199,9 +203,19 @@ const CodeEditor = ({
     (clientX, clientY) => editorCoordinateResolverRef.current?.(clientX, clientY) ?? null,
     [],
   );
+  const resolveModelPosition = useCallback<EditorModelPositionResolver>(
+    (line, column) => editorModelPositionResolverRef.current?.(line, column) ?? null,
+    [],
+  );
   const handleCoordinateResolverChange = useCallback(
     (resolver: EditorCoordinateResolver | null) => {
       editorCoordinateResolverRef.current = resolver;
+    },
+    [],
+  );
+  const handleModelPositionResolverChange = useCallback(
+    (resolver: EditorModelPositionResolver | null) => {
+      editorModelPositionResolverRef.current = resolver;
     },
     [],
   );
@@ -528,6 +542,7 @@ const CodeEditor = ({
               editorRef={editorRef}
               filePath={filePath}
               cursorPosition={displayCursorPosition}
+              resolveModelPosition={resolveModelPosition}
             />
           )}
 
@@ -541,6 +556,7 @@ const CodeEditor = ({
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
+              resolveModelPosition={resolveModelPosition}
               inputRef={rename.inputRef}
               onSubmit={(newName) => void rename.executeRename(newName)}
               onCancel={rename.cancelRename}
@@ -572,6 +588,7 @@ const CodeEditor = ({
                 onContentChange={onContentChange}
                 inlayHints={enableInlayHints ? inlayHints : []}
                 onCoordinateResolverChange={handleCoordinateResolverChange}
+                onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={

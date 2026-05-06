@@ -55,7 +55,11 @@ import {
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
-import { buildEditorViewLayout, type EditorCoordinateResolver } from "../view-model/view-layout";
+import {
+  buildEditorViewLayout,
+  type EditorCoordinateResolver,
+  type EditorModelPositionResolver,
+} from "../view-model/view-layout";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
@@ -91,6 +95,7 @@ interface EditorProps {
   onContentChange?: (content: string) => void;
   inlayHints?: InlayHint[];
   onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
+  onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
 }
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
@@ -127,6 +132,7 @@ export function Editor({
   onContentChange,
   inlayHints = [],
   onCoordinateResolverChange,
+  onModelPositionResolverChange,
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -444,11 +450,35 @@ export function Editor({
     },
     [foldTransform, viewLayout],
   );
+  const resolveModelPosition = useCallback<EditorModelPositionResolver>(
+    (line, column) => {
+      const virtualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.actualToVirtual.get(line) ?? line)
+        : line;
+
+      if (virtualLine < 0 || virtualLine >= lines.length) return null;
+
+      const position = viewLayout.modelPositionToViewPosition(virtualLine, column);
+
+      return {
+        ...position,
+        line,
+        modelLine: line,
+        height: position.segment.height,
+      };
+    },
+    [foldTransform, lines.length, viewLayout],
+  );
 
   useEffect(() => {
     onCoordinateResolverChange?.(resolveEditorCoordinate);
     return () => onCoordinateResolverChange?.(null);
   }, [onCoordinateResolverChange, resolveEditorCoordinate]);
+
+  useEffect(() => {
+    onModelPositionResolverChange?.(resolveModelPosition);
+    return () => onModelPositionResolverChange?.(null);
+  }, [onModelPositionResolverChange, resolveModelPosition]);
 
   useEffect(() => {
     if (!useGlobalEditorState || !cursorViewPosition || isDragScrolling()) return;
@@ -1676,6 +1706,7 @@ export function Editor({
               lineHeight={lineHeight}
               tabSize={tabSize}
               wordWrap={wordWrap}
+              cursorViewPosition={cursorViewPosition}
             />
           )}
 

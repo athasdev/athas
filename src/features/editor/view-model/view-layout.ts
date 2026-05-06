@@ -28,6 +28,11 @@ export type EditorCoordinateResolver = (
   clientY: number,
 ) => EditorResolvedPosition | null;
 
+export type EditorModelPositionResolver = (
+  line: number,
+  column: number,
+) => EditorResolvedPosition | null;
+
 export interface EditorViewLayout {
   segments: ViewLineSegment[];
   modelLineStartViewLines: number[];
