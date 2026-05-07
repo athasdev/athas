@@ -447,6 +447,20 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     };
   }, []);
 
+  // XtermTerminal stays mounted while slots move between panes. When a new
+  // slot owner provides a fresh ref callback, hand the live terminal handle to
+  // it even though initialization does not re-run.
+  useEffect(() => {
+    const terminal = xtermRef.current;
+    if (!isInitialized || !terminal || !onTerminalRef) return;
+
+    onTerminalRef({
+      focus: () => terminal.focus(),
+      showSearch: () => setIsSearchVisible(true),
+      terminal,
+    });
+  }, [isInitialized, onTerminalRef]);
+
   // Listen for portal-target changes from TerminalHost; force a fit + repaint
   // so PTY/xterm dims match the new slot before any TUI relies on them.
   useEffect(() => {
