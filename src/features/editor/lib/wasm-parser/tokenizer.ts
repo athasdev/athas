@@ -3,12 +3,17 @@
  * Provides tokenization API using Tree-sitter WASM parsers
  */
 
-import type { Node, Tree } from "web-tree-sitter";
+import type { Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getLanguageAssetConfig } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
 import { getLanguageOverlayTokens } from "./language-overlays";
 import { dedupeHighlightTokens, isIgnoredCapture, mapCaptureToClass } from "./capture-map";
+import {
+  findInjectionNodes,
+  getInjectionRules,
+  resolveInjectedLanguage,
+} from "./language-injections";
 import type {
   HighlightToken,
   IncrementalParseOptions,
@@ -16,102 +21,6 @@ import type {
   ParserConfig,
   TokenizeResult,
 } from "./types";
-
-/**
- * Language injection rules for embedded languages (e.g. JS inside HTML <script>)
- */
-interface InjectionRule {
-  parentType: string;
-  contentType: string;
-  language: string;
-}
-
-const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
-  angular: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-  ],
-  html: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-  ],
-  svelte: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-    { parentType: "*", contentType: "raw_text_await", language: "javascript" },
-    { parentType: "*", contentType: "raw_text_each", language: "javascript" },
-    { parentType: "*", contentType: "raw_text_expr", language: "javascript" },
-  ],
-  markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
-};
-
-/**
- * Walk the tree to find nodes matching injection rules
- */
-function findInjectionNodes(
-  rootNode: Node,
-  rules: InjectionRule[],
-): Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> {
-  const results: Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> = [];
-
-  function walk(node: Node) {
-    for (const rule of rules) {
-      if (rule.parentType === "*") {
-        if (node.type === rule.contentType) {
-          results.push({ rule, node, parentNode: null });
-        }
-      } else if (node.type === rule.parentType) {
-        for (let i = 0; i < node.childCount; i++) {
-          const child = node.child(i);
-          if (child && child.type === rule.contentType) {
-            results.push({ rule, node: child, parentNode: node });
-          }
-        }
-      }
-    }
-    for (let i = 0; i < node.childCount; i++) {
-      const child = node.child(i);
-      if (child) walk(child);
-    }
-  }
-
-  walk(rootNode);
-  return results;
-}
-
-function resolveInjectedLanguage(
-  source: string,
-  parentLanguageId: string,
-  rule: InjectionRule,
-  node: Node,
-  parentNode: Node | null,
-): string {
-  if (rule.parentType !== "script_element" || !parentNode) {
-    return rule.language;
-  }
-
-  const openingTag = source.slice(parentNode.startIndex, node.startIndex);
-  const langMatch = openingTag.match(/\blang\s*=\s*["']([^"']+)["']/i);
-  const lang = langMatch?.[1]?.trim().toLowerCase();
-
-  if (!lang) {
-    return rule.language;
-  }
-
-  if (lang === "ts" || lang === "typescript") {
-    return "typescript";
-  }
-
-  if (lang === "js" || lang === "javascript") {
-    return "javascript";
-  }
-
-  if (parentLanguageId === "svelte" && (lang === "tsx" || lang === "jsx")) {
-    return lang === "tsx" ? "typescriptreact" : "javascriptreact";
-  }
-
-  return rule.language;
-}
 
 /**
  * Tokenize code using a WASM parser with optional incremental parsing support.
@@ -209,7 +118,7 @@ export async function tokenizeCodeWithTree(
     }
 
     // Process language injections (e.g. JS inside HTML <script>)
-    const injectionRules = LANGUAGE_INJECTIONS[languageId];
+    const injectionRules = getInjectionRules(languageId);
     if (injectionRules) {
       const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
 

@@ -737,6 +737,25 @@ const navigationCommands: Command[] = [
     },
   },
   {
+    id: "editor.showOutline",
+    title: "Go to Symbol in Editor",
+    category: "Navigation",
+    keybinding: "cmd+shift+o",
+    execute: () => {
+      useUIState.getState().openCommandPaletteView("outline");
+    },
+  },
+  {
+    id: "workbench.showOutline",
+    title: "Show Outline",
+    category: "Navigation",
+    execute: () => {
+      const uiState = useUIState.getState();
+      uiState.setIsSidebarVisible(true);
+      uiState.setActiveView("outline");
+    },
+  },
+  {
     id: "workbench.nextTab",
     title: "Next Tab",
     category: "Navigation",

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import type { Node, QueryCapture, Tree } from "web-tree-sitter";
+import type { QueryCapture, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getLanguageAssetConfig } from "./extension-assets";
 import { getLanguageOverlayTokens } from "./language-overlays";
@@ -8,50 +8,24 @@ import { wasmParserLoader } from "./loader";
 import { dedupeHighlightTokens, isIgnoredCapture, mapCaptureToClass } from "./capture-map";
 import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
 import { calculateEdit, isSimpleEdit } from "../../utils/tree-sitter-edit";
+import {
+  findInjectionNodes,
+  getInjectionRules,
+  resolveInjectedLanguage,
+} from "./language-injections";
+import type {
+  TokenizerWorkerRequest,
+  TokenizerWorkerResponse,
+  ViewportRangePayload,
+} from "./worker-protocol";
 
 interface WorkerSession {
   bufferId: string;
   languageId: string;
   content: string;
   tree: Tree;
+  lastAccessedAt: number;
 }
-
-interface ViewportRangePayload {
-  startLine: number;
-  endLine: number;
-}
-
-interface InjectionRule {
-  parentType: string;
-  contentType: string;
-  language: string;
-}
-
-interface WarmupMessage {
-  id: number;
-  type: "warmup";
-  languages?: string[];
-}
-
-interface ResetMessage {
-  id: number;
-  type: "reset";
-  bufferId: string;
-}
-
-interface TokenizeMessage {
-  id: number;
-  type: "tokenize";
-  bufferId: string;
-  content: string;
-  languageId: string;
-  wasmPath?: string;
-  highlightQueryUrl?: string;
-  mode: "full" | "range";
-  viewportRange?: ViewportRangePayload;
-}
-
-type WorkerRequest = WarmupMessage | ResetMessage | TokenizeMessage;
 
 interface WorkerSuccessResponse {
   id: number;
@@ -60,34 +34,8 @@ interface WorkerSuccessResponse {
   normalizedText?: string;
 }
 
-interface WorkerErrorResponse {
-  id: number;
-  ok: false;
-  error: string;
-}
-
-type WorkerResponse = WorkerSuccessResponse | WorkerErrorResponse;
-
+const MAX_CACHED_SESSIONS = 8;
 const sessions = new Map<string, WorkerSession>();
-
-const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
-  angular: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-  ],
-  html: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-  ],
-  svelte: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-    { parentType: "*", contentType: "raw_text_await", language: "javascript" },
-    { parentType: "*", contentType: "raw_text_each", language: "javascript" },
-    { parentType: "*", contentType: "raw_text_expr", language: "javascript" },
-  ],
-  markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
-};
 
 function normalizeLineEndings(content: string): string {
   return content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -102,72 +50,6 @@ function buildLineStartOffsets(content: string): number[] {
     }
   }
   return offsets;
-}
-
-function findInjectionNodes(
-  rootNode: Node,
-  rules: InjectionRule[],
-): Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> {
-  const results: Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> = [];
-
-  function walk(node: Node) {
-    for (const rule of rules) {
-      if (rule.parentType === "*") {
-        if (node.type === rule.contentType) {
-          results.push({ rule, node, parentNode: null });
-        }
-      } else if (node.type === rule.parentType) {
-        for (let i = 0; i < node.childCount; i++) {
-          const child = node.child(i);
-          if (child && child.type === rule.contentType) {
-            results.push({ rule, node: child, parentNode: node });
-          }
-        }
-      }
-    }
-
-    for (let i = 0; i < node.childCount; i++) {
-      const child = node.child(i);
-      if (child) walk(child);
-    }
-  }
-
-  walk(rootNode);
-  return results;
-}
-
-function resolveInjectedLanguage(
-  source: string,
-  parentLanguageId: string,
-  rule: InjectionRule,
-  node: Node,
-  parentNode: Node | null,
-): string {
-  if (rule.parentType !== "script_element" || !parentNode) {
-    return rule.language;
-  }
-
-  const openingTag = source.slice(parentNode.startIndex, node.startIndex);
-  const langMatch = openingTag.match(/\blang\s*=\s*["']([^"']+)["']/i);
-  const lang = langMatch?.[1]?.trim().toLowerCase();
-
-  if (!lang) {
-    return rule.language;
-  }
-
-  if (lang === "ts" || lang === "typescript") {
-    return "typescript";
-  }
-
-  if (lang === "js" || lang === "javascript") {
-    return "javascript";
-  }
-
-  if (parentLanguageId === "svelte" && (lang === "tsx" || lang === "jsx")) {
-    return lang === "tsx" ? "typescriptreact" : "javascriptreact";
-  }
-
-  return rule.language;
 }
 
 async function getLoadedParser(
@@ -269,10 +151,11 @@ function getRangeQueryOptions(content: string, viewportRange?: ViewportRangePayl
 
 function upsertTree(
   session: WorkerSession | undefined,
+  bufferId: string,
   languageId: string,
   content: string,
   tree: Tree,
-) {
+): WorkerSession {
   if (session?.tree && session.tree !== tree) {
     try {
       session.tree.delete();
@@ -282,14 +165,39 @@ function upsertTree(
   }
 
   return {
-    bufferId: session?.bufferId ?? "",
+    bufferId,
     languageId,
     content,
     tree,
+    lastAccessedAt: Date.now(),
   };
 }
 
-async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessResponse> {
+function disposeSession(session: WorkerSession) {
+  try {
+    session.tree.delete();
+  } catch {
+    // ignore
+  }
+}
+
+function pruneCachedSessions() {
+  if (sessions.size <= MAX_CACHED_SESSIONS) return;
+
+  const overflow = sessions.size - MAX_CACHED_SESSIONS;
+  const staleSessions = Array.from(sessions.values())
+    .sort((a, b) => a.lastAccessedAt - b.lastAccessedAt)
+    .slice(0, overflow);
+
+  for (const session of staleSessions) {
+    sessions.delete(session.bufferId);
+    disposeSession(session);
+  }
+}
+
+async function handleTokenize(
+  message: Extract<TokenizerWorkerRequest, { type: "tokenize" }>,
+): Promise<WorkerSuccessResponse> {
   const normalizedContent = normalizeLineEndings(message.content);
   const loadedParser = await getLoadedParser(message.languageId, {
     wasmPath: message.wasmPath,
@@ -341,7 +249,7 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
       )
     : [];
 
-  const injectionRules = LANGUAGE_INJECTIONS[message.languageId];
+  const injectionRules = getInjectionRules(message.languageId);
   if (injectionRules) {
     const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
 
@@ -388,9 +296,15 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
 
   tokens.push(...getLanguageOverlayTokens(message.languageId, normalizedContent));
 
-  const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
-  nextSession.bufferId = message.bufferId;
+  const nextSession = upsertTree(
+    existing,
+    message.bufferId,
+    message.languageId,
+    normalizedContent,
+    tree,
+  );
   sessions.set(message.bufferId, nextSession);
+  pruneCachedSessions();
 
   return {
     id: message.id,
@@ -400,20 +314,18 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
   };
 }
 
-function handleReset(message: ResetMessage): WorkerSuccessResponse {
+function handleReset(
+  message: Extract<TokenizerWorkerRequest, { type: "reset" }>,
+): WorkerSuccessResponse {
   const existing = sessions.get(message.bufferId);
-  if (existing?.tree) {
-    try {
-      existing.tree.delete();
-    } catch {
-      // ignore
-    }
+  if (existing) {
+    disposeSession(existing);
   }
   sessions.delete(message.bufferId);
   return { id: message.id, ok: true };
 }
 
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+self.onmessage = async (event: MessageEvent<TokenizerWorkerRequest>) => {
   const message = event.data;
 
   try {
@@ -424,17 +336,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         (self as DedicatedWorkerGlobalScope).postMessage({
           id: message.id,
           ok: true,
-        } satisfies WorkerResponse);
+        } satisfies TokenizerWorkerResponse);
         return;
       case "reset":
         (self as DedicatedWorkerGlobalScope).postMessage(
-          handleReset(message) satisfies WorkerResponse,
+          handleReset(message) satisfies TokenizerWorkerResponse,
         );
         return;
       case "tokenize":
         await wasmParserLoader.initialize();
         (self as DedicatedWorkerGlobalScope).postMessage(
-          (await handleTokenize(message)) satisfies WorkerResponse,
+          (await handleTokenize(message)) satisfies TokenizerWorkerResponse,
         );
         return;
     }
@@ -443,6 +355,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: message.id,
       ok: false,
       error: error instanceof Error ? error.message : String(error),
-    } satisfies WorkerErrorResponse);
+    } satisfies TokenizerWorkerResponse);
   }
 };

@@ -45,6 +45,7 @@ pub struct FlatSymbol {
    pub end_line: u32,
    pub end_character: u32,
    pub container_name: Option<String>,
+   pub hierarchy_path: Vec<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

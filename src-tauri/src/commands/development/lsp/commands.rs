@@ -372,6 +372,7 @@ pub async fn lsp_get_document_symbols(
             end_line: info.location.range.end.line,
             end_character: info.location.range.end.character,
             container_name: info.container_name,
+            hierarchy_path: Vec::new(),
          })
          .collect(),
       Some(DocumentSymbolResponse::Nested(doc_symbols)) => {

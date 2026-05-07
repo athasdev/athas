@@ -1812,6 +1812,9 @@ export function Editor({
           lineHeight={lineHeight}
           scale={minimapScale}
           width={minimapWidth}
+          cursorLine={cursorViewPosition?.viewLine ?? visualCursorLine}
+          searchMatches={highlightMatches ?? searchMatches}
+          currentSearchMatchIndex={currentHighlightIndex ?? currentMatchIndex}
           onScrollTo={(scrollTop) => {
             if (inputRef.current) {
               inputRef.current.scrollTop = scrollTop;

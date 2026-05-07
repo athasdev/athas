@@ -904,6 +904,7 @@ export class LspClient {
       endLine: number;
       endCharacter: number;
       containerName?: string;
+      hierarchyPath?: number[];
     }[]
   > {
     try {
@@ -918,6 +919,7 @@ export class LspClient {
           endLine: number;
           endCharacter: number;
           containerName?: string;
+          hierarchyPath?: number[];
         }[]
       >("lsp_get_document_symbols", { filePath });
       logger.debug("LSPClient", `Got ${symbols.length} document symbols`);

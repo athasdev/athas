@@ -2,6 +2,7 @@ import {
   Folder,
   GitBranch,
   GitPullRequest,
+  ListBullets,
   MagnifyingGlass,
   SidebarSimple,
   Sparkle as Sparkles,
@@ -60,6 +61,8 @@ export const SidebarPaneSelector = ({
       ? "size-9 rounded-lg"
       : "w-8 rounded-md";
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const isOutlineActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
   const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
   const isSidebarBuilderFeatureEnabled = coreFeatures.sidebarBuilder;
   const isCollaborationFeatureEnabled = useAuthStore(
@@ -117,6 +120,20 @@ export const SidebarPaneSelector = ({
           } satisfies TabsItem,
         ]
       : []),
+    {
+      id: "outline",
+      icon: <ListBullets className={iconClassName} weight="duotone" />,
+      isActive: isOutlineActive,
+      onClick: () => onViewChange("outline"),
+      role: "tab",
+      ariaLabel: "Outline",
+      className: tabClassName,
+      tooltip: {
+        content: "Outline",
+        shortcut: "Mod+Shift+O",
+        side: tooltipSide,
+      },
+    },
     ...(isCollaborationFeatureEnabled
       ? [
           {

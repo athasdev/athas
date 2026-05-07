@@ -117,7 +117,7 @@ export function parseSnippet(body: string | string[]): ParsedSnippet {
 
 /**
  * Replace snippet variables with actual values
- * Supports common VSCode snippet variables
+ * Supports common editor snippet variables
  */
 export function replaceVariables(
   text: string,

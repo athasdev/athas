@@ -1,6 +1,46 @@
 import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff-types";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git-types";
 
+export type DiffLineVisualType = "added" | "removed" | "context";
+
+export interface DiffLineVisualState {
+  lineBackground: string;
+  gutterBackground: string;
+  contentColor: string;
+}
+
+const DIFF_LINE_VISUALS: Record<DiffLineVisualType, DiffLineVisualState> = {
+  added: {
+    lineBackground: "bg-git-added/15",
+    gutterBackground: "bg-git-added/25",
+    contentColor: "text-git-added",
+  },
+  removed: {
+    lineBackground: "bg-git-deleted/15",
+    gutterBackground: "bg-git-deleted/25",
+    contentColor: "text-git-deleted",
+  },
+  context: {
+    lineBackground: "",
+    gutterBackground: "bg-primary-bg",
+    contentColor: "text-text",
+  },
+};
+
+export function getDiffLineVisualType(lineType: GitDiffLine["line_type"]): DiffLineVisualType {
+  if (lineType === "added" || lineType === "removed") {
+    return lineType;
+  }
+
+  return "context";
+}
+
+export function getDiffLineVisualState(
+  lineType: GitDiffLine["line_type"] | DiffLineVisualType,
+): DiffLineVisualState {
+  return DIFF_LINE_VISUALS[getDiffLineVisualType(lineType as GitDiffLine["line_type"])];
+}
+
 export const createGitHunk = (
   hunk: { header: GitDiffLine; lines: GitDiffLine[] },
   filePath: string,

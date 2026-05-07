@@ -8,6 +8,7 @@ import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
+import { OutlineSidebarView } from "@/features/outline/components/outline-sidebar-view";
 import { SidebarBuilderView } from "@/features/sidebar-builder/components/sidebar-builder-view";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
@@ -109,6 +110,8 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
     (activeSidebarView === "files" || isDisabledExperimentalViewActive);
   const isDebuggerViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
+  const isOutlineViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
   const isMultiAgentsViewActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
@@ -193,6 +196,10 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
             <DebuggerView />
           </div>
         )}
+
+        <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
+          <OutlineSidebarView />
+        </div>
 
         {isCollaborationFeatureEnabled ? (
           <div className={cn("h-full", !isCollaborationViewActive && "hidden")}>

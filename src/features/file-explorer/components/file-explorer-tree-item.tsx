@@ -8,6 +8,7 @@ import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/f
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import Input from "@/ui/input";
+import { TreeRow } from "@/ui/tree-row";
 import { cn } from "@/utils/cn";
 import { FileExplorerIcon } from "./file-explorer-icon";
 
@@ -169,8 +170,7 @@ function FileExplorerTreeItemComponent({
   return (
     <div className="file-tree-item w-full" data-depth={depth}>
       {renderTreeGuides()}
-      <button
-        type="button"
+      <TreeRow
         data-file-path={file.path}
         data-is-dir={file.isDir}
         data-path={file.path}
@@ -179,20 +179,17 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
           densityConfig.rowClassName,
-          isActive && "bg-selected",
           dragOverPath === file.path &&
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",
         )}
-        style={
-          {
-            paddingLeft: `${paddingLeft}px`,
-          } as React.CSSProperties
-        }
+        active={isActive}
+        baseIndent={14}
+        depth={depth}
+        indentSize={indentSize}
       >
         <FileExplorerIcon
           fileName={file.name}
@@ -209,7 +206,7 @@ function FileExplorerTreeItemComponent({
         >
           {displayName ?? file.name}
         </span>
-      </button>
+      </TreeRow>
     </div>
   );
 }
