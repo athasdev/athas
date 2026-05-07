@@ -239,6 +239,10 @@ impl AcpWorker {
 
       let connection = self.connection.as_ref().context("No active connection")?;
       let session_id = self.session_id.as_ref().context("No active session")?;
+      let app_handle = self
+         .app_handle
+         .as_ref()
+         .context("No app handle available")?;
 
       let request = acp::SetSessionConfigOptionRequest::new(
          session_id.clone(),
@@ -246,10 +250,19 @@ impl AcpWorker {
          value.to_string(),
       );
 
-      connection
+      let response = connection
          .set_session_config_option(request)
          .await
          .context("Failed to set session config option")?;
+      let config_options = Self::map_config_options(response.config_options);
+
+      let _ = app_handle.emit(
+         "acp-event",
+         AcpEvent::ConfigOptionsUpdate {
+            session_id: session_id.to_string(),
+            config_options,
+         },
+      );
 
       Ok(())
    }
@@ -303,7 +316,28 @@ impl AcpWorker {
          .is_some()
    }
 
+   fn supports_session_close(&self) -> bool {
+      self
+         .agent_capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.session_capabilities.get("close"))
+         .is_some()
+   }
+
    pub(super) async fn stop(&mut self) -> Result<()> {
+      if self.supports_session_close()
+         && let (Some(connection), Some(session_id)) =
+            (self.connection.as_ref(), self.session_id.as_ref())
+         && let Err(error) = connection
+            .close_session(acp::CloseSessionRequest::new(session_id.clone()))
+            .await
+      {
+         log::warn!(
+            "Failed to close ACP session before stopping agent: {}",
+            error
+         );
+      }
+
       if let Some(handle) = self.io_handle.take() {
          handle.abort();
       }

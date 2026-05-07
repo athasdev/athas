@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { AgentLauncher } from "@/features/ai/components/agent-launcher";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
+import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
@@ -43,6 +44,7 @@ const SIDEBAR_COLLAPSE_THRESHOLD = 48;
 export function MainLayout() {
   useChatInitialization();
   usePaneKeyboard();
+  useCollaborationPresence();
 
   const {
     isSidebarVisible,

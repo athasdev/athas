@@ -348,6 +348,7 @@ pub struct SessionConfigOption {
    pub id: String,
    pub name: String,
    pub description: Option<String>,
+   pub category: Option<String>,
    pub kind: SessionConfigOptionKind,
 }
 

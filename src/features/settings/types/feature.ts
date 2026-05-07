@@ -18,6 +18,7 @@ export interface CoreFeaturesState {
   diagnostics: boolean;
   debugger: boolean;
   aiChat: boolean;
+  teamCollaboration: boolean;
   multiAgents: boolean;
   sidebarBuilder: boolean;
   breadcrumbs: boolean;

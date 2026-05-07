@@ -7,6 +7,9 @@ const DESKTOP_AUTH_POLL_INTERVAL_MS = 1500;
 const DESKTOP_AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const DESKTOP_SESSION_SECRET_HEADER = "X-Desktop-Session-Secret";
 let authTokenCache: string | null | undefined;
+let collaborationDeviceIdCache: string | null = null;
+const COLLABORATION_DEVICE_ID_STORAGE_KEY = "athas_collaboration_device_id";
+const COLLABORATION_CLIENT_SEQ_STORAGE_KEY = "athas_collaboration_client_seq";
 
 interface DesktopAuthApiOptions {
   apiBase?: string;
@@ -20,15 +23,140 @@ export interface AuthUser {
   provider: string | null;
   github_username: string | null;
   subscription_status: "free" | "pro";
+  subscriptionStatus?: "free" | "pro";
+  subscriptionPlan?: "free" | "pro" | "teams" | "enterprise";
   created_at: string;
 }
 
 export interface SubscriptionInfo {
   status: "free" | "pro";
   subscription: {
-    plan: string;
+    plan: "free" | "pro" | "teams" | "enterprise" | string;
     renews_at: string | null;
     ends_at: string | null;
+  } | null;
+  collaboration?: {
+    enabled: boolean;
+    workspace: {
+      id: number;
+      name: string;
+      slug: string;
+      role: string;
+      visibility: string;
+      realtimeProtocolVersion: number;
+    } | null;
+    members: Array<{
+      id: number;
+      userId: number | null;
+      name: string;
+      email: string;
+      role: string;
+      status: string;
+      lastSeenAt: string | null;
+    }>;
+    invitations: Array<{
+      id: number;
+      email: string;
+      role: string;
+      status: string;
+      expiresAt: string | null;
+    }>;
+    projects: Array<{
+      id: number;
+      name: string;
+      visibility: string;
+      updatedAt: string | null;
+    }>;
+    channels: Array<{
+      id: number;
+      name: string;
+      slug: string;
+      description: string | null;
+      visibility: string;
+      parentChannelId: number | null;
+      memberCount: number;
+      guestCount: number;
+      noteVersion: number;
+      notePreview: string;
+      updatedAt: string | null;
+    }>;
+    channelNotes: Array<{
+      channelId: number;
+      contentMarkdown: string;
+      version: number;
+      updatedAt: string | null;
+    }>;
+    channelGuests: Array<{
+      id: number;
+      channelId: number;
+      email: string;
+      name: string;
+      role: string;
+      status: string;
+      expiresAt: string | null;
+    }>;
+    settings: {
+      sharedSettings: Record<string, unknown>;
+      editorPolicy: Record<string, unknown>;
+    } | null;
+    activity: Array<{
+      id: number;
+      action: string;
+      actorUserId: number | null;
+      targetType: string | null;
+      targetId: string | null;
+      metadata: Record<string, unknown>;
+      createdAt: string | null;
+    }>;
+    presence: Array<{
+      id: number;
+      userId: number | null;
+      channelId: number | null;
+      channelName: string | null;
+      channelSlug: string | null;
+      followingUserId: number | null;
+      followingUserName: string | null;
+      deviceId: string;
+      status: string;
+      activeFilePath: string | null;
+      cursorLabel: string | null;
+      heartbeatAt: string | null;
+    }>;
+    documents: Array<{
+      id: number;
+      path: string;
+      baseVersion: number;
+      stateVector: Record<string, unknown>;
+      updatedAt: string | null;
+    }>;
+    documentUpdates: Array<{
+      id: number;
+      documentId: number;
+      clientId: string;
+      clientSeq: number;
+      serverVersion: number;
+      updateType: string;
+      createdAt: string | null;
+    }>;
+    mediaSignals: Array<{
+      id: number;
+      channelId: number;
+      senderDeviceId: string;
+      recipientDeviceId: string | null;
+      kind: "offer" | "answer" | "ice" | "leave" | string;
+      payload: Record<string, unknown>;
+      createdAt: string | null;
+    }>;
+    capabilities: {
+      canInvite: boolean;
+      canManageMembers: boolean;
+      canShareProjects: boolean;
+      canCreateChannels: boolean;
+      canEditChannelNotes: boolean;
+      activityFeed: boolean;
+      presence: boolean;
+      realtimeDocuments: boolean;
+    };
   } | null;
   enterprise: {
     has_access: boolean;
@@ -58,6 +186,84 @@ export interface EnterprisePolicy {
   updatedAt: string | null;
 }
 
+export interface CollaborationDocumentUpdatePull {
+  document: {
+    id: number;
+    path: string;
+    baseVersion: number;
+    stateVector: Record<string, unknown>;
+    updatedAt: string | null;
+  };
+  updates: Array<{
+    id: number;
+    documentId: number;
+    actorUserId: number | null;
+    clientId: string;
+    clientSeq: number;
+    serverVersion: number;
+    updateType: string;
+    operation: Record<string, unknown>;
+    createdAt: string | null;
+  }>;
+}
+
+export type CollaborationDocumentSnapshot = CollaborationDocumentUpdatePull["document"];
+export type CollaborationDocumentUpdate = CollaborationDocumentUpdatePull["updates"][number];
+
+export type CollaborationDocumentStreamEvent =
+  | {
+      type: "ready";
+      document: CollaborationDocumentSnapshot;
+      afterServerVersion: number;
+      pollIntervalMs: number;
+    }
+  | {
+      type: "update";
+      document: CollaborationDocumentSnapshot;
+      update: CollaborationDocumentUpdate;
+    }
+  | {
+      type: "heartbeat";
+      document: CollaborationDocumentSnapshot;
+      afterServerVersion: number;
+    }
+  | {
+      type: "error";
+      error: string;
+      status?: number;
+    };
+
+export interface CollaborationAdminAnalytics {
+  generatedAt: string;
+  workspace: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  totals: {
+    members: number;
+    activeMembers: number;
+    pendingInvitations: number;
+    channels: number;
+    projects: number;
+    presenceSessions: number;
+    documents: number;
+    documentUpdates: number;
+    activityEvents: number;
+  };
+  roles: Record<string, number>;
+  memberStatuses: Record<string, number>;
+  updateTypes: Record<string, number>;
+  recentActivity: Array<{
+    id: number;
+    action: string;
+    actorUserId: number | null;
+    targetType: string | null;
+    targetId: string | null;
+    createdAt: string | null;
+  }>;
+}
+
 export interface CloudSettingsSyncSnapshot {
   schemaVersion: number;
   updatedAt: string;
@@ -75,6 +281,115 @@ type DesktopAuthInitResponse = {
   pollSecret?: unknown;
   loginUrl?: unknown;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | null {
+  if (!isRecord(payload)) return null;
+  if (payload.status !== "free" && payload.status !== "pro") return null;
+
+  const subscription = parseSubscriptionPlanSnapshot(payload.subscription);
+  const enterprise = asRecord(payload.enterprise);
+  const collaboration = parseCollaborationSnapshot(payload.collaboration);
+
+  return {
+    ...(payload as unknown as SubscriptionInfo),
+    status: payload.status,
+    subscription,
+    collaboration,
+    enterprise: {
+      has_access: enterprise.has_access === true,
+      is_admin: enterprise.is_admin === true,
+      policy: isRecord(enterprise.policy)
+        ? (enterprise.policy as SubscriptionInfo["enterprise"]["policy"])
+        : null,
+    },
+  };
+}
+
+function parseSubscriptionPlanSnapshot(payload: unknown): SubscriptionInfo["subscription"] | null {
+  if (payload === null || payload === undefined) return null;
+  if (!isRecord(payload) || typeof payload.plan !== "string") return null;
+
+  return {
+    plan: payload.plan,
+    renews_at: typeof payload.renews_at === "string" ? payload.renews_at : null,
+    ends_at: typeof payload.ends_at === "string" ? payload.ends_at : null,
+  };
+}
+
+function parseCollaborationSnapshot(payload: unknown): SubscriptionInfo["collaboration"] | null {
+  if (payload === null || payload === undefined) return null;
+  if (!isRecord(payload) || typeof payload.enabled !== "boolean") return null;
+
+  const capabilities = asRecord(payload.capabilities);
+  const settings = asRecord(payload.settings);
+
+  return {
+    enabled: payload.enabled,
+    workspace: isRecord(payload.workspace)
+      ? (payload.workspace as NonNullable<SubscriptionInfo["collaboration"]>["workspace"])
+      : null,
+    members: asArray(payload.members) as NonNullable<SubscriptionInfo["collaboration"]>["members"],
+    invitations: asArray(payload.invitations) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["invitations"],
+    projects: asArray(payload.projects) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["projects"],
+    channels: asArray(payload.channels) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["channels"],
+    channelNotes: asArray(payload.channelNotes) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["channelNotes"],
+    channelGuests: asArray(payload.channelGuests) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["channelGuests"],
+    settings:
+      isRecord(settings.sharedSettings) || isRecord(settings.editorPolicy)
+        ? {
+            sharedSettings: asRecord(settings.sharedSettings),
+            editorPolicy: asRecord(settings.editorPolicy),
+          }
+        : null,
+    activity: asArray(payload.activity) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["activity"],
+    presence: asArray(payload.presence) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["presence"],
+    documents: asArray(payload.documents) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["documents"],
+    documentUpdates: asArray(payload.documentUpdates) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["documentUpdates"],
+    mediaSignals: asArray(payload.mediaSignals) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["mediaSignals"],
+    capabilities: {
+      canInvite: capabilities.canInvite === true,
+      canManageMembers: capabilities.canManageMembers === true,
+      canShareProjects: capabilities.canShareProjects === true,
+      canCreateChannels: capabilities.canCreateChannels === true,
+      canEditChannelNotes: capabilities.canEditChannelNotes === true,
+      activityFeed: capabilities.activityFeed === true,
+      presence: capabilities.presence === true,
+      realtimeDocuments: capabilities.realtimeDocuments === true,
+    },
+  };
+}
 
 export class DesktopAuthError extends Error {
   code: "endpoint_unavailable" | "expired" | "timeout" | "failed";
@@ -172,7 +487,11 @@ export async function fetchSubscriptionStatus(tokenOverride?: string): Promise<S
   if (!response.ok) {
     throw new AuthApiError(`Failed to fetch subscription: ${response.status}`, response.status);
   }
-  return await response.json();
+  const parsed = parseSubscriptionInfoResponse(await response.json());
+  if (!parsed) {
+    throw new AuthApiError("Subscription response was malformed.", response.status);
+  }
+  return parsed;
 }
 
 export async function updateEnterprisePolicy(
@@ -193,6 +512,395 @@ export async function updateEnterprisePolicy(
   }
 
   return payload.policy;
+}
+
+function getCollaborationDeviceId(): string {
+  if (collaborationDeviceIdCache) return collaborationDeviceIdCache;
+
+  const existing = window.localStorage.getItem(COLLABORATION_DEVICE_ID_STORAGE_KEY);
+  if (existing) {
+    collaborationDeviceIdCache = existing;
+    return existing;
+  }
+
+  const next = crypto.randomUUID();
+  window.localStorage.setItem(COLLABORATION_DEVICE_ID_STORAGE_KEY, next);
+  collaborationDeviceIdCache = next;
+  return next;
+}
+
+export function getCollaborationClientId(): string {
+  return getCollaborationDeviceId();
+}
+
+export function getNextCollaborationClientSeq(): number {
+  const current = Number(window.localStorage.getItem(COLLABORATION_CLIENT_SEQ_STORAGE_KEY) ?? 0);
+  const next = Number.isFinite(current) && current >= 0 ? Math.floor(current) + 1 : 1;
+  window.localStorage.setItem(COLLABORATION_CLIENT_SEQ_STORAGE_KEY, String(next));
+  return next;
+}
+
+export async function updateCollaborationPresence(input: {
+  status?: "online" | "away" | "offline";
+  channelId?: number | null;
+  followingUserId?: number | null;
+  activeFilePath?: string | null;
+  cursorLabel?: string | null;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch("/api/collaboration/presence", {
+    method: "POST",
+    body: JSON.stringify({
+      deviceId: getCollaborationDeviceId(),
+      status: input.status ?? "online",
+      channelId: input.channelId ?? null,
+      followingUserId: input.followingUserId ?? null,
+      activeFilePath: input.activeFilePath ?? null,
+      cursorLabel: input.cursorLabel ?? null,
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to update collaboration presence: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export async function updateCollaborationChannelNote(input: {
+  channelId: number;
+  contentMarkdown: string;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch(
+    `/api/collaboration/channels/${input.channelId}/notes`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        contentMarkdown: input.contentMarkdown,
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to update collaboration channel note: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export type CollaborationMediaSignal = NonNullable<
+  SubscriptionInfo["collaboration"]
+>["mediaSignals"][number];
+
+export async function fetchCollaborationMediaSignals(input: {
+  channelId: number;
+  afterId?: number;
+  deviceId: string;
+}): Promise<CollaborationMediaSignal[]> {
+  const params = new URLSearchParams({
+    afterId: String(input.afterId ?? 0),
+    deviceId: input.deviceId,
+  });
+  const response = await authenticatedFetch(
+    `/api/collaboration/channels/${input.channelId}/media/signals?${params.toString()}`,
+  );
+
+  const payload = (await response.json().catch(() => null)) as {
+    signals?: CollaborationMediaSignal[];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to fetch collaboration media signals: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.signals ?? [];
+}
+
+export async function postCollaborationMediaSignal(input: {
+  channelId: number;
+  senderDeviceId: string;
+  recipientDeviceId?: string | null;
+  kind: "offer" | "answer" | "ice" | "leave";
+  payload: Record<string, unknown>;
+}): Promise<CollaborationMediaSignal | null> {
+  const response = await authenticatedFetch(
+    `/api/collaboration/channels/${input.channelId}/media/signals`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        senderDeviceId: input.senderDeviceId,
+        recipientDeviceId: input.recipientDeviceId ?? null,
+        kind: input.kind,
+        payload: input.payload,
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as {
+    signal?: CollaborationMediaSignal;
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to post collaboration media signal: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.signal ?? null;
+}
+
+export async function registerCollaborationDocument(input: {
+  path: string;
+  baseVersion?: number;
+  stateVector?: Record<string, unknown>;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch("/api/collaboration/documents", {
+    method: "POST",
+    body: JSON.stringify({
+      path: input.path,
+      baseVersion: input.baseVersion ?? 0,
+      stateVector: input.stateVector ?? {},
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to register collaboration document: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export async function fetchCollaborationDocumentUpdates(input: {
+  documentId: number;
+  afterVersion?: number;
+  limit?: number;
+}): Promise<CollaborationDocumentUpdatePull> {
+  const params = new URLSearchParams({
+    afterVersion: String(input.afterVersion ?? 0),
+    limit: String(input.limit ?? 100),
+  });
+  const response = await authenticatedFetch(
+    `/api/collaboration/documents/${input.documentId}/updates?${params.toString()}`,
+  );
+
+  const payload = (await response.json().catch(() => null)) as
+    | (CollaborationDocumentUpdatePull & { error?: string })
+    | null;
+
+  if (!response.ok || !payload?.document) {
+    throw new AuthApiError(
+      payload?.error || `Failed to fetch collaboration document updates: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return {
+    document: payload.document,
+    updates: payload.updates ?? [],
+  };
+}
+
+export async function appendCollaborationDocumentUpdate(input: {
+  documentId: number;
+  clientId: string;
+  clientSeq: number;
+  expectedBaseVersion?: number;
+  updateType?: "metadata" | "cursor" | "content";
+  operation?: Record<string, unknown>;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch(
+    `/api/collaboration/documents/${input.documentId}/updates`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        clientId: input.clientId,
+        clientSeq: input.clientSeq,
+        expectedBaseVersion: input.expectedBaseVersion,
+        updateType: input.updateType ?? "metadata",
+        operation: input.operation ?? {},
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to append collaboration document update: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+function toCollaborationDocumentStreamEvent(
+  eventName: string,
+  data: Record<string, unknown>,
+): CollaborationDocumentStreamEvent | null {
+  if (eventName === "ready" && data.document) {
+    return {
+      type: "ready",
+      document: data.document as CollaborationDocumentSnapshot,
+      afterServerVersion: typeof data.afterServerVersion === "number" ? data.afterServerVersion : 0,
+      pollIntervalMs: typeof data.pollIntervalMs === "number" ? data.pollIntervalMs : 2000,
+    };
+  }
+
+  if (eventName === "update" && data.document && data.update) {
+    return {
+      type: "update",
+      document: data.document as CollaborationDocumentSnapshot,
+      update: data.update as CollaborationDocumentUpdate,
+    };
+  }
+
+  if (eventName === "heartbeat" && data.document) {
+    return {
+      type: "heartbeat",
+      document: data.document as CollaborationDocumentSnapshot,
+      afterServerVersion: typeof data.afterServerVersion === "number" ? data.afterServerVersion : 0,
+    };
+  }
+
+  if (eventName === "error") {
+    return {
+      type: "error",
+      error: typeof data.error === "string" ? data.error : "Collaboration stream failed",
+      status: typeof data.status === "number" ? data.status : undefined,
+    };
+  }
+
+  return null;
+}
+
+function parseCollaborationSseBlock(block: string): CollaborationDocumentStreamEvent | null {
+  const lines = block.split("\n");
+  const eventName = lines
+    .find((line) => line.startsWith("event:"))
+    ?.slice("event:".length)
+    .trim();
+  const dataText = lines
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice("data:".length).trimStart())
+    .join("\n");
+
+  if (!eventName || !dataText) return null;
+
+  const data = JSON.parse(dataText) as unknown;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+
+  return toCollaborationDocumentStreamEvent(eventName, data as Record<string, unknown>);
+}
+
+export async function streamCollaborationDocumentUpdates(input: {
+  documentId: number;
+  afterVersion?: number;
+  limit?: number;
+  maxPolls?: number;
+  pollIntervalMs?: number;
+  signal?: AbortSignal;
+  onEvent: (event: CollaborationDocumentStreamEvent) => void | Promise<void>;
+}): Promise<void> {
+  const params = new URLSearchParams({
+    afterVersion: String(input.afterVersion ?? 0),
+    limit: String(input.limit ?? 100),
+  });
+  if (typeof input.maxPolls === "number") params.set("maxPolls", String(input.maxPolls));
+  if (typeof input.pollIntervalMs === "number") {
+    params.set("pollIntervalMs", String(input.pollIntervalMs));
+  }
+
+  const response = await authenticatedFetch(
+    `/api/collaboration/documents/${input.documentId}/events?${params.toString()}`,
+    {
+      headers: { Accept: "text/event-stream" },
+      signal: input.signal,
+    },
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new AuthApiError(
+      payload?.error || `Failed to stream collaboration document updates: ${response.status}`,
+      response.status,
+    );
+  }
+
+  if (!response.body) {
+    throw new AuthApiError("Collaboration document update stream is unavailable.", 502);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
+
+    for (const block of blocks) {
+      const event = parseCollaborationSseBlock(block.trim());
+      if (event) await input.onEvent(event);
+    }
+
+    if (done) break;
+  }
+
+  const trailingEvent = parseCollaborationSseBlock(buffer.trim());
+  if (trailingEvent) await input.onEvent(trailingEvent);
+}
+
+export async function fetchCollaborationAdminAnalytics(): Promise<CollaborationAdminAnalytics> {
+  const response = await authenticatedFetch("/api/collaboration/admin/analytics");
+  const payload = (await response.json().catch(() => null)) as {
+    analytics?: CollaborationAdminAnalytics;
+    error?: string;
+  } | null;
+
+  if (!response.ok || !payload?.analytics) {
+    throw new AuthApiError(
+      payload?.error || `Failed to fetch collaboration analytics: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload.analytics;
 }
 
 export async function fetchSettingsSyncSnapshot(
@@ -413,5 +1121,7 @@ export async function waitForDesktopAuthToken(
 export const __test__ = {
   parseDesktopAuthInitResponse,
   parseDesktopAuthPollResponse,
+  parseSubscriptionInfoResponse,
+  parseCollaborationSseBlock,
   getApiBaseUnavailableMessage,
 };

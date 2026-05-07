@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-sidebar-view";
+import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar-view";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import DebuggerView from "@/features/debugger/components/debugger-view";
@@ -12,6 +13,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { cn } from "@/utils/cn";
@@ -91,12 +93,16 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
+  const isCollaborationFeatureEnabled = useAuthStore(
+    (state) => state.subscription?.collaboration?.enabled === true,
+  );
   const isMultiAgentsFeatureEnabled =
     settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
   const isSidebarBuilderFeatureEnabled = settings.coreFeatures.sidebarBuilder;
   const isDisabledExperimentalViewActive =
     (activeSidebarView === "multi-agents" && !isMultiAgentsFeatureEnabled) ||
-    (activeSidebarView === "sidebar-builder" && !isSidebarBuilderFeatureEnabled);
+    (activeSidebarView === "sidebar-builder" && !isSidebarBuilderFeatureEnabled) ||
+    (activeSidebarView === "collaboration" && !isCollaborationFeatureEnabled);
   const isFilesViewActive =
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
@@ -113,6 +119,11 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     activeSidebarView === "sidebar-builder";
+  const isCollaborationViewActive =
+    isCollaborationFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "collaboration";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
   const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
 
@@ -182,6 +193,12 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
             <DebuggerView />
           </div>
         )}
+
+        {isCollaborationFeatureEnabled ? (
+          <div className={cn("h-full", !isCollaborationViewActive && "hidden")}>
+            <CollaborationSidebarView />
+          </div>
+        ) : null}
 
         {isMultiAgentsFeatureEnabled && (
           <div className={cn("h-full", !isMultiAgentsViewActive && "hidden")}>

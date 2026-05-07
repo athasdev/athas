@@ -38,6 +38,16 @@ describe("getActiveSidebarView", () => {
       }),
     ).toBe("multi-agents");
   });
+
+  test("returns collaboration when the collaboration pane is active", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "collaboration",
+      }),
+    ).toBe("collaboration");
+  });
 });
 
 describe("resolveSidebarPaneClick", () => {
@@ -119,6 +129,23 @@ describe("resolveSidebarPaneClick", () => {
     ).toEqual({
       nextIsSidebarVisible: false,
       nextView: "multi-agents",
+    });
+  });
+
+  test("opens the collaboration pane like other sidebar views", () => {
+    expect(
+      resolveSidebarPaneClick(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "collaboration",
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: true,
+      nextView: "collaboration",
     });
   });
 });

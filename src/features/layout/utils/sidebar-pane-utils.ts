@@ -2,6 +2,7 @@ export type SidebarView =
   | "files"
   | "git"
   | "github-prs"
+  | "collaboration"
   | "multi-agents"
   | "sidebar-builder"
   | (string & {});

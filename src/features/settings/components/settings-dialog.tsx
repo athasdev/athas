@@ -11,6 +11,7 @@ import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AccountSettings } from "./tabs/account-settings";
 import { AISettings } from "./tabs/ai-settings";
 import { AppearanceSettings } from "./tabs/appearance-settings";
+import { CollaborationSettings } from "./tabs/collaboration-settings";
 import { DatabaseSettings } from "./tabs/database-settings";
 import { EditorSettings } from "./tabs/editor-settings";
 import { EnterpriseSettings } from "./tabs/enterprise-settings";
@@ -32,6 +33,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
+  const hasTeamsAccess = Boolean(subscription?.collaboration?.enabled);
 
   const clearSearch = useSettingsStore((state) => state.clearSearch);
   const searchQuery = useSettingsStore((state) => state.search.query);
@@ -43,13 +45,16 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     if (isOpen) {
       if (settingsInitialTab === "language") {
         setActiveTab("editor");
-      } else if (!hasEnterpriseAccess && settingsInitialTab === "enterprise") {
+      } else if (
+        (!hasEnterpriseAccess && settingsInitialTab === "enterprise") ||
+        (!hasTeamsAccess && settingsInitialTab === "collaboration")
+      ) {
         setActiveTab("general");
       } else {
         setActiveTab(settingsInitialTab);
       }
     }
-  }, [settingsInitialTab, isOpen, hasEnterpriseAccess]);
+  }, [settingsInitialTab, isOpen, hasEnterpriseAccess, hasTeamsAccess]);
 
   // Remember the last active tab so it persists across open/close
   const handleTabChange = (tab: SettingsTab) => {
@@ -86,6 +91,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <KeyboardSettings />;
       case "features":
         return <FeaturesSettings />;
+      case "collaboration":
+        return hasTeamsAccess ? <CollaborationSettings /> : <GeneralSettings />;
       case "enterprise":
         return hasEnterpriseAccess ? <EnterpriseSettings /> : <GeneralSettings />;
       case "advanced":

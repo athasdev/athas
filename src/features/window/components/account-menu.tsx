@@ -8,6 +8,7 @@ import {
   UserCircle,
   GearSix,
   ArrowSquareOut,
+  UsersThree,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -99,6 +100,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     (state) => state.providerApiKeys.get("openrouter") || false,
   );
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const hasBlockingModalOpen = useUIState(
     (state) =>
       state.isQuickOpenVisible ||
@@ -127,7 +129,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   };
 
   const handleManageAccount = async () => {
-    await openUrl("https://athas.dev/dashboard");
+    await openUrl(new URL("/dashboard", getApiBase()).toString());
   };
 
   const handleOpenBillingDashboard = async () => {
@@ -143,8 +145,13 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     setIsSettingsDialogVisible(true);
   };
 
+  const handleOpenCollaboration = () => {
+    openSettingsDialog("collaboration");
+  };
+
   const subscriptionStatus = subscription?.status ?? "free";
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
+  const isTeams = Boolean(subscription?.collaboration?.enabled);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const isPro = subscriptionStatus === "pro";
@@ -152,11 +159,13 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
   const planLabel = isEnterprise
     ? "Enterprise"
-    : isPro
-      ? "Pro"
-      : isAuthenticated
-        ? "Free"
-        : "Guest";
+    : isTeams
+      ? "Teams"
+      : isPro
+        ? "Pro"
+        : isAuthenticated
+          ? "Free"
+          : "Guest";
   const modeLabel = (() => {
     if (!isAuthenticated) return "Guest";
     if (!aiAllowedByPolicy) return "Blocked";
@@ -225,6 +234,16 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       icon: <CreditCard weight="duotone" />,
       onClick: handleOpenBillingDashboard,
     },
+    ...(isTeams
+      ? [
+          {
+            id: "collaboration",
+            label: "Collaboration",
+            icon: <UsersThree weight="duotone" />,
+            onClick: handleOpenCollaboration,
+          },
+        ]
+      : []),
     {
       id: "manage-account",
       label: "Manage Account",

@@ -71,6 +71,7 @@ const SUPPORTED_SETTINGS_TABS = new Set<SettingsTab>([
   "keyboard",
   "language",
   "features",
+  "collaboration",
   "enterprise",
   "advanced",
   "terminal",

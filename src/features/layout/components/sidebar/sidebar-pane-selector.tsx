@@ -5,8 +5,10 @@ import {
   MagnifyingGlass,
   SidebarSimple,
   Sparkle as Sparkles,
+  UsersThree,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
@@ -60,6 +62,14 @@ export const SidebarPaneSelector = ({
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
   const isSidebarBuilderFeatureEnabled = coreFeatures.sidebarBuilder;
+  const isCollaborationFeatureEnabled = useAuthStore(
+    (state) => state.subscription?.collaboration?.enabled === true,
+  );
+  const isCollaborationActive =
+    isCollaborationFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "collaboration";
   const isMultiAgentsActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
@@ -102,6 +112,23 @@ export const SidebarPaneSelector = ({
             tooltip: {
               content: "Search",
               shortcut: "Mod+Shift+F",
+              side: tooltipSide,
+            },
+          } satisfies TabsItem,
+        ]
+      : []),
+    ...(isCollaborationFeatureEnabled
+      ? [
+          {
+            id: "collaboration",
+            icon: <UsersThree className={iconClassName} weight="duotone" />,
+            isActive: isCollaborationActive,
+            onClick: () => onViewChange("collaboration"),
+            role: "tab",
+            ariaLabel: "Collaboration",
+            className: tabClassName,
+            tooltip: {
+              content: "Collaboration",
               side: tooltipSide,
             },
           } satisfies TabsItem,

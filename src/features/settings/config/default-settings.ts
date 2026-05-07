@@ -107,6 +107,7 @@ export const defaultSettings: Settings = {
     diagnostics: true,
     debugger: false,
     aiChat: true,
+    teamCollaboration: true,
     multiAgents: false,
     sidebarBuilder: false,
     breadcrumbs: true,

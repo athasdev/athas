@@ -105,6 +105,7 @@ export type SessionConfigOption = {
   id: string;
   name: string;
   description?: string;
+  category?: "mode" | "model" | "thought_level" | (string & {});
   kind: {
     type: "select";
     currentValue: string;

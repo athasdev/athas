@@ -24,6 +24,7 @@ interface AuthActions {
   handleAuthCallback: (token: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
+  setCollaborationSnapshot: (collaboration: SubscriptionInfo["collaboration"] | null) => void;
   logout: () => Promise<void>;
 }
 
@@ -150,6 +151,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           await get().logout();
         }
       }
+    },
+
+    setCollaborationSnapshot: (collaboration) => {
+      set((state) => {
+        if (!state.subscription) return;
+        state.subscription.collaboration = collaboration;
+      });
     },
 
     logout: async () => {

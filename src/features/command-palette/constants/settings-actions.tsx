@@ -52,6 +52,7 @@ const settingsTabLabels: Record<SettingsTab, string> = {
   keyboard: "Keybindings",
   language: "Editor",
   features: "Features",
+  collaboration: "Collaboration",
   enterprise: "Enterprise",
   advanced: "Advanced",
   terminal: "Terminal",

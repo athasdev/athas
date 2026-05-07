@@ -9,6 +9,11 @@ function normalizeConfigText(option: SessionConfigOption): string {
 export function classifySessionConfigOption(
   option: SessionConfigOption,
 ): SessionConfigOptionCategory {
+  const category = option.category;
+  if (category === "model" || category === "mode" || category === "thought_level") {
+    return category as SessionConfigOptionCategory;
+  }
+
   const text = normalizeConfigText(option);
 
   if (/\bmodel\b|\bmodels\b|\bprovider\b/.test(text)) {

@@ -47,6 +47,7 @@ pub async fn start_acp_agent(
    let bridge = {
       let mut bridge = bridge.lock().await;
       refresh_registered_agents(&mut bridge).await;
+      bridge.detect_agents();
       bridge.clone()
    };
    bridge
