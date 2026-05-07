@@ -1,21 +1,9 @@
 import { create } from "zustand";
-import type {
-  Terminal,
-  TerminalViewSnapshot,
-  TerminalViewSnapshotInput,
-} from "@/features/terminal/types/terminal";
+import type { Terminal } from "@/features/terminal/types/terminal";
 
 export type TerminalWidthMode = "full" | "editor";
 export type TerminalTabLayout = "horizontal" | "vertical";
 export type TerminalTabSidebarPosition = "left" | "right";
-
-let terminalSnapshotVersion = 0;
-
-const nextTerminalSnapshotVersion = () => {
-  const now = Date.now();
-  terminalSnapshotVersion = Math.max(terminalSnapshotVersion + 1, now);
-  return terminalSnapshotVersion;
-};
 
 interface TerminalStore {
   sessions: Map<string, Partial<Terminal>>;
@@ -25,12 +13,6 @@ interface TerminalStore {
   tabSidebarPosition: TerminalTabSidebarPosition;
   updateSession: (sessionId: string, updates: Partial<Terminal>) => void;
   getSession: (sessionId: string) => Partial<Terminal> | undefined;
-  saveSessionSnapshot: (
-    sessionId: string,
-    snapshot: TerminalViewSnapshotInput,
-  ) => TerminalViewSnapshot;
-  getSessionSnapshot: (sessionId: string) => TerminalViewSnapshot | undefined;
-  clearSessionSnapshot: (sessionId: string) => void;
   removeSession: (sessionId: string) => void;
   setWidthMode: (mode: TerminalWidthMode) => void;
   setTabLayout: (layout: TerminalTabLayout) => void;
@@ -56,50 +38,6 @@ export const useTerminalStore = create<TerminalStore>()((set, get) => ({
 
   getSession: (sessionId: string) => {
     return get().sessions.get(sessionId);
-  },
-
-  saveSessionSnapshot: (sessionId: string, snapshot: TerminalViewSnapshotInput) => {
-    const versionedSnapshot = {
-      ...snapshot,
-      version: nextTerminalSnapshotVersion(),
-    };
-
-    set((state) => {
-      const newSessions = new Map(state.sessions);
-      const currentSession = newSessions.get(sessionId) || {};
-
-      if (
-        currentSession.viewSnapshot &&
-        currentSession.viewSnapshot.version > versionedSnapshot.version
-      ) {
-        return { sessions: newSessions };
-      }
-
-      newSessions.set(sessionId, {
-        ...currentSession,
-        serializedContent: versionedSnapshot.serializedContent,
-        viewSnapshot: versionedSnapshot,
-      });
-      return { sessions: newSessions };
-    });
-
-    return get().sessions.get(sessionId)?.viewSnapshot ?? versionedSnapshot;
-  },
-
-  getSessionSnapshot: (sessionId: string) => {
-    return get().sessions.get(sessionId)?.viewSnapshot;
-  },
-
-  clearSessionSnapshot: (sessionId: string) => {
-    set((state) => {
-      const currentSession = state.sessions.get(sessionId);
-      if (!currentSession?.viewSnapshot) return state;
-
-      const newSessions = new Map(state.sessions);
-      const { viewSnapshot: _viewSnapshot, ...nextSession } = currentSession;
-      newSessions.set(sessionId, nextSession);
-      return { sessions: newSessions };
-    });
   },
 
   removeSession: (sessionId: string) => {

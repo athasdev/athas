@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { Terminal as TerminalType } from "@/features/terminal/types/terminal";
-import { XtermTerminal } from "./terminal";
 import { TerminalErrorBoundary } from "./terminal-error-boundary";
+import { TerminalSlot } from "./terminal-slot";
 
 interface TerminalSessionProps {
   terminal: TerminalType;
@@ -27,7 +27,6 @@ const TerminalSession = ({
   const terminalRef = useRef<any>(null);
   const xtermInstanceRef = useRef<any>(null);
 
-  // Focus method that can be called externally, with verified retry
   const focusTerminal = useCallback(() => {
     const ref = xtermInstanceRef.current || terminalRef.current;
     if (!ref?.focus) return;
@@ -38,7 +37,6 @@ const TerminalSession = ({
       attempt++;
       ref.focus();
 
-      // Verify focus landed on the terminal's textarea
       requestAnimationFrame(() => {
         const textarea = ref.terminal?.textarea;
         if (textarea && document.activeElement !== textarea) {
@@ -47,7 +45,6 @@ const TerminalSession = ({
       });
     };
 
-    // Wait for layout to settle before first focus attempt
     requestAnimationFrame(() => tryFocus());
   }, []);
 
@@ -60,7 +57,11 @@ const TerminalSession = ({
     focusTerminal();
   }, [focusTerminal]);
 
-  // Register ref with parent
+  const handleTerminalRef = useCallback((ref: any) => {
+    xtermInstanceRef.current = ref;
+    terminalRef.current = ref;
+  }, []);
+
   useEffect(() => {
     if (onRegisterRef) {
       onRegisterRef(terminal.id, { focus: focusTerminal, showSearch });
@@ -70,7 +71,6 @@ const TerminalSession = ({
     }
   }, [terminal.id, onRegisterRef, focusTerminal, showSearch]);
 
-  // Handle activity tracking
   useEffect(() => {
     if (isActive && onActivity) {
       onActivity(terminal.id);
@@ -80,21 +80,14 @@ const TerminalSession = ({
   return (
     <div className="flex h-full min-h-0 flex-col" data-terminal-id={terminal.id}>
       <TerminalErrorBoundary>
-        <XtermTerminal
+        <TerminalSlot
           sessionId={terminal.id}
           isActive={isActive}
           isVisible={isVisible}
           initialCommand={terminal.initialCommand}
-          onReady={() => {
-            // Additional ready callback if needed
-          }}
-          onTerminalRef={(ref) => {
-            // Store both xterm instance and focus method
-            xtermInstanceRef.current = ref;
-            terminalRef.current = ref;
-          }}
-          onTerminalExit={onTerminalExit}
           remoteConnectionId={terminal.remoteConnectionId}
+          onTerminalExit={onTerminalExit}
+          onTerminalRef={handleTerminalRef}
         />
       </TerminalErrorBoundary>
     </div>

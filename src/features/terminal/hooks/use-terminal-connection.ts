@@ -53,7 +53,6 @@ const stripTerminalControlSequences = (rawTitle: string) => {
 };
 
 interface UseTerminalConnectionOptions {
-  captureTerminalSnapshot?: () => void;
   connectionId?: string;
   getTerminalTheme: () => NonNullable<XtermTerminal["options"]["theme"]>;
   initialCommand?: string;
@@ -74,7 +73,6 @@ interface UseTerminalConnectionOptions {
 }
 
 export function useTerminalConnection({
-  captureTerminalSnapshot,
   connectionId,
   getTerminalTheme,
   initialCommand,
@@ -306,7 +304,6 @@ export function useTerminalConnection({
         cancelAnimationFrame(outputFlushFrameRef.current);
         flushOutputBuffer();
       }
-      captureTerminalSnapshot?.();
       void flush();
       for (const disposable of disposables) {
         disposable.dispose();
@@ -319,7 +316,6 @@ export function useTerminalConnection({
     };
   }, [
     connectionId,
-    captureTerminalSnapshot,
     flush,
     getTerminalTheme,
     isInitialized,
