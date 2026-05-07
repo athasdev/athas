@@ -1057,18 +1057,31 @@ export const useBufferStore = createSelectors(
               .catch((error) => {
                 logger.error("BufferStore", "Failed to stop LSP:", error);
               });
+          }
 
-            // Add to closed history
+          // Track every closeable editor buffer (real or preview, including images,
+          // pdfs, diffs) so Cmd+Shift+T can reopen the most recent one. Skip ephemeral
+          // types that have no path or can't be re-resolved from disk.
+          const isReopenable =
+            closedBuffer.type === "editor" ||
+            closedBuffer.type === "image" ||
+            closedBuffer.type === "pdf" ||
+            closedBuffer.type === "binary" ||
+            closedBuffer.type === "markdownPreview" ||
+            closedBuffer.type === "htmlPreview" ||
+            closedBuffer.type === "csvPreview";
+
+          if (isReopenable && closedBuffer.path) {
             const closedBufferInfo: ClosedBuffer = {
               path: closedBuffer.path,
               name: closedBuffer.name,
               isPinned: closedBuffer.isPinned,
             };
 
-            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
-              0,
-              EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
-            );
+            const updatedHistory = [
+              closedBufferInfo,
+              ...closedBuffersHistory.filter((entry) => entry.path !== closedBuffer.path),
+            ].slice(0, EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY);
 
             set((state) => {
               state.closedBuffersHistory = updatedHistory;
@@ -1526,17 +1539,36 @@ export const useBufferStore = createSelectors(
         },
 
         reopenClosedTab: async () => {
-          const { closedBuffersHistory } = get();
+          const { closedBuffersHistory, buffers } = get();
 
           if (closedBuffersHistory.length === 0) {
+            const { toast } = await import("@/ui/toast");
+            toast.info("No recently closed tabs");
             return;
           }
 
-          const [closedBuffer, ...remainingHistory] = closedBuffersHistory;
+          // Pop the most recently closed entry. Skip any entry that's already open
+          // (re-add to head would be a no-op) — pull the next one instead.
+          let closedBuffer: ClosedBuffer | undefined;
+          let remainingHistory = closedBuffersHistory;
+          while (remainingHistory.length > 0) {
+            const [head, ...rest] = remainingHistory;
+            remainingHistory = rest;
+            if (!buffers.some((b) => b.path === head.path)) {
+              closedBuffer = head;
+              break;
+            }
+          }
 
           set((state) => {
             state.closedBuffersHistory = remainingHistory;
           });
+
+          if (!closedBuffer) {
+            const { toast } = await import("@/ui/toast");
+            toast.info("No recently closed tabs");
+            return;
+          }
 
           try {
             const content = await readFileContent(closedBuffer.path);
@@ -1552,6 +1584,8 @@ export const useBufferStore = createSelectors(
             }
           } catch (error) {
             logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
+            const { toast } = await import("@/ui/toast");
+            toast.error(`Couldn't reopen ${closedBuffer.name}`);
           }
         },
       },
