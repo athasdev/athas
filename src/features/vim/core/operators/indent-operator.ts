@@ -1,7 +1,8 @@
 /**
- * Indent operator (d)
+ * Indent operator (>)
  */
 
+import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 
 /**
@@ -27,13 +28,15 @@ export const indentOperator: Operator = {
     const indentedContent = indentedLines.join("\n");
     updateContent(indentedContent);
 
-    // Position cursor at start of deletion (or beginning of file)
-    setCursorPosition({
-      line: range.start.line,
-      column: cursor.column,
-      offset: range.start.offset,
-    });
+    // Adjust cursor column if it was on an indented line
+    const cursorWasInRange = cursor.line >= startLine && cursor.line <= endLine;
+    const newColumn = cursorWasInRange ? cursor.column + tabSize : cursor.column;
+    const newOffset = calculateOffsetFromPosition(cursor.line, newColumn, indentedLines);
 
-    return;
+    setCursorPosition({
+      line: cursor.line,
+      column: newColumn,
+      offset: newOffset,
+    });
   },
 };

@@ -1,3 +1,4 @@
+import { current } from "immer";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -57,6 +58,12 @@ export const useHistoryStore = createSelectors(
             const lastEntry = history.past[history.past.length - 1];
 
             if (lastEntry?.content === entry.content) {
+              return;
+            }
+
+            // Skip if content is identical to the top of the past stack (dedup)
+            const topEntry = history.past[history.past.length - 1];
+            if (topEntry && topEntry.content === entry.content) {
               return;
             }
 

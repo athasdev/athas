@@ -3,6 +3,7 @@
  */
 
 import type { Position } from "@/features/editor/types/editor";
+import { calculateCursorPosition } from "@/features/editor/utils/position";
 import type { TextObject, VimRange } from "./types";
 
 /**
@@ -47,11 +48,12 @@ export const wordTextObject: TextObject = {
 
     // For "around" mode, include trailing whitespace
     if (mode === "around") {
+      const wordEnd = end;
       while (end < content.length && /\s/.test(content[end])) {
         end++;
       }
-      // If no trailing whitespace, include leading whitespace
-      if (end === start + (offset - start)) {
+      // If no trailing whitespace was consumed, include leading whitespace
+      if (end === wordEnd) {
         while (start > 0 && /\s/.test(content[start - 1])) {
           start--;
         }
@@ -61,8 +63,8 @@ export const wordTextObject: TextObject = {
     if (start === end) return null;
 
     // Convert offsets to positions
-    const startPos = offsetToPosition(start, lines);
-    const endPos = offsetToPosition(end, lines);
+    const startPos = calculateCursorPosition(start, lines);
+    const endPos = calculateCursorPosition(end, lines);
 
     return {
       start: startPos,
@@ -104,8 +106,8 @@ export const WORDTextObject: TextObject = {
 
     if (start === end) return null;
 
-    const startPos = offsetToPosition(start, lines);
-    const endPos = offsetToPosition(end, lines);
+    const startPos = calculateCursorPosition(start, lines);
+    const endPos = calculateCursorPosition(end, lines);
 
     return {
       start: startPos,
@@ -177,8 +179,8 @@ const createPairTextObject = (openChar: string, closeChar: string, name: string)
       const rangeStart = mode === "inner" ? start + 1 : start;
       const rangeEnd = mode === "inner" ? end : end + 1;
 
-      const startPos = offsetToPosition(rangeStart, lines);
-      const endPos = offsetToPosition(rangeEnd, lines);
+      const startPos = calculateCursorPosition(rangeStart, lines);
+      const endPos = calculateCursorPosition(rangeEnd, lines);
 
       return {
         start: startPos,
@@ -222,8 +224,8 @@ const createPairTextObject = (openChar: string, closeChar: string, name: string)
     const rangeStart = mode === "inner" ? start + 1 : start;
     const rangeEnd = mode === "inner" ? end : end + 1;
 
-    const startPos = offsetToPosition(rangeStart, lines);
-    const endPos = offsetToPosition(rangeEnd, lines);
+    const startPos = calculateCursorPosition(rangeStart, lines);
+    const endPos = calculateCursorPosition(rangeEnd, lines);
 
     return {
       start: startPos,
@@ -232,30 +234,6 @@ const createPairTextObject = (openChar: string, closeChar: string, name: string)
     };
   },
 });
-
-/**
- * Helper to convert offset to position
- */
-const offsetToPosition = (offset: number, lines: string[]): Position => {
-  let currentOffset = 0;
-  let line = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const lineLength = lines[i].length;
-    if (currentOffset + lineLength >= offset) {
-      line = i;
-      break;
-    }
-    currentOffset += lineLength + 1; // +1 for newline
-  }
-
-  const column = offset - currentOffset;
-  return {
-    line,
-    column,
-    offset,
-  };
-};
 
 /**
  * All available text objects

@@ -8,7 +8,9 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings-store"
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import type { Position } from "@/features/editor/types/editor";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { createDomEditorFacade } from "../dom-editor-facade";
 import { getAction } from "../actions/action-registry";
 import { createReplaceAction } from "../actions/replace-action";
 import { getOperator } from "../operators/operator-registry";
@@ -55,6 +57,9 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const action = getAction(command.action);
       if (!action) return false;
 
+      // Save undo state before mutating actions
+      context.facade.saveUndoState();
+
       // Don't track the repeat command itself
       if (command.action !== ".") {
         // Store this operation for repeat functionality (but only if it's repeatable)
@@ -68,9 +73,14 @@ export const executeVimCommand = (keys: string[]): boolean => {
         }
       }
 
-      // Execute the action multiple times if count is specified
+      // Execute the action multiple times if count is specified.
+      // Refresh context after each iteration so mutating actions (e.g., J)
+      // see updated lines and cursor on subsequent loops.
       for (let i = 0; i < count; i++) {
         action.execute(context);
+        if (i < count - 1) {
+          refreshEditorContext(context);
+        }
       }
 
       return true;
@@ -80,6 +90,9 @@ export const executeVimCommand = (keys: string[]): boolean => {
     if (command.operator) {
       const operator = getOperator(command.operator);
       if (!operator) return false;
+
+      // Save undo state before mutating operators
+      context.facade.saveUndoState();
 
       let range: VimRange | null;
 
@@ -96,7 +109,18 @@ export const executeVimCommand = (keys: string[]): boolean => {
       }
       // Get range from motion
       else if (command.motion) {
-        const motion = getMotion(command.motion);
+        let motionKey = command.motion;
+
+        // Vim special case: cw/cW behaves like ce/cE when cursor is on a word character
+        if (command.operator === "c" && (motionKey === "w" || motionKey === "W")) {
+          const currentLine = context.lines[context.cursor.line];
+          const currentChar = currentLine?.[context.cursor.column];
+          if (currentChar && !/\s/.test(currentChar)) {
+            motionKey = motionKey === "w" ? "e" : "E";
+          }
+        }
+
+        const motion = getMotion(motionKey);
         if (!motion) return false;
 
         const motionCountArg = command.count === undefined ? undefined : command.count;
@@ -148,13 +172,7 @@ export const executeVimCommand = (keys: string[]): boolean => {
 
       // For navigation, just move the cursor to the end of the range
       context.setCursorPosition(range.end);
-
-      // Update textarea cursor
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.selectionStart = textarea.selectionEnd = range.end.offset;
-        textarea.dispatchEvent(new Event("select"));
-      }
+      context.facade.collapseSelection(range.end.offset);
 
       return true;
     }
@@ -169,7 +187,17 @@ export const executeVimCommand = (keys: string[]): boolean => {
 /**
  * Get the current editor context
  */
-const getEditorContext = (): EditorContext | null => {
+/**
+ * Refresh context fields after a mutating action so the next loop
+ * iteration sees current editor state.
+ */
+const refreshEditorContext = (context: EditorContext): void => {
+  context.lines = context.facade.getLines();
+  context.content = context.lines.join("\n");
+  context.cursor = context.facade.getCursorPosition();
+};
+
+export const getEditorContext = (): EditorContext | null => {
   const cursorState = useEditorStateStore.getState();
   const viewState = useEditorViewStore.getState();
   const bufferState = useBufferStore.getState();
@@ -183,21 +211,15 @@ const getEditorContext = (): EditorContext | null => {
   if (!lines || lines.length === 0) return null;
 
   const content = lines.join("\n");
+  const facade = createDomEditorFacade();
 
   const updateContent = (newContent: string) => {
     if (activeBufferId) {
-      bufferState.actions.updateBufferContent(activeBufferId, newContent);
-
-      // Update textarea
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.value = newContent;
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+      facade.setContent(newContent);
     }
   };
 
-  const setCursorPosition = (position: any) => {
+  const setCursorPosition = (position: Position) => {
     cursorState.actions.setCursorPosition(position);
   };
 
@@ -209,6 +231,7 @@ const getEditorContext = (): EditorContext | null => {
     updateContent,
     setCursorPosition,
     tabSize,
+    facade,
   };
 };
 
@@ -242,6 +265,16 @@ export const executeReplaceCommand = (char: string, options: { count?: number } 
   const count = Math.max(1, options.count ?? 1);
   const replaceAction = createReplaceAction(char, count);
 
+  context.facade.saveUndoState();
   replaceAction.execute(context);
+
+  // Track for repeat (.) functionality
+  const vimStore = useVimStore.getState();
+  vimStore.actions.setLastOperation({
+    type: "action",
+    keys: ["r", char],
+    count: options.count,
+  });
+
   return true;
 };

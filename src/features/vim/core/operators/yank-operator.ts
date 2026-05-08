@@ -28,7 +28,8 @@ export const yankOperator: Operator = {
       const startLine = Math.min(range.start.line, range.end.line);
       const endLine = Math.max(range.start.line, range.end.line);
       const yankedLines = lines.slice(startLine, endLine + 1);
-      const yankedContent = yankedLines.join("\n");
+      // Append trailing newline for consistency with delete-operator
+      const yankedContent = `${yankedLines.join("\n")}\n`;
 
       useVimStore.getState().actions.writeToRegister(yankedContent, true, false);
       return;

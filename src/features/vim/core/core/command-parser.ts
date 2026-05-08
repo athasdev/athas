@@ -213,7 +213,7 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
 
   // Parse text object mode (i or a) - only valid after an operator
   if (state.operator && (keys[index] === "i" || keys[index] === "a")) {
-    state.textObjectMode = keys[index] as "inner" | "around";
+    state.textObjectMode = keys[index] === "i" ? "inner" : "around";
     index++;
 
     if (index >= keys.length) {

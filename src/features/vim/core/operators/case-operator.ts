@@ -5,7 +5,10 @@
  * gU + motion: uppercase text in range
  */
 
-import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import {
+  calculateCursorPosition,
+  calculateOffsetFromPosition,
+} from "@/features/editor/utils/position";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 
 const applyCaseTransform = (
@@ -47,22 +50,8 @@ const applyCaseTransform = (
   updateContent(newContent);
 
   const newLines = newContent.split("\n");
-  let line = 0;
-  let offset = 0;
-  for (let i = 0; i < newLines.length; i++) {
-    if (offset + newLines[i].length >= startOffset) {
-      line = i;
-      break;
-    }
-    offset += newLines[i].length + 1;
-  }
-
-  const column = startOffset - offset;
-  setCursorPosition({
-    line,
-    column: Math.max(0, column),
-    offset: startOffset,
-  });
+  const newCursorPosition = calculateCursorPosition(startOffset, newLines);
+  setCursorPosition(newCursorPosition);
 };
 
 export const lowercaseOperator: Operator = {

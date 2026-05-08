@@ -1,7 +1,8 @@
 /**
- * Outdent operator (d)
+ * Outdent operator (<)
  */
 
+import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 
 /**
@@ -28,13 +29,17 @@ export const outdentOperator: Operator = {
     const outdentedContent = outdentedLines.join("\n");
     updateContent(outdentedContent);
 
-    // Position cursor at start of deletion (or beginning of file)
-    setCursorPosition({
-      line: range.start.line,
-      column: cursor.column,
-      offset: range.start.offset,
-    });
+    // Adjust cursor column if it was on an outdented line
+    const originalLine = lines[cursor.line] ?? "";
+    const spacesRemoved = Math.min(tabSize, originalLine.length - originalLine.trimStart().length);
+    const cursorWasInRange = cursor.line >= startLine && cursor.line <= endLine;
+    const newColumn = cursorWasInRange ? Math.max(0, cursor.column - spacesRemoved) : cursor.column;
+    const newOffset = calculateOffsetFromPosition(cursor.line, newColumn, outdentedLines);
 
-    return;
+    setCursorPosition({
+      line: cursor.line,
+      column: newColumn,
+      offset: newOffset,
+    });
   },
 };

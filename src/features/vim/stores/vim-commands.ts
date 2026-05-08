@@ -1,8 +1,11 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
 import { useVimStore } from "./vim-store";
+import { createVimEditing } from "./vim-editing";
 
 export interface VimCommand {
   name: string;
@@ -170,6 +173,62 @@ const terminalCommand: VimCommand = {
   },
 };
 
+// Undo
+const undoCommand: VimCommand = {
+  name: "undo",
+  aliases: ["u"],
+  description: "Undo the last change",
+  execute: async () => {
+    createVimEditing().undo();
+  },
+};
+
+// Redo
+const redoCommand: VimCommand = {
+  name: "redo",
+  aliases: ["red"],
+  description: "Redo the last undone change",
+  execute: async () => {
+    createVimEditing().redo();
+  },
+};
+
+// Earlier: go back N changes (or time)
+const earlierCommand: VimCommand = {
+  name: "earlier",
+  aliases: ["ea"],
+  description: "Go back in time (N changes or time)",
+  execute: async (args?: string[]) => {
+    const vimEdit = createVimEditing();
+    let count = 1;
+    if (args && args.length > 0) {
+      const parsed = parseInt(args[0], 10);
+      if (!Number.isNaN(parsed)) {
+        count = parsed;
+      }
+    }
+    vimEdit.undo(count);
+  },
+};
+
+// Later: go forward N changes (or time)
+const laterCommand: VimCommand = {
+  name: "later",
+  aliases: ["lat"],
+  description: "Go forward in time (N changes or time)",
+  execute: async (args?: string[]) => {
+    const vimEdit = createVimEditing();
+    let count = 1;
+    if (args && args.length > 0) {
+      const parsed = parseInt(args[0], 10);
+      if (!Number.isNaN(parsed)) {
+        count = parsed;
+      }
+    }
+    vimEdit.redo(count);
+  },
+};
+
 // Available vim commands
 export const vimCommands: VimCommand[] = [
   writeCommand,
@@ -182,6 +241,10 @@ export const vimCommands: VimCommand[] = [
   setOptionCommand,
   sidebarCommand,
   terminalCommand,
+  undoCommand,
+  redoCommand,
+  earlierCommand,
+  laterCommand,
 ];
 
 // Parse and execute vim command
@@ -210,7 +273,8 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
     const isGlobalOnLine = flags.includes("g");
     const isCaseInsensitive = flags.includes("i");
 
-    const lines = useEditorViewStore.getState().lines;
+    const facade = createDomEditorFacade();
+    const lines = facade.getLines();
     const cursorState = useEditorStateStore.getState();
     const bufferState = useBufferStore.getState();
     const { activeBufferId } = bufferState;
@@ -219,33 +283,35 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
       return false;
     }
 
+    // Save undo state before substitution
+    facade.saveUndoState();
+
     // Unescape forward slashes in pattern and replacement
     const unescapedPattern = pattern.replace(/\\\//g, "/");
     const unescapedReplacement = replacement.replace(/\\\//g, "/");
 
-    const regexFlags = (isCaseInsensitive ? "i" : "") + (isGlobalOnLine ? "g" : "");
-    const regex = new RegExp(unescapedPattern, regexFlags);
+    try {
+      const regexFlags = (isCaseInsensitive ? "i" : "") + (isGlobalOnLine ? "g" : "");
+      const regex = new RegExp(unescapedPattern, regexFlags);
 
-    const newLines = [...lines];
-    if (isWholeFile) {
-      for (let i = 0; i < newLines.length; i++) {
-        newLines[i] = newLines[i].replace(regex, unescapedReplacement);
+      const newLines = [...lines];
+      if (isWholeFile) {
+        for (let i = 0; i < newLines.length; i++) {
+          newLines[i] = newLines[i].replace(regex, unescapedReplacement);
+        }
+      } else {
+        const currentLine = cursorState.cursorPosition.line;
+        newLines[currentLine] = newLines[currentLine].replace(regex, unescapedReplacement);
       }
-    } else {
-      const currentLine = cursorState.cursorPosition.line;
-      newLines[currentLine] = newLines[currentLine].replace(regex, unescapedReplacement);
+
+      const newContent = newLines.join("\n");
+      facade.setContent(newContent);
+
+      return true;
+    } catch (error) {
+      console.error("Invalid substitution regex:", error);
+      return false;
     }
-
-    const newContent = newLines.join("\n");
-    bufferState.actions.updateBufferContent(activeBufferId, newContent);
-
-    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.value = newContent;
-      textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-
-    return true;
   }
 
   // Split command and arguments

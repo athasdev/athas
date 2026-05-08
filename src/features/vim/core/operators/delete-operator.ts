@@ -2,7 +2,10 @@
  * Delete operator (d)
  */
 
-import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import {
+  calculateCursorPosition,
+  calculateOffsetFromPosition,
+} from "@/features/editor/utils/position";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 import { setVimClipboard } from "./yank-operator";
 
@@ -72,24 +75,7 @@ export const deleteOperator: Operator = {
 
     // Position cursor at start of deletion
     const newLines = newContent.split("\n");
-    let line = 0;
-    let offset = 0;
-
-    // Find the line containing the start offset
-    for (let i = 0; i < newLines.length; i++) {
-      if (offset + newLines[i].length >= startOffset) {
-        line = i;
-        break;
-      }
-      offset += newLines[i].length + 1; // +1 for newline
-    }
-
-    const column = startOffset - offset;
-
-    setCursorPosition({
-      line,
-      column: Math.max(0, column),
-      offset: startOffset,
-    });
+    const newCursorPosition = calculateCursorPosition(startOffset, newLines);
+    setCursorPosition(newCursorPosition);
   },
 };

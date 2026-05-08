@@ -3,6 +3,7 @@ import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { useSettingsStore } from "@/features/settings/store";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { pauseAutoHistory, resumeAutoHistory } from "@/features/editor/stores/editor-app-store";
 
 export type VimMode = "normal" | "insert" | "visual" | "command";
 
@@ -37,10 +38,6 @@ interface VimState {
     end: { line: number; column: number } | null;
   };
   visualMode: "char" | "line" | null;
-  register: {
-    text: string;
-    isLineWise: boolean;
-  };
   lastOperation: {
     type: "command" | "action" | null;
     keys: string[];
@@ -66,10 +63,6 @@ const defaultVimState: VimState = {
     end: null,
   },
   visualMode: null,
-  register: {
-    text: "",
-    isLineWise: false,
-  },
   lastOperation: null,
   registers: new Map<string, RegisterEntry>(),
   currentRegister: null,
@@ -83,6 +76,17 @@ const useVimStoreBase = create(
     combine(defaultVimState, (set, get) => ({
       actions: {
         setMode: (mode: VimMode) => {
+          const previousMode = get().mode;
+
+          // Pause auto-history when entering insert mode,
+          // resume when leaving it. This ensures the entire
+          // insert session is a single undo entry.
+          if (previousMode !== "insert" && mode === "insert") {
+            pauseAutoHistory();
+          } else if (previousMode === "insert" && mode !== "insert") {
+            resumeAutoHistory();
+          }
+
           set((state) => {
             state.mode = mode;
             // Clear key buffer when switching modes
@@ -176,13 +180,6 @@ const useVimStoreBase = create(
         setLastKey: (key: string | null) => {
           set((state) => {
             state.lastKey = key;
-          });
-        },
-
-        setRegister: (text: string, isLineWise: boolean) => {
-          set((state) => {
-            state.register.text = text;
-            state.register.isLineWise = isLineWise;
           });
         },
 

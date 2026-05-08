@@ -4,7 +4,6 @@
 
 import { calculateCursorPosition } from "@/features/editor/utils/position";
 import type { Action, EditorContext } from "../core/types";
-import { setVimClipboard } from "../operators/yank-operator";
 
 /**
  * Replace action factory - creates a replace action for a specific character
@@ -14,7 +13,7 @@ export const createReplaceAction = (char: string, count = 1): Action => ({
   repeatable: true,
 
   execute: (context: EditorContext): void => {
-    const { content, updateContent, setCursorPosition, cursor } = context;
+    const { content, updateContent, setCursorPosition, cursor, facade } = context;
 
     if (cursor.offset >= content.length) {
       return;
@@ -28,8 +27,8 @@ export const createReplaceAction = (char: string, count = 1): Action => ({
       return;
     }
 
-    // Store replaced characters in clipboard for undo/redo parity
-    setVimClipboard({ content: replacedSegment, linewise: false });
+    // Note: vim's 'r' does NOT affect any register, so we intentionally
+    // do NOT call setVimClipboard here.
 
     const replacementText = char.repeat(replacedSegment.length);
     const newContent =
@@ -45,13 +44,7 @@ export const createReplaceAction = (char: string, count = 1): Action => ({
     const newCursorPosition = calculateCursorPosition(newCursorOffset, newLines);
 
     setCursorPosition(newCursorPosition);
-
-    // Update textarea cursor
-    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.selectionStart = textarea.selectionEnd = newCursorPosition.offset;
-      textarea.dispatchEvent(new Event("select"));
-    }
+    facade.collapseSelection(newCursorPosition.offset);
   },
 });
 

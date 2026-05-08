@@ -5,14 +5,16 @@ import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
+import { editorAPI } from "@/features/editor/extensions/api";
 
 export interface VimEditingCommands {
   deleteLine: () => void;
   yankLine: () => void;
   paste: () => void;
   pasteAbove: () => void;
-  undo: () => void;
-  redo: () => void;
+  undo: (count?: number) => void;
+  redo: (count?: number) => void;
   deleteChar: () => void;
   deleteCharBefore: () => void;
   replaceChar: (char: string) => void;
@@ -43,49 +45,21 @@ export const createVimEditing = (): VimEditingCommands => {
   };
 
   // Update buffer content
-  const updateContent = (newContent: string) => {
-    const { actions, activeBufferId } = useBufferStore.getState();
-    if (activeBufferId) {
-      actions.updateBufferContent(activeBufferId, newContent);
-
-      // Update textarea value directly without triggering input event
-      // Vim mode manages its own history, so we don't want to trigger
-      // the app-store's debounced history tracking
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.value = newContent;
-        // Don't dispatch input event - vim handles its own history
-      }
-    }
+  const updateContent = (newContent: string, markDirty?: boolean) => {
+    facade.setContent(newContent, markDirty);
   };
 
   // Save state for undo
   const saveUndoState = () => {
-    const { activeBufferId } = useBufferStore.getState();
-    if (!activeBufferId) return;
-
-    const currentContent = getContent();
-    const currentPos = getCursorPosition();
-
-    // Push to centralized history store
-    useHistoryStore.getState().actions.pushHistory(activeBufferId, {
-      content: currentContent,
-      cursorPosition: currentPos,
-      timestamp: Date.now(),
-    });
+    facade.saveUndoState();
   };
 
   // Update textarea cursor position
   const updateTextareaCursor = (newPosition: any, shouldFocus = false) => {
-    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-    if (textarea) {
-      // Focus first if requested - setting selection on blurred textarea may not persist
-      if (shouldFocus && document.activeElement !== textarea) {
-        textarea.focus();
-      }
-      textarea.selectionStart = textarea.selectionEnd = newPosition.offset;
-      textarea.dispatchEvent(new Event("select"));
+    if (shouldFocus) {
+      facade.focus();
     }
+    facade.collapseSelection(newPosition.offset);
   };
 
   return {
@@ -195,29 +169,34 @@ export const createVimEditing = (): VimEditingCommands => {
       updateTextareaCursor(newPosition);
     },
 
-    undo: () => {
+    undo: (count = 1) => {
       const { activeBufferId } = useBufferStore.getState();
       if (!activeBufferId) return;
 
       const historyStore = useHistoryStore.getState();
-      if (!historyStore.actions.canUndo(activeBufferId)) return;
 
-      const currentPos = getCursorPosition();
+      // Perform count undo operations
+      let lastEntry = null;
+      for (let i = 0; i < count; i++) {
+        if (!historyStore.actions.canUndo(activeBufferId)) break;
+        lastEntry = historyStore.actions.undo(activeBufferId);
+      }
 
       // Get previous state from history
       const entry = historyStore.actions.undo(activeBufferId, getCurrentHistoryEntry());
       if (!entry) return;
 
-      // Restore content
-      updateContent(entry.content);
+      // Restore content (markDirty=false so undo doesn't flag buffer as modified)
+      updateContent(lastEntry.content, false);
 
       // Restore cursor position if available, otherwise maintain current position
-      if (entry.cursorPosition) {
-        setCursorPosition(entry.cursorPosition);
-        updateTextareaCursor(entry.cursorPosition);
+      if (lastEntry.cursorPosition) {
+        setCursorPosition(lastEntry.cursorPosition);
+        updateTextareaCursor(lastEntry.cursorPosition);
       } else {
         // Try to maintain cursor position within new content bounds
-        const newLines = entry.content.split("\n");
+        const currentPos = getCursorPosition();
+        const newLines = lastEntry.content.split("\n");
         const newLine = Math.min(currentPos.line, newLines.length - 1);
         const newColumn = Math.min(currentPos.column, newLines[newLine].length);
         const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
@@ -226,30 +205,36 @@ export const createVimEditing = (): VimEditingCommands => {
         setCursorPosition(newPosition);
         updateTextareaCursor(newPosition);
       }
+
+      editorAPI.emitEvent("contentChange", {
+        content: lastEntry.content,
+        changes: [],
+      });
     },
 
-    redo: () => {
+    redo: (count = 1) => {
       const { activeBufferId } = useBufferStore.getState();
       if (!activeBufferId) return;
 
       const historyStore = useHistoryStore.getState();
-      if (!historyStore.actions.canRedo(activeBufferId)) return;
 
       // Get next state from history
       const entry = historyStore.actions.redo(activeBufferId, getCurrentHistoryEntry());
       if (!entry) return;
 
-      // Restore content
-      updateContent(entry.content);
+      if (!lastEntry) return;
+
+      // Restore content (markDirty=false so redo doesn't flag buffer as modified)
+      updateContent(lastEntry.content, false);
 
       // Restore cursor position if available, otherwise maintain current position
-      if (entry.cursorPosition) {
-        setCursorPosition(entry.cursorPosition);
-        updateTextareaCursor(entry.cursorPosition);
+      if (lastEntry.cursorPosition) {
+        setCursorPosition(lastEntry.cursorPosition);
+        updateTextareaCursor(lastEntry.cursorPosition);
       } else {
         // Try to maintain cursor position within new content bounds
         const currentPos = getCursorPosition();
-        const newLines = entry.content.split("\n");
+        const newLines = lastEntry.content.split("\n");
         const newLine = Math.min(currentPos.line, newLines.length - 1);
         const newColumn = Math.min(currentPos.column, newLines[newLine].length);
         const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
@@ -258,6 +243,11 @@ export const createVimEditing = (): VimEditingCommands => {
         setCursorPosition(newPosition);
         updateTextareaCursor(newPosition);
       }
+
+      editorAPI.emitEvent("contentChange", {
+        content: lastEntry.content,
+        changes: [],
+      });
     },
 
     deleteChar: () => {

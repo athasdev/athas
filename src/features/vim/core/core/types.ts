@@ -3,6 +3,7 @@
  */
 
 import type { Position } from "@/features/editor/types/editor";
+import type { VimEditorFacade } from "../editor-facade";
 
 /**
  * Represents a range in the editor (for motions and text objects)
@@ -24,7 +25,8 @@ export interface EditorContext {
   activeBufferId: string | null;
   updateContent: (newContent: string) => void;
   setCursorPosition: (position: Position) => void;
-  tabSize: number; // The count from the command (e.g., 3 in 3>>)
+  tabSize: number;
+  facade: VimEditorFacade;
 }
 
 /**
@@ -113,20 +115,4 @@ export interface VimCommand {
   };
   action?: string;
   register?: string;
-}
-
-/**
- * Command to be stored for repeat (dot command)
- */
-export interface RepeatableCommand {
-  type: "operator" | "action";
-  operator?: string;
-  motion?: string;
-  textObject?: {
-    mode: "inner" | "around";
-    object: string;
-  };
-  count?: number;
-  // For actions like x, ~, etc.
-  actionName?: string;
 }

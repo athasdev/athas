@@ -2,7 +2,10 @@
  * Paste actions (p, P)
  */
 
-import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import {
+  calculateCursorPosition,
+  calculateOffsetFromPosition,
+} from "@/features/editor/utils/position";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import type { Action, EditorContext } from "../core/types";
 
@@ -57,23 +60,8 @@ export const pasteAction: Action = {
 
       const newOffset = pasteOffset + clipboard.content.length - 1;
       const newLines = newContent.split("\n");
-      let line = 0;
-      let offset = 0;
-
-      for (let i = 0; i < newLines.length; i++) {
-        if (offset + newLines[i].length >= newOffset) {
-          line = i;
-          break;
-        }
-        offset += newLines[i].length + 1;
-      }
-
-      const column = newOffset - offset;
-      setCursorPosition({
-        line,
-        column: Math.max(0, column),
-        offset: Math.max(0, newOffset),
-      });
+      const newCursorPosition = calculateCursorPosition(Math.max(0, newOffset), newLines);
+      setCursorPosition(newCursorPosition);
     }
   },
 };
@@ -116,23 +104,8 @@ export const pasteBeforeAction: Action = {
 
       const newOffset = cursor.offset + clipboard.content.length - 1;
       const newLines = newContent.split("\n");
-      let line = 0;
-      let offset = 0;
-
-      for (let i = 0; i < newLines.length; i++) {
-        if (offset + newLines[i].length >= newOffset) {
-          line = i;
-          break;
-        }
-        offset += newLines[i].length + 1;
-      }
-
-      const column = newOffset - offset;
-      setCursorPosition({
-        line,
-        column: Math.max(0, column),
-        offset: Math.max(0, newOffset),
-      });
+      const newCursorPosition = calculateCursorPosition(Math.max(0, newOffset), newLines);
+      setCursorPosition(newCursorPosition);
     }
   },
 };

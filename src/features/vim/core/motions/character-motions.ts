@@ -19,13 +19,8 @@ let lastFindType: "to" | "find" = "find";
 export const charLeft: Motion = {
   name: "h",
   calculate: (cursor: Position, lines: string[], count = 1): VimRange => {
-    let newColumn = Math.max(0, cursor.column - count);
+    const newColumn = Math.max(0, cursor.column - count);
     const newLine = cursor.line;
-
-    // If we go past the start of the line, don't wrap to previous line
-    if (newColumn < 0) {
-      newColumn = 0;
-    }
 
     const offset = calculateOffsetFromPosition(newLine, newColumn, lines);
 
@@ -48,7 +43,8 @@ export const charRight: Motion = {
   name: "l",
   calculate: (cursor: Position, lines: string[], count = 1): VimRange => {
     const lineLength = lines[cursor.line].length;
-    const newColumn = Math.min(lineLength, cursor.column + count);
+    // vim's l stops at the last character, not past it
+    const newColumn = Math.min(Math.max(0, lineLength - 1), cursor.column + count);
 
     const offset = calculateOffsetFromPosition(cursor.line, newColumn, lines);
 
@@ -111,7 +107,60 @@ export const charUp: Motion = {
 };
 
 /**
- * Create a find character motion
+ * Build a find character motion without mutating global repeat state.
+ * Used by repeat commands (; ,) so they don't corrupt the stored direction.
+ */
+const buildFindCharMotion = (
+  char: string,
+  direction: "forward" | "backward",
+  type: "find" | "to",
+): Motion => ({
+  name: `${type}-${direction}-${char}`,
+  calculate: (cursor: Position, lines: string[], count = 1): VimRange => {
+    const line = lines[cursor.line];
+    let column = cursor.column;
+    let foundCount = 0;
+
+    if (direction === "forward") {
+      // Search forward
+      for (let i = column + 1; i < line.length; i++) {
+        if (line[i] === char) {
+          foundCount++;
+          if (foundCount === count) {
+            column = type === "to" ? i - 1 : i;
+            break;
+          }
+        }
+      }
+    } else {
+      // Search backward
+      for (let i = column - 1; i >= 0; i--) {
+        if (line[i] === char) {
+          foundCount++;
+          if (foundCount === count) {
+            column = type === "to" ? i + 1 : i;
+            break;
+          }
+        }
+      }
+    }
+
+    const offset = calculateOffsetFromPosition(cursor.line, column, lines);
+
+    return {
+      start: cursor,
+      end: {
+        line: cursor.line,
+        column,
+        offset,
+      },
+      inclusive: true,
+    };
+  },
+});
+
+/**
+ * Create a find character motion and store it for repeat (; ,)
  */
 export const createFindCharMotion = (
   char: string,
@@ -123,50 +172,7 @@ export const createFindCharMotion = (
   lastFindDirection = direction;
   lastFindType = type;
 
-  return {
-    name: `${type}-${direction}-${char}`,
-    calculate: (cursor: Position, lines: string[], count = 1): VimRange => {
-      const line = lines[cursor.line];
-      let column = cursor.column;
-      let foundCount = 0;
-
-      if (direction === "forward") {
-        // Search forward
-        for (let i = column + 1; i < line.length; i++) {
-          if (line[i] === char) {
-            foundCount++;
-            if (foundCount === count) {
-              column = type === "to" ? i - 1 : i;
-              break;
-            }
-          }
-        }
-      } else {
-        // Search backward
-        for (let i = column - 1; i >= 0; i--) {
-          if (line[i] === char) {
-            foundCount++;
-            if (foundCount === count) {
-              column = type === "to" ? i + 1 : i;
-              break;
-            }
-          }
-        }
-      }
-
-      const offset = calculateOffsetFromPosition(cursor.line, column, lines);
-
-      return {
-        start: cursor,
-        end: {
-          line: cursor.line,
-          column,
-          offset,
-        },
-        inclusive: true,
-      };
-    },
-  };
+  return buildFindCharMotion(char, direction, type);
 };
 
 /**
@@ -179,7 +185,8 @@ export const repeatFindChar: Motion = {
       return { start: cursor, end: cursor, inclusive: false };
     }
 
-    const motion = createFindCharMotion(lastFindChar, lastFindDirection, lastFindType);
+    // Use buildFindCharMotion to avoid mutating global state
+    const motion = buildFindCharMotion(lastFindChar, lastFindDirection, lastFindType);
     return motion.calculate(cursor, lines, count);
   },
 };
@@ -195,7 +202,8 @@ export const repeatFindCharReverse: Motion = {
     }
 
     const oppositeDirection = lastFindDirection === "forward" ? "backward" : "forward";
-    const motion = createFindCharMotion(lastFindChar, oppositeDirection, lastFindType);
+    // Use buildFindCharMotion to avoid mutating global state
+    const motion = buildFindCharMotion(lastFindChar, oppositeDirection, lastFindType);
     return motion.calculate(cursor, lines, count);
   },
 };
