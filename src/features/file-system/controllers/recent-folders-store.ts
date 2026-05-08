@@ -16,6 +16,7 @@ interface RecentFoldersState {
 
 interface RecentFoldersActions {
   addToRecents: (folderPath: string, metadata?: RecentFolderMetadata) => void;
+  importRecentFolders: (folderPaths: string[]) => number;
   openRecentFolder: (folderPath: string) => Promise<void>;
   removeFromRecents: (folderPath: string) => void;
   clearRecents: () => void;
@@ -33,6 +34,32 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
           set((state) => {
             state.recentFolders = upsertRecentFolder(state.recentFolders, folderPath, metadata);
           });
+        },
+
+        importRecentFolders: (folderPaths: string[]) => {
+          const uniquePaths = folderPaths.filter(
+            (folderPath, index) => folderPaths.indexOf(folderPath) === index,
+          );
+          const existingPaths = new Set(get().recentFolders.map((folder) => folder.path));
+          const importedPaths = uniquePaths.filter((folderPath) => !existingPaths.has(folderPath));
+
+          if (importedPaths.length === 0) {
+            return 0;
+          }
+
+          const importBaseTime = Date.now() - 60_000;
+          set((state) => {
+            state.recentFolders = importedPaths.reduce(
+              (folders, folderPath, index) =>
+                upsertRecentFolder(folders, folderPath, {
+                  lastOpenedAt: importBaseTime - index,
+                  missing: false,
+                }),
+              state.recentFolders,
+            );
+          });
+
+          return importedPaths.length;
         },
 
         openRecentFolder: async (folderPath: string) => {

@@ -287,6 +287,7 @@ fn main() {
          install_cli_command,
          uninstall_cli_command,
          get_cli_install_command,
+         get_vscode_recent_projects,
          // Runtime commands
          ensure_runtime,
          get_runtime_status,

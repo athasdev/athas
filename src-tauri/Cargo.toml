@@ -70,6 +70,7 @@ lsp-types = { version = "0.95", features = ["proposed"] }
 portable-pty = "0.9"
 regex = "1.10"
 reqwest = "0.12"
+rusqlite = { version = "0.29.0", features = ["bundled"] }
 sha256 = "1.5"
 tar = "0.4"
 flate2 = "1.0"

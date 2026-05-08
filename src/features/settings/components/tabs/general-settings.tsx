@@ -217,7 +217,7 @@ export const GeneralSettings = () => {
 
       <SettingRow
         label="Terminal Command"
-        description="Install the `athas` command to launch the app from your terminal."
+        description="Install the `athas` command to open folders and files from your terminal."
       >
         <div className="flex gap-2">
           {cliInstalled ? (
