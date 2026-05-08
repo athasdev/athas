@@ -311,6 +311,9 @@ export class AcpStreamHandler {
       case "session_info_update":
         break;
 
+      case "usage_update":
+        break;
+
       case "prompt_complete":
         this.handlePromptComplete(event);
         break;
