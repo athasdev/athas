@@ -803,6 +803,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["terminal", "profile", "default", "launch"],
   },
   {
+    id: "terminal-confirm-multiline-paste",
+    tab: "terminal",
+    section: "Safety",
+    label: "Confirm Multi-line Paste",
+    description: "Warn before pasting multiple lines or large blocks of text into the terminal",
+    keywords: ["terminal", "paste", "warning", "confirm", "multiline", "safety"],
+  },
+  {
     id: "terminal-font-family",
     tab: "terminal",
     section: "Typography",

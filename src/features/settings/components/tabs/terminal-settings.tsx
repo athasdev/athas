@@ -165,6 +165,32 @@ export const TerminalSettings = () => {
       </Section>
 
       <Section
+        title="Safety"
+        description="Keep high-risk terminal actions explicit without slowing down normal typing."
+      >
+        <SettingRow
+          label="Confirm Multi-line Paste"
+          description="Warn before pasting multiple lines or large blocks of text into the terminal."
+          onReset={() =>
+            updateSetting(
+              "confirmTerminalMultilinePaste",
+              getDefaultSetting("confirmTerminalMultilinePaste"),
+            )
+          }
+          canReset={
+            settings.confirmTerminalMultilinePaste !==
+            getDefaultSetting("confirmTerminalMultilinePaste")
+          }
+        >
+          <Switch
+            checked={settings.confirmTerminalMultilinePaste}
+            onChange={(checked) => updateSetting("confirmTerminalMultilinePaste", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
+      <Section
         title="Profiles"
         description="Create reusable launch presets with a shell override, startup directory, and optional startup commands."
       >

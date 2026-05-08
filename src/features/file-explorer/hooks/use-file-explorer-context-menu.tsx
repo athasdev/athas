@@ -57,6 +57,7 @@ interface UseFileExplorerContextMenuOptions {
   onRemoveFolderFromWorkspace?: (path: string) => void;
   isWorkspaceRootPath?: (path: string) => boolean;
   canRemoveWorkspaceRootPath?: (path: string) => boolean;
+  onCollapseDirectory?: (path: string, isWorkspaceRoot: boolean) => void;
   onDeleteRequested: (candidate: { path: string; isDir: boolean }) => void;
   onStartInlineEditing: (path: string, isFolder: boolean) => void;
   onOpenAllFilesInDirectory: (directoryPath: string) => Promise<void>;
@@ -107,6 +108,7 @@ export function useFileExplorerContextMenu({
   onRemoveFolderFromWorkspace,
   isWorkspaceRootPath,
   canRemoveWorkspaceRootPath,
+  onCollapseDirectory,
   onDeleteRequested,
   onStartInlineEditing,
   onOpenAllFilesInDirectory,
@@ -249,9 +251,18 @@ export function useFileExplorerContextMenu({
         },
         {
           id: "collapse-all",
-          label: "Collapse All",
+          label: isWorkspaceRootPath?.(contextMenu.path) ? "Collapse Descendants" : "Collapse Folder",
           icon: <CaretDoubleUp />,
-          onClick: () => useFileTreeStore.getState().collapsePath(contextMenu.path),
+          onClick: () => {
+            if (onCollapseDirectory) {
+              onCollapseDirectory(
+                contextMenu.path,
+                Boolean(isWorkspaceRootPath?.(contextMenu.path)),
+              );
+              return;
+            }
+            useFileTreeStore.getState().collapsePath(contextMenu.path);
+          },
         },
         {
           id: "open-terminal",

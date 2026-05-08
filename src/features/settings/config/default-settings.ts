@@ -44,6 +44,7 @@ export const defaultSettings: Settings = {
   terminalCursorWidth: 2,
   terminalDefaultShellId: "",
   terminalDefaultProfileId: "",
+  confirmTerminalMultilinePaste: true,
   // UI
   uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
