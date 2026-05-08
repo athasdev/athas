@@ -2,38 +2,21 @@ import { memo, useMemo } from "react";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { cn } from "@/utils/cn";
 import type { DiffLineProps } from "../../types/git-diff-types";
+import { getDiffLineVisualState, getDiffLineVisualType } from "../../utils/git-diff-helpers";
 
 export const getLineBackground = (type: string) => {
-  switch (type) {
-    case "added":
-      return "bg-git-added/15";
-    case "removed":
-      return "bg-git-deleted/15";
-    default:
-      return "";
-  }
+  return getDiffLineVisualState(getDiffLineVisualType(type as DiffLineProps["line"]["line_type"]))
+    .lineBackground;
 };
 
 export const getGutterBackground = (type: string) => {
-  switch (type) {
-    case "added":
-      return "bg-git-added/25";
-    case "removed":
-      return "bg-git-deleted/25";
-    default:
-      return "bg-primary-bg";
-  }
+  return getDiffLineVisualState(getDiffLineVisualType(type as DiffLineProps["line"]["line_type"]))
+    .gutterBackground;
 };
 
 export const getContentColor = (type: string) => {
-  switch (type) {
-    case "added":
-      return "text-git-added";
-    case "removed":
-      return "text-git-deleted";
-    default:
-      return "text-text";
-  }
+  return getDiffLineVisualState(getDiffLineVisualType(type as DiffLineProps["line"]["line_type"]))
+    .contentColor;
 };
 
 const renderWhitespace = (content: string, showWhitespace: boolean) => {

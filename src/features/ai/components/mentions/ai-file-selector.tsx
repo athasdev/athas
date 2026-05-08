@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
@@ -87,6 +88,7 @@ export function AIFileSelector({
   hasLeadingResults = false,
 }: AIFileSelectorProps) {
   const listboxId = useId();
+  const lastEmittedResultsSignatureRef = useRef<string | null>(null);
   const [debouncedQuery] = useDebounce(query, 50);
   const isBackendSearchActive =
     useBackendSearch && debouncedQuery.trim().length > 0 && canUseBackendFileSearch(rootFolderPath);
@@ -114,6 +116,11 @@ export function AIFileSelector({
 
     return flattenFileSearchResults(categorizedFiles);
   }, [backendHits, categorizedFiles, isBackendSearchActive]);
+  const resultFiles = useMemo(() => results.map(({ file }) => file), [results]);
+  const resultFilesSignature = useMemo(
+    () => resultFiles.map((file) => `${file.path}\0${file.name}`).join("\n"),
+    [resultFiles],
+  );
 
   useEffect(() => {
     if (selectedIndex <= results.length - 1) return;
@@ -121,8 +128,12 @@ export function AIFileSelector({
   }, [onSelectedIndexChange, results.length, selectedIndex]);
 
   useEffect(() => {
-    onResultsChange?.(results.map(({ file }) => file));
-  }, [onResultsChange, results]);
+    if (!onResultsChange) return;
+    if (lastEmittedResultsSignatureRef.current === resultFilesSignature) return;
+
+    lastEmittedResultsSignatureRef.current = resultFilesSignature;
+    onResultsChange(resultFiles);
+  }, [onResultsChange, resultFiles, resultFilesSignature]);
 
   useEffect(() => {
     if (!showSearchInput || !autoFocusSearchInput) return;

@@ -102,16 +102,30 @@ export function ContextSelector({
 
   useEffect(() => {
     if (!isOpen) return;
+    let cancelled = false;
 
-    getAllProjectFiles().then((projectFiles) => {
-      const filtered: FileEntry[] = [];
-      for (const file of projectFiles) {
-        if (!file.isDir && !shouldIgnoreFile(file.path)) {
-          filtered.push(file);
+    getAllProjectFiles()
+      .then((projectFiles) => {
+        if (cancelled) return;
+
+        const filtered: FileEntry[] = [];
+        for (const file of projectFiles) {
+          if (!file.isDir && !shouldIgnoreFile(file.path)) {
+            filtered.push(file);
+          }
         }
-      }
-      setFileItems(filtered);
-    });
+
+        setFileItems(filtered);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load context files:", error);
+        setFileItems([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, getAllProjectFiles]);
 
   const bufferByPath = useMemo(

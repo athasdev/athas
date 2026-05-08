@@ -73,24 +73,6 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
 
   return (
     <div className="group relative w-full">
-      {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="mb-1 space-y-0.5">
-          {message.toolCalls!.map((toolCall, toolIndex) => (
-            <ToolCallDisplay
-              key={`${message.id}-tool-${toolIndex}`}
-              toolName={toolCall.name}
-              input={toolCall.input}
-              output={toolCall.output}
-              error={toolCall.error}
-              kind={toolCall.kind}
-              status={toolCall.status}
-              locations={toolCall.locations}
-              isStreaming={!toolCall.isComplete && message.isStreaming}
-            />
-          ))}
-        </div>
-      )}
-
       {message.images && message.images.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {message.images.map((image, index) => (
@@ -142,6 +124,24 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
             )}
           </div>
         </>
+      )}
+
+      {message.toolCalls && message.toolCalls.length > 0 && (
+        <div className="mt-2 space-y-0.5">
+          {message.toolCalls!.map((toolCall, toolIndex) => (
+            <ToolCallDisplay
+              key={`${message.id}-tool-${toolIndex}`}
+              toolName={toolCall.name}
+              input={toolCall.input}
+              output={toolCall.output}
+              error={toolCall.error}
+              kind={toolCall.kind}
+              status={toolCall.status}
+              locations={toolCall.locations}
+              isStreaming={!toolCall.isComplete && message.isStreaming}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

@@ -3,12 +3,14 @@ import { ArrowLeft } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
-import { getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
+import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
 import { PathBreadcrumb } from "./path-breadcrumb";
 
 interface DirectoryEntry {
@@ -29,6 +31,7 @@ export function FilePathBreadcrumb({
   className,
 }: FilePathBreadcrumbProps) {
   const { rootFolderPath, handleFileSelect } = useFileSystemStore();
+  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const [dropdown, setDropdown] = useState<{
     segmentIndex: number;
     x: number;
@@ -45,6 +48,13 @@ export function FilePathBreadcrumb({
     if (filePath.startsWith("remote://")) {
       const pathWithoutRemote = filePath.replace(/^remote:\/\/[^/]+/, "");
       return pathWithoutRemote.split("/").filter(Boolean);
+    }
+
+    if (filePath.startsWith("local-history://")) {
+      const encodedSourcePath = filePath.replace(/^local-history:\/\/[^/]+\/?/, "");
+      const sourcePath = encodedSourcePath ? decodeURIComponent(encodedSourcePath) : "";
+      const fileName = sourcePath ? getBaseName(sourcePath, "snapshot") : "snapshot";
+      return ["Local History", fileName];
     }
 
     if (filePath.includes("://")) {
@@ -119,6 +129,11 @@ export function FilePathBreadcrumb({
     event.stopPropagation();
 
     if (segmentIndex === segments.length - 1) {
+      if (!filePath.includes("://") && extensionRegistry.isLspSupported(filePath)) {
+        openCommandPaletteView("outline");
+        return;
+      }
+
       const fullPath = rootFolderPath
         ? joinPath(rootFolderPath, ...segments.slice(0, segmentIndex + 1))
         : segments.slice(0, segmentIndex + 1).join("/");

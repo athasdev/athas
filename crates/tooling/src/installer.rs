@@ -103,6 +103,66 @@ impl ToolInstaller {
       Ok(())
    }
 
+   fn known_node_companion_packages(package: &str) -> &'static [&'static str] {
+      match package {
+         // typescript-language-server declares TypeScript as a peer dependency
+         // and exits during LSP initialize if it cannot resolve it locally.
+         "typescript-language-server" => &["typescript"],
+         "@vtsls/language-server" => &["typescript"],
+         _ => &[],
+      }
+   }
+
+   fn node_packages_to_install(package: &str, companion_packages: &[String]) -> Vec<String> {
+      let mut packages = Vec::with_capacity(
+         1 + companion_packages.len() + Self::known_node_companion_packages(package).len(),
+      );
+      packages.push(package.to_string());
+      packages.extend(companion_packages.iter().cloned());
+
+      for companion in Self::known_node_companion_packages(package) {
+         if !packages.iter().any(|candidate| candidate == companion) {
+            packages.push((*companion).to_string());
+         }
+      }
+
+      packages
+   }
+
+   fn node_companion_packages_to_validate(
+      package: &str,
+      companion_packages: &[String],
+   ) -> Vec<String> {
+      let mut packages = companion_packages.to_vec();
+
+      for companion in Self::known_node_companion_packages(package) {
+         if !packages.iter().any(|candidate| candidate == companion) {
+            packages.push((*companion).to_string());
+         }
+      }
+
+      packages
+   }
+
+   fn validate_node_companion_packages(
+      package_dir: &Path,
+      package: &str,
+      companion_packages: &[String],
+   ) -> Result<(), ToolError> {
+      for companion in Self::node_companion_packages_to_validate(package, companion_packages) {
+         let companion_dir = package_dir.join("node_modules").join(&companion);
+         if !companion_dir.exists() {
+            return Err(ToolError::InstallationFailed(format!(
+               "Package '{}' is installed but required dependency '{}' is missing. Reinstall the \
+                language tools.",
+               package, companion
+            )));
+         }
+      }
+
+      Ok(())
+   }
+
    fn resolve_node_bin_shim(package_dir: &Path, command_name: &str) -> Option<PathBuf> {
       let bin_dir = package_dir.join("node_modules").join(".bin");
       Self::node_bin_names(command_name)
@@ -449,14 +509,26 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_bun(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_bun(
+               app_handle,
+               package,
+               Self::configured_command_name(config),
+               &config.packages,
+            )
+            .await
          }
          ToolRuntime::Node => {
             let package = config
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_npm(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_npm(
+               app_handle,
+               package,
+               Self::configured_command_name(config),
+               &config.packages,
+            )
+            .await
          }
          ToolRuntime::Python => {
             let package = config
@@ -523,6 +595,7 @@ impl ToolInstaller {
       app_handle: &AppHandle,
       package: &str,
       command_name: &str,
+      companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
       let runtime_root = Self::get_runtime_root(app_handle)?;
       let bun_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Bun)
@@ -537,8 +610,11 @@ impl ToolInstaller {
       log::info!("Installing {} via Bun to {:?}", package, package_dir);
 
       let mut command = Command::new(&bun_path);
+      let mut args = vec!["add"];
+      let packages = Self::node_packages_to_install(package, companion_packages);
+      args.extend(packages.iter().map(String::as_str));
       let output = configure_background_command(&mut command)
-         .args(["add", package])
+         .args(args)
          .current_dir(&package_dir)
          .output()
          .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
@@ -568,6 +644,7 @@ impl ToolInstaller {
       app_handle: &AppHandle,
       package: &str,
       command_name: &str,
+      companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
       let runtime_root = Self::get_runtime_root(app_handle)?;
       let node_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Node)
@@ -588,8 +665,11 @@ impl ToolInstaller {
       log::info!("Installing {} via npm to {:?}", package, package_dir);
 
       let mut command = Command::new(&npm_path);
+      let mut args = vec!["install"];
+      let packages = Self::node_packages_to_install(package, companion_packages);
+      args.extend(packages.iter().map(String::as_str));
       let output = configure_background_command(&mut command)
-         .args(["install", package])
+         .args(args)
          .current_dir(&package_dir)
          .output()
          .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
@@ -967,6 +1047,7 @@ impl ToolInstaller {
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             let package_dir = tools_dir.join("bun").join(package);
+            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
             Ok(
                Self::resolve_node_package_binary(&package_dir, package, command_name)
                   .unwrap_or_else(|| {
@@ -984,6 +1065,7 @@ impl ToolInstaller {
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             let package_dir = tools_dir.join("npm").join(package);
+            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
             Ok(
                Self::resolve_node_package_binary(&package_dir, package, command_name)
                   .unwrap_or_else(|| {
@@ -1067,6 +1149,7 @@ impl ToolInstaller {
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             let package_dir = tools_dir.join("bun").join(package);
+            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
 
             if let Some(entrypoint) =
                Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
@@ -1090,6 +1173,7 @@ impl ToolInstaller {
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             let package_dir = tools_dir.join("npm").join(package);
+            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
 
             if let Some(entrypoint) =
                Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
@@ -1173,6 +1257,51 @@ mod tests {
 
       let manifest = fs::read_to_string(package_json).unwrap();
       assert!(manifest.contains("\"eslint\": \"*\""));
+   }
+
+   #[test]
+   fn installs_typescript_with_typescript_language_server() {
+      assert_eq!(
+         ToolInstaller::node_packages_to_install("typescript-language-server", &[]),
+         vec!["typescript-language-server", "typescript"]
+      );
+      assert_eq!(
+         ToolInstaller::node_packages_to_install("eslint", &[]),
+         vec!["eslint"]
+      );
+      assert_eq!(
+         ToolInstaller::node_packages_to_install("@vtsls/language-server", &[]),
+         vec!["@vtsls/language-server", "typescript"]
+      );
+      assert_eq!(
+         ToolInstaller::node_packages_to_install(
+            "@vtsls/language-server",
+            &["typescript".to_string()]
+         ),
+         vec!["@vtsls/language-server", "typescript"]
+      );
+   }
+
+   #[test]
+   fn validates_typescript_language_server_companion_package() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("typescript-language-server");
+      fs::create_dir_all(package_dir.join("node_modules/typescript-language-server")).unwrap();
+
+      let missing = ToolInstaller::validate_node_companion_packages(
+         &package_dir,
+         "typescript-language-server",
+         &[],
+      );
+      assert!(missing.is_err());
+
+      fs::create_dir_all(package_dir.join("node_modules/typescript")).unwrap();
+      let ready = ToolInstaller::validate_node_companion_packages(
+         &package_dir,
+         "typescript-language-server",
+         &[],
+      );
+      assert!(ready.is_ok());
    }
 
    #[test]

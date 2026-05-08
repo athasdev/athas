@@ -315,35 +315,39 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
     const isShift = e.shiftKey;
     let shortcut = null;
 
+    const key = typeof e.key === 'string' ? e.key.toLowerCase() : e.key;
+
     if (isMod && e.key === 'Tab') {{
       shortcut = 'global:switch-tab';
-    }} else if (isMod && e.key === 'j') {{
+    }} else if (isMod && !isShift && key === 'j') {{
       shortcut = 'global:toggle-terminal';
-    }} else if (isMod && e.key === 'b') {{
+    }} else if (isMod && !isShift && key === 'b') {{
       shortcut = 'global:toggle-sidebar';
-    }} else if (isMod && e.key === 'k') {{
+    }} else if (isMod && isShift && key === 'p') {{
       shortcut = 'global:command-palette';
-    }} else if (isMod && e.key === 'p') {{
+    }} else if (isMod && !isShift && key === 'k') {{
+      shortcut = 'global:command-palette';
+    }} else if (isMod && !isShift && key === 'p') {{
       shortcut = 'global:quick-open';
-    }} else if (isMod && e.key === 'w') {{
+    }} else if (isMod && !isShift && key === 'w') {{
       shortcut = 'global:close-tab';
-    }} else if (isMod && isShift && e.key === 'T') {{
+    }} else if (isMod && isShift && key === 't') {{
       shortcut = 'global:reopen-tab';
-    }} else if (isMod && e.key === 't') {{
+    }} else if (isMod && !isShift && key === 't') {{
       shortcut = 'global:new-tab';
-    }} else if (isMod && e.key === 'n') {{
-      shortcut = 'global:new-window';
-    }} else if (isMod && isShift && e.key === 'N') {{
+    }} else if (isMod && isShift && key === 'n') {{
       shortcut = 'global:new-private-window';
-    }} else if (isMod && e.key === 'f') {{
-      shortcut = 'global:find';
-    }} else if (isMod && isShift && e.key === 'F') {{
+    }} else if (isMod && !isShift && key === 'n') {{
+      shortcut = 'global:new-window';
+    }} else if (isMod && isShift && key === 'f') {{
       shortcut = 'global:find-in-files';
+    }} else if (isMod && !isShift && key === 'f') {{
+      shortcut = 'global:find';
     }} else if (isMod && e.key === ',') {{
       shortcut = 'global:settings';
-    }} else if (isMod && e.key === 'l') {{
+    }} else if (isMod && !isShift && key === 'l') {{
       shortcut = 'focus-url';
-    }} else if (isMod && e.key === 'r' && !isShift) {{
+    }} else if (isMod && key === 'r' && !isShift) {{
       shortcut = 'refresh';
     }} else if (isMod && e.key === '[') {{
       shortcut = 'go-back';
@@ -398,6 +402,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 }
 
 #[command]
+#[allow(clippy::too_many_arguments)]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
    url: String,
@@ -539,10 +544,10 @@ pub async fn close_all_embedded_webviews(
 
    let mut close_errors = Vec::new();
    for label in labels {
-      if let Some(webview) = app.get_webview(&label) {
-         if let Err(error) = webview.close() {
-            close_errors.push(format!("{label}: {error}"));
-         }
+      if let Some(webview) = app.get_webview(&label)
+         && let Err(error) = webview.close()
+      {
+         close_errors.push(format!("{label}: {error}"));
       }
    }
 

@@ -3,6 +3,7 @@ import type { Hover, MarkedString, MarkupContent } from "vscode-languageserver-t
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorUIStore } from "../stores/ui-store";
 import { logger } from "../utils/logger";
+import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface UseHoverProps {
   getHover?: (filePath: string, line: number, character: number) => Promise<Hover | null>;
@@ -10,6 +11,7 @@ interface UseHoverProps {
   filePath: string;
   lineHeight: number;
   charWidth: number;
+  resolveEditorPosition?: EditorCoordinateResolver;
 }
 
 export const useHover = ({
@@ -18,6 +20,7 @@ export const useHover = ({
   filePath,
   lineHeight,
   charWidth,
+  resolveEditorPosition,
 }: UseHoverProps) => {
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverRequestIdRef = useRef(0);
@@ -62,11 +65,14 @@ export const useHover = ({
 
         if (totalLines === 0) return;
 
-        const line = Math.floor((y - paddingTop + scrollTop) / lineHeight);
+        const resolvedPosition = resolveEditorPosition?.(clientX, clientY);
+        const line =
+          resolvedPosition?.line ?? Math.floor((y - paddingTop + scrollTop) / lineHeight);
         const clampedLine = Math.max(0, Math.min(line, totalLines - 1));
         const lineLength = textLines[clampedLine]?.length ?? 0;
 
-        const character = Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
+        const character =
+          resolvedPosition?.column ?? Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
         const clampedCharacter = Math.max(0, Math.min(character, lineLength));
 
         if (clampedLine >= 0 && clampedCharacter >= 0) {
@@ -119,7 +125,10 @@ export const useHover = ({
                 const gap = 6;
                 const maxTooltipHeight = EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT;
                 let tooltipX = clientX;
-                const lineTop = rect.top + paddingTop + clampedLine * lineHeight - scrollTop;
+                const lineTop =
+                  rect.top +
+                  (resolvedPosition?.top ?? paddingTop + clampedLine * lineHeight) -
+                  scrollTop;
                 const spaceAbove = lineTop - margin;
                 const spaceBelow = window.innerHeight - (lineTop + lineHeight) - margin;
                 let opensUpward = spaceAbove >= Math.min(maxTooltipHeight, spaceBelow);
@@ -157,6 +166,7 @@ export const useHover = ({
       filePath,
       lineHeight,
       charWidth,
+      resolveEditorPosition,
       actions.setHoverInfo,
       actions.setIsHovering,
     ],

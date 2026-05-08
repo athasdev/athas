@@ -10,7 +10,7 @@ export interface EditorAPI {
 
   // Selection operations
   getSelection: () => Range | null;
-  setSelection: (range: Range) => void;
+  setSelection: (range?: Range | null) => void;
   getCursorPosition: () => Position;
   setCursorPosition: (position: Position) => void;
   selectAll: () => void;

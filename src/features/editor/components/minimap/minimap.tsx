@@ -1,6 +1,12 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Token } from "../../utils/html";
 import { MinimapCanvas } from "./minimap-canvas";
+import {
+  buildMinimapLineMetrics,
+  buildSearchMarks,
+  getMinimapRenderMetrics,
+  getScrollTopFromMinimapY,
+} from "./minimap-utils";
 
 interface MinimapProps {
   content: string;
@@ -11,6 +17,9 @@ interface MinimapProps {
   lineHeight: number;
   scale: number;
   width: number;
+  cursorLine?: number;
+  searchMatches?: Array<{ start: number; end: number }>;
+  currentSearchMatchIndex?: number;
   onScrollTo: (scrollTop: number) => void;
 }
 
@@ -23,19 +32,59 @@ function MinimapComponent({
   lineHeight,
   scale,
   width,
+  cursorLine,
+  searchMatches = [],
+  currentSearchMatchIndex = -1,
   onScrollTo,
 }: MinimapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [containerHeight, setContainerHeight] = useState(0);
 
-  // Calculate scaled dimensions
-  const scaledTotalHeight = totalHeight * scale;
-  const scaledViewportHeight = viewportHeight * scale;
-  const scaledScrollTop = scrollTop * scale;
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  // Clamp viewport indicator position
-  const maxIndicatorTop = Math.max(0, scaledTotalHeight - scaledViewportHeight);
-  const indicatorTop = Math.min(scaledScrollTop, maxIndicatorTop);
+    const updateHeight = () => {
+      setContainerHeight(container.getBoundingClientRect().height);
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  const metrics = useMemo(
+    () =>
+      getMinimapRenderMetrics({
+        preferredScale: scale,
+        totalHeight,
+        viewportHeight,
+        scrollTop,
+        containerHeight,
+      }),
+    [containerHeight, scale, scrollTop, totalHeight, viewportHeight],
+  );
+
+  const lineMetrics = useMemo(() => buildMinimapLineMetrics(content), [content]);
+  const searchMarks = useMemo(
+    () =>
+      buildSearchMarks({
+        matches: searchMatches,
+        currentMatchIndex: currentSearchMatchIndex,
+        lineStarts: lineMetrics.lineStarts,
+        lineHeight,
+        renderScale: metrics.renderScale,
+      }),
+    [
+      currentSearchMatchIndex,
+      lineHeight,
+      lineMetrics.lineStarts,
+      metrics.renderScale,
+      searchMatches,
+    ],
+  );
 
   const calculateScrollFromY = useCallback(
     (clientY: number) => {
@@ -43,21 +92,22 @@ function MinimapComponent({
 
       const rect = containerRef.current.getBoundingClientRect();
       const y = clientY - rect.top;
-
-      // Calculate the target scroll position
-      // Center the viewport on the clicked position
-      const targetY = y / scale - viewportHeight / 2;
-      const maxScroll = totalHeight - viewportHeight;
-      const newScrollTop = Math.max(0, Math.min(targetY, maxScroll));
+      const newScrollTop = getScrollTopFromMinimapY({
+        y,
+        renderScale: metrics.renderScale,
+        viewportHeight,
+        totalHeight,
+      });
 
       onScrollTo(newScrollTop);
     },
-    [scale, viewportHeight, totalHeight, onScrollTo],
+    [metrics.renderScale, viewportHeight, totalHeight, onScrollTo],
   );
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.PointerEvent) => {
       e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
       calculateScrollFromY(e.clientY);
     },
@@ -65,20 +115,26 @@ function MinimapComponent({
   );
 
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.PointerEvent) => {
       if (!isDragging) return;
       calculateScrollFromY(e.clientY);
     },
     [isDragging, calculateScrollFromY],
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.PointerEvent) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
     setIsDragging(false);
   }, []);
 
-  const handleMouseLeave = useCallback(() => {
+  const handlePointerCancel = useCallback(() => {
     setIsDragging(false);
   }, []);
+
+  const cursorTop =
+    typeof cursorLine === "number" ? cursorLine * lineHeight * metrics.renderScale : undefined;
 
   return (
     <div
@@ -92,32 +148,64 @@ function MinimapComponent({
         borderLeft: "1px solid var(--border)",
         overflow: "hidden",
         cursor: isDragging ? "grabbing" : "pointer",
+        touchAction: "none",
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
+      onPointerDown={handleMouseDown}
+      onPointerMove={handleMouseMove}
+      onPointerUp={handleMouseUp}
+      onPointerCancel={handlePointerCancel}
     >
       <MinimapCanvas
         content={content}
         tokens={tokens}
         width={width}
-        height={scaledTotalHeight}
-        scale={scale}
+        height={metrics.renderHeight}
+        scale={metrics.renderScale}
         lineHeight={lineHeight}
       />
 
-      {/* Viewport indicator */}
+      {searchMarks.map((mark, index) => (
+        <div
+          key={`${mark.top}-${index}`}
+          style={{
+            position: "absolute",
+            top: `${Math.max(0, Math.min(mark.top, metrics.renderHeight - 2))}px`,
+            right: 2,
+            width: mark.active ? 8 : 5,
+            height: mark.active ? 3 : 2,
+            backgroundColor: mark.active ? "var(--accent)" : "var(--warning)",
+            borderRadius: 1,
+            pointerEvents: "none",
+            opacity: mark.active ? 1 : 0.85,
+          }}
+        />
+      ))}
+
+      {cursorTop !== undefined && (
+        <div
+          style={{
+            position: "absolute",
+            top: `${Math.max(0, Math.min(cursorTop, metrics.renderHeight - 2))}px`,
+            left: 0,
+            right: 0,
+            height: 2,
+            backgroundColor: "var(--accent)",
+            opacity: 0.75,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
       <div
         className="minimap-viewport"
         style={{
           position: "absolute",
-          top: `${indicatorTop}px`,
+          top: `${metrics.viewportTop}px`,
           left: 0,
           right: 0,
-          height: `${Math.max(scaledViewportHeight, 20)}px`,
-          backgroundColor: "rgba(255, 255, 255, 0.1)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
+          height: `${metrics.viewportHeight}px`,
+          backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--accent) 32%, transparent)",
           pointerEvents: "none",
           transition: isDragging ? "none" : "top 0.05s ease-out",
         }}

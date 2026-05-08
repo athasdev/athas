@@ -9,6 +9,8 @@
 import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { buildLineOffsetMap } from "../../utils/html";
+import { calculateSelectionBoxes } from "../../utils/selection-boxes";
+import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface SearchMatch {
   start: number;
@@ -24,6 +26,7 @@ interface SearchHighlightLayerProps {
   tabSize: number;
   content: string;
   viewportRange?: { startLine: number; endLine: number };
+  viewLayout?: EditorViewLayout;
 }
 
 interface HighlightBox {
@@ -82,6 +85,7 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
       tabSize,
       content,
       viewportRange,
+      viewLayout,
     },
     ref,
   ) => {
@@ -109,6 +113,37 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
         measure.textContent = text;
         return measure.getBoundingClientRect().width;
       };
+
+      if (viewLayout) {
+        searchMatches.forEach((match, matchIndex) => {
+          const isCurrent = matchIndex === currentMatchIndex;
+          const matchBoxes = calculateSelectionBoxes({
+            selectionOffsets: {
+              start: Math.min(match.start, match.end),
+              end: Math.max(match.start, match.end),
+            },
+            lines,
+            lineOffsets,
+            contentLength: content.length,
+            lineHeight,
+            measureText: getTextWidth,
+            viewLayout,
+          });
+
+          boxes.push(
+            ...matchBoxes.map((box) => ({
+              top: box.top,
+              left: box.left,
+              width: box.width,
+              height: box.height,
+              isCurrent,
+            })),
+          );
+        });
+
+        setHighlightBoxes(boxes);
+        return;
+      }
 
       const getPosition = (line: number, column: number): { top: number; left: number } => {
         const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
@@ -199,6 +234,7 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
       fontFamily,
       tabSize,
       viewportRange,
+      viewLayout,
     ]);
 
     if (searchMatches.length === 0) return null;
@@ -251,6 +287,7 @@ export const SearchHighlightLayer = memo(SearchHighlightLayerComponent, (prev, n
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
     prev.content === next.content &&
+    prev.viewLayout === next.viewLayout &&
     prev.viewportRange?.startLine === next.viewportRange?.startLine &&
     prev.viewportRange?.endLine === next.viewportRange?.endLine
   );

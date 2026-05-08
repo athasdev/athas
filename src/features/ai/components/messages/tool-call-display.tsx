@@ -2,7 +2,10 @@ import {
   WarningCircle as AlertCircle,
   CheckCircle,
   Clock,
+  FileText,
+  GitDiff,
   TerminalWindow as TerminalSquare,
+  Wrench,
 } from "@phosphor-icons/react";
 import { getAcpDiffOutputs, openAcpDiffOutput } from "@/features/ai/lib/acp-diff-output";
 import {
@@ -10,7 +13,11 @@ import {
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
 import type { AcpToolCallLocation, AcpToolCallStatus, AcpToolKind } from "@/features/ai/types/acp";
-import { Button } from "@/ui/button";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { getFileDiff } from "@/features/git/api/git-diff-api";
+import { useProjectStore } from "@/features/window/stores/project-store";
+import { getBaseName, joinPath } from "@/utils/path-helpers";
 import { ChatActivityLine } from "../chat/chat-activity-line";
 
 interface ToolCallDisplayProps {
@@ -54,10 +61,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
 }
 
-function getBaseName(path: string): string {
-  return path.split("/").pop() || path;
-}
-
 function getInputSummary(toolName: string, input: unknown): string | null {
   if (!input || typeof input !== "object") return typeof input === "string" ? input : null;
   const record = input as Record<string, unknown>;
@@ -72,6 +75,75 @@ function getInputSummary(toolName: string, input: unknown): string | null {
     return record.command;
   }
   return null;
+}
+
+function isAbsolutePath(path: string): boolean {
+  return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("remote://");
+}
+
+function resolveToolPath(
+  locations: AcpToolCallLocation[] | undefined,
+  input: unknown,
+): string | null {
+  const locationPath = locations?.[0]?.path;
+  if (locationPath) return locationPath;
+
+  if (!input || typeof input !== "object") return null;
+  const record = input as Record<string, unknown>;
+  const path =
+    typeof record.file_path === "string"
+      ? record.file_path
+      : typeof record.path === "string"
+        ? record.path
+        : typeof record.filename === "string"
+          ? record.filename
+          : null;
+
+  return path;
+}
+
+function resolveWorkspacePath(path: string): string {
+  if (isAbsolutePath(path)) return path;
+  const rootFolderPath = useProjectStore.getState().rootFolderPath;
+  return rootFolderPath ? joinPath(rootFolderPath, path) : path;
+}
+
+async function openToolPath(path: string) {
+  const resolvedPath = resolveWorkspacePath(path);
+  const content = await readFileContent(resolvedPath);
+  const bufferId = useBufferStore
+    .getState()
+    .actions.openBuffer(resolvedPath, getBaseName(resolvedPath), content);
+  useBufferStore.getState().actions.setActiveBuffer(bufferId);
+}
+
+async function openToolDiff(path: string, output: unknown) {
+  if (openAcpDiffOutput(output)) return;
+
+  const rootFolderPath = useProjectStore.getState().rootFolderPath;
+  const resolvedPath = resolveWorkspacePath(path);
+  const repoPath = rootFolderPath ?? resolvedPath;
+  const diff = await getFileDiff(repoPath, path);
+
+  if (diff) {
+    const displayName = `${getBaseName(diff.file_path)}.diff`;
+    useBufferStore
+      .getState()
+      .actions.openBuffer(
+        `diff://acp-tool-output/${Date.now()}`,
+        displayName,
+        "",
+        false,
+        undefined,
+        true,
+        true,
+        diff,
+      );
+    return;
+  }
+
+  const newText = await readFileContent(resolvedPath);
+  openAcpDiffOutput([{ type: "diff", path: resolvedPath, oldText: "", newText }]);
 }
 
 function getDiffItems(output: unknown) {
@@ -161,7 +233,7 @@ export default function ToolCallDisplay({
         ? CheckCircle
         : state === "running"
           ? Clock
-          : TerminalSquare;
+          : Wrench;
   const hasDetails =
     Boolean(input) ||
     Boolean(output) ||
@@ -172,37 +244,70 @@ export default function ToolCallDisplay({
   const hasDiffOutput = diffItems.length > 0;
   const terminalItems = getTerminalItems(output);
   const hasTerminalOutput = terminalItems.length > 0;
+  const toolPath = resolveToolPath(locations, input);
+  const isQuietCompletedTool =
+    state === "success" &&
+    !hasDiffOutput &&
+    !hasTerminalOutput &&
+    !error &&
+    (kind === "read" || kind === "execute" || kind === "search" || kind === "think");
+
+  if (isQuietCompletedTool) return null;
+
+  const actionButtons = (
+    <span className="flex items-center gap-1">
+      {toolPath && (kind === "edit" || kind === "delete" || kind === "move" || hasDiffOutput) ? (
+        <button
+          type="button"
+          className="flex size-5 items-center justify-center rounded text-text-lighter/70 hover:bg-hover hover:text-text"
+          onClick={(event) => {
+            event.stopPropagation();
+            void openToolDiff(toolPath, output);
+          }}
+          title="Open diff"
+        >
+          <GitDiff size={13} weight="duotone" />
+        </button>
+      ) : null}
+      {toolPath ? (
+        <button
+          type="button"
+          className="flex size-5 items-center justify-center rounded text-text-lighter/70 hover:bg-hover hover:text-text"
+          onClick={(event) => {
+            event.stopPropagation();
+            void openToolPath(toolPath);
+          }}
+          title="Open file"
+        >
+          <FileText size={13} weight="duotone" />
+        </button>
+      ) : null}
+      {hasTerminalOutput ? (
+        <button
+          type="button"
+          className="flex size-5 items-center justify-center rounded text-text-lighter/70 hover:bg-hover hover:text-text"
+          onClick={(event) => {
+            event.stopPropagation();
+            openAcpTerminalOutput(output);
+          }}
+          title="Open terminal"
+        >
+          <TerminalSquare size={13} weight="duotone" />
+        </button>
+      ) : null}
+    </span>
+  );
 
   return (
-    <ChatActivityLine icon={<Icon size={13} />} title={toolName} detail={detail} state={state}>
+    <ChatActivityLine
+      icon={<Icon size={13} weight="duotone" />}
+      title={toolName}
+      detail={detail}
+      state={state}
+      actions={actionButtons}
+    >
       {hasDetails ? (
         <>
-          {hasDiffOutput || hasTerminalOutput ? (
-            <div className="ui-font mb-2 flex flex-wrap gap-1.5">
-              {hasDiffOutput ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => openAcpDiffOutput(output)}
-                  className="h-6 rounded-md border border-border/60 bg-transparent px-2 text-text-lighter hover:border-border hover:bg-hover/60 hover:text-text"
-                >
-                  Open diff
-                </Button>
-              ) : null}
-              {hasTerminalOutput ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => openAcpTerminalOutput(output)}
-                  className="h-6 rounded-md border border-border/60 bg-transparent px-2 text-text-lighter hover:border-border hover:bg-hover/60 hover:text-text"
-                >
-                  Open terminal
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
           {kind && kind !== "other" ? `kind: ${kind}\n` : ""}
           {locations?.length
             ? `locations:\n${locations

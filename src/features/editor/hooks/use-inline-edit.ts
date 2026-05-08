@@ -15,6 +15,7 @@ import {
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position, Range } from "../types/editor";
 import { splitLines } from "../utils/lines";
+import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import {
   calculateCursorPosition,
   calculateOffsetFromPosition,
@@ -22,12 +23,6 @@ import {
 } from "../utils/position";
 
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
-const DEFAULT_INLINE_EDIT_MODELS: AutocompleteModel[] = [
-  { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
-  { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
-  { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
-  { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-];
 const INLINE_EDIT_POPOVER_WIDTH = 320;
 const INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT = 170;
 const INLINE_EDIT_POPOVER_MARGIN = 8;
@@ -45,6 +40,7 @@ interface UseInlineEditOptions {
   lineHeight: number;
   tabSize: number;
   lastScrollRef: React.RefObject<{ top: number; left: number }>;
+  resolveModelPosition?: EditorModelPositionResolver;
   setCursorPosition: (position: Position) => void;
   setSelection: (selection?: Range) => void;
   updateBufferContent: (bufferId: string, content: string, snapshot?: boolean) => void;
@@ -60,6 +56,7 @@ export function useInlineEdit({
   lineHeight,
   tabSize,
   lastScrollRef,
+  resolveModelPosition,
   setCursorPosition,
   setSelection,
   updateBufferContent,
@@ -74,9 +71,7 @@ export function useInlineEdit({
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
   const [isInlineEditModelLoading, setIsInlineEditModelLoading] = useState(false);
   const [inlineEditError, setInlineEditError] = useState<string | null>(null);
-  const [inlineEditModels, setInlineEditModels] = useState<AutocompleteModel[]>(
-    DEFAULT_INLINE_EDIT_MODELS,
-  );
+  const [inlineEditModels, setInlineEditModels] = useState<AutocompleteModel[]>([]);
   const [inlineEditSelectionAnchor, setInlineEditSelectionAnchor] = useState<{
     line: number;
     column: number;
@@ -150,10 +145,10 @@ export function useInlineEdit({
             await updateSetting("aiAutocompleteModelId", models[0].id);
           }
         } else {
-          setInlineEditModels(DEFAULT_INLINE_EDIT_MODELS);
+          setInlineEditModels([]);
         }
       } catch {
-        setInlineEditModels(DEFAULT_INLINE_EDIT_MODELS);
+        setInlineEditModels([]);
       } finally {
         setIsInlineEditModelLoading(false);
       }
@@ -339,8 +334,13 @@ export function useInlineEdit({
 
     const lineText = lines[inlineEditSelectionAnchor.line] || "";
     const anchorColumn = Math.min(inlineEditSelectionAnchor.column, lineText.length);
-    const anchorX = getAccurateCursorX(lineText, anchorColumn, fontSize, fontFamily, tabSize);
+    const resolvedAnchor = resolveModelPosition?.(inlineEditSelectionAnchor.line, anchorColumn);
+    const anchorX =
+      resolvedAnchor?.left !== undefined
+        ? resolvedAnchor.left - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT
+        : getAccurateCursorX(lineText, anchorColumn, fontSize, fontFamily, tabSize);
     const anchorTop =
+      resolvedAnchor?.top ??
       inlineEditSelectionAnchor.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
     const textarea = inputRef.current;
     const scrollLeft = textarea?.scrollLeft ?? lastScrollRef.current.left;

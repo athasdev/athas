@@ -21,6 +21,7 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
+import { getApiBase } from "@/utils/api-base";
 import Section, { SettingRow } from "../settings-section";
 
 export const AccountSettings = () => {
@@ -40,16 +41,23 @@ export const AccountSettings = () => {
   const settingsSyncLastSource = useSettingsSyncStore((state) => state.lastSyncSource);
 
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
-  const isPaidPlan = isPro || isEnterprise;
+  const isTeams = Boolean(subscription?.collaboration?.enabled);
+  const isPaidPlan = isPro || isEnterprise || isTeams;
   const planLabel =
-    subscription?.subscription?.plan === "enterprise" ? "Enterprise" : isPro ? "Pro" : "Free";
+    subscription?.subscription?.plan === "enterprise"
+      ? "Enterprise"
+      : isTeams
+        ? "Teams"
+        : isPro
+          ? "Pro"
+          : "Free";
 
   const handleManageAccount = async () => {
-    await openUrl("https://athas.dev/dashboard");
+    await openUrl(new URL("/dashboard", getApiBase()).toString());
   };
 
   const handleManagePlan = async () => {
-    await openUrl(isPaidPlan ? "https://athas.dev/dashboard/billing" : "https://athas.dev/pricing");
+    await openUrl(new URL(isPaidPlan ? "/dashboard/billing" : "/pricing", getApiBase()).toString());
   };
 
   const handleToggleSettingsSync = async (checked: boolean) => {

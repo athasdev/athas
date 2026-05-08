@@ -15,6 +15,13 @@ import {
   type FileTreeGitStatusDecoration,
   type FileTreeGitStatusLookup,
 } from "@/features/file-explorer/lib/file-tree-git-status";
+import {
+  collectGitIgnoreFileReferences,
+  createFileTreeGitIgnoreRules,
+  isPathGitIgnoredByFileTreeRules,
+  type FileTreeGitIgnoreRules,
+  type GitIgnoreFileContent,
+} from "@/features/file-explorer/lib/file-tree-gitignore";
 import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
@@ -124,7 +131,7 @@ function FileExplorerTreeComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<Document>(document);
 
-  const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
+  const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   // sticky handled purely by CSS; no JS scanning
@@ -205,30 +212,49 @@ function FileExplorerTreeComponent({
 
   // removed scroll-time DOM scanning for sticky folders
 
+  const gitIgnoreFileReferences = useMemo(
+    () => collectGitIgnoreFileReferences(files, rootFolderPath),
+    [files, rootFolderPath],
+  );
+
   useEffect(() => {
+    let cancelled = false;
+
     const loadGitignore = async () => {
       if (!rootFolderPath) {
-        setGitIgnore(null);
+        setGitIgnoreRules(null);
         return;
       }
 
-      try {
-        const content = await readFile(joinPath(rootFolderPath, ".gitignore"));
-        const ig = ignore();
-        ig.add(
-          content
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter((l) => l && !l.startsWith("#")),
+      const ignoreFiles = await Promise.all(
+        gitIgnoreFileReferences.map(async (file): Promise<GitIgnoreFileContent | null> => {
+          try {
+            return {
+              ...file,
+              content: await readFile(file.path),
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setGitIgnoreRules(
+          createFileTreeGitIgnoreRules(
+            rootFolderPath,
+            ignoreFiles.filter((file): file is GitIgnoreFileContent => file !== null),
+          ),
         );
-        setGitIgnore(ig);
-      } catch {
-        setGitIgnore(null);
       }
     };
 
     loadGitignore();
-  }, [rootFolderPath]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gitIgnoreFileReferences, rootFolderPath]);
 
   const gitStatus =
     currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath
@@ -237,16 +263,12 @@ function FileExplorerTreeComponent({
 
   const isGitIgnored = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
-      if (!gitIgnore || !rootFolderPath) return false;
+      if (!gitIgnoreRules || !rootFolderPath) return false;
       if (getWorkspaceRootForPath(fullPath) !== rootFolderPath) return false;
 
-      let relative = getRelativePath(fullPath, rootFolderPath);
-      if (!relative || relative.trim() === "") return false;
-      if (isDir && !relative.endsWith("/")) relative += "/";
-      if (relative === ".git/" || relative === ".git") return false;
-      return gitIgnore.ignores(relative);
+      return isPathGitIgnoredByFileTreeRules(gitIgnoreRules, fullPath, isDir);
     },
-    [getWorkspaceRootForPath, gitIgnore, rootFolderPath],
+    [getWorkspaceRootForPath, gitIgnoreRules, rootFolderPath],
   );
 
   const gitStatusDecorationLookup = useMemo(() => {

@@ -2,11 +2,14 @@ import {
   Folder,
   GitBranch,
   GitPullRequest,
+  ListBullets,
   MagnifyingGlass,
   SidebarSimple,
   Sparkle as Sparkles,
+  UsersThree,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
@@ -58,8 +61,18 @@ export const SidebarPaneSelector = ({
       ? "size-9 rounded-lg"
       : "w-8 rounded-md";
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const isOutlineActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
   const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
   const isSidebarBuilderFeatureEnabled = coreFeatures.sidebarBuilder;
+  const isCollaborationFeatureEnabled = useAuthStore(
+    (state) => state.subscription?.collaboration?.enabled === true,
+  );
+  const isCollaborationActive =
+    isCollaborationFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "collaboration";
   const isMultiAgentsActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
@@ -102,6 +115,37 @@ export const SidebarPaneSelector = ({
             tooltip: {
               content: "Search",
               shortcut: "Mod+Shift+F",
+              side: tooltipSide,
+            },
+          } satisfies TabsItem,
+        ]
+      : []),
+    {
+      id: "outline",
+      icon: <ListBullets className={iconClassName} weight="duotone" />,
+      isActive: isOutlineActive,
+      onClick: () => onViewChange("outline"),
+      role: "tab",
+      ariaLabel: "Outline",
+      className: tabClassName,
+      tooltip: {
+        content: "Outline",
+        shortcut: "Mod+Shift+O",
+        side: tooltipSide,
+      },
+    },
+    ...(isCollaborationFeatureEnabled
+      ? [
+          {
+            id: "collaboration",
+            icon: <UsersThree className={iconClassName} weight="duotone" />,
+            isActive: isCollaborationActive,
+            onClick: () => onViewChange("collaboration"),
+            role: "tab",
+            ariaLabel: "Collaboration",
+            className: tabClassName,
+            tooltip: {
+              content: "Collaboration",
               side: tooltipSide,
             },
           } satisfies TabsItem,

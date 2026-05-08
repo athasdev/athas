@@ -11,6 +11,7 @@ import {
   SidebarSimple,
   Sparkle,
   TerminalWindow as TerminalIcon,
+  UsersThree,
 } from "@phosphor-icons/react";
 import type { CoreFeature, CoreFeaturesState } from "../types/feature";
 
@@ -71,6 +72,13 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "AI-powered code assistance and chat",
     icon: MessageSquare,
     enabled: coreFeatures.aiChat,
+  },
+  {
+    id: "teamCollaboration",
+    name: "Teams Collaboration",
+    description: "Team workspace invites, roles, projects, and channels",
+    icon: UsersThree,
+    enabled: coreFeatures.teamCollaboration,
   },
   {
     id: "multiAgents",

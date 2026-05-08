@@ -41,20 +41,35 @@ pub(super) fn flatten_document_symbols(
    symbols: &[DocumentSymbol],
    container: Option<&str>,
 ) -> Vec<FlatSymbol> {
+   flatten_document_symbols_with_path(symbols, container, Vec::new())
+}
+
+fn flatten_document_symbols_with_path(
+   symbols: &[DocumentSymbol],
+   container: Option<&str>,
+   parent_path: Vec<u32>,
+) -> Vec<FlatSymbol> {
    let mut result = Vec::new();
-   for symbol in symbols {
+   for (index, symbol) in symbols.iter().enumerate() {
+      let mut hierarchy_path = parent_path.clone();
+      hierarchy_path.push(index as u32);
       result.push(FlatSymbol {
          name: symbol.name.clone(),
          kind: symbol_kind_to_string(symbol.kind),
          detail: symbol.detail.clone(),
          line: symbol.selection_range.start.line,
          character: symbol.selection_range.start.character,
-         end_line: symbol.selection_range.end.line,
-         end_character: symbol.selection_range.end.character,
+         end_line: symbol.range.end.line,
+         end_character: symbol.range.end.character,
          container_name: container.map(|s| s.to_string()),
+         hierarchy_path: hierarchy_path.clone(),
       });
       if let Some(children) = &symbol.children {
-         result.extend(flatten_document_symbols(children, Some(&symbol.name)));
+         result.extend(flatten_document_symbols_with_path(
+            children,
+            Some(&symbol.name),
+            hierarchy_path,
+         ));
       }
    }
    result

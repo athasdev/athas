@@ -9,7 +9,8 @@ import { useSettingsStore } from "@/features/settings/store";
 
 interface InputLayerProps {
   content: string;
-  onInput: (content: string) => void;
+  onInput: (content: string, event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onBeforeInput?: (e: React.FormEvent<HTMLTextAreaElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onKeyUp?: () => void;
   onSelect?: () => void;
@@ -35,6 +36,7 @@ interface InputLayerProps {
 const InputLayerComponent = ({
   content,
   onInput,
+  onBeforeInput,
   onKeyDown,
   onKeyUp,
   onSelect,
@@ -60,7 +62,7 @@ const InputLayerComponent = ({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onInput(e.target.value);
+      onInput(e.target.value, e);
     },
     [onInput],
   );
@@ -69,6 +71,7 @@ const InputLayerComponent = ({
     <textarea
       ref={ref as React.RefObject<HTMLTextAreaElement>}
       defaultValue={content}
+      onBeforeInput={onBeforeInput}
       onChange={handleChange}
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
@@ -78,7 +81,9 @@ const InputLayerComponent = ({
       onMouseUp={onMouseUp}
       onContextMenu={onContextMenu}
       onScroll={onScroll}
-      className={`input-layer editor-textarea editor-viewport ${wordWrap ? "native-selection" : "selection-transparent"}`}
+      className={`input-layer editor-textarea editor-viewport ${
+        customCaret || !wordWrap ? "selection-transparent" : "native-selection"
+      }`}
       style={{
         position: "absolute",
         top: 0,
@@ -126,6 +131,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.customCaret === next.customCaret &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
+    prev.onBeforeInput === next.onBeforeInput &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onScroll === next.onScroll &&
     prev.onSelect === next.onSelect &&

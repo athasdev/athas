@@ -84,6 +84,11 @@ pub(super) async fn initialize_worker(
    .await?;
    let auth_methods = init_response.auth_methods.clone();
    let auth_method_id = auth_methods.first().map(|method| method.id.to_string());
+   let supports_session_resume = init_response
+      .agent_capabilities
+      .session_capabilities
+      .resume
+      .is_some();
    let agent_capabilities = init_response.agent_capabilities.into();
 
    let cwd = workspace_path
@@ -98,6 +103,7 @@ pub(super) async fn initialize_worker(
       requested_session_id,
       SessionBootstrapContext {
          auth_methods,
+         supports_session_resume,
          map_config_options,
          child: &mut child,
          io_handle: &io_handle,
@@ -136,6 +142,7 @@ where
    F: Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 {
    auth_methods: Vec<acp::AuthMethod>,
+   supports_session_resume: bool,
    map_config_options: F,
    child: &'a mut Child,
    io_handle: &'a tokio::task::JoinHandle<()>,
@@ -239,7 +246,7 @@ async fn initialize_connection(
 
    let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::LATEST)
       .client_capabilities(client_capabilities)
-      .client_info(acp::Implementation::new("Athas", env!("CARGO_PKG_VERSION")));
+      .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
 
    let initialize_timeout_secs = if uses_npx_codex_adapter { 120 } else { 30 };
    log::info!(
@@ -342,6 +349,73 @@ async fn bootstrap_session(
             });
          }
          Ok(Err(err))
+            if matches!(err.code, acp::ErrorCode::MethodNotFound)
+               && ctx.supports_session_resume =>
+         {
+            log::warn!(
+               "ACP session/load unavailable ({}), trying session/resume",
+               err
+            );
+            let mut resume_result =
+               resume_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
+
+            if let Ok(Err(err)) = &resume_result
+               && matches!(err.code, acp::ErrorCode::AuthRequired)
+            {
+               if let Err(e) = authenticate(connection.clone()).await {
+                  ctx.io_handle.abort();
+                  terminate_process_group(ctx.child.id());
+                  let _ = ctx.child.kill().await;
+                  bail!("{}", e);
+               }
+               resume_result =
+                  resume_session(connection.clone(), cwd.clone(), existing_session_id.clone())
+                     .await;
+            }
+
+            match resume_result {
+               Ok(Ok(resume_response)) => {
+                  log::info!("ACP session resumed: {}", existing_session_id);
+                  client.set_session_id(existing_session_id.clone()).await;
+                  return Ok(SessionBootstrap {
+                     session_id: Some(acp::SessionId::new(existing_session_id)),
+                     initial_modes: resume_response.modes.map(map_mode_state),
+                     initial_config_options: resume_response
+                        .config_options
+                        .map(&ctx.map_config_options),
+                  });
+               }
+               Ok(Err(err))
+                  if matches!(
+                     err.code,
+                     acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
+                  ) =>
+               {
+                  log::warn!(
+                     "ACP session/resume unavailable or session missing ({}), falling back to \
+                      session/new",
+                     err
+                  );
+               }
+               Ok(Err(err)) => {
+                  ctx.io_handle.abort();
+                  terminate_process_group(ctx.child.id());
+                  let _ = ctx.child.kill().await;
+                  bail!(
+                     "Failed to resume ACP session {}: {}",
+                     existing_session_id,
+                     err
+                  );
+               }
+               Err(_) => {
+                  ctx.io_handle.abort();
+                  force_kill_process_group(ctx.child.id());
+                  let _ = ctx.child.kill().await;
+                  bail!("ACP session/resume timed out");
+               }
+            }
+         }
+         Ok(Err(err))
             if matches!(
                err.code,
                acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
@@ -434,6 +508,19 @@ async fn load_session(
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.load_session(request),
+   )
+   .await
+}
+
+async fn resume_session(
+   connection: Arc<acp::ClientSideConnection>,
+   cwd: PathBuf,
+   existing_session_id: String,
+) -> Result<Result<acp::ResumeSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
+   let request = acp::ResumeSessionRequest::new(existing_session_id, cwd);
+   tokio::time::timeout(
+      std::time::Duration::from_secs(30),
+      connection.resume_session(request),
    )
    .await
 }

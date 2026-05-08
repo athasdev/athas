@@ -2,16 +2,19 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect } from "react";
+import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { useUpdater } from "@/features/settings/hooks/use-updater";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { fetchRawAppVersion } from "@/features/window/utils/app-version";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { primitiveAlert, primitivePrompt } from "@/ui/primitive-dialog-service";
+import { primitiveAlert } from "@/ui/primitive-dialog-service";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
@@ -62,9 +65,30 @@ export function useMenuEventsWrapper() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
+  const openWhatsNew = useWhatsNewStore((state) => state.open);
+  const { checkForUpdates } = useUpdater(false);
+  const { showToast } = useToast();
   const isTerminalFocused = () => {
     const activeElement = document.activeElement as HTMLElement | null;
     return activeElement?.closest(".terminal-container") !== null;
+  };
+  const shouldRouteEditMenuToEditor = () => {
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    if (activeElement?.classList.contains("editor-textarea")) {
+      return true;
+    }
+
+    const isTextField =
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.isContentEditable;
+
+    if (isTextField) {
+      return false;
+    }
+
+    return activeBuffer?.type === "editor";
   };
 
   useEffect(() => {
@@ -162,20 +186,24 @@ export function useMenuEventsWrapper() {
       }
     },
     onUndo: () => {
-      // Trigger browser's undo
+      if (shouldRouteEditMenuToEditor()) {
+        editorAPI.undo();
+        return;
+      }
+
       document.execCommand("undo");
     },
     onRedo: () => {
-      // Trigger browser's redo
+      if (shouldRouteEditMenuToEditor()) {
+        editorAPI.redo();
+        return;
+      }
+
       document.execCommand("redo");
     },
     onFind: () => uiState.setIsFindVisible(true),
     onFindReplace: () => {
-      uiState.setIsFindVisible(true);
-      // Set a flag or state to indicate replace mode
-      // For now, we'll show the find bar and log that replace mode should be active
-      console.log("Find/Replace mode activated - find bar shown with replace functionality");
-      // In a full implementation, this would enable replace input field in the find bar
+      void keymapRegistry.executeCommand("workbench.showFindReplace");
     },
     onToggleComment: () => {
       void keymapRegistry.executeCommand("editor.toggleComment");
@@ -215,85 +243,29 @@ export function useMenuEventsWrapper() {
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
     onQuickOpen: () => uiState.setIsQuickOpenVisible(true),
-    onGoToLine: async () => {
-      // Simple go to line implementation using browser prompt
-      const line = await primitivePrompt("Go to line:", {
-        title: "Go to Line",
-        placeholder: "Line number",
-      });
-      if (line && !Number.isNaN(Number(line))) {
-        const lineNumber = parseInt(line, 10);
-        console.log(`Going to line ${lineNumber}`);
-        // Dispatch a custom event that the editor can listen to
-        window.dispatchEvent(
-          new CustomEvent("go-to-line", {
-            detail: { lineNumber },
-          }),
-        );
-        // In a full implementation, this would scroll to the specified line in the active editor
-      }
+    onGoToLine: () => {
+      void keymapRegistry.executeCommand("editor.goToLine");
     },
     onNextTab: () => {
-      const paneStore = usePaneStore.getState();
-      paneStore.actions.switchToNextBufferInPane();
-      // Sync buffer store
-      const activePane = paneStore.actions.getActivePane();
-      if (activePane?.activeBufferId) {
-        useBufferStore.getState().actions.setActiveBuffer(activePane.activeBufferId);
-      }
+      void keymapRegistry.executeCommand("workbench.nextTab");
     },
     onPrevTab: () => {
-      const paneStore = usePaneStore.getState();
-      paneStore.actions.switchToPreviousBufferInPane();
-      // Sync buffer store
-      const activePane = paneStore.actions.getActivePane();
-      if (activePane?.activeBufferId) {
-        useBufferStore.getState().actions.setActiveBuffer(activePane.activeBufferId);
-      }
+      void keymapRegistry.executeCommand("workbench.previousTab");
     },
     onThemeChange: (theme: string) => updateSetting("theme", theme),
-    onAbout: async () => {
-      const version = await fetchRawAppVersion();
-      const aboutText = `Athas Code Editor
-Version: ${version}
-Built with: React, TypeScript, Tauri
-License: MIT
-
-A lightweight, fast code editor for developers.
-
-GitHub: https://github.com/athasdev/athas`;
-
-      await primitiveAlert(aboutText, "About Athas");
+    onExecuteCommand: (commandId: string) => {
+      void keymapRegistry.executeCommand(commandId);
     },
-    onHelp: async () => {
-      const helpText = `Athas Help - Keyboard Shortcuts
-
-File:
-• Ctrl+N (Cmd+N): New Tab
-• Ctrl+O (Cmd+O): Open Folder
-• Ctrl+S (Cmd+S): Save
-• Ctrl+Shift+S (Cmd+Shift+S): Save As
-• Ctrl+W (Cmd+W): Close Tab
-
-Edit:
-• Ctrl+Z (Cmd+Z): Undo
-• Ctrl+Y (Cmd+Y): Redo
-• Ctrl+F (Cmd+F): Find
-• Ctrl+H (Cmd+Alt+F): Find & Replace
-
-View:
-• Ctrl+B (Cmd+B): Toggle Sidebar
-• Ctrl+J (Cmd+J): Toggle Terminal
-• Ctrl+R (Cmd+R): Toggle AI Chat
-
-Go:
-• Ctrl+P (Cmd+P): Quick Open
-• Ctrl+G (Cmd+G): Go to Line
-• Ctrl+Shift+P (Cmd+Shift+P): Command Palette
-
-For more help: https://github.com/athasdev/athas`;
-
-      await primitiveAlert(helpText, "Help");
+    onDocumentation: async () => {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl("https://athas.dev/docs");
+    },
+    onChangelog: async () => {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl("https://github.com/athasdev/athas/releases");
+    },
+    onWhatsNew: () => {
+      void openWhatsNew();
     },
     onReportBug: async () => {
       try {
@@ -324,18 +296,21 @@ For more help: https://github.com/athasdev/athas`;
         console.error("Failed to prepare bug report:", e);
       }
     },
-    onAboutAthas: async () => {
-      const version = await fetchRawAppVersion();
-      const aboutText = `Athas Code Editor
-Version: ${version}
-Built with: React, TypeScript, Tauri
-License: MIT
-
-A lightweight, fast code editor for developers.
-
-GitHub: https://github.com/athasdev/athas`;
-
-      await primitiveAlert(aboutText, "About Athas");
+    onRequestFeature: async () => {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl("https://github.com/athasdev/athas/issues/new?template=02-feature.yml");
+    },
+    onCheckForUpdates: async () => {
+      const hasUpdate = await checkForUpdates({ ignoreSuppression: true });
+      if (!hasUpdate) {
+        showToast({ message: "You're on the latest version", type: "success" });
+      }
+    },
+    onOpenSettings: () => {
+      uiState.openSettingsDialog("general");
+    },
+    onOpenExtensions: () => {
+      uiState.openSettingsDialog("extensions");
     },
     onToggleMenuBar: async () => {
       try {

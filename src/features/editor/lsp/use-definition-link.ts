@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorUIStore } from "../stores/ui-store";
+import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface Definition {
   uri: string;
@@ -21,6 +22,7 @@ interface UseDefinitionLinkProps {
     line: number,
     character: number,
   ) => Promise<Definition[] | null>;
+  resolveEditorPosition?: EditorCoordinateResolver;
 }
 
 /**
@@ -65,6 +67,7 @@ export const useDefinitionLink = ({
   charWidth,
   isLanguageSupported,
   getDefinition,
+  resolveEditorPosition,
 }: UseDefinitionLinkProps) => {
   const { actions } = useEditorUIStore();
   const isModifierHeldRef = useRef(false);
@@ -95,6 +98,11 @@ export const useDefinitionLink = ({
   // Calculate position from mouse coordinates
   const calculatePosition = useCallback(
     (x: number, y: number, editor: HTMLElement): { line: number; column: number } | null => {
+      const resolvedPosition = resolveEditorPosition?.(x, y);
+      if (resolvedPosition) {
+        return { line: resolvedPosition.line, column: resolvedPosition.column };
+      }
+
       const rect = editor.getBoundingClientRect();
       const relX = x - rect.left;
       const relY = y - rect.top;
@@ -116,7 +124,7 @@ export const useDefinitionLink = ({
 
       return { line, column };
     },
-    [lineHeight, charWidth],
+    [lineHeight, charWidth, resolveEditorPosition],
   );
 
   // Update the definition link based on current mouse position

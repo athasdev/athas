@@ -1,16 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
 import {
   Brain,
   Database,
   Package,
   PaintBrush,
   Plus,
-  Robot,
-  TextT,
   ArrowClockwise as RefreshCw,
+  Robot,
   MagnifyingGlass as Search,
+  TextT,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -27,7 +27,6 @@ import {
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp";
-import { AI_AGENTS, updateAgentStatus } from "@/features/ai/types/providers";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -36,6 +35,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { SegmentedControl } from "@/ui/segmented-control";
+import { PLATFORM_ARCH } from "@/utils/platform";
 
 interface UnifiedExtension {
   id: string;
@@ -53,6 +53,8 @@ interface UnifiedExtension {
   marketplaceSkill?: MarketplaceSkill;
   agentId?: string;
   canInstall?: boolean;
+  packageSize?: number;
+  contributionSummary?: string[];
 }
 
 const FILTER_TABS = [
@@ -67,6 +69,34 @@ const FILTER_TABS = [
 
 type ExtensionTabId = (typeof FILTER_TABS)[number]["id"];
 const FILTER_TAB_IDS = new Set<string>(FILTER_TABS.map((tab) => tab.id));
+
+function isBuiltInDatabaseProvider(providerId: string): boolean {
+  return providerId === "sqlite";
+}
+
+function formatBytes(size?: number): string {
+  if (!size || size <= 0) return "Size unknown";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = size;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function resolvePackageSize(manifest: {
+  installation?: {
+    size?: number;
+    platformArch?: Record<string, { size?: number }>;
+  };
+}): number | undefined {
+  const platformSize = manifest.installation?.platformArch?.[PLATFORM_ARCH]?.size;
+  if (typeof platformSize === "number" && platformSize > 0) return platformSize;
+  const size = manifest.installation?.size;
+  return typeof size === "number" && size > 0 ? size : undefined;
+}
 
 const getCategoryLabel = (category: UnifiedExtension["category"]) => {
   switch (category) {
@@ -108,7 +138,6 @@ const ExtensionRow = ({
 }) => {
   const installLabel = extension.category === "skill" ? "Add" : "Install";
   const uninstallLabel = extension.category === "skill" ? "Remove" : "Uninstall";
-  const isInstalledAgent = extension.category === "agent" && extension.isInstalled;
   const isUnavailableAgent =
     extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
   const extensionLabels =
@@ -156,22 +185,28 @@ const ExtensionRow = ({
               {extensionLabels.length > 5 && ` +${extensionLabels.length - 5}`}
             </span>
           )}
+          {extension.packageSize ? (
+            <>
+              <span>·</span>
+              <span>{formatBytes(extension.packageSize)}</span>
+            </>
+          ) : null}
         </div>
       </div>
       {extension.isBundled ? (
-        <Badge variant="accent" size="compact" className="shrink-0 rounded-full">
-          Built-in
-        </Badge>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="accent" size="compact" className="rounded-full">
+            Built-in
+          </Badge>
+        </div>
       ) : isInstalling ? (
         <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
-      ) : isInstalledAgent ? (
-        <Badge variant="accent" size="compact" className="shrink-0 rounded-full">
-          Installed
-        </Badge>
       ) : isUnavailableAgent ? (
-        <Button disabled variant="secondary" size="xs" className="shrink-0" tooltip="Unavailable">
-          Unavailable
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button disabled variant="secondary" size="xs" tooltip="Unavailable">
+            Unavailable
+          </Button>
+        </div>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
@@ -200,15 +235,11 @@ const ExtensionRow = ({
           </Button>
         </div>
       ) : (
-        <Button
-          onClick={onToggle}
-          variant="default"
-          size="xs"
-          className="shrink-0"
-          tooltip={installLabel}
-        >
-          {installLabel}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button onClick={onToggle} variant="default" size="xs" tooltip={installLabel}>
+            {installLabel}
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -241,12 +272,6 @@ export const ExtensionsSettings = () => {
     try {
       const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
       setAgents(availableAgents);
-      updateAgentStatus(
-        availableAgents.map((agent) => ({
-          id: agent.id,
-          installed: agent.installed,
-        })),
-      );
     } catch (error) {
       console.error("Failed to load ACP agents:", error);
       setAgents([]);
@@ -257,8 +282,34 @@ export const ExtensionsSettings = () => {
 
   const loadAllExtensions = useCallback(() => {
     const allExtensions: UnifiedExtension[] = [];
+    const detectedAgents = new Map(agents.map((agent) => [agent.id, agent]));
 
     for (const [, ext] of availableExtensions) {
+      if (ext.manifest.agents && ext.manifest.agents.length > 0) {
+        const contribution = ext.manifest.agents[0];
+        const agent = detectedAgents.get(contribution.id);
+        allExtensions.push({
+          id: `agent:${contribution.id}`,
+          name: agent?.name ?? contribution.name,
+          description:
+            agent?.description ?? contribution.description ?? "ACP-compatible coding agent",
+          category: "agent",
+          isInstalled: agent?.installed ?? false,
+          version: ext.manifest.version,
+          extensions: [agent?.binaryName ?? contribution.binaryName],
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+          agentId: contribution.id,
+          canInstall: agent?.canInstall ?? Boolean(contribution.install),
+          contributionSummary: [
+            `agent:${contribution.id}`,
+            agent?.binaryName ?? contribution.binaryName,
+          ].filter(Boolean),
+        });
+      }
+
       if (ext.manifest.languages && ext.manifest.languages.length > 0) {
         const lang = ext.manifest.languages[0];
         const isBundled = !ext.manifest.installation;
@@ -274,11 +325,19 @@ export const ExtensionsSettings = () => {
           isMarketplace: !isBundled,
           isBundled,
           runtimeIssues: ext.runtimeIssues,
+          packageSize: resolvePackageSize(ext.manifest),
+          contributionSummary: [
+            ...ext.manifest.languages.map((language) => `language:${language.id}`),
+            ...(ext.manifest.lsp?.name ? [`lsp:${ext.manifest.lsp.name}`] : []),
+            ...(ext.manifest.formatter?.name ? [`formatter:${ext.manifest.formatter.name}`] : []),
+            ...(ext.manifest.linter?.name ? [`linter:${ext.manifest.linter.name}`] : []),
+          ],
         });
       }
 
       if (ext.manifest.databaseProviders && ext.manifest.databaseProviders.length > 0) {
         const provider = ext.manifest.databaseProviders[0];
+        const isBuiltInDatabase = isBuiltInDatabaseProvider(provider.id);
         allExtensions.push({
           id: ext.manifest.id,
           name: ext.manifest.displayName,
@@ -288,9 +347,11 @@ export const ExtensionsSettings = () => {
           version: ext.manifest.version,
           extensions: provider.fileExtensions?.map((item) => item.replace(".", "")),
           publisher: ext.manifest.publisher,
-          isMarketplace: true,
-          isBundled: false,
+          isMarketplace: !isBuiltInDatabase,
+          isBundled: isBuiltInDatabase,
           runtimeIssues: ext.runtimeIssues,
+          packageSize: resolvePackageSize(ext.manifest),
+          contributionSummary: [`database:${provider.id}`],
         });
       }
 
@@ -306,6 +367,8 @@ export const ExtensionsSettings = () => {
           isMarketplace: true,
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
+          packageSize: resolvePackageSize(ext.manifest),
+          contributionSummary: ext.manifest.themes.map((theme) => `theme:${theme.id}`),
         });
       }
 
@@ -321,6 +384,8 @@ export const ExtensionsSettings = () => {
           isMarketplace: true,
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
+          packageSize: resolvePackageSize(ext.manifest),
+          contributionSummary: ext.manifest.iconThemes.map((theme) => `icon-theme:${theme.id}`),
         });
       }
     }
@@ -375,6 +440,7 @@ export const ExtensionsSettings = () => {
         isMarketplace: skill.source === "marketplace",
         skill,
         marketplaceSkill,
+        contributionSummary: ["skill"],
       });
     }
 
@@ -393,29 +459,15 @@ export const ExtensionsSettings = () => {
         publisher: skill.author,
         isMarketplace: true,
         marketplaceSkill: skill,
+        contributionSummary: ["skill"],
       });
     }
 
-    const detectedAgents = new Map(agents.map((agent) => [agent.id, agent]));
-    const agentIds = new Set<string>();
-
-    for (const fallbackAgent of AI_AGENTS) {
-      const agent = detectedAgents.get(fallbackAgent.id);
-      agentIds.add(fallbackAgent.id);
-      allExtensions.push({
-        id: `agent:${fallbackAgent.id}`,
-        name: agent?.name ?? fallbackAgent.name,
-        description: agent?.description ?? fallbackAgent.description,
-        category: "agent",
-        isInstalled: agent?.installed ?? fallbackAgent.installed ?? false,
-        extensions: [agent?.binaryName ?? fallbackAgent.binaryName],
-        publisher: "ACP",
-        isMarketplace: false,
-        agentId: fallbackAgent.id,
-        canInstall: agent?.canInstall ?? true,
-      });
-    }
-
+    const agentIds = new Set(
+      allExtensions
+        .filter((extension) => extension.category === "agent")
+        .map((extension) => extension.agentId ?? extension.id.replace(/^agent:/, "")),
+    );
     for (const agent of agents) {
       if (agentIds.has(agent.id)) {
         continue;
@@ -428,10 +480,11 @@ export const ExtensionsSettings = () => {
         category: "agent",
         isInstalled: agent.installed,
         extensions: [agent.binaryName],
-        publisher: "ACP",
-        isMarketplace: false,
+        publisher: "Marketplace",
+        isMarketplace: true,
         agentId: agent.id,
         canInstall: agent.canInstall,
+        contributionSummary: [`agent:${agent.id}`, agent.binaryName],
       });
     }
 
@@ -440,7 +493,7 @@ export const ExtensionsSettings = () => {
 
   useEffect(() => {
     loadAllExtensions();
-  }, [settings.theme, settings.iconTheme, loadAllExtensions]);
+  }, [loadAllExtensions]);
 
   useEffect(() => {
     void loadAgents();
@@ -530,11 +583,7 @@ export const ExtensionsSettings = () => {
 
   const handleToggle = async (extension: UnifiedExtension) => {
     if (extension.category === "agent") {
-      if (extension.isInstalled) {
-        return;
-      }
-
-      if (extension.canInstall === false) {
+      if (!extension.isInstalled && extension.canInstall === false) {
         showToast({
           message: `${extension.name} cannot be installed automatically`,
           type: "error",
@@ -547,23 +596,38 @@ export const ExtensionsSettings = () => {
       setInstallingAgentIds((current) => new Set(current).add(agentId));
 
       try {
-        const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
+        const installedAgent = await invoke<AgentConfig>(
+          extension.isInstalled ? "uninstall_acp_agent" : "install_acp_agent",
+          { agentId },
+        );
         setAgents((current) => {
           const next = new Map(current.map((agent) => [agent.id, agent]));
           next.set(installedAgent.id, installedAgent);
           return Array.from(next.values());
         });
-        updateAgentStatus([{ id: installedAgent.id, installed: installedAgent.installed }]);
         void loadAgents();
+        const managedUninstallLeftGlobalBinary = extension.isInstalled && installedAgent.installed;
         showToast({
-          message: `${extension.name} installed successfully`,
-          type: "success",
-          duration: 3000,
+          message: extension.isInstalled
+            ? managedUninstallLeftGlobalBinary
+              ? `${extension.name} managed install removed`
+              : `${extension.name} uninstalled successfully`
+            : `${extension.name} installed successfully`,
+          description: managedUninstallLeftGlobalBinary
+            ? "A global installation is still detected on your PATH."
+            : undefined,
+          type: managedUninstallLeftGlobalBinary ? "info" : "success",
+          duration: managedUninstallLeftGlobalBinary ? 5000 : 3000,
         });
       } catch (error) {
-        console.error(`Failed to install ${extension.name}:`, error);
+        console.error(
+          `Failed to ${extension.isInstalled ? "uninstall" : "install"} ${extension.name}:`,
+          error,
+        );
         showToast({
-          message: `Failed to install ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          message: `Failed to ${extension.isInstalled ? "uninstall" : "install"} ${extension.name}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
           type: "error",
           duration: 5000,
         });
@@ -685,6 +749,21 @@ export const ExtensionsSettings = () => {
     return matchesSearch && matchesTab;
   });
 
+  const isExtensionInstalling = (extension: UnifiedExtension) =>
+    Boolean(
+      availableExtensions.get(extension.id)?.isInstalling ||
+      (extension.category === "agent" &&
+        installingAgentIds.has(extension.agentId ?? extension.id.replace(/^agent:/, ""))),
+    );
+
+  const hasExtensionUpdate = (extension: UnifiedExtension) =>
+    extensionsWithUpdates.has(extension.id) ||
+    Boolean(
+      extension.skill &&
+      extension.marketplaceSkill &&
+      hasMarketplaceSkillUpdate(extension.skill, extension.marketplaceSkill),
+    );
+
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3">
@@ -749,47 +828,40 @@ export const ExtensionsSettings = () => {
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-auto pr-1.5">
-        {filteredExtensions.length === 0 ? (
-          <div className="py-8 text-center text-text-lighter">
-            <Package className="mx-auto mb-1.5 opacity-50" />
-            <p className="ui-font ui-text-sm">No extensions found matching your search.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredExtensions.map((extension) => {
-              const extensionFromStore = availableExtensions.get(extension.id);
-              const isInstalling =
-                extensionFromStore?.isInstalling ||
-                (extension.category === "agent" &&
-                  installingAgentIds.has(extension.agentId ?? extension.id.replace(/^agent:/, "")));
-              const hasSkillUpdate = Boolean(
-                extension.skill &&
-                extension.marketplaceSkill &&
-                hasMarketplaceSkillUpdate(extension.skill, extension.marketplaceSkill),
-              );
-              const hasUpdate = extensionsWithUpdates.has(extension.id) || hasSkillUpdate;
-              const hasLocalOverride = extension.skill
-                ? hasSkillLocalOverride(extension.skill)
-                : false;
-              const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+        <div className="min-h-0 flex-1 overflow-auto pr-1.5">
+          {filteredExtensions.length === 0 ? (
+            <div className="py-8 text-center text-text-lighter">
+              <Package className="mx-auto mb-1.5 opacity-50" />
+              <p className="ui-font ui-text-sm">No extensions found matching your search.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredExtensions.map((extension) => {
+                const isInstalling = isExtensionInstalling(extension);
+                const hasUpdate = hasExtensionUpdate(extension);
+                const hasLocalOverride = extension.skill
+                  ? hasSkillLocalOverride(extension.skill)
+                  : false;
+                const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
 
-              return (
-                <ExtensionRow
-                  key={extension.id}
-                  extension={extension}
-                  onToggle={() => handleToggle(extension)}
-                  onResetOverride={() => handleResetSkillOverride(extension)}
-                  onUpdate={() => handleUpdate(extension)}
-                  isInstalling={isInstalling}
-                  hasUpdate={hasUpdate}
-                  hasLocalOverride={hasLocalOverride}
-                  hasRuntimeIssue={hasRuntimeIssue}
-                />
-              );
-            })}
-          </div>
-        )}
+                return (
+                  <ExtensionRow
+                    key={extension.id}
+                    extension={extension}
+                    onToggle={() => handleToggle(extension)}
+                    onResetOverride={() => handleResetSkillOverride(extension)}
+                    onUpdate={() => handleUpdate(extension)}
+                    isInstalling={isInstalling}
+                    hasUpdate={hasUpdate}
+                    hasLocalOverride={hasLocalOverride}
+                    hasRuntimeIssue={hasRuntimeIssue}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       <SkillsCommand

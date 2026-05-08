@@ -279,6 +279,7 @@ export const defaultKeymaps: Keybinding[] = [
 
   // Additional view commands
   { key: "cmd+p", command: "file.quickOpen", source: "default" },
+  { key: "cmd+shift+o", command: "editor.showOutline", source: "default" },
   {
     key: "cmd+shift+p",
     command: "workbench.commandPalette",

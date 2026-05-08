@@ -100,7 +100,11 @@ class WasmParserLoader {
           return updatedParser;
         } catch (error) {
           // Try to fetch local highlight query as fallback before surfacing an error.
-          const localQuery = await this.fetchHighlightQueryText(languageId, config.wasmPath);
+          const localQuery = await this.fetchHighlightQueryText(
+            languageId,
+            config.wasmPath,
+            config.highlightQueryUrl,
+          );
           if (localQuery) {
             try {
               const { query, queryText: compiledQueryText } = this.compileHighlightQuery(
@@ -181,9 +185,11 @@ class WasmParserLoader {
   private async fetchHighlightQueryText(
     languageId: string,
     wasmPath?: string,
+    queryUrl?: string,
   ): Promise<string | null> {
     const { query, sourceUrl } = await fetchHighlightQuery(languageId, {
       wasmUrl: wasmPath,
+      queryUrl,
       cacheMode: "no-store",
     });
     if (!query) {
@@ -503,8 +509,42 @@ class WasmParserLoader {
     return -1;
   }
 
+  private async readCachedParser(
+    languageId: string,
+  ): Promise<{ wasmBytes: Uint8Array; queryText?: string } | null> {
+    const cached = await indexedDBParserCache.get(languageId);
+    if (!cached) return null;
+
+    let wasmBytes: Uint8Array;
+    if (cached.wasmData) {
+      wasmBytes = new Uint8Array(cached.wasmData);
+      logger.debug("WasmParser", `Using cached ArrayBuffer for ${languageId}`);
+    } else if (cached.wasmBlob) {
+      try {
+        const arrayBuffer = await cached.wasmBlob.arrayBuffer();
+        wasmBytes = new Uint8Array(arrayBuffer);
+        logger.debug("WasmParser", `Using cached Blob for ${languageId}`);
+      } catch (blobError) {
+        logger.error(
+          "WasmParser",
+          `Failed to read cached Blob for ${languageId}, clearing cache entry`,
+          blobError,
+        );
+        await indexedDBParserCache.delete(languageId);
+        throw new Error(`Cached parser corrupted, please reinstall ${languageId}`);
+      }
+    } else {
+      throw new Error(`Cache entry for ${languageId} has no WASM data`);
+    }
+
+    return {
+      wasmBytes,
+      queryText: cached.highlightQuery?.trim() ? cached.highlightQuery : undefined,
+    };
+  }
+
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
-    const { languageId, wasmPath, highlightQuery } = config;
+    const { languageId, wasmPath, highlightQuery, highlightQueryUrl } = config;
 
     try {
       // Ensure Tree-sitter is initialized
@@ -517,42 +557,19 @@ class WasmParserLoader {
       const isLocalParser = wasmPath.startsWith("/tree-sitter/");
 
       // Try to load from IndexedDB cache first (skip for local parsers)
-      const cached = isLocalParser ? null : await indexedDBParserCache.get(languageId);
+      const cached = isLocalParser ? null : await this.readCachedParser(languageId);
 
       let wasmBytes: Uint8Array;
       let queryText = highlightQuery;
 
       if (cached) {
         logger.debug("WasmParser", `Loading ${languageId} from IndexedDB cache`);
-
-        // Prefer ArrayBuffer over Blob (ArrayBuffer avoids WebKit blob issues)
-        if (cached.wasmData) {
-          wasmBytes = new Uint8Array(cached.wasmData);
-          logger.debug("WasmParser", `Using cached ArrayBuffer for ${languageId}`);
-        } else if (cached.wasmBlob) {
-          // Fallback to Blob for legacy entries
-          try {
-            const arrayBuffer = await cached.wasmBlob.arrayBuffer();
-            wasmBytes = new Uint8Array(arrayBuffer);
-            logger.debug("WasmParser", `Using cached Blob for ${languageId}`);
-          } catch (blobError) {
-            logger.error(
-              "WasmParser",
-              `Failed to read cached Blob for ${languageId}, will re-download`,
-              blobError,
-            );
-            // Delete corrupted cache entry and re-download
-            await indexedDBParserCache.delete(languageId);
-            throw new Error(`Cached parser corrupted, please reinstall ${languageId}`);
-          }
-        } else {
-          throw new Error(`Cache entry for ${languageId} has no WASM data`);
-        }
+        wasmBytes = cached.wasmBytes;
 
         // Use cached highlight query if available and not empty
         // Prefer cached query over passed parameter if cached is non-empty
-        if (cached.highlightQuery && cached.highlightQuery.trim().length > 0) {
-          queryText = cached.highlightQuery;
+        if (cached.queryText) {
+          queryText = cached.queryText;
           logger.debug("WasmParser", `Using cached highlight query for ${languageId}`);
         } else if (!queryText) {
           logger.warn(
@@ -602,18 +619,33 @@ class WasmParserLoader {
           // Load from local path
           logger.debug("WasmParser", `Loading ${languageId} from local path: ${wasmPath}`);
 
-          const response = await fetch(wasmPath);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
+          try {
+            const response = await fetch(wasmPath);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-          const arrayBuffer = await response.arrayBuffer();
-          wasmBytes = new Uint8Array(arrayBuffer);
-          this.ensureValidWasmBytes(languageId, wasmPath, wasmBytes);
+            const arrayBuffer = await response.arrayBuffer();
+            wasmBytes = new Uint8Array(arrayBuffer);
+            this.ensureValidWasmBytes(languageId, wasmPath, wasmBytes);
+          } catch (localError) {
+            const cachedFallback = await this.readCachedParser(languageId);
+            if (!cachedFallback) {
+              throw localError;
+            }
+
+            logger.debug("WasmParser", `Falling back to installed parser cache for ${languageId}`);
+            wasmBytes = cachedFallback.wasmBytes;
+            queryText = cachedFallback.queryText || queryText;
+          }
 
           // Also fetch highlight query from local path if not provided
           if (!queryText) {
-            const localQuery = await this.fetchHighlightQueryText(languageId, wasmPath);
+            const localQuery = await this.fetchHighlightQueryText(
+              languageId,
+              wasmPath,
+              highlightQueryUrl,
+            );
             if (localQuery) {
               queryText = localQuery;
               logger.debug("WasmParser", `Loaded highlight query for ${languageId}`);
@@ -673,7 +705,11 @@ class WasmParserLoader {
         } catch (error) {
           logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
           // Try to fetch local highlight query as fallback
-          const localQuery = await this.fetchHighlightQueryText(languageId, wasmPath);
+          const localQuery = await this.fetchHighlightQueryText(
+            languageId,
+            wasmPath,
+            highlightQueryUrl,
+          );
           if (localQuery && localQuery !== queryText) {
             try {
               const compiled = this.compileHighlightQuery(language, languageId, localQuery);

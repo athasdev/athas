@@ -1,4 +1,5 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { providerFetch } from "@/features/ai/services/providers/provider-fetch";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { getApiBase } from "@/utils/api-base";
@@ -401,7 +402,7 @@ async function requestCustomAutocompleteNonStreaming(
 }
 
 export async function fetchAutocompleteModels(): Promise<AutocompleteModel[]> {
-  const response = await tauriFetch(`${API_BASE}/api/ai/autocomplete/models`, {
+  const response = await providerFetch(`${API_BASE}/api/ai/autocomplete/models`, {
     method: "GET",
   });
 
@@ -412,7 +413,7 @@ export async function fetchAutocompleteModels(): Promise<AutocompleteModel[]> {
 
   // Fallback: if backend endpoint fails,
   // load public OpenRouter model metadata directly.
-  const openRouterResponse = await tauriFetch("https://openrouter.ai/api/v1/models", {
+  const openRouterResponse = await providerFetch("https://openrouter.ai/api/v1/models", {
     method: "GET",
   });
 

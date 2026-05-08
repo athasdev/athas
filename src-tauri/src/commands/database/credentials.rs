@@ -91,7 +91,7 @@ pub async fn delete_saved_connection(
    Ok(())
 }
 
-fn get_saved_connections_internal(
+pub(super) fn get_saved_connections_internal(
    app: &crate::app_runtime::AppHandle,
 ) -> Result<Vec<SavedConnection>, String> {
    match secure_storage::get_secret(app, DB_CONNECTIONS_KEY)? {
@@ -99,4 +99,12 @@ fn get_saved_connections_internal(
          .map_err(|e| format!("Failed to parse saved connections: {}", e)),
       None => Ok(Vec::new()),
    }
+}
+
+pub(super) fn get_db_credential_internal(
+   app: &crate::app_runtime::AppHandle,
+   connection_id: &str,
+) -> Result<Option<String>, String> {
+   let key = format!("{}{}", DB_CRED_PREFIX, connection_id);
+   secure_storage::get_secret(app, &key)
 }

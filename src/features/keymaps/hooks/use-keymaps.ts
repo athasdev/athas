@@ -16,51 +16,14 @@ import { useKeymapStore } from "../stores/store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
+import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
 import { parseKeybinding } from "../utils/parser";
 import type { ParsedKey } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
 
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
-const NATIVE_MENU_ACCELERATORS = [
-  "cmd+shift+n",
-  "cmd+o",
-  "cmd+s",
-  "cmd+shift+s",
-  "cmd+w",
-  "cmd+q",
-  "cmd+f",
-  "cmd+alt+f",
-  "cmd+/",
-  "cmd+shift+p",
-  "cmd+b",
-  "cmd+j",
-  "cmd+r",
-  "alt+m",
-  "cmd+p",
-  "cmd+g",
-  "cmd+alt+right",
-  "cmd+alt+left",
-  "cmd+m",
-  "alt+f9",
-  "alt+f10",
-  "cmd+alt+z",
-  "f11",
-  "cmd+ctrl+f",
-] as const;
-
-const parsedNativeMenuAccelerators = NATIVE_MENU_ACCELERATORS.map((shortcut) =>
-  parseKeybinding(shortcut),
-);
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
-
-function isNativeMenuAccelerator(event: KeyboardEvent) {
-  const eventKey = eventToKey(event);
-  return parsedNativeMenuAccelerators.some((shortcut) => {
-    if (shortcut.isChord) return false;
-    return keysMatch(eventKey, shortcut.parts[0]);
-  });
-}
 
 function isCloseTabShortcut(event: KeyboardEvent) {
   return keysMatch(eventToKey(event), closeTabShortcut);

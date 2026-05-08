@@ -7,6 +7,8 @@ import { QuickQuestionCommandContent } from "@/features/ai/components/quick-ques
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
+import { OutlineCommandContent } from "@/features/outline/components/outline-command";
 import { commitChanges } from "@/features/git/api/git-commits-api";
 import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/git-remotes-api";
 import {
@@ -68,6 +70,7 @@ const CommandPalette = () => {
     setIsFindVisible,
     setActiveView,
     setIsQuickOpenVisible,
+    openCommandPaletteView,
     setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
@@ -195,6 +198,7 @@ const CommandPalette = () => {
       setIsSidebarVisible,
       setActiveView,
       setIsQuickOpenVisible,
+      openCommandPaletteView,
       openSettingsDialog,
       onClose,
     }),
@@ -386,6 +390,21 @@ const CommandPalette = () => {
           onClose={onClose}
           onThemeChange={handleIconThemeChange}
           currentTheme={settings.iconTheme}
+        />
+      ) : currentView === "local-history" ? (
+        <LocalHistoryCommandContent
+          isActive={currentView === "local-history"}
+          activeFilePath={
+            activeBuffer?.type === "editor" && !activeBuffer.isVirtual ? activeBuffer.path : null
+          }
+          onBack={popView}
+          onClose={onClose}
+        />
+      ) : currentView === "outline" ? (
+        <OutlineCommandContent
+          isActive={currentView === "outline"}
+          onBack={popView}
+          onClose={onClose}
         />
       ) : (
         <>

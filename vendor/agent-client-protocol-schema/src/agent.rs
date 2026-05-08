@@ -1042,6 +1042,77 @@ impl ListSessionsRequest {
     }
 }
 
+/// Request parameters for closing an active session.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CloseSessionRequest {
+    /// The ID of the session to close.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CloseSessionRequest {
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Response to `session/close`.
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CloseSessionResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CloseSessionResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// **UNSTABLE**
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1589,6 +1660,9 @@ pub struct SessionConfigOption {
     /// Optional description for the Client to display to the user.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Optional semantic category for Client UX placement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
     /// Type-specific fields for this configuration option.
     #[serde(flatten)]
     pub kind: SessionConfigKind,
@@ -1613,6 +1687,7 @@ impl SessionConfigOption {
             id: id.into(),
             name: name.into(),
             description: None,
+            category: None,
             kind,
             meta: None,
         }
@@ -1635,6 +1710,13 @@ impl SessionConfigOption {
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
+        self
+    }
+
+    /// Optional semantic category for Client UX placement.
+    #[must_use]
+    pub fn category(mut self, category: impl IntoOption<String>) -> Self {
+        self.category = category.into_option();
         self
     }
 
@@ -2452,6 +2534,9 @@ pub struct SessionCapabilities {
     #[cfg(feature = "unstable_session_resume")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resume: Option<SessionResumeCapabilities>,
+    /// Whether the agent supports `session/close`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2488,6 +2573,13 @@ impl SessionCapabilities {
     #[must_use]
     pub fn resume(mut self, resume: impl IntoOption<SessionResumeCapabilities>) -> Self {
         self.resume = resume.into_option();
+        self
+    }
+
+    /// Whether the agent supports `session/close`.
+    #[must_use]
+    pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
+        self.close = close.into_option();
         self
     }
 
@@ -2600,6 +2692,39 @@ pub struct SessionResumeCapabilities {
 
 #[cfg(feature = "unstable_session_resume")]
 impl SessionResumeCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for the `session/close` method.
+///
+/// By supplying `{}` it means that the agent supports closing active sessions.
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionCloseCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SessionCloseCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2785,6 +2910,8 @@ pub struct AgentMethodNames {
     /// Method for resuming an existing session.
     #[cfg(feature = "unstable_session_resume")]
     pub session_resume: &'static str,
+    /// Method for closing an active session.
+    pub session_close: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -2806,6 +2933,7 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     #[cfg(feature = "unstable_session_resume")]
     session_resume: SESSION_RESUME_METHOD_NAME,
+    session_close: SESSION_CLOSE_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -2837,6 +2965,8 @@ pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 /// Method name for resuming an existing session.
 #[cfg(feature = "unstable_session_resume")]
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
+/// Method name for closing an active session.
+pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -2930,6 +3060,8 @@ pub enum ClientRequest {
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
     ResumeSessionRequest(ResumeSessionRequest),
+    /// Closes an active session and frees resources associated with it.
+    CloseSessionRequest(CloseSessionRequest),
     /// Sets the current mode for a session.
     ///
     /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
@@ -2994,6 +3126,7 @@ impl ClientRequest {
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             #[cfg(feature = "unstable_session_resume")]
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
+            Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             #[cfg(feature = "unstable_session_config_options")]
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
@@ -3026,6 +3159,7 @@ pub enum AgentResponse {
     ForkSessionResponse(ForkSessionResponse),
     #[cfg(feature = "unstable_session_resume")]
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
+    CloseSessionResponse(#[serde(default)] CloseSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     #[cfg(feature = "unstable_session_config_options")]
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),

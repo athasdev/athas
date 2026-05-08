@@ -4,6 +4,7 @@ import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useFontStore } from "@/features/settings/stores/font-store";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import { COMMON_TERMINAL_NERD_FONTS } from "@/features/terminal/utils/terminal-fonts";
 import {
   DEFAULT_SHELL_OPTION_VALUE,
   SYSTEM_DEFAULT_PROFILE_ID,
@@ -17,13 +18,6 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
-
-const NERD_FONTS = [
-  "MesloLGS NF",
-  "MesloLGS Nerd Font",
-  "FiraCode Nerd Font",
-  "JetBrainsMono Nerd Font",
-];
 
 const FONT_HELP_TEXT =
   "Note: Selected font must be installed on your system to work correctly. If icons are missing, try installing a Nerd Font.";
@@ -44,7 +38,7 @@ export const TerminalSettings = () => {
 
   // Combine Nerd Fonts with system monospace fonts
   // Only include Nerd Fonts if they are actually installed on the system
-  const installedNerdFonts = NERD_FONTS.filter((nerdFont) =>
+  const installedNerdFonts = COMMON_TERMINAL_NERD_FONTS.filter((nerdFont) =>
     monospaceFonts.some((sysFont) => sysFont.family === nerdFont),
   );
 
@@ -54,7 +48,7 @@ export const TerminalSettings = () => {
       label: `${font} (Nerd Font)`,
     })),
     ...monospaceFonts
-      .filter((f) => !NERD_FONTS.includes(f.family))
+      .filter((f) => !COMMON_TERMINAL_NERD_FONTS.includes(f.family))
       .map((f) => ({ value: f.family, label: f.family })),
   ];
 

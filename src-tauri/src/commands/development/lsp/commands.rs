@@ -4,8 +4,9 @@ use super::{
       symbol_kind_label,
    },
    types::{
-      FlatCodeLens, FlatInlayHint, FlatSemanticToken, FlatSymbol, LspApplyCodeActionResult,
-      LspCodeActionItem, LspDiagnosticContext,
+      FlatCodeLens, FlatInlayHint, FlatSemanticToken, FlatSymbol, FlatTextEdit,
+      FlatTextEditPosition, FlatTextEditRange, LspApplyCodeActionResult, LspCodeActionItem,
+      LspDiagnosticContext,
    },
 };
 use athas_lsp::{LspError, LspManager, LspResult};
@@ -296,6 +297,35 @@ pub async fn lsp_get_code_lens(
 }
 
 #[tauri::command]
+pub async fn lsp_format_document(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+) -> LspResult<Vec<FlatTextEdit>> {
+   let response = lsp_manager.format_document(&file_path).await.map_err(|e| {
+      log::error!("Failed to format document with LSP: {}", e);
+      LspError::from(e)
+   })?;
+
+   Ok(response
+      .unwrap_or_default()
+      .into_iter()
+      .map(|edit| FlatTextEdit {
+         range: FlatTextEditRange {
+            start: FlatTextEditPosition {
+               line: edit.range.start.line,
+               character: edit.range.start.character,
+            },
+            end: FlatTextEditPosition {
+               line: edit.range.end.line,
+               character: edit.range.end.character,
+            },
+         },
+         new_text: edit.new_text,
+      })
+      .collect())
+}
+
+#[tauri::command]
 pub async fn lsp_get_inlay_hints(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
@@ -342,6 +372,7 @@ pub async fn lsp_get_document_symbols(
             end_line: info.location.range.end.line,
             end_character: info.location.range.end.character,
             container_name: info.container_name,
+            hierarchy_path: Vec::new(),
          })
          .collect(),
       Some(DocumentSymbolResponse::Nested(doc_symbols)) => {
@@ -447,6 +478,17 @@ pub fn lsp_document_change(
 ) -> LspResult<()> {
    lsp_manager
       .notify_document_change(&file_path, content, version)
+      .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn lsp_document_save(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   content: Option<String>,
+) -> LspResult<()> {
+   lsp_manager
+      .notify_document_save(&file_path, content)
       .map_err(Into::into)
 }
 

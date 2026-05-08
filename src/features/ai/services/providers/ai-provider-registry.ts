@@ -4,6 +4,7 @@ import { GrokProvider } from "./grok-provider";
 import { MistralProvider } from "./mistral-provider";
 import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
+import { OpenAICompatibleProvider } from "./openai-compatible-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import { V0Provider } from "./v0-provider";
 import type { AIProvider, ProviderConfig } from "./ai-provider-interface";
@@ -74,6 +75,33 @@ function initializeProviders(): void {
   };
   providers.set("mistral", new MistralProvider(mistralConfig));
 
+  const deepSeekConfig: ProviderConfig = {
+    id: "deepseek",
+    name: "DeepSeek",
+    apiUrl: "https://api.deepseek.com/chat/completions",
+    requiresApiKey: true,
+    maxTokens: 128000,
+  };
+  providers.set("deepseek", new OpenAICompatibleProvider(deepSeekConfig));
+
+  const qwenConfig: ProviderConfig = {
+    id: "qwen",
+    name: "Qwen",
+    apiUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    requiresApiKey: true,
+    maxTokens: 1000000,
+  };
+  providers.set("qwen", new OpenAICompatibleProvider(qwenConfig));
+
+  const customConfig: ProviderConfig = {
+    id: "custom",
+    name: "Custom",
+    apiUrl: "",
+    requiresApiKey: false,
+    maxTokens: 4096,
+  };
+  providers.set("custom", new OpenAICompatibleProvider(customConfig));
+
   const ollamaConfig: ProviderConfig = {
     id: "ollama",
     name: "Ollama",
@@ -105,4 +133,16 @@ export function setOllamaBaseUrl(baseUrl: string): void {
 
 export function setOllamaApiKey(apiKey: string | null): void {
   getOllamaProvider()?.setApiKey(apiKey);
+}
+
+function getCustomProvider(): OpenAICompatibleProvider | undefined {
+  if (providers.size === 0) {
+    initializeProviders();
+  }
+  const custom = providers.get("custom");
+  return custom instanceof OpenAICompatibleProvider ? custom : undefined;
+}
+
+export function setCustomProviderBaseUrl(baseUrl: string): void {
+  getCustomProvider()?.setBaseUrl(baseUrl);
 }

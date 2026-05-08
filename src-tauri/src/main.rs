@@ -57,6 +57,11 @@ fn main() {
          move_file,
          rename_file,
          get_symlink_info,
+         local_history_record_file,
+         local_history_list_file,
+         local_history_read_entry,
+         local_history_delete_entry,
+         local_history_rename_entry,
          // Clipboard commands
          clipboard_set,
          clipboard_get,
@@ -186,6 +191,7 @@ fn main() {
          // ACP agent commands (new)
          get_available_agents,
          install_acp_agent,
+         uninstall_acp_agent,
          start_acp_agent,
          stop_acp_agent,
          send_acp_prompt,
@@ -231,6 +237,7 @@ fn main() {
          lsp_get_definition,
          lsp_get_semantic_tokens,
          lsp_get_code_lens,
+         lsp_format_document,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
@@ -242,6 +249,7 @@ fn main() {
          lsp_apply_code_action,
          lsp_document_open,
          lsp_document_change,
+         lsp_document_save,
          lsp_document_close,
          lsp_is_language_supported,
          // Debugger commands

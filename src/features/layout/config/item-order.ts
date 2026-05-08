@@ -8,6 +8,7 @@ export const HEADER_TRAILING_ITEM_IDS = [
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
   "search",
+  "collaboration",
   "multi-agents",
   "sidebar-builder",
   "git",
@@ -16,6 +17,7 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
 ] as const;
 export const FOOTER_LEADING_ITEM_IDS = [
   "branch",
+  "collaboration",
   "terminal",
   "diagnostics",
   "extensions",

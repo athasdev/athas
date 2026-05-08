@@ -6,7 +6,7 @@ import ChatHistoryDropdown from "@/features/ai/components/history/sidebar";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpSessionInfo } from "@/features/ai/types/acp";
-import { AGENT_OPTIONS, type AgentType, type Chat } from "@/features/ai/types/ai-chat";
+import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
@@ -199,11 +199,9 @@ export function MultiAgentsSidebarView() {
     if (!query) return sidebarChats;
 
     return sidebarChats.filter((chat) => {
-      const agentInfo = AGENT_OPTIONS.find((agent) => agent.id === chat.agentId);
       return (
         getDisplayTitle(chat.title).toLowerCase().includes(query) ||
-        chat.agentId.toLowerCase().includes(query) ||
-        agentInfo?.name.toLowerCase().includes(query)
+        chat.agentId.toLowerCase().includes(query)
       );
     });
   }, [deferredSearchQuery, sidebarChats]);
@@ -267,8 +265,7 @@ export function MultiAgentsSidebarView() {
       registerActiveAgentChat(chatId);
       openAgentBuffer(chatId);
 
-      const agentInfo = AGENT_OPTIONS.find((agent) => agent.id === agentId);
-      if (agentInfo?.isAcp) {
+      if (agentId !== "custom") {
         void AcpStreamHandler.warmup(agentId, chatId).catch((error) => {
           console.error(`Failed to prepare ${agentId} session:`, error);
         });
@@ -309,7 +306,6 @@ export function MultiAgentsSidebarView() {
     const agent = agentContextMenu.data;
     if (!agent) return [];
 
-    const agentInfo = AGENT_OPTIONS.find((item) => item.id === agent.agentId);
     const selected = currentChatId === agent.chatId;
     const isUntitled = agent.remoteOnly || !agent.title || agent.title === "New Chat";
     const pinned = pinnedChatIds.has(agent.chatId);
@@ -323,7 +319,7 @@ export function MultiAgentsSidebarView() {
       },
       {
         id: "new-chat",
-        label: `New ${agentInfo?.name ?? "Agent"} Chat`,
+        label: "New Agent Chat",
         onClick: () => createAgentChat(agent.agentId),
       },
       {

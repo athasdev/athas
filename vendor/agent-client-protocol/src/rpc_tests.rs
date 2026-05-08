@@ -136,6 +136,7 @@ struct TestAgent {
     sessions: Arc<Mutex<std::collections::HashMap<SessionId, std::path::PathBuf>>>,
     prompts_received: Arc<Mutex<Vec<PromptReceived>>>,
     cancellations_received: Arc<Mutex<Vec<SessionId>>>,
+    closed_sessions: Arc<Mutex<Vec<SessionId>>>,
     extension_notifications: Arc<Mutex<Vec<(String, ExtNotification)>>>,
 }
 
@@ -147,6 +148,7 @@ impl TestAgent {
             sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
             prompts_received: Arc::new(Mutex::new(Vec::new())),
             cancellations_received: Arc::new(Mutex::new(Vec::new())),
+            closed_sessions: Arc::new(Mutex::new(Vec::new())),
             extension_notifications: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -197,6 +199,18 @@ impl Agent for TestAgent {
             .unwrap()
             .push(args.session_id);
         Ok(())
+    }
+
+    async fn close_session(
+        &self,
+        args: agent_client_protocol_schema::CloseSessionRequest,
+    ) -> Result<agent_client_protocol_schema::CloseSessionResponse> {
+        self.closed_sessions
+            .lock()
+            .unwrap()
+            .push(args.session_id.clone());
+        self.sessions.lock().unwrap().remove(&args.session_id);
+        Ok(agent_client_protocol_schema::CloseSessionResponse::new())
     }
 
     #[cfg(feature = "unstable_session_model")]
@@ -844,6 +858,38 @@ async fn test_resume_session() {
         .await;
 }
 
+#[tokio::test]
+async fn test_close_session() {
+    let local_set = tokio::task::LocalSet::new();
+    local_set
+        .run_until(async {
+            let client = TestClient::new();
+            let agent = TestAgent::new();
+
+            let (agent_conn, _client_conn) = create_connection_pair(&client, &agent);
+
+            let new_session_response = agent_conn
+                .new_session(NewSessionRequest::new("/test"))
+                .await
+                .expect("new_session failed");
+            let session_id = new_session_response.session_id;
+
+            agent_conn
+                .close_session(agent_client_protocol_schema::CloseSessionRequest::new(
+                    session_id.clone(),
+                ))
+                .await
+                .expect("close_session failed");
+
+            assert_eq!(
+                agent.closed_sessions.lock().unwrap().as_slice(),
+                &[session_id.clone()]
+            );
+            assert!(!agent.sessions.lock().unwrap().contains_key(&session_id));
+        })
+        .await;
+}
+
 #[cfg(feature = "unstable_session_info_update")]
 #[tokio::test]
 async fn test_session_info_update() {
@@ -926,6 +972,24 @@ async fn test_set_session_config_option() {
                 response.config_options[0].id,
                 agent_client_protocol_schema::SessionConfigId::new("mode")
             );
+            assert!(response.config_options[0].category.is_none());
         })
         .await;
+}
+
+#[cfg(feature = "unstable_session_config_options")]
+#[test]
+fn test_session_config_option_category_serialization() {
+    let option = agent_client_protocol_schema::SessionConfigOption::select(
+        "model",
+        "Model",
+        "fast",
+        vec![agent_client_protocol_schema::SessionConfigSelectOption::new(
+            "fast", "Fast",
+        )],
+    )
+    .category("model");
+
+    let value = serde_json::to_value(&option).expect("serialize config option");
+    assert_eq!(value["category"], "model");
 }

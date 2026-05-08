@@ -45,6 +45,7 @@ pub struct FlatSymbol {
    pub end_line: u32,
    pub end_character: u32,
    pub container_name: Option<String>,
+   pub hierarchy_path: Vec<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,4 +76,25 @@ pub struct FlatCodeLens {
    pub title: String,
    pub command: Option<String>,
    pub arguments: Option<Vec<Value>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatTextEditPosition {
+   pub line: u32,
+   pub character: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatTextEditRange {
+   pub start: FlatTextEditPosition,
+   pub end: FlatTextEditPosition,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatTextEdit {
+   pub range: FlatTextEditRange,
+   pub new_text: String,
 }

@@ -1,1 +1,7 @@
-export type CommandPaletteViewId = "root" | "quick-question" | "color-theme" | "icon-theme";
+export type CommandPaletteViewId =
+  | "root"
+  | "quick-question"
+  | "color-theme"
+  | "icon-theme"
+  | "local-history"
+  | "outline";

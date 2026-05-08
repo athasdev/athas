@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitDiff } from "../types/git-types";
 import { isDiffFile, parseRawDiffContent } from "../utils/git-diff-parser";
+import { getDiffLineVisualState } from "../utils/git-diff-helpers";
 
 function isMultiFileDiff(value: GitDiff | MultiFileDiff): value is MultiFileDiff {
   return "files" in value;
@@ -74,5 +75,23 @@ describe("git diff parser", () => {
     expect(multiDiff.totalFiles).toBe(2);
     expect(multiDiff.totalAdditions).toBe(2);
     expect(multiDiff.totalDeletions).toBe(2);
+  });
+
+  test("maps diff line types to shared visual state", () => {
+    expect(getDiffLineVisualState("added")).toEqual({
+      lineBackground: "bg-git-added/15",
+      gutterBackground: "bg-git-added/25",
+      contentColor: "text-git-added",
+    });
+    expect(getDiffLineVisualState("removed")).toEqual({
+      lineBackground: "bg-git-deleted/15",
+      gutterBackground: "bg-git-deleted/25",
+      contentColor: "text-git-deleted",
+    });
+    expect(getDiffLineVisualState("header")).toEqual({
+      lineBackground: "",
+      gutterBackground: "bg-primary-bg",
+      contentColor: "text-text",
+    });
   });
 });

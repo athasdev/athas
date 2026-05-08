@@ -1,5 +1,6 @@
 pub mod connection_manager;
 pub mod providers;
+pub mod sidecar;
 pub mod sql_common;
 
 pub use connection_manager::{

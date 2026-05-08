@@ -1,4 +1,5 @@
-import { FilePlus } from "@phosphor-icons/react";
+import { ClockCounterClockwise, FilePlus } from "@phosphor-icons/react";
+import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { createTabActions } from "@/features/tabs/constants/tab-actions";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import type { Action } from "../models/action.types";
@@ -28,6 +29,18 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       action: () => {
         onClose();
         window.dispatchEvent(new CustomEvent("menu-save-as"));
+      },
+    },
+    {
+      id: "file-local-history",
+      label: "File: Show Local History",
+      description: "Open the selected file timeline",
+      icon: <ClockCounterClockwise />,
+      category: "File",
+      commandId: "file.localHistory",
+      action: () => {
+        onClose();
+        openLocalHistoryForActiveFile();
       },
     },
   ];

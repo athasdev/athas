@@ -129,6 +129,14 @@ export function syncOllamaBaseUrl(baseUrl: string) {
   );
 }
 
+export function syncCustomProviderBaseUrl(baseUrl: string) {
+  void import("@/features/ai/services/providers/ai-provider-registry").then(
+    ({ setCustomProviderBaseUrl }) => {
+      setCustomProviderBaseUrl(baseUrl);
+    },
+  );
+}
+
 /**
  * Pushes the Ollama API key (stored in Tauri's secure storage) into the
  * singleton provider instance so `getModels`, connection checks, and other
@@ -152,6 +160,7 @@ export function applySettingsSideEffects(settings: Settings) {
     stopSystemThemeSync();
   }
   syncOllamaBaseUrl(settings.ollamaBaseUrl);
+  syncCustomProviderBaseUrl(settings.aiCustomBaseUrl);
   void syncOllamaApiKey();
 }
 
@@ -177,6 +186,10 @@ export function applySettingSideEffect<K extends keyof Settings>(
 
   if (key === "ollamaBaseUrl") {
     syncOllamaBaseUrl(value as string);
+  }
+
+  if (key === "aiCustomBaseUrl") {
+    syncCustomProviderBaseUrl(value as string);
   }
 
   if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {

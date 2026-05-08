@@ -853,6 +853,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             <TerminalTab
               sessionId={buffer.sessionId}
               bufferId={buffer.id}
+              paneId={pane.id}
               initialCommand={buffer.initialCommand}
               workingDirectory={buffer.workingDirectory}
               remoteConnectionId={buffer.remoteConnectionId}
@@ -1071,6 +1072,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           <TerminalTab
                             sessionId={buffer.sessionId}
                             bufferId={buffer.id}
+                            paneId={pane.id}
                             initialCommand={buffer.initialCommand}
                             workingDirectory={buffer.workingDirectory}
                             isActive={isActivePane && isActiveBuffer}
@@ -1161,6 +1163,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         <TerminalTab
                           sessionId={b.sessionId}
                           bufferId={b.id}
+                          paneId={pane.id}
                           initialCommand={b.initialCommand}
                           workingDirectory={b.workingDirectory}
                           isActive={isActive && isActivePane}

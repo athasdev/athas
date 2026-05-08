@@ -1,7 +1,7 @@
 use crate::app_runtime::AppHandle;
 use athas_extensions::ExtensionInstaller;
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use std::{path::PathBuf, process::Stdio};
 use tauri::command;
 use tokio::{io::AsyncWriteExt, process::Command};
@@ -66,6 +66,10 @@ fn sidecar_for_platform(sidecar: &PlatformArchExecutable) -> Option<&str> {
    }
 }
 
+fn is_builtin_database_provider(provider_id: &str) -> bool {
+   provider_id == "sqlite"
+}
+
 fn resolve_sidecar_path(app_handle: AppHandle, provider_id: &str) -> Result<PathBuf, String> {
    let extension_id = database_extension_id(provider_id)?;
    let installer = ExtensionInstaller::new(app_handle)
@@ -103,12 +107,56 @@ fn resolve_sidecar_path(app_handle: AppHandle, provider_id: &str) -> Result<Path
    Ok(sidecar_path)
 }
 
+fn payload_connection_id(payload: &Value) -> Option<&str> {
+   payload
+      .get("connectionId")
+      .or_else(|| payload.get("connection_id"))
+      .and_then(Value::as_str)
+}
+
+fn hydrate_connection_payload(app_handle: &AppHandle, payload: Value) -> Result<Value, String> {
+   let Some(connection_id) = payload_connection_id(&payload) else {
+      return Ok(payload);
+   };
+
+   if payload.get("connectionConfig").is_some() {
+      return Ok(payload);
+   }
+
+   let saved_connection = super::credentials::get_saved_connections_internal(app_handle)?
+      .into_iter()
+      .find(|connection| connection.id == connection_id)
+      .ok_or_else(|| format!("Saved connection {} was not found", connection_id))?;
+   let password = super::credentials::get_db_credential_internal(app_handle, connection_id)?;
+
+   let mut object = match payload {
+      Value::Object(object) => object,
+      _ => Map::new(),
+   };
+   object.insert(
+      "connectionConfig".to_string(),
+      serde_json::to_value(saved_connection)
+         .map_err(|e| format!("Failed to encode saved connection: {}", e))?,
+   );
+   object.insert(
+      "password".to_string(),
+      password.map_or(Value::Null, Value::String),
+   );
+
+   Ok(Value::Object(object))
+}
+
 pub async fn run_database_sidecar(
    app_handle: AppHandle,
    provider_id: String,
    command: String,
    payload: Value,
 ) -> Result<Value, String> {
+   let payload = hydrate_connection_payload(&app_handle, payload)?;
+   if is_builtin_database_provider(&provider_id) {
+      return athas_database::sidecar::run_provider_command(provider_id, command, payload).await;
+   }
+
    let sidecar_path = resolve_sidecar_path(app_handle, &provider_id)?;
    let request = json!({
       "protocolVersion": 1,
@@ -117,7 +165,14 @@ pub async fn run_database_sidecar(
       "payload": payload,
    });
 
+   let sidecar_dir = sidecar_path
+      .parent()
+      .and_then(|bin_dir| bin_dir.parent())
+      .ok_or_else(|| "Invalid database sidecar path".to_string())?;
+
    let mut child = Command::new(&sidecar_path)
+      .current_dir(sidecar_dir)
+      .env("ATHAS_DB_SIDECAR_DIR", sidecar_dir)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())

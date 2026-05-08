@@ -315,8 +315,19 @@ const TerminalContainer = ({
         profileId: activeTerminal.profileId,
       });
       setTerminalSplitMode(activeTerminalId, true, companionId);
+      // createTerminal switches active to the new companion; restore the
+      // initiating terminal as active so the split layout (which renders
+      // the companion only inside the initiator's iteration) stays visible.
+      setActiveTerminal(activeTerminalId);
     }
-  }, [activeTerminalId, terminals, setTerminalSplitMode, createTerminal, closeTerminal]);
+  }, [
+    activeTerminalId,
+    terminals,
+    setTerminalSplitMode,
+    createTerminal,
+    closeTerminal,
+    setActiveTerminal,
+  ]);
 
   const handleSearchTerminal = useCallback(() => {
     if (!activeTerminalId) return;

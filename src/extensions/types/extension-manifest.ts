@@ -32,6 +32,9 @@ export interface ExtensionManifest {
   // Database provider sidecars
   databaseProviders?: DatabaseProviderContribution[];
 
+  // ACP agent contributions
+  agents?: AgentContribution[];
+
   // Color theme contributions
   themes?: ThemeContribution[];
 
@@ -90,6 +93,7 @@ export interface ExtensionManifest {
 export type ExtensionCategory =
   | "Language"
   | "Database"
+  | "Agent"
   | "Icon Theme"
   | "Linter"
   | "Formatter"
@@ -113,6 +117,7 @@ export interface LspConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Server executable paths per platform
@@ -175,6 +180,23 @@ export interface DatabaseProviderContribution {
   defaultPort?: number;
   fileExtensions?: string[];
   sidecar: PlatformArchExecutable;
+}
+
+export interface AgentContribution {
+  id: string;
+  name: string;
+  binaryName: string;
+  description?: string;
+  args?: string[];
+  envVars?: Record<string, string>;
+  icon?: string;
+  install?: {
+    runtime: ToolRuntime;
+    package: string;
+    command?: string;
+    downloadUrl?: string;
+    downloadUrls?: Partial<Record<PlatformArch | "win32-arm64", string>>;
+  };
 }
 
 export interface ThemeContribution {
@@ -281,6 +303,7 @@ export interface FormatterConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Formatter executable per platform
@@ -310,6 +333,7 @@ export interface LinterConfiguration {
   name?: string;
   runtime?: ToolRuntime;
   package?: string;
+  packages?: string[];
   downloadUrl?: string;
 
   // Linter executable per platform

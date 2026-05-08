@@ -9,6 +9,10 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
+import type {
+  EditorCoordinateResolver,
+  EditorModelPositionResolver,
+} from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
@@ -24,7 +28,7 @@ import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
-import type { Position } from "../types/editor";
+import type { Position, Range } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
@@ -51,7 +55,12 @@ interface CodeEditorProps {
   currentHighlightIndex?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
-  onContentChange?: (content: string) => void;
+  onContentChange?: (
+    content: string,
+    previousContent?: string,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => void;
 }
 
 export interface CodeEditorRef {
@@ -90,6 +99,8 @@ const CodeEditor = ({
   const codeLensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
+  const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
+  const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -193,6 +204,26 @@ const CodeEditor = ({
 
     return cachedCursor ?? { line: 0, column: 0, offset: 0 };
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
+  const resolveEditorPosition = useCallback<EditorCoordinateResolver>(
+    (clientX, clientY) => editorCoordinateResolverRef.current?.(clientX, clientY) ?? null,
+    [],
+  );
+  const resolveModelPosition = useCallback<EditorModelPositionResolver>(
+    (line, column) => editorModelPositionResolverRef.current?.(line, column) ?? null,
+    [],
+  );
+  const handleCoordinateResolverChange = useCallback(
+    (resolver: EditorCoordinateResolver | null) => {
+      editorCoordinateResolverRef.current = resolver;
+    },
+    [],
+  );
+  const handleModelPositionResolverChange = useCallback(
+    (resolver: EditorModelPositionResolver | null) => {
+      editorModelPositionResolverRef.current = resolver;
+    },
+    [],
+  );
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
@@ -201,6 +232,7 @@ const CodeEditor = ({
     value,
     cursorPosition,
     editorRef,
+    resolveEditorPosition,
   });
 
   // Rename symbol support
@@ -448,7 +480,7 @@ const CodeEditor = ({
 
           // Calculate scroll position to center the match in viewport
           const lineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
-          const targetScrollTop = line * lineHeight;
+          const targetScrollTop = resolveModelPosition(line, 0)?.top ?? line * lineHeight;
           const viewportHeight = textarea.clientHeight;
           const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
 
@@ -456,7 +488,15 @@ const CodeEditor = ({
         }
       }
     }
-  }, [currentMatchIndex, enableInteractiveServices, searchMatches, value, zoomedFontSize]);
+  }, [
+    currentMatchIndex,
+    enableInteractiveServices,
+    resolveModelPosition,
+    searchMatches,
+    settings.editorLineHeight,
+    value,
+    zoomedFontSize,
+  ]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
@@ -506,6 +546,7 @@ const CodeEditor = ({
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
               onExecute={handleCodeLensExecute}
+              resolveModelPosition={resolveModelPosition}
             />
           )}
 
@@ -515,6 +556,7 @@ const CodeEditor = ({
               editorRef={editorRef}
               filePath={filePath}
               cursorPosition={displayCursorPosition}
+              resolveModelPosition={resolveModelPosition}
             />
           )}
 
@@ -528,6 +570,7 @@ const CodeEditor = ({
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
+              resolveModelPosition={resolveModelPosition}
               inputRef={rename.inputRef}
               onSubmit={(newName) => void rename.executeRename(newName)}
               onCancel={rename.cancelRename}
@@ -558,6 +601,8 @@ const CodeEditor = ({
                 lineNumberMap={lineNumberMap}
                 onContentChange={onContentChange}
                 inlayHints={enableInlayHints ? inlayHints : []}
+                onCoordinateResolverChange={handleCoordinateResolverChange}
+                onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={

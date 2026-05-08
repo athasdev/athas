@@ -1,6 +1,6 @@
 {
   "name": "athas",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,6 +23,10 @@
     "dev:linux": "bun scripts/check-zig.ts && cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux -- --ozone-platform=x11 --disable-vulkan --disable-features=Vulkan",
     "build:stable": "bun scripts/check-zig.ts && tauri build",
     "build:linux": "bun scripts/check-zig.ts && cargo tauri build --no-bundle -- --no-default-features --features linux && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
+    "build:linux:deb": "bash scripts/release/package-linux-native.sh deb",
+    "build:linux:rpm": "bash scripts/release/package-linux-native.sh rpm",
+    "build:linux:appimage": "bash scripts/release/package-linux-native.sh appimage",
+    "build:linux:native": "bash scripts/release/package-linux-native.sh all",
     "build:preview": "bun scripts/check-zig.ts && tauri build --config src-tauri/tauri.preview.conf.json",
     "build:dev": "bun scripts/check-zig.ts && tauri build --config src-tauri/tauri.dev.conf.json",
     "smoke": "bun scripts/smoke-app.ts",

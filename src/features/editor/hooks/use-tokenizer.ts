@@ -6,6 +6,7 @@
 import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
+import { getLanguageAssetConfig } from "../lib/wasm-parser/extension-assets";
 import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "../lib/wasm-parser/types";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
@@ -188,6 +189,7 @@ export function useTokenizer({
         setTokens([]);
         return;
       }
+      const languageAssets = getLanguageAssetConfig(languageId);
 
       const requestVersion = ++requestVersionRef.current;
       const normalizedText = normalizeLineEndings(text);
@@ -201,6 +203,8 @@ export function useTokenizer({
           bufferId,
           content: normalizedText,
           languageId,
+          wasmPath: languageAssets.wasmPath,
+          highlightQueryUrl: languageAssets.highlightQueryUrl,
           mode: "full",
         });
 
@@ -242,6 +246,7 @@ export function useTokenizer({
 
       const languageId = languageIdOverride || getLanguageId(filePath);
       if (!languageId) return;
+      const languageAssets = getLanguageAssetConfig(languageId);
 
       const requestVersion = ++requestVersionRef.current;
       const { normalizedText, lineOffsets, lineCount } = getTextMetrics(text);
@@ -264,6 +269,8 @@ export function useTokenizer({
           bufferId,
           content: normalizedText,
           languageId,
+          wasmPath: languageAssets.wasmPath,
+          highlightQueryUrl: languageAssets.highlightQueryUrl,
           mode: "range",
           viewportRange: {
             startLine: clampedStartLine,

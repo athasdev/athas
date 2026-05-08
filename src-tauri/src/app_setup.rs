@@ -154,6 +154,48 @@ fn focus_active_window(app: &tauri::AppHandle<AthasRuntime>) {
    }
 }
 
+fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
+   match event_id {
+      "command_new_tab" => Some("workbench.newTab"),
+      "command_reopen_closed_tab" => Some("file.reopenClosed"),
+      "command_close_all_tabs" => Some("file.closeAll"),
+      "command_local_history" => Some("file.localHistory"),
+      "command_format_document" => Some("editor.formatDocument"),
+      "command_duplicate_line" => Some("editor.duplicateLine"),
+      "command_delete_line" => Some("editor.deleteLine"),
+      "command_move_line_up" => Some("editor.moveLineUp"),
+      "command_move_line_down" => Some("editor.moveLineDown"),
+      "command_global_search" => Some("workbench.showGlobalSearch"),
+      "command_diagnostics" => Some("workbench.toggleDiagnostics"),
+      "command_file_explorer" => Some("workbench.showFileExplorer"),
+      "command_source_control" => Some("workbench.showSourceControl"),
+      "command_github" => Some("workbench.showGitHub"),
+      "command_debugger" => Some("workbench.showDebugger"),
+      "command_toggle_sidebar_position" => Some("workbench.toggleSidebarPosition"),
+      "command_toggle_minimap" => Some("workbench.toggleMinimap"),
+      "command_zoom_in" => Some("workbench.zoomIn"),
+      "command_zoom_out" => Some("workbench.zoomOut"),
+      "command_zoom_reset" => Some("workbench.zoomReset"),
+      "command_keyboard_shortcuts" => Some("workbench.openKeyboardShortcuts"),
+      "command_help_keyboard_shortcuts" => Some("workbench.openKeyboardShortcuts"),
+      "command_go_back" => Some("navigation.goBack"),
+      "command_go_forward" => Some("navigation.goForward"),
+      "command_go_to_definition" => Some("editor.goToDefinition"),
+      "command_go_to_references" => Some("editor.goToReferences"),
+      "command_rename_symbol" => Some("editor.renameSymbol"),
+      "command_new_terminal" => Some("terminal.new"),
+      "command_split_terminal" => Some("terminal.split"),
+      "command_close_terminal" => Some("terminal.close"),
+      "command_start_debugging" => Some("debug.start"),
+      "command_stop_debugging" => Some("debug.stop"),
+      "command_toggle_breakpoint" => Some("debug.toggleBreakpoint"),
+      "command_new_agent" => Some("workbench.agentLauncher"),
+      "command_inline_edit" => Some("editor.inlineEdit"),
+      "command_connect_database" => Some("database.connect"),
+      _ => None,
+   }
+}
+
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
    match event.id().0.as_str() {
       "new_window" => {
@@ -231,6 +273,10 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                      if let Err(e) = app_handle.remove_menu() {
                         log::error!("Failed to hide menu: {}", e);
                      } else {
+                        if let Ok(store) = app_handle.store("settings.json") {
+                           store.set("nativeMenuBar", false);
+                           let _ = store.save();
+                        }
                         log::info!("Menu bar hidden");
                      }
                   } else {
@@ -239,6 +285,10 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                            if let Err(e) = app_handle.set_menu(new_menu) {
                               log::error!("Failed to show menu: {}", e);
                            } else {
+                              if let Ok(store) = app_handle.store("settings.json") {
+                                 store.set("nativeMenuBar", true);
+                                 let _ = store.save();
+                              }
                               log::info!("Menu bar shown");
                            }
                         }
@@ -263,15 +313,33 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "prev_tab" => {
                   let _ = window.emit("menu_prev_tab", ());
                }
-               "about" => {}
-               "help" => {
-                  let _ = window.emit("menu_help", ());
+               command_event_id if command_id_for_menu_event(command_event_id).is_some() => {
+                  let command_id = command_id_for_menu_event(command_event_id).unwrap();
+                  let _ = window.emit("menu_execute_command", command_id);
+               }
+               "documentation" => {
+                  let _ = window.emit("menu_documentation", ());
+               }
+               "changelog" => {
+                  let _ = window.emit("menu_changelog", ());
+               }
+               "whats_new" => {
+                  let _ = window.emit("menu_whats_new", ());
                }
                "report_bug" => {
                   let _ = window.emit("menu_report_bug", ());
                }
-               "about_athas" => {
-                  let _ = window.emit("menu_about_athas", ());
+               "request_feature" => {
+                  let _ = window.emit("menu_request_feature", ());
+               }
+               "check_updates" => {
+                  let _ = window.emit("menu_check_updates", ());
+               }
+               "open_settings" => {
+                  let _ = window.emit("menu_open_settings", ());
+               }
+               "open_extensions" => {
+                  let _ = window.emit("menu_open_extensions", ());
                }
                "minimize_window" => {
                   if let Err(e) = window.minimize() {

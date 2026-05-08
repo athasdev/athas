@@ -104,6 +104,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       if (attempt < attempts - 1) {
         attempt += 1;
         rafId = requestAnimationFrame(runFit);
+      } else {
+        // Final pass: force a renderer refresh so the canvas/WebGL backend
+        // repaints after a size change. Without this, splitting a pane (or any
+        // layout change that resizes the container) leaves the buffer in memory
+        // but unpainted until the window regains focus.
+        const term = xtermRef.current;
+        if (term) term.refresh(0, term.rows - 1);
       }
     };
 
@@ -280,9 +287,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         });
       }
 
-      if (existingSession?.serializedContent) {
-        terminal.write(existingSession.serializedContent);
-      }
+      // No snapshot replay: xterm is portaled and never remounts mid-session,
+      // so the live PTY redrawing via SIGWINCH is the source of truth.
 
       setIsInitialized(true);
       isInitializingRef.current = false;
@@ -434,16 +440,41 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     return () => {
       if (xtermRef.current) {
-        const serializedContent = addonsRef.current?.serializeAddon.serialize();
-        if (serializedContent && getSession(sessionId)?.connectionId) {
-          updateSession(sessionId, { serializedContent });
-        }
         xtermRef.current.dispose();
         xtermRef.current = null;
         addonsRef.current = null;
       }
     };
-  }, [getSession, sessionId, updateSession]);
+  }, []);
+
+  // XtermTerminal stays mounted while slots move between panes. When a new
+  // slot owner provides a fresh ref callback, hand the live terminal handle to
+  // it even though initialization does not re-run.
+  useEffect(() => {
+    const terminal = xtermRef.current;
+    if (!isInitialized || !terminal || !onTerminalRef) return;
+
+    onTerminalRef({
+      focus: () => terminal.focus(),
+      showSearch: () => setIsSearchVisible(true),
+      terminal,
+    });
+  }, [isInitialized, onTerminalRef]);
+
+  // Listen for portal-target changes from TerminalHost; force a fit + repaint
+  // so PTY/xterm dims match the new slot before any TUI relies on them.
+  useEffect(() => {
+    if (!isInitialized) return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionId: string }>).detail;
+      if (!detail || detail.sessionId !== sessionId) return;
+      fitTerminal(4);
+      const term = xtermRef.current;
+      if (term) term.refresh(0, term.rows - 1);
+    };
+    window.addEventListener("athas-terminal-refit", handler);
+    return () => window.removeEventListener("athas-terminal-refit", handler);
+  }, [fitTerminal, isInitialized, sessionId]);
 
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;

@@ -3,7 +3,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpEvent } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
+import type { AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import {
   getAvailableProviders,
@@ -24,8 +24,7 @@ import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-build
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
-  const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
-  return agent?.isAcp ?? false;
+  return agentId !== "custom";
 };
 
 function resolveProviderModelPair(providerId: string, modelId: string) {
@@ -65,6 +64,22 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
         maxTokens: 4096,
       },
     };
+  }
+
+  if (requestedProvider?.id === "custom") {
+    const customModelId = useSettingsStore.getState().settings.aiCustomModelId || modelId;
+    if (customModelId.trim().length > 0) {
+      return {
+        providerId,
+        modelId: customModelId,
+        provider: requestedProvider,
+        model: {
+          id: customModelId,
+          name: customModelId,
+          maxTokens: 4096,
+        },
+      };
+    }
   }
 
   for (const provider of getAvailableProviders()) {
@@ -156,6 +171,10 @@ export const getChatCompletionStream = async (
     const provider = resolved.provider;
     const model = resolved.model;
 
+    if (providerId === "custom" && !model) {
+      throw new Error("Custom provider model is required. Add one in Settings → AI.");
+    }
+
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
@@ -165,6 +184,10 @@ export const getChatCompletionStream = async (
     const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
     if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
       throw new Error(`${provider.name} API key not found`);
+    }
+
+    if (providerId === "custom" && !useSettingsStore.getState().settings.aiCustomBaseUrl) {
+      throw new Error("Custom provider base URL is required. Add one in Settings → AI.");
     }
 
     // Ollama Cloud requires auth even though the provider config marks the

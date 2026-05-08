@@ -1,16 +1,8 @@
-import { PLATFORM_ARCH } from "@/utils/platform";
 import type {
   DatabaseProviderContribution,
   DatabaseProviderId,
   ExtensionManifest,
-  PlatformArch,
-  PlatformPackage,
 } from "../types/extension-manifest";
-
-const EXTENSION_CDN_BASE_URL =
-  import.meta.env.VITE_EXTENSION_CDN_URL ||
-  import.meta.env.VITE_PARSER_CDN_URL ||
-  "https://athas.dev/extensions";
 
 const PROVIDER_DEFINITIONS: Array<{
   extensionId: string;
@@ -135,53 +127,26 @@ const PROVIDER_DEFINITIONS: Array<{
   },
 ];
 
-function buildPlatformPackages(
-  packageName: string,
-): Partial<Record<PlatformArch, PlatformPackage>> {
-  const platforms = [
-    "darwin-arm64",
-    "darwin-x64",
-    "linux-arm64",
-    "linux-x64",
-    "win32-x64",
-  ] as const;
-
-  return Object.fromEntries(
-    platforms.map((platformArch) => [
-      platformArch,
-      {
-        downloadUrl: `${EXTENSION_CDN_BASE_URL}/database/${packageName}/${platformArch}.tar.gz`,
-        size: 0,
-        checksum: "",
-      },
-    ]),
-  );
-}
-
 export function getDatabaseProviderExtensions(): ExtensionManifest[] {
-  return PROVIDER_DEFINITIONS.map(({ extensionId, packageName, name, description, provider }) => ({
-    id: extensionId,
-    name,
-    displayName: name,
-    description,
-    version: "1.0.0",
-    publisher: "Athas",
-    categories: ["Database"],
-    databaseProviders: [provider],
-    activationEvents: [`onDatabase:${provider.id}`],
-    license: "MIT",
-    repository: {
-      type: "git",
-      url: "https://github.com/athasdev/extensions",
-    },
-    icon: "icon.svg",
-    installation: {
-      downloadUrl: `${EXTENSION_CDN_BASE_URL}/database/${packageName}/${PLATFORM_ARCH}.tar.gz`,
-      size: 0,
-      checksum: "",
-      platformArch: buildPlatformPackages(packageName),
-    },
-  }));
+  return PROVIDER_DEFINITIONS.filter(({ provider }) => provider.id === "sqlite").map(
+    ({ extensionId, name, description, provider }) => ({
+      id: extensionId,
+      name,
+      displayName: name,
+      description,
+      version: "1.0.0",
+      publisher: "Athas",
+      categories: ["Database"],
+      databaseProviders: [provider],
+      activationEvents: [`onDatabase:${provider.id}`],
+      license: "MIT",
+      repository: {
+        type: "git",
+        url: "https://github.com/athasdev/extensions",
+      },
+      icon: "icon.svg",
+    }),
+  );
 }
 
 export function getDatabaseProviderExtensionId(providerId: DatabaseProviderId): string {

@@ -11,8 +11,8 @@ interface HistoryStoreState {
 
 interface HistoryActions {
   pushHistory: (bufferId: string, entry: HistoryEntry) => void;
-  undo: (bufferId: string) => HistoryEntry | null;
-  redo: (bufferId: string) => HistoryEntry | null;
+  undo: (bufferId: string, currentEntry?: HistoryEntry) => HistoryEntry | null;
+  redo: (bufferId: string, currentEntry?: HistoryEntry) => HistoryEntry | null;
   canUndo: (bufferId: string) => boolean;
   canRedo: (bufferId: string) => boolean;
   clearHistory: (bufferId: string) => void;
@@ -28,6 +28,19 @@ const createDefaultHistoryState = (maxHistorySize = DEFAULT_MAX_HISTORY_SIZE): H
   maxHistorySize,
 });
 
+function cloneHistoryEntry(entry: HistoryEntry): HistoryEntry {
+  return {
+    ...entry,
+    cursorPosition: entry.cursorPosition ? { ...entry.cursorPosition } : undefined,
+    selection: entry.selection
+      ? {
+          start: { ...entry.selection.start },
+          end: { ...entry.selection.end },
+        }
+      : undefined,
+  };
+}
+
 export const useHistoryStore = createSelectors(
   createWithEqualityFn<HistoryStoreState>()(
     immer((set, get) => ({
@@ -41,6 +54,11 @@ export const useHistoryStore = createSelectors(
             }
 
             const history = state.bufferHistories[bufferId];
+            const lastEntry = history.past[history.past.length - 1];
+
+            if (lastEntry?.content === entry.content) {
+              return;
+            }
 
             // Add to past
             history.past.push(entry);
@@ -55,7 +73,7 @@ export const useHistoryStore = createSelectors(
           });
         },
 
-        undo: (bufferId: string) => {
+        undo: (bufferId: string, currentEntry?: HistoryEntry) => {
           const history = get().bufferHistories[bufferId];
           if (!history || history.past.length === 0) {
             return null;
@@ -68,8 +86,10 @@ export const useHistoryStore = createSelectors(
             if (hist && hist.past.length > 0) {
               const lastEntry = hist.past.pop();
               if (lastEntry) {
-                hist.future.push(lastEntry);
-                entry = lastEntry;
+                if (currentEntry) {
+                  hist.future.push(cloneHistoryEntry(currentEntry));
+                }
+                entry = cloneHistoryEntry(lastEntry);
               }
             }
           });
@@ -77,7 +97,7 @@ export const useHistoryStore = createSelectors(
           return entry;
         },
 
-        redo: (bufferId: string) => {
+        redo: (bufferId: string, currentEntry?: HistoryEntry) => {
           const history = get().bufferHistories[bufferId];
           if (!history || history.future.length === 0) {
             return null;
@@ -90,8 +110,10 @@ export const useHistoryStore = createSelectors(
             if (hist && hist.future.length > 0) {
               const nextEntry = hist.future.pop();
               if (nextEntry) {
-                hist.past.push(nextEntry);
-                entry = nextEntry;
+                if (currentEntry) {
+                  hist.past.push(cloneHistoryEntry(currentEntry));
+                }
+                entry = cloneHistoryEntry(nextEntry);
               }
             }
           });

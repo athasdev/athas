@@ -9,6 +9,7 @@ interface ChatActivityLineProps {
   title: string;
   detail?: string | null;
   state?: "running" | "success" | "error" | "info";
+  actions?: ReactNode;
   children?: ReactNode;
 }
 
@@ -17,6 +18,7 @@ export function ChatActivityLine({
   title,
   detail,
   state = "info",
+  actions,
   children,
 }: ChatActivityLineProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -40,6 +42,7 @@ export function ChatActivityLine({
       >
         <span className="flex size-4 shrink-0 items-center justify-center opacity-80">{icon}</span>
         <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
+        {actions ? <span className="shrink-0">{actions}</span> : null}
         {canExpand ? (
           <CaretRight
             size={12}

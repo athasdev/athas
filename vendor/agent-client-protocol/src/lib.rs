@@ -185,6 +185,15 @@ impl Agent for ClientSideConnection {
             .await
     }
 
+    async fn close_session(&self, args: CloseSessionRequest) -> Result<CloseSessionResponse> {
+        self.conn
+            .request(
+                AGENT_METHOD_NAMES.session_close,
+                Some(ClientRequest::CloseSessionRequest(args)),
+            )
+            .await
+    }
+
     #[cfg(feature = "unstable_session_config_options")]
     async fn set_session_config_option(
         &self,
@@ -573,6 +582,9 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_resume => serde_json::from_str(params.get())
                 .map(ClientRequest::ResumeSessionRequest)
                 .map_err(Into::into),
+            m if m == AGENT_METHOD_NAMES.session_close => serde_json::from_str(params.get())
+                .map(ClientRequest::CloseSessionRequest)
+                .map_err(Into::into),
             #[cfg(feature = "unstable_session_config_options")]
             m if m == AGENT_METHOD_NAMES.session_set_config_option => {
                 serde_json::from_str(params.get())
@@ -662,6 +674,10 @@ impl<T: Agent> MessageHandler<AgentSide> for T {
             ClientRequest::ResumeSessionRequest(args) => {
                 let response = self.resume_session(args).await?;
                 Ok(AgentResponse::ResumeSessionResponse(response))
+            }
+            ClientRequest::CloseSessionRequest(args) => {
+                let response = self.close_session(args).await?;
+                Ok(AgentResponse::CloseSessionResponse(response))
             }
             #[cfg(feature = "unstable_session_config_options")]
             ClientRequest::SetSessionConfigOptionRequest(args) => {

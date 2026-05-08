@@ -14,10 +14,12 @@ import {
   TerminalWindow,
   TreeStructure,
   UserCircle,
+  UsersThree,
 } from "@phosphor-icons/react";
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
+import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
@@ -102,6 +104,11 @@ const tabItems: TabItem[] = [
     icon: Sparkle,
   },
   {
+    id: "collaboration",
+    label: "Collaboration",
+    icon: UsersThree,
+  },
+  {
     id: "enterprise",
     label: "Enterprise",
     icon: ShieldCheck,
@@ -124,21 +131,16 @@ export const SettingsVerticalTabs = ({
   const { isPro } = useProFeature();
   const { promptUpgrade } = useUpgradeToPro();
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
+  const hasTeamsAccess = Boolean(subscription?.collaboration?.enabled);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
 
   const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
 
-  const visibleTabs = tabItems.filter((item) => {
-    if (!hasEnterpriseAccess && item.id === "enterprise") {
-      return false;
-    }
-
-    if (!matchingTabs) {
-      return true;
-    }
-
-    return matchingTabs.has(item.id);
+  const visibleTabs = filterVisibleSettingsTabs(tabItems, {
+    hasEnterpriseAccess,
+    hasTeamsAccess,
+    matchingTabs,
   });
 
   React.useEffect(() => {

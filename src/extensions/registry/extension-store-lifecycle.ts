@@ -6,6 +6,7 @@ import {
   activateExtensionContributions,
   deactivateExtensionContributions,
 } from "../runtime/extension-contribution-runtime";
+import type { PlatformPackage } from "../types/extension-manifest";
 import { extensionRegistry } from "./extension-registry";
 import {
   buildRuntimeManifest,
@@ -14,7 +15,6 @@ import {
   resolveToolPaths,
 } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
-import type { PlatformPackage } from "../types/extension-manifest";
 
 async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {
   if (!extension.manifest.languages?.length) {
@@ -29,9 +29,12 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
-  const matchesLanguage = extension.manifest.languages.some((language) =>
-    language.extensions.includes(fileExt),
+  const fileName = activeBuffer.path.split("/").pop() || activeBuffer.path;
+  const lastDotIndex = fileName.lastIndexOf(".");
+  const fileExt = lastDotIndex >= 0 ? fileName.substring(lastDotIndex).toLowerCase() : "";
+  const matchesLanguage = extension.manifest.languages.some(
+    (language) =>
+      language.extensions.includes(fileExt) || Boolean(language.filenames?.includes(fileName)),
   );
 
   if (!matchesLanguage) {
@@ -69,26 +72,64 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
   );
 }
 
+function withCdnCacheBuster(url: string): string {
+  if (!url.startsWith("https://athas.dev/extensions/")) {
+    return url;
+  }
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${Date.now()}`;
+}
+
 function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage {
   const installation = extension.manifest.installation;
-  const platformPackage = installation?.platformArch?.[PLATFORM_ARCH];
-  const resolvedPackage =
-    platformPackage ??
-    (installation
-      ? {
-          downloadUrl: installation.downloadUrl,
-          checksum: installation.checksum,
-          size: installation.size,
-        }
-      : undefined);
+  const platformPackages = installation?.platformArch;
+  const platformPackage = platformPackages?.[PLATFORM_ARCH];
 
-  if (!resolvedPackage?.downloadUrl) {
+  if (platformPackages) {
+    if (isCompleteExtensionPackage(platformPackage)) {
+      return {
+        ...platformPackage,
+        downloadUrl: withCdnCacheBuster(platformPackage.downloadUrl),
+      };
+    }
+
     throw new Error(
       `No compatible package for ${extension.manifest.displayName} on ${PLATFORM_ARCH}`,
     );
   }
 
-  return resolvedPackage;
+  const genericPackage = installation
+    ? {
+        downloadUrl: installation.downloadUrl,
+        checksum: installation.checksum,
+        size: installation.size,
+      }
+    : undefined;
+
+  if (isCompleteExtensionPackage(genericPackage)) {
+    return {
+      ...genericPackage,
+      downloadUrl: withCdnCacheBuster(genericPackage.downloadUrl),
+    };
+  }
+
+  throw new Error(
+    `No compatible package for ${extension.manifest.displayName} on ${PLATFORM_ARCH}`,
+  );
+}
+
+function isCompleteExtensionPackage(
+  extensionPackage: PlatformPackage | undefined,
+): extensionPackage is PlatformPackage {
+  return (
+    typeof extensionPackage?.downloadUrl === "string" &&
+    extensionPackage.downloadUrl.length > 0 &&
+    typeof extensionPackage.size === "number" &&
+    extensionPackage.size > 0 &&
+    typeof extensionPackage.checksum === "string" &&
+    extensionPackage.checksum.length > 0
+  );
 }
 
 export async function installExtensionLifecycle(params: {

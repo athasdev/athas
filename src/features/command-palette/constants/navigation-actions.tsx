@@ -5,24 +5,33 @@ import {
   GitBranch,
   GitPullRequest,
   Hash,
+  ListBullets,
   Package,
   MagnifyingGlass as Search,
 } from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "github-prs" | "debugger") => void;
+  setActiveView: (view: SidebarView) => void;
   setIsQuickOpenVisible: (v: boolean) => void;
+  openCommandPaletteView?: (view: "outline") => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   onClose: () => void;
 }
 
 export const createNavigationActions = (params: NavigationActionsParams): Action[] => {
-  const { setIsSidebarVisible, setActiveView, setIsQuickOpenVisible, openSettingsDialog, onClose } =
-    params;
+  const {
+    setIsSidebarVisible,
+    setActiveView,
+    setIsQuickOpenVisible,
+    openCommandPaletteView,
+    openSettingsDialog,
+    onClose,
+  } = params;
 
   return [
     {
@@ -78,6 +87,19 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
+      id: "view-show-outline",
+      label: "View: Show Outline",
+      description: "Show symbols for the active file in the sidebar",
+      icon: <ListBullets />,
+      category: "Navigation",
+      commandId: "workbench.showOutline",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("outline");
+        onClose();
+      },
+    },
+    {
       id: "search-global",
       label: "Search: Global Search",
       description: "Search across files in workspace",
@@ -122,6 +144,18 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       action: () => {
         onClose();
         setIsQuickOpenVisible(true);
+      },
+    },
+    {
+      id: "go-to-symbol-in-editor",
+      label: "Go: Symbol in Editor",
+      description: "Open the active file outline picker",
+      icon: <ListBullets />,
+      category: "Navigation",
+      commandId: "editor.showOutline",
+      action: () => {
+        onClose();
+        openCommandPaletteView?.("outline");
       },
     },
   ];

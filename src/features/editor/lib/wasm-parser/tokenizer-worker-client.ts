@@ -1,40 +1,13 @@
-import type { HighlightToken } from "./types";
-
-interface ViewportRangePayload {
-  startLine: number;
-  endLine: number;
-}
-
-type WorkerRequest =
-  | { id: number; type: "warmup"; languages?: string[] }
-  | { id: number; type: "reset"; bufferId: string }
-  | {
-      id: number;
-      type: "tokenize";
-      bufferId: string;
-      content: string;
-      languageId: string;
-      mode: "full" | "range";
-      viewportRange?: ViewportRangePayload;
-    };
-
-type WorkerResponse =
-  | {
-      id: number;
-      ok: true;
-      tokens?: HighlightToken[];
-      normalizedText?: string;
-    }
-  | { id: number; ok: false; error: string };
+import type {
+  TokenizerWorkerRequest,
+  TokenizerWorkerResponse,
+  TokenizerWorkerResult,
+  ViewportRangePayload,
+} from "./worker-protocol";
 
 interface PendingRequest {
   resolve: (value: any) => void;
   reject: (reason?: unknown) => void;
-}
-
-export interface TokenizerWorkerResult {
-  tokens: HighlightToken[];
-  normalizedText: string;
 }
 
 class TokenizerWorkerClient {
@@ -49,7 +22,7 @@ class TokenizerWorkerClient {
       type: "module",
     });
 
-    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+    this.worker.onmessage = (event: MessageEvent<TokenizerWorkerResponse>) => {
       const message = event.data;
       const pending = this.pending.get(message.id);
       if (!pending) return;
@@ -73,7 +46,7 @@ class TokenizerWorkerClient {
     return this.worker;
   }
 
-  private post<T extends WorkerResponse>(request: WorkerRequest): Promise<T> {
+  private post<T extends TokenizerWorkerResponse>(request: TokenizerWorkerRequest): Promise<T> {
     const worker = this.ensureWorker();
 
     return new Promise<T>((resolve, reject) => {
@@ -96,11 +69,13 @@ class TokenizerWorkerClient {
     bufferId: string;
     content: string;
     languageId: string;
+    wasmPath?: string;
+    highlightQueryUrl?: string;
     mode: "full" | "range";
     viewportRange?: ViewportRangePayload;
   }): Promise<TokenizerWorkerResult> {
     const id = ++this.requestId;
-    const response = await this.post<Extract<WorkerResponse, { ok: true }>>({
+    const response = await this.post<Extract<TokenizerWorkerResponse, { ok: true }>>({
       id,
       type: "tokenize",
       ...params,

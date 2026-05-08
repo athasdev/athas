@@ -11,7 +11,6 @@ export interface Terminal {
   lastActivity?: Date;
   connectionId?: string;
   selection?: string;
-  serializedContent?: string;
   title?: string;
   ref?: any;
   splitMode?: boolean;

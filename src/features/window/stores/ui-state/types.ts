@@ -10,6 +10,7 @@ export type SettingsTab =
   | "keyboard"
   | "language"
   | "features"
+  | "collaboration"
   | "enterprise"
   | "advanced"
   | "terminal"

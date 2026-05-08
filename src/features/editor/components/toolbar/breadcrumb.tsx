@@ -106,6 +106,7 @@ export default function Breadcrumb({
   const filePath = filePathOverride ?? activeBuffer?.path ?? "";
   const onSearchClick = handleSearchClick;
   if (!filePath) return null;
+  const isLocalHistorySnapshot = filePath.startsWith("local-history://");
 
   const defaultActions =
     showDefaultActions && activeBuffer ? (
@@ -159,7 +160,10 @@ export default function Breadcrumb({
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
         <div className="ui-font flex min-w-0 items-center gap-2 text-text-lighter text-xs">
           {showPath && showBreadcrumbPath ? (
-            <FilePathBreadcrumb filePath={filePath} interactive={interactive} />
+            <FilePathBreadcrumb
+              filePath={filePath}
+              interactive={interactive && !isLocalHistorySnapshot}
+            />
           ) : null}
           {extensionActions.left.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />

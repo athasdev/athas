@@ -1,54 +1,31 @@
 /// <reference lib="webworker" />
 
-import type { Node, QueryCapture, Tree } from "web-tree-sitter";
+import type { QueryCapture, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
-import { getDefaultParserWasmUrl } from "./extension-assets";
+import { getLanguageAssetConfig } from "./extension-assets";
 import { getLanguageOverlayTokens } from "./language-overlays";
 import { wasmParserLoader } from "./loader";
+import { dedupeHighlightTokens, isIgnoredCapture, mapCaptureToClass } from "./capture-map";
 import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
 import { calculateEdit, isSimpleEdit } from "../../utils/tree-sitter-edit";
+import {
+  findInjectionNodes,
+  getInjectionRules,
+  resolveInjectedLanguage,
+} from "./language-injections";
+import type {
+  TokenizerWorkerRequest,
+  TokenizerWorkerResponse,
+  ViewportRangePayload,
+} from "./worker-protocol";
 
 interface WorkerSession {
   bufferId: string;
   languageId: string;
   content: string;
   tree: Tree;
+  lastAccessedAt: number;
 }
-
-interface ViewportRangePayload {
-  startLine: number;
-  endLine: number;
-}
-
-interface InjectionRule {
-  parentType: string;
-  contentType: string;
-  language: string;
-}
-
-interface WarmupMessage {
-  id: number;
-  type: "warmup";
-  languages?: string[];
-}
-
-interface ResetMessage {
-  id: number;
-  type: "reset";
-  bufferId: string;
-}
-
-interface TokenizeMessage {
-  id: number;
-  type: "tokenize";
-  bufferId: string;
-  content: string;
-  languageId: string;
-  mode: "full" | "range";
-  viewportRange?: ViewportRangePayload;
-}
-
-type WorkerRequest = WarmupMessage | ResetMessage | TokenizeMessage;
 
 interface WorkerSuccessResponse {
   id: number;
@@ -57,144 +34,8 @@ interface WorkerSuccessResponse {
   normalizedText?: string;
 }
 
-interface WorkerErrorResponse {
-  id: number;
-  ok: false;
-  error: string;
-}
-
-type WorkerResponse = WorkerSuccessResponse | WorkerErrorResponse;
-
+const MAX_CACHED_SESSIONS = 8;
 const sessions = new Map<string, WorkerSession>();
-
-const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
-  angular: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-  ],
-  html: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-  ],
-  svelte: [
-    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
-    { parentType: "style_element", contentType: "raw_text", language: "css" },
-    { parentType: "*", contentType: "raw_text_await", language: "javascript" },
-    { parentType: "*", contentType: "raw_text_each", language: "javascript" },
-    { parentType: "*", contentType: "raw_text_expr", language: "javascript" },
-  ],
-  markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
-};
-
-const CAPTURE_TO_CLASS: Record<string, string> = {
-  keyword: "token-keyword",
-  "keyword.control": "token-keyword",
-  "keyword.function": "token-keyword",
-  "keyword.operator": "token-keyword",
-  "keyword.return": "token-keyword",
-  "keyword.import": "token-keyword",
-  "keyword.conditional": "token-keyword",
-  "keyword.conditional.ternary": "token-operator",
-  "keyword.repeat": "token-keyword",
-  "keyword.type": "token-keyword",
-  "keyword.coroutine": "token-keyword",
-  "keyword.exception": "token-keyword",
-  "keyword.modifier": "token-keyword",
-  "keyword.directive": "token-keyword",
-  conditional: "token-keyword",
-  repeat: "token-keyword",
-  include: "token-keyword",
-  exception: "token-keyword",
-  storageclass: "token-keyword",
-  function: "token-function",
-  "function.call": "token-function",
-  "function.method": "token-function",
-  "function.method.call": "token-function",
-  "function.builtin": "token-function",
-  method: "token-function",
-  "method.call": "token-function",
-  constructor: "token-function",
-  variable: "token-variable",
-  "variable.builtin": "token-variable",
-  "variable.parameter": "token-variable",
-  "variable.member": "token-property",
-  parameter: "token-variable",
-  constant: "token-constant",
-  "constant.builtin": "token-constant",
-  "constant.numeric": "token-number",
-  number: "token-number",
-  float: "token-number",
-  boolean: "token-constant",
-  string: "token-string",
-  "string.special": "token-string",
-  "string.special.key": "token-property",
-  "string.special.url": "token-string",
-  "string.escape": "token-string",
-  "string.regexp": "token-string",
-  character: "token-string",
-  "character.special": "token-string",
-  comment: "token-comment",
-  "comment.line": "token-comment",
-  "comment.block": "token-comment",
-  "comment.documentation": "token-comment",
-  type: "token-type",
-  "type.builtin": "token-type",
-  "type.definition": "token-type",
-  class: "token-type",
-  interface: "token-type",
-  enum: "token-type",
-  struct: "token-type",
-  property: "token-property",
-  "property.definition": "token-property",
-  attribute: "token-attribute",
-  field: "token-property",
-  tag: "token-tag",
-  "tag.builtin": "token-tag",
-  "tag.attribute": "token-attribute",
-  "tag.delimiter": "token-punctuation",
-  operator: "token-operator",
-  "operator.arithmetic": "token-operator",
-  "operator.logical": "token-operator",
-  punctuation: "token-punctuation",
-  "punctuation.delimiter": "token-punctuation",
-  "punctuation.bracket": "token-punctuation",
-  "punctuation.special": "token-punctuation",
-  "markup.heading": "token-keyword",
-  "markup.heading.1": "token-keyword",
-  "markup.heading.2": "token-keyword",
-  "markup.heading.3": "token-keyword",
-  "markup.heading.4": "token-keyword",
-  "markup.heading.5": "token-keyword",
-  "markup.heading.6": "token-keyword",
-  "markup.strong": "token-constant",
-  "markup.italic": "token-variable",
-  "markup.strikethrough": "token-comment",
-  "markup.underline": "token-string",
-  "markup.raw": "token-string",
-  "markup.link.label": "token-string",
-  label: "token-constant",
-  namespace: "token-type",
-  module: "token-type",
-  "module.builtin": "token-type",
-  decorator: "token-attribute",
-  annotation: "token-attribute",
-  macro: "token-function",
-  "text.title": "token-keyword",
-  "text.literal": "token-string",
-  "text.emphasis": "token-variable",
-  "text.strong": "token-constant",
-  "text.uri": "token-string",
-  "text.reference": "token-function",
-  none: "token-text",
-};
-
-function mapCaptureToClass(captureName: string): string {
-  const exact = CAPTURE_TO_CLASS[captureName];
-  if (exact) return exact;
-  const dot = captureName.lastIndexOf(".");
-  if (dot > 0) return mapCaptureToClass(captureName.substring(0, dot));
-  return "token-text";
-}
 
 function normalizeLineEndings(content: string): string {
   return content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -211,80 +52,19 @@ function buildLineStartOffsets(content: string): number[] {
   return offsets;
 }
 
-function findInjectionNodes(
-  rootNode: Node,
-  rules: InjectionRule[],
-): Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> {
-  const results: Array<{ rule: InjectionRule; node: Node; parentNode: Node | null }> = [];
-
-  function walk(node: Node) {
-    for (const rule of rules) {
-      if (rule.parentType === "*") {
-        if (node.type === rule.contentType) {
-          results.push({ rule, node, parentNode: null });
-        }
-      } else if (node.type === rule.parentType) {
-        for (let i = 0; i < node.childCount; i++) {
-          const child = node.child(i);
-          if (child && child.type === rule.contentType) {
-            results.push({ rule, node: child, parentNode: node });
-          }
-        }
-      }
-    }
-
-    for (let i = 0; i < node.childCount; i++) {
-      const child = node.child(i);
-      if (child) walk(child);
-    }
-  }
-
-  walk(rootNode);
-  return results;
-}
-
-function resolveInjectedLanguage(
-  source: string,
-  parentLanguageId: string,
-  rule: InjectionRule,
-  node: Node,
-  parentNode: Node | null,
-): string {
-  if (rule.parentType !== "script_element" || !parentNode) {
-    return rule.language;
-  }
-
-  const openingTag = source.slice(parentNode.startIndex, node.startIndex);
-  const langMatch = openingTag.match(/\blang\s*=\s*["']([^"']+)["']/i);
-  const lang = langMatch?.[1]?.trim().toLowerCase();
-
-  if (!lang) {
-    return rule.language;
-  }
-
-  if (lang === "ts" || lang === "typescript") {
-    return "typescript";
-  }
-
-  if (lang === "js" || lang === "javascript") {
-    return "javascript";
-  }
-
-  if (parentLanguageId === "svelte" && (lang === "tsx" || lang === "jsx")) {
-    return lang === "tsx" ? "typescriptreact" : "javascriptreact";
-  }
-
-  return rule.language;
-}
-
-async function getLoadedParser(languageId: string): Promise<LoadedParser> {
+async function getLoadedParser(
+  languageId: string,
+  assets?: { wasmPath?: string; highlightQueryUrl?: string },
+): Promise<LoadedParser> {
   if (wasmParserLoader.isLoaded(languageId)) {
     return wasmParserLoader.getParser(languageId);
   }
 
+  const defaultAssets = getLanguageAssetConfig(languageId);
   const config: ParserConfig = {
     languageId,
-    wasmPath: getDefaultParserWasmUrl(languageId),
+    wasmPath: assets?.wasmPath || defaultAssets.wasmPath,
+    highlightQueryUrl: assets?.highlightQueryUrl || defaultAssets.highlightQueryUrl,
   };
 
   return wasmParserLoader.loadParser(config);
@@ -329,7 +109,7 @@ function toHighlightTokens(captures: QueryCapture[]): HighlightToken[] {
 
   for (const capture of captures) {
     const { name, node } = capture;
-    if (name === "none" || name === "spell" || name.startsWith("_")) {
+    if (isIgnoredCapture(name)) {
       continue;
     }
 
@@ -348,16 +128,7 @@ function toHighlightTokens(captures: QueryCapture[]): HighlightToken[] {
     });
   }
 
-  const deduped: HighlightToken[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const next = tokens[i + 1];
-    if (next && next.startIndex === tokens[i].startIndex && next.endIndex === tokens[i].endIndex) {
-      continue;
-    }
-    deduped.push(tokens[i]);
-  }
-
-  return deduped;
+  return dedupeHighlightTokens(tokens);
 }
 
 function getRangeQueryOptions(content: string, viewportRange?: ViewportRangePayload) {
@@ -380,10 +151,11 @@ function getRangeQueryOptions(content: string, viewportRange?: ViewportRangePayl
 
 function upsertTree(
   session: WorkerSession | undefined,
+  bufferId: string,
   languageId: string,
   content: string,
   tree: Tree,
-) {
+): WorkerSession {
   if (session?.tree && session.tree !== tree) {
     try {
       session.tree.delete();
@@ -393,16 +165,44 @@ function upsertTree(
   }
 
   return {
-    bufferId: session?.bufferId ?? "",
+    bufferId,
     languageId,
     content,
     tree,
+    lastAccessedAt: Date.now(),
   };
 }
 
-async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessResponse> {
+function disposeSession(session: WorkerSession) {
+  try {
+    session.tree.delete();
+  } catch {
+    // ignore
+  }
+}
+
+function pruneCachedSessions() {
+  if (sessions.size <= MAX_CACHED_SESSIONS) return;
+
+  const overflow = sessions.size - MAX_CACHED_SESSIONS;
+  const staleSessions = Array.from(sessions.values())
+    .sort((a, b) => a.lastAccessedAt - b.lastAccessedAt)
+    .slice(0, overflow);
+
+  for (const session of staleSessions) {
+    sessions.delete(session.bufferId);
+    disposeSession(session);
+  }
+}
+
+async function handleTokenize(
+  message: Extract<TokenizerWorkerRequest, { type: "tokenize" }>,
+): Promise<WorkerSuccessResponse> {
   const normalizedContent = normalizeLineEndings(message.content);
-  const loadedParser = await getLoadedParser(message.languageId);
+  const loadedParser = await getLoadedParser(message.languageId, {
+    wasmPath: message.wasmPath,
+    highlightQueryUrl: message.highlightQueryUrl,
+  });
   const existing = sessions.get(message.bufferId);
 
   let tree: Tree | null = null;
@@ -449,7 +249,7 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
       )
     : [];
 
-  const injectionRules = LANGUAGE_INJECTIONS[message.languageId];
+  const injectionRules = getInjectionRules(message.languageId);
   if (injectionRules) {
     const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
 
@@ -496,9 +296,15 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
 
   tokens.push(...getLanguageOverlayTokens(message.languageId, normalizedContent));
 
-  const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
-  nextSession.bufferId = message.bufferId;
+  const nextSession = upsertTree(
+    existing,
+    message.bufferId,
+    message.languageId,
+    normalizedContent,
+    tree,
+  );
   sessions.set(message.bufferId, nextSession);
+  pruneCachedSessions();
 
   return {
     id: message.id,
@@ -508,20 +314,18 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
   };
 }
 
-function handleReset(message: ResetMessage): WorkerSuccessResponse {
+function handleReset(
+  message: Extract<TokenizerWorkerRequest, { type: "reset" }>,
+): WorkerSuccessResponse {
   const existing = sessions.get(message.bufferId);
-  if (existing?.tree) {
-    try {
-      existing.tree.delete();
-    } catch {
-      // ignore
-    }
+  if (existing) {
+    disposeSession(existing);
   }
   sessions.delete(message.bufferId);
   return { id: message.id, ok: true };
 }
 
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+self.onmessage = async (event: MessageEvent<TokenizerWorkerRequest>) => {
   const message = event.data;
 
   try {
@@ -532,17 +336,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         (self as DedicatedWorkerGlobalScope).postMessage({
           id: message.id,
           ok: true,
-        } satisfies WorkerResponse);
+        } satisfies TokenizerWorkerResponse);
         return;
       case "reset":
         (self as DedicatedWorkerGlobalScope).postMessage(
-          handleReset(message) satisfies WorkerResponse,
+          handleReset(message) satisfies TokenizerWorkerResponse,
         );
         return;
       case "tokenize":
         await wasmParserLoader.initialize();
         (self as DedicatedWorkerGlobalScope).postMessage(
-          (await handleTokenize(message)) satisfies WorkerResponse,
+          (await handleTokenize(message)) satisfies TokenizerWorkerResponse,
         );
         return;
     }
@@ -551,6 +355,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: message.id,
       ok: false,
       error: error instanceof Error ? error.message : String(error),
-    } satisfies WorkerErrorResponse);
+    } satisfies TokenizerWorkerResponse);
   }
 };

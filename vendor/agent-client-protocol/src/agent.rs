@@ -1,10 +1,11 @@
 use std::{rc::Rc, sync::Arc};
 
 use agent_client_protocol_schema::{
-    AuthenticateRequest, AuthenticateResponse, CancelNotification, Error, ExtNotification,
-    ExtRequest, ExtResponse, InitializeRequest, InitializeResponse, LoadSessionRequest,
-    LoadSessionResponse, NewSessionRequest, NewSessionResponse, PromptRequest, PromptResponse,
-    Result, SetSessionModeRequest, SetSessionModeResponse,
+    AuthenticateRequest, AuthenticateResponse, CancelNotification, CloseSessionRequest,
+    CloseSessionResponse, Error, ExtNotification, ExtRequest, ExtResponse, InitializeRequest,
+    InitializeResponse, LoadSessionRequest, LoadSessionResponse, NewSessionRequest,
+    NewSessionResponse, PromptRequest, PromptResponse, Result, SetSessionModeRequest,
+    SetSessionModeResponse,
 };
 #[cfg(feature = "unstable_session_fork")]
 use agent_client_protocol_schema::{ForkSessionRequest, ForkSessionResponse};
@@ -192,6 +193,13 @@ pub trait Agent {
         Err(Error::method_not_found())
     }
 
+    /// Closes an active session and frees resources associated with it.
+    ///
+    /// Only available if the Agent supports the `sessionCapabilities.close` capability.
+    async fn close_session(&self, _args: CloseSessionRequest) -> Result<CloseSessionResponse> {
+        Err(Error::method_not_found())
+    }
+
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -265,6 +273,9 @@ impl<T: Agent> Agent for Rc<T> {
     async fn resume_session(&self, args: ResumeSessionRequest) -> Result<ResumeSessionResponse> {
         self.as_ref().resume_session(args).await
     }
+    async fn close_session(&self, args: CloseSessionRequest) -> Result<CloseSessionResponse> {
+        self.as_ref().close_session(args).await
+    }
     async fn ext_method(&self, args: ExtRequest) -> Result<ExtResponse> {
         self.as_ref().ext_method(args).await
     }
@@ -324,6 +335,9 @@ impl<T: Agent> Agent for Arc<T> {
     #[cfg(feature = "unstable_session_resume")]
     async fn resume_session(&self, args: ResumeSessionRequest) -> Result<ResumeSessionResponse> {
         self.as_ref().resume_session(args).await
+    }
+    async fn close_session(&self, args: CloseSessionRequest) -> Result<CloseSessionResponse> {
+        self.as_ref().close_session(args).await
     }
     async fn ext_method(&self, args: ExtRequest) -> Result<ExtResponse> {
         self.as_ref().ext_method(args).await

@@ -376,6 +376,7 @@ impl AthasAcpClient {
          id: option.id.to_string(),
          name: option.name,
          description: option.description,
+         category: option.category,
          kind,
       })
    }

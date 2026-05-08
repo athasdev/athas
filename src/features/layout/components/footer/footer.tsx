@@ -4,9 +4,12 @@ import {
   DownloadSimple,
   PuzzlePiece,
   TerminalWindow,
+  UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
+import { buildCollaborationFooterStatus } from "@/features/collaboration/lib/collaboration-footer-status";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { Dropdown } from "@/ui/dropdown";
@@ -22,6 +25,7 @@ import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import type {
   FooterLeadingItemId,
@@ -103,6 +107,9 @@ function FooterTabControl({
 const Footer = () => {
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
+  const collaboration = useAuthStore((state) => state.subscription?.collaboration);
+  const presenceTarget = useCollaborationRuntimeStore((state) => state.presenceTarget);
+  const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
@@ -145,6 +152,11 @@ const Footer = () => {
       ? gitStatus
       : workspaceGitStatus;
   const footerBranch = footerGitStatus?.branch;
+  const collaborationFooterStatus = buildCollaborationFooterStatus({
+    collaboration,
+    presenceTarget,
+    activeDocumentStream,
+  });
   const updateMenuItems = useMemo(
     () => [
       {
@@ -222,6 +234,42 @@ const Footer = () => {
                 }}
               />
             </div>
+          ),
+        }
+      : null,
+    collaborationFooterStatus
+      ? {
+          id: "collaboration",
+          label: "Collaboration",
+          content: (
+            <FooterTabControl
+              tooltip={collaborationFooterStatus.tooltip}
+              active={collaborationFooterStatus.active}
+              className={cn(
+                FOOTER_PILL_TAB_CLASS_NAME,
+                "max-w-[148px]",
+                collaborationFooterStatus.tone === "live" &&
+                  "text-accent hover:bg-accent/10 hover:text-accent",
+                collaborationFooterStatus.tone === "connecting" &&
+                  "text-warning hover:bg-warning/10 hover:text-warning",
+                collaborationFooterStatus.tone === "error" &&
+                  "text-error hover:bg-error/10 hover:text-error",
+              )}
+              onClick={() => {
+                uiState.setActiveView("collaboration");
+                uiState.setIsSidebarVisible(true);
+              }}
+            >
+              <UsersThree weight="duotone" />
+              <span className="ui-font ui-text-xs max-w-[86px] truncate font-medium">
+                {collaborationFooterStatus.label}
+              </span>
+              {collaborationFooterStatus.countLabel && (
+                <span className={cn(FOOTER_COUNT_PILL_CLASS_NAME, "bg-accent text-primary-bg")}>
+                  {collaborationFooterStatus.countLabel}
+                </span>
+              )}
+            </FooterTabControl>
           ),
         }
       : null,

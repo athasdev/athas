@@ -2,10 +2,12 @@ import { forwardRef, memo, useEffect, useState, type RefObject } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Position } from "../../types/editor";
 import { getAccurateCursorX } from "../../utils/position";
+import type { ViewPosition } from "../../view-model/view-layout";
 
 interface PrimaryCursorLayerProps {
   cursorPosition: Position;
   visualLine: number;
+  cursorViewPosition?: ViewPosition;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -20,6 +22,7 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
     {
       cursorPosition,
       visualLine,
+      cursorViewPosition,
       fontSize,
       fontFamily,
       lineHeight,
@@ -68,13 +71,17 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
     const lineText = lines[visualLine] || "";
     const cursorColumn = Math.min(cursorPosition.column, lineText.length);
     const left =
+      cursorViewPosition?.left ??
       getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
-      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
-    const top = visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+        EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+    const top =
+      cursorViewPosition?.top ?? visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const cursorKey = `${cursorPosition.line}:${cursorPosition.column}:${cursorPosition.offset}`;
 
     return (
       <div ref={ref} className="pointer-events-none absolute inset-0 z-10">
         <div
+          key={cursorKey}
           className="absolute animate-blink"
           style={{
             top: `${top}px`,
@@ -95,6 +102,7 @@ export const PrimaryCursorLayer = memo(PrimaryCursorLayerComponent, (prev, next)
   return (
     prev.cursorPosition === next.cursorPosition &&
     prev.visualLine === next.visualLine &&
+    prev.cursorViewPosition === next.cursorViewPosition &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
