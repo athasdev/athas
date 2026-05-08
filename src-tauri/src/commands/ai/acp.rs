@@ -15,6 +15,8 @@ use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
+const ACP_REGISTRY_URL: &str =
+   "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 
 #[derive(Deserialize)]
@@ -163,10 +165,55 @@ struct MarketplaceExtensionManifest {
    agents: Vec<MarketplaceAgentContribution>,
 }
 
+#[derive(Deserialize)]
+struct AcpRegistryIndex {
+   #[serde(default)]
+   agents: Vec<AcpRegistryAgent>,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryAgent {
+   id: String,
+   name: String,
+   description: String,
+   icon: Option<String>,
+   distribution: AcpRegistryDistribution,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryDistribution {
+   binary: Option<HashMap<String, AcpRegistryBinaryTarget>>,
+   npx: Option<AcpRegistryPackageTarget>,
+   uvx: Option<AcpRegistryPackageTarget>,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryBinaryTarget {
+   archive: String,
+   cmd: String,
+   #[serde(default)]
+   args: Vec<String>,
+   #[serde(default)]
+   env: HashMap<String, String>,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryPackageTarget {
+   package: String,
+   #[serde(default)]
+   args: Vec<String>,
+   #[serde(default)]
+   env: HashMap<String, String>,
+}
+
 fn extensions_manifest_url() -> String {
    let base_url = std::env::var("ATHAS_EXTENSIONS_CDN_URL")
       .unwrap_or_else(|_| EXTENSIONS_CDN_BASE_URL.to_string());
    format!("{}/manifests.json", base_url.trim_end_matches('/'))
+}
+
+fn acp_registry_url() -> String {
+   std::env::var("ATHAS_ACP_REGISTRY_URL").unwrap_or_else(|_| ACP_REGISTRY_URL.to_string())
 }
 
 fn current_platform_arch() -> Option<&'static str> {
@@ -179,6 +226,33 @@ fn current_platform_arch() -> Option<&'static str> {
       ("windows", "x86_64") => Some("win32-x64"),
       _ => None,
    }
+}
+
+fn current_acp_registry_platform() -> Option<&'static str> {
+   match (std::env::consts::OS, std::env::consts::ARCH) {
+      ("macos", "aarch64") => Some("darwin-aarch64"),
+      ("macos", "x86_64") => Some("darwin-x86_64"),
+      ("linux", "aarch64") => Some("linux-aarch64"),
+      ("linux", "x86_64") => Some("linux-x86_64"),
+      ("windows", "aarch64") => Some("windows-aarch64"),
+      ("windows", "x86_64") => Some("windows-x86_64"),
+      _ => None,
+   }
+}
+
+fn registry_command_name(cmd: &str, fallback: &str) -> String {
+   Path::new(cmd)
+      .file_name()
+      .and_then(|name| name.to_str())
+      .map(|name| {
+         if cfg!(windows) {
+            name.strip_suffix(".exe").unwrap_or(name).to_string()
+         } else {
+            name.to_string()
+         }
+      })
+      .filter(|name| !name.is_empty())
+      .unwrap_or_else(|| fallback.to_string())
 }
 
 fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
@@ -217,6 +291,115 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
    agent
 }
 
+fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> {
+   let AcpRegistryAgent {
+      id,
+      name,
+      description,
+      icon,
+      distribution,
+   } = agent;
+
+   if let Some(target) = current_acp_registry_platform()
+      .and_then(|platform| distribution.binary.as_ref()?.get(platform))
+   {
+      let binary_name = registry_command_name(&target.cmd, &id);
+      return Some(AgentConfig {
+         id,
+         name,
+         binary_name,
+         binary_path: None,
+         args: target.args.clone(),
+         env_vars: target.env.clone(),
+         icon,
+         description: Some(description),
+         installed: false,
+         install_runtime: Some(AgentRuntime::Binary),
+         install_package: Some(target.cmd.clone()),
+         install_download_url: Some(target.archive.clone()),
+         install_command: Some(registry_command_name(&target.cmd, "")),
+         can_install: true,
+      });
+   }
+
+   if let Some(target) = distribution.npx {
+      let mut args = vec!["-y".to_string(), target.package.clone()];
+      args.extend(target.args.clone());
+      return Some(AgentConfig {
+         id,
+         name,
+         binary_name: "npx".to_string(),
+         binary_path: None,
+         args,
+         env_vars: target.env,
+         icon,
+         description: Some(description),
+         installed: false,
+         install_runtime: Some(AgentRuntime::Node),
+         install_package: Some(target.package),
+         install_download_url: None,
+         install_command: None,
+         can_install: true,
+      });
+   }
+
+   if let Some(target) = distribution.uvx {
+      let mut args = vec![target.package];
+      args.extend(target.args);
+      return Some(AgentConfig {
+         id,
+         name,
+         binary_name: "uvx".to_string(),
+         binary_path: None,
+         args,
+         env_vars: target.env,
+         icon,
+         description: Some(description),
+         installed: false,
+         install_runtime: None,
+         install_package: None,
+         install_download_url: None,
+         install_command: None,
+         can_install: false,
+      });
+   }
+
+   None
+}
+
+fn acp_registry_agents_from_index(index: AcpRegistryIndex) -> Vec<AgentConfig> {
+   let mut agents = index
+      .agents
+      .into_iter()
+      .filter_map(acp_registry_agent_to_config)
+      .collect::<Vec<_>>();
+   agents.sort_by_key(|agent| agent.name.clone());
+   agents
+}
+
+async fn load_acp_registry_agents() -> Result<Vec<AgentConfig>, String> {
+   let response = reqwest::Client::new()
+      .get(acp_registry_url())
+      .timeout(Duration::from_secs(5))
+      .send()
+      .await
+      .map_err(|error| format!("Failed to load ACP registry: {}", error))?;
+
+   if !response.status().is_success() {
+      return Err(format!(
+         "Failed to load ACP registry: HTTP {}",
+         response.status()
+      ));
+   }
+
+   let registry = response
+      .json::<AcpRegistryIndex>()
+      .await
+      .map_err(|error| format!("Invalid ACP registry: {}", error))?;
+
+   Ok(acp_registry_agents_from_index(registry))
+}
+
 async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    let cache = AGENT_CATALOG_CACHE.get_or_init(|| std::sync::Mutex::new(None));
    {
@@ -230,6 +413,26 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       }
    }
 
+   let agents = match load_acp_registry_agents().await {
+      Ok(agents) => agents,
+      Err(registry_error) => {
+         log::warn!("{}", registry_error);
+         load_legacy_marketplace_agents().await?
+      }
+   };
+
+   let mut cached = cache
+      .lock()
+      .map_err(|_| "Agent catalog cache poisoned".to_string())?;
+   *cached = Some(CachedAgentCatalog {
+      loaded_at: Instant::now(),
+      agents: agents.clone(),
+   });
+
+   Ok(agents)
+}
+
+async fn load_legacy_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    let response = reqwest::Client::new()
       .get(extensions_manifest_url())
       .timeout(Duration::from_secs(5))
@@ -255,14 +458,6 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       .map(to_agent_config)
       .collect::<Vec<_>>();
    agents.sort_by_key(|agent| agent.name.clone());
-
-   let mut cached = cache
-      .lock()
-      .map_err(|_| "Agent catalog cache poisoned".to_string())?;
-   *cached = Some(CachedAgentCatalog {
-      loaded_at: Instant::now(),
-      agents: agents.clone(),
-   });
 
    Ok(agents)
 }
@@ -533,4 +728,191 @@ fn make_wrapper_executable(path: &PathBuf) -> Result<(), String> {
    }
 
    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn parse_registry(json: &str) -> Vec<AgentConfig> {
+      let index: AcpRegistryIndex = serde_json::from_str(json).expect("registry fixture");
+      acp_registry_agents_from_index(index)
+   }
+
+   #[test]
+   fn acp_registry_maps_binary_agent_for_current_platform() {
+      let agents = parse_registry(
+         r#"{
+            "agents": [
+              {
+                "id": "codex-acp",
+                "name": "Codex CLI",
+                "version": "0.14.0",
+                "description": "ACP adapter for OpenAI's coding assistant",
+                "distribution": {
+                  "binary": {
+                    "darwin-aarch64": {
+                      "archive": "https://example.com/codex-aarch64.tar.gz",
+                      "cmd": "./codex-acp",
+                      "args": ["--acp"],
+                      "env": { "CODEX_HOME": "/tmp/codex" }
+                    },
+                    "darwin-x86_64": {
+                      "archive": "https://example.com/codex-x64.tar.gz",
+                      "cmd": "./codex-acp"
+                    },
+                    "linux-x86_64": {
+                      "archive": "https://example.com/codex-linux.tar.gz",
+                      "cmd": "./codex-acp"
+                    },
+                    "windows-x86_64": {
+                      "archive": "https://example.com/codex.zip",
+                      "cmd": "./codex-acp.exe"
+                    }
+                  }
+                },
+                "icon": "https://example.com/codex.svg"
+              }
+            ]
+         }"#,
+      );
+
+      let agent = agents
+         .into_iter()
+         .find(|agent| agent.id == "codex-acp")
+         .expect("codex agent");
+
+      assert_eq!(agent.name, "Codex CLI");
+      assert_eq!(agent.install_runtime, Some(AgentRuntime::Binary));
+      assert_eq!(agent.binary_name, "codex-acp");
+      assert!(agent.can_install);
+      assert!(agent.install_download_url.is_some());
+      assert_eq!(agent.icon.as_deref(), Some("https://example.com/codex.svg"));
+   }
+
+   #[test]
+   fn acp_registry_maps_npx_agent_to_npx_launch() {
+      let agents = parse_registry(
+         r#"{
+            "agents": [
+              {
+                "id": "claude-acp",
+                "name": "Claude Agent",
+                "version": "0.33.1",
+                "description": "ACP wrapper for Claude",
+                "distribution": {
+                  "npx": {
+                    "package": "@agentclientprotocol/claude-agent-acp@0.33.1",
+                    "args": ["--verbose"],
+                    "env": { "ANTHROPIC_HOME": "/tmp/claude" }
+                  }
+                }
+              }
+            ]
+         }"#,
+      );
+
+      let agent = agents
+         .into_iter()
+         .find(|agent| agent.id == "claude-acp")
+         .expect("claude agent");
+
+      assert_eq!(agent.binary_name, "npx");
+      assert_eq!(agent.install_runtime, Some(AgentRuntime::Node));
+      assert_eq!(
+         agent.args,
+         vec![
+            "-y".to_string(),
+            "@agentclientprotocol/claude-agent-acp@0.33.1".to_string(),
+            "--verbose".to_string()
+         ]
+      );
+      assert_eq!(
+         agent.install_package.as_deref(),
+         Some("@agentclientprotocol/claude-agent-acp@0.33.1")
+      );
+      assert!(agent.can_install);
+   }
+
+   #[test]
+   fn acp_registry_includes_uvx_agents_without_managed_install_claim() {
+      let agents = parse_registry(
+         r#"{
+            "agents": [
+              {
+                "id": "fast-agent",
+                "name": "fast-agent",
+                "version": "0.7.0",
+                "description": "Code and build agents",
+                "distribution": {
+                  "uvx": {
+                    "package": "fast-agent-acp==0.7.0",
+                    "args": ["-x"]
+                  }
+                }
+              }
+            ]
+         }"#,
+      );
+
+      let agent = agents
+         .into_iter()
+         .find(|agent| agent.id == "fast-agent")
+         .expect("uvx agent");
+
+      assert_eq!(agent.binary_name, "uvx");
+      assert_eq!(
+         agent.args,
+         vec!["fast-agent-acp==0.7.0".to_string(), "-x".to_string()]
+      );
+      assert_eq!(agent.install_runtime, None);
+      assert!(!agent.can_install);
+   }
+
+   #[test]
+   fn acp_registry_prefers_current_platform_binary_over_npx() {
+      let agents = parse_registry(
+         r#"{
+            "agents": [
+              {
+                "id": "kilo",
+                "name": "Kilo",
+                "version": "7.2.40",
+                "description": "Kilo ACP",
+                "distribution": {
+                  "binary": {
+                    "darwin-aarch64": {
+                      "archive": "https://example.com/kilo-aarch64.tar.gz",
+                      "cmd": "./kilo"
+                    },
+                    "darwin-x86_64": {
+                      "archive": "https://example.com/kilo-x64.tar.gz",
+                      "cmd": "./kilo"
+                    },
+                    "linux-x86_64": {
+                      "archive": "https://example.com/kilo-linux.tar.gz",
+                      "cmd": "./kilo"
+                    },
+                    "windows-x86_64": {
+                      "archive": "https://example.com/kilo.zip",
+                      "cmd": "kilo.exe"
+                    }
+                  },
+                  "npx": {
+                    "package": "kilo-code@7.2.40"
+                  }
+                }
+              }
+            ]
+         }"#,
+      );
+
+      let agent = agents
+         .into_iter()
+         .find(|agent| agent.id == "kilo")
+         .expect("kilo agent");
+
+      assert_eq!(agent.install_runtime, Some(AgentRuntime::Binary));
+      assert_eq!(agent.binary_name, "kilo");
+   }
 }
