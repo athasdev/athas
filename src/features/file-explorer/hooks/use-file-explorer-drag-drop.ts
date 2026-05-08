@@ -108,8 +108,21 @@ export function useFileExplorerDragDrop(
     }
   }, [dragState.mousePosition]);
 
+  const dragStateRef = useRef(dragState);
+  useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
+
   useEffect(() => {
     if (!dragState.isDragging) return;
+
+    const handleAbort = () => {
+      setDragState(initialDragState);
+      clearAutoExpand();
+      clearEditorDropHover();
+    };
+
+    window.addEventListener("athas-drag-abort", handleAbort);
 
     const handleMouseMove = (e: MouseEvent) => {
       setDragState((prev) => ({
@@ -125,11 +138,12 @@ export function useFileExplorerDragDrop(
         elementUnder?.closest("[data-pane-container]") ||
         elementUnder?.closest("[data-tab-bar-pane-id]");
 
+      const draggedItem = dragStateRef.current.draggedItem;
+
       if (fileTreeItem) {
         clearEditorDropHover();
         const path = fileTreeItem.getAttribute("data-file-path");
         const isDir = fileTreeItem.getAttribute("data-is-dir") === "true";
-        const draggedItem = dragState.draggedItem;
 
         if (path && draggedItem && path !== draggedItem.path) {
           const separator = getPathSeparator(draggedItem.path);
@@ -163,7 +177,7 @@ export function useFileExplorerDragDrop(
           dragOverIsDir: true,
         }));
         clearAutoExpand();
-      } else if (aiContextDropTarget && dragState.draggedItem) {
+      } else if (aiContextDropTarget && draggedItem) {
         clearEditorDropHover();
         setDragState((prev) => ({
           ...prev,
@@ -171,7 +185,7 @@ export function useFileExplorerDragDrop(
           dragOverIsDir: false,
         }));
         clearAutoExpand();
-      } else if (editorDropTarget && dragState.draggedItem && !dragState.draggedItem.isDir) {
+      } else if (editorDropTarget && draggedItem && !draggedItem.isDir) {
         setInternalTabDragHover({ x: e.clientX, y: e.clientY });
         setDragState((prev) => ({
           ...prev,
@@ -191,19 +205,19 @@ export function useFileExplorerDragDrop(
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
-      // Check if dropping on a pane container (outside file tree)
+      const live = dragStateRef.current;
       const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
       const isOverPane = elementUnder?.closest("[data-pane-container]") !== null;
       const isOverFileTree = elementUnder?.closest(".file-tree-container") !== null;
       const isOverAIContextDropTarget =
         elementUnder?.closest("[data-ai-context-drop-target]") !== null;
 
-      if (isOverAIContextDropTarget && dragState.draggedItem) {
+      if (isOverAIContextDropTarget && live.draggedItem) {
         dispatchSidebarResourceDropOnAI({
           type: "file",
-          path: dragState.draggedItem.path,
-          name: dragState.draggedItem.name,
-          isDir: dragState.draggedItem.isDir,
+          path: live.draggedItem.path,
+          name: live.draggedItem.name,
+          isDir: live.draggedItem.isDir,
         });
         setDragState(initialDragState);
         clearAutoExpand();
@@ -211,14 +225,13 @@ export function useFileExplorerDragDrop(
         return;
       }
 
-      // If dropping on a pane (not in file tree), dispatch event for pane to handle
-      if (isOverPane && !isOverFileTree && dragState.draggedItem && !dragState.draggedItem.isDir) {
+      if (isOverPane && !isOverFileTree && live.draggedItem && !live.draggedItem.isDir) {
         window.dispatchEvent(
           new CustomEvent("file-tree-drop-on-pane", {
             detail: {
-              path: dragState.draggedItem.path,
-              name: dragState.draggedItem.name,
-              isDir: dragState.draggedItem.isDir,
+              path: live.draggedItem.path,
+              name: live.draggedItem.name,
+              isDir: live.draggedItem.isDir,
               x: e.clientX,
               y: e.clientY,
             },
@@ -230,9 +243,9 @@ export function useFileExplorerDragDrop(
         return;
       }
 
-      if (dragState.dragOverPath && dragState.draggedItem) {
-        const { path: sourcePath, name: sourceName } = dragState.draggedItem;
-        let targetPath = dragState.dragOverPath;
+      if (live.dragOverPath && live.draggedItem) {
+        const { path: sourcePath, name: sourceName } = live.draggedItem;
+        let targetPath = live.dragOverPath;
 
         if (targetPath === "__ROOT__") {
           targetPath = rootFolderPath || "";
@@ -243,7 +256,7 @@ export function useFileExplorerDragDrop(
           }
         }
 
-        if (!dragState.dragOverIsDir && targetPath !== "__ROOT__") {
+        if (!live.dragOverIsDir && targetPath !== "__ROOT__") {
           targetPath = getDirName(targetPath) || rootFolderPath || "";
         }
 
@@ -272,13 +285,14 @@ export function useFileExplorerDragDrop(
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("mouseleave", handleMouseUp);
+      window.removeEventListener("athas-drag-abort", handleAbort);
       clearAutoExpand();
       clearEditorDropHover();
     };
   }, [
+    dragState.isDragging,
     clearAutoExpand,
     clearEditorDropHover,
-    dragState,
     onFileMove,
     onMoveError,
     rootFolderPath,
@@ -297,7 +311,6 @@ export function useFileExplorerDragDrop(
       mousePosition: { x: e.clientX, y: e.clientY },
     });
 
-    // Store drag data globally for pane containers to access
     window.__fileDragData = {
       path: file.path,
       name: file.name,
@@ -305,7 +318,6 @@ export function useFileExplorerDragDrop(
     };
   }, []);
 
-  // Clean up global drag data on drag end
   useEffect(() => {
     if (!dragState.isDragging) {
       delete window.__fileDragData;

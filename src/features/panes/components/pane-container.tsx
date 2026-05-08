@@ -1,10 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import type { DatabaseType } from "@/features/database/models/provider.types";
-import {
-  PROVIDER_REGISTRY,
-  type DatabaseViewerProps,
-} from "@/features/database/providers/provider-registry";
+import { PROVIDER_REGISTRY } from "@/features/database/providers/provider-registry";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { Buffer } from "@/features/editor/stores/buffer-store";
@@ -23,23 +19,22 @@ import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import {
+  applyDropZoneGates,
   clearInternalTabDragData,
+  getSplitDropConfig,
   getInternalTabDragData,
   getInternalTabDragHover,
+  isEdgeDropZone,
+  isDragAborted,
   resolveDropTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { cn } from "@/utils/cn";
-import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils/pane-activation";
 import { EmptyEditorState } from "./empty-editor-state";
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
+import { hasTextContent } from "../types/pane-content";
 import type { EditorContent, PullRequestContent } from "../types/pane-content";
-import {
-  ensureBufferInPaneDropTarget,
-  getOrCreatePaneDropTarget,
-  moveBufferToPaneDropTarget,
-} from "../utils/pane-drop-actions";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 
 const AgentTab = lazy(() =>
@@ -50,7 +45,7 @@ const AgentTab = lazy(() =>
 
 const databaseViewerCache = new Map<
   DatabaseType,
-  React.LazyExoticComponent<React.ComponentType<DatabaseViewerProps>>
+  React.LazyExoticComponent<React.ComponentType<any>>
 >();
 function getDatabaseViewer(dbType: DatabaseType) {
   if (!databaseViewerCache.has(dbType)) {
@@ -71,7 +66,7 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
-const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
+const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const ImageViewer = lazy(() =>
@@ -108,14 +103,10 @@ const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
 
-type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
-type PaneRenderBuffer = Exclude<Buffer, EditorContent> | EditorBufferShell;
-
-function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
-  const previewText =
-    "content" in buffer && typeof buffer.content === "string"
-      ? buffer.content.split("\n").slice(0, 14).join("\n").trim()
-      : "";
+function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
+  const previewText = hasTextContent(buffer)
+    ? buffer.content.split("\n").slice(0, 14).join("\n").trim()
+    : "";
 
   const summary =
     buffer.type === "terminal"
@@ -147,23 +138,23 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-xs leading-5 text-text-lighter">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 text-[11px] leading-5 text-text-lighter">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-xs leading-5 text-text-lighter">
+          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words text-xs leading-5 text-text-lighter">
             {summary}
           </pre>
         </div>
       </div>
 
       <div className="border-t border-border/60 bg-secondary-bg/80 px-4 py-2">
-        <div className="truncate ui-text-xs font-medium text-text">
+        <div className="truncate text-xs font-medium text-text">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
-        <div className="truncate ui-text-xs text-text-lighter">{buffer.path}</div>
+        <div className="truncate text-[11px] text-text-lighter">{buffer.path}</div>
       </div>
     </div>
   );
@@ -185,12 +176,12 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-green-500/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
+              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font text-[11px] text-text-lighter">
                 #{buffer.prNumber ?? "--"}
               </span>
-              <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
+              <div className="min-w-0 truncate font-medium text-sm text-text">{buffer.name}</div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-xs text-text-lighter">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-lighter">
               <span className="font-medium text-text-light">
                 {authorLogin ? `@${authorLogin}` : "Pull request"}
               </span>
@@ -198,7 +189,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <span>{commitCount ?? "--"} commits</span>
               <span>{commentCount ?? "--"} comments</span>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-xs">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
               <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
                 Description
               </span>
@@ -214,13 +205,13 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
       </div>
       <div className="min-h-0 flex-1 bg-primary-bg/40 px-3 py-3">
         <div className="rounded-lg bg-secondary-bg/35 px-3 py-2">
-          <div className="line-clamp-5 ui-text-sm leading-6 text-text-lighter">
+          <div className="line-clamp-5 text-sm leading-6 text-text-lighter">
             {details?.body?.trim()
               ? details.body
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-xs text-text-lighter">
+        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 text-xs text-text-lighter">
           {buffer.path}
         </div>
       </div>
@@ -228,7 +219,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
   );
 }
 
-function isStandardEditorBuffer(buffer: PaneRenderBuffer): buffer is EditorBufferShell {
+function isStandardEditorBuffer(buffer: Buffer): buffer is EditorContent {
   return buffer.type === "editor";
 }
 
@@ -237,9 +228,19 @@ function EmptyPaneState() {
 }
 
 export function PaneContainer({ pane }: PaneContainerProps) {
+  const buffers = useBufferStore.use.buffers();
   const activePaneId = usePaneStore.use.activePaneId();
-  const { reorderPaneBuffers } = usePaneStore.use.actions();
-  const { closeBufferForce, openTerminalBuffer, showNewTabView } = useBufferStore.use.actions();
+  const {
+    setActivePane,
+    setActivePaneBuffer,
+    addBufferToPane,
+    moveBufferToPane,
+    removeBufferFromPane,
+    reorderPaneBuffers,
+    splitPane,
+  } = usePaneStore.use.actions();
+  const { closeBufferForce, openBuffer, openTerminalBuffer, showNewTabView } =
+    useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
@@ -258,26 +259,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const suppressAutoCenterRef = useRef(false);
   const isActivePane = pane.id === activePaneId;
 
-  const paneBuffers = useBufferStore(
-    useShallow((state) => {
-      const buffersById = new Map(state.buffers.map((buffer) => [buffer.id, buffer]));
-
-      return pane.bufferIds
-        .map((bufferId) => {
-          const buffer = buffersById.get(bufferId);
-          if (!buffer) return undefined;
-          if (buffer.type === "editor") {
-            return {
-              id: buffer.id,
-              path: buffer.path,
-              name: buffer.name,
-              type: buffer.type,
-            } satisfies EditorBufferShell;
-          }
-          return buffer;
-        })
-        .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
-    }),
+  const paneBuffers = useMemo(
+    () =>
+      pane.bufferIds
+        .map((bufferId) => buffers.find((buffer) => buffer.id === bufferId))
+        .filter((buffer): buffer is Buffer => buffer !== undefined),
+    [buffers, pane.bufferIds],
   );
 
   const activeBuffer = useMemo(() => {
@@ -298,15 +285,19 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     if (paneBuffers.length > 0) return;
     if (suppressAutoNewTab) return;
 
-    activatePaneAndSyncBuffer(pane.id);
+    setActivePane(pane.id);
     showNewTabView();
-  }, [pane.id, paneBuffers.length, showNewTabView, suppressAutoNewTab]);
+  }, [pane.id, paneBuffers.length, setActivePane, showNewTabView, suppressAutoNewTab]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
-      activatePaneAndSyncBuffer(pane.id);
+      setActivePane(pane.id);
+      // Sync buffer store's activeBufferId with this pane's active buffer
+      if (pane.activeBufferId) {
+        useBufferStore.getState().actions.setActiveBuffer(pane.activeBufferId);
+      }
     }
-  }, [isActivePane, pane.id]);
+  }, [isActivePane, pane.id, pane.activeBufferId, setActivePane]);
 
   const handlePaneMouseDownCapture = useCallback(
     (e: React.MouseEvent) => {
@@ -322,17 +313,23 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       }
 
       if (!isActivePane) {
-        activatePaneAndSyncBuffer(pane.id);
+        setActivePane(pane.id);
+        if (pane.activeBufferId) {
+          useBufferStore.getState().actions.setActiveBuffer(pane.activeBufferId);
+        }
       }
     },
-    [isActivePane, pane.id],
+    [isActivePane, pane.id, pane.activeBufferId, setActivePane],
   );
 
   const handleTabClick = useCallback(
     (bufferId: string) => {
-      activateBufferInPaneAndSync(pane.id, bufferId);
+      setActivePane(pane.id);
+      setActivePaneBuffer(pane.id, bufferId);
+      // Sync buffer store's activeBufferId
+      useBufferStore.getState().actions.setActiveBuffer(bufferId);
     },
-    [pane.id],
+    [pane.id, setActivePane, setActivePaneBuffer],
   );
 
   const openFileTreeDropInPane = useCallback(
@@ -346,25 +343,45 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       const target = resolveDropTarget(point);
       if (target.paneId !== pane.id) return;
 
-      const targetPaneId = getOrCreatePaneDropTarget({ paneId: pane.id, zone: target.zone });
-      if (!targetPaneId) return;
+      if (!window.__fileDragData) return;
 
-      activatePaneAndSyncBuffer(targetPaneId);
+      if (isDragAborted()) {
+        delete window.__fileDragData;
+        return;
+      }
+
+      delete window.__fileDragData;
+
+      const effectiveZone = applyDropZoneGates(target.zone);
 
       try {
+        setActivePane(pane.id);
         await handleFileOpen(fileDragData.path, false);
         const openedBufferId = useBufferStore.getState().activeBufferId;
-        if (openedBufferId) {
-          ensureBufferInPaneDropTarget(openedBufferId, { paneId: targetPaneId, zone: "center" });
-          activateBufferInPaneAndSync(targetPaneId, openedBufferId);
+        if (!openedBufferId) return;
+
+        if (!isEdgeDropZone(effectiveZone)) {
+          setActivePaneBuffer(pane.id, openedBufferId);
+          useBufferStore.getState().actions.setActiveBuffer(openedBufferId);
+          return;
         }
+
+        const { direction, placement } = getSplitDropConfig(effectiveZone);
+        const newPaneId = splitPane(pane.id, direction, openedBufferId, placement);
+        if (!newPaneId) return;
+
+        removeBufferFromPane(pane.id, openedBufferId);
+
+        setActivePane(newPaneId);
+        setActivePaneBuffer(newPaneId, openedBufferId);
+        useBufferStore.getState().actions.setActiveBuffer(openedBufferId);
       } catch (error) {
         console.error("Failed to open file from file tree drop:", error);
       } finally {
         delete window.__fileDragData;
       }
     },
-    [handleFileOpen, pane.id],
+    [handleFileOpen, pane.id, removeBufferFromPane, setActivePane, setActivePaneBuffer, splitPane],
   );
 
   const openSidebarResourceInPane = useCallback(
@@ -374,24 +391,32 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       const target = resolveDropTarget(point);
       if (target.paneId !== pane.id) return;
 
-      const targetPaneId = opensBuffer
-        ? getOrCreatePaneDropTarget({ paneId: pane.id, zone: target.zone })
-        : pane.id;
-      if (!targetPaneId) return;
+      let targetPaneId = pane.id;
+      if (opensBuffer && isEdgeDropZone(target.zone)) {
+        const { direction, placement } = getSplitDropConfig(target.zone);
+        const newPaneId = splitPane(pane.id, direction, undefined, placement);
+        if (!newPaneId) return;
+        targetPaneId = newPaneId;
+      }
 
-      activatePaneAndSyncBuffer(targetPaneId);
+      setActivePane(targetPaneId);
 
       try {
         const bufferId = await openSidebarResourceBuffer(resource);
         if (!bufferId) return;
 
-        ensureBufferInPaneDropTarget(bufferId, { paneId: targetPaneId, zone: "center" });
-        activateBufferInPaneAndSync(targetPaneId, bufferId);
+        const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
+        if (!targetPane?.bufferIds.includes(bufferId)) {
+          addBufferToPane(targetPaneId, bufferId, true);
+        } else {
+          setActivePaneBuffer(targetPaneId, bufferId);
+        }
+        useBufferStore.getState().actions.setActiveBuffer(bufferId);
       } catch (error) {
         console.error("Failed to open sidebar resource from drop:", error);
       }
     },
-    [pane.id],
+    [addBufferToPane, pane.id, setActivePane, setActivePaneBuffer, splitPane],
   );
 
   const getCarouselWidthBounds = useCallback(() => {
@@ -517,7 +542,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     }
   }, [activeBuffer, closeBufferForce]);
 
-  // Listen for file tree drops on this pane
   useEffect(() => {
     const syncHover = () => {
       const hover = getInternalTabDragHover();
@@ -525,26 +549,26 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     };
 
     window.addEventListener("athas-internal-tab-drag-hover", syncHover);
-    return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
+    window.addEventListener("athas-drag-abort", syncHover);
+
+    return () => {
+      window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
+      window.removeEventListener("athas-drag-abort", syncHover);
+    };
   }, [pane.id]);
 
   useEffect(() => {
-    const handleFileTreeDrop = async (e: CustomEvent) => {
+    const handleFileTreeDrop = (event: Event) => {
       const fileDragData = window.__fileDragData;
       if (!fileDragData) return;
 
-      await openFileTreeDropInPane(fileDragData, { x: e.detail.x, y: e.detail.y });
+      const { detail } = event as CustomEvent<{ x: number; y: number }>;
+      void openFileTreeDropInPane(fileDragData, { x: detail.x, y: detail.y });
     };
 
-    window.addEventListener(
-      "file-tree-drop-on-pane",
-      handleFileTreeDrop as unknown as EventListener,
-    );
+    window.addEventListener("file-tree-drop-on-pane", handleFileTreeDrop);
     return () => {
-      window.removeEventListener(
-        "file-tree-drop-on-pane",
-        handleFileTreeDrop as unknown as EventListener,
-      );
+      window.removeEventListener("file-tree-drop-on-pane", handleFileTreeDrop);
     };
   }, [openFileTreeDropInPane]);
 
@@ -591,6 +615,14 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       if (!zone) return;
 
+      if (isDragAborted()) {
+        clearInternalTabDragData();
+        return;
+      }
+
+      const gatedZone = applyDropZoneGates(zone);
+      if (!gatedZone) return;
+
       const tabDataString = e.dataTransfer.getData("application/tab-data");
       const fallbackTabData = getInternalTabDragData();
       if (!tabDataString && !fallbackTabData) return;
@@ -619,71 +651,57 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         clearInternalTabDragData();
       }
 
-      if (zone === "center") {
+      if (gatedZone === "center") {
         if (source === "terminal-panel" && terminalId) {
-          const newBufferId = openTerminalBuffer({
+          setActivePane(pane.id);
+          openTerminalBuffer({
             sessionId: terminalId,
             name: terminalName,
             command: initialCommand,
             workingDirectory: currentDirectory,
             remoteConnectionId,
           });
-          activateBufferInPaneAndSync(pane.id, newBufferId);
           window.dispatchEvent(
             new CustomEvent("terminal-detach-to-buffer", {
               detail: { terminalId },
             }),
           );
         } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
-          moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: pane.id, zone: "center" });
-          activateBufferInPaneAndSync(pane.id, bufferId);
+          moveBufferToPane(bufferId, sourcePaneId, pane.id);
         } else if (!sourcePaneId && bufferId) {
-          ensureBufferInPaneDropTarget(bufferId, { paneId: pane.id, zone: "center" });
-          activateBufferInPaneAndSync(pane.id, bufferId);
+          addBufferToPane(pane.id, bufferId, true);
         }
         return;
       }
 
-      const newPaneId = getOrCreatePaneDropTarget({ paneId: pane.id, zone });
+      if (!isEdgeDropZone(gatedZone)) return;
+
+      const { direction, placement } = getSplitDropConfig(gatedZone);
+      const newPaneId = splitPane(pane.id, direction, undefined, placement);
       if (!newPaneId) return;
 
       // Move the dragged buffer into the newly created pane.
       if (source === "terminal-panel" && terminalId) {
-        const newBufferId = openTerminalBuffer({
+        setActivePane(newPaneId);
+        openTerminalBuffer({
           sessionId: terminalId,
           name: terminalName,
           command: initialCommand,
           workingDirectory: currentDirectory,
           remoteConnectionId,
         });
-        activateBufferInPaneAndSync(newPaneId, newBufferId);
         window.dispatchEvent(
           new CustomEvent("terminal-detach-to-buffer", {
             detail: { terminalId },
           }),
         );
       } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
-        moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: newPaneId, zone: "center" });
-        activateBufferInPaneAndSync(newPaneId, bufferId);
+        moveBufferToPane(bufferId, sourcePaneId, newPaneId);
       } else if (bufferId) {
-        moveBufferToPaneDropTarget(bufferId, pane.id, { paneId: newPaneId, zone: "center" });
-        activateBufferInPaneAndSync(newPaneId, bufferId);
+        moveBufferToPane(bufferId, pane.id, newPaneId);
       }
     },
-    [pane.id, openTerminalBuffer],
-  );
-
-  // Handle mouse up for file tree drag (which uses mouse events, not HTML5 drag API)
-  const handleMouseUp = useCallback(
-    async (event: React.MouseEvent) => {
-      const fileDragData = window.__fileDragData;
-      if (!fileDragData || fileDragData.isDir) {
-        return; // Only handle file drops, not directory drops
-      }
-
-      await openFileTreeDropInPane(fileDragData, { x: event.clientX, y: event.clientY });
-    },
-    [openFileTreeDropInPane],
+    [pane.id, splitPane, moveBufferToPane, addBufferToPane, openTerminalBuffer, setActivePane],
   );
 
   const handleDrop = useCallback(
@@ -692,7 +710,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       e.stopPropagation();
       setIsDragOver(false);
       setIsTabDragOver(false);
-      activatePaneAndSyncBuffer(pane.id);
+      setActivePane(pane.id);
 
       // Tab drops are handled by SplitDropOverlay — skip here
       if (e.dataTransfer.types.includes("application/tab-data") || getInternalTabDragData()) {
@@ -713,7 +731,18 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         return;
       }
     },
-    [pane.id, handleFileOpen, openSidebarResourceInPane],
+    [
+      pane.id,
+      pane.bufferIds,
+      buffers,
+      setActivePane,
+      addBufferToPane,
+      moveBufferToPane,
+      setActivePaneBuffer,
+      openBuffer,
+      handleFileOpen,
+      openSidebarResourceInPane,
+    ],
   );
 
   const handleCarouselWheel = useCallback(
@@ -814,7 +843,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     horizontalBufferCarousel && (paneBuffers.length > 1 || shouldShowNewTabCard);
 
   const renderActiveBuffer = useCallback(
-    (buffer: PaneRenderBuffer) => {
+    (buffer: Buffer) => {
       switch (buffer.type) {
         case "newTab":
           return null;
@@ -842,7 +871,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
 
         case "pullRequest":
-          return <GitHubPRViewer prNumber={buffer.prNumber} />;
+          return <PRViewer prNumber={buffer.prNumber} />;
 
         case "githubIssue":
           return (
@@ -889,20 +918,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         case "database": {
           const config = PROVIDER_REGISTRY[buffer.databaseType];
           const DatabaseViewer = getDatabaseViewer(buffer.databaseType);
-          let viewerProps: DatabaseViewerProps;
-          if (config.isFileBased) {
-            viewerProps = { databasePath: buffer.path };
-          } else {
-            const connectionId = buffer.connectionId;
-            if (!connectionId) {
-              return (
-                <div className="flex h-full items-center justify-center text-text-lighter ui-text-sm">
-                  Missing database connection
-                </div>
-              );
-            }
-            viewerProps = { connectionId };
-          }
+          const viewerProps = config.isFileBased
+            ? { databasePath: buffer.path }
+            : { connectionId: buffer.connectionId };
           return <DatabaseViewer {...viewerProps} />;
         }
 
@@ -951,19 +969,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       } ${isDragOver || internalHoverZone ? "ring-2 ring-accent" : ""}`}
       onMouseDownCapture={handlePaneMouseDownCapture}
       onClick={handlePaneClick}
-      onMouseUp={handleMouseUp}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {(isDragOver || internalHoverZone) && !isTabDragOver && !internalHoverZone && (
-        <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />
-      )}
-      <SplitDropOverlay
-        visible={isTabDragOver || !!internalHoverZone}
-        onDrop={handleSplitDrop}
-        activeZoneOverride={internalHoverZone}
-      />
       <TabBar
         paneId={pane.id}
         onTabClick={handleTabClick}
@@ -971,6 +980,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
+        <SplitDropOverlay
+          visible={isTabDragOver || !!internalHoverZone}
+          onDrop={handleSplitDrop}
+          activeZoneOverride={internalHoverZone}
+        />
         {!activeBuffer && !shouldRenderCarousel && <EmptyPaneState />}
         {activeBuffer?.type === "newTab" && !shouldRenderCarousel && <EmptyEditorState />}
 
