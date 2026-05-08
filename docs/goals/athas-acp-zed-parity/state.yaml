@@ -1,0 +1,304 @@
+# GoalBuddy v2 state.yaml
+# Board truth lives here. goal.md is the editable charter; notes/ holds long receipts only.
+
+version: 2
+
+goal:
+  title: "Athas ACP Zed Parity"
+  slug: "athas-acp-zed-parity"
+  kind: specific
+  tranche: "Zed-referenced ACP behavioral hardening: discover, patch, verify, audit, and continue through safe slices until the first parity tranche is complete."
+  status: done
+  intake:
+    original_request: "Make Athas ACP on par with Zed by studying /Users/sw/Code/zed, hardening ACP, and adding providers or harnesses where needed."
+    interpreted_outcome: "Athas ACP behavior is hardened against Zed's local implementation and verified with behavioral parity evidence for the selected core flows."
+    input_shape: specific
+    audience: "Athas users and maintainers"
+    authority: approved
+    proof_type: test
+    completion_proof: "Zed-referenced ACP gaps are mapped, selected Athas patches are implemented, relevant tests/checks pass, and a final audit confirms behavioral parity for the first tranche."
+    likely_misfire: "Stopping at comparison notes, provider brainstorming, or broad architecture commentary without verified Athas ACP behavior changes."
+    blind_spots_considered:
+      - "Parity could mean protocol correctness, provider breadth, UX behavior, or harness maturity."
+      - "Broad provider expansion can distract from hardening core ACP behavior."
+      - "Athas already has a foundation; the goal is targeted patching, not a rewrite."
+      - "Proof must be behavioral and verifiable, not just source-backed notes."
+    existing_plan_facts:
+      - "Use /Users/sw/Code/zed as the reference source."
+      - "Cross-reference Zed before changing Athas ACP."
+      - "Athas already has a good ACP foundation."
+      - "Patch weak angles in Athas rather than replacing everything."
+      - "Do not pursue broad provider expansion in the first tranche unless parity-critical evidence requires it."
+
+rules:
+  pm_owns_state: true
+  one_active_task: true
+  max_write_workers: 1
+  no_implementation_without_worker_or_pm_task: true
+  no_completion_without_judge_or_pm_audit: true
+  planning_is_not_completion: true
+  queued_required_worker_blocks_completion: true
+  continuous_until_full_outcome: true
+  missing_input_or_credentials_do_not_stop_goal: true
+  preserve_and_validate_existing_plan: true
+  intake_misfire_must_be_audited: true
+
+agents:
+  scout: installed
+  worker: installed
+  judge: installed
+
+active_task: null
+
+tasks:
+  - id: T001
+    type: scout
+    assignee: Scout
+    status: done
+    reasoning_hint: medium
+    objective: "Map Athas ACP against Zed ACP and identify the highest-leverage behavioral gaps for the first hardening tranche."
+    inputs:
+      - "/Users/sw/Code/athas"
+      - "/Users/sw/Code/zed"
+      - "Athas ACP-related crates, commands, frontend integration, tests, and docs discovered by search."
+      - "Zed ACP-related implementation, provider integration, lifecycle behavior, tests, and docs discovered by search."
+    constraints:
+      - "Read-only."
+      - "Do not edit implementation files."
+      - "Treat /Users/sw/Code/zed as the reference source."
+      - "Use concrete file paths, symbols, tests, and command evidence."
+      - "Separate protocol behavior gaps from provider breadth gaps."
+      - "Prefer targeted hardening candidates over rewrite proposals."
+    expected_output:
+      - "Athas ACP implementation map with file-path evidence."
+      - "Zed ACP implementation map with file-path evidence."
+      - "Behavioral parity matrix covering lifecycle, sessions, streaming, cancellation, tools, errors, and provider handoff where applicable."
+      - "Ranked Athas gap candidates with risk, likely files, and verification options."
+      - "Candidate Worker slices that avoid broad provider expansion unless required."
+    receipt:
+      result: done
+      note: "notes/T001-acp-zed-map.md"
+      summary: "Mapped Athas ACP against Zed. Top gap is cancellation semantics and pending tool finalization; session bootstrap tests, tool ordering, and usage events follow. Provider breadth should stay deferred unless parity-critical."
+      evidence:
+        - "/Users/sw/Code/athas/crates/ai/src/acp/bridge.rs"
+        - "/Users/sw/Code/athas/crates/ai/src/acp/bridge_init.rs"
+        - "/Users/sw/Code/athas/crates/ai/src/acp/client.rs"
+        - "/Users/sw/Code/athas/src/features/ai/services/acp-stream-handler.ts"
+        - "/Users/sw/Code/zed/crates/acp_thread/src/acp_thread.rs"
+        - "/Users/sw/Code/zed/crates/acp_thread/src/connection.rs"
+        - "/Users/sw/Code/zed/crates/agent/src/tests/mod.rs"
+      candidate_worker_slices:
+        - "W1: cancellation behavior proof and stale running/tool state patch."
+        - "W2: bridge_init session bootstrap fallback tests."
+        - "W3: UsageUpdate event mapping and routing test."
+
+  - id: T002
+    type: judge
+    assignee: Judge
+    status: done
+    reasoning_hint: high
+    objective: "Choose the first safe Athas ACP hardening slice from Scout evidence."
+    inputs:
+      - "T001 receipt or note."
+      - "Current dirty diff."
+      - "Athas project validation commands."
+    constraints:
+      - "Read-only."
+      - "Do not implement."
+      - "Require Zed evidence for any claimed parity gap."
+      - "Prefer the smallest slice with strong verification."
+      - "Do not choose broad provider expansion unless it is required for a parity-critical behavior."
+    expected_output:
+      - "Decision."
+      - "Why this slice is first."
+      - "Exact Worker objective."
+      - "allowed_files."
+      - "verify."
+      - "stop_if."
+      - "Deferred or blocked candidates."
+    receipt:
+      result: done
+      decision: "Select a narrowed W1 cancellation-state slice first: harden Athas frontend ACP cancellation so an active cancelled prompt finalizes visible running tool state instead of leaving stale running tool calls behind. Do not attempt the full backend prompt-turn rewrite yet."
+      why_this_slice_is_first:
+        - "Smallest parity-critical subset of Scout's top-ranked gap."
+        - "Zed cancels running turns and marks pending or in-progress tools cancelled; Athas currently force-stops frontend handling without visible tool finalization."
+        - "Implementable without provider expansion, live ACP adapters, Rust process lifecycle changes, or broad architecture work."
+        - "Verifiable with focused frontend tests plus typecheck."
+      evidence:
+        - "/Users/sw/Code/zed/crates/acp_thread/src/acp_thread.rs"
+        - "/Users/sw/Code/zed/crates/agent/src/tests/mod.rs"
+        - "/Users/sw/Code/athas/crates/ai/src/acp/bridge.rs"
+        - "/Users/sw/Code/athas/src/features/ai/services/acp-stream-handler.ts"
+        - "/Users/sw/Code/athas/src/features/ai/lib/tool-call-state.ts"
+        - "/Users/sw/Code/athas/src/features/ai/types/acp.ts"
+      next_allowed_task: T003
+      deferred_or_blocked_candidates:
+        - "Deferred: full backend prompt-turn lifecycle hardening."
+        - "Deferred: bridge_init session fallback tests."
+        - "Deferred: UsageUpdate/token-cost event mapping."
+        - "Blocked for this tranche unless Judge reopens: broad provider expansion, registry/MCP forwarding, or adding providers solely for breadth."
+      full_outcome_complete: false
+
+  - id: T003
+    type: worker
+    assignee: Worker
+    status: done
+    reasoning_hint: default
+    objective: "Add a focused frontend cancellation regression test and patch Athas ACP stream handling so cancelling an active ACP prompt finalizes any active visible tool calls and activity rows as cancelled/failed, prevents late events from resurrecting the cancelled turn, and still sends cancel_acp_prompt to the backend."
+    allowed_files:
+      - "src/features/ai/services/acp-stream-handler.ts"
+      - "src/features/ai/lib/tool-call-state.ts"
+      - "src/features/ai/lib/acp-event-timeline.ts"
+      - "src/features/ai/components/chat/ai-chat.tsx"
+      - "src/features/ai/components/messages/tool-call-display.tsx"
+      - "src/features/ai/types/acp.ts"
+      - "src/features/ai/tests/acp-cancellation.test.ts"
+    verify:
+      - "bunx vp test run src/features/ai/tests/acp-cancellation.test.ts src/features/ai/tests/acp-activity-groups.test.ts"
+      - "bun typecheck"
+      - "If the test runner cannot target both files reliably, run: bunx vp test run src/features/ai/tests"
+    stop_if:
+      - "The fix requires editing crates/ai/src/acp/* or src-tauri/*; escalate back to Judge for a backend cancellation slice."
+      - "The fix requires a live ACP provider, external adapter, or broad fake ACP harness instead of local frontend mocks."
+      - "The fix requires provider expansion, registry/MCP work, new dependencies, or test/build config changes."
+      - "The Worker cannot produce a deterministic regression test showing active tool state is finalized on cancel."
+      - "Late-event handling is ambiguous enough that implementing it would silently discard valid future-turn events."
+      - "Verification fails twice after scoped fixes."
+    receipt:
+      result: done
+      changed_files:
+        - "src/features/ai/services/acp-stream-handler.ts"
+        - "src/features/ai/tests/acp-cancellation.test.ts"
+      commands:
+        - cmd: "bunx vp test run src/features/ai/tests/acp-cancellation.test.ts src/features/ai/tests/acp-activity-groups.test.ts"
+          status: pass
+        - cmd: "bun typecheck"
+          status: pass
+      summary: "ACP cancellation now finalizes tracked active tools with a Cancelled error before cleanup, both for frontend force-stop cancellation and protocol prompt_complete(cancelled). Regression tests prove active tool finalization, backend cancel invocation, and late-event suppression after cancellation."
+
+  - id: T004
+    type: judge
+    assignee: Judge
+    status: done
+    reasoning_hint: high
+    objective: "Audit the first implemented ACP slice against Zed-referenced behavioral parity and decide whether to continue with another slice."
+    inputs:
+      - "T001 receipt or note."
+      - "T002 receipt."
+      - "T003 receipt."
+      - "Current dirty diff."
+      - "Last verification."
+    constraints:
+      - "Read-only."
+      - "Reject completion if the slice is only documented but not verified."
+      - "Reject completion if required ACP hardening work remains safely actionable."
+      - "If not complete, define the next smallest safe Scout, Judge, or Worker task."
+    expected_output:
+      - "slice_complete: true | false."
+      - "full_outcome_complete: true | false."
+      - "Behavioral parity evidence."
+      - "Missing evidence."
+      - "Next task if not complete."
+    receipt:
+      result: done
+      decision: "Approve the first implemented ACP cancellation slice as complete, but do not complete the tranche. Continue with the next safe ACP hardening slice."
+      slice_complete: true
+      full_outcome_complete: false
+      behavioral_parity_evidence:
+        - "/Users/sw/Code/zed/crates/acp_thread/src/acp_thread.rs marks pending/in-progress tools canceled when cancelled."
+        - "/Users/sw/Code/zed/crates/agent/src/tests/mod.rs includes cancellation tests."
+        - "/Users/sw/Code/athas/src/features/ai/services/acp-stream-handler.ts now finalizes active tools before cancelled completion and force-stop cleanup."
+        - "/Users/sw/Code/athas/src/features/ai/tests/acp-cancellation.test.ts verifies tool finalization, backend cancel invocation, and late-event suppression."
+      missing_evidence:
+        - "No Athas Rust/backend behavioral test yet proves session load/resume/new fallbacks or AuthRequired retry branches against the Zed connection/session model."
+        - "No Athas usage/token-cost ACP event mapping exists yet."
+      next_allowed_task: T005
+      tranche_complete: false
+
+  - id: T005
+    type: worker
+    assignee: Worker
+    status: done
+    reasoning_hint: default
+    objective: "Add focused Rust behavioral tests for ACP session bootstrap fallback parity: requested session load success, session/load MethodNotFound falling through to session/resume when resume is supported, ResourceNotFound/MethodNotFound falling through to session/new, and AuthRequired retry behavior where a deterministic local test seam is practical."
+    allowed_files:
+      - "crates/ai/src/acp/bridge_init.rs"
+    verify:
+      - "cargo test -p athas-ai acp::bridge_init"
+      - "bun check:rust"
+    stop_if:
+      - "A deterministic local test cannot be added inside crates/ai/src/acp/bridge_init.rs without introducing a live ACP provider, external adapter, new dependency, or broad fake harness."
+      - "The tests require editing src-tauri, process lifecycle code, build config, Cargo.toml, or files outside allowed_files."
+      - "The implementation pressure turns into runtime behavior changes beyond small test seams needed inside bridge_init.rs."
+      - "The Worker discovers that the current bridge_init structure cannot be tested safely without a prior Scout/Judge task to design a narrower seam."
+      - "Verification fails twice after scoped fixes."
+    receipt:
+      result: done
+      changed_files:
+        - "crates/ai/src/acp/bridge_init.rs"
+      commands:
+        - cmd: "cargo test -p athas-ai acp::bridge_init"
+          status: pass
+        - cmd: "cargo check -p athas-ai"
+          status: pass
+        - cmd: "cargo fmt -p athas-ai --check"
+          status: pass
+      blocked_verification:
+        - cmd: "bun check:rust"
+          reason: "Repo-wide rustfmt check reports unrelated pre-existing diffs in crates/runtime/src/lib.rs, crates/tooling/src/registry.rs, and crates/tooling/src/types.rs, outside this task's allowed_files."
+      summary: "Added deterministic in-file tests and small decision seams for ACP session bootstrap fallback parity: load success preserves requested session id, MethodNotFound load tries resume only when supported, MethodNotFound/ResourceNotFound load/resume fall back to new session, AuthRequired is classified for retry before fallbacks, and new-session bootstrap preserves the agent-created id."
+
+  - id: T999
+    type: judge
+    assignee: Judge
+    status: done
+    reasoning_hint: high
+    objective: "Final audit for the first Athas ACP Zed parity tranche."
+    inputs:
+      - "All done task receipts."
+      - "Zed reference evidence."
+      - "Last verification."
+      - "Current dirty diff."
+    constraints:
+      - "Read-only."
+      - "Do not implement."
+      - "Reject completion if required Worker work is still queued or active."
+      - "Reject completion if the evidence does not map Athas behavior back to Zed-referenced parity."
+      - "Reject completion if the result is only a comparison artifact with no verified Athas improvement."
+    expected_output:
+      - "complete | not_complete."
+      - "full_outcome_complete: true | false."
+      - "Completed parity behaviors."
+      - "Missing evidence."
+      - "Next task if not complete."
+    receipt:
+      result: done
+      decision: complete
+      summary: "Approve T999. The first Athas ACP Zed parity tranche is complete enough to close: it produced Zed-referenced behavioral changes, not just comparison notes, and the implemented slices have focused regression coverage plus scoped frontend, TypeScript, Rust test/check, and Rust format verification."
+      full_outcome_complete: true
+      tranche_complete: true
+      completed_parity_behaviors:
+        - "Cancellation parity: Athas now finalizes active ACP tools with a Cancelled error before cleanup on protocol prompt_complete(cancelled) and local forceStop/user cancel, matching Zed's pending/in-progress tool cancellation behavior."
+        - "Cancellation proof: acp-cancellation.test.ts verifies active tool finalization, backend cancel_acp_prompt invocation, completion callback behavior, and late-event suppression after force-stop cancellation."
+        - "Session bootstrap parity: bridge_init.rs now has explicit decision/build seams covering requested session load success, MethodNotFound load-to-resume only when resume is supported, MethodNotFound/ResourceNotFound fallback to new, AuthRequired retry classification before fallbacks, and new-session id preservation."
+        - "Session bootstrap proof: Rust unit tests cover load id preservation, load/resume fallback gates, AuthRequired classification, and new-session id preservation."
+      missing_evidence:
+        - "No blocking missing evidence for this first tranche."
+        - "Deferred parity gap: Zed has UsageUpdate/token-cost handling and tests; Athas usage/token-cost ACP event mapping remains a valid later parity slice."
+        - "Verification caveat: bun check:rust remains blocked by unrelated repo-wide rustfmt diffs outside this tranche's allowed files."
+        - "No live ACP provider smoke was included; acceptable because this tranche used deterministic local behavioral tests and did not require provider expansion."
+      next_task_if_not_complete: null
+
+checks:
+  dirty_fingerprint: unknown
+  last_verification:
+    result: scoped_pass_with_unrelated_blocker
+    task: T005
+    commands:
+      - "bunx vp test run src/features/ai/tests/acp-cancellation.test.ts src/features/ai/tests/acp-activity-groups.test.ts"
+      - "bunx vp test run src/features/ai/tests"
+      - "bun typecheck"
+      - "cargo test -p athas-ai acp::bridge_init"
+      - "cargo check -p athas-ai"
+      - "cargo fmt -p athas-ai --check"
+      - "bun check:rust blocked by unrelated repo-wide rustfmt diffs outside T005 allowed_files"

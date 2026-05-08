@@ -326,7 +326,7 @@ async fn bootstrap_session(
          load_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
 
       if let Ok(Err(err)) = &load_result
-         && matches!(err.code, acp::ErrorCode::AuthRequired)
+         && is_auth_required(err)
       {
          if let Err(e) = authenticate(connection.clone()).await {
             ctx.io_handle.abort();
@@ -342,16 +342,13 @@ async fn bootstrap_session(
          Ok(Ok(load_response)) => {
             log::info!("ACP session loaded: {}", existing_session_id);
             client.set_session_id(existing_session_id.clone()).await;
-            return Ok(SessionBootstrap {
-               session_id: Some(acp::SessionId::new(existing_session_id)),
-               initial_modes: load_response.modes.map(map_mode_state),
-               initial_config_options: load_response.config_options.map(&ctx.map_config_options),
-            });
+            return Ok(bootstrap_from_loaded_session(
+               existing_session_id,
+               load_response,
+               &ctx.map_config_options,
+            ));
          }
-         Ok(Err(err))
-            if matches!(err.code, acp::ErrorCode::MethodNotFound)
-               && ctx.supports_session_resume =>
-         {
+         Ok(Err(err)) if should_try_resume_after_load(&err, ctx.supports_session_resume) => {
             log::warn!(
                "ACP session/load unavailable ({}), trying session/resume",
                err
@@ -360,7 +357,7 @@ async fn bootstrap_session(
                resume_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
 
             if let Ok(Err(err)) = &resume_result
-               && matches!(err.code, acp::ErrorCode::AuthRequired)
+               && is_auth_required(err)
             {
                if let Err(e) = authenticate(connection.clone()).await {
                   ctx.io_handle.abort();
@@ -377,20 +374,13 @@ async fn bootstrap_session(
                Ok(Ok(resume_response)) => {
                   log::info!("ACP session resumed: {}", existing_session_id);
                   client.set_session_id(existing_session_id.clone()).await;
-                  return Ok(SessionBootstrap {
-                     session_id: Some(acp::SessionId::new(existing_session_id)),
-                     initial_modes: resume_response.modes.map(map_mode_state),
-                     initial_config_options: resume_response
-                        .config_options
-                        .map(&ctx.map_config_options),
-                  });
+                  return Ok(bootstrap_from_resumed_session(
+                     existing_session_id,
+                     resume_response,
+                     &ctx.map_config_options,
+                  ));
                }
-               Ok(Err(err))
-                  if matches!(
-                     err.code,
-                     acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
-                  ) =>
-               {
+               Ok(Err(err)) if should_fallback_to_new_after_resume(&err) => {
                   log::warn!(
                      "ACP session/resume unavailable or session missing ({}), falling back to \
                       session/new",
@@ -415,12 +405,7 @@ async fn bootstrap_session(
                }
             }
          }
-         Ok(Err(err))
-            if matches!(
-               err.code,
-               acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
-            ) =>
-         {
+         Ok(Err(err)) if should_fallback_to_new_after_load(&err) => {
             log::warn!(
                "ACP session/load unavailable or session missing ({}), falling back to session/new",
                err
@@ -447,7 +432,7 @@ async fn bootstrap_session(
 
    let mut session_result = create_session(connection.clone(), cwd.clone()).await;
    if let Ok(Err(err)) = &session_result
-      && matches!(err.code, acp::ErrorCode::AuthRequired)
+      && is_auth_required(err)
    {
       if let Err(e) = authenticate(connection.clone()).await {
          ctx.io_handle.abort();
@@ -480,11 +465,64 @@ async fn bootstrap_session(
    log::info!("ACP session created: {}", session.session_id);
    client.set_session_id(session.session_id.to_string()).await;
 
-   Ok(SessionBootstrap {
+   Ok(bootstrap_from_new_session(session, &ctx.map_config_options))
+}
+
+fn is_auth_required(err: &acp::Error) -> bool {
+   matches!(err.code, acp::ErrorCode::AuthRequired)
+}
+
+fn should_try_resume_after_load(err: &acp::Error, supports_session_resume: bool) -> bool {
+   supports_session_resume && matches!(err.code, acp::ErrorCode::MethodNotFound)
+}
+
+fn should_fallback_to_new_after_load(err: &acp::Error) -> bool {
+   matches!(
+      err.code,
+      acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
+   )
+}
+
+fn should_fallback_to_new_after_resume(err: &acp::Error) -> bool {
+   matches!(
+      err.code,
+      acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
+   )
+}
+
+fn bootstrap_from_loaded_session(
+   existing_session_id: String,
+   load_response: acp::LoadSessionResponse,
+   map_config_options: &impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
+) -> SessionBootstrap {
+   SessionBootstrap {
+      session_id: Some(acp::SessionId::new(existing_session_id)),
+      initial_modes: load_response.modes.map(map_mode_state),
+      initial_config_options: load_response.config_options.map(map_config_options),
+   }
+}
+
+fn bootstrap_from_resumed_session(
+   existing_session_id: String,
+   resume_response: acp::ResumeSessionResponse,
+   map_config_options: &impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
+) -> SessionBootstrap {
+   SessionBootstrap {
+      session_id: Some(acp::SessionId::new(existing_session_id)),
+      initial_modes: resume_response.modes.map(map_mode_state),
+      initial_config_options: resume_response.config_options.map(map_config_options),
+   }
+}
+
+fn bootstrap_from_new_session(
+   session: acp::NewSessionResponse,
+   map_config_options: &impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
+) -> SessionBootstrap {
+   SessionBootstrap {
       session_id: Some(session.session_id),
       initial_modes: session.modes.map(map_mode_state),
-      initial_config_options: session.config_options.map(ctx.map_config_options),
-   })
+      initial_config_options: session.config_options.map(map_config_options),
+   }
 }
 
 async fn create_session(
@@ -568,5 +606,91 @@ fn emit_initial_session_state(
       )
    {
       log::warn!("Failed to emit initial session config options: {}", e);
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn no_config_options(_: Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption> {
+      Vec::new()
+   }
+
+   #[test]
+   fn loaded_session_bootstrap_preserves_requested_session_id() {
+      let bootstrap = bootstrap_from_loaded_session(
+         "existing-session".to_string(),
+         acp::LoadSessionResponse::new(),
+         &no_config_options,
+      );
+
+      assert_eq!(
+         bootstrap.session_id.map(|id| id.to_string()),
+         Some("existing-session".to_string())
+      );
+      assert!(bootstrap.initial_modes.is_none());
+      assert!(bootstrap.initial_config_options.is_none());
+   }
+
+   #[test]
+   fn method_not_found_load_uses_resume_only_when_supported() {
+      let err = acp::Error::method_not_found();
+
+      assert!(should_try_resume_after_load(&err, true));
+      assert!(!should_try_resume_after_load(&err, false));
+   }
+
+   #[test]
+   fn missing_or_unsupported_load_falls_back_to_new_session() {
+      assert!(should_fallback_to_new_after_load(
+         &acp::Error::method_not_found()
+      ));
+      assert!(should_fallback_to_new_after_load(
+         &acp::Error::resource_not_found(None)
+      ));
+      assert!(!should_fallback_to_new_after_load(
+         &acp::Error::invalid_params()
+      ));
+   }
+
+   #[test]
+   fn missing_or_unsupported_resume_falls_back_to_new_session() {
+      assert!(should_fallback_to_new_after_resume(
+         &acp::Error::method_not_found()
+      ));
+      assert!(should_fallback_to_new_after_resume(
+         &acp::Error::resource_not_found(None)
+      ));
+      assert!(!should_fallback_to_new_after_resume(
+         &acp::Error::internal_error()
+      ));
+   }
+
+   #[test]
+   fn auth_required_errors_are_retriable_before_session_fallbacks() {
+      assert!(is_auth_required(&acp::Error::auth_required()));
+      assert!(!is_auth_required(&acp::Error::method_not_found()));
+      assert!(!should_fallback_to_new_after_load(
+         &acp::Error::auth_required()
+      ));
+      assert!(!should_fallback_to_new_after_resume(
+         &acp::Error::auth_required()
+      ));
+   }
+
+   #[test]
+   fn new_session_bootstrap_uses_agent_created_session_id() {
+      let bootstrap = bootstrap_from_new_session(
+         acp::NewSessionResponse::new("created-session"),
+         &no_config_options,
+      );
+
+      assert_eq!(
+         bootstrap.session_id.map(|id| id.to_string()),
+         Some("created-session".to_string())
+      );
+      assert!(bootstrap.initial_modes.is_none());
+      assert!(bootstrap.initial_config_options.is_none());
    }
 }

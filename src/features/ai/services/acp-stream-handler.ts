@@ -327,6 +327,7 @@ export class AcpStreamHandler {
     // The stop reason can be used to determine how to handle the completion
     if (event.stopReason === "cancelled") {
       // User cancelled the prompt
+      this.finalizeActiveToolsAsCancelled();
       this.cleanup();
       this.handlers.onComplete();
       return;
@@ -542,10 +543,19 @@ export class AcpStreamHandler {
     }
   }
 
+  private finalizeActiveToolsAsCancelled(): void {
+    if (!this.handlers.onToolComplete || this.activeTools.size === 0) return;
+
+    for (const [toolId, toolName] of this.activeTools) {
+      this.handlers.onToolComplete(toolName, toolId, undefined, "Cancelled");
+    }
+  }
+
   private forceStop(): void {
     if (this.sessionComplete || this.cancelled) return;
     this.cancelled = true;
     this.pendingNewMessage = false;
+    this.finalizeActiveToolsAsCancelled();
     this.cleanup();
     this.handlers.onComplete();
   }
