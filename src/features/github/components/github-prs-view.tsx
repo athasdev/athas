@@ -88,7 +88,7 @@ const PRListItem = memo(({ pr, isActive, onSelect, onContextMenu, repoPath }: PR
         });
       }}
       variant="ghost"
-      size="sm"
+      compact
       className={cn(
         "h-auto w-full cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] hover:bg-hover/70 active:cursor-grabbing",
         isActive && "bg-hover/80 text-text",
@@ -425,7 +425,7 @@ const GitHubPRsView = memo(() => {
                 ref={filterTriggerRef}
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 variant="ghost"
-                size="sm"
+                compact
                 disabled={activeSection !== "pull-requests"}
                 className={dropdownTriggerClassName("ui-text-sm")}
                 tooltip="Filter pull requests"
@@ -474,7 +474,7 @@ const GitHubPRsView = memo(() => {
                 key={filter}
                 onClick={() => handleFilterChange(filter)}
                 variant="ghost"
-                size="sm"
+                compact
                 className={cn(
                   dropdownItemClassName("justify-start"),
                   filter === currentFilter && "bg-selected text-accent",

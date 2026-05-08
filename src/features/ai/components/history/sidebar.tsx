@@ -166,7 +166,6 @@ export default function ChatHistoryDropdown({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   onClick={(event) => {
                     event.stopPropagation();
                     onDeleteChat(chat.id, event);

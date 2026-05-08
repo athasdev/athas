@@ -156,12 +156,12 @@ export const AppearanceSettings = () => {
               onChange={(value) => updateSetting("theme", value)}
               className={SETTINGS_CONTROL_WIDTHS.wide}
               size="xs"
-              variant="secondary"
+              variant="default"
               searchable
               searchableTrigger="input"
               disabled={settings.syncSystemTheme}
             />
-            <Button onClick={handleUploadTheme} variant="default" size="xs" className="gap-1">
+            <Button onClick={handleUploadTheme} variant="default" className="gap-1" compact>
               <Upload />
               Upload
             </Button>
@@ -195,7 +195,7 @@ export const AppearanceSettings = () => {
                 onChange={(value) => updateSetting("autoThemeLight", value)}
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="xs"
-                variant="secondary"
+                variant="default"
                 searchable
                 searchableTrigger="input"
               />
@@ -213,7 +213,7 @@ export const AppearanceSettings = () => {
                 onChange={(value) => updateSetting("autoThemeDark", value)}
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="xs"
-                variant="secondary"
+                variant="default"
                 searchable
                 searchableTrigger="input"
               />
@@ -233,7 +233,7 @@ export const AppearanceSettings = () => {
             onChange={handleIconThemeChange}
             className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -287,7 +287,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -307,7 +307,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -361,7 +361,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />

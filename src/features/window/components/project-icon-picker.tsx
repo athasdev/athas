@@ -128,8 +128,8 @@ const ProjectIconPicker = memo(
               <Button
                 onClick={handleRemoveIcon}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Remove custom icon"
+                compact
               >
                 <Trash2 />
               </Button>
@@ -158,7 +158,6 @@ const ProjectIconPicker = memo(
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-md"
                   onClick={() => handleSelect(icon.path)}
                   className={`group size-12 border ${
                     currentIcon === icon.path ? "border-accent bg-accent/10" : "border-border/50"

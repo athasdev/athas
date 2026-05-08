@@ -52,7 +52,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
             <Button
               onClick={() => void copyToClipboard(commit.oid, "Commit SHA copied")}
               variant="ghost"
-              size="icon-xs"
+              compact
               className="rounded text-text-lighter"
               aria-label="Copy commit SHA"
             >
@@ -64,7 +64,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
               <Button
                 onClick={() => commit.url && void openUrl(commit.url)}
                 variant="ghost"
-                size="icon-xs"
+                compact
                 className="rounded text-text-lighter"
                 aria-label="Open commit in browser"
               >

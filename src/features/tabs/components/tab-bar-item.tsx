@@ -108,7 +108,6 @@ const TabBarItem = memo(function TabBarItem({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             onClick={(e) => {
               e.stopPropagation();
               if (buffer.isPinned) {

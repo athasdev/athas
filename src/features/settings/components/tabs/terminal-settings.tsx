@@ -130,7 +130,7 @@ export const TerminalSettings = () => {
             }
             className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -157,7 +157,7 @@ export const TerminalSettings = () => {
             }
             className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -176,7 +176,6 @@ export const TerminalSettings = () => {
             </div>
             <Button
               variant="default"
-              size="sm"
               onClick={() =>
                 profileActions.addProfile({
                   name: `Custom Profile ${profiles.length + 1}`,
@@ -209,7 +208,6 @@ export const TerminalSettings = () => {
                   </div>
                   <Button
                     variant="danger"
-                    size="xs"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
                   >
@@ -243,7 +241,7 @@ export const TerminalSettings = () => {
                       }
                       className="w-full"
                       size="sm"
-                      variant="secondary"
+                      variant="default"
                       searchable
                       searchableTrigger="input"
                     />
@@ -303,7 +301,7 @@ export const TerminalSettings = () => {
               onChange={(val) => updateSetting("terminalFontFamily", val)}
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               size="xs"
-              variant="secondary"
+              variant="default"
               searchable
               searchableTrigger="input"
               placeholder="Select font..."
@@ -409,7 +407,7 @@ export const TerminalSettings = () => {
             }
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />

@@ -50,7 +50,7 @@ const IssueRow = memo(({ issue, isActive, onSelect, repoPath }: IssueListItemPro
       });
     }}
     variant="ghost"
-    size="sm"
+    compact
     active={isActive}
     className={cn(
       "h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing",

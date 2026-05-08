@@ -72,7 +72,7 @@ export default function Pagination({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           variant="ghost"
-          size="xs"
+          compact
           className="ui-text-sm text-text-lighter hover:text-text disabled:opacity-50"
         >
           ← Prev
@@ -97,7 +97,7 @@ export default function Pagination({
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           variant="ghost"
-          size="xs"
+          compact
           className="ui-text-sm text-text-lighter hover:text-text disabled:opacity-50"
         >
           Next →

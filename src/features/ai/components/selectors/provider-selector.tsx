@@ -155,8 +155,8 @@ export function ProviderSelector({
           aria-expanded={isOpen}
           className={cn(
             buttonVariants({
-              variant: isComposer ? "ghost" : "secondary",
-              size: isComposer ? "xs" : "sm",
+              variant: isComposer ? "ghost" : "default",
+              compact: true,
             }),
             triggerClass,
             "cursor-text",
@@ -188,8 +188,8 @@ export function ProviderSelector({
             triggerRef.current = node;
           }}
           type="button"
-          variant={isComposer ? "ghost" : "secondary"}
-          size={isComposer ? "xs" : "sm"}
+          variant={isComposer ? "ghost" : "default"}
+          compact
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"

@@ -183,10 +183,10 @@ export function QuickQuestionCommandContent({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
           className="rounded"
           onClick={onBack}
           aria-label="Back to commands"
+          compact
         >
           <CaretLeft className="text-text-lighter" />
         </Button>
@@ -225,7 +225,6 @@ export function QuickQuestionCommandContent({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
                 className="rounded"
                 onClick={() => void handleCopy()}
                 tooltip="Copy answer"

@@ -371,18 +371,14 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               label,
             );
           },
-          button(config: {
-            label: string;
-            onClick: () => void;
-            variant?: "primary" | "secondary";
-          }) {
-            const { label, onClick, variant = "secondary" } = config;
+          button(config: { label: string; onClick: () => void; variant?: "default" | "accent" }) {
+            const { label, onClick, variant = "default" } = config;
             return createElement(
               Button,
               {
                 onClick,
                 variant,
-                size: "xs",
+                compact: true,
               },
               label,
             );
@@ -673,7 +669,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <Button onClick={onClose} variant="ghost" size="sm">
+            <Button onClick={onClose} variant="ghost" compact>
               Close
             </Button>
             {isAuthenticated ? (
@@ -681,16 +677,16 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 onClick={() =>
                   window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
                 }
-                variant="primary"
-                size="sm"
+                variant="accent"
+                compact
               >
                 Upgrade to Pro
               </Button>
             ) : (
               <Button
                 onClick={() => void signIn()}
-                variant="primary"
-                size="sm"
+                variant="accent"
+                compact
                 disabled={isSigningIn}
                 className="gap-1.5"
               >
@@ -716,9 +712,9 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             <Button
               onClick={handleBack}
               variant="ghost"
-              size="icon-xs"
               aria-label="Go back"
               disabled={isGenerating}
+              compact
             >
               <ArrowLeft />
             </Button>
@@ -797,10 +793,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             </p>
             <Button
               onClick={handleGenerate}
-              variant="primary"
-              size="sm"
+              variant="accent"
               disabled={!description.trim()}
               className="gap-1.5"
+              compact
             >
               <Sparkles className="size-3.5" />
               Generate
@@ -848,11 +844,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Button onClick={handleInstall} variant="primary" size="sm" className="gap-1.5">
+                  <Button onClick={handleInstall} variant="accent" className="gap-1.5" compact>
                     <Puzzle className="size-3.5" />
                     Install
                   </Button>
-                  <Button onClick={handleBack} variant="secondary" size="sm">
+                  <Button onClick={handleBack} variant="default" compact>
                     Try another prompt
                   </Button>
                 </div>
@@ -861,7 +857,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           ) : null}
 
           {(isInstalled || error) && (
-            <Button onClick={onClose} variant="ghost" size="sm" className="self-end">
+            <Button onClick={onClose} variant="ghost" className="self-end" compact>
               Done
             </Button>
           )}

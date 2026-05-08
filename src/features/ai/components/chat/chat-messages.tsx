@@ -96,7 +96,6 @@ export const ChatMessages = memo(
                 key={skill.id}
                 type="button"
                 variant="ghost"
-                size="xs"
                 onClick={() => handleSkillSelect(skill)}
                 className="h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
                 tooltip={skill.title}
@@ -108,9 +107,9 @@ export const ChatMessages = memo(
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               onClick={openNewSkill}
               className="h-6 rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/65 hover:border-border-strong hover:bg-transparent hover:text-text"
+              compact
             >
               <Plus size={12} />
               <span>New skill</span>

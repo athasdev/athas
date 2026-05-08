@@ -689,9 +689,9 @@ const TerminalContainer = ({
               type="button"
               onClick={handleSearchTerminal}
               variant="ghost"
-              size="icon-sm"
               className="size-6 shrink-0 text-text-lighter"
               aria-label="Find in Terminal"
+              compact
             >
               <Search />
             </Button>
@@ -701,7 +701,7 @@ const TerminalContainer = ({
               type="button"
               onClick={() => handleNewTerminal()}
               variant="ghost"
-              size="icon-sm"
+              compact
               className="size-6 shrink-0 text-text-lighter"
               aria-label="New Terminal"
             >
@@ -716,12 +716,12 @@ const TerminalContainer = ({
               type="button"
               onClick={handleSplitView}
               variant="ghost"
-              size="icon-sm"
               className={cn(
                 "size-6 shrink-0",
                 isSplitActive ? "border-border/80 bg-primary-bg text-text" : "text-text-lighter",
               )}
               aria-label="Split Terminal"
+              compact
             >
               <SplitSquareHorizontal />
             </Button>
@@ -735,9 +735,9 @@ const TerminalContainer = ({
                 type="button"
                 onClick={onFullScreen}
                 variant="ghost"
-                size="icon-sm"
                 className="size-6 shrink-0 text-text-lighter"
                 aria-label="Full Screen Terminal"
+                compact
               >
                 {isFullScreen ? <Minimize2 /> : <Maximize2 />}
               </Button>

@@ -47,7 +47,6 @@ export const SearchMatchItem = memo(
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         data-item-index={index}
         onClick={() => onSelect(filePath, match.line_number)}
         onMouseEnter={onPreview ? () => onPreview(filePath) : undefined}

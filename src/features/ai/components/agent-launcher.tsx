@@ -243,7 +243,6 @@ export function AgentLauncher() {
             onClick={toggleVoiceInput}
             disabled={!isSpeechRecognitionSupported}
             variant="ghost"
-            size="icon-xs"
             className={cn(
               "rounded-full text-text-lighter hover:text-text",
               isListening && "bg-accent/12 text-accent",
@@ -256,6 +255,7 @@ export function AgentLauncher() {
                   : "Start voice input"
             }
             aria-label={isListening ? "Stop voice input" : "Start voice input"}
+            compact
           >
             <Mic className={cn("size-3.5", isListening && "animate-pulse")} />
           </Button>
@@ -263,12 +263,12 @@ export function AgentLauncher() {
             type="button"
             onClick={submit}
             disabled={!prompt.trim()}
-            variant="secondary"
-            size="xs"
+            variant="default"
             className="rounded-full px-2.5"
             tooltip="Launch agent"
             shortcut="enter"
             aria-label="Launch agent"
+            compact
           >
             <Send className="size-3.5" />
           </Button>

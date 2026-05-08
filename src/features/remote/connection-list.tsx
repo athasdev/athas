@@ -87,12 +87,12 @@ const ConnectionList = ({
         <Button
           onClick={onAddNew}
           variant="ghost"
-          size="sm"
           className={cn(
             "flex size-5 items-center justify-center rounded p-0",
             "text-text-lighter transition-colors hover:bg-hover hover:text-text",
           )}
           aria-label="Add Remote Connection"
+          compact
         >
           <Plus />
         </Button>
@@ -106,9 +106,9 @@ const ConnectionList = ({
             <p className="mb-3 text-text-lighter text-xs">No remote connections</p>
             <Button
               onClick={onAddNew}
-              variant="outline"
-              size="sm"
+              variant="default"
               className="ui-font flex items-center gap-1.5"
+              compact
             >
               <Plus />
               Add Connection
@@ -121,7 +121,6 @@ const ConnectionList = ({
                 key={connection.id}
                 type="button"
                 variant="ghost"
-                size="sm"
                 onClick={() => {
                   if (!connectingMap[connection.id]) {
                     onConnect(connection.id);
@@ -178,7 +177,7 @@ const ConnectionList = ({
                           onFileSelect?.(`remote://${connection.id}/`, true);
                         }}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         aria-label="Browse Files"
                       >
                         <FolderOpen />
@@ -190,7 +189,7 @@ const ConnectionList = ({
                           onConnect(connection.id);
                         }}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="hover:text-error"
                         aria-label="Disconnect"
                       >
@@ -205,7 +204,7 @@ const ConnectionList = ({
                         if (!connectingMap[connection.id]) onConnect(connection.id);
                       }}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       className={cn(
                         connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                       )}

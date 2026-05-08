@@ -195,7 +195,7 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
             onClick={() => setIsOpen((open) => !open)}
             type="button"
             variant="ghost"
-            size="sm"
+            compact
             active={isOpen}
             className={cn(
               TITLE_BAR_ICON_BUTTON_CLASS_NAME,

@@ -433,11 +433,11 @@ function SearchExcerptItemComponent({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             onClick={handleContextToggle}
             tooltip={isExpanded ? "Collapse context" : "Expand context"}
             aria-label={isExpanded ? "Collapse context" : "Expand context"}
             className="shrink-0 text-text-lighter"
+            compact
           >
             {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
           </Button>

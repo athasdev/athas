@@ -1,6 +1,7 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
+  DownloadSimple,
   PencilSimple as Edit,
   Folder,
   Plus,
@@ -14,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, useCallback, useEffect, useState } from "react";
+import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
@@ -25,7 +27,7 @@ import {
 } from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
-import { Button } from "@/ui/button";
+import { Button, type ButtonVariant } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { PaneIconButton, paneTitleClassName } from "@/ui/pane";
 import { toast } from "@/ui/toast";
@@ -38,17 +40,12 @@ interface ProjectPickerDialogProps {
   onClose: () => void;
 }
 
-interface VsCodeRecentProject {
-  name: string;
-  path: string;
-  source: string;
-}
-
-let hasImportedVsCodeRecents = false;
+const OPEN_FOLDER_BUTTON_VARIANTS: ButtonVariant[] = ["default", "accent", "ghost", "danger"];
 
 const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps) => {
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<RemoteConnection | null>(null);
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
     null,
@@ -57,7 +54,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const { addToRecents, importRecentFolders, openRecentFolder, removeFromRecents, togglePinned } =
+  const { addToRecents, openRecentFolder, removeFromRecents, togglePinned } =
     useRecentFoldersStore();
   const { handleOpenFolder } = useFileSystemStore();
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
@@ -76,19 +73,6 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
       loadConnections();
     }
   }, [isOpen, loadConnections]);
-
-  useEffect(() => {
-    if (!isOpen || hasImportedVsCodeRecents) return;
-
-    hasImportedVsCodeRecents = true;
-    invoke<VsCodeRecentProject[]>("get_vscode_recent_projects")
-      .then((projects) => {
-        importRecentFolders(projects.map((project) => project.path));
-      })
-      .catch((error) => {
-        console.debug("Failed to import VS Code recent projects:", error);
-      });
-  }, [isOpen, importRecentFolders]);
 
   // Listen for connection status changes
   useEffect(() => {
@@ -222,7 +206,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
         headerBorder={false}
         size="lg"
         classNames={{
-          modal: "max-w-[560px] rounded-xl",
+          modal: "max-w-[720px] rounded-xl",
           content: "p-0",
         }}
       >
@@ -231,9 +215,27 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
           <div className="border-border border-b">
             <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
               <span className={paneTitleClassName("text-text-lighter")}>Recent</span>
-              <PaneIconButton onClick={handleOpenFolderClick} tooltip="Open folder">
-                <Plus />
-              </PaneIconButton>
+              <div className="flex items-center gap-1">
+                <PaneIconButton
+                  onClick={() => setIsImportDialogOpen(true)}
+                  tooltip="Import settings from editor"
+                >
+                  <DownloadSimple />
+                </PaneIconButton>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 overflow-x-auto border-border border-t px-3 py-2">
+              {OPEN_FOLDER_BUTTON_VARIANTS.map((variant) => (
+                <Button
+                  key={variant}
+                  type="button"
+                  variant={variant}
+                  onClick={handleOpenFolderClick}
+                  compact
+                >
+                  {variant}
+                </Button>
+              ))}
             </div>
             {recentFolders.length > 0 ? (
               recentFolders.map((folder) => {
@@ -251,7 +253,6 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
                       onClick={() => handleRecentFolderClick(folder)}
                       className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent"
                     >
@@ -287,7 +288,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       <Button
                         onClick={() => togglePinned(folder.path)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         tooltip={folder.pinned ? "Unpin recent project" : "Pin recent project"}
                         tooltipSide="bottom"
                       >
@@ -296,7 +297,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       <Button
                         onClick={() => void handleRecentFolderNewWindowClick(folder)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         tooltip="Open in new window"
                         tooltipSide="bottom"
                       >
@@ -305,7 +306,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       <Button
                         onClick={() => removeFromRecents(folder.path)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         tooltip="Remove from recents"
                         tooltipSide="bottom"
                       >
@@ -342,7 +343,6 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
                     onClick={() => handleConnect(connection.id)}
                     className={cn(
                       "h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent",
@@ -381,7 +381,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                     <Button
                       onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       tooltip="Open in new window"
                       tooltipSide="bottom"
                     >
@@ -393,7 +393,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                         setIsConnectionDialogOpen(true);
                       }}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       tooltip="Edit connection"
                       tooltipSide="bottom"
                     >
@@ -402,7 +402,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                     <Button
                       onClick={() => handleDeleteConnection(connection.id)}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       className="hover:text-error"
                       tooltip="Delete connection"
                       tooltipSide="bottom"
@@ -439,6 +439,10 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
         onClose={() => setPasswordPromptConnection(null)}
         onConnect={handleConnect}
       />
+
+      {isImportDialogOpen && (
+        <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />
+      )}
     </>
   );
 });

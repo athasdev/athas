@@ -1146,8 +1146,7 @@ details: ${errorDetails || mainError}
                       <Button
                         key={option.id}
                         type="button"
-                        variant={approved ? "outline" : "danger"}
-                        size="xs"
+                        variant={approved ? "default" : "danger"}
                         onClick={() =>
                           handlePermission(
                             approved,

@@ -28,8 +28,8 @@ export default function ColumnFilters({
         <Button
           onClick={onClearAll}
           variant="ghost"
-          size="xs"
           className="ui-text-sm text-text-lighter hover:text-text"
+          compact
         >
           clear
         </Button>
@@ -84,7 +84,7 @@ export default function ColumnFilters({
             <Button
               onClick={() => onRemoveFilter(index)}
               variant="ghost"
-              size="icon-xs"
+              compact
               className="text-text-lighter hover:text-red-500"
               tooltip="Remove filter"
             >

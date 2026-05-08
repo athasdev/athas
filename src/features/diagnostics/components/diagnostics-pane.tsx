@@ -891,8 +891,8 @@ const DiagnosticsPane = ({
                 type="button"
                 onClick={resetFilters}
                 variant="ghost"
-                size="xs"
                 className={CONTROL_PILL_BASE}
+                compact
               >
                 Reset filters
               </Button>
@@ -913,7 +913,6 @@ const DiagnosticsPane = ({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
                       onClick={() => toggleGroupCollapse(group.id)}
                       className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-primary-bg/70 px-2 py-1 text-left hover:bg-hover"
                     >

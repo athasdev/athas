@@ -76,7 +76,7 @@ export function OutlineCommandContent({ isActive, onBack, onClose }: OutlineComm
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Button variant="ghost" size="icon-xs" className="rounded" onClick={onBack}>
+        <Button variant="ghost" className="rounded" onClick={onBack} compact>
           <ArrowLeft />
         </Button>
         <CommandInput

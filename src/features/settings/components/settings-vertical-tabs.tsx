@@ -199,7 +199,7 @@ export const SettingsVerticalTabs = ({
                 }}
                 type="button"
                 variant="ghost"
-                size="sm"
+                compact
                 onClick={() => onTabChange(item.id)}
                 onKeyDown={(event) => {
                   switch (event.key) {
@@ -252,9 +252,9 @@ export const SettingsVerticalTabs = ({
           <Button
             type="button"
             variant="default"
-            size="sm"
             onClick={promptUpgrade}
             className="w-full justify-center border border-border/70"
+            compact
           >
             <ArrowSquareUp className="size-4" weight="duotone" />
             Upgrade to Pro

@@ -38,8 +38,7 @@ export class TerminalErrorBoundary extends Component<Props, State> {
               </p>
               <Button
                 type="button"
-                variant="secondary"
-                size="sm"
+                variant="default"
                 onClick={() => this.setState({ hasError: false, error: undefined })}
                 className="mt-4"
               >

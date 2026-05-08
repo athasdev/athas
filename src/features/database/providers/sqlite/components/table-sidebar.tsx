@@ -36,9 +36,9 @@ export default function TableSidebar({
           <Button
             onClick={onCreateTable}
             variant="ghost"
-            size="icon-sm"
             className="rounded-full opacity-0 group-hover:opacity-100"
             aria-label="Create table"
+            compact
           >
             <Plus className="text-text-lighter hover:text-text" />
           </Button>
@@ -56,7 +56,7 @@ export default function TableSidebar({
                 onClick={() => onSelectTable(t.name)}
                 onContextMenu={(e) => onTableContextMenu(e, t.name)}
                 variant="ghost"
-                size="sm"
+                compact
                 className={cn(
                   "flex h-auto w-full items-center justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
                   selectedTable === t.name && "bg-selected text-text",
@@ -79,7 +79,7 @@ export default function TableSidebar({
                 key={t.name}
                 onClick={() => onSelectTable(t.name)}
                 variant="ghost"
-                size="sm"
+                compact
                 className={cn(
                   "flex h-auto w-full items-center justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
                   selectedTable === t.name && "bg-selected text-text",
@@ -104,7 +104,7 @@ export default function TableSidebar({
                 key={i}
                 onClick={() => onSelectHistory(q)}
                 variant="ghost"
-                size="sm"
+                compact
                 className="mx-1 block h-auto w-[calc(100%-0.5rem)] truncate rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover"
                 tooltip={q}
                 aria-label={`Run query: ${q}`}

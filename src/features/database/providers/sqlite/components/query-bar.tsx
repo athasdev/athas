@@ -35,15 +35,15 @@ export default function QueryBar({
           disabled={isLoading}
         />
         <div className="flex justify-end gap-2">
-          <Button onClick={() => setIsCustomQuery(false)} variant="ghost" size="sm">
+          <Button onClick={() => setIsCustomQuery(false)} variant="ghost" compact>
             <X className="mr-1" />
             Cancel
           </Button>
           <Button
             onClick={executeCustomQuery}
             variant="default"
-            size="sm"
             disabled={isLoading || !customQuery.trim()}
+            compact
           >
             <Code className="mr-1" />
             Execute
@@ -62,13 +62,11 @@ export default function QueryBar({
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search..."
             leftIcon={Search}
-            size="sm"
           />
           {searchTerm && (
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={() => setSearchTerm("")}
               className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
               aria-label="Clear search"
@@ -77,7 +75,7 @@ export default function QueryBar({
             </Button>
           )}
         </div>
-        <Button onClick={() => setIsCustomQuery(true)} variant="default" size="sm">
+        <Button onClick={() => setIsCustomQuery(true)} variant="default" compact>
           <Code className="mr-1" />
           SQL
         </Button>

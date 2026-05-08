@@ -281,7 +281,7 @@ export function AgentSelector({
           onClick={() => setIsOpen(!isOpen)}
           type="button"
           variant="ghost"
-          size="sm"
+          compact
           className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
@@ -370,7 +370,7 @@ export function AgentSelector({
                           void handleInstallAgent(item.id as AgentType, item.name);
                         }}
                         variant="ghost"
-                        size="xs"
+                        compact
                         className="h-6 px-2 text-[10px]"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
@@ -386,7 +386,7 @@ export function AgentSelector({
                           onOpenSettings();
                         }}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className={cn(
                           item.isCurrent
                             ? "bg-accent/15 text-accent"

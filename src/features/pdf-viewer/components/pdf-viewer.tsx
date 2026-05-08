@@ -163,9 +163,9 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
         <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="ghost"
-            size="xs"
             onClick={handleOpenExternal}
             tooltip="Open in external viewer"
+            compact
           >
             <ExternalLink className="text-text" />
           </Button>

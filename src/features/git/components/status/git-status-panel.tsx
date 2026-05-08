@@ -528,11 +528,11 @@ const GitStatusPanel = ({
                   onClick={handleStashAllUnstaged}
                   disabled={isLoading}
                   variant="ghost"
-                  size="icon-sm"
                   className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                   tooltip="Stash all unstaged changes"
                   tooltipSide="bottom"
                   aria-label="Stash all unstaged changes"
+                  compact
                 >
                   <Archive />
                 </Button>
@@ -542,11 +542,11 @@ const GitStatusPanel = ({
                   onClick={handleStageAll}
                   disabled={isLoading}
                   variant="ghost"
-                  size="icon-sm"
                   className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                   tooltip="Stage all changes"
                   tooltipSide="bottom"
                   aria-label="Stage all changes"
+                  compact
                 >
                   <Plus />
                 </Button>
@@ -556,11 +556,11 @@ const GitStatusPanel = ({
                   onClick={handleUnstageAll}
                   disabled={isLoading}
                   variant="ghost"
-                  size="icon-sm"
                   className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                   tooltip="Unstage all changes"
                   tooltipSide="bottom"
                   aria-label="Unstage all changes"
+                  compact
                 >
                   <Minus />
                 </Button>

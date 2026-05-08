@@ -173,13 +173,13 @@ export function SettingRow({
             <span className="flex size-5 items-center justify-center">
               <Button
                 type="button"
-                variant="secondary"
-                size="icon-xs"
+                variant="ghost"
                 onClick={onReset}
                 disabled={!canReset}
                 aria-label={resetLabel || `Reset ${label}`}
                 tooltip={canReset ? resetLabel || `Reset ${label}` : undefined}
                 className={cn(!canReset && "pointer-events-none invisible")}
+                compact
               >
                 <RotateCcw />
               </Button>

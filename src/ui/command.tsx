@@ -21,7 +21,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
+  "mb-1 flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
   {
     variants: {
       selected: {
@@ -110,8 +110,8 @@ export const CommandHeader = ({
           aria-label="Close command palette"
           onClick={onClose}
           variant="ghost"
-          size="icon-xs"
           className="rounded"
+          compact
         >
           <X className="text-text-lighter" />
         </Button>
@@ -120,8 +120,8 @@ export const CommandHeader = ({
             aria-label="Clear persisted actions"
             onClick={clearActionsStack}
             variant="ghost"
-            size="icon-xs"
             className="rounded"
+            compact
           >
             <RefreshCwIcon className="text-text-lighter" />
           </Button>
@@ -205,8 +205,8 @@ export const CommandItem = ({
     onMouseLeave={onMouseLeave}
     {...props}
     variant="ghost"
-    size="sm"
     className={cn(commandItemVariants({ selected: isSelected }), className)}
+    compact
   >
     {children}
   </Button>

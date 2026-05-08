@@ -119,10 +119,10 @@ export const AccountSettings = () => {
           ) : (
             <Button
               variant="default"
-              size="xs"
               onClick={signIn}
               disabled={isSigningIn}
               className="ui-text-sm"
+              compact
             >
               <LogIn />
               {isSigningIn ? "Signing In..." : "Sign In"}
@@ -143,7 +143,7 @@ export const AccountSettings = () => {
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button variant="default" size="xs" onClick={handleManagePlan} className="ui-text-sm">
+              <Button variant="default" onClick={handleManagePlan} className="ui-text-sm" compact>
                 <CreditCard />
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
@@ -181,7 +181,6 @@ export const AccountSettings = () => {
             >
               <Button
                 variant="default"
-                size="xs"
                 onClick={() => void handleSyncNow()}
                 className="ui-text-sm"
                 disabled={settingsSyncIsSyncing}
@@ -197,7 +196,6 @@ export const AccountSettings = () => {
             >
               <Button
                 variant="default"
-                size="xs"
                 onClick={() => void handleRestoreFromCloud()}
                 className="ui-text-sm"
                 disabled={settingsSyncIsSyncing}
@@ -214,12 +212,7 @@ export const AccountSettings = () => {
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
           >
-            <Button
-              variant="default"
-              size="xs"
-              onClick={handleManageAccount}
-              className="ui-text-sm"
-            >
+            <Button variant="default" onClick={handleManageAccount} className="ui-text-sm" compact>
               <ExternalLink />
               Open Dashboard
             </Button>
@@ -231,12 +224,7 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button
-              variant="default"
-              size="xs"
-              onClick={() => void logout()}
-              className="ui-text-sm"
-            >
+            <Button variant="default" onClick={() => void logout()} className="ui-text-sm">
               <LogOut />
               Sign Out
             </Button>

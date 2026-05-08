@@ -1603,7 +1603,6 @@ export function Editor({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-xs"
                     onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
                     className="text-text-lighter hover:text-text"
                     tooltip="Close inline edit"
@@ -1641,7 +1640,6 @@ export function Editor({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="xs"
                     onClick={() => void inlineEditState.handleApplyInlineEdit()}
                     disabled={inlineEditState.isInlineEditRunning}
                     className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"

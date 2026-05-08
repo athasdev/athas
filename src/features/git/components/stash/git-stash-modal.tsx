@@ -80,17 +80,17 @@ export const StashMessageModal = ({
           <Button
             onClick={onClose}
             variant="ghost"
-            size="sm"
             className="text-text-lighter text-xs hover:text-text"
+            compact
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={isLoading}
-            variant="primary"
-            size="sm"
+            variant="accent"
             className="text-xs disabled:opacity-50"
+            compact
           >
             {isLoading ? "Stashing..." : "Stash"}
           </Button>

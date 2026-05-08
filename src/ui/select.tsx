@@ -33,7 +33,7 @@ export interface SelectProps {
   menuClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
-  variant?: "default" | "ghost" | "secondary" | "outline";
+  variant?: "default" | "ghost";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
   openDirection?: "up" | "down" | "auto";
@@ -274,7 +274,7 @@ export default function Select({
     [open, searchableTrigger, searchQuery, selectedOption, value],
   );
   const resolvedTriggerClassName = cn(
-    buttonVariants({ variant, size }),
+    buttonVariants({ variant, compact: size !== "md" }),
     !iconOnly && selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
     !iconOnly && "justify-between text-left",
     triggerClassName,
@@ -389,7 +389,7 @@ export default function Select({
           }
           rightIcon={ChevronDown}
           size={size}
-          variant={variant === "secondary" || variant === "outline" ? "default" : variant}
+          variant={variant}
           containerClassName="min-w-0 w-full"
           className={cn("min-w-0 font-normal text-text", triggerClassName)}
           placeholder={open ? "Search..." : selectedOption?.label || placeholder}

@@ -1,12 +1,50 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { Button } from "@/ui/button";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { SettingRow } from "../settings-section";
+
+const REPORT_BUG_CHANNELS = [
+  {
+    id: "discord",
+    label: "Discord",
+    detail: "Ask in the community server",
+    url: "https://discord.gg/DD8F38wFMv",
+  },
+  {
+    id: "github",
+    label: "GitHub",
+    detail: "Open a bug report issue",
+    url: "https://github.com/athasdev/athas/issues/new?template=01-bug.yml",
+  },
+  {
+    id: "twitter",
+    label: "X",
+    detail: "Message Athas on X",
+    url: "https://x.com/athasindustries",
+  },
+  {
+    id: "email",
+    label: "Email",
+    detail: "Send a report to hey@athas.dev",
+    url: "mailto:hey@athas.dev",
+  },
+] as const;
+
+type ReportBugChannel = (typeof REPORT_BUG_CHANNELS)[number];
 
 export const GeneralSettings = () => {
   const {
@@ -30,6 +68,8 @@ export const GeneralSettings = () => {
   const [cliChecking, setCliChecking] = useState(true);
   const [cliInstalling, setCliInstalling] = useState(false);
   const [appVersion, setAppVersion] = useState<string>("");
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isReportBugDialogOpen, setIsReportBugDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkCliStatus = async () => {
@@ -111,17 +151,31 @@ export const GeneralSettings = () => {
     showToast({ message: `Athas ${updateInfo?.version ?? "update"} skipped`, type: "success" });
   };
 
-  const handleReportBug = async () => {
+  const buildBugReport = async () => {
+    const version = await getVersion();
+    const os = await import("@tauri-apps/plugin-os");
+    const plat = os.platform();
+    const ver = os.version();
+
+    return `Environment\n\n- App: Athas ${version}\n- OS: ${plat} ${ver}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
+  };
+
+  const handleReportBug = async (channel: ReportBugChannel) => {
     try {
-      const version = await getVersion();
-      const os = await import("@tauri-apps/plugin-os");
-      const plat = os.platform();
-      const ver = os.version();
-      const report = `Environment\n\n- App: Athas ${version}\n- OS: ${plat} ${ver}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
-      await writeText(report);
       const { openUrl } = await import("@tauri-apps/plugin-opener");
-      await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
-      showToast({ message: "Report template copied", type: "success" });
+      const report = await buildBugReport();
+
+      if (channel.id === "email") {
+        await openUrl(
+          `${channel.url}?subject=${encodeURIComponent("Athas bug report")}&body=${encodeURIComponent(report)}`,
+        );
+      } else {
+        await writeText(report);
+        await openUrl(channel.url);
+        showToast({ message: "Report template copied", type: "success" });
+      }
+
+      setIsReportBugDialogOpen(false);
     } catch (err) {
       console.error("Failed to prepare bug report:", err);
       showToast({ message: "Failed to prepare bug report", type: "error" });
@@ -139,7 +193,7 @@ export const GeneralSettings = () => {
             onClick={handleCheckForUpdates}
             disabled={checking || downloading || installing}
             variant="default"
-            size="xs"
+            compact
           >
             {checking ? "Checking..." : "Check"}
           </Button>
@@ -149,7 +203,7 @@ export const GeneralSettings = () => {
                 onClick={viewReleaseNotes}
                 disabled={downloading || installing}
                 variant="default"
-                size="xs"
+                compact
               >
                 Notes
               </Button>
@@ -157,7 +211,7 @@ export const GeneralSettings = () => {
                 onClick={handleDownloadLater}
                 disabled={downloading || installing}
                 variant="default"
-                size="xs"
+                compact
               >
                 Later
               </Button>
@@ -165,7 +219,7 @@ export const GeneralSettings = () => {
                 onClick={handleRemindLater}
                 disabled={downloading || installing}
                 variant="default"
-                size="xs"
+                compact
               >
                 Tomorrow
               </Button>
@@ -173,7 +227,7 @@ export const GeneralSettings = () => {
                 onClick={handleSkipVersion}
                 disabled={downloading || installing}
                 variant="default"
-                size="xs"
+                compact
               >
                 Skip
               </Button>
@@ -181,7 +235,7 @@ export const GeneralSettings = () => {
                 onClick={downloadAndInstall}
                 disabled={downloading || installing}
                 variant="default"
-                size="xs"
+                compact
               >
                 {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
               </Button>
@@ -190,7 +244,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="ui-font ui-text-sm px-1 text-text-lighter">
+      <div className="ui-font ui-text-xs -mt-3 px-1 text-text-lighter/75">
         {downloading
           ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
           : installing
@@ -233,7 +287,7 @@ export const GeneralSettings = () => {
                 onClick={() => void handleInstallCli()}
                 disabled={cliInstalling || cliChecking}
                 variant="default"
-                size="xs"
+                compact
               >
                 {cliInstalling ? "Installing..." : "Install"}
               </Button>
@@ -241,8 +295,8 @@ export const GeneralSettings = () => {
                 onClick={handleCopyInstallCommand}
                 disabled={cliChecking}
                 variant="default"
-                size="xs"
                 tooltip="Copy install command to clipboard"
+                compact
               >
                 Copy
               </Button>
@@ -251,7 +305,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="ui-font ui-text-sm px-1 text-text-lighter">
+      <div className="ui-font ui-text-xs -mt-3 px-1 text-text-lighter/75">
         {cliChecking
           ? "Checking..."
           : cliInstalled
@@ -259,14 +313,113 @@ export const GeneralSettings = () => {
             : "CLI command is not installed."}
       </div>
 
+      <SettingRow label="Import Settings" description="Import matching setup from another editor.">
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" compact>
+          Import
+        </Button>
+      </SettingRow>
+
       <SettingRow
         label="Report a Bug"
-        description="Copy environment details and open the bug report page"
+        description="Choose where to report an issue with environment details."
       >
-        <Button onClick={handleReportBug} variant="default" size="xs">
+        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" compact>
           Open
         </Button>
       </SettingRow>
+
+      {isImportDialogOpen && (
+        <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />
+      )}
+      {isReportBugDialogOpen && (
+        <ReportBugCommandDialog
+          onClose={() => setIsReportBugDialogOpen(false)}
+          onSelect={(channel) => void handleReportBug(channel)}
+        />
+      )}
     </div>
   );
 };
+
+function ReportBugCommandDialog({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (channel: ReportBugChannel) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const channels = useMemo(
+    () =>
+      REPORT_BUG_CHANNELS.filter((channel) =>
+        matchesSearchQuery(query, [channel.label, channel.detail]),
+      ),
+    [query],
+  );
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
+  const selectedChannel = channels[selectedIndex];
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.min(index + 1, channels.length - 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter" && selectedChannel) {
+      event.preventDefault();
+      onSelect(selectedChannel);
+    }
+  };
+
+  return (
+    <Command isVisible onClose={onClose} title="Report a Bug" className="w-[520px]">
+      <CommandHeader onClose={onClose}>
+        <CommandInput
+          ref={inputRef}
+          value={query}
+          onChange={setQuery}
+          onKeyDown={handleKeyDown}
+          placeholder="Report via..."
+        />
+      </CommandHeader>
+      <CommandList>
+        {channels.length === 0 ? (
+          <CommandEmpty>No report channel matches "{query}".</CommandEmpty>
+        ) : (
+          channels.map((channel, index) => (
+            <CommandItem
+              key={channel.id}
+              isSelected={index === selectedIndex}
+              onClick={() => onSelect(channel)}
+              onMouseEnter={() => setSelectedIndex(index)}
+              className="h-8 items-center justify-between px-3"
+            >
+              <span className="ui-font ui-text-sm text-text">{channel.label}</span>
+              <span className="ui-font ui-text-sm shrink-0 text-text-lighter">
+                {channel.detail}
+              </span>
+            </CommandItem>
+          ))
+        )}
+      </CommandList>
+    </Command>
+  );
+}

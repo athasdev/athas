@@ -326,7 +326,6 @@ function InfoView({
               key={t.name}
               type="button"
               variant="ghost"
-              size="xs"
               onClick={() => onSelectTable(t.name)}
               className={
                 selectedTable === t.name
@@ -349,7 +348,6 @@ function InfoView({
                 key={i}
                 type="button"
                 variant="ghost"
-                size="xs"
                 onClick={() => onSelectHistory(q)}
                 className="w-full justify-start truncate"
                 tooltip={q}

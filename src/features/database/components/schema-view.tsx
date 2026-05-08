@@ -46,7 +46,6 @@ export default function SchemaView({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={() => onAddColumnFilter(column.name)}
               className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
               tooltip="Filter by this column"

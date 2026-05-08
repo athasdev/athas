@@ -30,7 +30,7 @@ export function ExtensionDialogs() {
               <Button
                 onClick={() => closeDialog(dialog.id)}
                 variant="ghost"
-                size="icon-xs"
+                compact
                 aria-label="Close dialog"
               >
                 <X />

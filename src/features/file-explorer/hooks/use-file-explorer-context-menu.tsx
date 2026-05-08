@@ -499,10 +499,10 @@ export function useFileExplorerContextMenu({
             size="sm"
             footer={
               <>
-                <Button variant="ghost" size="sm" onClick={() => setEnvOverwriteDialog(null)}>
+                <Button variant="ghost" onClick={() => setEnvOverwriteDialog(null)}>
                   Cancel
                 </Button>
-                <Button variant="danger" size="sm" onClick={handleEnvOverwriteConfirm}>
+                <Button variant="danger" onClick={handleEnvOverwriteConfirm} compact>
                   Overwrite
                 </Button>
               </>

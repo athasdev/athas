@@ -109,9 +109,9 @@ export function PRActivityPanel({
               <p className="ui-font ui-text-sm text-error">{contentError}</p>
               <Button
                 onClick={onRetry}
-                variant="outline"
-                size="xs"
+                variant="default"
                 className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+                compact
               >
                 Retry
               </Button>

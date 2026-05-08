@@ -75,7 +75,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 key={col.name}
                 onClick={() => actions.selectCollection(col.name)}
                 variant="ghost"
-                size="xs"
+                compact
                 className={cn(
                   "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-xs",
                   store.selectedCollection === col.name && "bg-selected",
@@ -100,9 +100,9 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             />
             <Button
               onClick={handleApplyFilter}
-              size="sm"
               className="gap-1.5"
               aria-label="Apply filter"
+              compact
             >
               <Braces />
               Apply
@@ -110,7 +110,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             <Button
               onClick={() => setFilterInput("{}")}
               variant="ghost"
-              size="xs"
+              compact
               className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Reset filter"
             >
@@ -119,7 +119,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             <Button
               onClick={() => actions.refresh()}
               variant="ghost"
-              size="icon-sm"
+              compact
               className="rounded-full text-text-lighter"
               aria-label="Refresh"
             >
@@ -178,7 +178,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                         <Button
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
-                          size="icon-sm"
+                          compact
                           className="rounded-full text-red-400 opacity-0 transition-all hover:bg-red-500/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
@@ -216,7 +216,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(1)}
                   disabled={store.currentPage === 1}
                   variant="ghost"
-                  size="icon-sm"
+                  compact
                   className="rounded-full"
                   aria-label="First page"
                 >
@@ -226,7 +226,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.currentPage - 1)}
                   disabled={store.currentPage === 1}
                   variant="ghost"
-                  size="icon-sm"
+                  compact
                   className="rounded-full"
                   aria-label="Previous page"
                 >
@@ -236,7 +236,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.currentPage + 1)}
                   disabled={store.currentPage === store.totalPages}
                   variant="ghost"
-                  size="icon-sm"
+                  compact
                   className="rounded-full"
                   aria-label="Next page"
                 >
@@ -246,7 +246,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.totalPages)}
                   disabled={store.currentPage === store.totalPages}
                   variant="ghost"
-                  size="icon-sm"
+                  compact
                   className="rounded-full"
                   aria-label="Last page"
                 >

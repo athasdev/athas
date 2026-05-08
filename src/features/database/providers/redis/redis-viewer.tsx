@@ -53,7 +53,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <Button
               onClick={() => setShowInfo(!showInfo)}
               variant="ghost"
-              size="sm"
+              compact
               data-active={showInfo}
               aria-label="Toggle server info"
             >
@@ -62,7 +62,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <Button
               onClick={() => actions.scanKeys(undefined, true)}
               variant="ghost"
-              size="icon-sm"
+              compact
               className="rounded-full"
               aria-label="Refresh keys"
             >
@@ -87,9 +87,9 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <Button
               onClick={handleSearch}
               variant="ghost"
-              size="icon-xs"
               className="rounded-full"
               aria-label="Search keys"
+              compact
             >
               <Search />
             </Button>
@@ -100,7 +100,6 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 key={keyInfo.key}
                 type="button"
                 variant="ghost"
-                size="sm"
                 onClick={() => actions.selectKey(keyInfo.key)}
                 className={cn(
                   "h-auto w-full justify-start gap-1.5 px-2 py-1",
@@ -129,7 +128,6 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
                 onClick={() => actions.scanKeys()}
                 className="w-full text-accent"
                 aria-label="Load more keys"
@@ -191,7 +189,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 <Button
                   onClick={() => actions.deleteKey(store.selectedKey!)}
                   variant="ghost"
-                  size="icon-xs"
+                  compact
                   className="text-red-400 hover:bg-red-500/10 hover:text-red-400"
                   aria-label="Delete key"
                 >

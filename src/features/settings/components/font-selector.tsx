@@ -161,7 +161,7 @@ export const FontSelector = ({
       placeholder="Select font"
       className={className}
       size="xs"
-      variant="secondary"
+      variant="default"
       searchable
       searchableTrigger="input"
     />

@@ -283,7 +283,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               <Button
                 onClick={() => void fetchWorkflowRun(true)}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 aria-label="Refresh action run"
               >
                 <RefreshCw className={isLoading ? "animate-spin" : ""} />
@@ -293,8 +293,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               <Button
                 onClick={handleOpenInBrowser}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Open action run on GitHub"
+                compact
               >
                 <ExternalLink />
               </Button>
@@ -303,8 +303,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               <Button
                 onClick={handleCopyRunLink}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Copy run link"
+                compact
               >
                 <Copy />
               </Button>
@@ -320,8 +320,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               <p className="ui-font ui-text-sm text-error">{error}</p>
               <Button
                 onClick={() => void fetchWorkflowRun(true)}
-                variant="outline"
-                size="xs"
+                variant="default"
+                compact
                 className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
               >
                 Retry
@@ -376,7 +376,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                         type="button"
                         onClick={() => handleSelectJob(job.id ?? null)}
                         variant="ghost"
-                        size="xs"
+                        compact
                         active={selectedJobId === job.id}
                         className="shrink-0 text-text-lighter"
                       >
@@ -444,7 +444,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                         type="button"
                         onClick={() => void loadJobLogs(selectedJob.id!, true)}
                         variant="ghost"
-                        size="icon-sm"
+                        compact
                         aria-label="Refresh job logs"
                         disabled={!selectedJobLogsDownloadable}
                       >
@@ -457,9 +457,9 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                       type="button"
                       onClick={handleCopyJobLogs}
                       variant="ghost"
-                      size="icon-sm"
                       aria-label="Copy job logs"
                       disabled={!selectedJob.id || !jobLogs[selectedJob.id]}
+                      compact
                     >
                       <Copy />
                     </Button>
@@ -483,8 +483,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                       <Button
                         type="button"
                         onClick={() => void loadJobLogs(selectedJob.id!, true)}
-                        variant="outline"
-                        size="xs"
+                        variant="default"
+                        compact
                         className="border-error/40 text-error/90 hover:bg-error/10"
                       >
                         Retry

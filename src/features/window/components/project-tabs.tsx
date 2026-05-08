@@ -229,7 +229,6 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={(event) => handleTabActionsClick(event, tab)}
               className={cn(
                 "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
@@ -279,11 +278,11 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             onClick={handleAddProject}
             className="h-full w-6 rounded-none border-0 text-text-lighter opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 hover:bg-hover/60 hover:text-text"
             tooltip="Open folder"
             aria-label="Open folder"
+            compact
           >
             <Plus weight="bold" />
           </Button>

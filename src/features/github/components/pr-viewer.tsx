@@ -501,12 +501,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
               </div>
             </div>
             {detailsError && !isLoadingDetails ? (
-              <Button
-                onClick={handleRefresh}
-                variant="ghost"
-                size="xs"
-                className="text-text-lighter"
-              >
+              <Button onClick={handleRefresh} variant="ghost" className="text-text-lighter" compact>
                 Retry
               </Button>
             ) : (
@@ -582,9 +577,9 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
             <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
             <Button
               onClick={handleRefresh}
-              variant="outline"
-              size="xs"
+              variant="default"
               className="shrink-0 border-error/40 text-error/90 hover:bg-error/10"
+              compact
             >
               Retry
             </Button>

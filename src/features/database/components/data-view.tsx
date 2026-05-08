@@ -194,7 +194,6 @@ export default function DataViewComponent({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           onAddColumnFilter(column);

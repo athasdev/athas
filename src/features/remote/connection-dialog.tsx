@@ -155,7 +155,7 @@ const ConnectionDialog = ({
       }}
       footer={
         <>
-          <Button onClick={onClose} variant="ghost" size="sm">
+          <Button onClick={onClose} variant="ghost" compact>
             Cancel
           </Button>
           <Button
@@ -181,7 +181,7 @@ const ConnectionDialog = ({
               }
             }}
             variant="ghost"
-            size="sm"
+            compact
             disabled={isTesting}
           >
             {isTesting ? (
@@ -192,7 +192,7 @@ const ConnectionDialog = ({
               "Test Connection"
             )}
           </Button>
-          <Button onClick={handleSave} disabled={!isFormValid || isValidating} size="sm">
+          <Button onClick={handleSave} disabled={!isFormValid || isValidating} compact>
             {isValidating
               ? "Saving..."
               : editingConnection
@@ -306,7 +306,6 @@ const ConnectionDialog = ({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={() => setShowPassword(!showPassword)}
               className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter hover:text-text"
               aria-label={showPassword ? "Hide password" : "Show password"}

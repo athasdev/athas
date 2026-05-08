@@ -262,7 +262,6 @@ export function ProviderApiKeyCommand({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="xs"
                       onClick={() => void handleRemove()}
                       className="text-error hover:bg-error/10 hover:text-error"
                     >
@@ -272,8 +271,7 @@ export function ProviderApiKeyCommand({
                   )}
                   <Button
                     type="button"
-                    variant="primary"
-                    size="xs"
+                    variant="accent"
                     onClick={() => void handleSave()}
                     disabled={!apiKey.trim() || isValidating || apiKey.startsWith("•")}
                     className={cn(isValidating && "opacity-70")}

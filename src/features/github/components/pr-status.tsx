@@ -76,8 +76,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
     <div className="relative inline-flex shrink-0">
       <Button
         type="button"
-        variant="outline"
-        size="xs"
+        variant="default"
         onClick={() => setIsExpanded(!isExpanded)}
         className="border-border/70 bg-primary-bg/70 text-text"
       >

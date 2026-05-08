@@ -387,7 +387,7 @@ function BranchRow({
           }}
           disabled={isLoading}
           variant="ghost"
-          size="icon-xs"
+          compact
           className={cn(
             "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
             "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",

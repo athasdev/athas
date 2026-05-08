@@ -966,8 +966,8 @@ function FileExplorerTreeComponent({
             <Button
               onClick={handleOpenFolder}
               variant="ghost"
-              size="sm"
               className="mt-1.5 text-[0.78em] text-accent hover:text-accent/80"
+              compact
             >
               Open Folder
             </Button>
@@ -1115,9 +1115,8 @@ function FileExplorerTreeComponent({
           title={alertDialog.title}
           icon={AlertTriangle}
           onClose={() => setAlertDialog(null)}
-          size="sm"
           footer={
-            <Button onClick={() => setAlertDialog(null)} variant="primary" size="sm">
+            <Button onClick={() => setAlertDialog(null)} variant="accent" compact>
               OK
             </Button>
           }
@@ -1132,22 +1131,19 @@ function FileExplorerTreeComponent({
           onClose={() => {
             if (!isOpeningAllFiles) setOpenAllFilesDialog(null);
           }}
-          size="sm"
           footer={
             <>
               <Button
                 onClick={() => setOpenAllFilesDialog(null)}
                 disabled={isOpeningAllFiles}
-                variant="outline"
-                size="sm"
+                variant="default"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => void handleOpenAllFilesConfirm()}
                 disabled={isOpeningAllFiles}
-                variant="primary"
-                size="sm"
+                variant="accent"
               >
                 {isOpeningAllFiles ? "Opening..." : "Open"}
               </Button>
@@ -1166,14 +1162,12 @@ function FileExplorerTreeComponent({
           onClose={() => {
             if (!isDeletingPath) setDeleteCandidate(null);
           }}
-          size="sm"
           footer={
             <>
               <Button
                 onClick={() => setDeleteCandidate(null)}
                 disabled={isDeletingPath}
-                variant="outline"
-                size="sm"
+                variant="default"
                 className="disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
@@ -1182,7 +1176,6 @@ function FileExplorerTreeComponent({
                 onClick={() => void handleDeleteConfirm()}
                 disabled={isDeletingPath}
                 variant="danger"
-                size="sm"
                 className="disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingPath ? "Deleting..." : "Delete"}

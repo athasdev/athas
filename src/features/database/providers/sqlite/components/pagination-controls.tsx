@@ -41,7 +41,7 @@ export default function PaginationControls({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           variant="ghost"
-          size="xs"
+          compact
           className="text-text-lighter text-xs hover:text-text disabled:opacity-50"
           aria-label="Previous page"
         >
@@ -54,7 +54,7 @@ export default function PaginationControls({
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           variant="ghost"
-          size="xs"
+          compact
           className="text-text-lighter text-xs hover:text-text disabled:opacity-50"
           aria-label="Next page"
         >

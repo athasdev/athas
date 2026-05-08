@@ -138,7 +138,7 @@ const GitStashPanel = ({
                         onClick={(e) => handleApplyStash(stash.index, e)}
                         disabled={actionLoading.has(stash.index)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="text-text-lighter disabled:opacity-50"
                         tooltip="Apply stash"
                         aria-label="Apply stash"
@@ -150,7 +150,7 @@ const GitStashPanel = ({
                         onClick={(e) => handlePopStash(stash.index, e)}
                         disabled={actionLoading.has(stash.index)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="text-text-lighter disabled:opacity-50"
                         tooltip="Pop stash"
                         aria-label="Pop stash"
@@ -162,7 +162,7 @@ const GitStashPanel = ({
                         onClick={(e) => handleDropStash(stash.index, e)}
                         disabled={actionLoading.has(stash.index)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
                         tooltip="Drop stash"
                         aria-label="Drop stash"

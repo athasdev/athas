@@ -153,7 +153,6 @@ export function DebugBreakpointsList({
             <div className="truncate text-[11px] text-text-lighter">Line {breakpoint.line + 1}</div>
           </button>
           <Button
-            size="icon-xs"
             variant="ghost"
             className="opacity-0 group-hover:opacity-100"
             tooltip="Remove breakpoint"

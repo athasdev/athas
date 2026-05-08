@@ -279,39 +279,40 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     document.body,
   );
 
-  const menuItem = !shouldUseNativeMenuBar ? (
-    settings.compactMenuBar ? (
-      <div className="relative">
-        <Tooltip content="Menu" side="bottom">
-          <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
-            <Button
-              ref={menuButtonRef}
-              onClick={() => {
-                setMenuBarActiveMenu("File");
-              }}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(
-                TITLE_BAR_ICON_BUTTON_CLASS_NAME,
-                menuBarActiveMenu && "bg-hover/70 text-text",
-              )}
-              aria-label="Menu"
-            >
-              <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
-            </Button>
-          </TabsList>
-        </Tooltip>
-        <CustomMenuBar
-          activeMenu={menuBarActiveMenu}
-          setActiveMenu={setMenuBarActiveMenu}
-          compactFloating
-          anchorRef={menuButtonRef}
-        />
-      </div>
-    ) : (
-      <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-    )
-  ) : null;
+  const menuItem =
+    !isMacOS && !shouldUseNativeMenuBar ? (
+      settings.compactMenuBar ? (
+        <div className="relative">
+          <Tooltip content="Menu" side="bottom">
+            <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
+              <Button
+                ref={menuButtonRef}
+                onClick={() => {
+                  setMenuBarActiveMenu("File");
+                }}
+                variant="ghost"
+                compact
+                className={cn(
+                  TITLE_BAR_ICON_BUTTON_CLASS_NAME,
+                  menuBarActiveMenu && "bg-hover/70 text-text",
+                )}
+                aria-label="Menu"
+              >
+                <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+              </Button>
+            </TabsList>
+          </Tooltip>
+          <CustomMenuBar
+            activeMenu={menuBarActiveMenu}
+            setActiveMenu={setMenuBarActiveMenu}
+            compactFloating
+            anchorRef={menuButtonRef}
+          />
+        </div>
+      ) : (
+        <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+      )
+    ) : null;
 
   const headerTrailingItems: Array<HeaderItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
@@ -327,7 +328,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
           active={settings.isAIChatVisible}
           tooltip="Toggle AI Chat"
           tooltipSide="bottom"
@@ -364,9 +364,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content="Minimize" side="bottom">
               <Button
                 onClick={handleMinimize}
-                variant="secondary"
-                size="icon-md"
+                variant="default"
                 className="pointer-events-auto"
+                compact
               >
                 <Minus className="size-4 text-text-lighter" weight="bold" />
               </Button>
@@ -374,9 +374,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
-                variant="secondary"
-                size="icon-md"
+                variant="default"
                 className="pointer-events-auto"
+                compact
               >
                 {isMaximized ? (
                   <CornersIn className="size-4 text-text-lighter" weight="duotone" />
@@ -389,8 +389,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-md"
                 className="pointer-events-auto group"
+                compact
               >
                 <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
@@ -505,9 +505,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content="Minimize" side="bottom">
               <Button
                 onClick={handleMinimize}
-                variant="secondary"
-                size="icon-md"
+                variant="default"
                 className="pointer-events-auto"
+                compact
               >
                 <Minus className="size-4 text-text-lighter" weight="bold" />
               </Button>
@@ -515,9 +515,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
-                variant="secondary"
-                size="icon-md"
+                variant="default"
                 className="pointer-events-auto"
+                compact
               >
                 {isMaximized ? (
                   <CornersIn className="size-4 text-text-lighter" weight="duotone" />
@@ -530,8 +530,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-md"
                 className="pointer-events-auto group"
+                compact
               >
                 <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>

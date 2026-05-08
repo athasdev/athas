@@ -132,9 +132,9 @@ export default function RunActionsButton() {
               type="button"
               onClick={handlePrimaryRun}
               variant="ghost"
-              size="sm"
               className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "min-w-9 px-2")}
               aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
+              compact
             >
               <Play className="size-4 translate-x-[0.5px]" weight="duotone" />
             </Button>
@@ -145,7 +145,7 @@ export default function RunActionsButton() {
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               variant="ghost"
-              size="icon-sm"
+              compact
               active={isMenuOpen}
               className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "w-7 px-0")}
               aria-expanded={isMenuOpen}
@@ -177,7 +177,6 @@ export default function RunActionsButton() {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   onClick={() => runAction(action.command, action.name)}
                   className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent px-0 py-0 text-text hover:bg-transparent"
                   style={{ fontSize: "var(--ui-text-sm)" }}
@@ -197,7 +196,7 @@ export default function RunActionsButton() {
                       })
                     }
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="rounded-md text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
@@ -207,7 +206,7 @@ export default function RunActionsButton() {
                     type="button"
                     onClick={() => deleteAction(action.id)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="rounded-md text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
@@ -243,13 +242,13 @@ export default function RunActionsButton() {
           size="sm"
           footer={
             <>
-              <Button variant="ghost" size="sm" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
               <Button
-                size="sm"
                 onClick={handleSave}
                 disabled={!draft.name.trim() || !draft.command.trim()}
+                compact
               >
                 {draft.id ? "Save" : "Add Action"}
               </Button>

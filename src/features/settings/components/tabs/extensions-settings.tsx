@@ -203,23 +203,23 @@ const ExtensionRow = ({
         <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
       ) : isUnavailableAgent ? (
         <div className="flex shrink-0 items-center gap-2">
-          <Button disabled variant="secondary" size="xs" tooltip="Unavailable">
+          <Button disabled variant="default" tooltip="Unavailable" compact>
             Unavailable
           </Button>
         </div>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
-            <Button onClick={onUpdate} variant="default" size="xs" tooltip="Update available">
+            <Button onClick={onUpdate} variant="default" tooltip="Update available" compact>
               {hasRuntimeIssue ? "Reinstall" : "Update"}
             </Button>
           )}
           {hasLocalOverride && onResetOverride && (
             <Button
               onClick={onResetOverride}
-              variant="secondary"
-              size="xs"
+              variant="default"
               tooltip="Reset to marketplace version"
+              compact
             >
               Reset
             </Button>
@@ -227,16 +227,16 @@ const ExtensionRow = ({
           <Button
             onClick={onToggle}
             variant="danger"
-            size="xs"
             className="border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error"
             tooltip={uninstallLabel}
+            compact
           >
             {uninstallLabel}
           </Button>
         </div>
       ) : (
         <div className="flex shrink-0 items-center gap-2">
-          <Button onClick={onToggle} variant="default" size="xs" tooltip={installLabel}>
+          <Button onClick={onToggle} variant="default" tooltip={installLabel} compact>
             {installLabel}
           </Button>
         </div>
@@ -802,12 +802,7 @@ export const ExtensionsSettings = () => {
 
       {(settings.extensionsActiveTab === "skill" || settings.extensionsActiveTab === "all") && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="xs"
-            onClick={() => setIsSkillsCommandOpen(true)}
-          >
+          <Button type="button" variant="default" onClick={() => setIsSkillsCommandOpen(true)}>
             <Plus />
             New Skill
           </Button>

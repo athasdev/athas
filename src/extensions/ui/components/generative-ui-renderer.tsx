@@ -15,10 +15,10 @@ function ActionButton({ action }: { action: GenerativeUIAction }) {
   };
 
   const variant =
-    action.style === "primary" ? "primary" : action.style === "danger" ? "danger" : "secondary";
+    action.style === "primary" ? "accent" : action.style === "danger" ? "danger" : "default";
 
   return (
-    <Button onClick={handleClick} variant={variant} size="sm" aria-label={action.label}>
+    <Button onClick={handleClick} variant={variant} aria-label={action.label} compact>
       {action.label}
     </Button>
   );

@@ -250,8 +250,8 @@ export function EmptyEditorState() {
             type="button"
             onClick={item.action}
             variant="ghost"
-            size="sm"
             className={newTabRowClassName}
+            compact
           >
             <span className="shrink-0">{item.icon}</span>
             <span className="text-text text-xs">{item.label}</span>
@@ -286,7 +286,7 @@ export function EmptyEditorState() {
                       openTerminalBuffer({ name: action.name, command: action.command })
                     }
                     variant="ghost"
-                    size="sm"
+                    compact
                     className="h-auto min-w-0 flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
                   >
                     <Terminal className="shrink-0 text-text-light" />
@@ -296,7 +296,7 @@ export function EmptyEditorState() {
                     type="button"
                     onClick={() => handleStartEdit(action.id, action.command)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="shrink-0 opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
                   >
                     <Pencil />
@@ -305,7 +305,7 @@ export function EmptyEditorState() {
                     type="button"
                     onClick={(e) => handleDelete(action.id, e)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="shrink-0 opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
                   >
                     <Trash2 />
@@ -336,8 +336,8 @@ export function EmptyEditorState() {
             type="button"
             onClick={handleStartAdd}
             variant="ghost"
-            size="sm"
             className={newTabRowClassName}
+            compact
           >
             <Plus className="shrink-0 text-text-lighter" />
             <span className="text-text-light text-xs">Add custom action...</span>

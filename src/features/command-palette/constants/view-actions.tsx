@@ -16,7 +16,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { primitivePrompt } from "@/ui/primitive-dialog-service";
-import { IS_WINDOWS } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
@@ -157,7 +157,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    ...(!IS_WINDOWS
+    ...(!IS_MAC && !IS_WINDOWS
       ? [
           {
             id: "toggle-native-menu-bar",
@@ -179,21 +179,25 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           },
         ]
       : []),
-    {
-      id: "toggle-compact-menu-bar",
-      label: settings.compactMenuBar
-        ? "View: Disable Compact Menu Bar"
-        : "View: Enable Compact Menu Bar",
-      description: settings.compactMenuBar
-        ? "Show full menu bar"
-        : "Use compact menu bar with hamburger icon",
-      icon: <Menu />,
-      category: "View",
-      action: () => {
-        updateSetting("compactMenuBar", !settings.compactMenuBar);
-        onClose();
-      },
-    },
+    ...(!IS_MAC
+      ? [
+          {
+            id: "toggle-compact-menu-bar",
+            label: settings.compactMenuBar
+              ? "View: Disable Compact Menu Bar"
+              : "View: Enable Compact Menu Bar",
+            description: settings.compactMenuBar
+              ? "Show full menu bar"
+              : "Use compact menu bar with hamburger icon",
+            icon: <Menu />,
+            category: "View",
+            action: () => {
+              updateSetting("compactMenuBar", !settings.compactMenuBar);
+              onClose();
+            },
+          },
+        ]
+      : []),
     {
       id: "view-zoom-in",
       label: "Editor: Zoom In",

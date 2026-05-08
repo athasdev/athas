@@ -701,12 +701,12 @@ const TabBar = ({
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              size="icon-sm"
               className="shrink-0 rounded-lg text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
+              compact
             >
               <ArrowLeft />
             </Button>
@@ -715,12 +715,12 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              size="icon-sm"
               className="shrink-0 rounded-lg text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
+              compact
             >
               <ArrowRight />
             </Button>
@@ -760,7 +760,7 @@ const TabBar = ({
                 type="button"
                 onClick={() => closePane(paneId)}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className="shrink-0 rounded-lg text-text-lighter"
                 tooltip="Close Split"
                 tooltipSide="bottom"
@@ -774,11 +774,11 @@ const TabBar = ({
                 type="button"
                 onClick={handleSplitActivePane}
                 variant="ghost"
-                size="icon-sm"
                 className="shrink-0 rounded-lg text-text-lighter"
                 tooltip="Split Editor"
                 tooltipSide="bottom"
                 aria-label="Split editor"
+                compact
               >
                 <SplitSquareHorizontal />
               </Button>
@@ -788,11 +788,11 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                size="icon-sm"
                 className="shrink-0 rounded-lg text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
+                compact
               >
                 {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
               </Button>

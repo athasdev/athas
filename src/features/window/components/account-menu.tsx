@@ -301,7 +301,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
             onClick={() => setIsOpen((open) => !open)}
             type="button"
             variant="ghost"
-            size="icon-sm"
+            compact
             active={isOpen}
             className={TITLE_BAR_ICON_BUTTON_CLASS_NAME}
             aria-expanded={isOpen}

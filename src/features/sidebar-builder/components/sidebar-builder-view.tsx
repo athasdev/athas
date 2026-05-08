@@ -379,10 +379,10 @@ function AddWidgetPicker({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
           tooltip="Close"
           onClick={onClose}
           className="text-text-lighter/75"
+          compact
         >
           <X />
         </Button>
@@ -498,13 +498,13 @@ function WidgetRow({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
           tooltip={isFavorite ? "Remove Favorite" : "Favorite"}
           onClick={onToggleFavorite}
           className={cn(
             "opacity-0 group-hover:opacity-100",
             isFavorite && "opacity-100 text-warning",
           )}
+          compact
         >
           <Star weight={isFavorite ? "fill" : "regular"} />
         </Button>
@@ -1267,10 +1267,10 @@ export function SidebarBuilderView() {
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
           tooltip="Add"
           onClick={toggleAddPicker}
           className="text-text-lighter/70 hover:text-text"
+          compact
         >
           <Plus />
         </Button>

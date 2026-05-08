@@ -295,11 +295,11 @@ export default function DebuggerView() {
         <Bug size={16} className="text-text-lighter" weight="duotone" />
         <div className="min-w-0 flex-1 font-medium text-sm">Debug</div>
         <Button
-          size="icon-sm"
           variant="ghost"
           tooltip="Toggle breakpoint on current line"
           onClick={toggleCurrentLineBreakpoint}
           disabled={!activeFile}
+          compact
         >
           <ListBullets />
         </Button>
@@ -329,18 +329,17 @@ export default function DebuggerView() {
 
         <div className="grid grid-cols-[1fr_auto_auto] gap-1.5">
           <Button
-            size="sm"
-            variant="primary"
+            variant="accent"
             onClick={startDebugging}
             disabled={!canStartDebugging || isActiveSession}
             commandId="debug.start"
+            compact
           >
             <Play />
             Start
           </Button>
           <Button
-            size="icon-sm"
-            variant="secondary"
+            variant="default"
             tooltip={isPaused ? "Continue" : "Pause"}
             disabled={!canSendAdapterThreadRequest}
             onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
@@ -349,12 +348,12 @@ export default function DebuggerView() {
             {isPaused ? <Play /> : <Pause />}
           </Button>
           <Button
-            size="icon-sm"
             variant="danger"
             tooltip="Stop"
             disabled={!isActiveSession}
             onClick={stopDebugging}
             commandId="debug.stop"
+            compact
           >
             <Square />
           </Button>
@@ -362,8 +361,7 @@ export default function DebuggerView() {
 
         <div className="grid grid-cols-3 gap-1.5">
           <Button
-            size="xs"
-            variant="secondary"
+            variant="default"
             tooltip="Step over"
             disabled={!canStep}
             onClick={() => void sendAdapterThreadRequest("next")}
@@ -371,8 +369,7 @@ export default function DebuggerView() {
             Over
           </Button>
           <Button
-            size="xs"
-            variant="secondary"
+            variant="default"
             tooltip="Step into"
             disabled={!canStep}
             onClick={() => void sendAdapterThreadRequest("stepIn")}
@@ -380,8 +377,7 @@ export default function DebuggerView() {
             Into
           </Button>
           <Button
-            size="xs"
-            variant="secondary"
+            variant="default"
             tooltip="Step out"
             disabled={!canStep}
             onClick={() => void sendAdapterThreadRequest("stepOut")}
@@ -445,7 +441,6 @@ export default function DebuggerView() {
           action={
             activeAdapterOutput.length > 0 ? (
               <Button
-                size="icon-xs"
                 variant="ghost"
                 tooltip="Clear console"
                 onClick={(event) => {
@@ -483,7 +478,6 @@ export default function DebuggerView() {
           action={
             sortedBreakpoints.length > 0 ? (
               <Button
-                size="icon-xs"
                 variant="ghost"
                 tooltip="Clear breakpoints"
                 onClick={(event) => {

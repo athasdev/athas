@@ -106,7 +106,7 @@ export const AdvancedSettings = () => {
     <div className="space-y-4">
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
-          <Button variant="default" size="xs" onClick={() => void handleExportSettings()}>
+          <Button variant="default" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
@@ -114,7 +114,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button variant="default" size="xs" onClick={handleImportSettings}>
+          <Button variant="default" onClick={handleImportSettings} compact>
             Import
           </Button>
         </SettingRow>
@@ -138,14 +138,10 @@ export const AdvancedSettings = () => {
           description="Inspect the local queue and recent telemetry delivery results."
         >
           <div className="flex gap-2">
-            <Button
-              variant="default"
-              size="xs"
-              onClick={() => setShowTelemetryLog((value) => !value)}
-            >
+            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="default" size="xs" onClick={handleClearTelemetryLog}>
+            <Button variant="default" onClick={handleClearTelemetryLog} compact>
               Clear
             </Button>
           </div>

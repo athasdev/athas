@@ -224,7 +224,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <Button
                 onClick={() => void fetchIssue(true)}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 aria-label="Refresh issue"
               >
                 <RefreshCw className={isLoading ? "animate-spin" : ""} />
@@ -234,8 +234,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <Button
                 onClick={handleOpenInBrowser}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Open issue on GitHub"
+                compact
               >
                 <ExternalLink />
               </Button>
@@ -244,8 +244,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <Button
                 onClick={handleCopyIssueLink}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Copy issue link"
+                compact
               >
                 <Copy />
               </Button>
@@ -261,8 +261,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <p className="ui-font ui-text-sm text-error">{error}</p>
               <Button
                 onClick={() => void fetchIssue(true)}
-                variant="outline"
-                size="xs"
+                variant="default"
+                compact
                 className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
               >
                 Retry

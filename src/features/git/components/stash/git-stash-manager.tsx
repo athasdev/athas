@@ -120,7 +120,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             <Archive className="text-text-lighter" />
             <h2 className="font-medium text-sm text-text">Stash Manager</h2>
           </div>
-          <Button onClick={onClose} variant="ghost" size="icon-sm" className="text-text-lighter">
+          <Button onClick={onClose} variant="ghost" className="text-text-lighter" compact>
             <X />
           </Button>
         </div>
@@ -162,9 +162,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             <Button
               onClick={handleCreateStash}
               disabled={isLoading}
-              variant="outline"
-              size="sm"
+              variant="default"
               className="w-full"
+              compact
             >
               {isLoading ? "Creating..." : "Create Stash"}
             </Button>
@@ -209,8 +209,8 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <Button
                         onClick={() => handleApplyStash(stash.index)}
                         disabled={isActionLoading}
-                        variant="outline"
-                        size="xs"
+                        variant="default"
+                        compact
                         className="gap-1 px-2 py-1 text-[9px]"
                         tooltip="Apply stash (keep in stash list)"
                       >
@@ -221,8 +221,8 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <Button
                         onClick={() => handlePopStash(stash.index)}
                         disabled={isActionLoading}
-                        variant="outline"
-                        size="xs"
+                        variant="default"
+                        compact
                         className="gap-1 px-2 py-1 text-[9px]"
                         tooltip="Pop stash (apply and remove from stash list)"
                       >
@@ -234,7 +234,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         onClick={() => handleDropStash(stash.index)}
                         disabled={isActionLoading}
                         variant="danger"
-                        size="xs"
+                        compact
                         className="gap-1 px-2 py-1 text-[9px]"
                         tooltip="Drop stash (delete permanently)"
                       >

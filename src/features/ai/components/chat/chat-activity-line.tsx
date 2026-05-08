@@ -30,7 +30,6 @@ export function ChatActivityLine({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         onClick={() => canExpand && setIsExpanded((current) => !current)}
         disabled={!canExpand}
         className={cn(

@@ -10,8 +10,8 @@ export const PANE_CHIP_BASE =
 
 export const PANE_ICON_BUTTON_BASE = cn(
   buttonVariants({
-    variant: "secondary",
-    size: "icon-sm",
+    variant: "default",
+    compact: true,
   }),
   "shrink-0 rounded-lg text-text-lighter",
 );
@@ -30,13 +30,13 @@ export function paneChipClassName(className?: string) {
   return cn(PANE_CHIP_BASE, className);
 }
 
-export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;
+export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "compact">;
 
 export function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
   return (
     <Button
-      variant="secondary"
-      size="icon-sm"
+      variant="default"
+      compact
       className={cn("shrink-0 rounded-lg text-text-lighter", className)}
       {...props}
     />

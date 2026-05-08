@@ -140,7 +140,6 @@ export default function DataGrid({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
           onClick={onCreateRow}
           className={cn(
             "rounded-full",
@@ -148,6 +147,7 @@ export default function DataGrid({
           )}
           aria-label="Add row"
           disabled={!canCreateRows}
+          compact
         >
           <Plus className="text-text-lighter hover:text-text" />
         </Button>
@@ -195,7 +195,6 @@ export default function DataGrid({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon-xs"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (canFilterColumns) onAddColumnFilter(col);

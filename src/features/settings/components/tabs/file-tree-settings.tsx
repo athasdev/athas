@@ -76,7 +76,7 @@ export const FileTreeSettings = () => {
             onChange={(value) => updateSetting("fileTreeDensity", value as FileTreeDensity)}
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
-            variant="secondary"
+            variant="default"
           />
         </SettingRow>
 

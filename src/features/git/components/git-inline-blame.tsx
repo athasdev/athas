@@ -321,10 +321,10 @@ export const InlineGitBlame = ({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   className="gap-1.5 px-1.5"
                   onClick={handleViewCommit}
                   tooltip="View commit details"
+                  compact
                 >
                   <GitCommit />
                   <span className="ui-font text-text">{blameLine.commit_hash.substring(0, 7)}</span>
@@ -332,10 +332,10 @@ export const InlineGitBlame = ({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   className="ml-auto text-text-lighter hover:text-text"
                   onClick={handleCopyCommitHash}
                   tooltip="Copy commit hash"
+                  compact
                 >
                   {isCopied ? <Check className="text-green-500" /> : <Copy />}
                 </Button>

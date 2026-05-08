@@ -46,7 +46,7 @@ export default function InfoView({
                 key={table.name}
                 onClick={() => onTableChange(table.name)}
                 variant="ghost"
-                size="sm"
+                compact
                 className={`ui-font block h-auto w-full justify-start px-2 py-1 text-left text-xs hover:bg-hover ${
                   selectedTable === table.name ? "bg-selected" : ""
                 }`}
@@ -68,7 +68,7 @@ export default function InfoView({
                   key={index}
                   onClick={() => onQuerySelect(query)}
                   variant="ghost"
-                  size="sm"
+                  compact
                   className="ui-font block h-auto w-full truncate justify-start px-2 py-1 text-left text-xs hover:bg-hover"
                   tooltip={query}
                 >

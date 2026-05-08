@@ -10,13 +10,19 @@ import {
   upsertRecentFolder,
 } from "../utils/recent-folders";
 
+export interface RecentFolderImport {
+  path: string;
+  sourceId?: string;
+  sourceName?: string;
+}
+
 interface RecentFoldersState {
   recentFolders: RecentFolder[];
 }
 
 interface RecentFoldersActions {
   addToRecents: (folderPath: string, metadata?: RecentFolderMetadata) => void;
-  importRecentFolders: (folderPaths: string[]) => number;
+  importRecentFolders: (folders: RecentFolderImport[]) => number;
   openRecentFolder: (folderPath: string) => Promise<void>;
   removeFromRecents: (folderPath: string) => void;
   clearRecents: () => void;
@@ -36,30 +42,33 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
           });
         },
 
-        importRecentFolders: (folderPaths: string[]) => {
-          const uniquePaths = folderPaths.filter(
-            (folderPath, index) => folderPaths.indexOf(folderPath) === index,
+        importRecentFolders: (folders: RecentFolderImport[]) => {
+          const uniqueFolders = folders.filter(
+            (folder, index) =>
+              folders.findIndex((candidate) => candidate.path === folder.path) === index,
           );
           const existingPaths = new Set(get().recentFolders.map((folder) => folder.path));
-          const importedPaths = uniquePaths.filter((folderPath) => !existingPaths.has(folderPath));
+          const importedFolders = uniqueFolders.filter((folder) => !existingPaths.has(folder.path));
 
-          if (importedPaths.length === 0) {
+          if (importedFolders.length === 0) {
             return 0;
           }
 
           const importBaseTime = Date.now() - 60_000;
           set((state) => {
-            state.recentFolders = importedPaths.reduce(
-              (folders, folderPath, index) =>
-                upsertRecentFolder(folders, folderPath, {
+            state.recentFolders = importedFolders.reduce(
+              (recentFolders, folder, index) =>
+                upsertRecentFolder(recentFolders, folder.path, {
                   lastOpenedAt: importBaseTime - index,
                   missing: false,
+                  importSourceId: folder.sourceId,
+                  importSourceName: folder.sourceName,
                 }),
               state.recentFolders,
             );
           });
 
-          return importedPaths.length;
+          return importedFolders.length;
         },
 
         openRecentFolder: async (folderPath: string) => {

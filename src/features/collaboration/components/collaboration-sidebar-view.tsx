@@ -533,8 +533,7 @@ export function CollaborationSidebarView() {
             <Button
               key={channel.id}
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               active={selectedChannel?.id === channel.id}
               className="h-6 max-w-[120px] rounded-lg border-border/60 bg-transparent px-2 text-xs"
               disabled={!collaboration?.capabilities.presence}
@@ -671,7 +670,6 @@ export function CollaborationSidebarView() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
                 active={micState === "active"}
                 className={chatComposerIconButtonClassName(
                   micState === "error" ? "text-error hover:text-error" : undefined,
@@ -685,7 +683,6 @@ export function CollaborationSidebarView() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
                 active={screenState === "active"}
                 className={chatComposerIconButtonClassName(
                   screenState === "error" ? "text-error hover:text-error" : undefined,
@@ -699,7 +696,6 @@ export function CollaborationSidebarView() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
                 className={chatComposerIconButtonClassName()}
                 disabled={!selectedChannel || !model.canEditNotes || isSending}
                 tooltip="Share Documents"
@@ -711,8 +707,7 @@ export function CollaborationSidebarView() {
             </div>
             <Button
               type="button"
-              variant="primary"
-              size="icon-sm"
+              variant="accent"
               className="size-6 rounded-md p-0 [&_svg]:size-3.5"
               disabled={!draft.trim() || !selectedChannel || !model.canEditNotes || isSending}
               tooltip={isSending ? "Sending" : "Send"}

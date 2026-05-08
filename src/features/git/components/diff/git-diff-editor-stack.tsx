@@ -616,7 +616,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   onClick={() => void openUrl(githubCommitUrl)}
                   className="h-5 gap-1 px-1.5 text-text-lighter ui-text-sm"
                   aria-label="View on GitHub"
@@ -630,7 +629,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               <Button
                 type="button"
                 variant="ghost"
-                size="xs"
                 active={showWhitespace}
                 onClick={() => setShowWhitespace((prev) => !prev)}
                 className={cn("h-5 gap-1 px-1.5 text-text-lighter", showWhitespace && "text-text")}
@@ -645,7 +643,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   active={viewMode === "unified"}
                   onClick={() => setViewMode("unified")}
                   className="text-text-lighter"
@@ -658,7 +655,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   active={viewMode === "split"}
                   onClick={() => setViewMode("split")}
                   className="text-text-lighter"

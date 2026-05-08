@@ -220,7 +220,6 @@ const ContentGlobalSearch = () => {
                   type="button"
                   onClick={option.onToggle}
                   variant="ghost"
-                  size="icon-xs"
                   className={cn(
                     "rounded-md border border-transparent text-text-lighter transition-colors",
                     option.active
@@ -230,6 +229,7 @@ const ContentGlobalSearch = () => {
                   tooltip={option.label}
                   aria-label={option.label}
                   aria-pressed={option.active}
+                  compact
                 >
                   {option.icon}
                 </Button>

@@ -51,7 +51,7 @@ export default function FilterBar({
             <Button
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
-              size="xs"
+              compact
               className="rounded-full gap-0.5 text-text-lighter"
               aria-label="Add filter"
             >
@@ -63,9 +63,9 @@ export default function FilterBar({
         <Button
           onClick={onClear}
           variant="ghost"
-          size="xs"
           className="rounded-full text-text-lighter"
           aria-label="Clear all filters"
+          compact
         >
           Clear all
         </Button>
@@ -108,7 +108,7 @@ export default function FilterBar({
             <Button
               onClick={() => onRemove(i)}
               variant="ghost"
-              size="icon-xs"
+              compact
               className="text-text-lighter hover:text-red-500"
               aria-label="Remove filter"
             >

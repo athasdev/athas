@@ -115,20 +115,20 @@ const DiffHeader = memo(
                   <Button
                     onClick={onExpandAll}
                     variant="ghost"
-                    size="icon-xs"
                     className={iconButtonClass}
                     tooltip="Expand all"
                     aria-label="Expand all files"
+                    compact
                   >
                     <ChevronDown />
                   </Button>
                   <Button
                     onClick={onCollapseAll}
                     variant="ghost"
-                    size="icon-xs"
                     className={iconButtonClass}
                     tooltip="Collapse all"
                     aria-label="Collapse all files"
+                    compact
                   >
                     <ChevronUp />
                   </Button>
@@ -141,7 +141,7 @@ const DiffHeader = memo(
                   <Button
                     onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
                     variant="ghost"
-                    size="xs"
+                    compact
                     className={cn(
                       "flex h-5 items-center gap-1 rounded px-1.5 transition-colors hover:bg-hover hover:text-text",
                       showWhitespace ? "bg-hover text-text" : "text-text-lighter",
@@ -158,7 +158,7 @@ const DiffHeader = memo(
                       <Button
                         onClick={() => onViewModeChange("unified")}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className={cn(
                           segmentedButtonClass,
                           viewMode === "unified" && "bg-hover text-text",
@@ -171,7 +171,7 @@ const DiffHeader = memo(
                       <Button
                         onClick={() => onViewModeChange("split")}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className={cn(
                           segmentedButtonClass,
                           viewMode === "split" && "bg-hover text-text",
@@ -191,11 +191,11 @@ const DiffHeader = memo(
               <Button
                 onClick={handleClose}
                 variant="ghost"
-                size="icon-xs"
                 className={iconButtonClass}
                 tooltip="Close"
                 shortcut="escape"
                 aria-label="Close diff view"
+                compact
               >
                 <X />
               </Button>

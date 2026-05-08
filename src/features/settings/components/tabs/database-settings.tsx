@@ -48,7 +48,7 @@ export const DatabaseSettings = () => {
           <Button
             onClick={() => setIsDatabaseConnectionVisible(true)}
             variant="default"
-            size="xs"
+            compact
             className="gap-1.5"
           >
             <Plus />
@@ -92,7 +92,7 @@ export const DatabaseSettings = () => {
                 <Button
                   onClick={() => void deleteConnection(connection.id)}
                   variant="danger"
-                  size="xs"
+                  compact
                   className="gap-1.5"
                 >
                   <Trash2 />

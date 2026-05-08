@@ -50,12 +50,12 @@ const GitSidebarSectionHeader = ({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         onClick={onToggle}
         className={cn(
           paneHeaderClassName("w-full shrink-0 justify-between rounded-none px-2.5 hover:bg-hover"),
           className,
         )}
+        compact
       >
         {content}
       </Button>

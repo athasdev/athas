@@ -55,7 +55,7 @@ export function PathBreadcrumb({
                 ref={(element) => setSegmentRef?.(index, element)}
                 onClick={(event) => onSegmentClick?.(index, event)}
                 variant="ghost"
-                size="xs"
+                compact
                 className={cn(
                   "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 text-xs",
                   isLast

@@ -8,6 +8,8 @@ export interface RecentFolder {
   missing?: boolean;
   openInNewWindow?: boolean;
   pinned?: boolean;
+  importSourceId?: string;
+  importSourceName?: string;
 }
 
 export interface RecentFolderMetadata {
@@ -16,4 +18,6 @@ export interface RecentFolderMetadata {
   lastOpenedAt?: number;
   missing?: boolean;
   openInNewWindow?: boolean;
+  importSourceId?: string;
+  importSourceName?: string;
 }

@@ -433,8 +433,7 @@ export const AISettings = () => {
         <SettingRow label="API Keys" description="Manage provider API keys separately">
           <Button
             type="button"
-            variant="secondary"
-            size="sm"
+            variant="default"
             onClick={() => setIsApiKeyManagerOpen(true)}
             className="w-fit"
           >
@@ -494,9 +493,9 @@ export const AISettings = () => {
               <Button
                 type="button"
                 variant="default"
-                size="xs"
                 onClick={handleSaveCustomChatApiKey}
                 disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
+                compact
               >
                 Save
               </Button>
@@ -504,9 +503,9 @@ export const AISettings = () => {
                 <Button
                   type="button"
                   variant="default"
-                  size="xs"
                   onClick={handleRemoveCustomChatApiKey}
                   disabled={isSavingCustomChatApiKey}
+                  compact
                 >
                   Remove
                 </Button>
@@ -559,10 +558,10 @@ export const AISettings = () => {
                 <Button
                   type="button"
                   variant="default"
-                  size="icon-xs"
                   onClick={handleResetOllamaUrl}
                   title="Reset to default"
                   aria-label="Reset Ollama URL to default"
+                  compact
                 >
                   <RotateCcw />
                 </Button>
@@ -588,9 +587,9 @@ export const AISettings = () => {
               <Button
                 type="button"
                 variant="default"
-                size="xs"
                 onClick={handleSaveOllamaApiKey}
                 disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
+                compact
               >
                 {isSavingOllamaKey ? "Saving…" : "Save"}
               </Button>
@@ -598,11 +597,11 @@ export const AISettings = () => {
                 <Button
                   type="button"
                   variant="default"
-                  size="xs"
                   onClick={handleRemoveOllamaApiKey}
                   title="Remove saved API key"
                   aria-label="Remove Ollama API key"
                   className="text-error hover:bg-error/10"
+                  compact
                 >
                   <Trash2 />
                 </Button>
@@ -686,7 +685,7 @@ export const AISettings = () => {
                     useAIChatStore.getState().changeSessionConfigOption(option.id, value)
                   }
                   size="xs"
-                  variant="secondary"
+                  variant="default"
                   searchable
                   searchableTrigger="input"
                 />
@@ -784,10 +783,10 @@ export const AISettings = () => {
                 <div className="flex items-center gap-2">
                   <Button
                     variant="default"
-                    size="xs"
                     onClick={loadAutocompleteModels}
                     disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
                     title="Refresh model list"
+                    compact
                   >
                     <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
                   </Button>
@@ -870,22 +869,22 @@ export const AISettings = () => {
                     />
                     <Button
                       variant="default"
-                      size="xs"
                       onClick={handleSaveCustomAutocompleteApiKey}
                       disabled={
                         !customAutocompleteApiKeyInput.trim() ||
                         !aiCompletionAllowedByPolicy ||
                         isSavingCustomAutocompleteApiKey
                       }
+                      compact
                     >
                       Save
                     </Button>
                     {hasCustomAutocompleteApiKey && (
                       <Button
                         variant="default"
-                        size="xs"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                        compact
                       >
                         Remove
                       </Button>

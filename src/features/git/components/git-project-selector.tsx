@@ -224,7 +224,7 @@ const GitProjectSelector = ({
             onClick={() => void handleBrowseRepository()}
             disabled={isSelectingRepo}
             variant="ghost"
-            size="sm"
+            compact
             className="h-7 w-full justify-start px-2 text-text-lighter"
           >
             <FolderOpen />
@@ -235,8 +235,8 @@ const GitProjectSelector = ({
               type="button"
               onClick={handleUseWorkspaceRepositories}
               variant="ghost"
-              size="sm"
               className="mt-1 h-7 w-full justify-start px-2 text-text-lighter"
+              compact
             >
               <RefreshCw />
               Use workspace repositories

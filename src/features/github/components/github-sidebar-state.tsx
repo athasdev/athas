@@ -43,8 +43,8 @@ export function GitHubSidebarState({
             onClick={onAction}
             disabled={isActionDisabled}
             variant="ghost"
-            size="xs"
             className="ui-text-sm mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+            compact
           >
             {actionLabel}
           </Button>

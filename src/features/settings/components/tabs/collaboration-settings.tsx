@@ -46,9 +46,9 @@ export const CollaborationSettings = () => {
           <Button
             type="button"
             variant="default"
-            size="xs"
             className="ui-text-sm"
             onClick={openDashboardCollaboration}
+            compact
           >
             <UsersThree />
             Open
@@ -80,8 +80,7 @@ export const CollaborationSettings = () => {
             </Badge>
             <Button
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               className="ui-text-sm"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
               onClick={() => {
@@ -128,8 +127,7 @@ export const CollaborationSettings = () => {
             >
               <Button
                 type="button"
-                variant={presenceTarget.channelId === channel.id ? "primary" : "secondary"}
-                size="xs"
+                variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
                 className="ui-text-sm"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
@@ -143,8 +141,7 @@ export const CollaborationSettings = () => {
             <SettingRow key={`follow-${member.id}`} label={member.name} description={member.email}>
               <Button
                 type="button"
-                variant={presenceTarget.followingUserId === member.userId ? "primary" : "secondary"}
-                size="xs"
+                variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
                 className="ui-text-sm"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}

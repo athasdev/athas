@@ -12,7 +12,7 @@ import type { FileStatusFilter } from "../types/pr-viewer";
 import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(
-  buttonVariants({ variant: "ghost", size: "xs" }),
+  buttonVariants({ variant: "ghost", compact: true }),
   "h-5 rounded px-1.5 text-[10px] text-text-lighter hover:bg-hover hover:text-text",
 );
 
@@ -146,9 +146,9 @@ export const PRFilesPanel = memo(
             <p className="ui-font ui-text-sm text-error">{contentError}</p>
             <Button
               onClick={onRetry}
-              variant="outline"
-              size="xs"
+              variant="default"
               className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              compact
             >
               Retry
             </Button>
@@ -193,7 +193,6 @@ export const PRFilesPanel = memo(
                   data-pr-file-path={file.path}
                   type="button"
                   variant="ghost"
-                  size="sm"
                   active={isSelected}
                   tabIndex={isSelected ? 0 : -1}
                   onClick={() => onSelectFile(file.path)}
@@ -220,10 +219,10 @@ export const PRFilesPanel = memo(
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   onClick={onToggleSplit}
                   className={compactToolbarButtonClass}
                   aria-label="Toggle files split width"
+                  compact
                 >
                   {isWideSplit ? "Narrow Split" : "Wide Split"}
                 </Button>

@@ -76,7 +76,7 @@ export const CreateRowModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Add Row to {tableName}</h2>
-          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
+          <Button onClick={handleClose} variant="ghost" className="rounded-full" compact>
             <XIcon size="16" />
           </Button>
         </div>
@@ -112,10 +112,10 @@ export const CreateRowModal = ({
             ))}
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
+            <Button type="button" variant="ghost" onClick={handleClose} compact>
               Cancel
             </Button>
-            <Button type="submit" size="sm" className="gap-1">
+            <Button type="submit" className="gap-1" compact>
               <PlusIcon size="14" />
               Add Row
             </Button>
@@ -205,7 +205,7 @@ export const EditRowModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Edit Row in {tableName}</h2>
-          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
+          <Button onClick={handleClose} variant="ghost" className="rounded-full" compact>
             <XIcon size="16" />
           </Button>
         </div>
@@ -238,10 +238,10 @@ export const EditRowModal = ({
             ))}
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
+            <Button type="button" variant="ghost" onClick={handleClose} compact>
               Cancel
             </Button>
-            <Button type="submit" size="sm">
+            <Button type="submit" compact>
               Save Changes
             </Button>
           </div>
@@ -335,7 +335,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Create New Table</h2>
-          <Button onClick={handleClose} variant="ghost" size="icon-sm" className="rounded-full">
+          <Button onClick={handleClose} variant="ghost" className="rounded-full" compact>
             <XIcon size="16" />
           </Button>
         </div>
@@ -396,7 +396,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                     type="button"
                     onClick={() => removeColumn(index)}
                     variant="ghost"
-                    size="icon-sm"
+                    compact
                     className="rounded-full text-red-400"
                   >
                     <XIcon size="14" />
@@ -408,8 +408,8 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               type="button"
               onClick={addColumn}
               variant="ghost"
-              size="sm"
               className="rounded-full"
+              compact
             >
               <PlusIcon size="12" />
               Add Column
@@ -417,12 +417,11 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
+            <Button type="button" variant="ghost" onClick={handleClose} compact>
               Cancel
             </Button>
             <Button
               type="submit"
-              size="sm"
               disabled={!tableName.trim() || !columns.every((col) => col.name.trim())}
             >
               Create Table

@@ -94,19 +94,14 @@ export function PRViewerHeader({
                 onClick={onRefresh}
                 disabled={isRefreshingDetails}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Refresh PR data"
+                compact
               >
                 <RefreshCw className={isRefreshingDetails ? "animate-spin" : ""} />
               </Button>
             </Tooltip>
             <Tooltip content="Checkout PR branch" side="bottom">
-              <Button
-                onClick={onCheckout}
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Checkout PR branch"
-              >
+              <Button onClick={onCheckout} variant="ghost" aria-label="Checkout PR branch" compact>
                 <GitBranch />
               </Button>
             </Tooltip>
@@ -114,19 +109,14 @@ export function PRViewerHeader({
               <Button
                 onClick={onOpenInBrowser}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Open pull request in browser"
+                compact
               >
                 <ExternalLink />
               </Button>
             </Tooltip>
             <Tooltip content="Copy PR link" side="bottom">
-              <Button
-                onClick={onCopyPRLink}
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Copy PR link"
-              >
+              <Button onClick={onCopyPRLink} variant="ghost" aria-label="Copy PR link" compact>
                 <Copy />
               </Button>
             </Tooltip>
@@ -134,8 +124,8 @@ export function PRViewerHeader({
               <Button
                 onClick={onCopyBranchName}
                 variant="ghost"
-                size="icon-sm"
                 aria-label="Copy branch name"
+                compact
               >
                 <GitBranch />
               </Button>
@@ -163,9 +153,9 @@ export function PRViewerHeader({
             type="button"
             onClick={onToggleFilesView}
             variant="ghost"
-            size="sm"
             active={activeView === "files"}
             className="ui-text-sm h-auto min-w-0 rounded-md px-1.5 py-1 text-left"
+            compact
           >
             <span className="shrink-0 text-text-lighter">
               <FileCode2 />

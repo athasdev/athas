@@ -282,8 +282,8 @@ export function ModelSelector({
           onMouseDown={(event) => event.stopPropagation()}
           className={cn(
             buttonVariants({
-              variant: isComposer ? "ghost" : "secondary",
-              size: isComposer ? "xs" : "sm",
+              variant: isComposer ? "ghost" : "default",
+              compact: true,
             }),
             triggerClass,
             "cursor-text text-left outline-none placeholder:text-text",
@@ -296,8 +296,8 @@ export function ModelSelector({
             triggerRef.current = node;
           }}
           type="button"
-          variant={isComposer ? "ghost" : "secondary"}
-          size={isComposer ? "xs" : "sm"}
+          variant={isComposer ? "ghost" : "default"}
+          compact
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"

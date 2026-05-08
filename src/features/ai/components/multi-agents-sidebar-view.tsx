@@ -400,7 +400,6 @@ export function MultiAgentsSidebarView() {
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
           className={cn(
             "shrink-0",
             pinned ? "text-accent opacity-100" : "opacity-0 group-hover:opacity-100",
@@ -504,9 +503,9 @@ export function MultiAgentsSidebarView() {
                                   ref={chatHistoryTriggerRef}
                                   type="button"
                                   variant="ghost"
-                                  size="xs"
                                   onClick={showMoreHistory}
                                   className="h-6 px-1.5 text-[11px] text-text-lighter hover:text-text"
+                                  compact
                                 >
                                   {visibleSessionCount < EXPANDED_VISIBLE_SESSIONS
                                     ? "Show more"
@@ -517,7 +516,6 @@ export function MultiAgentsSidebarView() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  size="xs"
                                   onClick={() => setVisibleSessionCount(INITIAL_VISIBLE_SESSIONS)}
                                   className="h-6 px-1.5 text-[11px] text-text-lighter hover:text-text"
                                 >

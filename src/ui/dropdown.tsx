@@ -20,8 +20,8 @@ import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
-    variant: "secondary",
-    size: "xs",
+    variant: "default",
+    compact: true,
   }),
   "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
 );

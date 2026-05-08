@@ -83,16 +83,16 @@ export const prepareProjectTransitionWithUnsavedBuffers = async (
   const choice = await primitiveChoice<UnsavedProjectTransitionChoice>(message, {
     title: "Unsaved Changes",
     choices: [
-      { value: "cancel", label: "Cancel", variant: "outline" },
+      { value: "cancel", label: "Cancel", variant: "default" },
       {
         value: "discard",
         label: dirtyBuffers.length === 1 ? "Don't Save" : "Discard All",
-        variant: "outline",
+        variant: "default",
       },
       {
         value: "save",
         label: dirtyBuffers.length === 1 ? "Save" : "Save All",
-        variant: "primary",
+        variant: "accent",
       },
     ],
   });

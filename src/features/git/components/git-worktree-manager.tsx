@@ -204,7 +204,7 @@ const GitWorktreeManager = ({
               <Button
                 onClick={() => setIsAddFormOpen((value) => !value)}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className={cn(
                   gitSidebarSectionActionButtonClassName(),
                   isAddFormOpen && "bg-hover text-text",
@@ -219,7 +219,7 @@ const GitWorktreeManager = ({
                 onClick={() => void handlePruneWorktrees()}
                 disabled={isLoading}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                 aria-label="Prune worktrees"
                 tooltip="Prune worktrees"
@@ -268,7 +268,7 @@ const GitWorktreeManager = ({
                 type="button"
                 onClick={() => setIsAddFormOpen(false)}
                 variant="ghost"
-                size="sm"
+                compact
                 className="h-7 px-2"
               >
                 Cancel
@@ -276,8 +276,8 @@ const GitWorktreeManager = ({
               <Button
                 onClick={() => void handleAddWorktree()}
                 disabled={isLoading || !path.trim() || (createBranch && !branch.trim())}
-                variant="secondary"
-                size="sm"
+                variant="default"
+                compact
                 className="h-7 px-2"
               >
                 {isLoading ? "Adding..." : "Create Worktree"}

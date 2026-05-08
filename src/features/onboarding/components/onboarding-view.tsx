@@ -1,6 +1,7 @@
 import { FileText, FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import {
   type KeybindingPreset,
@@ -58,6 +59,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
   const [openFoldersInNewWindow, setOpenFoldersInNewWindow] = useState(
     settings.openFoldersInNewWindow,
   );
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [keybindingPreset, setKeybindingPreset] = useState<KeybindingPreset>(
     settings.keybindingPreset,
   );
@@ -128,7 +130,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
                 onChange={(value) => setKeybindingPreset(value as KeybindingPreset)}
                 options={keybindingPresetOptions}
                 size="sm"
-                variant="outline"
+                variant="default"
                 aria-label="Keybinding preset"
               />
             </SettingRow>
@@ -147,6 +149,15 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
             <SettingRow title="Open folders in a new window">
               <Switch checked={openFoldersInNewWindow} onChange={setOpenFoldersInNewWindow} />
             </SettingRow>
+
+            <SettingRow
+              title="Import settings from another editor"
+              description="Import matching setup from VS Code, Cursor, Windsurf, Zed, or JetBrains."
+            >
+              <Button variant="default" onClick={() => setIsImportDialogOpen(true)}>
+                Import
+              </Button>
+            </SettingRow>
           </div>
         ) : (
           <div className="rounded-lg border border-border/70 bg-secondary-bg/45 px-5 py-4">
@@ -161,15 +172,19 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
         )}
 
         <div className="mt-6 flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => void handleFinish(false)}>
+          <Button variant="ghost" onClick={() => void handleFinish(false)}>
             {viewModel.secondaryLabel}
           </Button>
-          <Button variant="primary" size="sm" onClick={() => void handlePrimaryAction()}>
+          <Button variant="accent" onClick={() => void handlePrimaryAction()}>
             {viewModel.primaryAction === "open-whats-new" ? <FileText /> : <FolderOpen />}
             {viewModel.primaryLabel}
           </Button>
         </div>
       </div>
+
+      {isImportDialogOpen && (
+        <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />
+      )}
     </div>
   );
 }

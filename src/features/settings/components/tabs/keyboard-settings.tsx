@@ -226,8 +226,7 @@ export const KeyboardSettings = () => {
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <Button
-                variant="secondary"
-                size="xs"
+                variant="default"
                 onClick={() => setIsEditingKeybindings(false)}
                 className="gap-1.5"
               >
@@ -236,10 +235,10 @@ export const KeyboardSettings = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" size="xs" onClick={handleImport}>
+                <Button variant="default" onClick={handleImport} compact>
                   Import
                 </Button>
-                <Button variant="default" size="xs" onClick={() => void handleExport()}>
+                <Button variant="default" onClick={() => void handleExport()}>
                   Export
                 </Button>
               </div>
@@ -354,7 +353,7 @@ export const KeyboardSettings = () => {
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
                 size="sm"
-                variant="outline"
+                variant="default"
                 searchable
                 searchableTrigger="input"
                 aria-label="Keybinding preset"
@@ -371,7 +370,7 @@ export const KeyboardSettings = () => {
             ) : null}
 
             <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
-              <Button variant="default" size="xs" onClick={() => setIsEditingKeybindings(true)}>
+              <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
                 Open Editor
               </Button>
             </SettingRow>

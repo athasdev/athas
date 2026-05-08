@@ -1282,7 +1282,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   <Button
                     onClick={() => removePastedImage(image.id)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
                     aria-label="Remove image"
                   >
@@ -1366,7 +1366,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 disabled={!isInputEnabled || !isSpeechRecognitionSupported}
                 onClick={toggleVoiceInput}
                 variant="ghost"
-                size="icon-xs"
                 className={cn(
                   chatComposerIconButtonClassName(),
                   isListening && "bg-accent/10 text-accent hover:bg-accent/14 hover:text-accent",
@@ -1382,6 +1381,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 }
                 aria-label={isListening ? "Stop voice input" : "Start voice input"}
                 aria-pressed={isListening}
+                compact
               >
                 <Mic size={12} className={cn(isListening && "animate-pulse")} />
               </Button>
@@ -1391,7 +1391,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 disabled={isSendDisabled}
                 onClick={isStreaming ? onStopStreaming : handleSendMessage}
                 variant="ghost"
-                size="icon-xs"
                 className={cn(
                   chatComposerIconButtonClassName(),
                   isSendDisabled
@@ -1484,7 +1483,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-xs"
                       className={chatComposerIconButtonClassName()}
                       tooltip="API keys"
                       aria-label="Manage API keys"
@@ -1541,7 +1539,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                       }
                     }}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     active={slashCommandState.active}
                     className={chatComposerIconButtonClassName()}
                     tooltip="Show slash commands"
@@ -1559,7 +1557,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   setIsSkillsOpen(true);
                 }}
                 variant="ghost"
-                size="icon-xs"
+                compact
                 className={chatComposerIconButtonClassName("ml-auto shrink-0")}
                 tooltip="Skills"
                 aria-label="Skills"

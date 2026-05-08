@@ -45,12 +45,12 @@ const MatchLine = ({
       onClick={onClick}
       onMouseEnter={onHover}
       variant="ghost"
-      size="sm"
       data-item-index={itemIndex}
       className={cn(
         "ui-text-sm editor-font flex h-auto w-full items-start justify-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-hover/70",
         isSelected && "bg-hover",
       )}
+      compact
     >
       <span className="w-10 shrink-0 text-right text-text-lighter/80">{match.line_number}</span>
       <span className="flex-1 truncate text-text">
@@ -76,7 +76,7 @@ export const ContentSearchResult = ({
         onClick={() => onFileClick(result.file_path)}
         onMouseEnter={() => onFileHover?.(result.file_path)}
         variant="ghost"
-        size="sm"
+        compact
         className="flex h-auto w-full items-center justify-start gap-2 rounded-none border-border/70 border-b px-2.5 py-2 hover:bg-hover/70"
       >
         <File className="size-4 shrink-0 text-text-lighter" weight="duotone" />

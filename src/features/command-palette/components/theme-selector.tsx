@@ -245,10 +245,10 @@ export const ThemeSelectorContent = ({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             className="rounded"
             onClick={handleBack}
             aria-label="Back to commands"
+            compact
           >
             <CaretLeft className="text-text-lighter" />
           </Button>
@@ -262,9 +262,9 @@ export const ThemeSelectorContent = ({
           <Button
             onClick={handleUploadTheme}
             variant="ghost"
-            size="xs"
             className="shrink-0 gap-1 px-2"
             aria-label="Upload theme"
+            compact
           >
             <Upload />
           </Button>
@@ -274,7 +274,7 @@ export const ThemeSelectorContent = ({
               useUIState.getState().openSettingsDialog("appearance");
             }}
             variant="ghost"
-            size="xs"
+            compact
             className="shrink-0 gap-1 px-2"
             aria-label="Open appearance settings"
           >

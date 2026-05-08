@@ -40,7 +40,6 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         onClick={() => step.description && setIsExpanded(!isExpanded)}
         className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-left"
       >

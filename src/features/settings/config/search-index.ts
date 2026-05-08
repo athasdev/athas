@@ -1,5 +1,5 @@
 import type { SettingSearchRecord } from "../types/search";
-import { IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // Enterprise Settings
@@ -378,7 +378,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show sidebar activity tabs across the top or in a left rail",
     keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
   },
-  ...(IS_MAC
+  ...(!IS_MAC && !IS_WINDOWS
     ? [
         {
           id: "appearance-native-menu-bar",
@@ -390,14 +390,18 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
         } satisfies SettingSearchRecord,
       ]
     : []),
-  {
-    id: "appearance-compact-menu-bar",
-    tab: "appearance",
-    section: "Layout",
-    label: "Compact Menu Bar",
-    description: "Requires UI menu bar; compact hamburger or full UI menu",
-    keywords: ["menu", "bar", "compact", "hamburger", "ui"],
-  },
+  ...(!IS_MAC
+    ? [
+        {
+          id: "appearance-compact-menu-bar",
+          tab: "appearance",
+          section: "Layout",
+          label: "Compact Menu Bar",
+          description: "Requires UI menu bar; compact hamburger or full UI menu",
+          keywords: ["menu", "bar", "compact", "hamburger", "ui"],
+        } satisfies SettingSearchRecord,
+      ]
+    : []),
   {
     id: "appearance-title-bar-project-mode",
     tab: "appearance",
@@ -914,6 +918,25 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Import Settings",
     description: "Restore app settings from a JSON file",
     keywords: ["import", "settings", "restore", "backup", "json"],
+  },
+  {
+    id: "general-import-editor-settings",
+    tab: "general",
+    section: "General",
+    label: "Import Settings",
+    description: "Import matching setup from another editor",
+    keywords: [
+      "import",
+      "settings",
+      "keybindings",
+      "projects",
+      "recent",
+      "vscode",
+      "cursor",
+      "windsurf",
+      "zed",
+      "jetbrains",
+    ],
   },
   {
     id: "advanced-reset-settings",

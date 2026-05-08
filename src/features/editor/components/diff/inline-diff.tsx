@@ -247,10 +247,10 @@ function InlineDiffComponent({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={handleRevert}
               tooltip="Revert this change"
               aria-label="Revert change"
+              compact
             >
               <ArrowCounterClockwise />
             </Button>
@@ -258,11 +258,11 @@ function InlineDiffComponent({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             onClick={onClose}
             tooltip="Close"
             shortcut="escape"
             aria-label="Close diff"
+            compact
           >
             <X />
           </Button>

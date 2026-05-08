@@ -202,12 +202,12 @@ export function ContextSelector({
         <Button
           onClick={onToggleOpen}
           variant="ghost"
-          size="icon-xs"
           className={chatComposerIconButtonClassName()}
           tooltip="Add context"
           aria-label="Add context"
           aria-expanded={isOpen}
           aria-haspopup="true"
+          compact
         >
           <Plus />
         </Button>
@@ -433,7 +433,7 @@ export function ContextSelector({
                 }
               }}
               variant="ghost"
-              size="icon-xs"
+              compact
               className="size-4 rounded text-text-lighter opacity-0 hover:bg-hover hover:text-text focus:opacity-100 group-hover:opacity-100"
               aria-label={`Remove ${item.name} from context`}
               tabIndex={0}

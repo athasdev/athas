@@ -70,13 +70,13 @@ export function TypedConfirmAction({
         <Button
           type="button"
           variant={variant}
-          size="xs"
           disabled={isBusy || value.trim().toLowerCase() !== confirmWord}
           onClick={() => void handleConfirm()}
+          compact
         >
           {isBusy ? (busyLabel ?? actionLabel) : actionLabel}
         </Button>
-        <Button type="button" variant="ghost" size="xs" onClick={() => setIsConfirming(false)}>
+        <Button type="button" variant="ghost" onClick={() => setIsConfirming(false)} compact>
           Cancel
         </Button>
       </div>
@@ -87,10 +87,10 @@ export function TypedConfirmAction({
     <Button
       type="button"
       variant={variant}
-      size="xs"
       disabled={isBusy}
       onClick={() => setIsConfirming(true)}
       tooltip={tooltip}
+      compact
     >
       {isBusy ? (busyLabel ?? actionLabel) : actionLabel}
     </Button>

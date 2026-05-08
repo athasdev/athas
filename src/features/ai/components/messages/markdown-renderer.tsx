@@ -342,7 +342,6 @@ function CodeBlock({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
                 className="rounded"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
@@ -352,8 +351,7 @@ function CodeBlock({
               {onApplyCode && (
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="xs"
+                  variant="default"
                   onClick={() => onApplyCode(code)}
                   className="h-5 px-1.5 text-[11px]"
                   tooltip="Apply this code to current buffer"
@@ -460,7 +458,6 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             onClick={() => setIsExpanded(!isExpanded)}
             className="h-auto px-1 text-error/70 hover:bg-transparent hover:text-error"
           >
@@ -473,8 +470,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="secondary"
-            size="xs"
+            variant="default"
             onClick={() => void handleRestartAgentSession()}
             disabled={isRestartingSession}
             className="h-auto gap-1.5"
@@ -485,8 +481,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           {suggestedCommand ? (
             <Button
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               onClick={() =>
                 openTerminalBuffer({
                   command: suggestedCommand,
@@ -501,8 +496,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           ) : (
             <Button
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
               className="h-auto gap-1.5"
             >

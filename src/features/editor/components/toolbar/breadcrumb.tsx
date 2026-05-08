@@ -117,10 +117,10 @@ export default function Breadcrumb({
           <Button
             onClick={handlePreviewClick}
             variant="ghost"
-            size="icon-xs"
             className="rounded text-text-lighter"
             tooltip="Preview"
             tooltipSide="bottom"
+            compact
           >
             <Eye />
           </Button>
@@ -128,22 +128,22 @@ export default function Breadcrumb({
         <Button
           onClick={handleInlineEditClick}
           variant="ghost"
-          size="icon-xs"
           className="rounded text-text-lighter"
           tooltip="AI inline edit"
           commandId="editor.inlineEdit"
           tooltipSide="bottom"
+          compact
         >
           <Sparkles />
         </Button>
         <Button
           onClick={onSearchClick}
           variant="ghost"
-          size="icon-xs"
           className="rounded text-text-lighter"
           tooltip="Find in file"
           commandId="workbench.showFind"
           tooltipSide="bottom"
+          compact
         >
           <Search />
         </Button>

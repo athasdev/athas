@@ -758,12 +758,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       onClick={handleSelectRepository}
       disabled={isSelectingRepo}
       variant="ghost"
-      size="sm"
       className={cn(
         "mt-1.5 ui-font ui-text-sm text-accent transition-colors hover:text-accent/80",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}
       tooltip="Select repository folder"
+      compact
     >
       {isSelectingRepo ? "Selecting..." : "Browse Repository"}
     </Button>
@@ -776,8 +776,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <Button
         onClick={() => void handleInitializeRepository()}
         disabled={!canInitializeRepository || isInitializingRepo}
-        variant="primary"
-        size="sm"
+        variant="accent"
+        compact
         className="mt-3"
         tooltip={
           canInitializeRepository
@@ -1122,7 +1122,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       }}
                       disabled={isActionLoading}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       className="text-text-lighter disabled:opacity-50"
                       tooltip="Apply stash"
                     >
@@ -1140,7 +1140,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       }}
                       disabled={isActionLoading}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       className="text-text-lighter disabled:opacity-50"
                       tooltip="Pop stash"
                     >
@@ -1158,7 +1158,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       }}
                       disabled={isActionLoading}
                       variant="ghost"
-                      size="icon-xs"
+                      compact
                       className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
                       tooltip="Drop stash"
                     >

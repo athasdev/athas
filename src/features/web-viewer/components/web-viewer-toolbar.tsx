@@ -105,21 +105,21 @@ export function WebViewerToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={isLoading ? onStopLoading : onRefresh}
               className="text-text-lighter hover:text-text"
               tooltip={isLoading ? "Stop loading" : "Refresh"}
+              compact
             >
               {isLoading ? <X className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
             </Button>
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={onCopyUrl}
               disabled={!canCopyUrl}
               className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
+              compact
             >
               {copied ? (
                 <Check className="h-3.5 w-3.5 text-success" />
@@ -137,7 +137,6 @@ export function WebViewerToolbar({
         <Button
           ref={zoomButtonRef}
           variant="ghost"
-          size="icon-sm"
           onClick={() => setShowZoomPopover((open) => !open)}
           tooltip="Zoom controls"
         >
@@ -155,7 +154,6 @@ export function WebViewerToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={() => {
                 onZoomIn();
                 setShowZoomPopover(false);
@@ -169,7 +167,6 @@ export function WebViewerToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={() => {
                 onZoomOut();
                 setShowZoomPopover(false);
@@ -183,7 +180,6 @@ export function WebViewerToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={() => {
                 onResetZoom();
                 setShowZoomPopover(false);
@@ -197,28 +193,28 @@ export function WebViewerToolbar({
         </Dropdown>
         <Button
           variant="ghost"
-          size="icon-sm"
           onClick={onClearBrowsingData}
           disabled={!canClearBrowsingData}
           tooltip="Clear browsing data"
+          compact
         >
           <Broom />
         </Button>
         <Button
           variant="ghost"
-          size="icon-sm"
           onClick={onOpenDevTools}
           disabled={!canOpenDevTools}
           tooltip={devToolsTooltip}
+          compact
         >
           <Code2 />
         </Button>
         <Button
           variant="ghost"
-          size="icon-sm"
           onClick={onOpenExternal}
           disabled={!canOpenExternal}
           tooltip="Open in browser"
+          compact
         >
           <ExternalLink />
         </Button>

@@ -655,8 +655,8 @@ const TerminalTabBar = ({
               <Button
                 onClick={onNewTerminal}
                 variant="ghost"
-                size="icon-sm"
                 className="rounded-lg text-text-lighter"
+                compact
               >
                 <Plus />
               </Button>
@@ -667,8 +667,8 @@ const TerminalTabBar = ({
                   ref={profileMenuButtonRef}
                   onClick={openProfileMenu}
                   variant="ghost"
-                  size="icon-sm"
                   className="h-6 w-5 rounded-lg text-text-lighter"
+                  compact
                 >
                   <ChevronDown />
                 </Button>
@@ -830,8 +830,8 @@ const TerminalTabBar = ({
                   <Button
                     onClick={onSearchTerminal}
                     variant="ghost"
-                    size="icon-sm"
                     className="shrink-0 rounded-lg text-text-lighter"
+                    compact
                   >
                     <Search />
                   </Button>
@@ -842,8 +842,8 @@ const TerminalTabBar = ({
                   <Button
                     onClick={onNewTerminal}
                     variant="ghost"
-                    size="icon-sm"
                     className="shrink-0 rounded-lg text-text-lighter"
+                    compact
                   >
                     <Plus />
                   </Button>
@@ -854,8 +854,8 @@ const TerminalTabBar = ({
                       ref={profileMenuButtonRef}
                       onClick={openProfileMenu}
                       variant="ghost"
-                      size="icon-sm"
                       className="h-6 w-5 shrink-0 rounded-lg text-text-lighter"
+                      compact
                     >
                       <ChevronDown />
                     </Button>
@@ -869,12 +869,12 @@ const TerminalTabBar = ({
                 >
                   <Button
                     onClick={onSplitView}
-                    variant={isSplitView ? "secondary" : "ghost"}
-                    size="icon-sm"
+                    variant={isSplitView ? "default" : "ghost"}
                     className={cn(
                       "shrink-0 rounded-lg",
                       isSplitView ? "text-text" : "text-text-lighter",
                     )}
+                    compact
                   >
                     <SplitSquareHorizontal />
                   </Button>
@@ -888,8 +888,8 @@ const TerminalTabBar = ({
                   <Button
                     onClick={onFullScreen}
                     variant="ghost"
-                    size="icon-sm"
                     className="shrink-0 rounded-lg text-text-lighter"
+                    compact
                   >
                     {isFullScreen ? <Minimize2 /> : <Maximize2 />}
                   </Button>

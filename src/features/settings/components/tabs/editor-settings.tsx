@@ -194,7 +194,7 @@ export const EditorSettings = () => {
             onChange={(value) => updateSetting("defaultLanguage", value)}
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -292,7 +292,7 @@ export const EditorSettings = () => {
             }
             className={SETTINGS_CONTROL_WIDTHS.text}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />

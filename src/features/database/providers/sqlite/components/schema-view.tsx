@@ -79,7 +79,6 @@ export default function SchemaView({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
                 onClick={() => onAddFilter(c.name)}
                 className="rounded-full text-text-lighter opacity-60 hover:text-text hover:opacity-100"
                 aria-label={`Filter by ${c.name}`}

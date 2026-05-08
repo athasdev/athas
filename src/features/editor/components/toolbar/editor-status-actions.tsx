@@ -31,7 +31,7 @@ import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
 const actionButtonClass = cn(
-  buttonVariants({ variant: "ghost", size: "icon-xs" }),
+  buttonVariants({ variant: "ghost", compact: true }),
   "rounded text-text-lighter",
 );
 
@@ -39,7 +39,7 @@ const statusChipClass =
   "ui-font inline-flex h-5 items-center self-center rounded-md border border-transparent px-1.5 text-[10px] leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const menuTriggerClass = cn(
-  buttonVariants({ variant: "ghost", size: "icon-xs" }),
+  buttonVariants({ variant: "ghost", compact: true }),
   "rounded text-text-lighter",
 );
 
@@ -330,7 +330,7 @@ export function EditorStatusActions({
               setLanguageSearch("");
             }}
             variant="ghost"
-            size="xs"
+            compact
             className={cn(
               statusChipClass,
               "min-w-0 cursor-pointer",
@@ -379,7 +379,7 @@ export function EditorStatusActions({
                   type="button"
                   onClick={() => void handleLanguageChange(lang.id)}
                   variant="ghost"
-                  size="sm"
+                  compact
                   className={dropdownItemClassName(
                     cn("justify-between", lang.id === currentFileLanguageId && "text-accent"),
                   )}
@@ -408,7 +408,7 @@ export function EditorStatusActions({
           type="button"
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
-          size="icon-xs"
+          compact
           className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
           aria-label="Language server status"
           tooltip={config.title}
@@ -446,8 +446,8 @@ export function EditorStatusActions({
                           type="button"
                           onClick={() => void handleRestartServer(entry.key, entry.displayName)}
                           disabled={isBusy || isRestartingCurrent}
-                          variant="secondary"
-                          size="xs"
+                          variant="default"
+                          compact
                           className="rounded-md px-2 text-[10px] text-text-lighter"
                         >
                           {isBusy ? "..." : "Restart"}
@@ -456,8 +456,8 @@ export function EditorStatusActions({
                           type="button"
                           onClick={() => void handleStopServer(entry.key, entry.displayName)}
                           disabled={isBusy || isRestartingCurrent}
-                          variant="secondary"
-                          size="xs"
+                          variant="default"
+                          compact
                           className="rounded-md px-2 text-[10px] text-text-lighter"
                         >
                           <Square />
@@ -477,8 +477,8 @@ export function EditorStatusActions({
                         type="button"
                         onClick={() => void handleStartCurrent()}
                         disabled={isRestartingCurrent}
-                        variant="secondary"
-                        size="xs"
+                        variant="default"
+                        compact
                         className="rounded-md px-2 text-[10px] text-text-lighter"
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
@@ -519,7 +519,7 @@ export function EditorStatusActions({
           type="button"
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
-          size="icon-xs"
+          compact
           className={cn(
             menuTriggerClass,
             isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
@@ -546,7 +546,7 @@ export function EditorStatusActions({
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                size="sm"
+                compact
                 className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
                 disabled={option.disabled}
               >
@@ -568,7 +568,7 @@ export function EditorStatusActions({
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                size="sm"
+                compact
                 className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
                 disabled={option.disabled}
               >
@@ -585,7 +585,7 @@ export function EditorStatusActions({
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                size="sm"
+                compact
                 className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
                 disabled={option.disabled}
               >

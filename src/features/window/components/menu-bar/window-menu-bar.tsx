@@ -403,7 +403,6 @@ const CustomMenuBar = ({
           <Button
             key={menuName}
             variant="ghost"
-            size="sm"
             className={cn(
               "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
               activeMenu === menuName

@@ -17,9 +17,9 @@ export function ExtensionToolbarAction({ action }: ExtensionToolbarActionProps) 
       <Button
         onClick={action.onClick}
         variant="ghost"
-        size="icon-xs"
         className="rounded text-text-lighter"
         aria-label={action.title}
+        compact
       >
         <DynamicIcon name={action.icon} />
       </Button>

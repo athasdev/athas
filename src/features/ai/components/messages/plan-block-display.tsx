@@ -58,12 +58,12 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={handleExecutePlan}
               className={cn(
                 "gap-1.5 rounded-full border border-accent/30",
                 "bg-accent/20 text-accent hover:bg-accent/30",
               )}
+              compact
             >
               <Play />
               Execute Plan

@@ -378,13 +378,7 @@ export function LocalHistoryCommandContent({
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Button
-          aria-label="Back"
-          onClick={onBack}
-          variant="ghost"
-          size="icon-xs"
-          className="rounded"
-        >
+        <Button aria-label="Back" onClick={onBack} variant="ghost" className="rounded" compact>
           <ArrowLeft className="text-text-lighter" />
         </Button>
         <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
@@ -396,7 +390,7 @@ export function LocalHistoryCommandContent({
           aria-label="Create local history entry"
           onClick={() => void createSnapshot()}
           variant="ghost"
-          size="icon-xs"
+          compact
           className="rounded"
           tooltip="Create entry"
         >
@@ -446,7 +440,6 @@ export function LocalHistoryCommandContent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   tooltip="Open snapshot"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -458,7 +451,6 @@ export function LocalHistoryCommandContent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   tooltip="Compare with current"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -470,7 +462,6 @@ export function LocalHistoryCommandContent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   tooltip="Compare with previous"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -482,7 +473,6 @@ export function LocalHistoryCommandContent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   tooltip="Restore snapshot"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -494,7 +484,6 @@ export function LocalHistoryCommandContent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   tooltip="Rename snapshot"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -506,7 +495,6 @@ export function LocalHistoryCommandContent({
                 <Button
                   type="button"
                   variant="danger"
-                  size="icon-xs"
                   tooltip="Delete snapshot"
                   onClick={(event) => {
                     event.stopPropagation();

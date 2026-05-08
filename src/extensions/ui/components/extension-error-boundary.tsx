@@ -41,9 +41,9 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
           </div>
           <Button
             onClick={this.handleRetry}
-            variant="secondary"
-            size="sm"
+            variant="default"
             aria-label={`Retry loading ${this.props.name}`}
+            compact
           >
             Retry
           </Button>

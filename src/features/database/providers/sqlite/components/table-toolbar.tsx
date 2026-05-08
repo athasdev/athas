@@ -87,8 +87,8 @@ export default function TableToolbar({
               <Button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                variant={viewMode === mode ? "secondary" : "ghost"}
-                size="xs"
+                variant={viewMode === mode ? "default" : "ghost"}
+                compact
                 className={cn(
                   "rounded-full px-2.5 py-1 text-xs",
                   viewMode === mode ? "text-text" : "text-text-lighter",
@@ -106,7 +106,7 @@ export default function TableToolbar({
             <Button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
-              size="xs"
+              compact
               className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Toggle column types"
             >
@@ -118,7 +118,7 @@ export default function TableToolbar({
             <Button
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
-              size="xs"
+              compact
               className="rounded-full px-2 py-1 text-text-lighter"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
@@ -131,9 +131,9 @@ export default function TableToolbar({
             <Button
               onClick={onCreateSubscription}
               variant="ghost"
-              size="xs"
               className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Create subscription"
+              compact
             >
               <Plus />
               Subscription
@@ -143,9 +143,9 @@ export default function TableToolbar({
             <Button
               onClick={onToggleSubscription}
               variant="ghost"
-              size="xs"
               className="rounded-full px-2 py-1 text-text-lighter"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
+              compact
             >
               {subscriptionInfo.enabled ? <ToggleRight /> : <ToggleLeft />}
               {subscriptionInfo.enabled ? "Disable" : "Enable"}
@@ -155,9 +155,9 @@ export default function TableToolbar({
             <Button
               onClick={onRefreshSubscription}
               variant="ghost"
-              size="xs"
               className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Refresh subscription"
+              compact
             >
               <RefreshCw />
               Refresh
@@ -167,9 +167,9 @@ export default function TableToolbar({
             <Button
               onClick={onDropSubscription}
               variant="ghost"
-              size="xs"
               className="rounded-full px-2 py-1 text-text-lighter"
               aria-label="Drop subscription"
+              compact
             >
               <Trash2 />
               Drop
@@ -180,9 +180,9 @@ export default function TableToolbar({
               <Button
                 onClick={exportAsCSV}
                 variant="ghost"
-                size="xs"
                 className="rounded-full px-2 py-1 text-text-lighter"
                 aria-label="Export as CSV"
+                compact
               >
                 <Download />
                 Export
@@ -190,9 +190,9 @@ export default function TableToolbar({
               <Button
                 onClick={copyAsJSON}
                 variant="ghost"
-                size="xs"
                 className="rounded-full px-2 py-1 text-text-lighter"
                 aria-label="Copy as JSON"
+                compact
               >
                 <Copy />
                 JSON
