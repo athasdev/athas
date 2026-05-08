@@ -1571,16 +1571,17 @@ export const useBufferStore = createSelectors(
           }
 
           try {
-            const content = await readFileContent(closedBuffer.path);
-            const bufferId = get().actions.openContent({
-              type: "editor",
-              path: closedBuffer.path,
-              name: closedBuffer.name,
-              content,
-            });
+            // Delegate to handleFileSelect — it routes by extension (image, pdf,
+            // binary, diff, editor) so reopening an image doesn't fall back to
+            // the editor type and render as raw binary.
+            const { useFileSystemStore } = await import("@/features/file-system/controllers/store");
+            await useFileSystemStore.getState().handleFileSelect(closedBuffer.path, false);
 
             if (closedBuffer.isPinned) {
-              get().actions.handleTabPin(bufferId);
+              const reopenedBufferId = get().activeBufferId;
+              if (reopenedBufferId) {
+                get().actions.handleTabPin(reopenedBufferId);
+              }
             }
           } catch (error) {
             logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
