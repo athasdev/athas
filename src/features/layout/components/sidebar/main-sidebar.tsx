@@ -8,7 +8,7 @@ import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
-import { OutlineSidebarView } from "@/features/outline/components/outline-sidebar-view";
+import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { SidebarBuilderView } from "@/features/sidebar-builder/components/sidebar-builder-view";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
@@ -201,7 +201,7 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
         )}
 
         <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
-          <OutlineSidebarView />
+          <OutlineSidebar />
         </div>
 
         <div className={cn("h-full", !isNotificationsViewActive && "hidden")}>
