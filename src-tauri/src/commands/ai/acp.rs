@@ -19,6 +19,7 @@ const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
 const ACP_REGISTRY_URL: &str =
    "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
+const EXCLUDED_ACP_REGISTRY_AGENT_IDS: &[&str] = &["agoragentic-acp"];
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -469,6 +470,7 @@ fn acp_registry_agents_from_index(index: AcpRegistryIndex) -> Vec<AgentConfig> {
    let mut agents = index
       .agents
       .into_iter()
+      .filter(|agent| !EXCLUDED_ACP_REGISTRY_AGENT_IDS.contains(&agent.id.as_str()))
       .filter_map(acp_registry_agent_to_config)
       .collect::<Vec<_>>();
    agents.sort_by_key(|agent| agent.name.clone());
@@ -1323,6 +1325,43 @@ mod tests {
       assert_eq!(
          codex.env_vars.get("REGISTRY_ENV").map(String::as_str),
          Some("1")
+      );
+   }
+
+   #[test]
+   fn acp_registry_json_skips_excluded_agents() {
+      let json = r#"{
+        "agents": [
+          {
+            "id": "agoragentic-acp",
+            "name": "Agoragentic",
+            "description": "Marketplace adapter",
+            "distribution": {
+              "npx": {
+                "package": "agoragentic-mcp@1.3.0",
+                "args": ["--acp"]
+              }
+            }
+          },
+          {
+            "id": "codex-acp",
+            "name": "Codex",
+            "description": "Codex ACP adapter",
+            "distribution": {
+              "npx": {
+                "package": "@vendor/codex-acp"
+              }
+            }
+          }
+        ]
+      }"#;
+
+      let agents = acp_registry_agents_from_json(json).expect("registry agents");
+
+      assert_eq!(agents.len(), 1);
+      assert_eq!(
+         agents.first().map(|agent| agent.id.as_str()),
+         Some("codex-acp")
       );
    }
 
