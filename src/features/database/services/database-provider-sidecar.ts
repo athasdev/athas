@@ -10,24 +10,48 @@ const COMMAND_PROVIDER_PREFIXES: Array<[string, DatabaseType]> = [
   ["redis", "redis"],
 ];
 
-export function getProviderIdForCommand(command: string): DatabaseType {
-  const match = COMMAND_PROVIDER_PREFIXES.find(([prefix]) => command.includes(prefix));
+function commandHasProviderToken(command: string, token: string): boolean {
+  return (
+    command === token ||
+    command.startsWith(`${token}_`) ||
+    command.endsWith(`_${token}`) ||
+    command.includes(`_${token}_`)
+  );
+}
 
-  if (!match) {
+export function getProviderIdForCommand(command: string): DatabaseType {
+  const matches = COMMAND_PROVIDER_PREFIXES.filter(([prefix]) =>
+    commandHasProviderToken(command, prefix),
+  );
+
+  if (matches.length === 0) {
     throw new Error(`Cannot resolve database provider for command ${command}`);
   }
 
-  return match[1];
+  if (matches.length > 1) {
+    throw new Error(`Ambiguous database provider command ${command}`);
+  }
+
+  return matches[0][1];
 }
 
 export async function invokeDatabaseProvider<T>(
   command: string,
   payload: Record<string, unknown>,
-  providerId = getProviderIdForCommand(command),
+  providerId?: DatabaseType,
 ): Promise<T> {
+  const normalizedCommand = command.trim();
+  if (!normalizedCommand) {
+    throw new Error("Database provider command is required");
+  }
+  const resolvedProviderId = (providerId ?? getProviderIdForCommand(normalizedCommand)).trim();
+  if (!resolvedProviderId) {
+    throw new Error("Database provider id is required");
+  }
+
   return invoke<T>("run_database_provider_command", {
-    providerId,
-    command,
+    providerId: resolvedProviderId,
+    command: normalizedCommand,
     payload,
   });
 }

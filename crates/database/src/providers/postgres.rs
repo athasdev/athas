@@ -60,6 +60,31 @@ fn row_to_json_values(row: &sqlx::postgres::PgRow) -> Vec<serde_json::Value> {
    values
 }
 
+const GET_POSTGRES_TABLES_SQL: &str = r#"
+      SELECT
+        table_name AS name,
+        CASE WHEN table_type = 'VIEW' THEN 'view' ELSE 'table' END AS kind,
+        NULL AS table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type IN ('BASE TABLE', 'VIEW')
+      UNION ALL
+      SELECT matviewname AS name, 'materialized_view' AS kind, NULL AS table_name
+      FROM pg_catalog.pg_matviews
+      WHERE schemaname = 'public'
+      UNION ALL
+      SELECT c.relname AS name, 'index' AS kind, t.relname AS table_name
+      FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_catalog.pg_index idx ON idx.indexrelid = c.oid
+      JOIN pg_catalog.pg_class t ON t.oid = idx.indrelid
+      LEFT JOIN pg_catalog.pg_constraint con ON con.conindid = c.oid
+      WHERE n.nspname = 'public' AND c.relkind IN ('i', 'I') AND con.oid IS NULL
+      UNION ALL
+      SELECT subname AS name, 'subscription' AS kind, NULL AS table_name
+      FROM pg_catalog.pg_subscription
+      ORDER BY kind, name
+      "#;
+
 pub async fn get_postgres_tables(
    connection_id: String,
    manager: &ConnectionManager,
@@ -73,26 +98,17 @@ pub async fn get_postgres_tables(
       _ => return Err("Invalid pool type".to_string()),
    };
 
-   let rows = sqlx::query(
-      r#"
-      SELECT table_name AS name, 'table' AS kind
-      FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-      UNION ALL
-      SELECT subname AS name, 'subscription' AS kind
-      FROM pg_catalog.pg_subscription
-      ORDER BY kind, name
-      "#,
-   )
-   .fetch_all(pool)
-   .await
-   .map_err(|e| format!("Failed to get tables: {}", e))?;
+   let rows = sqlx::query(GET_POSTGRES_TABLES_SQL)
+      .fetch_all(pool)
+      .await
+      .map_err(|e| format!("Failed to get tables: {}", e))?;
 
    Ok(rows
       .iter()
       .map(|r| TableInfo {
          name: r.get("name"),
          kind: r.get("kind"),
+         table_name: r.try_get("table_name").ok(),
       })
       .collect())
 }
@@ -185,14 +201,18 @@ pub async fn query_postgres_filtered(
       String::new()
    };
 
+   let (page_size, row_offset) = normalized_pagination(params.page_size, params.offset);
+   let limit_placeholder = format!("${}", offset + 1);
+   let offset_placeholder = format!("${}", offset + 2);
    let data_sql = format!(
       "SELECT * FROM {} {} {} LIMIT {} OFFSET {}",
-      table, where_clause, order_clause, params.page_size, params.offset
+      table, where_clause, order_clause, limit_placeholder, offset_placeholder
    );
    let mut data_query = sqlx::query(&data_sql);
    for p in &where_params {
       data_query = data_query.bind(p);
    }
+   data_query = data_query.bind(page_size).bind(row_offset);
    let rows = data_query
       .fetch_all(pool)
       .await
@@ -714,6 +734,57 @@ pub async fn update_postgres_row(
    Ok(result.rows_affected() as i64)
 }
 
+pub async fn update_postgres_row_by_values(
+   connection_id: String,
+   table: String,
+   set_columns: Vec<String>,
+   set_values: Vec<serde_json::Value>,
+   identity: RowIdentity,
+   manager: &ConnectionManager,
+) -> Result<i64, String> {
+   let pool_arc = manager
+      .get_pool(&connection_id)
+      .await
+      .ok_or("Not connected")?;
+   let pool = match pool_arc.as_ref() {
+      DatabasePool::Postgres(p) => p,
+      _ => return Err("Invalid pool type".to_string()),
+   };
+
+   let set_clauses: Vec<String> = set_columns
+      .iter()
+      .enumerate()
+      .map(|(i, c)| format!("{} = ${}", escape_identifier(c), i + 1))
+      .collect();
+   let mut param_offset = set_columns.len();
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier,
+      |i| format!("${}", i),
+      &mut param_offset,
+   )?;
+   let sql = format!(
+      "UPDATE {} SET {} {}",
+      escape_identifier(&table),
+      set_clauses.join(", "),
+      where_clause
+   );
+
+   let mut query = sqlx::query(&sql);
+   for v in &set_values {
+      query = query.bind(json_to_sql_string(v));
+   }
+   for v in &where_values {
+      query = query.bind(json_to_sql_string(v));
+   }
+
+   let result = query
+      .execute(pool)
+      .await
+      .map_err(|e| format!("Update failed: {}", e))?;
+   Ok(result.rows_affected() as i64)
+}
+
 pub async fn delete_postgres_row(
    connection_id: String,
    table: String,
@@ -742,4 +813,59 @@ pub async fn delete_postgres_row(
       .await
       .map_err(|e| format!("Delete failed: {}", e))?;
    Ok(result.rows_affected() as i64)
+}
+
+pub async fn delete_postgres_row_by_values(
+   connection_id: String,
+   table: String,
+   identity: RowIdentity,
+   manager: &ConnectionManager,
+) -> Result<i64, String> {
+   let pool_arc = manager
+      .get_pool(&connection_id)
+      .await
+      .ok_or("Not connected")?;
+   let pool = match pool_arc.as_ref() {
+      DatabasePool::Postgres(p) => p,
+      _ => return Err("Invalid pool type".to_string()),
+   };
+
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier,
+      |i| format!("${}", i),
+      &mut param_offset,
+   )?;
+   let sql = format!("DELETE FROM {} {}", escape_identifier(&table), where_clause);
+
+   let mut query = sqlx::query(&sql);
+   for v in &where_values {
+      query = query.bind(json_to_sql_string(v));
+   }
+
+   let result = query
+      .execute(pool)
+      .await
+      .map_err(|e| format!("Delete failed: {}", e))?;
+   Ok(result.rows_affected() as i64)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn postgres_catalog_query_includes_user_indexes_and_materialized_views() {
+      assert!(GET_POSTGRES_TABLES_SQL.contains("'materialized_view' AS kind"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("pg_catalog.pg_matviews"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("'index' AS kind"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("pg_catalog.pg_class"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("pg_catalog.pg_index"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("idx.indrelid"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("t.relname AS table_name"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("NULL AS table_name"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("con.conindid = c.oid"));
+      assert!(GET_POSTGRES_TABLES_SQL.contains("con.oid IS NULL"));
+   }
 }

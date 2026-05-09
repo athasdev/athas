@@ -1,0 +1,7 @@
+{
+  "protocolVersion": 1,
+  "ok": false,
+  "error": {
+    "message": "Query failed"
+  }
+}

@@ -177,6 +177,7 @@ export interface DatabaseProviderContribution {
   id: DatabaseProviderId;
   label: string;
   isFileBased: boolean;
+  protocolVersion: number;
   defaultPort?: number;
   fileExtensions?: string[];
   sidecar: PlatformArchExecutable;
