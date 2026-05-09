@@ -40,7 +40,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "./account-menu";
-import ProjectPickerDialog from "./project-picker-dialog";
+import ProjectPicker from "./project-picker";
 import ProjectTabs from "./project-tabs";
 import RunActionsButton from "./run-actions-button";
 import WindowTitleDisplay from "./window-title-display";
@@ -647,7 +647,7 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
         onClose={() => setIsSettingsDialogVisible(false)}
       />
       {createPortal(
-        <ProjectPickerDialog
+        <ProjectPicker
           isOpen={isProjectPickerVisible}
           onClose={() => setIsProjectPickerVisible(false)}
         />,

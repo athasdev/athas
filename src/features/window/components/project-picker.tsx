@@ -40,12 +40,12 @@ import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 
-interface ProjectPickerDialogProps {
+interface ProjectPickerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps) => {
+const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
   const [query, setQuery] = useState("");
@@ -271,9 +271,8 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   return (
     <>
-      <Command isVisible={isOpen} onClose={onClose} title="Open Project" className="w-[720px]">
+      <Command isVisible={isOpen} onClose={onClose} title="Open Project">
         <CommandHeader onClose={onClose}>
-          <Folder className="size-4 shrink-0 text-text-lighter" weight="duotone" />
           <CommandInput
             ref={inputRef}
             value={query}
@@ -283,52 +282,44 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
           />
         </CommandHeader>
         <CommandList>
-          <div className="p-1">
+          <div className="p-0">
             <CommandItem
               isSelected={selectedIndex === getEntryIndex("open-folder")}
               onMouseEnter={() => setSelectedIndex(getEntryIndex("open-folder"))}
               onClick={() => void handleOpenFolderClick()}
-              className="h-auto min-h-12 py-2"
+              className="px-3 py-1.5"
             >
-              <Folder className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-              <div className="min-w-0 flex-1 space-y-0.5 text-left">
-                <div className="ui-text-sm text-text">Open Folder</div>
-                <div className="ui-text-xs truncate text-text-lighter">Choose a local project</div>
+              <Folder className="shrink-0 text-text-lighter" weight="duotone" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs text-text">Open Folder</div>
               </div>
             </CommandItem>
             <CommandItem
               isSelected={selectedIndex === getEntryIndex("import-settings")}
               onMouseEnter={() => setSelectedIndex(getEntryIndex("import-settings"))}
               onClick={handleImportSettingsClick}
-              className="h-auto min-h-12 py-2"
+              className="px-3 py-1.5"
             >
-              <DownloadSimple className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-              <div className="min-w-0 flex-1 space-y-0.5 text-left">
-                <div className="ui-text-sm text-text">Import Editor Settings</div>
-                <div className="ui-text-xs truncate text-text-lighter">
-                  Bring recent projects from another editor
-                </div>
+              <DownloadSimple className="shrink-0 text-text-lighter" weight="duotone" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs text-text">Import Editor Settings</div>
               </div>
             </CommandItem>
             <CommandItem
               isSelected={selectedIndex === getEntryIndex("add-remote")}
               onMouseEnter={() => setSelectedIndex(getEntryIndex("add-remote"))}
               onClick={handleAddRemoteConnectionClick}
-              className="h-auto min-h-12 py-2"
+              className="px-3 py-1.5"
             >
-              <Plus className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-              <div className="min-w-0 flex-1 space-y-0.5 text-left">
-                <div className="ui-text-sm text-text">Add Remote Connection</div>
-                <div className="ui-text-xs truncate text-text-lighter">
-                  Create an SSH or remote workspace entry
-                </div>
+              <Plus className="shrink-0 text-text-lighter" weight="duotone" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs text-text">Add Remote Connection</div>
               </div>
             </CommandItem>
           </div>
 
           {filteredRecentFolders.length > 0 ? (
-            <div className="border-border border-t p-1">
-              <div className="ui-text-xs px-2.5 py-1.5 font-medium text-text-lighter">Recent</div>
+            <div className="p-0">
               {filteredRecentFolders.map((folder) => {
                 const matchingTab = projectTabs.find((t) => t.path === folder.path);
                 const iconPath = folder.customIcon ?? matchingTab?.customIcon;
@@ -346,7 +337,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       isSelected={selectedIndex === entryIndex}
                       onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleRecentFolderClick(folder)}
-                      className="mb-0 h-auto min-h-12 min-w-0 flex-1 rounded-r-none py-2"
+                      className="mb-0 min-w-0 flex-1 rounded-r-none px-3 py-1.5"
                     >
                       {iconPath ? (
                         <img
@@ -359,26 +350,26 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                           }}
                         />
                       ) : folder.missing ? (
-                        <WarningCircle className="size-4 shrink-0 text-warning" />
+                        <WarningCircle className="shrink-0 text-warning" />
                       ) : (
-                        <Folder className="size-4 shrink-0 text-text-lighter" />
+                        <Folder className="shrink-0 text-text-lighter" />
                       )}
-                      <div className="min-w-0 flex-1 space-y-0.5 text-left">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <span className="ui-text-sm truncate text-text">{folder.name}</span>
-                          {folder.pinned ? (
-                            <PushPin className="size-3.5 shrink-0 fill-current text-accent" />
-                          ) : null}
-                          {folder.missing ? (
-                            <span className="ui-text-xs shrink-0 rounded bg-warning/10 px-1 text-warning">
-                              Missing
-                            </span>
-                          ) : null}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs">
+                          <span className="text-text">{folder.name}</span>
+                          <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                            {folder.path}
+                          </span>
                         </div>
-                        <span className="ui-text-xs block truncate text-text-lighter">
-                          {folder.path}
-                        </span>
                       </div>
+                      {folder.pinned ? (
+                        <PushPin className="shrink-0 fill-current text-accent" />
+                      ) : null}
+                      {folder.missing ? (
+                        <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium text-[10px] text-warning">
+                          Missing
+                        </span>
+                      ) : null}
                     </CommandItem>
                     <div className="flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
                       <Button
@@ -416,8 +407,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
           ) : null}
 
           {filteredConnections.length > 0 ? (
-            <div className="border-border border-t p-1">
-              <div className="ui-text-xs px-2.5 py-1.5 font-medium text-text-lighter">Remote</div>
+            <div className="p-0">
               {filteredConnections.map((connection) => {
                 const entryIndex = getEntryIndex(`remote:${connection.id}`);
 
@@ -428,28 +418,26 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleConnect(connection.id)}
                       className={cn(
-                        "mb-0 h-auto min-h-12 min-w-0 flex-1 rounded-r-none py-2",
+                        "mb-0 min-w-0 flex-1 rounded-r-none px-3 py-1.5",
                         connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                       )}
                       disabled={!!connectingMap[connection.id]}
                     >
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
-                        <Server />
-                      </span>
-                      <div className="min-w-0 flex-1 space-y-0.5 text-left">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <span className="ui-text-sm truncate text-text">{connection.name}</span>
-                          <span className="ui-text-xs shrink-0 rounded bg-secondary-bg px-1 text-text-lighter">
+                      <Server className="shrink-0 text-text-lighter" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs">
+                          <span className="text-text">{connection.name}</span>
+                          <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
                             {connection.type.toUpperCase()}
                           </span>
+                          <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                            {connectingMap[connection.id]
+                              ? "Connecting..."
+                              : statusMap[connection.id] === "error"
+                                ? "Connection failed"
+                                : `${connection.username}@${connection.host}`}
+                          </span>
                         </div>
-                        <span className="ui-text-xs block truncate text-text-lighter">
-                          {connectingMap[connection.id]
-                            ? "Connecting..."
-                            : statusMap[connection.id] === "error"
-                              ? "Connection failed"
-                              : `${connection.username}@${connection.host}`}
-                        </span>
                       </div>
                       <span
                         className={cn(
@@ -534,6 +522,6 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   );
 });
 
-ProjectPickerDialog.displayName = "ProjectPickerDialog";
+ProjectPicker.displayName = "ProjectPicker";
 
-export default ProjectPickerDialog;
+export default ProjectPicker;
