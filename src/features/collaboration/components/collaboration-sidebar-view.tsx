@@ -400,6 +400,20 @@ export function CollaborationSidebarView() {
       ),
     );
   }, [collaboration?.presence, selectedChannel]);
+  const hasLocalMedia = mediaState.microphone || mediaState.screen;
+  const hasRemoteMedia = useMemo(() => {
+    if (!selectedChannel || !collaboration?.presence) return false;
+    const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
+    localDeviceIdRef.current = localDeviceId;
+    return collaboration.presence.some(
+      (presence) =>
+        presence.status === "online" &&
+        presence.channelId === selectedChannel.id &&
+        presence.deviceId !== localDeviceId &&
+        /\b(?:mic|screen)\b/.test(presence.cursorLabel ?? ""),
+    );
+  }, [collaboration?.presence, selectedChannel]);
+  const shouldPollMediaSignals = Boolean(selectedChannel && (hasLocalMedia || hasRemoteMedia));
 
   useEffect(() => {
     if (!selectedNoteFile) {
@@ -517,6 +531,11 @@ export function CollaborationSidebarView() {
     setRemoteShareList(() => []);
   }, [setRemoteShareList]);
 
+  useEffect(() => {
+    if (shouldPollMediaSignals) return;
+    closePeerConnections();
+  }, [closePeerConnections, shouldPollMediaSignals]);
+
   const createOfferForDevice = useCallback(
     async (remoteDeviceId: string) => {
       const peerConnection = ensurePeerConnection(remoteDeviceId);
@@ -571,7 +590,7 @@ export function CollaborationSidebarView() {
   );
 
   useEffect(() => {
-    if (!selectedChannel) return;
+    if (!selectedChannel || !shouldPollMediaSignals) return;
 
     let cancelled = false;
     const pollSignals = async () => {
@@ -596,14 +615,13 @@ export function CollaborationSidebarView() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [getLocalDeviceId, handleMediaSignal, selectedChannel]);
+  }, [getLocalDeviceId, handleMediaSignal, selectedChannel, shouldPollMediaSignals]);
 
   useEffect(() => {
     if (!selectedChannel) return;
-    const hasLocalTracks = mediaState.microphone || mediaState.screen;
 
     closePeerConnections();
-    if (!hasLocalTracks) {
+    if (!hasLocalMedia) {
       void postMediaSignal(null, "leave", {});
       return;
     }
@@ -614,8 +632,7 @@ export function CollaborationSidebarView() {
   }, [
     closePeerConnections,
     createOfferForDevice,
-    mediaState.microphone,
-    mediaState.screen,
+    hasLocalMedia,
     postMediaSignal,
     remoteDeviceIds,
     selectedChannel,
