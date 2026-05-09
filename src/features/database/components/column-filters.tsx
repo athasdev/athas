@@ -1,92 +1,119 @@
-import { X } from "@phosphor-icons/react";
+import { Plus, X } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import type { ColumnFilter, ColumnInfo } from "../models/common.types";
+import type { ColumnFilter, ColumnInfo, FilterOperator } from "../models/common.types";
+
+const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "equals", label: "=" },
+  { value: "notEquals", label: "!=" },
+  { value: "contains", label: "contains" },
+  { value: "startsWith", label: "starts with" },
+  { value: "endsWith", label: "ends with" },
+  { value: "gt", label: ">" },
+  { value: "gte", label: ">=" },
+  { value: "lt", label: "<" },
+  { value: "lte", label: "<=" },
+  { value: "between", label: "between" },
+  { value: "isNull", label: "is null" },
+  { value: "isNotNull", label: "is not null" },
+];
+
+const NO_VALUE_OPERATORS = new Set<FilterOperator>(["isNull", "isNotNull"]);
 
 interface ColumnFiltersProps {
-  columnFilters: ColumnFilter[];
-  tableMeta: ColumnInfo[];
-  onUpdateFilter: (index: number, updates: Partial<ColumnFilter>) => void;
-  onRemoveFilter: (index: number) => void;
-  onClearAll: () => void;
+  filters: ColumnFilter[];
+  columns: ColumnInfo[];
+  onUpdate: (index: number, updates: Partial<ColumnFilter>) => void;
+  onRemove: (index: number) => void;
+  onClear: () => void;
+  onAddFilter: (column: string) => void;
 }
 
 export default function ColumnFilters({
-  columnFilters,
-  tableMeta,
-  onUpdateFilter,
-  onRemoveFilter,
-  onClearAll,
+  filters,
+  columns,
+  onUpdate,
+  onRemove,
+  onClear,
+  onAddFilter,
 }: ColumnFiltersProps) {
-  if (columnFilters.length === 0) return null;
+  if (filters.length === 0) return null;
 
   return (
-    <div className="border-border border-b bg-secondary-bg px-3 py-2">
+    <div className="mx-3 mb-2 rounded-lg border border-border/60 bg-secondary-bg/60 px-3 py-2">
       <div className="mb-2 flex items-center justify-between">
-        <span className="ui-font ui-text-sm text-text-lighter">{columnFilters.length} filters</span>
+        <div className="flex items-center gap-2">
+          <span className="ui-font ui-text-sm text-text-lighter">
+            {filters.length} filter{filters.length !== 1 ? "s" : ""}
+          </span>
+          {columns.length > 0 && (
+            <Button
+              onClick={() => onAddFilter(columns[0].name)}
+              variant="ghost"
+              compact
+              className="rounded-md gap-0.5 text-text-lighter"
+              aria-label="Add filter"
+            >
+              <Plus />
+              Add
+            </Button>
+          )}
+        </div>
         <Button
-          onClick={onClearAll}
+          onClick={onClear}
           variant="ghost"
-          className="ui-text-sm text-text-lighter hover:text-text"
+          className="rounded-md text-text-lighter"
+          aria-label="Clear all filters"
           compact
         >
-          clear
+          Clear all
         </Button>
       </div>
       <div className="space-y-1">
-        {columnFilters.map((filter, index) => (
-          <div key={index} className="ui-text-sm flex items-center gap-2">
+        {filters.map((filter, index) => (
+          <div key={index} className="flex items-center gap-2 ui-font ui-text-sm">
             <Select
               value={filter.column}
-              options={tableMeta.map((col) => ({ value: col.name, label: col.name }))}
-              onChange={(value) => onUpdateFilter(index, { column: value })}
+              options={columns.map((column) => ({ value: column.name, label: column.name }))}
+              onChange={(value) => onUpdate(index, { column: value })}
               size="xs"
               className="min-w-20"
             />
-
             <Select
               value={filter.operator}
-              options={[
-                { value: "equals", label: "=" },
-                { value: "contains", label: "∋" },
-                { value: "startsWith", label: "^" },
-                { value: "endsWith", label: "$" },
-                { value: "gt", label: ">" },
-                { value: "lt", label: "<" },
-                { value: "between", label: "⇋" },
-              ]}
-              onChange={(value) =>
-                onUpdateFilter(index, { operator: value as ColumnFilter["operator"] })
-              }
+              options={FILTER_OPERATORS.map((operator) => ({
+                value: operator.value,
+                label: operator.label,
+              }))}
+              onChange={(value) => onUpdate(index, { operator: value as FilterOperator })}
               size="xs"
-              className="min-w-12"
+              className="min-w-20"
             />
-
-            <Input
-              type="text"
-              value={filter.value}
-              onChange={(e) => onUpdateFilter(index, { value: e.target.value })}
-              placeholder="value"
-              className="flex-1 rounded-none bg-primary-bg px-1 py-0.5"
-            />
-
-            {filter.operator === "between" && (
+            {!NO_VALUE_OPERATORS.has(filter.operator) && (
               <Input
-                type="text"
-                value={filter.value2 || ""}
-                onChange={(e) => onUpdateFilter(index, { value2: e.target.value })}
-                placeholder="value2"
-                className="flex-1 rounded-none bg-primary-bg px-1 py-0.5"
+                value={filter.value}
+                onChange={(e) => onUpdate(index, { value: e.target.value })}
+                placeholder="value"
+                size="xs"
+                className="flex-1"
               />
             )}
-
+            {filter.operator === "between" && (
+              <Input
+                value={filter.value2 || ""}
+                onChange={(e) => onUpdate(index, { value2: e.target.value })}
+                placeholder="to"
+                size="xs"
+                className="flex-1"
+              />
+            )}
             <Button
-              onClick={() => onRemoveFilter(index)}
+              onClick={() => onRemove(index)}
               variant="ghost"
               compact
               className="text-text-lighter hover:text-red-500"
-              tooltip="Remove filter"
+              aria-label="Remove filter"
             >
               <X />
             </Button>

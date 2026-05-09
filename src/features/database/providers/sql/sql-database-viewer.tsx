@@ -2,19 +2,26 @@ import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import CreateSubscriptionDialog from "../postgres/components/create-subscription-dialog";
 import PostgresSubscriptionSchemaView from "../postgres/components/postgres-subscription-schema-view";
+import ColumnFilters from "../../components/column-filters";
+import { SqlRowMenu, SqlTableMenu } from "../../components/context-menus";
+import { CreateRowModal, CreateTableModal, EditRowModal } from "../../components/crud-modals";
+import DataGrid from "../../components/data-grid";
+import InfoView from "../../components/info-view";
+import Pagination from "../../components/pagination";
+import QueryBar from "../../components/query-bar";
+import SchemaView from "../../components/schema-view";
+import TableSidebar from "../../components/table-sidebar";
+import TableToolbar from "../../components/table-toolbar";
+import {
+  buildQueryResultExportFilename,
+  serializeQueryResultToCsv,
+  serializeQueryResultToJson,
+} from "../../lib/query-result-export";
+import { paginateQueryResult } from "../../lib/query-result-pagination";
+import { writeDatabaseClipboardText } from "../../utils/clipboard";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import type { ViewMode } from "../../models/common.types";
+import type { DatabaseObjectKind, ViewMode } from "../../models/common.types";
 import type { DatabaseType } from "../../models/provider.types";
-import { SqliteRowMenu, SqliteTableMenu } from "../sqlite/components/context-menus";
-import { CreateRowModal, CreateTableModal, EditRowModal } from "../sqlite/components/crud-modals";
-import DataGrid from "../sqlite/components/data-grid";
-import FilterBar from "../sqlite/components/filter-bar";
-import InfoView from "../sqlite/components/info-view";
-import PaginationControls from "../sqlite/components/pagination-controls";
-import QueryBar from "../sqlite/components/query-bar";
-import SchemaView from "../sqlite/components/schema-view";
-import TableSidebar from "../sqlite/components/table-sidebar";
-import TableToolbar from "../sqlite/components/table-toolbar";
 import type { SqlDatabaseActions, SqlDatabaseState } from "./create-sql-store";
 
 export interface SqlDatabaseViewerProps {
@@ -50,19 +57,32 @@ export default function SqlDatabaseViewer({
 
   const initKey = databasePath || connectionId || "";
   const isSubscription = store.selectedObjectKind === "subscription";
-  const canMutateRows = store.selectedObjectKind === "table";
+  const isCatalogOnlyObject = store.selectedObjectKind === "index";
+  const canMutateRows = store.selectedObjectKind === "table" && !store.isCustomQuery;
+  const isBusy = store.isLoading || store.isCustomQueryLoading;
+  const visibleQueryResult =
+    store.queryResult && store.isCustomQuery
+      ? paginateQueryResult(store.queryResult, store.currentPage, store.pageSize)
+      : store.queryResult;
+  const gridResultLabel =
+    store.isCustomQuery && store.totalPages > 1 ? "query rows on this page" : "query rows";
 
   useEffect(() => {
     if (initKey) actions.init(initKey);
     return () => actions.reset();
   }, [initKey, actions]);
 
-  const handleTableContextMenu = (e: React.MouseEvent, tableName: string) => {
+  const handleTableContextMenu = (
+    e: React.MouseEvent,
+    tableName: string,
+    objectKind: DatabaseObjectKind,
+  ) => {
     e.preventDefault();
     setDatabaseTableMenu({
       x: e.clientX,
       y: e.clientY,
       tableName,
+      objectKind,
       databaseType,
     });
   };
@@ -91,57 +111,57 @@ export default function SqlDatabaseViewer({
   const handleDeleteRow = async (_: string, rowData: Record<string, unknown>) => {
     if (!canMutateRows) return;
     const pk = store.tableMeta.find((c) => c.primary_key);
-    if (!pk) return;
+    if (!pk) {
+      await actions.deleteRowByValues(rowData);
+      return;
+    }
     const pkValue = rowData[pk.name];
-    if (pkValue != null) await actions.deleteRow(pk.name, pkValue);
+    if (pkValue != null) {
+      await actions.deleteRow(pk.name, pkValue);
+      return;
+    }
+    await actions.deleteRowByValues(rowData);
   };
 
   const handleSubmitEditRow = async (values: Record<string, unknown>) => {
     if (!canMutateRows) return;
     const pk = store.tableMeta.find((c) => c.primary_key);
-    if (!pk) return;
+    if (!pk) {
+      await actions.updateRowByValues(editRowModal.rowData, values);
+      return;
+    }
     const pkValue = editRowModal.rowData[pk.name];
-    if (pkValue != null) await actions.updateRow(pk.name, pkValue, values);
+    if (pkValue != null) {
+      await actions.updateRow(pk.name, pkValue, values);
+      return;
+    }
+    await actions.updateRowByValues(editRowModal.rowData, values);
   };
 
   const exportAsCSV = () => {
-    if (!store.queryResult) return;
-    const headers = store.queryResult.columns.map((c) => `"${c}"`).join(",");
-    const rows = store.queryResult.rows
-      .map((row) =>
-        row
-          .map((cell) => {
-            if (cell === null) return '""';
-            if (typeof cell === "object") return `"${JSON.stringify(cell).replace(/"/g, '""')}"`;
-            return `"${String(cell).replace(/"/g, '""')}"`;
-          })
-          .join(","),
-      )
-      .join("\n");
-    const blob = new Blob([`${headers}\n${rows}`], {
+    if (!visibleQueryResult) return;
+    const blob = new Blob([serializeQueryResultToCsv(visibleQueryResult)], {
       type: "text/csv;charset=utf-8;",
     });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${store.selectedTable || "result"}_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = buildQueryResultExportFilename({
+      isCustomQuery: store.isCustomQuery,
+      selectedTable: store.selectedTable,
+      page: store.currentPage,
+      totalPages: store.totalPages,
+    });
     link.click();
     URL.revokeObjectURL(link.href);
   };
 
   const copyAsJSON = async () => {
-    if (!store.queryResult) return;
-    const data = store.queryResult.rows.map((row) => {
-      const obj: Record<string, unknown> = {};
-      store.queryResult!.columns.forEach((col, i) => {
-        obj[col] = row[i];
-      });
-      return obj;
-    });
-    await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    if (!visibleQueryResult) return;
+    await writeDatabaseClipboardText(serializeQueryResultToJson(visibleQueryResult));
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg/30 text-text">
+    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg text-text">
       <TableToolbar
         fileName={store.fileName}
         dbInfo={store.dbInfo}
@@ -154,6 +174,9 @@ export default function SqlDatabaseViewer({
         setShowColumnTypes={setShowColumnTypes}
         setIsCustomQuery={actions.setIsCustomQuery}
         hasData={!!store.queryResult}
+        resultRowCount={visibleQueryResult?.rows.length ?? 0}
+        currentPage={store.currentPage}
+        totalPages={store.totalPages}
         exportAsCSV={exportAsCSV}
         copyAsJSON={copyAsJSON}
         onCreateSubscription={
@@ -185,19 +208,29 @@ export default function SqlDatabaseViewer({
           tables={store.tables}
           selectedTable={store.selectedTable}
           onSelectTable={(name) => {
+            const objectKind = store.tables.find((table) => table.name === name)?.kind ?? "table";
             actions.selectTable(name);
-            setViewMode("data");
+            setViewMode(objectKind === "index" ? "info" : "data");
           }}
           onTableContextMenu={handleTableContextMenu}
           onCreateTable={() => setCreateTableModal(true)}
           sqlHistory={store.sqlHistory}
           onSelectHistory={(query) => {
+            actions.useSqlHistoryEntry(query);
             actions.setCustomQuery(query);
             actions.setIsCustomQuery(true);
           }}
+          onRunHistory={(query) => {
+            actions.useSqlHistoryEntry(query);
+            actions.setCustomQuery(query);
+            actions.setIsCustomQuery(true);
+            void actions.executeCustomQuery(query);
+          }}
+          onRemoveHistory={actions.removeSqlHistoryEntry}
+          onClearHistory={actions.clearSqlHistory}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
           <QueryBar
             searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}
@@ -205,12 +238,17 @@ export default function SqlDatabaseViewer({
             setCustomQuery={actions.setCustomQuery}
             isCustomQuery={store.isCustomQuery}
             setIsCustomQuery={actions.setIsCustomQuery}
+            cancelCustomQuery={actions.cancelCustomQuery}
             executeCustomQuery={actions.executeCustomQuery}
-            isLoading={store.isLoading}
+            lastQueryExecutionMs={store.lastQueryExecutionMs}
+            isLoading={isBusy}
+            isCustomQueryLoading={store.isCustomQueryLoading}
+            tables={store.tables}
+            tableMeta={store.tableMeta}
           />
 
           {viewMode === "data" && canMutateRows && (
-            <FilterBar
+            <ColumnFilters
               filters={store.columnFilters}
               columns={store.tableMeta}
               onUpdate={actions.updateColumnFilter}
@@ -221,23 +259,23 @@ export default function SqlDatabaseViewer({
           )}
 
           {store.error && (
-            <div className="mx-3 mb-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300 text-xs">
+            <div className="mx-3 mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 ui-font ui-text-sm text-red-300">
               {store.error}
             </div>
           )}
 
-          {store.isLoading && (
+          {isBusy && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <div className="flex items-center gap-2 text-sm text-text-lighter">
+              <div className="flex items-center gap-2 ui-font ui-text-sm text-text-lighter">
                 <RefreshCw className="animate-spin" />
                 Loading...
               </div>
             </div>
           )}
 
-          {!store.isLoading && viewMode === "data" && store.queryResult && (
+          {!isBusy && viewMode === "data" && visibleQueryResult && (
             <DataGrid
-              queryResult={store.queryResult}
+              queryResult={visibleQueryResult}
               tableMeta={store.tableMeta}
               tableName={store.selectedTable}
               currentPage={store.currentPage}
@@ -254,6 +292,11 @@ export default function SqlDatabaseViewer({
               canEditCells={canMutateRows}
               canCreateRows={canMutateRows}
               canOpenRowMenu={canMutateRows}
+              resultLabel={store.isCustomQuery ? gridResultLabel : "rows"}
+              foreignKeys={store.foreignKeys}
+              columnWidths={store.columnWidths}
+              onColumnWidthChange={actions.setColumnWidth}
+              onNavigateToForeignKey={actions.navigateToForeignKey}
               onCreateRow={() =>
                 canMutateRows &&
                 store.selectedTable &&
@@ -265,16 +308,14 @@ export default function SqlDatabaseViewer({
             />
           )}
 
-          {!store.isLoading &&
-            viewMode === "schema" &&
-            isSubscription &&
-            store.subscriptionInfo && (
-              <PostgresSubscriptionSchemaView subscriptionInfo={store.subscriptionInfo} />
-            )}
+          {!isBusy && viewMode === "schema" && isSubscription && store.subscriptionInfo && (
+            <PostgresSubscriptionSchemaView subscriptionInfo={store.subscriptionInfo} />
+          )}
 
-          {!store.isLoading &&
+          {!isBusy &&
             viewMode === "schema" &&
             !isSubscription &&
+            !isCatalogOnlyObject &&
             store.selectedTable &&
             store.tableMeta.length > 0 && (
               <SchemaView
@@ -282,10 +323,11 @@ export default function SqlDatabaseViewer({
                 columns={store.tableMeta}
                 foreignKeys={store.foreignKeys}
                 onAddFilter={actions.addColumnFilter}
+                canFilter={canMutateRows}
               />
             )}
 
-          {!store.isLoading && viewMode === "info" && (
+          {!isBusy && viewMode === "info" && (
             <InfoView
               fileName={store.fileName}
               dbInfo={store.dbInfo}
@@ -298,20 +340,29 @@ export default function SqlDatabaseViewer({
                 setViewMode("data");
               }}
               onQuerySelect={(query) => {
+                actions.useSqlHistoryEntry(query);
                 actions.setCustomQuery(query);
                 actions.setIsCustomQuery(true);
                 setViewMode("data");
               }}
+              onQueryRun={(query) => {
+                actions.useSqlHistoryEntry(query);
+                actions.setCustomQuery(query);
+                actions.setIsCustomQuery(true);
+                setViewMode("data");
+                void actions.executeCustomQuery(query);
+              }}
+              onQueryRemove={actions.removeSqlHistoryEntry}
+              onQueryHistoryClear={actions.clearSqlHistory}
             />
           )}
 
-          {!store.isLoading &&
+          {!isBusy &&
             viewMode === "data" &&
             store.queryResult &&
-            !store.isCustomQuery &&
-            canMutateRows &&
+            (store.isCustomQuery || canMutateRows) &&
             store.totalPages > 1 && (
-              <PaginationControls
+              <Pagination
                 currentPage={store.currentPage}
                 totalPages={store.totalPages}
                 pageSize={store.pageSize}
@@ -322,11 +373,11 @@ export default function SqlDatabaseViewer({
         </div>
       </div>
 
-      <SqliteTableMenu
+      <SqlTableMenu
         onCreateRow={(tableName) => setCreateRowModal({ isOpen: true, tableName })}
         onDeleteTable={actions.dropTable}
       />
-      <SqliteRowMenu onEditRow={handleEditRow} onDeleteRow={handleDeleteRow} />
+      <SqlRowMenu onEditRow={handleEditRow} onDeleteRow={handleDeleteRow} />
 
       <CreateRowModal
         isOpen={createRowModal.isOpen}

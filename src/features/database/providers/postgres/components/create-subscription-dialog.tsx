@@ -5,7 +5,12 @@ import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
-import type { CreatePostgresSubscriptionParams } from "../../sqlite/sqlite-types";
+import type { CreatePostgresSubscriptionParams } from "../../../models/common.types";
+import {
+  canCreatePostgresSubscription,
+  initialCreatePostgresSubscriptionForm,
+  normalizeCreatePostgresSubscriptionParams,
+} from "./create-subscription-form";
 
 interface CreateSubscriptionDialogProps {
   isOpen: boolean;
@@ -13,42 +18,31 @@ interface CreateSubscriptionDialogProps {
   onSubmit: (params: CreatePostgresSubscriptionParams) => Promise<void>;
 }
 
-const initialForm: CreatePostgresSubscriptionParams = {
-  name: "",
-  connection_string: "",
-  publications: [],
-  enabled: true,
-  create_slot: true,
-  copy_data: true,
-  connect: true,
-  failover: false,
-  with_slot_name: "",
-};
-
 export default function CreateSubscriptionDialog({
   isOpen,
   onClose,
   onSubmit,
 }: CreateSubscriptionDialogProps) {
-  const [form, setForm] = useState<CreatePostgresSubscriptionParams>(initialForm);
+  const [form, setForm] = useState<CreatePostgresSubscriptionParams>(
+    initialCreatePostgresSubscriptionForm,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
   const handleClose = () => {
-    setForm(initialForm);
+    setForm(initialCreatePostgresSubscriptionForm);
     setIsSubmitting(false);
     onClose();
   };
 
   const submitForm = async () => {
+    const normalizedForm = normalizeCreatePostgresSubscriptionParams(form);
+    if (!canCreatePostgresSubscription(normalizedForm)) return;
+
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        ...form,
-        publications: form.publications,
-        with_slot_name: form.with_slot_name?.trim() || null,
-      });
+      await onSubmit(normalizedForm);
       handleClose();
     } finally {
       setIsSubmitting(false);
@@ -72,13 +66,9 @@ export default function CreateSubscriptionDialog({
             Cancel
           </Button>
           <Button
+            type="button"
             onClick={() => void submitForm()}
-            disabled={
-              isSubmitting ||
-              !form.name.trim() ||
-              !form.connection_string.trim() ||
-              form.publications.length === 0
-            }
+            disabled={isSubmitting || !canCreatePostgresSubscription(form)}
           >
             Create
           </Button>
@@ -87,8 +77,11 @@ export default function CreateSubscriptionDialog({
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-1">
-          <label className="text-sm">Name</label>
+          <label htmlFor="postgres-subscription-name" className="text-sm">
+            Name
+          </label>
           <Input
+            id="postgres-subscription-name"
             value={form.name}
             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="analytics_sub"
@@ -96,8 +89,11 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm">Connection String</label>
+          <label htmlFor="postgres-subscription-connection-string" className="text-sm">
+            Connection String
+          </label>
           <Textarea
+            id="postgres-subscription-connection-string"
             value={form.connection_string}
             onChange={(e) =>
               setForm((prev) => ({
@@ -111,8 +107,11 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm">Publications</label>
+          <label htmlFor="postgres-subscription-publications" className="text-sm">
+            Publications
+          </label>
           <Input
+            id="postgres-subscription-publications"
             value={form.publications.join(", ")}
             onChange={(e) =>
               setForm((prev) => ({
@@ -128,8 +127,11 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm">Slot Name</label>
+          <label htmlFor="postgres-subscription-slot-name" className="text-sm">
+            Slot Name
+          </label>
           <Input
+            id="postgres-subscription-slot-name"
             value={form.with_slot_name ?? ""}
             onChange={(e) => setForm((prev) => ({ ...prev, with_slot_name: e.target.value }))}
             placeholder="Leave blank for default"
