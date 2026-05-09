@@ -19,6 +19,7 @@ const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
 const ACP_REGISTRY_URL: &str =
    "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
+const EXCLUDED_ACP_REGISTRY_AGENT_IDS: &[&str] = &["agoragentic-acp"];
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -320,15 +321,31 @@ fn package_command_name(package_name: &str, fallback: &str) -> String {
       .to_string()
 }
 
+fn npx_command_name(package_name: &str, fallback: &str) -> String {
+   match package_name {
+      "@google/gemini-cli" => "gemini".to_string(),
+      "@qwen-code/qwen-code" => "qwen".to_string(),
+      "@tencent-ai/codebuddy-code" => "codebuddy".to_string(),
+      "dirac-cli" => "dirac".to_string(),
+      _ => package_command_name(package_name, fallback),
+   }
+}
+
 fn python_package_spec_from_uvx(package_spec: &str) -> String {
    let spec = package_spec.trim();
-   if spec.contains("==") {
-      return spec.to_string();
-   }
-   spec
-      .rsplit_once('@')
-      .map(|(package, version)| format!("{package}=={version}"))
-      .unwrap_or_else(|| spec.to_string())
+   let package = if spec.contains("==") {
+      spec.to_string()
+   } else {
+      spec
+         .rsplit_once('@')
+         .map(|(package, version)| format!("{package}=={version}"))
+         .unwrap_or_else(|| spec.to_string())
+   };
+
+   package
+      .strip_prefix("fast-agent-acp==")
+      .map(|version| format!("fast-agent-mcp=={version}"))
+      .unwrap_or(package)
 }
 
 fn python_command_name(package_spec: &str, fallback: &str) -> String {
@@ -337,6 +354,9 @@ fn python_command_name(package_spec: &str, fallback: &str) -> String {
       .map(|(package, _)| package)
       .unwrap_or(package_spec)
       .trim();
+   if package == "fast-agent-mcp" {
+      return "fast-agent-acp".to_string();
+   }
    package_command_name(package, fallback)
 }
 
@@ -413,7 +433,7 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
 
    if let Some(target) = distribution.npx {
       let package_name = npm_package_name(&target.package);
-      let command = package_command_name(&package_name, &id);
+      let command = npx_command_name(&package_name, &id);
       return Some(AgentConfig {
          id,
          name,
@@ -464,6 +484,7 @@ fn acp_registry_agents_from_index(index: AcpRegistryIndex) -> Vec<AgentConfig> {
    let mut agents = index
       .agents
       .into_iter()
+      .filter(|agent| !EXCLUDED_ACP_REGISTRY_AGENT_IDS.contains(&agent.id.as_str()))
       .filter_map(acp_registry_agent_to_config)
       .collect::<Vec<_>>();
    agents.sort_by_key(|agent| agent.name.clone());
@@ -1183,10 +1204,25 @@ mod tests {
    }
 
    #[test]
+   fn npx_command_name_uses_known_package_binary_aliases() {
+      assert_eq!(npx_command_name("@google/gemini-cli", "gemini"), "gemini");
+      assert_eq!(
+         npx_command_name("@qwen-code/qwen-code", "qwen-code"),
+         "qwen"
+      );
+      assert_eq!(
+         npx_command_name("@tencent-ai/codebuddy-code", "codebuddy-code"),
+         "codebuddy"
+      );
+      assert_eq!(npx_command_name("dirac-cli", "dirac"), "dirac");
+      assert_eq!(npx_command_name("cline", "cline"), "cline");
+   }
+
+   #[test]
    fn python_package_spec_from_uvx_converts_registry_version_specs() {
       assert_eq!(
          python_package_spec_from_uvx("fast-agent-acp==0.7.1"),
-         "fast-agent-acp==0.7.1"
+         "fast-agent-mcp==0.7.1"
       );
       assert_eq!(
          python_package_spec_from_uvx("minion-code@0.1.44"),
@@ -1195,18 +1231,30 @@ mod tests {
    }
 
    #[test]
+   fn python_command_name_uses_fast_agent_acp_entrypoint() {
+      assert_eq!(
+         python_command_name("fast-agent-mcp==0.7.1", "fast-agent"),
+         "fast-agent-acp"
+      );
+      assert_eq!(
+         python_command_name("minion-code==0.1.44", "minion-code"),
+         "minion-code"
+      );
+   }
+
+   #[test]
    fn acp_registry_json_maps_npx_distribution_as_managed_node_install() {
       let json = r#"{
         "agents": [
           {
-            "id": "codex-acp",
-            "name": "Codex",
-            "description": "Codex ACP adapter",
+            "id": "qwen-code",
+            "name": "Qwen Code",
+            "description": "Qwen ACP adapter",
             "icon": "codex.svg",
             "distribution": {
               "npx": {
-                "package": "@vendor/codex-acp",
-                "args": ["--flag"],
+                "package": "@qwen-code/qwen-code@0.15.9",
+                "args": ["--acp"],
                 "env": { "REGISTRY_ENV": "1" }
               }
             }
@@ -1215,18 +1263,58 @@ mod tests {
       }"#;
 
       let agents = acp_registry_agents_from_json(json).expect("registry agents");
-      let codex = agents.first().expect("codex agent");
+      let qwen = agents.first().expect("qwen agent");
 
-      assert_eq!(codex.id, "codex-acp");
-      assert_eq!(codex.binary_name, "codex-acp");
-      assert_eq!(codex.args, vec!["--flag".to_string()]);
-      assert_eq!(codex.install_runtime, Some(AgentRuntime::Node));
-      assert_eq!(codex.install_package.as_deref(), Some("@vendor/codex-acp"));
-      assert_eq!(codex.install_command.as_deref(), Some("codex-acp"));
-      assert!(codex.can_install);
+      assert_eq!(qwen.id, "qwen-code");
+      assert_eq!(qwen.binary_name, "qwen");
+      assert_eq!(qwen.args, vec!["--acp".to_string()]);
+      assert_eq!(qwen.install_runtime, Some(AgentRuntime::Node));
       assert_eq!(
-         codex.env_vars.get("REGISTRY_ENV").map(String::as_str),
+         qwen.install_package.as_deref(),
+         Some("@qwen-code/qwen-code@0.15.9")
+      );
+      assert_eq!(qwen.install_command.as_deref(), Some("qwen"));
+      assert!(qwen.can_install);
+      assert_eq!(
+         qwen.env_vars.get("REGISTRY_ENV").map(String::as_str),
          Some("1")
+      );
+   }
+
+   #[test]
+   fn acp_registry_json_skips_excluded_agents() {
+      let json = r#"{
+        "agents": [
+          {
+            "id": "agoragentic-acp",
+            "name": "Agoragentic",
+            "description": "Marketplace adapter",
+            "distribution": {
+              "npx": {
+                "package": "agoragentic-mcp@1.3.0",
+                "args": ["--acp"]
+              }
+            }
+          },
+          {
+            "id": "codex-acp",
+            "name": "Codex",
+            "description": "Codex ACP adapter",
+            "distribution": {
+              "npx": {
+                "package": "@vendor/codex-acp"
+              }
+            }
+          }
+        ]
+      }"#;
+
+      let agents = acp_registry_agents_from_json(json).expect("registry agents");
+
+      assert_eq!(agents.len(), 1);
+      assert_eq!(
+         agents.first().map(|agent| agent.id.as_str()),
+         Some("codex-acp")
       );
    }
 
