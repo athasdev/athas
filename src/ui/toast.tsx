@@ -49,6 +49,7 @@ interface ToastState {
     warning: (message: string, description?: string) => string;
     error: (message: string, description?: string) => string;
     markAllNotificationsRead: () => void;
+    removeNotification: (id: string) => void;
     clearNotifications: () => void;
   };
 }
@@ -192,6 +193,10 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
     markAllNotificationsRead: () =>
       set((state) => ({
         notifications: state.notifications.map((item) => ({ ...item, read: true })),
+      })),
+    removeNotification: (id) =>
+      set((state) => ({
+        notifications: state.notifications.filter((item) => item.id !== id),
       })),
     clearNotifications: () => set({ notifications: [] }),
   },
