@@ -1,18 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import {
-  DownloadSimple,
-  PencilSimple as Edit,
-  Folder,
-  Plus,
-  PushPin,
-  PushPinSlash,
-  HardDrives as Server,
-  ArrowSquareOut as SquareArrowOutUpRight,
-  Trash as Trash2,
-  WarningCircle,
-  X,
-} from "@phosphor-icons/react";
+import { Folder, PushPin, HardDrives as Server, WarningCircle } from "@phosphor-icons/react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
@@ -30,6 +18,7 @@ import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/u
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
+  CommandFooter,
   CommandHeader,
   CommandInput,
   CommandItem,
@@ -38,7 +27,6 @@ import Command, {
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
 
 interface ProjectPickerProps {
   isOpen: boolean;
@@ -60,8 +48,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const { addToRecents, openRecentFolder, removeFromRecents, togglePinned } =
-    useRecentFoldersStore();
+  const { openRecentFolder } = useRecentFoldersStore();
   const { handleOpenFolder } = useFileSystemStore();
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
@@ -124,27 +111,6 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     await openRecentFolder(folder.path);
   };
 
-  const handleRecentFolderNewWindowClick = async (folder: RecentFolder) => {
-    onClose();
-    await createAppWindow({
-      path: folder.path,
-      isDirectory: true,
-    });
-    addToRecents(folder.path, {
-      customIcon: folder.customIcon,
-      missing: false,
-      openInNewWindow: true,
-    });
-  };
-
-  const handleRemoteConnectionNewWindowClick = async (connection: RemoteConnection) => {
-    onClose();
-    await createAppWindow({
-      remoteConnectionId: connection.id,
-      remoteConnectionName: connection.name,
-    });
-  };
-
   const handleConnect = async (connectionId: string, providedPassword?: string) => {
     const connection = connections.find((c) => c.id === connectionId);
     if (!connection) return;
@@ -194,15 +160,6 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     }
   };
 
-  const handleDeleteConnection = async (connectionId: string) => {
-    try {
-      await connectionStore.deleteConnection(connectionId);
-      await loadConnections();
-    } catch (error) {
-      console.error("Failed to delete connection:", error);
-    }
-  };
-
   const normalizedQuery = query.trim().toLowerCase();
   const filteredRecentFolders = useMemo(() => {
     if (!normalizedQuery) return recentFolders;
@@ -222,18 +179,6 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
 
   const commandEntries = useMemo(
     () => [
-      {
-        id: "open-folder",
-        onSelect: () => void handleOpenFolderClick(),
-      },
-      {
-        id: "import-settings",
-        onSelect: handleImportSettingsClick,
-      },
-      {
-        id: "add-remote",
-        onSelect: handleAddRemoteConnectionClick,
-      },
       ...filteredRecentFolders.map((folder) => ({
         id: `recent:${folder.path}`,
         onSelect: () => void handleRecentFolderClick(folder),
@@ -282,42 +227,6 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
           />
         </CommandHeader>
         <CommandList>
-          <div className="p-0">
-            <CommandItem
-              isSelected={selectedIndex === getEntryIndex("open-folder")}
-              onMouseEnter={() => setSelectedIndex(getEntryIndex("open-folder"))}
-              onClick={() => void handleOpenFolderClick()}
-              className="px-3 py-1.5"
-            >
-              <Folder className="shrink-0 text-text-lighter" weight="duotone" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs text-text">Open Folder</div>
-              </div>
-            </CommandItem>
-            <CommandItem
-              isSelected={selectedIndex === getEntryIndex("import-settings")}
-              onMouseEnter={() => setSelectedIndex(getEntryIndex("import-settings"))}
-              onClick={handleImportSettingsClick}
-              className="px-3 py-1.5"
-            >
-              <DownloadSimple className="shrink-0 text-text-lighter" weight="duotone" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs text-text">Import Editor Settings</div>
-              </div>
-            </CommandItem>
-            <CommandItem
-              isSelected={selectedIndex === getEntryIndex("add-remote")}
-              onMouseEnter={() => setSelectedIndex(getEntryIndex("add-remote"))}
-              onClick={handleAddRemoteConnectionClick}
-              className="px-3 py-1.5"
-            >
-              <Plus className="shrink-0 text-text-lighter" weight="duotone" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs text-text">Add Remote Connection</div>
-              </div>
-            </CommandItem>
-          </div>
-
           {filteredRecentFolders.length > 0 ? (
             <div className="p-0">
               {filteredRecentFolders.map((folder) => {
@@ -326,81 +235,45 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                 const entryIndex = getEntryIndex(`recent:${folder.path}`);
 
                 return (
-                  <div
+                  <CommandItem
                     key={folder.path}
-                    className={cn(
-                      "group flex items-stretch rounded-lg",
-                      folder.missing && "text-text-lighter",
-                    )}
+                    isSelected={selectedIndex === entryIndex}
+                    onMouseEnter={() => setSelectedIndex(entryIndex)}
+                    onClick={() => handleRecentFolderClick(folder)}
+                    className={cn("px-3 py-1.5", folder.missing && "text-text-lighter")}
                   >
-                    <CommandItem
-                      isSelected={selectedIndex === entryIndex}
-                      onMouseEnter={() => setSelectedIndex(entryIndex)}
-                      onClick={() => handleRecentFolderClick(folder)}
-                      className="mb-0 min-w-0 flex-1 rounded-r-none px-3 py-1.5"
-                    >
-                      {iconPath ? (
-                        <img
-                          src={convertFileSrc(iconPath)}
-                          alt=""
-                          className="shrink-0 rounded-sm object-contain"
-                          style={{
-                            width: "var(--app-ui-font-size)",
-                            height: "var(--app-ui-font-size)",
-                          }}
-                        />
-                      ) : folder.missing ? (
-                        <WarningCircle className="shrink-0 text-warning" />
-                      ) : (
-                        <Folder className="shrink-0 text-text-lighter" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs">
-                          <span className="text-text">{folder.name}</span>
-                          <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
-                            {folder.path}
-                          </span>
-                        </div>
-                      </div>
-                      {folder.pinned ? (
-                        <PushPin className="shrink-0 fill-current text-accent" />
-                      ) : null}
-                      {folder.missing ? (
-                        <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium text-[10px] text-warning">
-                          Missing
+                    {iconPath ? (
+                      <img
+                        src={convertFileSrc(iconPath)}
+                        alt=""
+                        className="shrink-0 rounded-sm object-contain"
+                        style={{
+                          width: "var(--app-ui-font-size)",
+                          height: "var(--app-ui-font-size)",
+                        }}
+                      />
+                    ) : folder.missing ? (
+                      <WarningCircle className="shrink-0 text-warning" />
+                    ) : (
+                      <Folder className="shrink-0 text-text-lighter" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs">
+                        <span className="text-text">{folder.name}</span>
+                        <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                          {folder.path}
                         </span>
-                      ) : null}
-                    </CommandItem>
-                    <div className="flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
-                      <Button
-                        onClick={() => togglePinned(folder.path)}
-                        variant="ghost"
-                        compact
-                        tooltip={folder.pinned ? "Unpin recent project" : "Pin recent project"}
-                        tooltipSide="bottom"
-                      >
-                        {folder.pinned ? <PushPinSlash /> : <PushPin />}
-                      </Button>
-                      <Button
-                        onClick={() => void handleRecentFolderNewWindowClick(folder)}
-                        variant="ghost"
-                        compact
-                        tooltip="Open in new window"
-                        tooltipSide="bottom"
-                      >
-                        <SquareArrowOutUpRight />
-                      </Button>
-                      <Button
-                        onClick={() => removeFromRecents(folder.path)}
-                        variant="ghost"
-                        compact
-                        tooltip="Remove from recents"
-                        tooltipSide="bottom"
-                      >
-                        <X />
-                      </Button>
+                      </div>
                     </div>
-                  </div>
+                    {folder.pinned ? (
+                      <PushPin className="shrink-0 fill-current text-accent" />
+                    ) : null}
+                    {folder.missing ? (
+                      <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium text-[10px] text-warning">
+                        Missing
+                      </span>
+                    ) : null}
+                  </CommandItem>
                 );
               })}
             </div>
@@ -412,77 +285,43 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                 const entryIndex = getEntryIndex(`remote:${connection.id}`);
 
                 return (
-                  <div key={connection.id} className="group flex items-stretch rounded-lg">
-                    <CommandItem
-                      isSelected={selectedIndex === entryIndex}
-                      onMouseEnter={() => setSelectedIndex(entryIndex)}
-                      onClick={() => handleConnect(connection.id)}
-                      className={cn(
-                        "mb-0 min-w-0 flex-1 rounded-r-none px-3 py-1.5",
-                        connectingMap[connection.id] && "cursor-not-allowed opacity-70",
-                      )}
-                      disabled={!!connectingMap[connection.id]}
-                    >
-                      <Server className="shrink-0 text-text-lighter" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs">
-                          <span className="text-text">{connection.name}</span>
-                          <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
-                            {connection.type.toUpperCase()}
-                          </span>
-                          <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
-                            {connectingMap[connection.id]
-                              ? "Connecting..."
-                              : statusMap[connection.id] === "error"
-                                ? "Connection failed"
-                                : `${connection.username}@${connection.host}`}
-                          </span>
-                        </div>
+                  <CommandItem
+                    key={connection.id}
+                    isSelected={selectedIndex === entryIndex}
+                    onMouseEnter={() => setSelectedIndex(entryIndex)}
+                    onClick={() => handleConnect(connection.id)}
+                    className={cn(
+                      "px-3 py-1.5",
+                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
+                    )}
+                    disabled={!!connectingMap[connection.id]}
+                  >
+                    <Server className="shrink-0 text-text-lighter" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs">
+                        <span className="text-text">{connection.name}</span>
+                        <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                          {connection.type.toUpperCase()}
+                        </span>
+                        <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                          {connectingMap[connection.id]
+                            ? "Connecting..."
+                            : statusMap[connection.id] === "error"
+                              ? "Connection failed"
+                              : `${connection.username}@${connection.host}`}
+                        </span>
                       </div>
-                      <span
-                        className={cn(
-                          "size-2 shrink-0 rounded-full",
-                          connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
-                        )}
-                      />
-                      <span className="sr-only">
-                        {connection.isConnected ? "Connected" : "Disconnected"}
-                      </span>
-                    </CommandItem>
-                    <div className="flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
-                      <Button
-                        onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
-                        variant="ghost"
-                        compact
-                        tooltip="Open in new window"
-                        tooltipSide="bottom"
-                      >
-                        <SquareArrowOutUpRight />
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setEditingConnection(connection);
-                          setIsConnectionDialogOpen(true);
-                        }}
-                        variant="ghost"
-                        compact
-                        tooltip="Edit connection"
-                        tooltipSide="bottom"
-                      >
-                        <Edit />
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteConnection(connection.id)}
-                        variant="ghost"
-                        compact
-                        className="hover:text-error"
-                        tooltip="Delete connection"
-                        tooltipSide="bottom"
-                      >
-                        <Trash2 />
-                      </Button>
                     </div>
-                  </div>
+                    <span
+                      className={cn(
+                        "size-2 shrink-0 rounded-full",
+                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                      )}
+                    />
+                    <span className="sr-only">
+                      {connection.isConnected ? "Connected" : "Disconnected"}
+                    </span>
+                  </CommandItem>
                 );
               })}
             </div>
@@ -494,6 +333,17 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             </CommandEmpty>
           ) : null}
         </CommandList>
+        <CommandFooter>
+          <Button variant="ghost" compact onClick={() => void handleOpenFolderClick()}>
+            Open Folder
+          </Button>
+          <Button variant="ghost" compact onClick={handleImportSettingsClick}>
+            Import Settings
+          </Button>
+          <Button variant="ghost" compact onClick={handleAddRemoteConnectionClick}>
+            Add Remote
+          </Button>
+        </CommandFooter>
       </Command>
 
       {/* Connection Dialog */}
