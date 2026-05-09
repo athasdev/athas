@@ -14,7 +14,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -27,9 +27,14 @@ import {
 } from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
-import { Button, type ButtonVariant } from "@/ui/button";
-import Dialog from "@/ui/dialog";
-import { PaneIconButton, paneTitleClassName } from "@/ui/pane";
+import { Button } from "@/ui/button";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
@@ -40,10 +45,11 @@ interface ProjectPickerDialogProps {
   onClose: () => void;
 }
 
-const OPEN_FOLDER_BUTTON_VARIANTS: ButtonVariant[] = ["default", "accent", "ghost", "danger"];
-
 const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
+  const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<RemoteConnection | null>(null);
@@ -70,7 +76,10 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   useEffect(() => {
     if (isOpen) {
+      setQuery("");
+      setSelectedIndex(0);
       loadConnections();
+      window.setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [isOpen, loadConnections]);
 
@@ -92,24 +101,22 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
     };
   }, [loadConnections]);
 
-  // Handle escape key
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+    setSelectedIndex(0);
+  }, [query]);
 
   const handleOpenFolderClick = async () => {
     onClose();
     await handleOpenFolder();
+  };
+
+  const handleImportSettingsClick = () => {
+    setIsImportDialogOpen(true);
+  };
+
+  const handleAddRemoteConnectionClick = () => {
+    setEditingConnection(null);
+    setIsConnectionDialogOpen(true);
   };
 
   const handleRecentFolderClick = async (folder: RecentFolder) => {
@@ -196,65 +203,150 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
     }
   };
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredRecentFolders = useMemo(() => {
+    if (!normalizedQuery) return recentFolders;
+    return recentFolders.filter((folder) =>
+      [folder.name, folder.path].some((value) => value.toLowerCase().includes(normalizedQuery)),
+    );
+  }, [normalizedQuery, recentFolders]);
+
+  const filteredConnections = useMemo(() => {
+    if (!normalizedQuery) return connections;
+    return connections.filter((connection) =>
+      [connection.name, connection.host, connection.username, connection.type].some((value) =>
+        value.toLowerCase().includes(normalizedQuery),
+      ),
+    );
+  }, [connections, normalizedQuery]);
+
+  const commandEntries = useMemo(
+    () => [
+      {
+        id: "open-folder",
+        onSelect: () => void handleOpenFolderClick(),
+      },
+      {
+        id: "import-settings",
+        onSelect: handleImportSettingsClick,
+      },
+      {
+        id: "add-remote",
+        onSelect: handleAddRemoteConnectionClick,
+      },
+      ...filteredRecentFolders.map((folder) => ({
+        id: `recent:${folder.path}`,
+        onSelect: () => void handleRecentFolderClick(folder),
+      })),
+      ...filteredConnections.map((connection) => ({
+        id: `remote:${connection.id}`,
+        onSelect: () => void handleConnect(connection.id),
+      })),
+    ],
+    [filteredConnections, filteredRecentFolders],
+  );
+
+  useEffect(() => {
+    setSelectedIndex((index) => Math.min(index, Math.max(commandEntries.length - 1, 0)));
+  }, [commandEntries.length]);
+
+  const handleCommandKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (commandEntries.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSelectedIndex((index) => (index + 1) % commandEntries.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSelectedIndex((index) => (index - 1 + commandEntries.length) % commandEntries.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      commandEntries[selectedIndex]?.onSelect();
+    }
+  };
+
+  const getEntryIndex = (id: string) => commandEntries.findIndex((entry) => entry.id === id);
+
   if (!isOpen) return null;
 
   return (
     <>
-      <Dialog
-        title="Open Project"
-        onClose={onClose}
-        headerBorder={false}
-        size="lg"
-        classNames={{
-          modal: "max-w-[720px] rounded-xl",
-          content: "p-0",
-        }}
-      >
-        <div className="max-h-[400px] overflow-y-auto">
-          {/* Recent Projects */}
-          <div className="border-border border-b">
-            <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
-              <span className={paneTitleClassName("text-text-lighter")}>Recent</span>
-              <div className="flex items-center gap-1">
-                <PaneIconButton
-                  onClick={() => setIsImportDialogOpen(true)}
-                  tooltip="Import settings from editor"
-                >
-                  <DownloadSimple />
-                </PaneIconButton>
+      <Command isVisible={isOpen} onClose={onClose} title="Open Project" className="w-[720px]">
+        <CommandHeader onClose={onClose}>
+          <Folder className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+          <CommandInput
+            ref={inputRef}
+            value={query}
+            onChange={setQuery}
+            onKeyDown={handleCommandKeyDown}
+            placeholder="Open project or remote connection"
+          />
+        </CommandHeader>
+        <CommandList>
+          <div className="p-1">
+            <CommandItem
+              isSelected={selectedIndex === getEntryIndex("open-folder")}
+              onMouseEnter={() => setSelectedIndex(getEntryIndex("open-folder"))}
+              onClick={() => void handleOpenFolderClick()}
+              className="h-auto min-h-12 py-2"
+            >
+              <Folder className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+              <div className="min-w-0 flex-1 space-y-0.5 text-left">
+                <div className="ui-text-sm text-text">Open Folder</div>
+                <div className="ui-text-xs truncate text-text-lighter">Choose a local project</div>
               </div>
-            </div>
-            <div className="flex items-center gap-1 overflow-x-auto border-border border-t px-3 py-2">
-              {OPEN_FOLDER_BUTTON_VARIANTS.map((variant) => (
-                <Button
-                  key={variant}
-                  type="button"
-                  variant={variant}
-                  onClick={handleOpenFolderClick}
-                  compact
-                >
-                  {variant}
-                </Button>
-              ))}
-            </div>
-            {recentFolders.length > 0 ? (
-              recentFolders.map((folder) => {
+            </CommandItem>
+            <CommandItem
+              isSelected={selectedIndex === getEntryIndex("import-settings")}
+              onMouseEnter={() => setSelectedIndex(getEntryIndex("import-settings"))}
+              onClick={handleImportSettingsClick}
+              className="h-auto min-h-12 py-2"
+            >
+              <DownloadSimple className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+              <div className="min-w-0 flex-1 space-y-0.5 text-left">
+                <div className="ui-text-sm text-text">Import Editor Settings</div>
+                <div className="ui-text-xs truncate text-text-lighter">
+                  Bring recent projects from another editor
+                </div>
+              </div>
+            </CommandItem>
+            <CommandItem
+              isSelected={selectedIndex === getEntryIndex("add-remote")}
+              onMouseEnter={() => setSelectedIndex(getEntryIndex("add-remote"))}
+              onClick={handleAddRemoteConnectionClick}
+              className="h-auto min-h-12 py-2"
+            >
+              <Plus className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+              <div className="min-w-0 flex-1 space-y-0.5 text-left">
+                <div className="ui-text-sm text-text">Add Remote Connection</div>
+                <div className="ui-text-xs truncate text-text-lighter">
+                  Create an SSH or remote workspace entry
+                </div>
+              </div>
+            </CommandItem>
+          </div>
+
+          {filteredRecentFolders.length > 0 ? (
+            <div className="border-border border-t p-1">
+              <div className="ui-text-xs px-2.5 py-1.5 font-medium text-text-lighter">Recent</div>
+              {filteredRecentFolders.map((folder) => {
                 const matchingTab = projectTabs.find((t) => t.path === folder.path);
                 const iconPath = folder.customIcon ?? matchingTab?.customIcon;
+                const entryIndex = getEntryIndex(`recent:${folder.path}`);
 
                 return (
                   <div
                     key={folder.path}
                     className={cn(
-                      "group flex items-center hover:bg-hover",
+                      "group flex items-stretch rounded-lg",
                       folder.missing && "text-text-lighter",
                     )}
                   >
-                    <Button
-                      type="button"
-                      variant="ghost"
+                    <CommandItem
+                      isSelected={selectedIndex === entryIndex}
+                      onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleRecentFolderClick(folder)}
-                      className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent"
+                      className="mb-0 h-auto min-h-12 min-w-0 flex-1 rounded-r-none py-2"
                     >
                       {iconPath ? (
                         <img
@@ -267,24 +359,28 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                           }}
                         />
                       ) : folder.missing ? (
-                        <WarningCircle className="shrink-0 text-warning" />
+                        <WarningCircle className="size-4 shrink-0 text-warning" />
                       ) : (
-                        <Folder className="shrink-0 text-text-lighter" />
+                        <Folder className="size-4 shrink-0 text-text-lighter" />
                       )}
-                      <span className="ui-text-sm truncate text-text">{folder.name}</span>
-                      {folder.pinned ? (
-                        <PushPin className="shrink-0 fill-current text-accent" />
-                      ) : null}
-                      {folder.missing ? (
-                        <span className="ui-text-sm shrink-0 rounded bg-warning/10 px-1 text-warning">
-                          Missing
+                      <div className="min-w-0 flex-1 space-y-0.5 text-left">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="ui-text-sm truncate text-text">{folder.name}</span>
+                          {folder.pinned ? (
+                            <PushPin className="size-3.5 shrink-0 fill-current text-accent" />
+                          ) : null}
+                          {folder.missing ? (
+                            <span className="ui-text-xs shrink-0 rounded bg-warning/10 px-1 text-warning">
+                              Missing
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="ui-text-xs block truncate text-text-lighter">
+                          {folder.path}
                         </span>
-                      ) : null}
-                      <span className="ui-text-sm ml-auto truncate text-text-lighter">
-                        {folder.path}
-                      </span>
-                    </Button>
-                    <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
+                      </div>
+                    </CommandItem>
+                    <div className="flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
                       <Button
                         onClick={() => togglePinned(folder.path)}
                         variant="ghost"
@@ -315,111 +411,102 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                     </div>
                   </div>
                 );
-              })
-            ) : (
-              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
-                No recent projects
-              </div>
-            )}
-          </div>
-
-          {/* Remote Connections */}
-          <div>
-            <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
-              <span className={paneTitleClassName("text-text-lighter")}>Remote</span>
-              <PaneIconButton
-                onClick={() => {
-                  setEditingConnection(null);
-                  setIsConnectionDialogOpen(true);
-                }}
-                tooltip="Add remote connection"
-              >
-                <Plus />
-              </PaneIconButton>
+              })}
             </div>
-            {connections.length > 0 ? (
-              connections.map((connection) => (
-                <div key={connection.id} className="group flex items-center hover:bg-hover">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => handleConnect(connection.id)}
-                    className={cn(
-                      "h-auto min-w-0 flex-1 justify-start gap-2 rounded-none px-3 py-1.5 hover:bg-transparent",
-                      "border-l-2 border-transparent hover:border-sky-500/35",
-                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
-                    )}
-                    disabled={!!connectingMap[connection.id]}
-                  >
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
-                      <Server />
-                    </span>
-                    <div className="flex min-w-0 flex-col">
-                      <span className="ui-text-sm truncate text-text">{connection.name}</span>
-                      <span className="ui-text-sm truncate text-text-lighter">
-                        {connectingMap[connection.id]
-                          ? "Connecting…"
-                          : statusMap[connection.id] === "error"
-                            ? "Connection failed"
-                            : `${connection.username}@${connection.host}`}
-                      </span>
-                    </div>
-                    <span className="ui-text-sm text-text-lighter">
-                      {connection.type.toUpperCase()}
-                    </span>
-                    <span
+          ) : null}
+
+          {filteredConnections.length > 0 ? (
+            <div className="border-border border-t p-1">
+              <div className="ui-text-xs px-2.5 py-1.5 font-medium text-text-lighter">Remote</div>
+              {filteredConnections.map((connection) => {
+                const entryIndex = getEntryIndex(`remote:${connection.id}`);
+
+                return (
+                  <div key={connection.id} className="group flex items-stretch rounded-lg">
+                    <CommandItem
+                      isSelected={selectedIndex === entryIndex}
+                      onMouseEnter={() => setSelectedIndex(entryIndex)}
+                      onClick={() => handleConnect(connection.id)}
                       className={cn(
-                        "ml-auto size-2 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                        "mb-0 h-auto min-h-12 min-w-0 flex-1 rounded-r-none py-2",
+                        connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                       )}
-                    />
-                    <span className="sr-only">
-                      {connection.isConnected ? "Connected" : "Disconnected"}
-                    </span>
-                  </Button>
-                  <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
-                    <Button
-                      onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
-                      variant="ghost"
-                      compact
-                      tooltip="Open in new window"
-                      tooltipSide="bottom"
+                      disabled={!!connectingMap[connection.id]}
                     >
-                      <SquareArrowOutUpRight />
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setEditingConnection(connection);
-                        setIsConnectionDialogOpen(true);
-                      }}
-                      variant="ghost"
-                      compact
-                      tooltip="Edit connection"
-                      tooltipSide="bottom"
-                    >
-                      <Edit />
-                    </Button>
-                    <Button
-                      onClick={() => handleDeleteConnection(connection.id)}
-                      variant="ghost"
-                      compact
-                      className="hover:text-error"
-                      tooltip="Delete connection"
-                      tooltipSide="bottom"
-                    >
-                      <Trash2 />
-                    </Button>
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
+                        <Server />
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-0.5 text-left">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="ui-text-sm truncate text-text">{connection.name}</span>
+                          <span className="ui-text-xs shrink-0 rounded bg-secondary-bg px-1 text-text-lighter">
+                            {connection.type.toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="ui-text-xs block truncate text-text-lighter">
+                          {connectingMap[connection.id]
+                            ? "Connecting..."
+                            : statusMap[connection.id] === "error"
+                              ? "Connection failed"
+                              : `${connection.username}@${connection.host}`}
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                        )}
+                      />
+                      <span className="sr-only">
+                        {connection.isConnected ? "Connected" : "Disconnected"}
+                      </span>
+                    </CommandItem>
+                    <div className="flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
+                      <Button
+                        onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
+                        variant="ghost"
+                        compact
+                        tooltip="Open in new window"
+                        tooltipSide="bottom"
+                      >
+                        <SquareArrowOutUpRight />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setEditingConnection(connection);
+                          setIsConnectionDialogOpen(true);
+                        }}
+                        variant="ghost"
+                        compact
+                        tooltip="Edit connection"
+                        tooltipSide="bottom"
+                      >
+                        <Edit />
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteConnection(connection.id)}
+                        variant="ghost"
+                        compact
+                        className="hover:text-error"
+                        tooltip="Delete connection"
+                        tooltipSide="bottom"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
-                No remote connections
-              </div>
-            )}
-          </div>
-        </div>
-      </Dialog>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {filteredRecentFolders.length === 0 && filteredConnections.length === 0 ? (
+            <CommandEmpty>
+              {normalizedQuery ? `No projects match "${query}".` : "No recent projects"}
+            </CommandEmpty>
+          ) : null}
+        </CommandList>
+      </Command>
 
       {/* Connection Dialog */}
       <ConnectionDialog
