@@ -45,6 +45,7 @@ import { createGitActions } from "../constants/git-actions";
 import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
+import { createPaneActions } from "../constants/pane-actions";
 import { createSettingsActions } from "../constants/settings-actions";
 import { createSidebarBuilderActions } from "../constants/sidebar-builder-actions";
 import { createViewActions } from "../constants/view-actions";
@@ -200,6 +201,9 @@ const CommandPalette = () => {
       setIsQuickOpenVisible,
       openCommandPaletteView,
       openSettingsDialog,
+      onClose,
+    }),
+    ...createPaneActions({
       onClose,
     }),
     ...(settings.coreFeatures.sidebarBuilder

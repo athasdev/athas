@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import {
@@ -24,7 +25,7 @@ const BottomPane = () => {
   const { settings } = useSettingsStore();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const bottomPaneBufferIds = getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds);
-  const { moveBufferToPane, setActivePane } = usePaneStore.use.actions();
+  const { moveBufferToPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
@@ -122,14 +123,14 @@ const BottomPane = () => {
         if (!tabData) return;
 
         if (tabData.source === "terminal-panel" && tabData.terminalId) {
-          setActivePane(BOTTOM_PANE_ID);
-          openTerminalBuffer({
+          const bufferId = openTerminalBuffer({
             sessionId: tabData.terminalId,
             name: tabData.name,
             command: tabData.initialCommand,
             workingDirectory: tabData.currentDirectory,
             remoteConnectionId: tabData.remoteConnectionId,
           });
+          activateBufferInPaneAndSync(BOTTOM_PANE_ID, bufferId);
           window.dispatchEvent(
             new CustomEvent("terminal-detach-to-buffer", {
               detail: { terminalId: tabData.terminalId },
@@ -137,6 +138,7 @@ const BottomPane = () => {
           );
         } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
           moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);
+          activateBufferInPaneAndSync(BOTTOM_PANE_ID, tabData.bufferId);
         } else {
           return;
         }
@@ -149,7 +151,7 @@ const BottomPane = () => {
         clearInternalTabDragData();
       }
     },
-    [moveBufferToPane, openTerminalBuffer, setActivePane],
+    [moveBufferToPane, openTerminalBuffer],
   );
 
   return (

@@ -1,6 +1,7 @@
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
+import { getPaneDropZoneFromRect, type PaneDropZone } from "@/features/panes/utils/pane-drop-zones";
 
-export type InternalDropZone = "left" | "right" | "top" | "bottom" | "center" | null;
+export type InternalDropZone = PaneDropZone;
 
 export interface InternalTabDragData {
   source?: "pane" | "terminal-panel";
@@ -37,20 +38,6 @@ export function clearInternalTabDragData() {
   delete window.__athasInternalTabDragData;
   delete window.__athasInternalTabDragHover;
   window.dispatchEvent(new CustomEvent("athas-internal-tab-drag-hover"));
-}
-
-function getDropZone(point: { x: number; y: number }, rect: DOMRect): InternalDropZone {
-  const x = point.x - rect.left;
-  const y = point.y - rect.top;
-  const nx = x / rect.width;
-  const ny = y / rect.height;
-  const threshold = 0.25;
-
-  if (nx < threshold && nx < ny && nx < 1 - ny) return "left";
-  if (nx > 1 - threshold && 1 - nx < ny && 1 - nx < 1 - ny) return "right";
-  if (ny < threshold) return "top";
-  if (ny > 1 - threshold) return "bottom";
-  return "center";
 }
 
 export function setInternalTabDragHoverTarget(next: InternalTabDragHoverTarget) {
@@ -96,7 +83,7 @@ export function resolveDropTarget(point: { x: number; y: number }) {
   if (paneContainer?.dataset.paneId) {
     return {
       paneId: paneContainer.dataset.paneId,
-      zone: getDropZone(point, paneContainer.getBoundingClientRect()),
+      zone: getPaneDropZoneFromRect(point, paneContainer.getBoundingClientRect()),
     };
   }
 

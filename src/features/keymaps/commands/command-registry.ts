@@ -14,6 +14,14 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
+import {
+  closeActiveEditorGroup,
+  closeOtherEditorGroups,
+  moveActiveEditorToAdjacentGroup,
+  resetEditorGroupSizes,
+  splitActiveEditorGroup,
+  toggleActiveEditorGroupLock,
+} from "@/features/panes/utils/pane-command-actions";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -1027,6 +1035,73 @@ const navigationCommands: Command[] = [
   },
 ];
 
+const paneCommands: Command[] = [
+  {
+    id: "workbench.splitEditorRight",
+    title: "Split Editor Right",
+    category: "View",
+    execute: () => {
+      splitActiveEditorGroup("horizontal");
+    },
+  },
+  {
+    id: "workbench.splitEditorDown",
+    title: "Split Editor Down",
+    category: "View",
+    execute: () => {
+      splitActiveEditorGroup("vertical");
+    },
+  },
+  {
+    id: "workbench.closeEditorGroup",
+    title: "Close Editor Group",
+    category: "View",
+    execute: () => {
+      closeActiveEditorGroup();
+    },
+  },
+  {
+    id: "workbench.closeOtherEditorGroups",
+    title: "Close Other Editor Groups",
+    category: "View",
+    execute: () => {
+      closeOtherEditorGroups();
+    },
+  },
+  {
+    id: "workbench.moveEditorToNextGroup",
+    title: "Move Editor Into Next Group",
+    category: "View",
+    execute: () => {
+      moveActiveEditorToAdjacentGroup("next");
+    },
+  },
+  {
+    id: "workbench.moveEditorToPreviousGroup",
+    title: "Move Editor Into Previous Group",
+    category: "View",
+    execute: () => {
+      moveActiveEditorToAdjacentGroup("previous");
+    },
+  },
+  {
+    id: "workbench.resetEditorGroupSizes",
+    title: "Reset Editor Group Sizes",
+    category: "View",
+    execute: () => {
+      resetEditorGroupSizes();
+    },
+  },
+  {
+    id: "workbench.toggleEditorGroupLock",
+    title: "Toggle Editor Group Lock",
+    category: "View",
+    execute: () => {
+      toggleActiveEditorGroupLock();
+    },
+  },
+];
+
 const databaseCommands: Command[] = [
   {
     id: "database.connect",
@@ -1127,6 +1202,7 @@ const allCommands: Command[] = [
   ...terminalCommands,
   ...viewCommands,
   ...navigationCommands,
+  ...paneCommands,
   ...databaseCommands,
   ...windowCommands,
 ];

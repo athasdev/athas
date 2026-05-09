@@ -17,7 +17,6 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
 ] as const;
 export const FOOTER_LEADING_ITEM_IDS = [
   "branch",
-  "collaboration",
   "terminal",
   "diagnostics",
   "extensions",

@@ -8,6 +8,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { splitActiveEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -227,11 +228,7 @@ export function useMenuEventsWrapper() {
       useSettingsStore.getState().toggleAIChatVisible();
     },
     onSplitEditor: () => {
-      const paneStore = usePaneStore.getState();
-      const activePane = paneStore.actions.getActivePane();
-      if (activePane?.activeBufferId) {
-        paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
-      }
+      splitActiveEditorGroup("horizontal");
     },
     onToggleVim: async () => {
       // For now, we'll show a notification about vim mode

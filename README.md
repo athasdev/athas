@@ -13,8 +13,8 @@
 - LSP support
 - Vim keybindings
 - Integrated terminal
-- SQLite viewer
-- External editor support
+- Database viewers
+- Collaboration
 - Enterprise policy controls (managed mode + extension allowlist)
 
 ## Download
