@@ -32,7 +32,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { NotificationsMenu } from "@/features/window/components/notifications-menu";
+import { NotificationsTrigger } from "@/features/window/components/notifications-sidebar";
 import { useDocumentOutline } from "@/features/outline/hooks/use-document-outline";
 import type {
   FooterLeadingItemId,
@@ -435,7 +435,7 @@ const Footer = () => {
     {
       id: "notifications",
       label: "Notifications",
-      content: <NotificationsMenu />,
+      content: <NotificationsTrigger />,
     },
   ];
 
