@@ -1,5 +1,12 @@
 import ignore from "ignore";
-import { MagnifyingGlass as Search, Warning as AlertTriangle } from "@phosphor-icons/react";
+import {
+  Check,
+  Eye,
+  Funnel,
+  GitBranch,
+  MagnifyingGlass as Search,
+  Warning as AlertTriangle,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
@@ -33,7 +40,8 @@ import { useGitStore } from "@/features/git/stores/git-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import { SidebarHeader, SidebarHeaderSearch } from "@/ui/sidebar";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { SidebarHeader, SidebarHeaderIconButton, SidebarHeaderSearch } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -135,8 +143,10 @@ function FileExplorerTreeComponent({
   const [hasTreeFocus, setHasTreeFocus] = useState(false);
   const [treeSearchOpen, setTreeSearchOpen] = useState(false);
   const [treeSearchQuery, setTreeSearchQuery] = useState("");
+  const [isFileTreeFilterMenuOpen, setIsFileTreeFilterMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const documentRef = useRef<Document>(document);
 
   const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
@@ -144,7 +154,7 @@ function FileExplorerTreeComponent({
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   // sticky handled purely by CSS; no JS scanning
 
-  const { settings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const fileTreeDensity = settings.fileTreeDensity;
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
@@ -358,7 +368,56 @@ function FileExplorerTreeComponent({
   const isTreeSearchActive = treeSearchQuery.trim().length > 0;
   const displayedFiles = isTreeSearchActive ? treeSearchResult.files : filteredFiles;
   const displayedExpandedPaths = isTreeSearchActive ? treeSearchResult.expandedPaths : undefined;
-  const shouldShowTreeSearch = treeSearchOpen || isTreeSearchActive;
+  const hasActiveFileTreeFilters =
+    !settings.showHiddenFilesInFileTree ||
+    !settings.showGitignoredFilesInFileTree ||
+    !settings.showGitStatusInFileTree;
+  const shouldShowTreeSearch =
+    treeSearchOpen || isTreeSearchActive || hasActiveFileTreeFilters || isFileTreeFilterMenuOpen;
+  const fileTreeFilterMenuItems = useMemo<MenuItem[]>(
+    () => [
+      {
+        id: "hidden-files",
+        label: "Hidden Files",
+        icon: <Eye />,
+        keybinding: settings.showHiddenFilesInFileTree ? (
+          <Check className="size-3.5 text-accent" />
+        ) : null,
+        onClick: () =>
+          void updateSetting("showHiddenFilesInFileTree", !settings.showHiddenFilesInFileTree),
+      },
+      {
+        id: "gitignored-files",
+        label: "Gitignored Files",
+        icon: <GitBranch />,
+        keybinding: settings.showGitignoredFilesInFileTree ? (
+          <Check className="size-3.5 text-accent" />
+        ) : null,
+        onClick: () =>
+          void updateSetting(
+            "showGitignoredFilesInFileTree",
+            !settings.showGitignoredFilesInFileTree,
+          ),
+      },
+      { id: "sep-status", label: "", separator: true, onClick: () => {} },
+      {
+        id: "git-status",
+        label: "Git Status",
+        icon: <GitBranch />,
+        keybinding: settings.showGitStatusInFileTree ? (
+          <Check className="size-3.5 text-accent" />
+        ) : null,
+        onClick: () =>
+          void updateSetting("showGitStatusInFileTree", !settings.showGitStatusInFileTree),
+      },
+    ],
+    [
+      settings.showGitStatusInFileTree,
+      settings.showGitignoredFilesInFileTree,
+      settings.showHiddenFilesInFileTree,
+      updateSetting,
+    ],
+  );
 
   const { visibleRows, rowVirtualizer } = useFileExplorerVisibleRows({
     files: displayedFiles,
@@ -1118,6 +1177,16 @@ function FileExplorerTreeComponent({
               }
             }}
           />
+          <SidebarHeaderIconButton
+            ref={filterButtonRef}
+            active={hasActiveFileTreeFilters}
+            className="shrink-0"
+            tooltip="Filter Files"
+            tooltipSide="bottom"
+            onClick={() => setIsFileTreeFilterMenuOpen(true)}
+          >
+            <Funnel />
+          </SidebarHeaderIconButton>
         </SidebarHeader>
       )}
       {!rootFolderPath ? (
@@ -1276,6 +1345,16 @@ function FileExplorerTreeComponent({
       )}
 
       {contextMenuElement}
+      <Dropdown
+        isOpen={isFileTreeFilterMenuOpen}
+        anchorRef={filterButtonRef}
+        anchorSide="bottom"
+        anchorAlign="end"
+        items={fileTreeFilterMenuItems}
+        onClose={() => setIsFileTreeFilterMenuOpen(false)}
+        closeOnSelect={false}
+        className="w-fit min-w-fit"
+      />
       {alertDialog && (
         <Dialog
           title={alertDialog.title}

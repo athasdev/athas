@@ -1,12 +1,13 @@
 import {
   BracketsCurly as Braces,
+  Check,
   Code,
   Funnel,
   Function as FunctionIcon,
   MagnifyingGlass as Search,
   SquaresFour,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import {
   SidebarEmptyState,
@@ -18,57 +19,96 @@ import { useDocumentOutline } from "../hooks/use-document-outline";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 
-type OutlineFilter = "all" | "types" | "functions" | "properties" | "variables" | "other";
+type OutlineFilter = "types" | "functions" | "properties" | "variables" | "other";
 
-const OUTLINE_FILTER_KINDS: Record<Exclude<OutlineFilter, "all" | "other">, Set<string>> = {
+const OUTLINE_FILTER_KINDS: Record<Exclude<OutlineFilter, "other">, Set<string>> = {
   types: new Set(["class", "interface", "struct", "enum", "type-parameter"]),
   functions: new Set(["function", "method", "constructor"]),
   properties: new Set(["property", "field", "enum-member"]),
   variables: new Set(["variable", "constant"]),
 };
 
-function matchesOutlineFilter(kind: string, filter: OutlineFilter) {
-  if (filter === "all") return true;
-  if (filter === "other") {
-    return !Object.values(OUTLINE_FILTER_KINDS).some((kinds) => kinds.has(kind));
-  }
-  return OUTLINE_FILTER_KINDS[filter].has(kind);
+const OUTLINE_FILTER_OPTIONS: Array<{
+  id: OutlineFilter;
+  label: string;
+  icon: ReactNode;
+}> = [
+  { id: "types", label: "Types", icon: <SquaresFour /> },
+  { id: "functions", label: "Functions", icon: <FunctionIcon /> },
+  { id: "properties", label: "Properties", icon: <Braces /> },
+  { id: "variables", label: "Variables", icon: <Code /> },
+  { id: "other", label: "Other", icon: <Code /> },
+];
+
+function matchesOutlineFilter(kind: string, selectedFilters: Set<OutlineFilter>) {
+  if (selectedFilters.size === OUTLINE_FILTER_OPTIONS.length) return true;
+
+  return OUTLINE_FILTER_OPTIONS.some((option) => {
+    if (!selectedFilters.has(option.id)) return false;
+    if (option.id === "other") {
+      return !Object.values(OUTLINE_FILTER_KINDS).some((kinds) => kinds.has(kind));
+    }
+    return OUTLINE_FILTER_KINDS[option.id].has(kind);
+  });
 }
 
 export function OutlineSidebar() {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<OutlineFilter>("all");
+  const [selectedFilters, setSelectedFilters] = useState<Set<OutlineFilter>>(
+    () => new Set(OUTLINE_FILTER_OPTIONS.map((option) => option.id)),
+  );
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const { symbols, isLoading, isSupported } = useDocumentOutline(true);
+  const shouldShowHeader = isSupported && symbols.length > 0;
   const filteredSymbols = useMemo(
-    () => symbols.filter((symbol) => matchesOutlineFilter(symbol.kind, filter)),
-    [filter, symbols],
+    () => symbols.filter((symbol) => matchesOutlineFilter(symbol.kind, selectedFilters)),
+    [selectedFilters, symbols],
   );
   const visibleSymbols = useMemo(
     () => getVisibleOutlineSymbols(filteredSymbols, collapsedIds, query),
     [collapsedIds, filteredSymbols, query],
   );
-  const filterMenuItems = useMemo<MenuItem[]>(
-    () =>
-      [
-        { id: "all", label: "All", icon: <Funnel />, value: "all" },
-        { id: "types", label: "Types", icon: <SquaresFour />, value: "types" },
-        { id: "functions", label: "Functions", icon: <FunctionIcon />, value: "functions" },
-        { id: "properties", label: "Properties", icon: <Braces />, value: "properties" },
-        { id: "variables", label: "Variables", icon: <Code />, value: "variables" },
-        { id: "other", label: "Other", icon: <Code />, value: "other" },
-      ].map((item) => ({
-        id: item.id,
-        label: item.label,
-        icon: item.icon,
-        onClick: () => setFilter(item.value as OutlineFilter),
-        className: filter === item.value ? "bg-hover text-text" : undefined,
+  const areAllFiltersSelected = selectedFilters.size === OUTLINE_FILTER_OPTIONS.length;
+  const setAllFilters = useCallback(() => {
+    setSelectedFilters(new Set(OUTLINE_FILTER_OPTIONS.map((option) => option.id)));
+  }, []);
+  const toggleFilter = useCallback((filter: OutlineFilter) => {
+    setSelectedFilters((currentFilters) => {
+      const nextFilters = new Set(currentFilters);
+      if (nextFilters.has(filter)) {
+        nextFilters.delete(filter);
+      } else {
+        nextFilters.add(filter);
+      }
+      return nextFilters;
+    });
+  }, []);
+  const outlineFilterMenuItems = useMemo<MenuItem[]>(
+    () => [
+      {
+        id: "all",
+        label: "All",
+        icon: <Funnel />,
+        keybinding: areAllFiltersSelected ? <Check className="size-3.5 text-accent" /> : null,
+        onClick: setAllFilters,
+      },
+      { id: "sep-filters", label: "", separator: true, onClick: () => {} },
+      ...OUTLINE_FILTER_OPTIONS.map((option) => ({
+        id: option.id,
+        label: option.label,
+        icon: option.icon,
+        keybinding: selectedFilters.has(option.id) ? (
+          <Check className="size-3.5 text-accent" />
+        ) : null,
+        onClick: () => toggleFilter(option.id),
       })),
-    [filter],
+    ],
+    [areAllFiltersSelected, selectedFilters, setAllFilters, toggleFilter],
   );
   const focusedSymbolIndex = focusedSymbolId
     ? visibleSymbols.findIndex((symbol) => symbol.id === focusedSymbolId)
@@ -108,6 +148,32 @@ export function OutlineSidebar() {
 
     setFocusedSymbolId(symbol.id);
     requestAnimationFrame(() => rowRefs.current.get(symbol.id)?.focus());
+  };
+
+  const focusSearch = () => {
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+  };
+
+  const handleSidebarKeyDown = (event: React.KeyboardEvent) => {
+    const target = event.target;
+    const isTypingTarget =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      (target instanceof HTMLElement && target.isContentEditable);
+
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      focusSearch();
+      return;
+    }
+
+    if (!isTypingTarget && event.key === "/") {
+      event.preventDefault();
+      focusSearch();
+    }
   };
 
   const handleSymbolKeyDown = (
@@ -167,26 +233,38 @@ export function OutlineSidebar() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-primary-bg">
-      <SidebarHeader>
-        <SidebarHeaderSearch
-          value={query}
-          onChange={setQuery}
-          leftIcon={Search}
-          placeholder="Search"
-          aria-label="Search outline"
-        />
-        <SidebarHeaderIconButton
-          ref={filterButtonRef}
-          active={filter !== "all"}
-          className="shrink-0"
-          tooltip="Filter Outline"
-          tooltipSide="bottom"
-          onClick={() => setIsFilterMenuOpen(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
+    <div
+      className="flex h-full min-h-0 flex-col bg-primary-bg"
+      onKeyDownCapture={handleSidebarKeyDown}
+    >
+      {shouldShowHeader ? (
+        <SidebarHeader>
+          <SidebarHeaderSearch
+            ref={searchInputRef}
+            value={query}
+            onChange={setQuery}
+            leftIcon={Search}
+            placeholder="Search"
+            aria-label="Search outline"
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown" && visibleSymbols.length > 0) {
+                event.preventDefault();
+                focusSymbolAtIndex(0);
+              }
+            }}
+          />
+          <SidebarHeaderIconButton
+            ref={filterButtonRef}
+            active={!areAllFiltersSelected}
+            className="shrink-0"
+            tooltip="Filter Outline"
+            tooltipSide="bottom"
+            onClick={() => setIsFilterMenuOpen(true)}
+          >
+            <Funnel />
+          </SidebarHeaderIconButton>
+        </SidebarHeader>
+      ) : null}
 
       <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
         {!isSupported ? (
@@ -229,8 +307,9 @@ export function OutlineSidebar() {
         anchorRef={filterButtonRef}
         anchorSide="bottom"
         anchorAlign="end"
-        items={filterMenuItems}
+        items={outlineFilterMenuItems}
         onClose={() => setIsFilterMenuOpen(false)}
+        closeOnSelect={false}
         className="w-fit min-w-fit"
       />
     </div>
