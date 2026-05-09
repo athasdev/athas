@@ -93,6 +93,9 @@ export const useEditorAppStore = createSelectors(
 
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+          const { parseCollaborationNoteBufferPath } =
+            await import("@/features/collaboration/lib/collaboration-sidebar-model");
+          const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
 
           if (activeBufferId) {
             const lastTrackedContent = undoGroupTracker.getTrackedContent(activeBufferId);
@@ -122,6 +125,9 @@ export const useEditorAppStore = createSelectors(
 
           if (isRemoteFile) {
             updateBufferContent(activeBuffer.id, content, false);
+          } else if (collaborationNoteTarget) {
+            updateBufferContent(activeBuffer.id, content, true);
+            markBufferDirty(activeBuffer.id, content !== activeBuffer.savedContent);
           } else {
             updateBufferContent(activeBuffer.id, content, true);
 
@@ -175,6 +181,9 @@ export const useEditorAppStore = createSelectors(
 
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+          const { parseCollaborationNoteBufferPath } =
+            await import("@/features/collaboration/lib/collaboration-sidebar-model");
+          const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
 
           if (activeBuffer.path.startsWith("untitled:")) {
             const { save: saveDialog } = await import("@tauri-apps/plugin-dialog");
@@ -191,7 +200,34 @@ export const useEditorAppStore = createSelectors(
             return;
           }
 
-          if (activeBuffer.isVirtual) {
+          if (collaborationNoteTarget) {
+            const { updateCollaborationChannelNote } =
+              await import("@/features/window/services/auth-api");
+            const { useAuthStore } = await import("@/features/window/stores/auth-store");
+            const { updateCollaborationNoteFile } =
+              await import("@/features/collaboration/lib/collaboration-sidebar-model");
+            const { subscription, setCollaborationSnapshot } = useAuthStore.getState();
+            const collaboration = subscription?.collaboration;
+            const channelNote = collaboration?.channelNotes.find(
+              (note) => note.channelId === collaborationNoteTarget.channelId,
+            );
+
+            if (!channelNote) {
+              markBufferDirty(activeBuffer.id, true);
+              return;
+            }
+
+            const nextCollaboration = await updateCollaborationChannelNote({
+              channelId: collaborationNoteTarget.channelId,
+              contentMarkdown: updateCollaborationNoteFile({
+                contentMarkdown: channelNote.contentMarkdown,
+                path: collaborationNoteTarget.notePath,
+                fileContent: activeBuffer.content,
+              }),
+            });
+            setCollaborationSnapshot(nextCollaboration);
+            markBufferDirty(activeBuffer.id, false);
+          } else if (activeBuffer.isVirtual) {
             if (activeBuffer.path === "settings://user-settings.json") {
               const success = updateSettingsFromJSON(activeBuffer.content);
               markBufferDirty(activeBuffer.id, !success);

@@ -113,7 +113,6 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
               </div>
               <Badge
                 variant="muted"
-                shape="pill"
                 size="compact"
                 className={cn("capitalize", summary.badgeClassName)}
               >
@@ -182,7 +181,7 @@ export const MergeStatusBadge = memo(
     const Icon = status.icon;
 
     return (
-      <Badge shape="pill" size="compact" className={cn("gap-1", status.color)}>
+      <Badge size="compact" className={cn("gap-1", status.color)}>
         <Icon />
         <span>{status.text}</span>
       </Badge>
@@ -258,7 +257,6 @@ export const LabelBadges = memo(({ labels }: LabelBadgesProps) => {
       {labels.map((label, idx) => (
         <Badge
           key={idx}
-          shape="pill"
           size="compact"
           className="border"
           style={{
