@@ -129,6 +129,23 @@ impl ToolInstaller {
       packages
    }
 
+   pub fn managed_dir_name(input: &str) -> String {
+      let name = input
+         .chars()
+         .map(|character| match character {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' | '@' => character,
+            _ => '_',
+         })
+         .collect::<String>();
+      if name.is_empty() {
+         "tool".to_string()
+      } else if name == "." || name == ".." {
+         name.replace('.', "_")
+      } else {
+         name
+      }
+   }
+
    fn node_package_name(package_spec: &str) -> String {
       let spec = package_spec.trim();
       if let Some(scoped) = spec.strip_prefix('@') {
@@ -489,7 +506,9 @@ impl ToolInstaller {
    }
 
    fn binary_install_dir(app_handle: &AppHandle, name: &str) -> Result<PathBuf, ToolError> {
-      Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
+      Ok(Self::get_tools_dir(app_handle)?
+         .join("binary")
+         .join(Self::managed_dir_name(name)))
    }
 
    fn install_extracted_binary(
@@ -634,7 +653,7 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("bun").join(package);
+      let package_dir = tools_dir.join("bun").join(Self::managed_dir_name(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
@@ -683,7 +702,7 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("npm").join(package);
+      let package_dir = tools_dir.join("npm").join(Self::managed_dir_name(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
@@ -737,7 +756,9 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let venv_dir = tools_dir.join("python").join(package);
+      let venv_dir = tools_dir
+         .join("python")
+         .join(Self::managed_dir_name(package));
       std::fs::create_dir_all(&venv_dir)?;
 
       log::info!(
@@ -962,7 +983,7 @@ impl ToolInstaller {
       })?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("ruby").join(package);
+      let package_dir = tools_dir.join("ruby").join(Self::managed_dir_name(package));
       let gem_home = package_dir.join("gems");
       let gem_bin_dir = package_dir.join("gem-bin");
       std::fs::create_dir_all(&gem_home)?;
@@ -1077,7 +1098,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("bun").join(package);
+            let package_dir = tools_dir.join("bun").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
             Ok(
                Self::resolve_node_package_binary(&package_dir, package, command_name)
@@ -1095,7 +1116,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("npm").join(package);
+            let package_dir = tools_dir.join("npm").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
             Ok(
                Self::resolve_node_package_binary(&package_dir, package, command_name)
@@ -1116,7 +1137,7 @@ impl ToolInstaller {
             let scripts_dir = if cfg!(windows) { "Scripts" } else { "bin" };
             Ok(tools_dir
                .join("python")
-               .join(package)
+               .join(Self::managed_dir_name(package))
                .join(scripts_dir)
                .join(bin_name))
          }
@@ -1134,7 +1155,7 @@ impl ToolInstaller {
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             Ok(Self::ruby_wrapper_path(
-               &tools_dir.join("ruby").join(package),
+               &tools_dir.join("ruby").join(Self::managed_dir_name(package)),
                Self::configured_command_name(config),
             ))
          }
@@ -1148,7 +1169,9 @@ impl ToolInstaller {
                return Ok(system_path);
             }
 
-            let install_dir = tools_dir.join("binary").join(&config.name);
+            let install_dir = tools_dir
+               .join("binary")
+               .join(Self::managed_dir_name(&config.name));
             if install_dir.exists()
                && let Ok(path) = Self::pick_binary(&install_dir, command_name)
             {
@@ -1179,7 +1202,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("bun").join(package);
+            let package_dir = tools_dir.join("bun").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
 
             if let Some(entrypoint) =
@@ -1203,7 +1226,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("npm").join(package);
+            let package_dir = tools_dir.join("npm").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
 
             if let Some(entrypoint) =
@@ -1333,6 +1356,23 @@ mod tests {
          &[],
       );
       assert!(ready.is_ok());
+   }
+
+   #[test]
+   fn managed_dir_name_rejects_path_components() {
+      assert_eq!(
+         ToolInstaller::managed_dir_name("@scope/package@1.2.3"),
+         "@scope_package@1.2.3"
+      );
+      assert_eq!(
+         ToolInstaller::managed_dir_name("../../Library/LaunchAgents/demo"),
+         ".._.._Library_LaunchAgents_demo"
+      );
+      assert_eq!(
+         ToolInstaller::managed_dir_name("/tmp/absolute"),
+         "_tmp_absolute"
+      );
+      assert_eq!(ToolInstaller::managed_dir_name(".."), "__");
    }
 
    #[test]

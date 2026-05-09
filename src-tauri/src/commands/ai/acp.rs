@@ -923,17 +923,27 @@ fn remove_managed_tool(app_handle: &AppHandle, tool_config: &ToolConfig) -> Resu
    };
    let tools_dir = ToolInstaller::get_tools_dir(app_handle).map_err(|e| e.to_string())?;
    let path = match tool_config.runtime {
-      ToolRuntime::Node => tools_dir.join("npm").join(package),
-      ToolRuntime::Python => tools_dir.join("python").join(package),
+      ToolRuntime::Node => tools_dir
+         .join("npm")
+         .join(ToolInstaller::managed_dir_name(package)),
+      ToolRuntime::Python => tools_dir
+         .join("python")
+         .join(ToolInstaller::managed_dir_name(package)),
       ToolRuntime::Go => {
          ToolInstaller::get_tool_path(app_handle, tool_config).map_err(|e| e.to_string())?
       }
       ToolRuntime::Rust => {
          ToolInstaller::get_tool_path(app_handle, tool_config).map_err(|e| e.to_string())?
       }
-      ToolRuntime::Binary => tools_dir.join("binary").join(&tool_config.name),
-      ToolRuntime::Bun => tools_dir.join("bun").join(package),
-      ToolRuntime::Ruby => tools_dir.join("ruby").join(package),
+      ToolRuntime::Binary => tools_dir
+         .join("binary")
+         .join(ToolInstaller::managed_dir_name(&tool_config.name)),
+      ToolRuntime::Bun => tools_dir
+         .join("bun")
+         .join(ToolInstaller::managed_dir_name(package)),
+      ToolRuntime::Ruby => tools_dir
+         .join("ruby")
+         .join(ToolInstaller::managed_dir_name(package)),
    };
 
    if path.is_dir() {
@@ -984,10 +994,11 @@ fn acp_wrapper_path(app_handle: &AppHandle, agent_id: &str) -> Result<PathBuf, S
       .path()
       .app_data_dir()
       .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+   let safe_agent_id = receipt_file_stem(agent_id);
    let file_name = if cfg!(windows) {
-      format!("{agent_id}.cmd")
+      format!("{safe_agent_id}.cmd")
    } else {
-      agent_id.to_string()
+      safe_agent_id
    };
    Ok(data_dir.join("tools").join("acp").join(file_name))
 }
@@ -1005,13 +1016,18 @@ fn acp_install_receipt_path(app_handle: &AppHandle, agent_id: &str) -> Result<Pa
 }
 
 fn receipt_file_stem(agent_id: &str) -> String {
-   agent_id
+   let stem = agent_id
       .chars()
       .map(|character| match character {
          'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' => character,
          _ => '_',
       })
-      .collect()
+      .collect::<String>();
+   if stem == "." || stem == ".." {
+      stem.replace('.', "_")
+   } else {
+      stem
+   }
 }
 
 #[derive(Serialize)]

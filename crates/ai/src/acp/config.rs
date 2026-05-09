@@ -154,13 +154,18 @@ fn managed_agent_receipt_path(receipt_dir: Option<&Path>, agent_id: &str) -> Opt
 }
 
 fn receipt_file_stem(agent_id: &str) -> String {
-   agent_id
+   let stem = agent_id
       .chars()
       .map(|character| match character {
          'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' => character,
          _ => '_',
       })
-      .collect()
+      .collect::<String>();
+   if stem == "." || stem == ".." {
+      stem.replace('.', "_")
+   } else {
+      stem
+   }
 }
 
 fn managed_agent_needs_update(receipt_dir: Option<&Path>, config: &AgentConfig) -> bool {
@@ -208,14 +213,15 @@ fn agent_runtime_key(config: &AgentConfig) -> Option<String> {
 }
 
 fn wrapper_file_name(agent_id: &str) -> String {
+   let safe_agent_id = receipt_file_stem(agent_id);
    #[cfg(target_os = "windows")]
    {
-      format!("{agent_id}.cmd")
+      format!("{safe_agent_id}.cmd")
    }
 
    #[cfg(not(target_os = "windows"))]
    {
-      agent_id.to_string()
+      safe_agent_id
    }
 }
 
@@ -404,6 +410,31 @@ mod tests {
       let resolved =
          managed_wrapper_path(Some(temp_dir.path()), "codex-cli").expect("wrapper should exist");
       assert_eq!(resolved, wrapper);
+   }
+
+   #[test]
+   fn managed_wrapper_path_sanitizes_agent_id() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let wrapper = if cfg!(windows) {
+         temp_dir.path().join(".._escape.cmd")
+      } else {
+         temp_dir.path().join(".._escape")
+      };
+      fs::write(&wrapper, "echo test").expect("write wrapper");
+
+      let resolved =
+         managed_wrapper_path(Some(temp_dir.path()), "../escape").expect("wrapper should exist");
+      assert_eq!(resolved, wrapper);
+
+      let dot_dot = if cfg!(windows) {
+         temp_dir.path().join("__.cmd")
+      } else {
+         temp_dir.path().join("__")
+      };
+      fs::write(&dot_dot, "echo test").expect("write wrapper");
+      let resolved_dot_dot =
+         managed_wrapper_path(Some(temp_dir.path()), "..").expect("wrapper should exist");
+      assert_eq!(resolved_dot_dot, dot_dot);
    }
 
    #[test]
