@@ -13,7 +13,10 @@ export function SidebarHeader({
 }) {
   return (
     <div
-      className={cn("flex h-8 shrink-0 items-center gap-1.5 bg-primary-bg px-1.5 py-1", className)}
+      className={cn(
+        "sticky top-0 z-20 flex h-8 shrink-0 select-none items-center gap-1.5 bg-primary-bg/95 px-1.5 py-1 backdrop-blur-sm",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -41,7 +44,7 @@ export const SidebarHeaderSearch = forwardRef<
       variant="ghost"
       size="xs"
       placeholder={placeholder}
-      className={cn("h-6 rounded-md border-transparent bg-transparent", className)}
+      className={cn("h-6 rounded-md border-transparent bg-transparent select-text", className)}
       containerClassName={cn("min-w-0 flex-1", containerClassName)}
       {...props}
     />
@@ -74,7 +77,7 @@ export function SidebarEmptyState({
   return (
     <div
       className={cn(
-        "ui-font ui-text-sm flex min-h-24 items-center justify-center px-3 py-6 text-center text-text-lighter",
+        "ui-font ui-text-sm flex min-h-24 select-none items-center justify-center px-3 py-6 text-center text-text-lighter",
         className,
       )}
       {...props}

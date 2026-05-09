@@ -16,7 +16,7 @@ export const buttonVariants = cva(
         ghost:
           "bg-transparent text-text-lighter hover:bg-hover hover:text-text data-[active=true]:bg-hover data-[active=true]:text-text",
         danger:
-          "border-error/25 bg-error/10 text-error hover:border-error/35 hover:bg-error/18 data-[active=true]:border-error/40 data-[active=true]:bg-error/22",
+          "bg-transparent text-text hover:bg-error/10 hover:text-error data-[active=true]:bg-error/12 data-[active=true]:text-error",
       },
       compact: {
         true: "h-[var(--app-ui-button-compact-height,1.5rem)] min-w-[var(--app-ui-button-compact-min-width,1.5rem)] px-1.5",

@@ -240,6 +240,7 @@ interface DropdownBaseProps {
   menuClassName?: string;
   style?: CSSProperties;
   portalContainer?: Element | DocumentFragment | null;
+  closeOnSelect?: boolean;
 }
 
 interface AnchorPositioning {
@@ -325,6 +326,7 @@ export function Dropdown(props: DropdownProps) {
     searchable,
     searchPlaceholder,
     portalContainer,
+    closeOnSelect = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -596,13 +598,15 @@ export function Dropdown(props: DropdownProps) {
           e.preventDefault();
           if (focusIndex >= 0 && focusIndex < items.length) {
             items[focusIndex].onClick();
-            onClose();
+            if (closeOnSelect) {
+              onClose();
+            }
           }
           break;
         }
       }
     },
-    [getFilteredItems, focusIndex, onClose],
+    [closeOnSelect, getFilteredItems, focusIndex, onClose],
   );
 
   if (typeof document === "undefined") return null;
@@ -651,7 +655,7 @@ export function Dropdown(props: DropdownProps) {
           <MenuItemsList
             items={getFilteredItems()}
             focusIndex={focusIndex}
-            onItemSelect={onClose}
+            onItemSelect={closeOnSelect ? onClose : undefined}
           />
         )}
         {hasSections &&
@@ -661,7 +665,10 @@ export function Dropdown(props: DropdownProps) {
               {section.label && (
                 <div className={dropdownSectionLabelVariants()}>{section.label}</div>
               )}
-              <MenuItemsList items={section.items} onItemSelect={onClose} />
+              <MenuItemsList
+                items={section.items}
+                onItemSelect={closeOnSelect ? onClose : undefined}
+              />
             </div>
           ))}
       </div>
