@@ -371,7 +371,7 @@ pub async fn cancel_acp_prompt(bridge: State<'_, AcpBridgeState>) -> Result<(), 
 }
 
 fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
-   let runtime = match agent.install_runtime.clone() {
+   let runtime = match agent.install_runtime.as_ref() {
       Some(AgentRuntime::Node) => ToolRuntime::Node,
       Some(AgentRuntime::Python) => ToolRuntime::Python,
       Some(AgentRuntime::Go) => ToolRuntime::Go,
@@ -385,22 +385,25 @@ fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
       }
    };
 
-   let package = if runtime == ToolRuntime::Binary {
-      agent.install_package.clone()
-   } else {
-      Some(
-         agent
-            .install_package
-            .clone()
-            .ok_or_else(|| format!("{} is missing installation metadata", agent.name))?,
-      )
-   };
+   if runtime != ToolRuntime::Binary && agent.install_package.as_deref().unwrap_or("").is_empty() {
+      return Err(format!("{} is missing an install package", agent.name));
+   }
+
+   if runtime == ToolRuntime::Binary
+      && agent
+         .install_download_url
+         .as_deref()
+         .unwrap_or("")
+         .is_empty()
+   {
+      return Err(format!("{} is missing a binary download URL", agent.name));
+   }
 
    Ok(ToolConfig {
       name: agent.binary_name.clone(),
       command: agent.install_command.clone(),
       runtime,
-      package,
+      package: agent.install_package.clone(),
       packages: vec![],
       download_url: agent.install_download_url.clone(),
       args: vec![],
@@ -442,6 +445,101 @@ fn remove_managed_tool(app_handle: &AppHandle, tool_config: &ToolConfig) -> Resu
    }
 
    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn test_agent() -> AgentConfig {
+      AgentConfig::new("example-agent", "Example Agent", "example-agent")
+   }
+
+   #[test]
+   fn tool_config_maps_node_install_metadata() {
+      let agent = test_agent()
+         .with_install(AgentRuntime::Node, "@example/acp-agent")
+         .with_install_command("example-acp");
+
+      let config = tool_config_from_agent(&agent).expect("tool config");
+
+      assert_eq!(config.name, "example-agent");
+      assert_eq!(config.command.as_deref(), Some("example-acp"));
+      assert_eq!(config.runtime, ToolRuntime::Node);
+      assert_eq!(config.package.as_deref(), Some("@example/acp-agent"));
+      assert_eq!(config.download_url, None);
+   }
+
+   #[test]
+   fn tool_config_maps_binary_install_metadata() {
+      let agent = test_agent()
+         .with_install(AgentRuntime::Binary, "example-agent")
+         .with_install_download_url(
+            "https://downloads.example.com/example-agent.tar.gz".to_string(),
+         );
+
+      let config = tool_config_from_agent(&agent).expect("tool config");
+
+      assert_eq!(config.name, "example-agent");
+      assert_eq!(config.runtime, ToolRuntime::Binary);
+      assert_eq!(config.package.as_deref(), Some("example-agent"));
+      assert_eq!(
+         config.download_url.as_deref(),
+         Some("https://downloads.example.com/example-agent.tar.gz")
+      );
+   }
+
+   #[test]
+   fn tool_config_rejects_unsupported_managed_install() {
+      let error = tool_config_from_agent(&test_agent()).expect_err("unsupported install");
+
+      assert_eq!(error, "Example Agent does not support managed installation");
+   }
+
+   #[test]
+   fn tool_config_rejects_missing_package_for_runtime_install() {
+      let mut agent = test_agent();
+      agent.install_runtime = Some(AgentRuntime::Node);
+      agent.can_install = true;
+
+      let error = tool_config_from_agent(&agent).expect_err("missing package");
+
+      assert_eq!(error, "Example Agent is missing an install package");
+   }
+
+   #[test]
+   fn tool_config_rejects_binary_install_without_download_url() {
+      let agent = test_agent().with_install(AgentRuntime::Binary, "example-agent");
+
+      let error = tool_config_from_agent(&agent).expect_err("missing download URL");
+
+      assert_eq!(error, "Example Agent is missing a binary download URL");
+   }
+
+   #[test]
+   fn wrapper_scripts_forward_arguments() {
+      let binary_wrapper = build_binary_wrapper(Path::new("/opt/athas/bin/example-agent"));
+      let node_wrapper = build_node_wrapper(
+         Path::new("/opt/athas/node"),
+         Path::new("/opt/athas/tools/npm/example-agent/index.js"),
+      );
+
+      assert!(binary_wrapper.contains("/opt/athas/bin/example-agent"));
+      assert!(node_wrapper.contains("/opt/athas/node"));
+      assert!(node_wrapper.contains("/opt/athas/tools/npm/example-agent/index.js"));
+
+      #[cfg(target_os = "windows")]
+      {
+         assert!(binary_wrapper.contains("%*"));
+         assert!(node_wrapper.contains("%*"));
+      }
+
+      #[cfg(not(target_os = "windows"))]
+      {
+         assert!(binary_wrapper.contains("\"$@\""));
+         assert!(node_wrapper.contains("\"$@\""));
+      }
+   }
 }
 
 async fn write_acp_wrapper(
