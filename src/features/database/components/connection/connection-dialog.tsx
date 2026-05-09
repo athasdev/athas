@@ -4,7 +4,7 @@ import {
   SpinnerGap as Loader2,
   PlugsConnected as PlugZap,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { Button } from "@/ui/button";
@@ -13,45 +13,16 @@ import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { Tab, TabsList } from "@/ui/tabs";
+import { normalizeDatabaseError } from "../../lib/database-errors";
 import type { DatabaseType } from "../../models/provider.types";
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
-import { type SavedConnection, useConnectionStore } from "../../stores/connection-store";
+import { useConnectionStore } from "../../stores/connection-store";
+import { buildSavedConnectionConfig } from "./connection-config";
+import { getInstalledDatabaseTypes, validateConnectionInput } from "./connection-validation";
 
 interface ConnectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-const CONNECTION_DB_TYPES: DatabaseType[] = [
-  "sqlite",
-  "duckdb",
-  "postgres",
-  "mysql",
-  "mongodb",
-  "redis",
-];
-
-function getInstalledDatabaseTypes(
-  availableExtensions: Map<
-    string,
-    { isInstalled?: boolean; manifest: { databaseProviders?: Array<{ id: string }> } }
-  >,
-): DatabaseType[] {
-  const installedTypes = new Set<DatabaseType>();
-
-  for (const extension of availableExtensions.values()) {
-    if (!extension.isInstalled) {
-      continue;
-    }
-
-    for (const provider of extension.manifest.databaseProviders ?? []) {
-      if (CONNECTION_DB_TYPES.includes(provider.id as DatabaseType)) {
-        installedTypes.add(provider.id as DatabaseType);
-      }
-    }
-  }
-
-  return CONNECTION_DB_TYPES.filter((type) => installedTypes.has(type));
 }
 
 export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
@@ -72,6 +43,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<boolean | null>(null);
+  const connectionFeedbackVersionRef = useRef(0);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -97,6 +69,34 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
 
   const provider = PROVIDER_REGISTRY[dbType];
   const isFileBased = provider.isFileBased;
+  const validationError = validateConnectionInput({
+    dbType,
+    isFileBased,
+    mode,
+    filePath,
+    host,
+    port,
+    database,
+    connectionString,
+  });
+
+  const clearConnectionFeedback = () => {
+    connectionFeedbackVersionRef.current += 1;
+    setIsTesting(false);
+    setError(null);
+    setTestResult(null);
+  };
+
+  const updateConnectionField = <T,>(setter: (value: T) => void, value: T) => {
+    setter(value);
+    clearConnectionFeedback();
+  };
+
+  const handleModeChange = (nextMode: "form" | "string") => {
+    if (mode === nextMode) return;
+    setMode(nextMode);
+    clearConnectionFeedback();
+  };
 
   const handleDbTypeChange = (type: DatabaseType) => {
     setDbType(type);
@@ -104,20 +104,20 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     if (PROVIDER_REGISTRY[type].isFileBased) {
       setMode("form");
     }
-    setError(null);
-    setTestResult(null);
+    clearConnectionFeedback();
   };
 
-  const buildConfig = (): SavedConnection => ({
-    id: `${dbType}-${Date.now()}`,
-    name: name || `${PROVIDER_REGISTRY[dbType].label} Connection`,
-    db_type: dbType,
-    host,
-    port,
-    database,
-    username,
-    connection_string: mode === "string" ? connectionString : undefined,
-  });
+  const buildConfig = () =>
+    buildSavedConnectionConfig({
+      dbType,
+      mode,
+      name,
+      host,
+      port,
+      database,
+      username,
+      connectionString,
+    });
 
   const handleBrowseDatabaseFile = async () => {
     const selected = await open({
@@ -137,27 +137,45 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         const fileName = selected.split("/").pop() ?? selected;
         setName(fileName);
       }
+      clearConnectionFeedback();
     }
   };
 
   const handleTest = async () => {
     if (isFileBased) return;
+    if (validationError) {
+      connectionFeedbackVersionRef.current += 1;
+      setError(validationError);
+      setTestResult(false);
+      return;
+    }
+    const feedbackVersion = connectionFeedbackVersionRef.current + 1;
+    connectionFeedbackVersionRef.current = feedbackVersion;
     setIsTesting(true);
     setError(null);
     setTestResult(null);
     try {
       const result = await actions.testConnection(buildConfig(), password || undefined);
-      setTestResult(result);
-      if (!result) setError("Connection test failed");
+      if (connectionFeedbackVersionRef.current !== feedbackVersion) return;
+      setTestResult(result.ok);
+      if (!result.ok) setError(result.error ?? "Connection test failed");
     } catch (err) {
-      setError(String(err));
+      if (connectionFeedbackVersionRef.current !== feedbackVersion) return;
+      setError(normalizeDatabaseError(err));
       setTestResult(false);
     } finally {
-      setIsTesting(false);
+      if (connectionFeedbackVersionRef.current === feedbackVersion) {
+        setIsTesting(false);
+      }
     }
   };
 
   const handleConnect = async () => {
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setIsConnecting(true);
     setError(null);
     try {
@@ -181,7 +199,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         .actions.openDatabaseBuffer(`connection://${connId}`, config.name, dbType, connId);
       onClose();
     } catch (err) {
-      setError(String(err));
+      setError(normalizeDatabaseError(err));
     } finally {
       setIsConnecting(false);
     }
@@ -217,11 +235,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
           <Button
             type="button"
             onClick={handleConnect}
-            disabled={
-              installedDbTypes.length === 0 ||
-              isConnecting ||
-              (isFileBased ? !filePath.trim() : false)
-            }
+            disabled={installedDbTypes.length === 0 || isConnecting || validationError !== null}
             className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
             compact
@@ -258,7 +272,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
           isActive={mode === "form"}
           size="sm"
           variant="default"
-          onClick={() => setMode("form")}
+          onClick={() => handleModeChange("form")}
         >
           Form
         </Tab>
@@ -269,7 +283,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
           isActive={mode === "string"}
           size="sm"
           variant="default"
-          onClick={() => !isFileBased && setMode("string")}
+          onClick={() => !isFileBased && handleModeChange("string")}
           className={isFileBased ? "pointer-events-none opacity-50" : undefined}
         >
           Connection String
@@ -287,7 +301,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               className="w-full"
               placeholder={`My ${PROVIDER_REGISTRY[dbType].label}`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => updateConnectionField(setName, e.target.value)}
             />
           </div>
 
@@ -301,7 +315,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   id="db-conn-file"
                   className="w-full"
                   value={filePath}
-                  onChange={(e) => setFilePath(e.target.value)}
+                  onChange={(e) => updateConnectionField(setFilePath, e.target.value)}
                   placeholder="Select a SQLite database file"
                 />
                 <Button
@@ -327,7 +341,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     id="db-conn-host"
                     className="w-full"
                     value={host}
-                    onChange={(e) => setHost(e.target.value)}
+                    onChange={(e) => updateConnectionField(setHost, e.target.value)}
                   />
                 </div>
                 <div className="w-24 space-y-1">
@@ -339,7 +353,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     type="number"
                     className="w-full"
                     value={port}
-                    onChange={(e) => setPort(Number(e.target.value))}
+                    onChange={(e) => updateConnectionField(setPort, Number(e.target.value))}
                   />
                 </div>
               </div>
@@ -352,7 +366,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     id="db-conn-database"
                     className="w-full"
                     value={database}
-                    onChange={(e) => setDatabase(e.target.value)}
+                    onChange={(e) => updateConnectionField(setDatabase, e.target.value)}
                   />
                 </div>
               )}
@@ -365,7 +379,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     id="db-conn-username"
                     className="w-full"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => updateConnectionField(setUsername, e.target.value)}
                   />
                 </div>
                 <div className="flex-1 space-y-1">
@@ -377,7 +391,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     type="password"
                     className="w-full"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => updateConnectionField(setPassword, e.target.value)}
                   />
                 </div>
               </div>
@@ -385,7 +399,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                 <Checkbox
                   id="db-conn-save-password"
                   checked={saveCredential}
-                  onChange={setSaveCredential}
+                  onChange={(checked) => updateConnectionField(setSaveCredential, checked)}
                   ariaLabel="Save password securely"
                 />
                 <span className="ui-font text-text-lighter text-xs">Save password securely</span>
@@ -403,7 +417,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             className="w-full"
             placeholder={`${dbType}://user:pass@host:port/database`}
             value={connectionString}
-            onChange={(e) => setConnectionString(e.target.value)}
+            onChange={(e) => updateConnectionField(setConnectionString, e.target.value)}
           />
         </div>
       )}
