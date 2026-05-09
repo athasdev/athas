@@ -41,6 +41,8 @@ function AgentIcon({
   const [didFail, setDidFail] = useState(false);
 
   if (icon && !didFail) {
+    const hue = agentIconHue(agentId);
+
     return (
       <img
         aria-hidden="true"
@@ -51,11 +53,22 @@ function AgentIcon({
         referrerPolicy="no-referrer"
         onError={() => setDidFail(true)}
         className={cn("shrink-0 object-contain", className)}
+        style={{
+          filter: `brightness(0) saturate(100%) invert(82%) sepia(82%) saturate(1180%) hue-rotate(${hue}deg) brightness(101%) contrast(96%)`,
+        }}
       />
     );
   }
 
   return <ProviderIcon providerId={agentId} size={size} className={className} />;
+}
+
+function agentIconHue(agentId: string) {
+  let hash = 0;
+  for (let index = 0; index < agentId.length; index++) {
+    hash = (hash * 31 + agentId.charCodeAt(index)) >>> 0;
+  }
+  return hash % 360;
 }
 
 interface AgentSelectorProps {
