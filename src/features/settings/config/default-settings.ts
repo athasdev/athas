@@ -56,7 +56,7 @@ export const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   sidebarTabsPosition: "top",
-  titleBarProjectMode: "tabs",
+  titleBarProjectMode: "window",
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],

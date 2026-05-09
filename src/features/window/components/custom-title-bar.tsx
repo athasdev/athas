@@ -40,6 +40,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "./account-menu";
+import ProjectPickerDialog from "./project-picker-dialog";
 import ProjectTabs from "./project-tabs";
 import RunActionsButton from "./run-actions-button";
 import WindowTitleDisplay from "./window-title-display";
@@ -619,7 +620,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
 const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
   const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
+  const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
   useEffect(() => {
@@ -643,6 +646,13 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
         isOpen={isSettingsDialogVisible}
         onClose={() => setIsSettingsDialogVisible(false)}
       />
+      {createPortal(
+        <ProjectPickerDialog
+          isOpen={isProjectPickerVisible}
+          onClose={() => setIsProjectPickerVisible(false)}
+        />,
+        document.body,
+      )}
     </>
   );
 };
