@@ -1,5 +1,6 @@
 use super::types::AgentConfig;
 use crate::runtime::AthasAppHandle as AppHandle;
+use serde::Deserialize;
 use std::{
    collections::HashMap,
    env, fs,
@@ -39,6 +40,7 @@ pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
    last_detection: Option<Instant>,
    managed_bin_dir: Option<PathBuf>,
+   managed_receipt_dir: Option<PathBuf>,
 }
 
 impl AgentRegistry {
@@ -47,6 +49,7 @@ impl AgentRegistry {
          agents: HashMap::new(),
          last_detection: None,
          managed_bin_dir: managed_acp_bin_dir(app_handle),
+         managed_receipt_dir: managed_acp_receipt_dir(app_handle),
       }
    }
 
@@ -86,8 +89,12 @@ impl AgentRegistry {
          if let Some(path) = managed_wrapper_path(self.managed_bin_dir.as_deref(), &config.id) {
             config.installed = true;
             config.binary_path = Some(path.to_string_lossy().to_string());
+            config.update_available =
+               managed_agent_needs_update(self.managed_receipt_dir.as_deref(), config);
             continue;
          }
+
+         config.update_available = false;
 
          if config.id == "codex-cli" {
             detect_codex_adapter(config);
@@ -136,6 +143,70 @@ fn managed_acp_bin_dir(app_handle: &AppHandle) -> Option<PathBuf> {
    Some(data_dir.join("tools").join("acp"))
 }
 
+fn managed_acp_receipt_dir(app_handle: &AppHandle) -> Option<PathBuf> {
+   let data_dir = app_handle.path().app_data_dir().ok()?;
+   Some(data_dir.join("tools").join("acp").join(".receipts"))
+}
+
+fn managed_agent_receipt_path(receipt_dir: Option<&Path>, agent_id: &str) -> Option<PathBuf> {
+   let dir = receipt_dir?;
+   Some(dir.join(format!("{}.json", receipt_file_stem(agent_id))))
+}
+
+fn receipt_file_stem(agent_id: &str) -> String {
+   agent_id
+      .chars()
+      .map(|character| match character {
+         'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' => character,
+         _ => '_',
+      })
+      .collect()
+}
+
+fn managed_agent_needs_update(receipt_dir: Option<&Path>, config: &AgentConfig) -> bool {
+   if !config.can_install {
+      return false;
+   }
+
+   let Some(receipt_path) = managed_agent_receipt_path(receipt_dir, &config.id) else {
+      return false;
+   };
+   let Ok(receipt_json) = fs::read_to_string(receipt_path) else {
+      return true;
+   };
+   let Ok(receipt) = serde_json::from_str::<ManagedAgentReceipt>(&receipt_json) else {
+      return true;
+   };
+
+   !receipt.matches(config)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ManagedAgentReceipt {
+   install_runtime: Option<String>,
+   install_package: Option<String>,
+   install_download_url: Option<String>,
+   install_command: Option<String>,
+}
+
+impl ManagedAgentReceipt {
+   fn matches(&self, config: &AgentConfig) -> bool {
+      self.install_runtime == agent_runtime_key(config)
+         && self.install_package == config.install_package
+         && self.install_download_url == config.install_download_url
+         && self.install_command == config.install_command
+   }
+}
+
+fn agent_runtime_key(config: &AgentConfig) -> Option<String> {
+   config
+      .install_runtime
+      .as_ref()
+      .and_then(|runtime| serde_json::to_value(runtime).ok())
+      .and_then(|value| value.as_str().map(ToString::to_string))
+}
+
 fn wrapper_file_name(agent_id: &str) -> String {
    #[cfg(target_os = "windows")]
    {
@@ -158,19 +229,10 @@ fn detect_codex_adapter(config: &mut AgentConfig) {
       return;
    }
 
-   // Fallback to npx for users who haven't installed codex-acp globally yet.
-   if let Some(path) = find_binary("npx") {
-      config.installed = true;
-      config.binary_path = Some(path.to_string_lossy().to_string());
-      config.args = vec!["-y".to_string(), "@zed-industries/codex-acp".to_string()];
-      log::debug!("Using npx fallback for codex-acp at {}", path.display());
-      return;
-   }
-
    config.installed = false;
    config.binary_path = None;
    config.args.clear();
-   log::debug!("Codex ACP adapter not found (neither codex-acp nor npx available)");
+   log::debug!("Codex ACP adapter not found");
 }
 
 fn find_binary(binary_name: &str) -> Option<PathBuf> {
@@ -325,7 +387,8 @@ fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-   use super::{check_dir_for_binary, managed_wrapper_path};
+   use super::{check_dir_for_binary, managed_agent_needs_update, managed_wrapper_path};
+   use crate::acp::types::{AgentConfig, AgentRuntime};
    use std::{fs, path::PathBuf};
 
    #[test]
@@ -347,5 +410,65 @@ mod tests {
    fn check_dir_for_binary_returns_none_for_missing_binary() {
       let missing = check_dir_for_binary(PathBuf::from("/tmp/athas-missing").as_path(), "nope");
       assert!(missing.is_none());
+   }
+
+   #[test]
+   fn missing_managed_receipt_marks_install_update_available() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let mut config = AgentConfig::new("amp-acp", "Amp", "amp-acp");
+      config.install_runtime = Some(AgentRuntime::Binary);
+      config.install_package = Some("./amp-acp".to_string());
+      config.install_download_url = Some("https://example.com/amp-v1.tar.gz".to_string());
+      config.install_command = Some("amp-acp".to_string());
+      config.can_install = true;
+
+      assert!(managed_agent_needs_update(Some(temp_dir.path()), &config));
+   }
+
+   #[test]
+   fn stale_managed_receipt_marks_install_update_available() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      fs::write(
+         temp_dir.path().join("amp-acp.json"),
+         r#"{
+  "installRuntime": "binary",
+  "installPackage": "./amp-acp",
+  "installDownloadUrl": "https://example.com/amp-v1.tar.gz",
+  "installCommand": "amp-acp"
+}"#,
+      )
+      .expect("write receipt");
+
+      let mut config = AgentConfig::new("amp-acp", "Amp", "amp-acp");
+      config.install_runtime = Some(AgentRuntime::Binary);
+      config.install_package = Some("./amp-acp".to_string());
+      config.install_download_url = Some("https://example.com/amp-v2.tar.gz".to_string());
+      config.install_command = Some("amp-acp".to_string());
+      config.can_install = true;
+
+      assert!(managed_agent_needs_update(Some(temp_dir.path()), &config));
+   }
+
+   #[test]
+   fn current_managed_receipt_keeps_install_current() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      fs::write(
+         temp_dir.path().join("codex-acp.json"),
+         r#"{
+  "installRuntime": "node",
+  "installPackage": "@vendor/codex-acp@1.0.0",
+  "installDownloadUrl": null,
+  "installCommand": "codex-acp"
+}"#,
+      )
+      .expect("write receipt");
+
+      let mut config = AgentConfig::new("codex-acp", "Codex", "codex-acp");
+      config.install_runtime = Some(AgentRuntime::Node);
+      config.install_package = Some("@vendor/codex-acp@1.0.0".to_string());
+      config.install_command = Some("codex-acp".to_string());
+      config.can_install = true;
+
+      assert!(!managed_agent_needs_update(Some(temp_dir.path()), &config));
    }
 }

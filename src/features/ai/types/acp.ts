@@ -15,6 +15,7 @@ export interface AgentConfig {
   installRuntime: "node" | "python" | "go" | "rust" | "binary" | null;
   installPackage: string | null;
   canInstall: boolean;
+  updateAvailable?: boolean;
 }
 
 export interface AcpAgentStatus {

@@ -2,13 +2,13 @@ use crate::app_runtime::AppHandle;
 use athas_ai::{AcpAgentBridge, AcpAgentStatus, AcpSessionList, AgentConfig, AgentRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,
    fs,
    path::{Path, PathBuf},
    sync::Arc,
-   time::{Duration, Instant},
+   time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{Manager, State};
 use tauri_plugin_store::StoreExt;
@@ -113,6 +113,7 @@ pub async fn uninstall_acp_agent(
 
    let tool_config = tool_config_from_agent(&agent)?;
    remove_acp_wrapper(&app_handle, &agent.id)?;
+   remove_acp_install_receipt(&app_handle, &agent.id)?;
    remove_managed_tool(&app_handle, &tool_config)?;
 
    let mut bridge = bridge.lock().await;
@@ -358,6 +359,7 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
       install_download_url: None,
       install_command: None,
       can_install: false,
+      update_available: false,
    };
 
    if let Some(install) = contribution.install {
@@ -408,6 +410,7 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
          install_download_url: Some(target.archive.clone()),
          install_command: Some(registry_command_name(&target.cmd, "")),
          can_install: true,
+         update_available: false,
       });
    }
 
@@ -431,6 +434,7 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
          install_download_url: None,
          install_command: Some(command),
          can_install: true,
+         update_available: false,
       });
    }
 
@@ -454,6 +458,7 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
          install_download_url: None,
          install_command: Some(command),
          can_install: true,
+         update_available: false,
       });
    }
 
@@ -596,6 +601,7 @@ fn apply_agent_server_settings(
                install_download_url: None,
                install_command: None,
                can_install: false,
+               update_available: false,
             };
             upsert_agent(&mut agents, custom_agent);
          }
@@ -969,6 +975,7 @@ async fn write_acp_wrapper(
 
    std::fs::write(&wrapper_path, wrapper_contents).map_err(|e| e.to_string())?;
    make_wrapper_executable(&wrapper_path)?;
+   write_acp_install_receipt(app_handle, agent)?;
    Ok(())
 }
 
@@ -983,6 +990,78 @@ fn acp_wrapper_path(app_handle: &AppHandle, agent_id: &str) -> Result<PathBuf, S
       agent_id.to_string()
    };
    Ok(data_dir.join("tools").join("acp").join(file_name))
+}
+
+fn acp_install_receipt_path(app_handle: &AppHandle, agent_id: &str) -> Result<PathBuf, String> {
+   let data_dir = app_handle
+      .path()
+      .app_data_dir()
+      .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+   Ok(data_dir
+      .join("tools")
+      .join("acp")
+      .join(".receipts")
+      .join(format!("{}.json", receipt_file_stem(agent_id))))
+}
+
+fn receipt_file_stem(agent_id: &str) -> String {
+   agent_id
+      .chars()
+      .map(|character| match character {
+         'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' => character,
+         _ => '_',
+      })
+      .collect()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AcpInstallReceipt {
+   agent_id: String,
+   install_runtime: Option<String>,
+   install_package: Option<String>,
+   install_download_url: Option<String>,
+   install_command: Option<String>,
+   installed_at_unix_seconds: u64,
+}
+
+fn write_acp_install_receipt(app_handle: &AppHandle, agent: &AgentConfig) -> Result<(), String> {
+   let receipt_path = acp_install_receipt_path(app_handle, &agent.id)?;
+   if let Some(parent) = receipt_path.parent() {
+      fs::create_dir_all(parent).map_err(|e| format!("Failed to create ACP receipt dir: {}", e))?;
+   }
+
+   let receipt = AcpInstallReceipt {
+      agent_id: agent.id.clone(),
+      install_runtime: agent_runtime_key(agent),
+      install_package: agent.install_package.clone(),
+      install_download_url: agent.install_download_url.clone(),
+      install_command: agent.install_command.clone(),
+      installed_at_unix_seconds: SystemTime::now()
+         .duration_since(UNIX_EPOCH)
+         .map(|duration| duration.as_secs())
+         .unwrap_or_default(),
+   };
+   let json = serde_json::to_string_pretty(&receipt)
+      .map_err(|e| format!("Failed to encode ACP install receipt: {}", e))?;
+   fs::write(receipt_path, json).map_err(|e| format!("Failed to write ACP install receipt: {}", e))
+}
+
+fn remove_acp_install_receipt(app_handle: &AppHandle, agent_id: &str) -> Result<(), String> {
+   let receipt_path = acp_install_receipt_path(app_handle, agent_id)?;
+   if receipt_path.exists() {
+      fs::remove_file(&receipt_path)
+         .map_err(|e| format!("Failed to remove ACP install receipt: {}", e))?;
+   }
+   Ok(())
+}
+
+fn agent_runtime_key(agent: &AgentConfig) -> Option<String> {
+   agent
+      .install_runtime
+      .as_ref()
+      .and_then(|runtime| serde_json::to_value(runtime).ok())
+      .and_then(|value| value.as_str().map(ToString::to_string))
 }
 
 fn build_binary_wrapper(binary: &Path) -> String {
@@ -1052,6 +1131,7 @@ mod tests {
          install_download_url: None,
          install_command: None,
          can_install: false,
+         update_available: false,
       }
    }
 

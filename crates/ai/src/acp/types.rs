@@ -215,6 +215,8 @@ pub struct AgentConfig {
    pub install_download_url: Option<String>,
    pub install_command: Option<String>,
    pub can_install: bool,
+   #[serde(default)]
+   pub update_available: bool,
 }
 
 impl AgentConfig {
@@ -236,6 +238,7 @@ impl AgentConfig {
          install_download_url: None,
          install_command: None,
          can_install: false,
+         update_available: false,
       }
    }
 

@@ -53,6 +53,7 @@ interface UnifiedExtension {
   marketplaceSkill?: MarketplaceSkill;
   agentId?: string;
   canInstall?: boolean;
+  updateAvailable?: boolean;
   packageSize?: number;
   contributionSummary?: string[];
 }
@@ -303,6 +304,7 @@ export const ExtensionsSettings = () => {
           runtimeIssues: ext.runtimeIssues,
           agentId: contribution.id,
           canInstall: agent?.canInstall ?? Boolean(contribution.install),
+          updateAvailable: agent?.updateAvailable ?? false,
           contributionSummary: [
             `agent:${contribution.id}`,
             agent?.binaryName ?? contribution.binaryName,
@@ -484,6 +486,7 @@ export const ExtensionsSettings = () => {
         isMarketplace: true,
         agentId: agent.id,
         canInstall: agent.canInstall,
+        updateAvailable: agent.updateAvailable ?? false,
         contributionSummary: [`agent:${agent.id}`, agent.binaryName],
       });
     }
@@ -507,6 +510,51 @@ export const ExtensionsSettings = () => {
   }, []);
 
   const handleUpdate = async (extension: UnifiedExtension) => {
+    if (extension.category === "agent") {
+      if (extension.canInstall === false) {
+        showToast({
+          message: `${extension.name} cannot be reinstalled automatically`,
+          type: "error",
+          duration: 5000,
+        });
+        return;
+      }
+
+      const agentId = extension.agentId ?? extension.id.replace(/^agent:/, "");
+      setInstallingAgentIds((current) => new Set(current).add(agentId));
+
+      try {
+        const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
+        setAgents((current) => {
+          const next = new Map(current.map((agent) => [agent.id, agent]));
+          next.set(installedAgent.id, installedAgent);
+          return Array.from(next.values());
+        });
+        void loadAgents();
+        showToast({
+          message: `${extension.name} reinstalled successfully`,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to reinstall ${extension.name}:`, error);
+        showToast({
+          message: `Failed to reinstall ${extension.name}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          type: "error",
+          duration: 5000,
+        });
+      } finally {
+        setInstallingAgentIds((current) => {
+          const next = new Set(current);
+          next.delete(agentId);
+          return next;
+        });
+      }
+      return;
+    }
+
     if (extension.category === "skill") {
       if (!extension.skill || !extension.marketplaceSkill) return;
 
@@ -757,6 +805,7 @@ export const ExtensionsSettings = () => {
     );
 
   const hasExtensionUpdate = (extension: UnifiedExtension) =>
+    (extension.category === "agent" && Boolean(extension.updateAvailable)) ||
     extensionsWithUpdates.has(extension.id) ||
     Boolean(
       extension.skill &&

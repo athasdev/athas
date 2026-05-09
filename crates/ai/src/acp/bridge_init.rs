@@ -40,7 +40,7 @@ pub(super) async fn initialize_worker(
    requested_session_id: Option<String>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 ) -> Result<InitializedAcpWorker> {
-   let (mut child, uses_npx_codex_adapter) =
+   let (mut child, uses_lazy_package_runner) =
       spawn_agent_process(config, workspace_path.as_deref())?;
    let process_group_id = child.id();
    let stdin = child
@@ -77,7 +77,7 @@ pub(super) async fn initialize_worker(
 
    let init_response = initialize_connection(
       connection.clone(),
-      uses_npx_codex_adapter,
+      uses_lazy_package_runner,
       &mut child,
       &io_handle,
    )
@@ -191,11 +191,8 @@ fn spawn_agent_process(
       cmd.env("PATH", format!("{current}:{shell_path}"));
    }
 
-   let uses_npx_codex_adapter = binary.ends_with("npx")
-      && config
-         .args
-         .iter()
-         .any(|arg| arg == "@zed-industries/codex-acp");
+   let uses_lazy_package_runner =
+      binary.ends_with("npx") && config.args.iter().any(|arg| arg == "-y");
 
    for (key, value) in &config.env_vars {
       cmd.env(key, value);
@@ -205,7 +202,7 @@ fn spawn_agent_process(
       cmd.current_dir(path);
    }
 
-   Ok((cmd.spawn()?, uses_npx_codex_adapter))
+   Ok((cmd.spawn()?, uses_lazy_package_runner))
 }
 
 fn spawn_stderr_logger(child: &mut Child, agent_name: String) {
@@ -222,7 +219,7 @@ fn spawn_stderr_logger(child: &mut Child, agent_name: String) {
 
 async fn initialize_connection(
    connection: Arc<acp::ClientSideConnection>,
-   uses_npx_codex_adapter: bool,
+   uses_lazy_package_runner: bool,
    child: &mut Child,
    io_handle: &tokio::task::JoinHandle<()>,
 ) -> Result<acp::InitializeResponse> {
@@ -252,7 +249,7 @@ async fn initialize_connection(
       .client_capabilities(client_capabilities)
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
 
-   let initialize_timeout_secs = if uses_npx_codex_adapter { 120 } else { 30 };
+   let initialize_timeout_secs = if uses_lazy_package_runner { 120 } else { 30 };
    log::info!(
       "Sending ACP initialize request (timeout: {}s)...",
       initialize_timeout_secs
