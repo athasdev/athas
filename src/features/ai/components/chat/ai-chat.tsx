@@ -10,6 +10,7 @@ import {
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { classifyAcpProviderError } from "@/features/ai/lib/acp-provider-errors";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import {
@@ -696,27 +697,15 @@ details: The agent session started, but no content, tool output, or resource was
             }
           }
 
-          const isAcpAuthError =
-            isAcpAgent(currentAgentId) &&
-            (mainError.includes("Authentication required") ||
-              errorDetails.includes("Authentication required"));
+          const acpProviderError = isAcpAgent(currentAgentId)
+            ? classifyAcpProviderError(mainError, errorDetails)
+            : null;
 
-          if (isAcpAuthError) {
-            errorTitle = "Authentication Required";
-            errorCode = "AUTH_REQUIRED";
-            errorMessage =
-              "The selected agent needs external authentication before it can accept prompts.";
-
-            if (
-              mainError.includes("Method not implemented") ||
-              errorDetails.includes("Method not implemented")
-            ) {
-              errorDetails =
-                "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again.";
-            } else if (!errorDetails) {
-              errorDetails =
-                "Complete authentication in the underlying CLI/adapter, then try again.";
-            }
+          if (acpProviderError) {
+            errorTitle = acpProviderError.title;
+            errorCode = acpProviderError.code;
+            errorMessage = acpProviderError.message;
+            errorDetails = acpProviderError.detail;
           }
 
           if (canReconnect) {
@@ -958,10 +947,11 @@ details: ${errorDetails || mainError}
               useAIChatStore.getState().setAcpStatus(event.status);
               break; // internal state sync
             case "error":
+              const acpProviderError = classifyAcpProviderError(event.error);
               appendAcpEvent({
                 kind: "error",
-                label: "Agent error",
-                detail: truncateDetail(event.error),
+                label: acpProviderError?.activityLabel ?? "Agent error",
+                detail: truncateDetail(acpProviderError?.detail ?? event.error),
                 state: "error",
               });
               break;

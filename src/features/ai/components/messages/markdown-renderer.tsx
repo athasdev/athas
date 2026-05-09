@@ -404,10 +404,15 @@ function ErrorBlock({ errorData }: { errorData: string }) {
       .trim() || "";
   const summary = title || message || "Error";
   const normalizedDetails = details && details !== message ? details : "";
-  const isAuthRequired = code === "AUTH_REQUIRED";
+  const needsProviderSetup = code === "AUTH_REQUIRED" || code === "PROVIDER_SETUP_REQUIRED";
 
   const suggestedCommand = useMemo(() => {
     const normalizedText = `${summary} ${message} ${normalizedDetails}`.toLowerCase();
+    const setupCommand = normalizedDetails.match(/\b([\w.-]+(?:\s+[\w.:/@-]+)*\s+--setup)\b/i)?.[1];
+
+    if (setupCommand) {
+      return setupCommand;
+    }
 
     if (normalizedText.includes("claude code")) {
       return "claude auth login";
@@ -466,7 +471,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           </Button>
         )}
       </div>
-      {isAuthRequired && (
+      {needsProviderSetup && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -505,7 +510,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
             </Button>
           )}
           <span className="ui-text-xs text-error/70">
-            Complete login in the agent CLI, then retry.
+            Complete provider setup in the agent CLI, then retry.
           </span>
         </div>
       )}
