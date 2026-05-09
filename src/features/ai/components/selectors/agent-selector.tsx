@@ -23,8 +23,40 @@ const ATHAS_AGENT_OPTION = {
   id: "custom",
   name: "Athas Agent",
   description: "Use Athas chat settings and provider configuration",
+  icon: null,
   isAcp: false,
 };
+
+function AgentIcon({
+  agentId,
+  icon,
+  size,
+  className,
+}: {
+  agentId: string;
+  icon?: string | null;
+  size: number;
+  className?: string;
+}) {
+  const [didFail, setDidFail] = useState(false);
+
+  if (icon && !didFail) {
+    return (
+      <img
+        aria-hidden="true"
+        src={icon}
+        alt=""
+        width={size}
+        height={size}
+        referrerPolicy="no-referrer"
+        onError={() => setDidFail(true)}
+        className={cn("shrink-0 object-contain", className)}
+      />
+    );
+  }
+
+  return <ProviderIcon providerId={agentId} size={size} className={className} />;
+}
 
 interface AgentSelectorProps {
   variant?: "header" | "input";
@@ -93,6 +125,7 @@ export function AgentSelector({
       id: string;
       name: string;
       description: string;
+      icon?: string | null;
       isInstalled?: boolean;
       isCurrent?: boolean;
       canInstall?: boolean;
@@ -120,6 +153,7 @@ export function AgentSelector({
         id: agent.id,
         name: agent.name,
         description: agentConfig?.description ?? agent.description ?? "ACP-compatible coding agent",
+        icon: agentConfig?.icon ?? agent.icon,
         isInstalled,
         isCurrent: agent.id === currentAgentId,
         canInstall: agent.id === "custom" ? false : (agentConfig?.canInstall ?? true),
@@ -284,7 +318,12 @@ export function AgentSelector({
           compact
           className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
-          <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
+          <AgentIcon
+            agentId={currentAgentId}
+            icon={currentAgent.icon}
+            size={11}
+            className="text-text-lighter"
+          />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
           <ChevronDown
             className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
@@ -349,7 +388,12 @@ export function AgentSelector({
                   )}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
+                    <AgentIcon
+                      agentId={item.id}
+                      icon={item.icon}
+                      size={12}
+                      className="text-text-lighter"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-left text-text text-xs leading-4">
                         {item.name}
