@@ -300,7 +300,7 @@ export function AgentSelector({
         onClose={() => setIsOpen(false)}
         portalContainer={portalContainer}
         className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
-        style={{ maxHeight: "240px" }}
+        style={{ maxHeight: "420px" }}
       >
         <div className="bg-secondary-bg px-1.5 py-1.5" onKeyDown={handleKeyDown}>
           <Input
@@ -317,7 +317,7 @@ export function AgentSelector({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1 [overscroll-behavior:contain]">
+        <div className="max-h-[360px] min-h-0 flex-1 overflow-y-auto p-1 pr-1.5 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
