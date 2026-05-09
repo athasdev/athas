@@ -73,6 +73,10 @@ export function useMenuEventsWrapper() {
     const activeElement = document.activeElement as HTMLElement | null;
     return activeElement?.closest(".terminal-container") !== null;
   };
+  const isFileTreeFocused = () => {
+    const activeElement = document.activeElement as HTMLElement | null;
+    return activeElement?.closest(".file-tree-container") !== null;
+  };
   const shouldRouteEditMenuToEditor = () => {
     const activeElement = document.activeElement as HTMLElement | null;
 
@@ -202,7 +206,14 @@ export function useMenuEventsWrapper() {
 
       document.execCommand("redo");
     },
-    onFind: () => uiState.setIsFindVisible(true),
+    onFind: () => {
+      if (isFileTreeFocused()) {
+        window.dispatchEvent(new CustomEvent("file-tree-open-search"));
+        return;
+      }
+
+      uiState.setIsFindVisible(true);
+    },
     onFindReplace: () => {
       void keymapRegistry.executeCommand("workbench.showFindReplace");
     },

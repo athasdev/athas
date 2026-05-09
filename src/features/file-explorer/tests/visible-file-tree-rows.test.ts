@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   buildVisibleFileTreeRows,
+  filterFileTreeForSearch,
   getGuideAncestorRows,
   getStickyAncestorRow,
   getStickyAncestorRows,
@@ -148,5 +149,40 @@ describe("buildVisibleFileTreeRows", () => {
       "/root/src/features",
       "/root/src/features/file-explorer",
     ]);
+  });
+});
+
+describe("filterFileTreeForSearch", () => {
+  test("keeps matching files with their ancestors expanded", () => {
+    const result = filterFileTreeForSearch(tree, "file-tree");
+    const rows = buildVisibleFileTreeRows(result.files, result.expandedPaths);
+
+    expect(rows.map((row) => row.file.path)).toEqual([
+      "/root",
+      "/root/src",
+      "/root/src/features",
+      "/root/src/features/file-explorer",
+      "/root/src/features/file-explorer/file-tree.tsx",
+    ]);
+    expect(Array.from(result.matchedPaths)).toEqual([
+      "/root/src/features/file-explorer/file-tree.tsx",
+    ]);
+    expect(result.matchCount).toBe(1);
+  });
+
+  test("keeps a matching folder without expanding unmatched descendants", () => {
+    const result = filterFileTreeForSearch(tree, "features");
+    const rows = buildVisibleFileTreeRows(result.files, result.expandedPaths);
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root", "/root/src", "/root/src/features"]);
+    expect(Array.from(result.matchedPaths)).toEqual(["/root/src/features"]);
+  });
+
+  test("returns the original tree for an empty query", () => {
+    const result = filterFileTreeForSearch(tree, " ");
+
+    expect(result.files).toBe(tree);
+    expect(result.matchCount).toBe(0);
+    expect(result.expandedPaths.size).toBe(0);
   });
 });

@@ -485,6 +485,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+f",
     execute: () => {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (activeElement?.closest(".file-tree-container")) {
+        window.dispatchEvent(new CustomEvent("file-tree-open-search"));
+        return;
+      }
+
       if (useKeymapStore.getState().contexts.terminalFocus) {
         window.dispatchEvent(new CustomEvent("terminal-open-search"));
         return;
