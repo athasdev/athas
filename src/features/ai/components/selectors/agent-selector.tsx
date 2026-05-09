@@ -12,6 +12,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import type { AgentType } from "@/features/ai/types/ai-chat";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -229,6 +230,17 @@ export function AgentSelector({
 
       if (variant === "header") {
         const newChatId = createNewChat(agentId);
+        const bufferStore = useBufferStore.getState();
+        const activeBuffer = bufferStore.buffers.find(
+          (buffer) => buffer.id === bufferStore.activeBufferId,
+        );
+        if (activeBuffer?.type === "agent") {
+          bufferStore.actions.updateBuffer({
+            ...activeBuffer,
+            path: `agent://${newChatId}`,
+            sessionId: newChatId,
+          });
+        }
         if (agentId !== "custom") {
           void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {
             console.error(`Failed to prepare ${agentId} session:`, error);
