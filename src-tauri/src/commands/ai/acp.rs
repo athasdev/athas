@@ -322,6 +322,16 @@ fn package_command_name(package_name: &str, fallback: &str) -> String {
       .to_string()
 }
 
+fn npx_command_name(package_name: &str, fallback: &str) -> String {
+   match package_name {
+      "@google/gemini-cli" => "gemini".to_string(),
+      "@qwen-code/qwen-code" => "qwen".to_string(),
+      "@tencent-ai/codebuddy-code" => "codebuddy".to_string(),
+      "dirac-cli" => "dirac".to_string(),
+      _ => package_command_name(package_name, fallback),
+   }
+}
+
 fn python_package_spec_from_uvx(package_spec: &str) -> String {
    let spec = package_spec.trim();
    if spec.contains("==") {
@@ -417,7 +427,7 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
 
    if let Some(target) = distribution.npx {
       let package_name = npm_package_name(&target.package);
-      let command = package_command_name(&package_name, &id);
+      let command = npx_command_name(&package_name, &id);
       return Some(AgentConfig {
          id,
          name,
@@ -1281,6 +1291,21 @@ mod tests {
    }
 
    #[test]
+   fn npx_command_name_uses_known_package_binary_aliases() {
+      assert_eq!(npx_command_name("@google/gemini-cli", "gemini"), "gemini");
+      assert_eq!(
+         npx_command_name("@qwen-code/qwen-code", "qwen-code"),
+         "qwen"
+      );
+      assert_eq!(
+         npx_command_name("@tencent-ai/codebuddy-code", "codebuddy-code"),
+         "codebuddy"
+      );
+      assert_eq!(npx_command_name("dirac-cli", "dirac"), "dirac");
+      assert_eq!(npx_command_name("cline", "cline"), "cline");
+   }
+
+   #[test]
    fn python_package_spec_from_uvx_converts_registry_version_specs() {
       assert_eq!(
          python_package_spec_from_uvx("fast-agent-acp==0.7.1"),
@@ -1297,14 +1322,14 @@ mod tests {
       let json = r#"{
         "agents": [
           {
-            "id": "codex-acp",
-            "name": "Codex",
-            "description": "Codex ACP adapter",
+            "id": "qwen-code",
+            "name": "Qwen Code",
+            "description": "Qwen ACP adapter",
             "icon": "codex.svg",
             "distribution": {
               "npx": {
-                "package": "@vendor/codex-acp",
-                "args": ["--flag"],
+                "package": "@qwen-code/qwen-code@0.15.9",
+                "args": ["--acp"],
                 "env": { "REGISTRY_ENV": "1" }
               }
             }
@@ -1313,17 +1338,20 @@ mod tests {
       }"#;
 
       let agents = acp_registry_agents_from_json(json).expect("registry agents");
-      let codex = agents.first().expect("codex agent");
+      let qwen = agents.first().expect("qwen agent");
 
-      assert_eq!(codex.id, "codex-acp");
-      assert_eq!(codex.binary_name, "codex-acp");
-      assert_eq!(codex.args, vec!["--flag".to_string()]);
-      assert_eq!(codex.install_runtime, Some(AgentRuntime::Node));
-      assert_eq!(codex.install_package.as_deref(), Some("@vendor/codex-acp"));
-      assert_eq!(codex.install_command.as_deref(), Some("codex-acp"));
-      assert!(codex.can_install);
+      assert_eq!(qwen.id, "qwen-code");
+      assert_eq!(qwen.binary_name, "qwen");
+      assert_eq!(qwen.args, vec!["--acp".to_string()]);
+      assert_eq!(qwen.install_runtime, Some(AgentRuntime::Node));
       assert_eq!(
-         codex.env_vars.get("REGISTRY_ENV").map(String::as_str),
+         qwen.install_package.as_deref(),
+         Some("@qwen-code/qwen-code@0.15.9")
+      );
+      assert_eq!(qwen.install_command.as_deref(), Some("qwen"));
+      assert!(qwen.can_install);
+      assert_eq!(
+         qwen.env_vars.get("REGISTRY_ENV").map(String::as_str),
          Some("1")
       );
    }
