@@ -234,6 +234,7 @@ export type AcpEvent =
       type: "error";
       sessionId: string | null;
       error: string;
+      errorKind?: "authentication_required" | "provider_setup_required" | null;
     }
   | {
       type: "status_changed";

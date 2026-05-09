@@ -22,12 +22,13 @@ const AUTHENTICATE_NOT_IMPLEMENTED = /method not implemented/i;
 export function classifyAcpProviderError(
   mainError: string,
   errorDetails = "",
+  errorKind?: "authentication_required" | "provider_setup_required" | null,
 ): AcpProviderErrorClassification | null {
   const text = [mainError, errorDetails].filter(Boolean).join("\n");
 
   if (!text) return null;
 
-  if (text.includes("Authentication required")) {
+  if (errorKind === "authentication_required" || text.includes("Authentication required")) {
     const detail = AUTHENTICATE_NOT_IMPLEMENTED.test(text)
       ? "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again."
       : errorDetails || "Complete authentication in the underlying CLI/adapter, then try again.";
@@ -41,7 +42,10 @@ export function classifyAcpProviderError(
     };
   }
 
-  if (!SETUP_PATTERNS.some((pattern) => pattern.test(text))) {
+  if (
+    errorKind !== "provider_setup_required" &&
+    !SETUP_PATTERNS.some((pattern) => pattern.test(text))
+  ) {
     return null;
   }
 

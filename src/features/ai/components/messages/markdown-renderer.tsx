@@ -8,6 +8,10 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
+import {
+  extractProviderSetupCommand,
+  parseErrorBlockData,
+} from "@/features/ai/lib/error-block-data";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";
@@ -381,34 +385,14 @@ function ErrorBlock({ errorData }: { errorData: string }) {
   const setSessionModeState = useAIChatStore((state) => state.setSessionModeState);
   const setSessionConfigOptions = useAIChatStore((state) => state.setSessionConfigOptions);
 
-  const lines = errorData.split("\n");
-  const title =
-    lines
-      .find((l) => l.startsWith("title:"))
-      ?.replace("title:", "")
-      .trim() || "";
-  const code =
-    lines
-      .find((l) => l.startsWith("code:"))
-      ?.replace("code:", "")
-      .trim() || "";
-  const message =
-    lines
-      .find((l) => l.startsWith("message:"))
-      ?.replace("message:", "")
-      .trim() || "";
-  const details =
-    lines
-      .find((l) => l.startsWith("details:"))
-      ?.replace("details:", "")
-      .trim() || "";
+  const { title, code, message, details } = parseErrorBlockData(errorData);
   const summary = title || message || "Error";
   const normalizedDetails = details && details !== message ? details : "";
   const needsProviderSetup = code === "AUTH_REQUIRED" || code === "PROVIDER_SETUP_REQUIRED";
 
   const suggestedCommand = useMemo(() => {
     const normalizedText = `${summary} ${message} ${normalizedDetails}`.toLowerCase();
-    const setupCommand = normalizedDetails.match(/\b([\w.-]+(?:\s+[\w.:/@-]+)*\s+--setup)\b/i)?.[1];
+    const setupCommand = extractProviderSetupCommand(normalizedDetails);
 
     if (setupCommand) {
       return setupCommand;

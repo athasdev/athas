@@ -374,6 +374,13 @@ pub struct AcpSessionList {
    pub next_cursor: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpErrorKind {
+   AuthenticationRequired,
+   ProviderSetupRequired,
+}
+
 /// Events emitted to the frontend via Tauri
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -449,6 +456,7 @@ pub enum AcpEvent {
    Error {
       session_id: Option<String>,
       error: String,
+      error_kind: Option<AcpErrorKind>,
    },
    /// Agent status changed
    #[serde(rename_all = "camelCase")]

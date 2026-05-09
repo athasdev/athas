@@ -28,4 +28,14 @@ describe("classifyAcpProviderError", () => {
   it("ignores ordinary provider runtime errors", () => {
     expect(classifyAcpProviderError("Agent returned EMPTY_RESPONSE")).toBeNull();
   });
+
+  it("honors backend provider setup classification", () => {
+    const result = classifyAcpProviderError(
+      "Provider exited during prompt",
+      "",
+      "provider_setup_required",
+    );
+
+    expect(result?.code).toBe("PROVIDER_SETUP_REQUIRED");
+  });
 });

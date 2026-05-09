@@ -947,7 +947,7 @@ details: ${errorDetails || mainError}
               useAIChatStore.getState().setAcpStatus(event.status);
               break; // internal state sync
             case "error":
-              const acpProviderError = classifyAcpProviderError(event.error);
+              const acpProviderError = classifyAcpProviderError(event.error, "", event.errorKind);
               appendAcpEvent({
                 kind: "error",
                 label: acpProviderError?.activityLabel ?? "Agent error",
