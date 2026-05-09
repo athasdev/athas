@@ -4,6 +4,7 @@ export type SidebarView =
   | "github-prs"
   | "outline"
   | "collaboration"
+  | "notifications"
   | "multi-agents"
   | "sidebar-builder"
   | (string & {});

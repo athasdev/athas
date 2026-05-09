@@ -3,7 +3,7 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/utils/cn";
 
 const badgeVariants = cva(
-  "ui-font inline-flex items-center justify-center font-medium leading-none",
+  "ui-font inline-flex h-[var(--app-ui-badge-height,1.5rem)] items-center justify-center rounded-md font-normal leading-none",
   {
     variants: {
       variant: {
@@ -11,10 +11,6 @@ const badgeVariants = cva(
         accent: "bg-accent/10 text-accent",
         muted: "text-text-lighter",
         error: "border border-error/30 bg-error/5 text-error/90",
-      },
-      shape: {
-        default: "rounded-md",
-        pill: "rounded-full",
       },
       size: {
         default: "ui-text-sm px-2 py-0.5",
@@ -24,7 +20,6 @@ const badgeVariants = cva(
     },
     defaultVariants: {
       variant: "default",
-      shape: "default",
       size: "default",
     },
   },
@@ -32,6 +27,6 @@ const badgeVariants = cva(
 
 type BadgeProps = HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;
 
-export default function Badge({ className, variant, shape, size, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant, shape, size }), className)} {...props} />;
+export default function Badge({ className, variant, size, ...props }: BadgeProps) {
+  return <span className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }

@@ -14,6 +14,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { NotificationsPane } from "@/features/window/components/notifications-menu";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
@@ -112,6 +113,8 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
   const isOutlineViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
+  const isNotificationsViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "notifications";
   const isMultiAgentsViewActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
@@ -199,6 +202,10 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
 
         <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
           <OutlineSidebarView />
+        </div>
+
+        <div className={cn("h-full", !isNotificationsViewActive && "hidden")}>
+          <NotificationsPane />
         </div>
 
         {isCollaborationFeatureEnabled ? (

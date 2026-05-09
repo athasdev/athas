@@ -150,7 +150,7 @@ const ExtensionRow = ({
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="ui-font ui-text-md text-text">{extension.name}</span>
-          <Badge variant="default" size="compact" shape="pill">
+          <Badge variant="default" size="compact">
             {getCategoryLabel(extension.category)}
           </Badge>
           {extension.version && (
@@ -160,7 +160,6 @@ const ExtensionRow = ({
             <Badge
               variant="default"
               size="compact"
-              shape="pill"
               className="border-warning/25 bg-warning/10 text-warning"
             >
               Local override
@@ -195,7 +194,7 @@ const ExtensionRow = ({
       </div>
       {extension.isBundled ? (
         <div className="flex shrink-0 items-center gap-2">
-          <Badge variant="accent" size="compact" className="rounded-full">
+          <Badge variant="accent" size="compact">
             Built-in
           </Badge>
         </div>

@@ -80,7 +80,7 @@ export const DatabaseSettings = () => {
                   <div className="flex items-center gap-2">
                     <Database className="text-text-lighter" />
                     <div className="ui-font ui-text-sm truncate text-text">{connection.name}</div>
-                    <Badge variant="default" shape="pill" size="compact" className="uppercase">
+                    <Badge variant="default" size="compact" className="uppercase">
                       {formatDbType(connection.db_type)}
                     </Badge>
                   </div>

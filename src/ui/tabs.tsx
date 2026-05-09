@@ -233,6 +233,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   return (
     <div
       ref={ref}
+      data-active={isActive}
       className={cn(
         tabVariants({ size, variant, active: isActive, dragged: isDragged }),
         actionInsetClass,

@@ -194,7 +194,7 @@ export function SettingRow({
       </div>
       <div
         ref={controlRef}
-        className="ui-font ui-text-sm shrink-0 select-auto [--app-ui-control-font-size:var(--ui-text-sm)]"
+        className="ui-font ui-text-sm shrink-0 select-auto [--app-ui-badge-height:1.5rem] [--app-ui-button-compact-height:1.5rem] [--app-ui-button-compact-min-width:1.5rem] [--app-ui-button-height:1.5rem] [--app-ui-button-min-width:1.5rem] [--app-ui-control-font-size:var(--ui-text-sm)]"
       >
         {children}
       </div>

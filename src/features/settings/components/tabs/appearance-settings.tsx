@@ -144,31 +144,6 @@ export const AppearanceSettings = () => {
     <div className="space-y-4">
       <Section title="Theme">
         <SettingRow
-          label="Color Theme"
-          description="Choose your preferred color theme"
-          onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
-          canReset={settings.theme !== getDefaultSetting("theme")}
-        >
-          <div className="flex items-center gap-2">
-            <Select
-              value={settings.theme}
-              options={normalizedThemeOptions}
-              onChange={(value) => updateSetting("theme", value)}
-              className={SETTINGS_CONTROL_WIDTHS.wide}
-              size="xs"
-              variant="default"
-              searchable
-              searchableTrigger="input"
-              disabled={settings.syncSystemTheme}
-            />
-            <Button onClick={handleUploadTheme} variant="default" className="gap-1" compact>
-              <Upload />
-              Upload
-            </Button>
-          </div>
-        </SettingRow>
-
-        <SettingRow
           label="Sync With OS"
           description="Automatically switch between your preferred light and dark themes"
           onReset={() => updateSetting("syncSystemTheme", getDefaultSetting("syncSystemTheme"))}
@@ -181,6 +156,38 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
+        {!settings.syncSystemTheme ? (
+          <SettingRow
+            label="Color Theme"
+            description="Choose your preferred color theme"
+            onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
+            canReset={settings.theme !== getDefaultSetting("theme")}
+          >
+            <div className="flex items-center gap-2">
+              <Select
+                value={settings.theme}
+                options={normalizedThemeOptions}
+                onChange={(value) => updateSetting("theme", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+              />
+              <Button
+                type="button"
+                onClick={handleUploadTheme}
+                variant="default"
+                tooltip="Upload theme"
+                aria-label="Upload theme"
+                compact
+              >
+                <Upload />
+              </Button>
+            </div>
+          </SettingRow>
+        ) : null}
+
         {settings.syncSystemTheme ? (
           <>
             <SettingRow
@@ -189,16 +196,28 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
-              <Select
-                value={settings.autoThemeLight}
-                options={lightThemeOptions}
-                onChange={(value) => updateSetting("autoThemeLight", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="default"
-                searchable
-                searchableTrigger="input"
-              />
+              <div className="flex items-center gap-2">
+                <Select
+                  value={settings.autoThemeLight}
+                  options={lightThemeOptions}
+                  onChange={(value) => updateSetting("autoThemeLight", value)}
+                  className={SETTINGS_CONTROL_WIDTHS.wide}
+                  size="xs"
+                  variant="default"
+                  searchable
+                  searchableTrigger="input"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUploadTheme}
+                  variant="default"
+                  tooltip="Upload theme"
+                  aria-label="Upload theme"
+                  compact
+                >
+                  <Upload />
+                </Button>
+              </div>
             </SettingRow>
 
             <SettingRow
@@ -207,16 +226,28 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
-              <Select
-                value={settings.autoThemeDark}
-                options={darkThemeOptions}
-                onChange={(value) => updateSetting("autoThemeDark", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="default"
-                searchable
-                searchableTrigger="input"
-              />
+              <div className="flex items-center gap-2">
+                <Select
+                  value={settings.autoThemeDark}
+                  options={darkThemeOptions}
+                  onChange={(value) => updateSetting("autoThemeDark", value)}
+                  className={SETTINGS_CONTROL_WIDTHS.wide}
+                  size="xs"
+                  variant="default"
+                  searchable
+                  searchableTrigger="input"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUploadTheme}
+                  variant="default"
+                  tooltip="Upload theme"
+                  aria-label="Upload theme"
+                  compact
+                >
+                  <Upload />
+                </Button>
+              </div>
             </SettingRow>
           </>
         ) : null}

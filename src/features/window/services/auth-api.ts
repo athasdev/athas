@@ -86,6 +86,13 @@ export interface SubscriptionInfo {
       version: number;
       updatedAt: string | null;
     }>;
+    privateChats: Array<{
+      id: number;
+      conversationMemberId: number;
+      authorMemberId: number;
+      body: string;
+      createdAt: string | null;
+    }>;
     channelGuests: Array<{
       id: number;
       channelId: number;
@@ -353,6 +360,9 @@ function parseCollaborationSnapshot(payload: unknown): SubscriptionInfo["collabo
     channelNotes: asArray(payload.channelNotes) as NonNullable<
       SubscriptionInfo["collaboration"]
     >["channelNotes"],
+    privateChats: asArray(payload.privateChats) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["privateChats"],
     channelGuests: asArray(payload.channelGuests) as NonNullable<
       SubscriptionInfo["collaboration"]
     >["channelGuests"],
@@ -596,6 +606,64 @@ export async function updateCollaborationChannelNote(input: {
   if (!response.ok) {
     throw new AuthApiError(
       payload?.error || `Failed to update collaboration channel note: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export async function createCollaborationChannel(input: {
+  name: string;
+  description?: string;
+  visibility?: string;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch("/api/collaboration/channels", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      visibility: input.visibility ?? "workspace",
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to create collaboration channel: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export async function appendCollaborationPrivateChatMessage(input: {
+  memberId: number;
+  body: string;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch(
+    `/api/collaboration/private-chats/${input.memberId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        body: input.body,
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to send private chat message: ${response.status}`,
       response.status,
     );
   }

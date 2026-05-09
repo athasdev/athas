@@ -1,6 +1,11 @@
-import { CaretDown, PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
+import { PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import {
+  CHROME_CONTROL_GROUP_CLASS_NAME,
+  CHROME_ICON_CLASS_NAME,
+  CHROME_ICON_BUTTON_CLASS_NAME,
+} from "@/features/layout/components/chrome-control-styles";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
@@ -10,12 +15,6 @@ import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
-
-const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
-  "pointer-events-auto border-transparent bg-transparent p-0";
-const TITLE_BAR_BUTTON_CLASS_NAME =
-  "h-6 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
 
 type ActionDraft = {
   id?: string;
@@ -54,8 +53,6 @@ export default function RunActionsButton() {
     () => getActionsForWorkspace(workspacePath),
     [allActions, getActionsForWorkspace, workspacePath],
   );
-  const primaryAction = actions[0];
-
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [draft, setDraft] = useState<ActionDraft>({ name: "", command: "" });
@@ -78,15 +75,6 @@ export default function RunActionsButton() {
       }),
     );
     closeMenu();
-  };
-
-  const handlePrimaryRun = () => {
-    if (primaryAction) {
-      runAction(primaryAction.command, primaryAction.name);
-      return;
-    }
-
-    openDialog();
   };
 
   useEffect(() => {
@@ -122,37 +110,21 @@ export default function RunActionsButton() {
         <TabsList
           variant="segmented"
           data-active={isMenuOpen}
-          className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}
+          className={CHROME_CONTROL_GROUP_CLASS_NAME}
         >
-          <Tooltip
-            content={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
-            side="bottom"
-          >
-            <Button
-              type="button"
-              onClick={handlePrimaryRun}
-              variant="ghost"
-              className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "min-w-9 px-2")}
-              aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
-              compact
-            >
-              <Play className="size-4 translate-x-[0.5px]" weight="duotone" />
-            </Button>
-          </Tooltip>
-
           <Tooltip content="Run actions" side="bottom">
             <Button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               variant="ghost"
-              compact
               active={isMenuOpen}
-              className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "w-7 px-0")}
+              className={CHROME_ICON_BUTTON_CLASS_NAME}
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
-              aria-label="Open run actions"
+              aria-label="Run actions"
+              compact
             >
-              <CaretDown className="size-4" weight="bold" />
+              <Play className={CHROME_ICON_CLASS_NAME} weight="duotone" />
             </Button>
           </Tooltip>
         </TabsList>

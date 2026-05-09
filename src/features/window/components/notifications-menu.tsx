@@ -1,7 +1,5 @@
 import {
   Bell,
-  CaretDown,
-  CaretUp,
   Check,
   ClipboardText,
   Copy,
@@ -11,20 +9,22 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  CHROME_CONTROL_GROUP_CLASS_NAME,
+  CHROME_ICON_CLASS_NAME,
+  CHROME_ICON_BUTTON_CLASS_NAME,
+  CHROME_PILL_BUTTON_CLASS_NAME,
+} from "@/features/layout/components/chrome-control-styles";
+import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Dropdown } from "@/ui/dropdown";
 import { TabsList } from "@/ui/tabs";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-
-const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
-  "pointer-events-auto border-transparent bg-transparent p-0";
-const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
-  "h-6 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
 
 interface NotificationsMenuProps {
   className?: string;
@@ -98,12 +98,6 @@ function NotificationItem({
           )}
           <div className="ui-font ui-text-sm mt-1 flex items-center gap-1 text-text-lighter">
             <span>{formatNotificationAge(notification.updatedAt)}</span>
-            {hasDescription &&
-              (expanded ? (
-                <CaretUp className="size-3" weight="bold" />
-              ) : (
-                <CaretDown className="size-3" weight="bold" />
-              ))}
           </div>
         </div>
       </div>
@@ -111,23 +105,11 @@ function NotificationItem({
   );
 }
 
-export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
+export function NotificationsPane() {
   const notifications = useToastStore.use.notifications();
   const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
   const clearNotifications = useToastStore((state) => state.actions.clearNotifications);
-  const hasBlockingModalOpen = useUIState(
-    (state) =>
-      state.isQuickOpenVisible ||
-      state.isCommandPaletteVisible ||
-      state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
-      state.isProjectPickerVisible ||
-      state.isDatabaseConnectionVisible,
-  );
-
-  const [isOpen, setIsOpen] = useState(false);
   const notificationContextMenu = useContextMenu<NotificationEntry>();
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const unreadCount = useMemo(
     () =>
       notifications.filter((notification) => !notification.read && notification.type !== "success")
@@ -136,14 +118,9 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
   );
 
   useEffect(() => {
-    if (!isOpen || !hasBlockingModalOpen) return;
-    setIsOpen(false);
-  }, [hasBlockingModalOpen, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen || unreadCount === 0) return;
+    if (unreadCount === 0) return;
     markAllNotificationsRead();
-  }, [isOpen, unreadCount, markAllNotificationsRead]);
+  }, [unreadCount, markAllNotificationsRead]);
 
   const notificationContextMenuItems = useMemo<ContextMenuItem[]>(() => {
     const notification = notificationContextMenu.data;
@@ -188,39 +165,7 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
 
   return (
     <>
-      <Tooltip content="Notifications" side="bottom">
-        <TabsList variant="segmented" className={cn(TITLE_BAR_CONTROL_GROUP_CLASS_NAME, className)}>
-          <Button
-            ref={buttonRef}
-            onClick={() => setIsOpen((open) => !open)}
-            type="button"
-            variant="ghost"
-            compact
-            active={isOpen}
-            className={cn(
-              TITLE_BAR_ICON_BUTTON_CLASS_NAME,
-              unreadCount > 0 ? "min-w-10 gap-1 px-1.5" : "w-7 px-0",
-            )}
-            aria-expanded={isOpen}
-            aria-haspopup="menu"
-            aria-label="Notifications"
-          >
-            <Bell className="size-4" weight="duotone" />
-            {unreadCount > 0 && (
-              <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
-                {unreadCount}
-              </span>
-            )}
-          </Button>
-        </TabsList>
-      </Tooltip>
-      <Dropdown
-        isOpen={isOpen}
-        anchorRef={buttonRef}
-        anchorAlign="end"
-        className="w-[360px] max-w-[min(420px,calc(100vw-16px))]"
-        onClose={() => setIsOpen(false)}
-      >
+      <div className="flex h-full min-h-0 flex-col">
         <div className="flex items-center justify-between px-3 py-2">
           <div className="ui-font ui-text-sm text-text">Notifications</div>
           {notifications.length > 0 && (
@@ -238,7 +183,7 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
             No notifications yet.
           </div>
         ) : (
-          <div className="max-h-[360px] overflow-y-auto p-1">
+          <div className="min-h-0 flex-1 overflow-y-auto p-1">
             {notifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
@@ -248,7 +193,7 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
             ))}
           </div>
         )}
-      </Dropdown>
+      </div>
       <ContextMenu
         isOpen={notificationContextMenu.isOpen}
         position={notificationContextMenu.position}
@@ -256,5 +201,66 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
         onClose={notificationContextMenu.close}
       />
     </>
+  );
+}
+
+export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
+  const notifications = useToastStore.use.notifications();
+  const {
+    isSidebarVisible,
+    isGitViewActive,
+    isGitHubPRsViewActive,
+    activeSidebarView,
+    setActiveView,
+    setIsSidebarVisible,
+  } = useUIState();
+  const { settings, updateSetting } = useSettingsStore();
+  const unreadCount = useMemo(
+    () =>
+      notifications.filter((notification) => !notification.read && notification.type !== "success")
+        .length,
+    [notifications],
+  );
+  const isActive = isSidebarVisible && activeSidebarView === "notifications";
+
+  return (
+    <Tooltip content="Notifications" side="top">
+      <TabsList variant="segmented" className={cn(CHROME_CONTROL_GROUP_CLASS_NAME, className)}>
+        <Button
+          onClick={() => {
+            if (settings.sidebarPosition !== "right") {
+              void updateSetting("sidebarPosition", "right");
+            }
+            const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
+              {
+                isSidebarVisible,
+                isGitViewActive,
+                isGitHubPRsViewActive,
+                activeSidebarView,
+              },
+              "notifications",
+            );
+            setActiveView(nextView);
+            setIsSidebarVisible(nextIsSidebarVisible);
+          }}
+          type="button"
+          variant="ghost"
+          compact
+          active={isActive}
+          className={cn(
+            CHROME_ICON_BUTTON_CLASS_NAME,
+            unreadCount > 0 && cn(CHROME_PILL_BUTTON_CLASS_NAME, "w-auto gap-1.5"),
+          )}
+          aria-label="Notifications"
+        >
+          <Bell className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+          {unreadCount > 0 && (
+            <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
+              {unreadCount}
+            </span>
+          )}
+        </Button>
+      </TabsList>
+    </Tooltip>
   );
 };
