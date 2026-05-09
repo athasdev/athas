@@ -14,10 +14,9 @@ import {
 import type React from "react";
 import { forwardRef, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CHROME_CONTROL_GROUP_CLASS_NAME,
-  CHROME_ICON_CLASS_NAME,
-  CHROME_ICON_BUTTON_CLASS_NAME,
-  CHROME_PILL_BUTTON_CLASS_NAME,
+  chromeControl,
+  chromeControlGroup,
+  chromeIcon,
 } from "@/features/layout/components/chrome-control-styles";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { useSettingsStore } from "@/features/settings/store";
@@ -667,7 +666,7 @@ export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) =
 
   return (
     <Tooltip content="Notifications" side="top">
-      <TabsList variant="segmented" className={cn(CHROME_CONTROL_GROUP_CLASS_NAME, className)}>
+      <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
         <Button
           onClick={() => {
             if (settings.sidebarPosition !== "right") {
@@ -690,12 +689,12 @@ export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) =
           compact
           active={isActive}
           className={cn(
-            CHROME_ICON_BUTTON_CLASS_NAME,
-            unreadCount > 0 && cn(CHROME_PILL_BUTTON_CLASS_NAME, "w-auto gap-1.5"),
+            chromeControl(),
+            unreadCount > 0 && cn(chromeControl({ shape: "pill" }), "w-auto gap-1.5"),
           )}
           aria-label="Notifications"
         >
-          <Bell className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+          <Bell className={chromeIcon()} weight="duotone" />
           {unreadCount > 0 && (
             <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
               {unreadCount}

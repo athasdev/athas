@@ -2,9 +2,9 @@ import { PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import {
-  CHROME_CONTROL_GROUP_CLASS_NAME,
-  CHROME_ICON_CLASS_NAME,
-  CHROME_ICON_BUTTON_CLASS_NAME,
+  chromeControl,
+  chromeControlGroup,
+  chromeIcon,
 } from "@/features/layout/components/chrome-control-styles";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -107,24 +107,20 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <TabsList
-          variant="segmented"
-          data-active={isMenuOpen}
-          className={CHROME_CONTROL_GROUP_CLASS_NAME}
-        >
+        <TabsList variant="segmented" data-active={isMenuOpen} className={chromeControlGroup()}>
           <Tooltip content="Run actions" side="bottom">
             <Button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               variant="ghost"
               active={isMenuOpen}
-              className={CHROME_ICON_BUTTON_CLASS_NAME}
+              className={chromeControl()}
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label="Run actions"
               compact
             >
-              <Play className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+              <Play className={chromeIcon()} weight="duotone" />
             </Button>
           </Tooltip>
         </TabsList>

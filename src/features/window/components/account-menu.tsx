@@ -13,8 +13,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import {
-  CHROME_CONTROL_GROUP_CLASS_NAME,
-  CHROME_ICON_BUTTON_CLASS_NAME,
+  chromeControl,
+  chromeControlGroup,
 } from "@/features/layout/components/chrome-control-styles";
 import {
   extractAutocompleteUsage,
@@ -220,7 +220,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <TabsList variant="segmented" className={cn(CHROME_CONTROL_GROUP_CLASS_NAME, className)}>
+        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
           <Button
             ref={buttonRef}
             onClick={() => setIsOpen((open) => !open)}
@@ -228,7 +228,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
             variant="ghost"
             compact
             active={isOpen}
-            className={CHROME_ICON_BUTTON_CLASS_NAME}
+            className={chromeControl()}
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-label="Account"

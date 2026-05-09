@@ -231,7 +231,7 @@ export function MainLayout() {
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
+    <div className="athas-layout-shell relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
@@ -245,7 +245,7 @@ export function MainLayout() {
 
       <CustomTitleBarWithSettings />
 
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
@@ -281,7 +281,7 @@ export function MainLayout() {
 
           {/* Main content area with split view */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
+            <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
             {terminalWidthMode === "editor" && <BottomPane />}

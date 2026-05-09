@@ -62,11 +62,7 @@ import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { SidebarHeader, SidebarHeaderSearch } from "@/ui/sidebar";
-import {
-  EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
-  EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
-  Tabs,
-} from "@/ui/tabs";
+import { equalWidthSegmentedTabItem, equalWidthSegmentedTabs, Tabs } from "@/ui/tabs";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { toast } from "@/ui/toast";
@@ -1224,7 +1220,7 @@ export function CollaborationSidebarView() {
           variant="segmented"
           size="md"
           contentLayout="stacked"
-          className={EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME}
+          className={equalWidthSegmentedTabs()}
           items={collaborationTabs.map((tab) => ({
             id: tab.id,
             isActive: activeTab === tab.id,
@@ -1237,7 +1233,7 @@ export function CollaborationSidebarView() {
               content: tab.label,
               side: "bottom",
             },
-            className: EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
+            className: equalWidthSegmentedTabItem(),
           }))}
         />
       </div>

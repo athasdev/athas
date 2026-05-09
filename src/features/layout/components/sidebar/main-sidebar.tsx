@@ -52,7 +52,7 @@ export const SidebarActivityRail = memo(() => {
   };
 
   return (
-    <div className="flex shrink-0 items-start px-1 pt-0 pb-1.5">
+    <div className="athas-sidebar-rail flex shrink-0 items-start px-1 pt-0 pb-1.5">
       <SidebarPaneSelector
         activeSidebarView={activeSidebarView}
         isGitViewActive={isGitViewActive}

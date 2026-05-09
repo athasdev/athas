@@ -17,10 +17,10 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import {
-  CHROME_CONTROL_GROUP_CLASS_NAME,
-  CHROME_ICON_BUTTON_CLASS_NAME,
-  CHROME_ICON_CLASS_NAME,
-  CHROME_ITEM_WRAPPER_CLASS_NAME,
+  chromeControl,
+  chromeControlGroup,
+  chromeIcon,
+  chromeItemWrapper,
 } from "@/features/layout/components/chrome-control-styles";
 import {
   resolveSidebarPaneClick,
@@ -345,7 +345,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       settings.compactMenuBar ? (
         <div className="relative">
           <Tooltip content="Menu" side="bottom">
-            <TabsList variant="segmented" className={CHROME_CONTROL_GROUP_CLASS_NAME}>
+            <TabsList variant="segmented" className={chromeControlGroup()}>
               <Button
                 ref={menuButtonRef}
                 onClick={() => {
@@ -353,13 +353,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 }}
                 variant="ghost"
                 compact
-                className={cn(
-                  CHROME_ICON_BUTTON_CLASS_NAME,
-                  menuBarActiveMenu && "bg-hover/70 text-text",
-                )}
+                className={cn(chromeControl(), menuBarActiveMenu && "bg-hover/70 text-text")}
                 aria-label="Menu"
               >
-                <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+                <List className={chromeIcon()} weight="duotone" />
               </Button>
             </TabsList>
           </Tooltip>
@@ -391,10 +388,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
-          className={CHROME_ICON_BUTTON_CLASS_NAME}
+          className={chromeControl()}
           aria-label="Toggle AI Chat"
         >
-          <Sparkle className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+          <Sparkle className={chromeIcon()} weight="duotone" />
         </Button>
       ),
     },
@@ -411,10 +408,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           tooltip="Collaboration"
           tooltipSide="bottom"
           onClick={() => handleRightUtilityViewChange("collaboration")}
-          className={CHROME_ICON_BUTTON_CLASS_NAME}
+          className={chromeControl()}
           aria-label="Collaboration"
         >
-          <UsersThree className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+          <UsersThree className={chromeIcon()} weight="duotone" />
         </Button>
       ) : null,
     },
@@ -429,7 +426,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className={`relative z-50 flex select-none items-center justify-between ${
+        className={`athas-title-bar relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-8" : "h-8"
         } bg-secondary-bg px-2`}
       >
@@ -441,7 +438,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleMinimize}
                 variant="ghost"
-                className={cn("pointer-events-auto", CHROME_ICON_BUTTON_CLASS_NAME)}
+                className={cn("pointer-events-auto", chromeControl())}
                 compact
               >
                 <Minus weight="bold" />
@@ -451,7 +448,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleToggleMaximize}
                 variant="ghost"
-                className={cn("pointer-events-auto", CHROME_ICON_BUTTON_CLASS_NAME)}
+                className={cn("pointer-events-auto", chromeControl())}
                 compact
               >
                 {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
@@ -461,10 +458,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                className={cn(
-                  "pointer-events-auto group hover:text-white",
-                  CHROME_ICON_BUTTON_CLASS_NAME,
-                )}
+                className={cn("pointer-events-auto group hover:text-white", chromeControl())}
                 compact
               >
                 <X weight="bold" />
@@ -483,7 +477,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         data-tauri-drag-region
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
-          "relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
+          "athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
@@ -520,7 +514,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
             ).map((item) =>
               item.content ? (
-                <div key={item.id} className={CHROME_ITEM_WRAPPER_CLASS_NAME}>
+                <div key={item.id} className={chromeItemWrapper()}>
                   {item.content}
                 </div>
               ) : null,
@@ -537,7 +531,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     <div
       data-tauri-drag-region
       onContextMenu={handleTitleBarContextMenu}
-      className="relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
+      className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
     >
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center">
@@ -576,7 +570,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
           ).map((item) =>
             item.content ? (
-              <div key={item.id} className={CHROME_ITEM_WRAPPER_CLASS_NAME}>
+              <div key={item.id} className={chromeItemWrapper()}>
                 {item.content}
               </div>
             ) : null,
@@ -589,7 +583,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleMinimize}
                 variant="ghost"
-                className={cn("pointer-events-auto", CHROME_ICON_BUTTON_CLASS_NAME)}
+                className={cn("pointer-events-auto", chromeControl())}
                 compact
               >
                 <Minus weight="bold" />
@@ -599,7 +593,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleToggleMaximize}
                 variant="ghost"
-                className={cn("pointer-events-auto", CHROME_ICON_BUTTON_CLASS_NAME)}
+                className={cn("pointer-events-auto", chromeControl())}
                 compact
               >
                 {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
@@ -609,10 +603,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                className={cn(
-                  "pointer-events-auto group hover:text-white",
-                  CHROME_ICON_BUTTON_CLASS_NAME,
-                )}
+                className={cn("pointer-events-auto group hover:text-white", chromeControl())}
                 compact
               >
                 <X weight="bold" />

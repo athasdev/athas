@@ -38,11 +38,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
 import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { SidebarHeader, SidebarHeaderSearch } from "@/ui/sidebar";
-import {
-  Tabs,
-  EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
-  EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
-} from "@/ui/tabs";
+import { Tabs, equalWidthSegmentedTabItem, equalWidthSegmentedTabs } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { useGitHubStore } from "../stores/github-store";
 import type { PRFilter, PullRequest } from "../types/github";
@@ -427,7 +423,7 @@ const GitHubPRsView = memo(() => {
                 orderedIds as typeof settings.githubSidebarSectionOrder,
               )
             }
-            className={EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME}
+            className={equalWidthSegmentedTabs()}
             items={sectionTabs.map((tab) => ({
               id: tab.id,
               isActive: activeSection === tab.id,
@@ -436,7 +432,7 @@ const GitHubPRsView = memo(() => {
               tabIndex: 0,
               icon: <div className="relative flex items-center justify-center">{tab.icon}</div>,
               label: <span className="ui-text-sm text-center leading-none">{tab.label}</span>,
-              className: EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
+              className: equalWidthSegmentedTabItem(),
             }))}
           />
 

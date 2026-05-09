@@ -8,8 +8,8 @@ import {
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
-  CHROME_CONTROL_GROUP_CLASS_NAME,
-  CHROME_ICON_BUTTON_CLASS_NAME,
+  chromeControl,
+  chromeControlGroup,
 } from "@/features/layout/components/chrome-control-styles";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
@@ -57,10 +57,10 @@ export const SidebarPaneSelector = ({
   const tooltipSide = compact ? "bottom" : isVertical ? "right" : "bottom";
   const iconClassName = compact ? "size-4" : isVertical ? "size-[18px]" : undefined;
   const tabClassName = compact
-    ? CHROME_ICON_BUTTON_CLASS_NAME
+    ? chromeControl()
     : isVertical
-      ? "size-9 rounded-lg"
-      : "w-8 rounded-md";
+      ? chromeControl({ shape: "sidebar" })
+      : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
   const isSidebarBuilderFeatureEnabled = coreFeatures.sidebarBuilder;
@@ -252,7 +252,7 @@ export const SidebarPaneSelector = ({
     <TabsList
       variant="default"
       className={cn(
-        compact ? CHROME_CONTROL_GROUP_CLASS_NAME : "gap-0.5 p-1",
+        compact ? chromeControlGroup() : "gap-0.5 p-1",
         isVertical && "flex-col items-center gap-1 rounded-none border-0 bg-transparent p-0",
       )}
     >

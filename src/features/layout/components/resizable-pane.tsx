@@ -184,7 +184,7 @@ export function ResizablePane({
       ref={paneRef}
       style={{ width: hidden ? "0px" : `${width}px` }}
       className={cn(
-        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
+        "athas-resizable-pane relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
         hidden && "pointer-events-none",
         className,
       )}
@@ -215,7 +215,7 @@ export function ResizablePane({
       >
         <div
           className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
+            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
             !hidden && "rounded-lg",
           )}
         >

@@ -7,6 +7,7 @@ import {
   TerminalWindow,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { cva } from "class-variance-authority";
 import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
@@ -15,11 +16,10 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-s
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import {
-  CHROME_CONTROL_GROUP_CLASS_NAME,
-  CHROME_ICON_CLASS_NAME,
-  CHROME_ICON_BUTTON_CLASS_NAME,
-  CHROME_ITEM_WRAPPER_CLASS_NAME,
-  CHROME_PILL_BUTTON_CLASS_NAME,
+  chromeControl,
+  chromeControlGroup,
+  chromeIcon,
+  chromeItemWrapper,
 } from "@/features/layout/components/chrome-control-styles";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { getGitStatus } from "@/features/git/api/git-status-api";
@@ -46,10 +46,11 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const FOOTER_COUNT_PILL_CLASS_NAME =
-  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3";
-const FOOTER_GIT_TRIGGER_CLASS_NAME = "h-6 w-fit rounded-md";
-const FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME = "pl-7 ui-text-sm";
+const footerCountPill = cva(
+  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3",
+);
+const footerGitTrigger = cva("h-6 w-fit rounded-md");
+const footerGitTriggerInput = cva("pl-7 ui-text-sm");
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -80,7 +81,7 @@ function FooterTabControl({
   const shortcut = useCommandShortcut(commandId);
 
   return (
-    <TabsList variant="segmented" className={CHROME_CONTROL_GROUP_CLASS_NAME}>
+    <TabsList variant="segmented" className={chromeControlGroup()}>
       <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
           ref={controlRef}
@@ -203,8 +204,8 @@ const Footer = () => {
                 paletteTarget
                 placement="up"
                 triggerIconSize={16}
-                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
-                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[220px]")}
+                triggerClassName={footerGitTrigger()}
+                triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[220px]")}
                 onBranchChange={async () => {
                   const status = await getGitStatus(footerRepoPath);
                   actions.setWorkspaceGitStatus(status, footerRepoPath);
@@ -217,8 +218,8 @@ const Footer = () => {
                 repoPath={footerRepoPath}
                 placement="up"
                 triggerIconSize={16}
-                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
-                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[118px]")}
+                triggerClassName={footerGitTrigger()}
+                triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[118px]")}
                 onWorktreeChange={async (worktreePath) => {
                   selectRepository(worktreePath);
                   const status = await getGitStatus(worktreePath);
@@ -240,7 +241,7 @@ const Footer = () => {
             <FooterTabControl
               tooltip="Toggle Terminal"
               active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
-              className={CHROME_ICON_BUTTON_CLASS_NAME}
+              className={chromeControl()}
               commandId="workbench.toggleTerminal"
               onClick={() => {
                 uiState.setBottomPaneActiveTab("terminal");
@@ -273,7 +274,7 @@ const Footer = () => {
               }
               active={isDiagnosticsBufferActive}
               className={cn(
-                CHROME_PILL_BUTTON_CLASS_NAME,
+                chromeControl({ shape: "pill" }),
                 !isDiagnosticsBufferActive && diagnosticsCount > 0 && "text-warning",
               )}
               commandId="workbench.toggleDiagnostics"
@@ -296,11 +297,11 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className={cn(CHROME_PILL_BUTTON_CLASS_NAME, "text-blue-400 hover:text-blue-300")}
+              className={cn(chromeControl({ shape: "pill" }), "text-blue-400 hover:text-blue-300")}
               onClick={() => uiState.openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className={cn(FOOTER_COUNT_PILL_CLASS_NAME, "bg-blue-400 text-primary-bg")}>
+              <span className={cn(footerCountPill(), "bg-blue-400 text-primary-bg")}>
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
               </span>
             </FooterTabControl>
@@ -324,7 +325,7 @@ const Footer = () => {
                         : `Update available: ${updateInfo.version}`
                 }
                 className={cn(
-                  CHROME_PILL_BUTTON_CLASS_NAME,
+                  chromeControl({ shape: "pill" }),
                   downloading || installing
                     ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
                     : updateError
@@ -356,7 +357,7 @@ const Footer = () => {
                 tooltip="Update Options"
                 active={isUpdateMenuOpen}
                 className={cn(
-                  CHROME_ICON_BUTTON_CLASS_NAME,
+                  chromeControl(),
                   updateError
                     ? "text-error hover:bg-error/10 hover:text-error"
                     : "text-accent hover:bg-accent/10 hover:text-accent",
@@ -405,7 +406,7 @@ const Footer = () => {
               <FooterTabControl
                 tooltip="Outline"
                 active={isOutlineActive}
-                className={CHROME_ICON_BUTTON_CLASS_NAME}
+                className={chromeControl()}
                 commandId="workbench.focusOutline"
                 onClick={() => {
                   if (settings.sidebarPosition !== "right") {
@@ -426,7 +427,7 @@ const Footer = () => {
                   uiState.setIsSidebarVisible(nextIsSidebarVisible);
                 }}
               >
-                <ListBullets className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+                <ListBullets className={chromeIcon()} weight="duotone" />
               </FooterTabControl>
             ),
           },
@@ -440,10 +441,10 @@ const Footer = () => {
   ];
 
   return (
-    <div className="relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+    <div className="athas-footer-bar relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerLeadingItems, settings.footerLeadingItemsOrder).map((item) => (
-          <div key={item.id} className={CHROME_ITEM_WRAPPER_CLASS_NAME}>
+          <div key={item.id} className={chromeItemWrapper()}>
             {item.content}
           </div>
         ))}
@@ -451,7 +452,7 @@ const Footer = () => {
 
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerTrailingItems, settings.footerTrailingItemsOrder).map((item) => (
-          <div key={item.id} className={CHROME_ITEM_WRAPPER_CLASS_NAME}>
+          <div key={item.id} className={chromeItemWrapper()}>
             {item.content}
           </div>
         ))}

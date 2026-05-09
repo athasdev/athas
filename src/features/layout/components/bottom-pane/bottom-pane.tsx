@@ -158,7 +158,7 @@ const BottomPane = () => {
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
+        "athas-glass-island relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
         isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
         !isBottomPaneVisible && "hidden",
