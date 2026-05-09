@@ -6,7 +6,7 @@ import {
   HardDrives as Server,
   Trash as Trash2,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -31,15 +31,47 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
   const { actions } = store;
   const [patternInput, setPatternInput] = useState("*");
   const [showInfo, setShowInfo] = useState(false);
+  const keyListRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     actions.init(connectionId);
     return () => actions.reset();
   }, [connectionId, actions]);
 
+  useEffect(() => {
+    setPatternInput(store.scanPattern);
+  }, [store.scanPattern]);
+
   const handleSearch = () => {
     actions.scanKeys(patternInput, true);
   };
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    const keyList = keyListRef.current;
+    if (
+      !sentinel ||
+      !keyList ||
+      !store.hasMore ||
+      store.isScanningKeys ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          actions.scanKeys();
+        }
+      },
+      { root: keyList, rootMargin: "160px 0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [actions, store.hasMore, store.isScanningKeys, store.keys.length]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-secondary-bg/30 text-text">
@@ -64,9 +96,10 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               variant="ghost"
               compact
               className="rounded-full"
+              disabled={store.isScanningKeys}
               aria-label="Refresh keys"
             >
-              <RefreshCw />
+              <RefreshCw className={store.isScanningKeys ? "animate-spin" : undefined} />
             </Button>
           </div>
         </div>
@@ -88,13 +121,14 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               onClick={handleSearch}
               variant="ghost"
               className="rounded-full"
+              disabled={store.isScanningKeys}
               aria-label="Search keys"
               compact
             >
-              <Search />
+              {store.isScanningKeys ? <RefreshCw className="animate-spin" /> : <Search />}
             </Button>
           </div>
-          <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+          <div ref={keyListRef} className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
             {store.keys.map((keyInfo) => (
               <Button
                 key={keyInfo.key}
@@ -125,15 +159,16 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               </Button>
             ))}
             {store.hasMore && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => actions.scanKeys()}
-                className="w-full text-accent"
-                aria-label="Load more keys"
+              <div
+                ref={loadMoreRef}
+                aria-label="Loading more keys"
+                className="px-2 py-1 text-text-lighter text-xs"
               >
-                Load more...
-              </Button>
+                {store.isScanningKeys ? "Loading keys..." : "More keys..."}
+              </div>
+            )}
+            {store.isScanningKeys && !store.hasMore && (
+              <div className="px-2 py-1 text-text-lighter text-xs">Loading keys...</div>
             )}
           </div>
         </div>
