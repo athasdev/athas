@@ -104,7 +104,7 @@ impl ToolInstaller {
    }
 
    fn known_node_companion_packages(package: &str) -> &'static [&'static str] {
-      match package {
+      match Self::node_package_name(package).as_str() {
          // typescript-language-server declares TypeScript as a peer dependency
          // and exits during LSP initialize if it cannot resolve it locally.
          "typescript-language-server" => &["typescript"],
@@ -127,6 +127,35 @@ impl ToolInstaller {
       }
 
       packages
+   }
+
+   fn node_package_name(package_spec: &str) -> String {
+      let spec = package_spec.trim();
+      if let Some(scoped) = spec.strip_prefix('@') {
+         let mut segments = scoped.splitn(3, '/');
+         let Some(scope) = segments.next() else {
+            return spec.to_string();
+         };
+         let Some(name_and_version) = segments.next() else {
+            return spec.to_string();
+         };
+         let name = name_and_version
+            .rsplit_once('@')
+            .map(|(name, _)| name)
+            .unwrap_or(name_and_version);
+         if name.is_empty() {
+            spec.to_string()
+         } else {
+            format!("@{scope}/{name}")
+         }
+      } else {
+         spec
+            .rsplit_once('@')
+            .map(|(name, _)| name)
+            .filter(|name| !name.is_empty())
+            .unwrap_or(spec)
+            .to_string()
+      }
    }
 
    fn node_companion_packages_to_validate(
@@ -219,7 +248,9 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Option<PathBuf> {
-      let package_root = package_dir.join("node_modules").join(package);
+      let package_root = package_dir
+         .join("node_modules")
+         .join(Self::node_package_name(package));
       Self::resolve_node_package_entrypoint_from_root(&package_root, command_name, true)
          .filter(|path| path.exists())
    }
@@ -1305,6 +1336,22 @@ mod tests {
    }
 
    #[test]
+   fn resolves_node_package_name_from_versioned_specs() {
+      assert_eq!(
+         ToolInstaller::node_package_name("typescript-language-server@4.4.1"),
+         "typescript-language-server"
+      );
+      assert_eq!(
+         ToolInstaller::node_package_name("@vtsls/language-server@0.2.9"),
+         "@vtsls/language-server"
+      );
+      assert_eq!(
+         ToolInstaller::node_package_name("@vtsls/language-server"),
+         "@vtsls/language-server"
+      );
+   }
+
+   #[test]
    fn resolves_node_bin_shim_when_present() {
       let temp = tempfile::tempdir().unwrap();
       let package_dir = temp.path().join("bun").join("typescript-language-server");
@@ -1353,6 +1400,41 @@ mod tests {
          &package_dir,
          "@vue/language-server",
          "vue-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));
+   }
+
+   #[test]
+   fn resolves_versioned_node_package_entrypoint() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp
+         .path()
+         .join("npm")
+         .join("@agentclientprotocol")
+         .join("claude-agent-acp@0.33.1");
+      let package_root = package_dir
+         .join("node_modules")
+         .join("@agentclientprotocol")
+         .join("claude-agent-acp");
+      let entrypoint = package_root.join("bin").join("claude-agent-acp.js");
+      fs::create_dir_all(entrypoint.parent().unwrap()).unwrap();
+      fs::write(
+         package_root.join("package.json"),
+         r#"{
+  "name": "@agentclientprotocol/claude-agent-acp",
+  "bin": {
+    "claude-agent-acp": "./bin/claude-agent-acp.js"
+  }
+}"#,
+      )
+      .unwrap();
+      fs::write(&entrypoint, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_binary(
+         &package_dir,
+         "@agentclientprotocol/claude-agent-acp@0.33.1",
+         "claude-agent-acp",
       );
 
       assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));

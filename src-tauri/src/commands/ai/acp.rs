@@ -282,6 +282,64 @@ fn registry_command_name(cmd: &str, fallback: &str) -> String {
       .unwrap_or_else(|| fallback.to_string())
 }
 
+fn npm_package_name(package_spec: &str) -> String {
+   let spec = package_spec.trim();
+   if let Some(scoped) = spec.strip_prefix('@') {
+      let mut segments = scoped.splitn(3, '/');
+      let Some(scope) = segments.next() else {
+         return spec.to_string();
+      };
+      let Some(name_and_version) = segments.next() else {
+         return spec.to_string();
+      };
+      let name = name_and_version
+         .rsplit_once('@')
+         .map(|(name, _)| name)
+         .unwrap_or(name_and_version);
+      if name.is_empty() {
+         spec.to_string()
+      } else {
+         format!("@{scope}/{name}")
+      }
+   } else {
+      spec
+         .rsplit_once('@')
+         .map(|(name, _)| name)
+         .filter(|name| !name.is_empty())
+         .unwrap_or(spec)
+         .to_string()
+   }
+}
+
+fn package_command_name(package_name: &str, fallback: &str) -> String {
+   package_name
+      .rsplit('/')
+      .next()
+      .filter(|name| !name.is_empty())
+      .unwrap_or(fallback)
+      .to_string()
+}
+
+fn python_package_spec_from_uvx(package_spec: &str) -> String {
+   let spec = package_spec.trim();
+   if spec.contains("==") {
+      return spec.to_string();
+   }
+   spec
+      .rsplit_once('@')
+      .map(|(package, version)| format!("{package}=={version}"))
+      .unwrap_or_else(|| spec.to_string())
+}
+
+fn python_command_name(package_spec: &str, fallback: &str) -> String {
+   let package = package_spec
+      .split_once("==")
+      .map(|(package, _)| package)
+      .unwrap_or(package_spec)
+      .trim();
+   package_command_name(package, fallback)
+}
+
 fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
    let mut agent = AgentConfig {
       id: contribution.id,
@@ -354,48 +412,48 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
    }
 
    if let Some(target) = distribution.npx {
-      let mut args = vec!["-y".to_string(), target.package.clone()];
-      args.extend(target.args.clone());
+      let package_name = npm_package_name(&target.package);
+      let command = package_command_name(&package_name, &id);
       return Some(AgentConfig {
          id,
          name,
-         binary_name: "npx".to_string(),
+         binary_name: command.clone(),
          binary_path: None,
-         args,
+         args: target.args.clone(),
          env_vars: target.env,
          default_mode: None,
          default_model: None,
          icon,
          description: Some(description),
          installed: false,
-         install_runtime: None,
-         install_package: None,
+         install_runtime: Some(AgentRuntime::Node),
+         install_package: Some(target.package),
          install_download_url: None,
-         install_command: None,
-         can_install: false,
+         install_command: Some(command),
+         can_install: true,
       });
    }
 
    if let Some(target) = distribution.uvx {
-      let mut args = vec![target.package];
-      args.extend(target.args);
+      let package = python_package_spec_from_uvx(&target.package);
+      let command = python_command_name(&package, &id);
       return Some(AgentConfig {
          id,
          name,
-         binary_name: "uvx".to_string(),
+         binary_name: command.clone(),
          binary_path: None,
-         args,
+         args: target.args,
          env_vars: target.env,
          default_mode: None,
          default_model: None,
          icon,
          description: Some(description),
          installed: false,
-         install_runtime: None,
-         install_package: None,
+         install_runtime: Some(AgentRuntime::Python),
+         install_package: Some(package),
          install_download_url: None,
-         install_command: None,
-         can_install: false,
+         install_command: Some(command),
+         can_install: true,
       });
    }
 
@@ -1115,7 +1173,29 @@ mod tests {
    }
 
    #[test]
-   fn acp_registry_json_maps_npx_distribution() {
+   fn npm_package_name_strips_registry_version_specs() {
+      assert_eq!(npm_package_name("cline@2.18.0"), "cline");
+      assert_eq!(
+         npm_package_name("@agentclientprotocol/claude-agent-acp@0.33.1"),
+         "@agentclientprotocol/claude-agent-acp"
+      );
+      assert_eq!(npm_package_name("@scope/package"), "@scope/package");
+   }
+
+   #[test]
+   fn python_package_spec_from_uvx_converts_registry_version_specs() {
+      assert_eq!(
+         python_package_spec_from_uvx("fast-agent-acp==0.7.1"),
+         "fast-agent-acp==0.7.1"
+      );
+      assert_eq!(
+         python_package_spec_from_uvx("minion-code@0.1.44"),
+         "minion-code==0.1.44"
+      );
+   }
+
+   #[test]
+   fn acp_registry_json_maps_npx_distribution_as_managed_node_install() {
       let json = r#"{
         "agents": [
           {
@@ -1138,18 +1218,48 @@ mod tests {
       let codex = agents.first().expect("codex agent");
 
       assert_eq!(codex.id, "codex-acp");
-      assert_eq!(codex.binary_name, "npx");
-      assert_eq!(
-         codex.args,
-         vec![
-            "-y".to_string(),
-            "@vendor/codex-acp".to_string(),
-            "--flag".to_string()
-         ]
-      );
+      assert_eq!(codex.binary_name, "codex-acp");
+      assert_eq!(codex.args, vec!["--flag".to_string()]);
+      assert_eq!(codex.install_runtime, Some(AgentRuntime::Node));
+      assert_eq!(codex.install_package.as_deref(), Some("@vendor/codex-acp"));
+      assert_eq!(codex.install_command.as_deref(), Some("codex-acp"));
+      assert!(codex.can_install);
       assert_eq!(
          codex.env_vars.get("REGISTRY_ENV").map(String::as_str),
          Some("1")
       );
+   }
+
+   #[test]
+   fn acp_registry_json_maps_uvx_distribution_as_managed_python_install() {
+      let json = r#"{
+        "agents": [
+          {
+            "id": "minion-code",
+            "name": "Minion Code",
+            "description": "Minion ACP adapter",
+            "distribution": {
+              "uvx": {
+                "package": "minion-code@0.1.44",
+                "args": ["acp"]
+              }
+            }
+          }
+        ]
+      }"#;
+
+      let agents = acp_registry_agents_from_json(json).expect("registry agents");
+      let minion = agents.first().expect("minion agent");
+
+      assert_eq!(minion.id, "minion-code");
+      assert_eq!(minion.binary_name, "minion-code");
+      assert_eq!(minion.args, vec!["acp".to_string()]);
+      assert_eq!(minion.install_runtime, Some(AgentRuntime::Python));
+      assert_eq!(
+         minion.install_package.as_deref(),
+         Some("minion-code==0.1.44")
+      );
+      assert_eq!(minion.install_command.as_deref(), Some("minion-code"));
+      assert!(minion.can_install);
    }
 }
