@@ -86,6 +86,12 @@ export function AgentSelector({
     void loadInstalledAgents();
   }, [loadInstalledAgents]);
 
+  useEffect(() => {
+    if (isOpen) {
+      void loadInstalledAgents();
+    }
+  }, [isOpen, loadInstalledAgents]);
+
   // Build filtered items list
   const filteredItems = useMemo(() => {
     const items: Array<{

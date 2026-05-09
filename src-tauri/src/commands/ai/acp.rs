@@ -19,6 +19,7 @@ const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
 const ACP_REGISTRY_URL: &str =
    "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
+const ACP_REGISTRY_USER_AGENT: &str = concat!("Athas/", env!("CARGO_PKG_VERSION"));
 const EXCLUDED_ACP_REGISTRY_AGENT_IDS: &[&str] = &["agoragentic-acp"];
 
 #[derive(Deserialize)]
@@ -526,6 +527,7 @@ fn write_acp_registry_cache(app_handle: &AppHandle, json: &str) -> Result<(), St
 async fn load_acp_registry_agents(app_handle: &AppHandle) -> Result<Vec<AgentConfig>, String> {
    let response = reqwest::Client::new()
       .get(acp_registry_url())
+      .header(reqwest::header::USER_AGENT, ACP_REGISTRY_USER_AGENT)
       .timeout(Duration::from_secs(5))
       .send()
       .await
