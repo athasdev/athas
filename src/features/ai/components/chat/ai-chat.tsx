@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { Key as KeyRound } from "@phosphor-icons/react";
 import type React from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import {
   appendChatAcpEvent,
@@ -218,8 +218,13 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
-  const effectiveChatId =
-    chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
+  const activeAgentChatId = useMemo(() => {
+    if (activeBuffer?.type !== "agent") return null;
+    return chatState.chats.some((chat) => chat.id === activeBuffer.sessionId)
+      ? activeBuffer.sessionId
+      : null;
+  }, [activeBuffer, chatState.chats]);
+  const effectiveChatId = chatId ?? activeAgentChatId ?? chatState.currentChatId;
 
   useEffect(() => {
     if (isActiveSurface && activeBuffer) {
@@ -494,6 +499,13 @@ const AIChat = memo(function AIChat({
     let chatId = store.currentChatId;
     if (!chatId) {
       chatId = chatActions.createNewChat(currentAgentId);
+    }
+    if (activeBuffer?.type === "agent" && activeBuffer.sessionId !== chatId) {
+      useBufferStore.getState().actions.updateBuffer({
+        ...activeBuffer,
+        path: `agent://${chatId}`,
+        sessionId: chatId,
+      });
     }
 
     const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
