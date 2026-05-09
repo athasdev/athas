@@ -3,7 +3,13 @@ import type { SubscriptionInfo } from "@/features/window/services/auth-api";
 import {
   appendCollaborationChatMessage,
   appendCollaborationSharedDocuments,
+  addCollaborationNoteFile,
+  addCollaborationNoteFolder,
   buildCollaborationSidebarModel,
+  deleteCollaborationNoteItem,
+  renameCollaborationNoteItem,
+  updateCollaborationNoteFile,
+  updateCollaborationNotesMarkdown,
 } from "../lib/collaboration-sidebar-model";
 
 function collaborationSnapshot(
@@ -55,6 +61,7 @@ function collaborationSnapshot(
         updatedAt: null,
       },
     ],
+    privateChats: [],
     channelGuests: [],
     settings: null,
     activity: [],
@@ -93,6 +100,8 @@ describe("collaboration sidebar model", () => {
         kind: "message",
       },
     ]);
+    expect(model?.notesMarkdown).toBe("");
+    expect(model?.notesItems).toEqual([{ type: "file", path: "notes.md", content: "" }]);
     expect(model?.chatGroups).toHaveLength(1);
   });
 
@@ -134,7 +143,18 @@ describe("collaboration sidebar model", () => {
         author: "Teammate",
         message: "  second   message ",
       }),
-    ).toBe("- **Mehmet**: First\n- **Teammate**: second message");
+    ).toBe(
+      [
+        "<!-- athas:threads -->",
+        "- **Mehmet**: First",
+        "- **Teammate**: second message",
+        "<!-- /athas:threads -->",
+        "",
+        "<!-- athas:notes -->",
+        "",
+        "<!-- /athas:notes -->",
+      ].join("\n"),
+    );
   });
 
   it("appends non-code document shares as compact chat lines", () => {
@@ -145,7 +165,114 @@ describe("collaboration sidebar model", () => {
         documentNames: ["Roadmap.pdf", "Meeting Notes.docx"],
       }),
     ).toBe(
-      "- **Mehmet**: shared document: Roadmap.pdf\n- **Mehmet**: shared document: Meeting Notes.docx",
+      [
+        "<!-- athas:threads -->",
+        "- **Mehmet**: shared document: Roadmap.pdf",
+        "- **Mehmet**: shared document: Meeting Notes.docx",
+        "<!-- /athas:threads -->",
+        "",
+        "<!-- athas:notes -->",
+        "",
+        "<!-- /athas:notes -->",
+      ].join("\n"),
     );
+  });
+
+  it("stores notes separately from thread lines", () => {
+    const contentMarkdown = updateCollaborationNotesMarkdown({
+      contentMarkdown: "- **Mehmet**: First",
+      notesMarkdown: "## Plan\n\nShip the sidebar tabs.",
+    });
+    const model = buildCollaborationSidebarModel({
+      collaboration: collaborationSnapshot({
+        channelNotes: [{ channelId: 10, contentMarkdown, version: 1, updatedAt: null }],
+      }),
+      selectedChannelId: 10,
+    });
+
+    expect(model?.chatEntries).toHaveLength(1);
+    expect(model?.notesItems).toEqual([
+      { type: "file", path: "notes.md", content: "## Plan\n\nShip the sidebar tabs." },
+    ]);
+  });
+
+  it("adds folders and markdown files to the notes workspace", () => {
+    const withFolder = addCollaborationNoteFolder({
+      contentMarkdown: "",
+      path: "docs",
+    });
+    const withFile = addCollaborationNoteFile({
+      contentMarkdown: withFolder.contentMarkdown,
+      path: "docs/plan",
+    });
+    const withContent = updateCollaborationNoteFile({
+      contentMarkdown: withFile.contentMarkdown,
+      path: withFile.path,
+      fileContent: "# Plan",
+    });
+    const model = buildCollaborationSidebarModel({
+      collaboration: collaborationSnapshot({
+        channelNotes: [
+          { channelId: 10, contentMarkdown: withContent, version: 1, updatedAt: null },
+        ],
+      }),
+      selectedChannelId: 10,
+    });
+
+    expect(withFile.path).toBe("docs/plan.md");
+    expect(model?.notesItems).toContainEqual({ type: "folder", path: "docs" });
+    expect(model?.notesItems).toContainEqual({
+      type: "file",
+      path: "docs/plan.md",
+      content: "# Plan",
+    });
+  });
+
+  it("auto-creates parent folders for nested markdown files", () => {
+    const withFile = addCollaborationNoteFile({
+      contentMarkdown: "",
+      path: "docs/release/checklist",
+    });
+    const model = buildCollaborationSidebarModel({
+      collaboration: collaborationSnapshot({
+        channelNotes: [
+          { channelId: 10, contentMarkdown: withFile.contentMarkdown, version: 1, updatedAt: null },
+        ],
+      }),
+      selectedChannelId: 10,
+    });
+
+    expect(model?.notesItems).toEqual([
+      { type: "folder", path: "docs" },
+      { type: "folder", path: "docs/release" },
+      { type: "file", path: "docs/release/checklist.md", content: "" },
+    ]);
+  });
+
+  it("renames and deletes note workspace items", () => {
+    const withFile = addCollaborationNoteFile({
+      contentMarkdown: "",
+      path: "docs/plan",
+    });
+    const renamed = renameCollaborationNoteItem({
+      contentMarkdown: withFile.contentMarkdown,
+      type: "folder",
+      path: "docs",
+      nextPath: "planning",
+    });
+    const deleted = deleteCollaborationNoteItem({
+      contentMarkdown: renamed.contentMarkdown,
+      type: "file",
+      path: "planning/plan.md",
+    });
+    const model = buildCollaborationSidebarModel({
+      collaboration: collaborationSnapshot({
+        channelNotes: [{ channelId: 10, contentMarkdown: deleted, version: 1, updatedAt: null }],
+      }),
+      selectedChannelId: 10,
+    });
+
+    expect(renamed.path).toBe("planning");
+    expect(model?.notesItems).toEqual([{ type: "folder", path: "planning" }]);
   });
 });

@@ -34,6 +34,7 @@ function collaborationSnapshot(
       },
     ],
     channelNotes: [],
+    privateChats: [],
     channelGuests: [],
     settings: null,
     activity: [],
