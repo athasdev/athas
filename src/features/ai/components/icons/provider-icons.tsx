@@ -2,6 +2,19 @@ import type { SVGProps } from "react";
 import { cn } from "@/utils/cn";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
+export type ProviderIconKind =
+  | "openai"
+  | "v0"
+  | "anthropic"
+  | "gemini"
+  | "xai"
+  | "deepseek"
+  | "mistral"
+  | "ollama"
+  | "openrouter"
+  | "moonshot"
+  | "qwen"
+  | "custom";
 
 const defaultProps = (size = 14, className?: string): SVGProps<SVGSVGElement> => ({
   width: size,
@@ -148,22 +161,16 @@ export function ProviderIcon({
 }) {
   const props = { size, className: cn("shrink-0", className) };
 
-  switch (providerId) {
+  switch (resolveProviderIconKind(providerId)) {
     case "openai":
-    case "codex-cli":
       return <OpenAIIcon {...props} />;
     case "v0":
       return <V0Icon {...props} />;
     case "anthropic":
-    case "claude-code":
       return <AnthropicIcon {...props} />;
     case "gemini":
-    case "google":
-    case "gemini-cli":
       return <GeminiIcon {...props} />;
-    case "grok":
     case "xai":
-    case "x-ai":
       return <XAIIcon {...props} />;
     case "deepseek":
       return <DeepSeekIcon {...props} />;
@@ -173,15 +180,57 @@ export function ProviderIcon({
       return <OllamaIcon {...props} />;
     case "openrouter":
       return <OpenRouterIcon {...props} />;
-    case "kimi-cli":
+    case "moonshot":
       return <MoonshotIcon {...props} />;
     case "qwen":
-    case "qwen-code":
       return <QwenIcon {...props} />;
-    case "opencode":
     case "custom":
       return <CustomAPIIcon {...props} />;
     default:
       return <CustomAPIIcon {...props} />;
+  }
+}
+
+export function resolveProviderIconKind(providerId: string): ProviderIconKind {
+  const normalizedId = providerId.toLowerCase();
+
+  switch (normalizedId) {
+    case "openai":
+    case "codex-cli":
+    case "codex-acp":
+      return "openai";
+    case "v0":
+      return "v0";
+    case "anthropic":
+    case "claude-code":
+    case "claude-acp":
+      return "anthropic";
+    case "gemini":
+    case "google":
+    case "gemini-cli":
+      return "gemini";
+    case "grok":
+    case "xai":
+    case "x-ai":
+      return "xai";
+    case "deepseek":
+      return "deepseek";
+    case "mistral":
+    case "mistral-vibe":
+      return "mistral";
+    case "ollama":
+      return "ollama";
+    case "openrouter":
+      return "openrouter";
+    case "kimi":
+    case "kimi-cli":
+      return "moonshot";
+    case "qwen":
+    case "qwen-code":
+      return "qwen";
+    case "opencode":
+    case "custom":
+    default:
+      return "custom";
   }
 }
