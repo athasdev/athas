@@ -334,13 +334,19 @@ fn npx_command_name(package_name: &str, fallback: &str) -> String {
 
 fn python_package_spec_from_uvx(package_spec: &str) -> String {
    let spec = package_spec.trim();
-   if spec.contains("==") {
-      return spec.to_string();
-   }
-   spec
-      .rsplit_once('@')
-      .map(|(package, version)| format!("{package}=={version}"))
-      .unwrap_or_else(|| spec.to_string())
+   let package = if spec.contains("==") {
+      spec.to_string()
+   } else {
+      spec
+         .rsplit_once('@')
+         .map(|(package, version)| format!("{package}=={version}"))
+         .unwrap_or_else(|| spec.to_string())
+   };
+
+   package
+      .strip_prefix("fast-agent-acp==")
+      .map(|version| format!("fast-agent-mcp=={version}"))
+      .unwrap_or(package)
 }
 
 fn python_command_name(package_spec: &str, fallback: &str) -> String {
@@ -349,6 +355,9 @@ fn python_command_name(package_spec: &str, fallback: &str) -> String {
       .map(|(package, _)| package)
       .unwrap_or(package_spec)
       .trim();
+   if package == "fast-agent-mcp" {
+      return "fast-agent-acp".to_string();
+   }
    package_command_name(package, fallback)
 }
 
@@ -1309,11 +1318,23 @@ mod tests {
    fn python_package_spec_from_uvx_converts_registry_version_specs() {
       assert_eq!(
          python_package_spec_from_uvx("fast-agent-acp==0.7.1"),
-         "fast-agent-acp==0.7.1"
+         "fast-agent-mcp==0.7.1"
       );
       assert_eq!(
          python_package_spec_from_uvx("minion-code@0.1.44"),
          "minion-code==0.1.44"
+      );
+   }
+
+   #[test]
+   fn python_command_name_uses_fast_agent_acp_entrypoint() {
+      assert_eq!(
+         python_command_name("fast-agent-mcp==0.7.1", "fast-agent"),
+         "fast-agent-acp"
+      );
+      assert_eq!(
+         python_command_name("minion-code==0.1.44", "minion-code"),
+         "minion-code"
       );
    }
 
