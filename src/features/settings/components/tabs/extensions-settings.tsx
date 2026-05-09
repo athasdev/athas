@@ -26,6 +26,7 @@ import {
   resetSkillLocalOverride,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
 import { extensionManager } from "@/features/editor/extensions/manager";
@@ -52,6 +53,7 @@ interface UnifiedExtension {
   skill?: AIChatSkill;
   marketplaceSkill?: MarketplaceSkill;
   agentId?: string;
+  icon?: string | null;
   canInstall?: boolean;
   packageSize?: number;
   contributionSummary?: string[];
@@ -149,6 +151,14 @@ const ExtensionRow = ({
     <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
+          {extension.category === "agent" ? (
+            <ProviderIcon
+              providerId={extension.agentId ?? extension.id}
+              catalogIconUrl={extension.icon}
+              size={14}
+              className="text-text-lighter"
+            />
+          ) : null}
           <span className="ui-font ui-text-md text-text">{extension.name}</span>
           <Badge variant="default" size="compact" shape="pill">
             {getCategoryLabel(extension.category)}
@@ -302,6 +312,7 @@ export const ExtensionsSettings = () => {
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
           agentId: contribution.id,
+          icon: agent?.icon ?? contribution.icon,
           canInstall: agent?.canInstall ?? Boolean(contribution.install),
           contributionSummary: [
             `agent:${contribution.id}`,
@@ -483,6 +494,7 @@ export const ExtensionsSettings = () => {
         publisher: "Marketplace",
         isMarketplace: true,
         agentId: agent.id,
+        icon: agent.icon,
         canInstall: agent.canInstall,
         contributionSummary: [`agent:${agent.id}`, agent.binaryName],
       });

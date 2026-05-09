@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveProviderIconKind } from "../components/icons/provider-icons";
+import { resolveCatalogIconUrl, resolveProviderIconKind } from "../components/icons/provider-icons";
 
 describe("resolveProviderIconKind", () => {
   it("recognizes legacy and registry ACP provider ids", () => {
@@ -17,5 +17,19 @@ describe("resolveProviderIconKind", () => {
 
   it("falls back to the custom terminal glyph for unknown agent ids", () => {
     expect(resolveProviderIconKind("local-agent")).toBe("custom");
+  });
+});
+
+describe("resolveCatalogIconUrl", () => {
+  it("accepts secure catalog icon urls", () => {
+    expect(
+      resolveCatalogIconUrl("https://cdn.agentclientprotocol.com/registry/v1/latest/amp-acp.svg"),
+    ).toBe("https://cdn.agentclientprotocol.com/registry/v1/latest/amp-acp.svg");
+  });
+
+  it("rejects empty and non-https catalog icon urls", () => {
+    expect(resolveCatalogIconUrl("")).toBeNull();
+    expect(resolveCatalogIconUrl("http://example.com/icon.svg")).toBeNull();
+    expect(resolveCatalogIconUrl("javascript:alert(1)")).toBeNull();
   });
 });

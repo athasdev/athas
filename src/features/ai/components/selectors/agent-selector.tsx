@@ -24,6 +24,7 @@ const ATHAS_AGENT_OPTION = {
   name: "Athas Agent",
   description: "Use Athas chat settings and provider configuration",
   isAcp: false,
+  icon: null,
 };
 
 interface AgentSelectorProps {
@@ -97,6 +98,7 @@ export function AgentSelector({
       isCurrent?: boolean;
       canInstall?: boolean;
       isInstalling?: boolean;
+      icon?: string | null;
     }> = [];
 
     const searchLower = search.toLowerCase();
@@ -124,6 +126,7 @@ export function AgentSelector({
         isCurrent: agent.id === currentAgentId,
         canInstall: agent.id === "custom" ? false : (agentConfig?.canInstall ?? true),
         isInstalling: installingAgentId === agent.id,
+        icon: agentConfig?.icon ?? agent.icon,
       });
     }
 
@@ -284,7 +287,12 @@ export function AgentSelector({
           compact
           className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
-          <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
+          <ProviderIcon
+            providerId={currentAgentId}
+            catalogIconUrl={currentAgent.icon}
+            size={11}
+            className="text-text-lighter"
+          />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
           <ChevronDown
             className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
@@ -349,7 +357,12 @@ export function AgentSelector({
                   )}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
+                    <ProviderIcon
+                      providerId={item.id}
+                      catalogIconUrl={item.icon}
+                      size={12}
+                      className="text-text-lighter"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-left text-text text-xs leading-4">
                         {item.name}

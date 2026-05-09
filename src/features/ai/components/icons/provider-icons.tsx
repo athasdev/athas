@@ -152,14 +152,38 @@ export function CustomAPIIcon({ size, className, ...props }: IconProps) {
 
 export function ProviderIcon({
   providerId,
+  catalogIconUrl,
   size = 14,
   className,
 }: {
   providerId: string;
+  catalogIconUrl?: string | null;
   size?: number;
   className?: string;
 }) {
   const props = { size, className: cn("shrink-0", className) };
+  const resolvedCatalogIconUrl = resolveCatalogIconUrl(catalogIconUrl);
+
+  if (resolvedCatalogIconUrl) {
+    return (
+      <span
+        aria-hidden="true"
+        className={cn("inline-block shrink-0 bg-current", className)}
+        style={{
+          width: size,
+          height: size,
+          maskImage: `url("${resolvedCatalogIconUrl}")`,
+          maskPosition: "center",
+          maskRepeat: "no-repeat",
+          maskSize: "contain",
+          WebkitMaskImage: `url("${resolvedCatalogIconUrl}")`,
+          WebkitMaskPosition: "center",
+          WebkitMaskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+        }}
+      />
+    );
+  }
 
   switch (resolveProviderIconKind(providerId)) {
     case "openai":
@@ -188,6 +212,20 @@ export function ProviderIcon({
       return <CustomAPIIcon {...props} />;
     default:
       return <CustomAPIIcon {...props} />;
+  }
+}
+
+export function resolveCatalogIconUrl(iconUrl?: string | null): string | null {
+  if (!iconUrl) return null;
+
+  const trimmed = iconUrl.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
   }
 }
 
