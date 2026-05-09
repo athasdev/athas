@@ -17,10 +17,19 @@ import {
   PaperPlaneTilt,
   PushPin,
   RocketLaunch,
+  MagnifyingGlass as Search,
   UsersThree,
   Wrench,
 } from "@phosphor-icons/react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   addCollaborationNoteFile,
@@ -52,6 +61,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import { SidebarHeader, SidebarHeaderSearch } from "@/ui/sidebar";
 import {
   EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
   EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
@@ -281,6 +291,22 @@ function SidebarHoverCard({ children, card }: { children: ReactNode; card: React
   );
 }
 
+function normalizeSearchQuery(query: string) {
+  return query.trim().toLowerCase();
+}
+
+function matchesSearchQuery(
+  query: string,
+  values: Array<string | number | boolean | null | undefined>,
+) {
+  if (!query) return true;
+  return values.some((value) =>
+    String(value ?? "")
+      .toLowerCase()
+      .includes(query),
+  );
+}
+
 function RemoteMediaTile({ share }: { share: RemoteMediaShare }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -323,6 +349,9 @@ export function CollaborationSidebarView() {
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
   const [activeTab, setActiveTab] = useState<CollaborationSidebarTab>("channels");
   const [openConversation, setOpenConversation] = useState<CollaborationConversation | null>(null);
+  const [channelSearchQuery, setChannelSearchQuery] = useState("");
+  const [peopleSearchQuery, setPeopleSearchQuery] = useState("");
+  const [notesSearchQuery, setNotesSearchQuery] = useState("");
   const [channelIconPickerTab, setChannelIconPickerTab] = useState<"emoji" | "icon">("emoji");
   const [channelIcons, setChannelIcons] = useState<Record<string, string>>(loadChannelIcons);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
@@ -346,6 +375,9 @@ export function CollaborationSidebarView() {
   const channelsContextMenu = useContextMenu<SidebarChannel>();
   const participantContextMenu = useContextMenu<SidebarParticipant>();
   const notesContextMenu = useContextMenu<SidebarNoteItem>();
+  const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
+  const deferredPeopleSearchQuery = useDeferredValue(peopleSearchQuery);
+  const deferredNotesSearchQuery = useDeferredValue(notesSearchQuery);
 
   const model = useMemo(
     () =>
@@ -383,6 +415,62 @@ export function CollaborationSidebarView() {
     model?.notesItems.find(
       (item) => item.type === "folder" && item.path === selectedNoteFolderPath,
     ) ?? null;
+  const channelSearch = normalizeSearchQuery(deferredChannelSearchQuery);
+  const peopleSearch = normalizeSearchQuery(deferredPeopleSearchQuery);
+  const notesSearch = normalizeSearchQuery(deferredNotesSearchQuery);
+  const filteredChannels = useMemo(() => {
+    const channels = model?.channels ?? [];
+    if (!channelSearch) return channels;
+
+    return channels.filter((channel) =>
+      matchesSearchQuery(channelSearch, [
+        channel.slug,
+        channel.description,
+        channel.memberCount,
+        channel.id,
+      ]),
+    );
+  }, [channelSearch, model?.channels]);
+  const filteredParticipants = useMemo(() => {
+    const participants = model?.participants ?? [];
+    if (!peopleSearch) return participants;
+
+    return participants.filter((participant) =>
+      matchesSearchQuery(peopleSearch, [
+        participant.name,
+        participant.role,
+        participant.activeFilePath,
+        participant.online ? "online" : "offline",
+        participant.microphone ? "microphone" : null,
+        participant.screen ? "screen" : null,
+      ]),
+    );
+  }, [model?.participants, peopleSearch]);
+  const filteredPrivateChatParticipants = useMemo(() => {
+    const participants = model?.participants ?? [];
+    if (!channelSearch) return participants;
+
+    return participants.filter((participant) =>
+      matchesSearchQuery(channelSearch, [
+        participant.name,
+        participant.role,
+        participant.online ? "online" : "offline",
+        participant.activeFilePath,
+      ]),
+    );
+  }, [channelSearch, model?.participants]);
+  const filteredNoteItems = useMemo(() => {
+    const items = model?.notesItems ?? [];
+    if (!notesSearch) return items;
+
+    return items.filter((item) =>
+      matchesSearchQuery(notesSearch, [
+        item.path,
+        item.type,
+        item.type === "file" ? item.content : null,
+      ]),
+    );
+  }, [model?.notesItems, notesSearch]);
   const remoteDeviceIds = useMemo(() => {
     if (!selectedChannel || !collaboration?.presence) return [];
     const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
@@ -1160,6 +1248,13 @@ export function CollaborationSidebarView() {
             className="h-full overflow-y-auto px-2 py-2"
             onContextMenu={(event) => channelsContextMenu.open(event)}
           >
+            <SidebarHeader>
+              <SidebarHeaderSearch
+                value={channelSearchQuery}
+                onChange={setChannelSearchQuery}
+                leftIcon={Search}
+              />
+            </SidebarHeader>
             <div className="space-y-px">
               {isCreatingChannel ? (
                 <form
@@ -1197,7 +1292,7 @@ export function CollaborationSidebarView() {
                   </Button>
                 </form>
               ) : null}
-              {model.channels.map((channel) => (
+              {filteredChannels.map((channel) => (
                 <SidebarHoverCard
                   key={channel.id}
                   card={
@@ -1235,11 +1330,11 @@ export function CollaborationSidebarView() {
                   </button>
                 </SidebarHoverCard>
               ))}
-              {model.participants.length > 0 ? (
+              {filteredPrivateChatParticipants.length > 0 ? (
                 <div className="pt-2">
                   <div className="px-2 pb-1 text-text-lighter text-[11px]">Private chats</div>
                   <div className="space-y-px">
-                    {model.participants.map((participant) => (
+                    {filteredPrivateChatParticipants.map((participant) => (
                       <SidebarHoverCard
                         key={participant.id}
                         card={
@@ -1272,6 +1367,11 @@ export function CollaborationSidebarView() {
                     ))}
                   </div>
                 </div>
+              ) : null}
+              {channelSearch &&
+              filteredChannels.length === 0 &&
+              filteredPrivateChatParticipants.length === 0 ? (
+                <div className="px-2 py-3 text-center text-text-lighter text-xs">No matches.</div>
               ) : null}
             </div>
           </div>
@@ -1494,6 +1594,13 @@ export function CollaborationSidebarView() {
 
         {activeTab === "people" ? (
           <div className="h-full overflow-y-auto px-2 py-2">
+            <SidebarHeader>
+              <SidebarHeaderSearch
+                value={peopleSearchQuery}
+                onChange={setPeopleSearchQuery}
+                leftIcon={Search}
+              />
+            </SidebarHeader>
             {remoteShares.length > 0 ? (
               <div className="mb-1 space-y-1.5">
                 {remoteShares.map((share) => (
@@ -1503,8 +1610,8 @@ export function CollaborationSidebarView() {
             ) : null}
 
             <div className="space-y-px">
-              {model.participants.length > 0 ? (
-                model.participants.map((participant) => (
+              {filteredParticipants.length > 0 ? (
+                filteredParticipants.map((participant) => (
                   <SidebarHoverCard
                     key={participant.id}
                     card={
@@ -1566,7 +1673,7 @@ export function CollaborationSidebarView() {
                 ))
               ) : (
                 <div className="px-2 py-3 text-center text-text-lighter text-xs">
-                  No members yet.
+                  {peopleSearch ? "No matching members." : "No members yet."}
                 </div>
               )}
             </div>
@@ -1578,6 +1685,13 @@ export function CollaborationSidebarView() {
             className="h-full overflow-y-auto px-2 py-2"
             onContextMenu={(event) => notesContextMenu.open(event)}
           >
+            <SidebarHeader>
+              <SidebarHeaderSearch
+                value={notesSearchQuery}
+                onChange={setNotesSearchQuery}
+                leftIcon={Search}
+              />
+            </SidebarHeader>
             <div className="mb-1 flex justify-end px-1">
               <Button
                 type="button"
@@ -1589,7 +1703,7 @@ export function CollaborationSidebarView() {
               </Button>
             </div>
             <div className="space-y-px">
-              {model.notesItems.map((item) => {
+              {filteredNoteItems.map((item) => {
                 return (
                   <button
                     key={`${item.type}:${item.path}`}
@@ -1637,6 +1751,11 @@ export function CollaborationSidebarView() {
                   </button>
                 );
               })}
+              {filteredNoteItems.length === 0 ? (
+                <div className="px-2 py-3 text-center text-text-lighter text-xs">
+                  No matching notes.
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}

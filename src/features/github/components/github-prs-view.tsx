@@ -7,6 +7,7 @@ import {
   GitBranch,
   GitPullRequest,
   Lightning,
+  MagnifyingGlass as Search,
 } from "@phosphor-icons/react";
 import {
   WarningCircle as AlertCircle,
@@ -36,6 +37,7 @@ import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
 import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import { SidebarHeader, SidebarHeaderSearch } from "@/ui/sidebar";
 import {
   Tabs,
   EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
@@ -140,6 +142,7 @@ const GitHubPRsView = memo(() => {
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<GitHubSidebarSection>("pull-requests");
   const [sectionRefreshNonce, setSectionRefreshNonce] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const prContextMenu = useContextMenu<PullRequest>();
 
@@ -149,6 +152,7 @@ const GitHubPRsView = memo(() => {
     return activeBuffer?.type === "pullRequest" ? activeBuffer.prNumber : null;
   }, [activeBufferId, buffers]);
   const deferredPrs = useDeferredValue(prs);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const availableSections = useMemo(
     () =>
       [
@@ -373,6 +377,23 @@ const GitHubPRsView = memo(() => {
   }, [settings.githubSidebarSectionOrder]);
 
   const sectionTabs = allSectionTabs.filter((tab) => availableSections.includes(tab.id));
+  const filteredPrs = useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
+    if (!query) return deferredPrs;
+
+    return deferredPrs.filter((pr) =>
+      [
+        pr.title,
+        `#${pr.number}`,
+        pr.author.login,
+        pr.headRef,
+        pr.baseRef,
+        pr.state,
+        pr.reviewDecision ?? "",
+        pr.isDraft ? "draft" : "",
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [deferredPrs, deferredSearchQuery]);
 
   if (!isAuthenticated) {
     return (
@@ -485,6 +506,15 @@ const GitHubPRsView = memo(() => {
             ))}
           </Dropdown>
 
+          <SidebarHeader>
+            <SidebarHeaderSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              leftIcon={Search}
+              placeholder="Search"
+            />
+          </SidebarHeader>
+
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {activeSection === "pull-requests" && (
               <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
@@ -499,9 +529,9 @@ const GitHubPRsView = memo(() => {
                   isActionDisabled={isSelectingRepo}
                 />
               ) : activeSection === "issues" ? (
-                <GitHubIssuesView refreshNonce={sectionRefreshNonce} />
+                <GitHubIssuesView refreshNonce={sectionRefreshNonce} searchQuery={searchQuery} />
               ) : activeSection === "actions" ? (
-                <GitHubActionsView refreshNonce={sectionRefreshNonce} />
+                <GitHubActionsView refreshNonce={sectionRefreshNonce} searchQuery={searchQuery} />
               ) : error ? (
                 <GitHubSidebarState
                   icon={<AlertCircle className="size-4" />}
@@ -531,9 +561,14 @@ const GitHubPRsView = memo(() => {
                   icon={<GitPullRequest className="size-4" />}
                   title="No pull requests"
                 />
+              ) : filteredPrs.length === 0 ? (
+                <GitHubSidebarState
+                  icon={<GitPullRequest className="size-4" />}
+                  title="No matching pull requests"
+                />
               ) : (
                 <div className="space-y-2 overflow-x-hidden">
-                  {deferredPrs.map((pr) => (
+                  {filteredPrs.map((pr) => (
                     <PRListItem
                       key={pr.number}
                       pr={pr}

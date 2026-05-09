@@ -72,9 +72,10 @@ WorkflowRunRow.displayName = "WorkflowRunRow";
 
 interface GitHubActionsViewProps {
   refreshNonce?: number;
+  searchQuery?: string;
 }
 
-const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) => {
+const GitHubActionsView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubActionsViewProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
@@ -91,6 +92,7 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const deferredRuns = useDeferredValue(runs);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const fetchRuns = useCallback(
     async (force = false) => {
@@ -165,6 +167,25 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
     }
   }, [fetchRuns, isAuthenticated, refreshNonce]);
 
+  const filteredRuns = useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
+    if (!query) return deferredRuns;
+
+    return deferredRuns.filter((run) =>
+      [
+        run.displayTitle ?? "",
+        run.name ?? "",
+        run.workflowName ?? "",
+        run.event ?? "",
+        run.status ?? "",
+        run.conclusion ?? "",
+        run.headBranch ?? "",
+        run.headSha ?? "",
+        `#${run.databaseId}`,
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [deferredRuns, deferredSearchQuery]);
+
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -185,9 +206,14 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
           />
         ) : deferredRuns.length === 0 && !isLoading ? (
           <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
+        ) : filteredRuns.length === 0 ? (
+          <GitHubSidebarState
+            icon={<Activity className="size-4" />}
+            title="No matching workflow runs"
+          />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
-            {deferredRuns.map((run) => (
+            {filteredRuns.map((run) => (
               <WorkflowRunRow
                 key={run.databaseId}
                 run={run}
