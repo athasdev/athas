@@ -74,7 +74,7 @@ export const DatabaseSettings = () => {
             {savedConnections.map((connection) => (
               <div
                 key={connection.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

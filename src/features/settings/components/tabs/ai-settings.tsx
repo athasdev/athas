@@ -106,7 +106,7 @@ export const AISettings = () => {
   useEffect(() => {
     const detectAgents = async () => {
       try {
-        const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+        await invoke<AgentConfig[]>("get_available_agents");
       } catch {
         // Failed to detect agents
       }
@@ -539,7 +539,7 @@ export const AISettings = () => {
             onReset={handleResetOllamaUrl}
             canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <Input
                 type="text"
                 value={ollamaUrl}
@@ -547,7 +547,7 @@ export const AISettings = () => {
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={Globe}
-                className={cn("w-56", ollamaStatus === "error" && "border-error/60")}
+                className={cn("w-56 max-w-full", ollamaStatus === "error" && "border-error/60")}
               />
               {ollamaStatus === "checking" && (
                 <RefreshCw className="animate-spin text-text-lighter" />
@@ -572,7 +572,7 @@ export const AISettings = () => {
             label="API Key"
             description="Used for authenticated Ollama endpoints and Ollama Cloud."
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <Input
                 type="password"
                 value={ollamaApiKeyInput}
@@ -580,7 +580,10 @@ export const AISettings = () => {
                 placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
                 spellCheck={false}
                 leftIcon={Key}
-                className={cn("w-56", needsApiKey && !hasStoredOllamaKey && "border-warning/60")}
+                className={cn(
+                  "w-56 max-w-full",
+                  needsApiKey && !hasStoredOllamaKey && "border-warning/60",
+                )}
                 autoComplete="off"
                 disabled={isSavingOllamaKey}
               />

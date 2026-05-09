@@ -146,7 +146,7 @@ const ExtensionRow = ({
       : extension.extensions?.map((ext) => `.${ext}`);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
+    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="ui-font ui-text-md text-text">{extension.name}</span>
@@ -193,7 +193,7 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           <Badge variant="accent" size="compact">
             Built-in
           </Badge>
@@ -201,13 +201,13 @@ const ExtensionRow = ({
       ) : isInstalling ? (
         <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
       ) : isUnavailableAgent ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           <Button disabled variant="default" tooltip="Unavailable" compact>
             Unavailable
           </Button>
         </div>
       ) : extension.isInstalled ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
             <Button onClick={onUpdate} variant="default" tooltip="Update available" compact>
               {hasRuntimeIssue ? "Reinstall" : "Update"}
@@ -234,7 +234,7 @@ const ExtensionRow = ({
           </Button>
         </div>
       ) : (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           <Button onClick={onToggle} variant="default" tooltip={installLabel} compact>
             {installLabel}
           </Button>
