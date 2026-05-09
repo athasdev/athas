@@ -36,6 +36,7 @@ export const ChatMessages = memo(
       })),
     );
     const skills = useSettingsStore((state) => state.settings.aiSkills);
+    const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
     const [isSkillsOpen, setIsSkillsOpen] = useState(false);
     const [skillsInitialView, setSkillsInitialView] = useState<"list" | "editor">("list");
 
@@ -44,6 +45,7 @@ export const ChatMessages = memo(
       [chatId, chats, currentChatId],
     );
     const messages = currentChat?.messages || [];
+    const agentIconId = currentChat?.agentId === "custom" ? aiProviderId : currentChat?.agentId;
     const timelineItems = useMemo(
       () =>
         [
@@ -165,6 +167,7 @@ export const ChatMessages = memo(
               <ChatMessage
                 message={message}
                 isLastMessage={index === messages.length - 1}
+                agentIconId={agentIconId}
                 onApplyCode={onApplyCode}
               />
             </div>
