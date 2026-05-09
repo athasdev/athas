@@ -11,10 +11,13 @@ use std::{
    time::{Duration, Instant},
 };
 use tauri::{Manager, State};
+use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
+const ACP_REGISTRY_URL: &str =
+   "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 
 #[derive(Deserialize)]
@@ -30,15 +33,17 @@ pub struct PermissionResponseArgs {
 
 #[tauri::command]
 pub async fn get_available_agents(
+   app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
 ) -> Result<Vec<AgentConfig>, String> {
    let mut bridge = bridge.lock().await;
-   refresh_registered_agents(&mut bridge).await;
+   refresh_registered_agents(&app_handle, &mut bridge).await;
    Ok(bridge.detect_agents())
 }
 
 #[tauri::command]
 pub async fn start_acp_agent(
+   app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
    workspace_path: Option<String>,
@@ -46,7 +51,7 @@ pub async fn start_acp_agent(
 ) -> Result<AcpAgentStatus, String> {
    let bridge = {
       let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
+      refresh_registered_agents(&app_handle, &mut bridge).await;
       bridge.detect_agents();
       bridge.clone()
    };
@@ -64,7 +69,7 @@ pub async fn install_acp_agent(
 ) -> Result<AgentConfig, String> {
    let agent = {
       let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
+      refresh_registered_agents(&app_handle, &mut bridge).await;
       let agents = bridge.detect_agents();
       agents
          .into_iter()
@@ -97,7 +102,7 @@ pub async fn uninstall_acp_agent(
 ) -> Result<AgentConfig, String> {
    let agent = {
       let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
+      refresh_registered_agents(&app_handle, &mut bridge).await;
       bridge.invalidate_agent_detection_cache();
       let agents = bridge.detect_agents();
       agents
@@ -163,10 +168,79 @@ struct MarketplaceExtensionManifest {
    agents: Vec<MarketplaceAgentContribution>,
 }
 
+#[derive(Deserialize)]
+struct AcpRegistryIndex {
+   #[serde(default)]
+   agents: Vec<AcpRegistryAgent>,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryAgent {
+   id: String,
+   name: String,
+   description: String,
+   icon: Option<String>,
+   distribution: AcpRegistryDistribution,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryDistribution {
+   binary: Option<HashMap<String, AcpRegistryBinaryTarget>>,
+   npx: Option<AcpRegistryPackageTarget>,
+   uvx: Option<AcpRegistryPackageTarget>,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryBinaryTarget {
+   archive: String,
+   cmd: String,
+   #[serde(default)]
+   args: Vec<String>,
+   #[serde(default)]
+   env: HashMap<String, String>,
+}
+
+#[derive(Deserialize)]
+struct AcpRegistryPackageTarget {
+   package: String,
+   #[serde(default)]
+   args: Vec<String>,
+   #[serde(default)]
+   env: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum AcpAgentServerSetting {
+   Custom {
+      command: String,
+      #[serde(default)]
+      args: Vec<String>,
+      #[serde(default)]
+      env: HashMap<String, String>,
+      #[serde(default, alias = "defaultMode")]
+      default_mode: Option<String>,
+      #[serde(default, alias = "defaultModel")]
+      default_model: Option<String>,
+   },
+   Registry {
+      #[serde(default)]
+      env: HashMap<String, String>,
+      #[serde(default, alias = "defaultMode")]
+      default_mode: Option<String>,
+      #[serde(default, alias = "defaultModel")]
+      default_model: Option<String>,
+   },
+}
+
 fn extensions_manifest_url() -> String {
    let base_url = std::env::var("ATHAS_EXTENSIONS_CDN_URL")
       .unwrap_or_else(|_| EXTENSIONS_CDN_BASE_URL.to_string());
    format!("{}/manifests.json", base_url.trim_end_matches('/'))
+}
+
+fn acp_registry_url() -> String {
+   std::env::var("ATHAS_ACP_REGISTRY_URL").unwrap_or_else(|_| ACP_REGISTRY_URL.to_string())
 }
 
 fn current_platform_arch() -> Option<&'static str> {
@@ -181,6 +255,33 @@ fn current_platform_arch() -> Option<&'static str> {
    }
 }
 
+fn current_acp_registry_platform() -> Option<&'static str> {
+   match (std::env::consts::OS, std::env::consts::ARCH) {
+      ("macos", "aarch64") => Some("darwin-aarch64"),
+      ("macos", "x86_64") => Some("darwin-x86_64"),
+      ("linux", "aarch64") => Some("linux-aarch64"),
+      ("linux", "x86_64") => Some("linux-x86_64"),
+      ("windows", "aarch64") => Some("windows-aarch64"),
+      ("windows", "x86_64") => Some("windows-x86_64"),
+      _ => None,
+   }
+}
+
+fn registry_command_name(cmd: &str, fallback: &str) -> String {
+   Path::new(cmd)
+      .file_name()
+      .and_then(|name| name.to_str())
+      .map(|name| {
+         if cfg!(windows) {
+            name.strip_suffix(".exe").unwrap_or(name).to_string()
+         } else {
+            name.to_string()
+         }
+      })
+      .filter(|name| !name.is_empty())
+      .unwrap_or_else(|| fallback.to_string())
+}
+
 fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
    let mut agent = AgentConfig {
       id: contribution.id,
@@ -189,6 +290,8 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
       binary_path: None,
       args: contribution.args,
       env_vars: contribution.env_vars,
+      default_mode: None,
+      default_model: None,
       icon: contribution.icon,
       description: contribution.description,
       installed: false,
@@ -217,7 +320,304 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
    agent
 }
 
-async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
+fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> {
+   let AcpRegistryAgent {
+      id,
+      name,
+      description,
+      icon,
+      distribution,
+   } = agent;
+
+   if let Some(target) = current_acp_registry_platform()
+      .and_then(|platform| distribution.binary.as_ref()?.get(platform))
+   {
+      let binary_name = registry_command_name(&target.cmd, &id);
+      return Some(AgentConfig {
+         id,
+         name,
+         binary_name,
+         binary_path: None,
+         args: target.args.clone(),
+         env_vars: target.env.clone(),
+         default_mode: None,
+         default_model: None,
+         icon,
+         description: Some(description),
+         installed: false,
+         install_runtime: Some(AgentRuntime::Binary),
+         install_package: Some(target.cmd.clone()),
+         install_download_url: Some(target.archive.clone()),
+         install_command: Some(registry_command_name(&target.cmd, "")),
+         can_install: true,
+      });
+   }
+
+   if let Some(target) = distribution.npx {
+      let mut args = vec!["-y".to_string(), target.package.clone()];
+      args.extend(target.args.clone());
+      return Some(AgentConfig {
+         id,
+         name,
+         binary_name: "npx".to_string(),
+         binary_path: None,
+         args,
+         env_vars: target.env,
+         default_mode: None,
+         default_model: None,
+         icon,
+         description: Some(description),
+         installed: false,
+         install_runtime: None,
+         install_package: None,
+         install_download_url: None,
+         install_command: None,
+         can_install: false,
+      });
+   }
+
+   if let Some(target) = distribution.uvx {
+      let mut args = vec![target.package];
+      args.extend(target.args);
+      return Some(AgentConfig {
+         id,
+         name,
+         binary_name: "uvx".to_string(),
+         binary_path: None,
+         args,
+         env_vars: target.env,
+         default_mode: None,
+         default_model: None,
+         icon,
+         description: Some(description),
+         installed: false,
+         install_runtime: None,
+         install_package: None,
+         install_download_url: None,
+         install_command: None,
+         can_install: false,
+      });
+   }
+
+   None
+}
+
+fn acp_registry_agents_from_index(index: AcpRegistryIndex) -> Vec<AgentConfig> {
+   let mut agents = index
+      .agents
+      .into_iter()
+      .filter_map(acp_registry_agent_to_config)
+      .collect::<Vec<_>>();
+   agents.sort_by_key(|agent| agent.name.clone());
+   agents
+}
+
+fn acp_registry_cache_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
+   app_handle
+      .path()
+      .app_data_dir()
+      .map(|dir| dir.join("acp-registry").join("registry.json"))
+      .map_err(|error| format!("Failed to resolve ACP registry cache path: {}", error))
+}
+
+fn acp_registry_agents_from_json(json: &str) -> Result<Vec<AgentConfig>, String> {
+   let registry = serde_json::from_str::<AcpRegistryIndex>(json)
+      .map_err(|error| format!("Invalid ACP registry: {}", error))?;
+   Ok(acp_registry_agents_from_index(registry))
+}
+
+fn load_cached_acp_registry_agents(app_handle: &AppHandle) -> Result<Vec<AgentConfig>, String> {
+   let cache_path = acp_registry_cache_path(app_handle)?;
+   let json = fs::read_to_string(&cache_path)
+      .map_err(|error| format!("Failed to read cached ACP registry: {}", error))?;
+   acp_registry_agents_from_json(&json)
+      .map_err(|error| format!("Invalid cached ACP registry: {}", error))
+}
+
+fn write_acp_registry_cache(app_handle: &AppHandle, json: &str) -> Result<(), String> {
+   let cache_path = acp_registry_cache_path(app_handle)?;
+   if let Some(parent) = cache_path.parent() {
+      fs::create_dir_all(parent)
+         .map_err(|error| format!("Failed to create ACP registry cache directory: {}", error))?;
+   }
+   fs::write(&cache_path, json)
+      .map_err(|error| format!("Failed to write ACP registry cache: {}", error))
+}
+
+async fn load_acp_registry_agents(app_handle: &AppHandle) -> Result<Vec<AgentConfig>, String> {
+   let response = reqwest::Client::new()
+      .get(acp_registry_url())
+      .timeout(Duration::from_secs(5))
+      .send()
+      .await
+      .map_err(|error| format!("Failed to load ACP registry: {}", error))?;
+
+   if !response.status().is_success() {
+      return Err(format!(
+         "Failed to load ACP registry: HTTP {}",
+         response.status()
+      ));
+   }
+
+   let json = response
+      .text()
+      .await
+      .map_err(|error| format!("Failed to read ACP registry response: {}", error))?;
+
+   let agents = acp_registry_agents_from_json(&json)?;
+   if let Err(error) = write_acp_registry_cache(app_handle, &json) {
+      log::warn!("{}", error);
+   }
+
+   Ok(agents)
+}
+
+async fn load_preferred_registry_agents(
+   app_handle: &AppHandle,
+) -> Result<Vec<AgentConfig>, String> {
+   match load_acp_registry_agents(app_handle).await {
+      Ok(agents) => Ok(agents),
+      Err(registry_error) => {
+         log::warn!("{}", registry_error);
+         load_cached_acp_registry_agents(app_handle).map_err(|cache_error| {
+            log::warn!("{}", cache_error);
+            registry_error
+         })
+      }
+   }
+}
+
+fn merge_agent_catalogs(
+   mut preferred_agents: Vec<AgentConfig>,
+   fallback_agents: Vec<AgentConfig>,
+) -> Vec<AgentConfig> {
+   for agent in fallback_agents {
+      if !preferred_agents
+         .iter()
+         .any(|preferred| preferred.id == agent.id)
+      {
+         preferred_agents.push(agent);
+      }
+   }
+   preferred_agents.sort_by_key(|agent| agent.name.clone());
+   preferred_agents
+}
+
+fn apply_agent_server_settings(
+   mut agents: Vec<AgentConfig>,
+   settings: HashMap<String, AcpAgentServerSetting>,
+) -> Vec<AgentConfig> {
+   for (id, setting) in settings {
+      match setting {
+         AcpAgentServerSetting::Custom {
+            command,
+            args,
+            env,
+            default_mode,
+            default_model,
+         } => {
+            if command.trim().is_empty() {
+               log::warn!("Skipping custom ACP agent '{}' with an empty command", id);
+               continue;
+            }
+            let binary_name = registry_command_name(&command, &id);
+            let custom_agent = AgentConfig {
+               id: id.clone(),
+               name: id,
+               binary_name,
+               binary_path: Some(expand_home(&command)),
+               args,
+               env_vars: env,
+               default_mode: clean_setting(default_mode),
+               default_model: clean_setting(default_model),
+               icon: None,
+               description: Some("Custom ACP agent from Athas settings".to_string()),
+               installed: false,
+               install_runtime: None,
+               install_package: None,
+               install_download_url: None,
+               install_command: None,
+               can_install: false,
+            };
+            upsert_agent(&mut agents, custom_agent);
+         }
+         AcpAgentServerSetting::Registry {
+            env,
+            default_mode,
+            default_model,
+         } => {
+            let Some(agent) = agents
+               .iter_mut()
+               .find(|agent| agent.id == id || agent.name == id)
+            else {
+               log::debug!("Configured ACP registry agent '{}' was not found", id);
+               continue;
+            };
+            agent.env_vars.extend(env);
+            agent.default_mode = clean_setting(default_mode);
+            agent.default_model = clean_setting(default_model);
+         }
+      }
+   }
+
+   agents.sort_by_key(|agent| agent.name.clone());
+   agents
+}
+
+fn clean_setting(value: Option<String>) -> Option<String> {
+   value
+      .map(|value| value.trim().to_string())
+      .filter(|value| !value.is_empty())
+}
+
+fn expand_home(path: &str) -> String {
+   if path == "~" {
+      return std::env::var("HOME").unwrap_or_else(|_| path.to_string());
+   }
+   if let Some(rest) = path.strip_prefix("~/") {
+      if let Ok(home) = std::env::var("HOME") {
+         return Path::new(&home).join(rest).to_string_lossy().to_string();
+      }
+   }
+   path.to_string()
+}
+
+fn upsert_agent(agents: &mut Vec<AgentConfig>, agent: AgentConfig) {
+   if let Some(existing) = agents.iter_mut().find(|existing| existing.id == agent.id) {
+      *existing = agent;
+   } else {
+      agents.push(agent);
+   }
+}
+
+fn load_agent_server_settings(
+   app_handle: &AppHandle,
+) -> Result<HashMap<String, AcpAgentServerSetting>, String> {
+   let store = app_handle
+      .store("settings.json")
+      .map_err(|error| format!("Failed to load settings store: {}", error))?;
+   let Some(value) = store.get("agentServers") else {
+      return Ok(HashMap::new());
+   };
+   let raw_settings = serde_json::from_value::<HashMap<String, serde_json::Value>>(value)
+      .map_err(|error| format!("Invalid agentServers settings: {}", error))?;
+   let mut settings = HashMap::new();
+
+   for (id, value) in raw_settings {
+      match serde_json::from_value::<AcpAgentServerSetting>(value) {
+         Ok(setting) => {
+            settings.insert(id, setting);
+         }
+         Err(error) => {
+            log::warn!("Skipping invalid ACP agent setting '{}': {}", id, error);
+         }
+      }
+   }
+
+   Ok(settings)
+}
+
+async fn load_marketplace_agents(app_handle: &AppHandle) -> Result<Vec<AgentConfig>, String> {
    let cache = AGENT_CATALOG_CACHE.get_or_init(|| std::sync::Mutex::new(None));
    {
       let cached = cache
@@ -226,10 +626,55 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       if let Some(catalog) = cached.as_ref()
          && catalog.loaded_at.elapsed() < Duration::from_secs(AGENT_CATALOG_CACHE_SECONDS)
       {
-         return Ok(catalog.agents.clone());
+         let agent_settings = load_agent_server_settings(app_handle).map_err(|error| {
+            log::warn!("{}", error);
+            error
+         })?;
+         return Ok(apply_agent_server_settings(
+            catalog.agents.clone(),
+            agent_settings,
+         ));
       }
    }
 
+   let registry_agents = load_preferred_registry_agents(app_handle).await;
+   let legacy_agents = load_legacy_marketplace_agents().await;
+   let agents = match (registry_agents, legacy_agents) {
+      (Ok(registry_agents), Ok(legacy_agents)) => {
+         merge_agent_catalogs(registry_agents, legacy_agents)
+      }
+      (Ok(registry_agents), Err(legacy_error)) => {
+         log::warn!("{}", legacy_error);
+         registry_agents
+      }
+      (Err(registry_error), Ok(legacy_agents)) => {
+         log::warn!("{}", registry_error);
+         legacy_agents
+      }
+      (Err(registry_error), Err(legacy_error)) => {
+         return Err(format!(
+            "{}; legacy agent catalog also failed: {}",
+            registry_error, legacy_error
+         ));
+      }
+   };
+
+   let mut cached = cache
+      .lock()
+      .map_err(|_| "Agent catalog cache poisoned".to_string())?;
+   *cached = Some(CachedAgentCatalog {
+      loaded_at: Instant::now(),
+      agents: agents.clone(),
+   });
+
+   let agent_settings = load_agent_server_settings(app_handle).map_err(|error| {
+      log::warn!("{}", error);
+      error
+   })?;
+   Ok(apply_agent_server_settings(agents, agent_settings))
+}
+
+async fn load_legacy_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    let response = reqwest::Client::new()
       .get(extensions_manifest_url())
       .timeout(Duration::from_secs(5))
@@ -256,19 +701,11 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       .collect::<Vec<_>>();
    agents.sort_by_key(|agent| agent.name.clone());
 
-   let mut cached = cache
-      .lock()
-      .map_err(|_| "Agent catalog cache poisoned".to_string())?;
-   *cached = Some(CachedAgentCatalog {
-      loaded_at: Instant::now(),
-      agents: agents.clone(),
-   });
-
    Ok(agents)
 }
 
-async fn refresh_registered_agents(bridge: &mut AcpAgentBridge) {
-   match load_marketplace_agents().await {
+async fn refresh_registered_agents(app_handle: &AppHandle, bridge: &mut AcpAgentBridge) {
+   match load_marketplace_agents(app_handle).await {
       Ok(agents) => bridge.replace_registered_agents(agents),
       Err(error) => {
          log::warn!("{}", error);
@@ -533,4 +970,186 @@ fn make_wrapper_executable(path: &PathBuf) -> Result<(), String> {
    }
 
    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn agent(id: &str, name: &str, binary_name: &str) -> AgentConfig {
+      AgentConfig {
+         id: id.to_string(),
+         name: name.to_string(),
+         binary_name: binary_name.to_string(),
+         binary_path: None,
+         args: Vec::new(),
+         env_vars: HashMap::new(),
+         default_mode: None,
+         default_model: None,
+         icon: None,
+         description: None,
+         installed: false,
+         install_runtime: None,
+         install_package: None,
+         install_download_url: None,
+         install_command: None,
+         can_install: false,
+      }
+   }
+
+   #[test]
+   fn merge_agent_catalogs_prefers_registry_and_preserves_legacy_only_agents() {
+      let mut registry = agent("codex-acp", "Codex Registry", "npx");
+      registry.args = vec!["-y".to_string(), "@vendor/codex-acp".to_string()];
+      let legacy = agent("codex-acp", "Codex Legacy", "codex-acp");
+      let legacy_only = agent("athas-local", "Athas Local", "athas-local");
+
+      let merged = merge_agent_catalogs(vec![registry], vec![legacy, legacy_only]);
+
+      assert_eq!(merged.len(), 2);
+      let codex = merged
+         .iter()
+         .find(|candidate| candidate.id == "codex-acp")
+         .expect("codex agent");
+      assert_eq!(codex.name, "Codex Registry");
+      assert_eq!(codex.binary_name, "npx");
+      assert!(merged.iter().any(|candidate| candidate.id == "athas-local"));
+   }
+
+   #[test]
+   fn registry_settings_override_env_and_defaults_without_dropping_agent() {
+      let mut base = agent("codex-acp", "Codex", "npx");
+      base.env_vars.insert(
+         "BASE_URL".to_string(),
+         "https://registry.example".to_string(),
+      );
+      base
+         .env_vars
+         .insert("KEEP_ME".to_string(), "registry".to_string());
+
+      let mut env = HashMap::new();
+      env.insert("BASE_URL".to_string(), "https://user.example".to_string());
+      env.insert("USER_ONLY".to_string(), "true".to_string());
+      let mut settings = HashMap::new();
+      settings.insert(
+         "codex-acp".to_string(),
+         AcpAgentServerSetting::Registry {
+            env,
+            default_mode: Some("plan".to_string()),
+            default_model: Some("gpt-5.5".to_string()),
+         },
+      );
+
+      let agents = apply_agent_server_settings(vec![base], settings);
+      let codex = agents.first().expect("codex agent");
+
+      assert_eq!(
+         codex.env_vars.get("BASE_URL").map(String::as_str),
+         Some("https://user.example")
+      );
+      assert_eq!(
+         codex.env_vars.get("KEEP_ME").map(String::as_str),
+         Some("registry")
+      );
+      assert_eq!(
+         codex.env_vars.get("USER_ONLY").map(String::as_str),
+         Some("true")
+      );
+      assert_eq!(codex.default_mode.as_deref(), Some("plan"));
+      assert_eq!(codex.default_model.as_deref(), Some("gpt-5.5"));
+   }
+
+   #[test]
+   fn custom_agent_settings_create_runnable_agent_config() {
+      let mut env = HashMap::new();
+      env.insert("CUSTOM_TOKEN".to_string(), "secret".to_string());
+      let mut settings = HashMap::new();
+      settings.insert(
+         "my-agent".to_string(),
+         AcpAgentServerSetting::Custom {
+            command: "/usr/local/bin/my-agent".to_string(),
+            args: vec!["--acp".to_string()],
+            env,
+            default_mode: Some(" act ".to_string()),
+            default_model: Some(" custom-model ".to_string()),
+         },
+      );
+
+      let agents = apply_agent_server_settings(Vec::new(), settings);
+      let custom = agents.first().expect("custom agent");
+
+      assert_eq!(custom.id, "my-agent");
+      assert_eq!(custom.name, "my-agent");
+      assert_eq!(custom.binary_name, "my-agent");
+      assert_eq!(
+         custom.binary_path.as_deref(),
+         Some("/usr/local/bin/my-agent")
+      );
+      assert_eq!(custom.args, vec!["--acp"]);
+      assert_eq!(
+         custom.env_vars.get("CUSTOM_TOKEN").map(String::as_str),
+         Some("secret")
+      );
+      assert_eq!(custom.default_mode.as_deref(), Some("act"));
+      assert_eq!(custom.default_model.as_deref(), Some("custom-model"));
+      assert!(!custom.can_install);
+   }
+
+   #[test]
+   fn malformed_custom_agent_settings_are_skipped() {
+      let mut settings = HashMap::new();
+      settings.insert(
+         "broken".to_string(),
+         AcpAgentServerSetting::Custom {
+            command: " ".to_string(),
+            args: Vec::new(),
+            env: HashMap::new(),
+            default_mode: None,
+            default_model: None,
+         },
+      );
+
+      let agents = apply_agent_server_settings(Vec::new(), settings);
+
+      assert!(agents.is_empty());
+   }
+
+   #[test]
+   fn acp_registry_json_maps_npx_distribution() {
+      let json = r#"{
+        "agents": [
+          {
+            "id": "codex-acp",
+            "name": "Codex",
+            "description": "Codex ACP adapter",
+            "icon": "codex.svg",
+            "distribution": {
+              "npx": {
+                "package": "@vendor/codex-acp",
+                "args": ["--flag"],
+                "env": { "REGISTRY_ENV": "1" }
+              }
+            }
+          }
+        ]
+      }"#;
+
+      let agents = acp_registry_agents_from_json(json).expect("registry agents");
+      let codex = agents.first().expect("codex agent");
+
+      assert_eq!(codex.id, "codex-acp");
+      assert_eq!(codex.binary_name, "npx");
+      assert_eq!(
+         codex.args,
+         vec![
+            "-y".to_string(),
+            "@vendor/codex-acp".to_string(),
+            "--flag".to_string()
+         ]
+      );
+      assert_eq!(
+         codex.env_vars.get("REGISTRY_ENV").map(String::as_str),
+         Some("1")
+      );
+   }
 }

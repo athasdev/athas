@@ -94,6 +94,14 @@ impl AgentRegistry {
             continue;
          }
 
+         if let Some(path) = config.binary_path.as_ref().map(PathBuf::from)
+            && path.is_file()
+         {
+            config.installed = true;
+            config.binary_path = Some(path.to_string_lossy().to_string());
+            continue;
+         }
+
          if let Some(path) = find_binary(&config.binary_name) {
             config.installed = true;
             config.binary_path = Some(path.to_string_lossy().to_string());

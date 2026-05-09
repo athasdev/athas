@@ -7,6 +7,8 @@ export interface AgentConfig {
   binaryPath: string | null;
   args: string[];
   envVars: Record<string, string>;
+  defaultMode: string | null;
+  defaultModel: string | null;
   icon: string | null;
   description: string | null;
   installed: boolean;

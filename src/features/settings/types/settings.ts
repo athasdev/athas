@@ -9,6 +9,22 @@ import type {
 
 export type Theme = string;
 
+export type AcpAgentServerSettings =
+  | {
+      type: "custom";
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      defaultMode?: string;
+      defaultModel?: string;
+    }
+  | {
+      type: "registry";
+      env?: Record<string, string>;
+      defaultMode?: string;
+      defaultModel?: string;
+    };
+
 export interface Settings {
   // General
   autoSave: boolean;
@@ -65,6 +81,7 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiSkills: AIChatSkill[];
+  agentServers: Record<string, AcpAgentServerSettings>;
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;

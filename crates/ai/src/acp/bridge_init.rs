@@ -104,6 +104,8 @@ pub(super) async fn initialize_worker(
       SessionBootstrapContext {
          auth_methods,
          supports_session_resume,
+         default_mode: config.default_mode.clone(),
+         default_model: config.default_model.clone(),
          map_config_options,
          child: &mut child,
          io_handle: &io_handle,
@@ -143,6 +145,8 @@ where
 {
    auth_methods: Vec<acp::AuthMethod>,
    supports_session_resume: bool,
+   default_mode: Option<String>,
+   default_model: Option<String>,
    map_config_options: F,
    child: &'a mut Child,
    io_handle: &'a tokio::task::JoinHandle<()>,
@@ -340,6 +344,14 @@ async fn bootstrap_session(
 
       match load_result {
          Ok(Ok(load_response)) => {
+            apply_session_defaults(
+               connection.clone(),
+               acp::SessionId::new(existing_session_id.clone()),
+               ctx.default_mode.as_deref(),
+               ctx.default_model.as_deref(),
+               load_response.config_options.as_ref(),
+            )
+            .await;
             log::info!("ACP session loaded: {}", existing_session_id);
             client.set_session_id(existing_session_id.clone()).await;
             return Ok(SessionBootstrap {
@@ -375,6 +387,14 @@ async fn bootstrap_session(
 
             match resume_result {
                Ok(Ok(resume_response)) => {
+                  apply_session_defaults(
+                     connection.clone(),
+                     acp::SessionId::new(existing_session_id.clone()),
+                     ctx.default_mode.as_deref(),
+                     ctx.default_model.as_deref(),
+                     resume_response.config_options.as_ref(),
+                  )
+                  .await;
                   log::info!("ACP session resumed: {}", existing_session_id);
                   client.set_session_id(existing_session_id.clone()).await;
                   return Ok(SessionBootstrap {
@@ -478,6 +498,14 @@ async fn bootstrap_session(
    };
 
    log::info!("ACP session created: {}", session.session_id);
+   apply_session_defaults(
+      connection.clone(),
+      session.session_id.clone(),
+      ctx.default_mode.as_deref(),
+      ctx.default_model.as_deref(),
+      session.config_options.as_ref(),
+   )
+   .await;
    client.set_session_id(session.session_id.to_string()).await;
 
    Ok(SessionBootstrap {
@@ -491,7 +519,7 @@ async fn create_session(
    connection: Arc<acp::ClientSideConnection>,
    cwd: PathBuf,
 ) -> Result<Result<acp::NewSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let session_request = acp::NewSessionRequest::new(cwd);
+   let session_request = new_session_request(cwd);
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.new_session(session_request),
@@ -504,7 +532,7 @@ async fn load_session(
    cwd: PathBuf,
    existing_session_id: String,
 ) -> Result<Result<acp::LoadSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let request = acp::LoadSessionRequest::new(existing_session_id, cwd);
+   let request = load_session_request(existing_session_id, cwd);
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.load_session(request),
@@ -517,12 +545,80 @@ async fn resume_session(
    cwd: PathBuf,
    existing_session_id: String,
 ) -> Result<Result<acp::ResumeSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let request = acp::ResumeSessionRequest::new(existing_session_id, cwd);
+   let request = resume_session_request(existing_session_id, cwd);
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.resume_session(request),
    )
    .await
+}
+
+fn new_session_request(cwd: PathBuf) -> acp::NewSessionRequest {
+   acp::NewSessionRequest::new(cwd)
+}
+
+fn load_session_request(existing_session_id: String, cwd: PathBuf) -> acp::LoadSessionRequest {
+   acp::LoadSessionRequest::new(existing_session_id, cwd)
+}
+
+fn resume_session_request(existing_session_id: String, cwd: PathBuf) -> acp::ResumeSessionRequest {
+   acp::ResumeSessionRequest::new(existing_session_id, cwd)
+}
+
+async fn apply_session_defaults(
+   connection: Arc<acp::ClientSideConnection>,
+   session_id: acp::SessionId,
+   default_mode: Option<&str>,
+   default_model: Option<&str>,
+   config_options: Option<&Vec<acp::SessionConfigOption>>,
+) {
+   if let Some(mode_id) = default_mode.filter(|mode| !mode.trim().is_empty())
+      && let Err(error) = connection
+         .set_session_mode(acp::SetSessionModeRequest::new(
+            session_id.clone(),
+            mode_id.to_string(),
+         ))
+         .await
+   {
+      log::warn!("Failed to apply ACP default mode '{}': {}", mode_id, error);
+   }
+
+   let Some(model_id) = default_model.filter(|model| !model.trim().is_empty()) else {
+      return;
+   };
+   let Some(config_id) = model_config_option_id(config_options) else {
+      log::debug!(
+         "ACP default model '{}' configured, but the agent did not expose a model config option",
+         model_id
+      );
+      return;
+   };
+
+   if let Err(error) = connection
+      .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
+         session_id,
+         config_id,
+         model_id.to_string(),
+      ))
+      .await
+   {
+      log::warn!(
+         "Failed to apply ACP default model '{}': {}",
+         model_id,
+         error
+      );
+   }
+}
+
+fn model_config_option_id(
+   config_options: Option<&Vec<acp::SessionConfigOption>>,
+) -> Option<String> {
+   config_options?
+      .iter()
+      .find(|option| {
+         option.id.to_string() == "model" || option.category.as_deref() == Some("model")
+      })
+      .map(|option| option.id.to_string())
 }
 
 fn map_mode_state(modes: acp::SessionModeState) -> SessionModeState {
@@ -568,5 +664,36 @@ fn emit_initial_session_state(
       )
    {
       log::warn!("Failed to emit initial session config options: {}", e);
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn new_session_request_sets_cwd() {
+      let request = new_session_request(PathBuf::from("/repo"));
+
+      assert_eq!(request.cwd, PathBuf::from("/repo"));
+      assert!(request.mcp_servers.is_empty());
+   }
+
+   #[test]
+   fn load_session_request_sets_session_and_cwd() {
+      let request = load_session_request("session-1".to_string(), PathBuf::from("/repo"));
+
+      assert_eq!(request.session_id, acp::SessionId::new("session-1"));
+      assert_eq!(request.cwd, PathBuf::from("/repo"));
+      assert!(request.mcp_servers.is_empty());
+   }
+
+   #[test]
+   fn resume_session_request_sets_session_and_cwd() {
+      let request = resume_session_request("session-1".to_string(), PathBuf::from("/repo"));
+
+      assert_eq!(request.session_id, acp::SessionId::new("session-1"));
+      assert_eq!(request.cwd, PathBuf::from("/repo"));
+      assert!(request.mcp_servers.is_empty());
    }
 }
