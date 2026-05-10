@@ -369,7 +369,7 @@ export function AgentSelector({
           />
         </div>
 
-        <div className="max-h-[360px] min-h-0 flex-1 overflow-y-auto p-1 pr-1.5 [overscroll-behavior:contain]">
+        <div className="max-h-[360px] min-h-0 flex-1 overflow-y-auto p-1 pr-1.5 pb-2 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
@@ -394,7 +394,7 @@ export function AgentSelector({
                     }
                   }}
                   className={cn(
-                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors",
+                    "group mb-1 flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors last:mb-2",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     !item.isInstalled && item.id !== "custom" && "text-text-lighter",

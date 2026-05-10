@@ -578,13 +578,26 @@ fn merge_agent_catalogs(
    for agent in fallback_agents {
       if !preferred_agents
          .iter()
-         .any(|preferred| preferred.id == agent.id)
+         .any(|preferred| agents_refer_to_same_provider(preferred, &agent))
       {
          preferred_agents.push(agent);
       }
    }
    preferred_agents.sort_by_key(|agent| agent.name.clone());
    preferred_agents
+}
+
+fn agents_refer_to_same_provider(preferred: &AgentConfig, fallback: &AgentConfig) -> bool {
+   preferred.id == fallback.id
+      || normalized_agent_name(&preferred.name) == normalized_agent_name(&fallback.name)
+}
+
+fn normalized_agent_name(name: &str) -> String {
+   name
+      .chars()
+      .filter(|character| character.is_ascii_alphanumeric())
+      .flat_map(|character| character.to_lowercase())
+      .collect()
 }
 
 fn apply_agent_server_settings(
@@ -1189,6 +1202,20 @@ mod tests {
       assert_eq!(codex.name, "Codex Registry");
       assert_eq!(codex.binary_name, "npx");
       assert!(merged.iter().any(|candidate| candidate.id == "athas-local"));
+   }
+
+   #[test]
+   fn merge_agent_catalogs_deduplicates_renamed_legacy_agents_by_name() {
+      let registry = agent("codex-acp", "Codex CLI", "codex-acp");
+      let renamed_legacy = agent("codex-cli", "Codex CLI", "codex");
+      let legacy_only = agent("claude-code", "Claude Code", "claude");
+
+      let merged = merge_agent_catalogs(vec![registry], vec![renamed_legacy, legacy_only]);
+
+      assert_eq!(merged.len(), 2);
+      assert!(merged.iter().any(|candidate| candidate.id == "codex-acp"));
+      assert!(!merged.iter().any(|candidate| candidate.id == "codex-cli"));
+      assert!(merged.iter().any(|candidate| candidate.id == "claude-code"));
    }
 
    #[test]
