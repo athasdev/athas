@@ -5,6 +5,10 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
+import {
+  DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
+  getDroppedDatabaseFilePaths,
+} from "@/features/database/utils/database-file-drop";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
@@ -48,7 +52,13 @@ export function MainLayout() {
 
   const {
     isSidebarVisible,
+    isRightSidebarVisible,
+    isAgentSidebarVisible,
+    activeRightSidebarView,
+    activeAgentSidebarView,
     setIsSidebarVisible,
+    setIsRightSidebarVisible,
+    setIsAgentSidebarVisible,
     isDatabaseConnectionVisible,
     setIsDatabaseConnectionVisible,
   } = useUIState();
@@ -70,6 +80,18 @@ export function MainLayout() {
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
+
+    if (isRightSidebarVisible && activeRightSidebarView === "databases" && rootFolderPath) {
+      const databasePaths = getDroppedDatabaseFilePaths(paths);
+      if (databasePaths.length > 0) {
+        window.dispatchEvent(
+          new CustomEvent(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, {
+            detail: { paths: databasePaths },
+          }),
+        );
+        return;
+      }
+    }
 
     const result = await openDroppedWorkspacePaths(paths, {
       getPathInfo: getSymlinkInfo,
@@ -247,37 +269,22 @@ export function MainLayout() {
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
-          {/* Left sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <div className={!showInlineAiChat ? "hidden" : undefined}>
+          {sidebarPosition === "left" ? (
+            <>
+              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
               <ResizablePane
                 position="left"
-                widthKey="aiChatWidth"
+                widthKey="sidebarWidth"
+                hidden={!isSidebarVisible}
                 collapsible
-                collapseThreshold={0}
-                onCollapse={() => updateSetting("isAIChatVisible", false)}
+                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                edgePadding={!showLeftSidebarTabs}
+                onCollapse={() => setIsSidebarVisible(false)}
               >
-                <AIChat mode="chat" />
+                <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
-            </div>
-          ) : (
-            sidebarPosition === "left" && (
-              <>
-                {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
-                <ResizablePane
-                  position="left"
-                  widthKey="sidebarWidth"
-                  hidden={!isSidebarVisible}
-                  collapsible
-                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                  edgePadding={!showLeftSidebarTabs}
-                  onCollapse={() => setIsSidebarVisible(false)}
-                >
-                  <MainSidebar showActivityRail={!showLeftSidebarTabs} />
-                </ResizablePane>
-              </>
-            )
-          )}
+            </>
+          ) : null}
 
           {/* Main content area with split view */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
@@ -287,7 +294,36 @@ export function MainLayout() {
             {terminalWidthMode === "editor" && <BottomPane />}
           </div>
 
-          {/* Right sidebar or AI chat based on settings */}
+          {/* Right side panes are ordered from inner to edge. */}
+          {showInlineAiChat ? (
+            <ResizablePane
+              position="right"
+              widthKey="aiChatWidth"
+              collapsible
+              collapseThreshold={0}
+              onCollapse={() => updateSetting("isAIChatVisible", false)}
+            >
+              <AIChat mode="chat" />
+            </ResizablePane>
+          ) : null}
+
+          <ResizablePane
+            position="right"
+            widthKey="aiChatWidth"
+            hidden={!isAgentSidebarVisible}
+            collapsible
+            collapseThreshold={0}
+            onCollapse={() => setIsAgentSidebarVisible(false)}
+          >
+            <MainSidebar
+              showActivityRail={false}
+              paneLevel="agent"
+              activeView={activeAgentSidebarView}
+              isGitActive={false}
+              isGitHubPRsActive={false}
+            />
+          </ResizablePane>
+
           {sidebarPosition === "right" ? (
             <>
               {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
@@ -300,22 +336,27 @@ export function MainLayout() {
                 edgePadding={!showLeftSidebarTabs}
                 onCollapse={() => setIsSidebarVisible(false)}
               >
-                <MainSidebar showActivityRail={!showLeftSidebarTabs} />
+                <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
             </>
-          ) : (
-            <div className={!showInlineAiChat ? "hidden" : undefined}>
-              <ResizablePane
-                position="right"
-                widthKey="aiChatWidth"
-                collapsible
-                collapseThreshold={0}
-                onCollapse={() => updateSetting("isAIChatVisible", false)}
-              >
-                <AIChat mode="chat" />
-              </ResizablePane>
-            </div>
-          )}
+          ) : null}
+
+          <ResizablePane
+            position="right"
+            widthKey="sidebarWidth"
+            hidden={!isRightSidebarVisible}
+            collapsible
+            collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+            onCollapse={() => setIsRightSidebarVisible(false)}
+          >
+            <MainSidebar
+              showActivityRail={false}
+              paneLevel="edge"
+              activeView={activeRightSidebarView}
+              isGitActive={false}
+              isGitHubPRsActive={false}
+            />
+          </ResizablePane>
         </div>
 
         {terminalWidthMode === "full" && (

@@ -2,10 +2,12 @@ import {
   ArrowClockwise,
   BugBeetle,
   CaretUp,
+  Database,
   DownloadSimple,
   ListBullets,
   PuzzlePiece,
   TerminalWindow,
+  UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
@@ -22,7 +24,7 @@ import {
   chromeIcon,
   chromeItemWrapper,
 } from "@/features/layout/components/chrome-control-styles";
-import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
+import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
@@ -33,11 +35,13 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { NotificationsTrigger } from "@/features/window/components/notifications-sidebar";
-import { useDocumentOutline } from "@/features/outline/hooks/use-document-outline";
-import type {
-  FooterLeadingItemId,
-  FooterTrailingItemId,
+import {
+  FOOTER_TRAILING_ITEM_IDS,
+  normalizeItemOrder,
+  type FooterLeadingItemId,
+  type FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 
@@ -110,8 +114,11 @@ function FooterTabControl({
 
 const Footer = () => {
   const settings = useSettingsStore((state) => state.settings);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const uiState = useUIState();
+  const isCollaborationFeatureEnabled = useAuthStore(
+    (state) => state.subscription?.collaboration?.enabled === true,
+  );
+  const { openSidebarView } = useSidebarPaneController();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
@@ -407,18 +414,19 @@ const Footer = () => {
   const footerLeadingItems = footerLeadingItemsSource.filter(
     (item): item is FooterItem<FooterLeadingItemId> => item !== null,
   );
-  const { activeBuffer, symbols } = useDocumentOutline(true);
-  const shouldShowOutline =
-    settings.coreFeatures.outline &&
-    activeBuffer?.type === "editor" &&
-    !activeBuffer.isVirtual &&
-    Boolean(activeBuffer.path) &&
-    symbols.length > 0;
+  const shouldShowOutline = settings.coreFeatures.outline;
   const isOutlineActive =
-    uiState.isSidebarVisible &&
-    !uiState.isGitViewActive &&
-    !uiState.isGitHubPRsViewActive &&
-    uiState.activeSidebarView === "outline";
+    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "outline";
+  const isDatabasesActive =
+    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "databases";
+  const isCollaborationActive =
+    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "collaboration";
+  const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
+    return normalizeItemOrder(
+      settings.footerTrailingItemsOrder,
+      FOOTER_TRAILING_ITEM_IDS,
+    ) as FooterTrailingItemId[];
+  }, [settings.footerTrailingItemsOrder]);
 
   const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [
     ...(shouldShowOutline
@@ -433,25 +441,47 @@ const Footer = () => {
                 className={chromeControl()}
                 commandId="workbench.focusOutline"
                 onClick={() => {
-                  if (settings.sidebarPosition !== "right") {
-                    void updateSetting("sidebarPosition", "right");
-                  }
-
-                  const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
-                    {
-                      isSidebarVisible: uiState.isSidebarVisible,
-                      isGitViewActive: uiState.isGitViewActive,
-                      isGitHubPRsViewActive: uiState.isGitHubPRsViewActive,
-                      activeSidebarView: uiState.activeSidebarView,
-                    },
-                    "outline",
-                  );
-
-                  uiState.setActiveView(nextView);
-                  uiState.setIsSidebarVisible(nextIsSidebarVisible);
+                  openSidebarView("outline", { triggerSide: "right" });
                 }}
               >
                 <ListBullets className={chromeIcon()} weight="duotone" />
+              </FooterTabControl>
+            ),
+          },
+        ]
+      : []),
+    {
+      id: "databases",
+      label: "Databases",
+      content: (
+        <FooterTabControl
+          tooltip="Databases"
+          active={isDatabasesActive}
+          className={chromeControl()}
+          commandId="database.connect"
+          onClick={() => {
+            openSidebarView("databases", { triggerSide: "right" });
+          }}
+        >
+          <Database className={chromeIcon()} weight="duotone" />
+        </FooterTabControl>
+      ),
+    },
+    ...(isCollaborationFeatureEnabled
+      ? [
+          {
+            id: "collaboration" as const,
+            label: "Collaboration",
+            content: (
+              <FooterTabControl
+                tooltip="Collaboration"
+                active={isCollaborationActive}
+                className={chromeControl()}
+                onClick={() => {
+                  openSidebarView("collaboration", { triggerSide: "right" });
+                }}
+              >
+                <UsersThree className={chromeIcon()} weight="duotone" />
               </FooterTabControl>
             ),
           },
@@ -475,7 +505,7 @@ const Footer = () => {
       </div>
 
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
-        {orderFooterItems(footerTrailingItems, settings.footerTrailingItemsOrder).map((item) => (
+        {orderFooterItems(footerTrailingItems, footerTrailingOrder).map((item) => (
           <div key={item.id} className={chromeItemWrapper()}>
             {item.content}
           </div>

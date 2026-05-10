@@ -6,7 +6,6 @@ import {
   List,
   Minus,
   Sparkle,
-  UsersThree,
   X,
 } from "@phosphor-icons/react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -16,20 +15,17 @@ import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import {
   chromeControl,
   chromeControlGroup,
   chromeIcon,
   chromeItemWrapper,
 } from "@/features/layout/components/chrome-control-styles";
-import {
-  resolveSidebarPaneClick,
-  type SidebarView,
-} from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
@@ -71,7 +67,7 @@ function placeHeaderItemsBeforeAccount<T extends string>(items: Array<HeaderItem
   if (accountIndex < 0) return items;
 
   let nextItems = [...items];
-  for (const id of ["ai-chat", "collaboration"] as const) {
+  for (const id of ["ai-chat"] as const) {
     const itemIndex = nextItems.findIndex((item) => item.id === id);
     const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
     if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
@@ -91,16 +87,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const {
-    isGitViewActive,
-    isGitHubPRsViewActive,
-    activeSidebarView,
-    isSidebarVisible,
-    setActiveView,
-    setIsSidebarVisible,
-    setIsProjectPickerVisible,
-  } = useUIState();
+  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView, setIsProjectPickerVisible } =
+    useUIState();
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const { openSidebarView } = useSidebarPaneController();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -116,9 +106,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const shouldUseNativeMenuBar = !isWindows && settings.nativeMenuBar;
   const titleBarProjectMode = settings.titleBarProjectMode;
   const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
-  const isCollaborationFeatureEnabled = useAuthStore(
-    (state) => state.subscription?.collaboration?.enabled === true,
-  );
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
@@ -192,37 +179,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   };
 
   const handleSidebarViewChange = (view: SidebarView) => {
-    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
-      {
-        isSidebarVisible,
-        isGitViewActive,
-        isGitHubPRsViewActive,
-        activeSidebarView,
-      },
-      view,
-    );
-
-    setActiveView(nextView);
-    setIsSidebarVisible(nextIsSidebarVisible);
-  };
-
-  const handleRightUtilityViewChange = (view: SidebarView) => {
-    if (settings.sidebarPosition !== "right") {
-      void updateSetting("sidebarPosition", "right");
-    }
-
-    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
-      {
-        isSidebarVisible,
-        isGitViewActive,
-        isGitHubPRsViewActive,
-        activeSidebarView,
-      },
-      view,
-    );
-
-    setActiveView(nextView);
-    setIsSidebarVisible(nextIsSidebarVisible);
+    openSidebarView(view, { triggerSide: "left" });
   };
 
   const handleTitleBarContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -395,26 +352,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           <Sparkle className={chromeIcon()} weight="duotone" />
         </Button>
       ),
-    },
-    {
-      id: "collaboration",
-      label: "Collaboration",
-      content: isCollaborationFeatureEnabled ? (
-        <Button
-          type="button"
-          variant="ghost"
-          active={
-            !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "collaboration"
-          }
-          tooltip="Collaboration"
-          tooltipSide="bottom"
-          onClick={() => handleRightUtilityViewChange("collaboration")}
-          className={chromeControl()}
-          aria-label="Collaboration"
-        >
-          <UsersThree className={chromeIcon()} weight="duotone" />
-        </Button>
-      ) : null,
     },
     {
       id: "account",

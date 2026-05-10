@@ -9,10 +9,14 @@ export interface ViewState {
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   activeSidebarView: SidebarView;
+  activeRightSidebarView: SidebarView;
+  activeAgentSidebarView: SidebarView;
 }
 
 export interface ViewActions {
   setActiveView: (view: SidebarView) => void;
+  setActiveRightSidebarView: (view: SidebarView) => void;
+  setActiveAgentSidebarView: (view: SidebarView) => void;
 }
 
 export type ViewSlice = ViewState & ViewActions;
@@ -21,6 +25,8 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
   isGitViewActive: false,
   isGitHubPRsViewActive: false,
   activeSidebarView: "files",
+  activeRightSidebarView: "notifications",
+  activeAgentSidebarView: "multi-agents",
 
   setActiveView: (view: SidebarView) => {
     set({
@@ -48,5 +54,11 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
         state.bottomPaneActiveTab ?? DEFAULT_PROJECT_UI_STATE.bottomPaneActiveTab,
       activeSidebarView: view,
     });
+  },
+  setActiveRightSidebarView: (view: SidebarView) => {
+    set({ activeRightSidebarView: view });
+  },
+  setActiveAgentSidebarView: (view: SidebarView) => {
+    set({ activeAgentSidebarView: view });
   },
 });

@@ -64,6 +64,7 @@ interface OutlineSymbolRowProps {
   onClick: (symbol: OutlineSymbol) => void;
   onToggle?: (symbol: OutlineSymbol) => void;
   onMouseEnter?: () => void;
+  onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   tabIndex?: number;
   onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
 }
@@ -78,6 +79,7 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
       onClick,
       onToggle,
       onMouseEnter,
+      onContextMenu,
       tabIndex,
       onKeyDown,
     },
@@ -95,6 +97,7 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
         indentSize={14}
         onClick={() => onClick(symbol)}
         onMouseEnter={onMouseEnter}
+        onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
         tabIndex={tabIndex}
         className={rowHeightClassName}

@@ -12,7 +12,12 @@ import { useProjectStore } from "@/features/window/stores/project-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem, useContextMenu } from "@/ui/context-menu";
-import Input from "@/ui/input";
+import {
+  SidebarEmptyActionState,
+  SidebarHeader,
+  SidebarHeaderSearch,
+  SidebarPanel,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
 
@@ -418,17 +423,13 @@ export function MultiAgentsSidebarView() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-primary-bg">
-      <div className="flex h-8 shrink-0 items-center gap-1.5 px-1.5 pt-1">
-        <Input
+    <SidebarPanel>
+      <SidebarHeader>
+        <SidebarHeaderSearch
           value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
+          onChange={setSearchQuery}
           leftIcon={Search}
-          variant="ghost"
-          size="xs"
           placeholder="Search"
-          className="h-6 rounded-md border-transparent bg-transparent text-xs"
-          containerClassName="min-w-0 flex-1"
         />
         <AgentSelector
           variant="header"
@@ -436,19 +437,23 @@ export function MultiAgentsSidebarView() {
           triggerTooltip="New agent"
           triggerClassName="border border-border/80 border-dashed bg-transparent hover:border-border hover:bg-hover"
         />
-      </div>
+      </SidebarHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {filteredChats.length === 0 ? (
-          <div className="flex h-full min-h-[180px] flex-col items-center justify-center gap-3 px-4 text-center">
-            <div>
-              <div className="font-medium text-sm text-text">
-                {searchQuery ? "No matching agents" : "No agent history"}
-              </div>
-              <div className="mt-1 text-text-lighter text-xs">
-                {searchQuery ? "Try another search." : "Start a new agent chat."}
-              </div>
-            </div>
+          <SidebarEmptyActionState
+            className="h-full min-h-[180px]"
+            message={
+              <>
+                <span className="block text-text">
+                  {searchQuery ? "No matching agents" : "No agent history"}
+                </span>
+                <span className="mt-1 block text-xs">
+                  {searchQuery ? "Try another search." : "Start a new agent chat."}
+                </span>
+              </>
+            }
+          >
             {!searchQuery ? (
               <AgentSelector
                 variant="header"
@@ -457,7 +462,7 @@ export function MultiAgentsSidebarView() {
                 triggerClassName="border border-border/80 border-dashed bg-transparent hover:border-border hover:bg-hover"
               />
             ) : null}
-          </div>
+          </SidebarEmptyActionState>
         ) : (
           <div className="flex flex-col gap-2">
             {pinnedChats.length > 0 ? (
@@ -552,6 +557,6 @@ export function MultiAgentsSidebarView() {
         }}
         triggerRef={chatHistoryTriggerRef}
       />
-    </div>
+    </SidebarPanel>
   );
 }

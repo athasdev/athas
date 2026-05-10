@@ -18,8 +18,7 @@ import {
   chromeControlGroup,
   chromeIcon,
 } from "@/features/layout/components/chrome-control-styles";
-import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import Command, { CommandHeader, CommandList } from "@/ui/command";
@@ -382,7 +381,6 @@ export function NotificationsPane() {
   };
 
   const focusNotificationSearch = () => {
-    if (notifications.length === 0) return;
     requestAnimationFrame(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
@@ -455,33 +453,31 @@ export function NotificationsPane() {
           panelContextMenu.open(event);
         }}
       >
-        {notifications.length > 0 ? (
-          <SidebarHeader>
-            <SidebarHeaderSearch
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={setSearchQuery}
-              leftIcon={Search}
-              placeholder="Search"
-              onKeyDown={(event) => {
-                if (event.key === "ArrowDown" && visibleNotifications.length > 0) {
-                  event.preventDefault();
-                  focusNotificationAtIndex(0);
-                }
-              }}
-            />
-            <SidebarHeaderIconButton
-              ref={filterButtonRef}
-              active={notificationFilter !== "all"}
-              className="shrink-0"
-              tooltip="Filter Notifications"
-              tooltipSide="bottom"
-              onClick={() => setIsFilterMenuOpen(true)}
-            >
-              <Funnel />
-            </SidebarHeaderIconButton>
-          </SidebarHeader>
-        ) : null}
+        <SidebarHeader>
+          <SidebarHeaderSearch
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={setSearchQuery}
+            leftIcon={Search}
+            placeholder="Search"
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown" && visibleNotifications.length > 0) {
+                event.preventDefault();
+                focusNotificationAtIndex(0);
+              }
+            }}
+          />
+          <SidebarHeaderIconButton
+            ref={filterButtonRef}
+            active={notificationFilter !== "all"}
+            className="shrink-0"
+            tooltip="Filter Notifications"
+            tooltipSide="bottom"
+            onClick={() => setIsFilterMenuOpen(true)}
+          >
+            <Funnel />
+          </SidebarHeaderIconButton>
+        </SidebarHeader>
         {notifications.length === 0 ? (
           <SidebarEmptyState>No notifications yet.</SidebarEmptyState>
         ) : filteredNotifications.length === 0 ? (
@@ -647,42 +643,22 @@ export function NotificationsPane() {
 
 export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) => {
   const notifications = useToastStore.use.notifications();
-  const {
-    isSidebarVisible,
-    isGitViewActive,
-    isGitHubPRsViewActive,
-    activeSidebarView,
-    setActiveView,
-    setIsSidebarVisible,
-  } = useUIState();
-  const { settings, updateSetting } = useSettingsStore();
+  const { isRightSidebarVisible, activeRightSidebarView } = useUIState();
+  const { openSidebarView } = useSidebarPaneController();
   const unreadCount = useMemo(
     () =>
       notifications.filter((notification) => !notification.read && notification.type !== "success")
         .length,
     [notifications],
   );
-  const isActive = isSidebarVisible && activeSidebarView === "notifications";
+  const isActive = isRightSidebarVisible && activeRightSidebarView === "notifications";
 
   return (
     <Tooltip content="Notifications" side="top">
       <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
         <Button
           onClick={() => {
-            if (settings.sidebarPosition !== "right") {
-              void updateSetting("sidebarPosition", "right");
-            }
-            const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
-              {
-                isSidebarVisible,
-                isGitViewActive,
-                isGitHubPRsViewActive,
-                activeSidebarView,
-              },
-              "notifications",
-            );
-            setActiveView(nextView);
-            setIsSidebarVisible(nextIsSidebarVisible);
+            openSidebarView("notifications", { triggerSide: "right" });
           }}
           type="button"
           variant="ghost"

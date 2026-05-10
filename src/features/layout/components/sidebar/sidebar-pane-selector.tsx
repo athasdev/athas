@@ -1,10 +1,4 @@
-import {
-  Folder,
-  GitBranch,
-  GitPullRequest,
-  MagnifyingGlass,
-  Sparkle as Sparkles,
-} from "@phosphor-icons/react";
+import { Folder, GitBranch, GitPullRequest, MagnifyingGlass } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
   chromeControl,
@@ -61,12 +55,6 @@ export const SidebarPaneSelector = ({
       ? chromeControl({ shape: "sidebar" })
       : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
-  const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
-  const isMultiAgentsActive =
-    isMultiAgentsFeatureEnabled &&
-    !isGitViewActive &&
-    !isGitHubPRsViewActive &&
-    activeSidebarView === "multi-agents";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
@@ -99,23 +87,6 @@ export const SidebarPaneSelector = ({
             tooltip: {
               content: "Search",
               shortcut: "Mod+Shift+F",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...(isMultiAgentsFeatureEnabled
-      ? [
-          {
-            id: "multi-agents",
-            icon: <Sparkles className={iconClassName} weight="duotone" />,
-            isActive: isMultiAgentsActive,
-            onClick: () => onViewChange("multi-agents"),
-            role: "tab",
-            ariaLabel: "Multi Agents",
-            className: tabClassName,
-            tooltip: {
-              content: "Multi Agents",
               side: tooltipSide,
             },
           } satisfies TabsItem,
