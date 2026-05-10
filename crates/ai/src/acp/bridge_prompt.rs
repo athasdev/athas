@@ -72,7 +72,7 @@ async fn send_prompt_with_auth_retry(
       Ok(Err(err)) if matches!(err.code, acp::ErrorCode::AuthRequired) => {
          bail!("Authentication required before sending prompt")
       }
-      Ok(Err(err)) => Err(err).context("Failed to send prompt"),
+      Ok(Err(err)) => bail!("Failed to send prompt: {}", err),
       Err(_) => bail!("The ACP adapter did not acknowledge the prompt in time"),
    }
 }

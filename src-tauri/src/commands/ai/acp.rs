@@ -20,6 +20,7 @@ const ACP_REGISTRY_URL: &str =
    "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 const EXCLUDED_ACP_REGISTRY_AGENT_IDS: &[&str] = &["agoragentic-acp"];
+const SIGIT_WRAPPER_VERSION: u32 = 2;
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -361,13 +362,43 @@ fn python_command_name(package_spec: &str, fallback: &str) -> String {
    package_command_name(package, fallback)
 }
 
+fn registry_agent_args(agent_id: &str, mut args: Vec<String>) -> Vec<String> {
+   if agent_id == "qwen-code" {
+      args = args
+         .into_iter()
+         .filter(|arg| arg != "--experimental-skills")
+         .map(|arg| {
+            if arg == "--acp" || arg == "acp" {
+               "--experimental-acp".to_string()
+            } else {
+               arg
+            }
+         })
+         .collect();
+      if !args.iter().any(|arg| arg == "--experimental-acp") {
+         args.push("--experimental-acp".to_string());
+      }
+   }
+
+   args
+}
+
+fn acp_python_companion_packages(agent_id: &str) -> Vec<String> {
+   if agent_id == "minion-code" {
+      vec!["agent-client-protocol<0.9".to_string()]
+   } else {
+      Vec::new()
+   }
+}
+
 fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
+   let args = registry_agent_args(&contribution.id, contribution.args);
    let mut agent = AgentConfig {
       id: contribution.id,
       name: contribution.name,
       binary_name: contribution.binary_name,
       binary_path: None,
-      args: contribution.args,
+      args,
       env_vars: contribution.env_vars,
       default_mode: None,
       default_model: None,
@@ -413,12 +444,13 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
       .and_then(|platform| distribution.binary.as_ref()?.get(platform))
    {
       let binary_name = registry_command_name(&target.cmd, &id);
+      let args = registry_agent_args(&id, target.args.clone());
       return Some(AgentConfig {
          id,
          name,
          binary_name,
          binary_path: None,
-         args: target.args.clone(),
+         args,
          env_vars: target.env.clone(),
          default_mode: None,
          default_model: None,
@@ -437,12 +469,13 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
    if let Some(target) = distribution.npx {
       let package_name = npm_package_name(&target.package);
       let command = npx_command_name(&package_name, &id);
+      let args = registry_agent_args(&id, target.args.clone());
       return Some(AgentConfig {
          id,
          name,
          binary_name: command.clone(),
          binary_path: None,
-         args: target.args.clone(),
+         args,
          env_vars: target.env,
          default_mode: None,
          default_model: None,
@@ -461,12 +494,13 @@ fn acp_registry_agent_to_config(agent: AcpRegistryAgent) -> Option<AgentConfig> 
    if let Some(target) = distribution.uvx {
       let package = python_package_spec_from_uvx(&target.package);
       let command = python_command_name(&package, &id);
+      let args = registry_agent_args(&id, target.args);
       return Some(AgentConfig {
          id,
          name,
          binary_name: command.clone(),
          binary_path: None,
-         args: target.args,
+         args,
          env_vars: target.env,
          default_mode: None,
          default_model: None,
@@ -936,7 +970,7 @@ fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
       command: agent.install_command.clone(),
       runtime,
       package,
-      packages: vec![],
+      packages: acp_python_companion_packages(&agent.id),
       download_url: agent.install_download_url.clone(),
       args: vec![],
       env: HashMap::new(),
@@ -1014,6 +1048,10 @@ async fn write_acp_wrapper(
             .map_err(|e| e.to_string())?;
          build_node_wrapper(&node_path, &entrypoint)
       }
+      Some(AgentRuntime::Binary) if agent.id == "sigit" => build_stdout_filtered_wrapper(
+         installed_binary,
+         "exec \"$binary\" \"$@\" | awk '/^[[:space:]]*[\\{\\[]/ { print; fflush(); }'",
+      ),
       _ => build_binary_wrapper(installed_binary),
    };
 
@@ -1072,6 +1110,7 @@ struct AcpInstallReceipt {
    install_package: Option<String>,
    install_download_url: Option<String>,
    install_command: Option<String>,
+   wrapper_version: Option<u32>,
    installed_at_unix_seconds: u64,
 }
 
@@ -1087,6 +1126,7 @@ fn write_acp_install_receipt(app_handle: &AppHandle, agent: &AgentConfig) -> Res
       install_package: agent.install_package.clone(),
       install_download_url: agent.install_download_url.clone(),
       install_command: agent.install_command.clone(),
+      wrapper_version: acp_wrapper_version(agent),
       installed_at_unix_seconds: SystemTime::now()
          .duration_since(UNIX_EPOCH)
          .map(|duration| duration.as_secs())
@@ -1114,6 +1154,14 @@ fn agent_runtime_key(agent: &AgentConfig) -> Option<String> {
       .and_then(|value| value.as_str().map(ToString::to_string))
 }
 
+fn acp_wrapper_version(agent: &AgentConfig) -> Option<u32> {
+   if agent.id == "sigit" {
+      Some(SIGIT_WRAPPER_VERSION)
+   } else {
+      None
+   }
+}
+
 fn build_binary_wrapper(binary: &Path) -> String {
    #[cfg(target_os = "windows")]
    {
@@ -1123,6 +1171,18 @@ fn build_binary_wrapper(binary: &Path) -> String {
    #[cfg(not(target_os = "windows"))]
    {
       format!("#!/bin/sh\nexec \"{}\" \"$@\"\n", binary.display())
+   }
+}
+
+fn build_stdout_filtered_wrapper(binary: &Path, command: &str) -> String {
+   #[cfg(target_os = "windows")]
+   {
+      format!("@echo off\r\n\"{}\" %*\r\n", binary.display())
+   }
+
+   #[cfg(not(target_os = "windows"))]
+   {
+      format!("#!/bin/sh\nbinary='{}'\n{}\n", binary.display(), command)
    }
 }
 
@@ -1366,6 +1426,40 @@ mod tests {
    }
 
    #[test]
+   fn qwen_registry_args_use_current_acp_flag() {
+      assert_eq!(
+         registry_agent_args(
+            "qwen-code",
+            vec![
+               "--acp".to_string(),
+               "--experimental-skills".to_string(),
+               "--other".to_string()
+            ]
+         ),
+         vec!["--experimental-acp".to_string(), "--other".to_string()]
+      );
+      assert_eq!(
+         registry_agent_args("qwen-code", vec!["acp".to_string()]),
+         vec!["--experimental-acp".to_string()]
+      );
+      assert_eq!(
+         registry_agent_args("qwen-code", Vec::new()),
+         vec!["--experimental-acp".to_string()]
+      );
+   }
+
+   #[test]
+   fn minion_install_config_pins_compatible_acp_package() {
+      let mut minion = agent("minion-code", "Minion Code", "minion-code");
+      minion.install_runtime = Some(AgentRuntime::Python);
+      minion.install_package = Some("minion-code==0.1.44".to_string());
+
+      let config = tool_config_from_agent(&minion).expect("tool config");
+
+      assert_eq!(config.packages, vec!["agent-client-protocol<0.9"]);
+   }
+
+   #[test]
    fn acp_registry_json_maps_npx_distribution_as_managed_node_install() {
       let json = r#"{
         "agents": [
@@ -1390,7 +1484,7 @@ mod tests {
 
       assert_eq!(qwen.id, "qwen-code");
       assert_eq!(qwen.binary_name, "qwen");
-      assert_eq!(qwen.args, vec!["--acp".to_string()]);
+      assert_eq!(qwen.args, vec!["--experimental-acp".to_string()]);
       assert_eq!(qwen.install_runtime, Some(AgentRuntime::Node));
       assert_eq!(
          qwen.install_package.as_deref(),

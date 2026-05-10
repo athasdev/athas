@@ -585,7 +585,13 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_pip(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_pip(
+               app_handle,
+               package,
+               Self::configured_command_name(config),
+               &config.packages,
+            )
+            .await
          }
          ToolRuntime::Go => {
             let package = config
@@ -749,6 +755,7 @@ impl ToolInstaller {
       app_handle: &AppHandle,
       package: &str,
       command_name: &str,
+      companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
       let runtime_root = Self::get_runtime_root(app_handle)?;
       let python_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Python)
@@ -789,9 +796,14 @@ impl ToolInstaller {
          venv_dir.join("bin").join("pip")
       };
 
+      let mut packages = Vec::with_capacity(1 + companion_packages.len());
+      packages.push(package);
+      packages.extend(companion_packages.iter().map(String::as_str));
+
       let mut command = Command::new(&pip_path);
       let output = configure_background_command(&mut command)
-         .args(["install", package])
+         .arg("install")
+         .args(packages)
          .output()
          .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
 

@@ -170,17 +170,18 @@ fn spawn_agent_process(
    workspace_path: Option<&str>,
 ) -> Result<(Child, bool)> {
    let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
+   let args = launch_args(config);
    log::info!(
       "Starting agent '{}' (binary: {}, resolved: {}, args: {:?})",
       config.name,
       config.binary_name,
       binary,
-      config.args
+      args
    );
 
    let mut cmd = Command::new(binary);
    configure_background_agent_command(&mut cmd);
-   cmd.args(&config.args)
+   cmd.args(&args)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
@@ -191,8 +192,7 @@ fn spawn_agent_process(
       cmd.env("PATH", format!("{current}:{shell_path}"));
    }
 
-   let uses_lazy_package_runner =
-      binary.ends_with("npx") && config.args.iter().any(|arg| arg == "-y");
+   let uses_lazy_package_runner = binary.ends_with("npx") && args.iter().any(|arg| arg == "-y");
 
    for (key, value) in &config.env_vars {
       cmd.env(key, value);
@@ -203,6 +203,31 @@ fn spawn_agent_process(
    }
 
    Ok((cmd.spawn()?, uses_lazy_package_runner))
+}
+
+fn launch_args(config: &AgentConfig) -> Vec<String> {
+   if config.id != "qwen-code" {
+      return config.args.clone();
+   }
+
+   let mut args = config
+      .args
+      .iter()
+      .filter(|arg| arg.as_str() != "--experimental-skills")
+      .map(|arg| {
+         if arg == "--acp" || arg == "acp" {
+            "--experimental-acp".to_string()
+         } else {
+            arg.clone()
+         }
+      })
+      .collect::<Vec<_>>();
+
+   if !args.iter().any(|arg| arg == "--experimental-acp") {
+      args.push("--experimental-acp".to_string());
+   }
+
+   args
 }
 
 fn spawn_stderr_logger(child: &mut Child, agent_name: String) {
@@ -692,5 +717,20 @@ mod tests {
       assert_eq!(request.session_id, acp::SessionId::new("session-1"));
       assert_eq!(request.cwd, PathBuf::from("/repo"));
       assert!(request.mcp_servers.is_empty());
+   }
+
+   #[test]
+   fn qwen_launch_args_use_current_acp_flag() {
+      let mut config = AgentConfig::new("qwen-code", "Qwen Code", "qwen");
+      config.args = vec![
+         "--acp".to_string(),
+         "--experimental-skills".to_string(),
+         "--other".to_string(),
+      ];
+
+      assert_eq!(
+         launch_args(&config),
+         vec!["--experimental-acp".to_string(), "--other".to_string()]
+      );
    }
 }

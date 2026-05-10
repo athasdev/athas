@@ -13,6 +13,7 @@ use tauri::Manager;
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;
+const SIGIT_WRAPPER_VERSION: u32 = 2;
 
 /// Get the user's login shell PATH. Bundled apps inherit a minimal PATH,
 /// so we source the full one from the user's shell and cache it.
@@ -193,6 +194,7 @@ struct ManagedAgentReceipt {
    install_package: Option<String>,
    install_download_url: Option<String>,
    install_command: Option<String>,
+   wrapper_version: Option<u32>,
 }
 
 impl ManagedAgentReceipt {
@@ -201,6 +203,15 @@ impl ManagedAgentReceipt {
          && self.install_package == config.install_package
          && self.install_download_url == config.install_download_url
          && self.install_command == config.install_command
+         && self.wrapper_version == managed_agent_wrapper_version(config)
+   }
+}
+
+fn managed_agent_wrapper_version(config: &AgentConfig) -> Option<u32> {
+   if config.id == "sigit" {
+      Some(SIGIT_WRAPPER_VERSION)
+   } else {
+      None
    }
 }
 
