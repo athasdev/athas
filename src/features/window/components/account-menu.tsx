@@ -12,6 +12,18 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
+import {
+  chromeControl,
+  chromeControlGroup,
+} from "@/features/layout/components/chrome-control-styles";
+import {
+  extractAutocompleteUsage,
+  formatUsageDate,
+  formatUsdFromCents,
+  getAccountPlanLabel,
+  getAiUsageModeLabel,
+  getUsageProgress,
+} from "@/features/window/lib/account-usage";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Badge from "@/ui/badge";
@@ -23,71 +35,8 @@ import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 
-const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
-  "pointer-events-auto border-transparent bg-transparent p-0";
-const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
-  "h-6 w-7 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
-
-type AutocompleteUsageSummary = {
-  periodStart: string;
-  periodEnd: string;
-  budgetCents: number;
-  reservedCents: number;
-  spendCents: number;
-  remainingCents: number;
-  requestsCount: number;
-  promptTokens: number;
-  completionTokens: number;
-  maxRequestCostCents: number;
-};
-
 interface AccountMenuProps {
   className?: string;
-}
-
-function extractAutocompleteUsage(subscription: unknown): AutocompleteUsageSummary | null {
-  if (!subscription || typeof subscription !== "object") return null;
-
-  const container = subscription as Record<string, unknown>;
-  const autocomplete =
-    container.autocomplete && typeof container.autocomplete === "object"
-      ? (container.autocomplete as Record<string, unknown>)
-      : null;
-  const usageCandidate = autocomplete?.usage;
-
-  if (!usageCandidate || typeof usageCandidate !== "object") return null;
-
-  const usage = usageCandidate as Record<string, unknown>;
-  if (
-    typeof usage.periodStart !== "string" ||
-    typeof usage.periodEnd !== "string" ||
-    typeof usage.budgetCents !== "number" ||
-    typeof usage.spendCents !== "number"
-  ) {
-    return null;
-  }
-
-  return usage as unknown as AutocompleteUsageSummary;
-}
-
-function formatUsdFromCents(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
-}
-
-function formatUsageDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
 }
 
 export const AccountMenu = ({ className }: AccountMenuProps) => {
@@ -152,35 +101,11 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const subscriptionStatus = subscription?.status ?? "free";
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
   const isTeams = Boolean(subscription?.collaboration?.enabled);
-  const enterprisePolicy = subscription?.enterprise?.policy;
-  const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const isPro = subscriptionStatus === "pro";
-  const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
-  const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
-  const planLabel = isEnterprise
-    ? "Enterprise"
-    : isTeams
-      ? "Teams"
-      : isPro
-        ? "Pro"
-        : isAuthenticated
-          ? "Free"
-          : "Guest";
-  const modeLabel = (() => {
-    if (!isAuthenticated) return "Guest";
-    if (!aiAllowedByPolicy) return "Blocked";
-    if (isPro) return "Hosted";
-    if (!byokAllowedByPolicy) return "Blocked";
-    return hasOpenRouterKey ? "BYOK" : "Key required";
-  })();
+  const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
+  const modeLabel = getAiUsageModeLabel({ isAuthenticated, subscription, hasOpenRouterKey });
   const autocompleteUsage = extractAutocompleteUsage(subscription);
-  const usageProgress =
-    autocompleteUsage && autocompleteUsage.budgetCents > 0
-      ? Math.min(
-          100,
-          Math.max(0, (autocompleteUsage.spendCents / autocompleteUsage.budgetCents) * 100),
-        )
-      : 0;
+  const usageProgress = getUsageProgress(autocompleteUsage);
 
   const signedOutItems: MenuItem[] = [
     {
@@ -295,7 +220,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <TabsList variant="segmented" className={cn(TITLE_BAR_CONTROL_GROUP_CLASS_NAME, className)}>
+        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
           <Button
             ref={buttonRef}
             onClick={() => setIsOpen((open) => !open)}
@@ -303,7 +228,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
             variant="ghost"
             compact
             active={isOpen}
-            className={TITLE_BAR_ICON_BUTTON_CLASS_NAME}
+            className={chromeControl()}
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-label="Account"
@@ -338,7 +263,6 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                   <span className="ui-text-sm font-medium text-text">AI usage</span>
                   <Badge
                     variant="default"
-                    shape="pill"
                     size="compact"
                     className={cn(
                       isPro || isEnterprise
@@ -354,7 +278,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
               {autocompleteUsage ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-xs text-text-lighter">Hosted autocomplete</span>
+                    <span className="ui-text-xs text-text-lighter">Hosted AI</span>
                     <span className="ui-text-xs font-medium text-text">
                       {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                       {formatUsdFromCents(autocompleteUsage.budgetCents)}

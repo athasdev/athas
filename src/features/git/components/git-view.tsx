@@ -18,11 +18,7 @@ import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import { PANE_GROUP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { primitiveAlert } from "@/ui/primitive-dialog-service";
-import {
-  EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
-  EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
-  Tabs,
-} from "@/ui/tabs";
+import { equalWidthSegmentedTabItem, equalWidthSegmentedTabs, Tabs } from "@/ui/tabs";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
@@ -973,7 +969,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             onReorder={(orderedIds) =>
               updateSetting("gitSidebarTabOrder", orderedIds as typeof settings.gitSidebarTabOrder)
             }
-            className={cn(EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME, "min-w-0 overflow-hidden")}
+            className={cn(equalWidthSegmentedTabs(), "min-w-0 overflow-hidden")}
             items={gitTabs.map((tab) => ({
               id: tab.id,
               isActive: activeTab === tab.id,
@@ -992,10 +988,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 content: tab.label,
                 side: "bottom",
               },
-              className: cn(
-                EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
-                "overflow-hidden px-1.5 [&>div]:min-w-0",
-              ),
+              className: cn(equalWidthSegmentedTabItem(), "overflow-hidden px-1.5 [&>div]:min-w-0"),
             }))}
           />
 

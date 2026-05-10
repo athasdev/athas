@@ -226,7 +226,7 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   getLineCount(): number {
-    return this.getLines().length;
+    return useEditorViewStore.getState().actions.getLineCount();
   }
 
   duplicateLine(): void {

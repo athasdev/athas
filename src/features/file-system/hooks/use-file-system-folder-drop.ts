@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -53,14 +54,14 @@ function routeInternalTabDrop(position: { x: number; y: number }) {
   if (!targetPaneId) return false;
 
   if (tabData.source === "terminal-panel" && tabData.terminalId) {
-    paneActions.setActivePane(targetPaneId);
-    bufferActions.openTerminalBuffer({
+    const bufferId = bufferActions.openTerminalBuffer({
       sessionId: tabData.terminalId,
       name: tabData.name,
       command: tabData.initialCommand,
       workingDirectory: tabData.currentDirectory,
       remoteConnectionId: tabData.remoteConnectionId,
     });
+    activateBufferInPaneAndSync(targetPaneId, bufferId);
     window.dispatchEvent(
       new CustomEvent("terminal-detach-to-buffer", {
         detail: { terminalId: tabData.terminalId },
@@ -68,6 +69,7 @@ function routeInternalTabDrop(position: { x: number; y: number }) {
     );
   } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== targetPaneId) {
     paneActions.moveBufferToPane(tabData.bufferId, tabData.paneId, targetPaneId);
+    activateBufferInPaneAndSync(targetPaneId, tabData.bufferId);
   } else {
     return false;
   }

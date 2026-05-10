@@ -21,6 +21,9 @@ interface DialogProps {
   classNames?: Partial<{
     backdrop: string;
     modal: string;
+    header: string;
+    title: string;
+    headerActions: string;
     content: string;
   }>;
 }
@@ -28,7 +31,7 @@ interface DialogProps {
 const dialogContentVariants = cva(
   [
     "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
-    "mx-4 flex max-h-[90vh] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl",
+    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl",
     "focus:outline-none",
   ],
   {
@@ -100,15 +103,20 @@ const Dialog = ({
             data-dialog-content=""
             className={cn(dialogContentVariants({ size }), classNames?.modal)}
           >
-            <div className="flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3">
-              <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
+                classNames?.header,
+              )}
+            >
+              <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
                 {Icon && <Icon className="text-text-lighter" />}
                 <DialogPrimitive.Title className="min-w-0 ui-font ui-text-md font-medium text-text">
                   {title}
                 </DialogPrimitive.Title>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
                 {headerActions}
                 <DialogPrimitive.Close asChild>
                   <button

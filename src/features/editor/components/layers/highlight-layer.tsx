@@ -5,12 +5,31 @@ import {
   FileCode as FileJson2,
   FileText,
 } from "@phosphor-icons/react";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
+import type { ResolvedEditorViewZone } from "@/features/editor/view-model/view-layout";
+import {
+  buildDiagnosticDecorations,
+  buildDiagnosticDecorationsByLine,
+  type DiagnosticDecoration,
+} from "../../decorations/diagnostic-decorations";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
+import { countLines, sliceContentLines } from "../../utils/large-file";
+
+interface LineMapping {
+  actualToVirtual: Map<number, number>;
+  virtualToActual: Map<number, number>;
+}
 
 interface HighlightLayerProps {
+  filePath?: string;
   content: string;
+  lines?: string[];
+  lineCount?: number;
+  lineOffsets?: number[];
+  lazyLineSlicing?: boolean;
   tokens: Token[];
   foldMarkers?: Map<number, number>;
   fontSize: number;
@@ -20,7 +39,14 @@ interface HighlightLayerProps {
   wordWrap?: boolean;
   viewportRange?: { startLine: number; endLine: number };
   inlayHints?: InlayHint[];
+  lineMapping?: LineMapping;
+  viewZones?: ResolvedEditorViewZone[];
 }
+
+const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
+const EMPTY_DIAGNOSTIC_DECORATIONS: DiagnosticDecoration[] = [];
+const EMPTY_INLAY_HINTS: InlayHint[] = [];
+const EMPTY_TOKENS: Token[] = [];
 
 interface LineProps {
   lineContent: string;
@@ -29,10 +55,19 @@ interface LineProps {
   lineStart: number;
   lineIndex: number;
   inlayHints?: InlayHint[];
+  diagnostics?: DiagnosticDecoration[];
 }
 
 const Line = memo<LineProps>(
-  ({ lineContent, tokens, foldedCount, lineStart, lineIndex, inlayHints = [] }) => {
+  ({
+    lineContent,
+    tokens,
+    foldedCount,
+    lineStart,
+    lineIndex,
+    inlayHints = [],
+    diagnostics = [],
+  }) => {
     const accordionMeta = useMemo(() => parseDiffAccordionLine(lineContent), [lineContent]);
 
     const spans = useMemo((): ReactNode[] => {
@@ -71,6 +106,47 @@ const Line = memo<LineProps>(
         }
       };
 
+      const getDiagnosticClassName = (diagnostic: DiagnosticDecoration) => {
+        if (diagnostic.severity === "error") return "diagnostic-decoration diagnostic-error";
+        if (diagnostic.severity === "warning") return "diagnostic-decoration diagnostic-warning";
+        return "diagnostic-decoration diagnostic-info";
+      };
+
+      const appendDecoratedText = (start: number, end: number, className: string) => {
+        if (end <= start) return;
+
+        const boundaries = new Set([start, end]);
+        for (const diagnostic of diagnostics) {
+          const overlapStart = Math.max(start, diagnostic.startColumn);
+          const overlapEnd = Math.min(end, diagnostic.endColumn);
+          if (overlapEnd > overlapStart) {
+            boundaries.add(overlapStart);
+            boundaries.add(overlapEnd);
+          }
+        }
+
+        const sortedBoundaries = [...boundaries].sort((a, b) => a - b);
+        for (let index = 0; index < sortedBoundaries.length - 1; index++) {
+          const segmentStart = sortedBoundaries[index];
+          const segmentEnd = sortedBoundaries[index + 1];
+          if (segmentEnd <= segmentStart) continue;
+
+          const activeDiagnostic = diagnostics.find(
+            (diagnostic) =>
+              segmentStart >= diagnostic.startColumn && segmentStart < diagnostic.endColumn,
+          );
+          const diagnosticClassName = activeDiagnostic
+            ? `${className} ${getDiagnosticClassName(activeDiagnostic)}`
+            : className;
+
+          result.push(
+            <span key={`${lineIndex}-${spanKey++}`} className={diagnosticClassName}>
+              {lineContent.substring(segmentStart, segmentEnd)}
+            </span>,
+          );
+        }
+      };
+
       const appendText = (start: number, end: number, className: string) => {
         if (end <= start) return;
 
@@ -80,11 +156,7 @@ const Line = memo<LineProps>(
         while (hintIndex < lineHints.length && lineHints[hintIndex].character < end) {
           const hint = lineHints[hintIndex];
           if (hint.character > cursor) {
-            result.push(
-              <span key={`${lineIndex}-${spanKey++}`} className={className}>
-                {lineContent.substring(cursor, hint.character)}
-              </span>,
-            );
+            appendDecoratedText(cursor, hint.character, className);
           }
           appendHint(hint);
           hintIndex++;
@@ -92,13 +164,23 @@ const Line = memo<LineProps>(
         }
 
         if (cursor < end) {
+          appendDecoratedText(cursor, end, className);
+        }
+      };
+
+      if (lineContent.length === 0 && diagnostics.length > 0) {
+        const emptyLineDiagnostic = diagnostics[0];
+        if (emptyLineDiagnostic) {
           result.push(
-            <span key={`${lineIndex}-${spanKey++}`} className={className}>
-              {lineContent.substring(cursor, end)}
+            <span
+              key={`${lineIndex}-${spanKey++}`}
+              className={`token-text ${getDiagnosticClassName(emptyLineDiagnostic)}`}
+            >
+              {"\u00A0"}
             </span>,
           );
         }
-      };
+      }
 
       if (tokens.length === 0) {
         appendText(0, lineContent.length, "token-text");
@@ -148,7 +230,7 @@ const Line = memo<LineProps>(
       appendHintsThrough(lineContent.length);
 
       return result;
-    }, [lineContent, tokens, lineStart, lineIndex, inlayHints]);
+    }, [lineContent, tokens, lineStart, lineIndex, inlayHints, diagnostics]);
 
     if (accordionMeta) {
       const Icon = accordionMeta.name.endsWith(".json") ? FileJson2 : FileText;
@@ -190,6 +272,7 @@ const Line = memo<LineProps>(
       prev.lineStart === next.lineStart &&
       prev.tokens === next.tokens &&
       prev.inlayHints === next.inlayHints &&
+      prev.diagnostics === next.diagnostics &&
       prev.foldedCount === next.foldedCount
     );
   },
@@ -201,6 +284,10 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
   (
     {
       content,
+      lines: providedLines,
+      lineCount: providedLineCount,
+      lineOffsets: providedLineOffsets,
+      lazyLineSlicing = false,
       tokens,
       foldMarkers,
       fontSize,
@@ -210,40 +297,61 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       wordWrap = false,
       viewportRange,
       inlayHints = [],
+      filePath,
+      lineMapping,
+      viewZones = [],
     },
     ref,
   ) => {
+    const diagnosticsForFile = useDiagnosticsStore((state) =>
+      filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
+    );
     // Normalize line endings first to ensure consistent rendering with textarea
     const normalizedContent = useMemo(() => normalizeLineEndings(content), [content]);
 
-    const lines = useMemo(() => normalizedContent.split("\n"), [normalizedContent]);
+    const lines = useMemo(() => {
+      if (providedLines) return providedLines;
+      if (lazyLineSlicing) return [];
+      return normalizedContent.split("\n");
+    }, [lazyLineSlicing, normalizedContent, providedLines]);
+    const lineCount =
+      providedLineCount ?? (lazyLineSlicing ? countLines(normalizedContent) : lines.length);
 
     const sortedTokens = useMemo(() => [...tokens].sort((a, b) => a.start - b.start), [tokens]);
 
     // Calculate line offsets once when content changes, independent of viewport
-    const lineOffsets = useMemo(() => buildLineOffsetMap(normalizedContent), [normalizedContent]);
+    const lineOffsets = useMemo(
+      () => (lazyLineSlicing ? [] : (providedLineOffsets ?? buildLineOffsetMap(normalizedContent))),
+      [lazyLineSlicing, normalizedContent, providedLineOffsets],
+    );
 
     const lineTokensMap = useMemo(() => {
       const map = new Map<number, Token[]>();
-      let tokenIndex = 0;
+      let firstCandidateTokenIndex = 0;
 
       // Only process lines in viewport if viewportRange is provided
       const startLine = viewportRange?.startLine ?? 0;
-      const endLine = viewportRange?.endLine ?? lines.length;
+      const endLine = viewportRange?.endLine ?? lineCount;
 
-      for (let lineIndex = startLine; lineIndex < Math.min(endLine, lines.length); lineIndex++) {
+      if (lazyLineSlicing) return map;
+
+      for (let lineIndex = startLine; lineIndex < Math.min(endLine, lineCount); lineIndex++) {
         const offset = lineOffsets[lineIndex];
         const lineLength = lines[lineIndex].length;
         const lineEnd = offset + lineLength;
         const lineTokens: Token[] = [];
 
-        // Find first token that might overlap with this line
-        while (tokenIndex < sortedTokens.length && sortedTokens[tokenIndex].end <= offset) {
-          tokenIndex++;
+        // Find first token that might overlap with this line. Keep this pointer moving forward
+        // across lines so typing does not repeatedly rescan already-ended tokens.
+        while (
+          firstCandidateTokenIndex < sortedTokens.length &&
+          sortedTokens[firstCandidateTokenIndex].end <= offset
+        ) {
+          firstCandidateTokenIndex++;
         }
 
         // Collect tokens that overlap with this line
-        const startTokenIndex = tokenIndex;
+        let tokenIndex = firstCandidateTokenIndex;
         while (tokenIndex < sortedTokens.length && sortedTokens[tokenIndex].start < lineEnd) {
           const token = sortedTokens[tokenIndex];
           if (token.end > offset) {
@@ -252,19 +360,18 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
           tokenIndex++;
         }
 
-        // Reset token index for next line
-        tokenIndex = startTokenIndex;
-
-        map.set(lineIndex, lineTokens);
+        if (lineTokens.length > 0) {
+          map.set(lineIndex, lineTokens);
+        }
       }
 
       return map;
-    }, [lines, sortedTokens, lineOffsets, viewportRange]);
+    }, [lazyLineSlicing, lineCount, lines, sortedTokens, lineOffsets, viewportRange]);
 
     const lineHintsMap = useMemo(() => {
       const map = new Map<number, InlayHint[]>();
       const startLine = viewportRange?.startLine ?? 0;
-      const endLine = viewportRange?.endLine ?? lines.length;
+      const endLine = viewportRange?.endLine ?? lineCount;
 
       for (const hint of inlayHints) {
         if (hint.line < startLine || hint.line >= endLine) continue;
@@ -274,31 +381,74 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       }
 
       return map;
-    }, [inlayHints, lines.length, viewportRange]);
+    }, [inlayHints, lineCount, viewportRange]);
+
+    const diagnosticDecorations = useMemo(() => {
+      if (!filePath) return [];
+      if (diagnosticsForFile.length === 0) return [];
+      if (lazyLineSlicing) return [];
+      return buildDiagnosticDecorations(diagnosticsForFile, lines, lineMapping);
+    }, [diagnosticsForFile, filePath, lazyLineSlicing, lines, lineMapping]);
+
+    const diagnosticDecorationsByLine = useMemo(
+      () => buildDiagnosticDecorationsByLine(diagnosticDecorations),
+      [diagnosticDecorations],
+    );
+
+    const viewZonesByLine = useMemo(() => {
+      const byLine = new Map<number, ResolvedEditorViewZone[]>();
+      for (const zone of viewZones) {
+        const lineZones = byLine.get(zone.afterLine);
+        if (lineZones) {
+          lineZones.push(zone);
+        } else {
+          byLine.set(zone.afterLine, [zone]);
+        }
+      }
+      return byLine;
+    }, [viewZones]);
 
     const renderedLines = useMemo(() => {
       const startLine = viewportRange?.startLine ?? 0;
-      const endLine = viewportRange?.endLine ?? lines.length;
+      const endLine = viewportRange?.endLine ?? lineCount;
+      const clampedStartLine = Math.max(0, Math.min(startLine, lineCount));
+      const clampedEndLine = Math.min(endLine, lineCount);
+      const visibleSlice = lazyLineSlicing
+        ? sliceContentLines(normalizedContent, clampedStartLine, clampedEndLine)
+        : null;
 
       const result: ReactNode[] = [];
+      let zonesBeforeStartHeight = 0;
+      let zonesAfterEndHeight = 0;
+      for (const zone of viewZones) {
+        if (zone.afterLine < clampedStartLine) {
+          zonesBeforeStartHeight += zone.height;
+        } else if (zone.afterLine >= clampedEndLine) {
+          zonesAfterEndHeight += zone.height;
+        }
+      }
 
       // Add spacer for lines before viewport
-      if (startLine > 0) {
+      if (clampedStartLine > 0) {
         result.push(
           <div
             key="spacer-top"
-            style={{ height: `${startLine * lineHeight}px` }}
+            style={{ height: `${clampedStartLine * lineHeight + zonesBeforeStartHeight}px` }}
             className="highlight-layer-spacer"
           />,
         );
       }
 
       // Render only visible lines with full content
-      for (let i = startLine; i < Math.min(endLine, lines.length); i++) {
-        const line = lines[i];
-        const lineTokens = lineTokensMap.get(i) || [];
-        const lineHints = lineHintsMap.get(i) || [];
-        const lineStart = lineOffsets[i];
+      for (let i = clampedStartLine; i < clampedEndLine; i++) {
+        const visibleIndex = i - clampedStartLine;
+        const line = visibleSlice ? (visibleSlice.lines[visibleIndex] ?? "") : (lines[i] ?? "");
+        const lineTokens = lineTokensMap.get(i) ?? EMPTY_TOKENS;
+        const lineHints = lineHintsMap.get(i) ?? EMPTY_INLAY_HINTS;
+        const lineDiagnostics = diagnosticDecorationsByLine.get(i) ?? EMPTY_DIAGNOSTIC_DECORATIONS;
+        const lineStart = visibleSlice
+          ? (visibleSlice.offsets[visibleIndex] ?? 0)
+          : (lineOffsets[i] ?? 0);
         const foldedCount = foldMarkers?.get(i);
 
         result.push(
@@ -307,27 +457,52 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
             lineContent={line}
             tokens={lineTokens}
             inlayHints={lineHints}
+            diagnostics={lineDiagnostics}
             foldedCount={foldedCount}
             lineStart={lineStart}
             lineIndex={i}
           />,
         );
+
+        for (const zone of viewZonesByLine.get(i) || []) {
+          result.push(
+            <div
+              key={`zone-${zone.id}`}
+              className="highlight-layer-view-zone"
+              style={{ height: `${zone.height}px` }}
+            />,
+          );
+        }
       }
 
       // Add spacer for lines after viewport
-      const remainingLines = lines.length - Math.min(endLine, lines.length);
+      const remainingLines = lineCount - Math.min(endLine, lineCount);
       if (remainingLines > 0) {
         result.push(
           <div
             key="spacer-bottom"
-            style={{ height: `${remainingLines * lineHeight}px` }}
+            style={{ height: `${remainingLines * lineHeight + zonesAfterEndHeight}px` }}
             className="highlight-layer-spacer"
           />,
         );
       }
 
       return result;
-    }, [lines, lineTokensMap, lineHintsMap, lineOffsets, viewportRange, lineHeight, foldMarkers]);
+    }, [
+      diagnosticDecorationsByLine,
+      lineCount,
+      lazyLineSlicing,
+      normalizedContent,
+      lines,
+      lineTokensMap,
+      lineHintsMap,
+      lineOffsets,
+      viewportRange,
+      lineHeight,
+      foldMarkers,
+      viewZones,
+      viewZonesByLine,
+    ]);
 
     return (
       <div
@@ -378,8 +553,15 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
 
   const shouldSkipRender =
     prev.content === next.content &&
+    prev.lines === next.lines &&
+    prev.lineCount === next.lineCount &&
+    prev.lineOffsets === next.lineOffsets &&
+    prev.lazyLineSlicing === next.lazyLineSlicing &&
     prev.tokens === next.tokens &&
     prev.inlayHints === next.inlayHints &&
+    prev.filePath === next.filePath &&
+    prev.lineMapping === next.lineMapping &&
+    prev.viewZones === next.viewZones &&
     prev.foldMarkers === next.foldMarkers &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&

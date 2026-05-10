@@ -589,7 +589,6 @@ dependencies = [
  "objc",
  "percent-encoding",
  "portable-pty",
- "rand 0.8.5",
  "regex",
  "reqwest 0.12.24",
  "roxmltree",
@@ -3501,7 +3500,7 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
- "windows-registry 0.5.3",
+ "windows-registry 0.6.1",
 ]
 
 [[package]]

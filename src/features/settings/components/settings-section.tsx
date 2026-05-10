@@ -11,14 +11,14 @@ interface SectionProps {
 }
 
 export const SETTINGS_CONTROL_WIDTHS = {
-  compact: "w-28",
-  default: "w-36",
-  wide: "w-44",
-  xwide: "w-56",
-  number: "w-28",
-  numberCompact: "w-24",
-  text: "w-48",
-  textWide: "w-56",
+  compact: "w-28 max-w-full",
+  default: "w-36 max-w-full",
+  wide: "w-44 max-w-full",
+  xwide: "w-56 max-w-full",
+  number: "w-28 max-w-full",
+  numberCompact: "w-24 max-w-full",
+  text: "w-48 max-w-full",
+  textWide: "w-56 max-w-full",
 } as const;
 
 export default function Section({ title, description, children, className }: SectionProps) {
@@ -158,7 +158,7 @@ export function SettingRow({
       aria-labelledby={labelId}
       aria-describedby={description ? descriptionId : undefined}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40",
+        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
         className,
       )}
       onClick={handleRowClick}
@@ -194,7 +194,7 @@ export function SettingRow({
       </div>
       <div
         ref={controlRef}
-        className="ui-font ui-text-sm shrink-0 select-auto [--app-ui-control-font-size:var(--ui-text-sm)]"
+        className="ui-font ui-text-sm shrink-0 select-auto [--app-ui-badge-height:1.5rem] [--app-ui-button-compact-height:1.5rem] [--app-ui-button-compact-min-width:1.5rem] [--app-ui-button-height:1.5rem] [--app-ui-button-min-width:1.5rem] [--app-ui-control-font-size:var(--ui-text-sm)] max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
       >
         {children}
       </div>

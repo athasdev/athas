@@ -24,7 +24,6 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import { Tabs } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import ProjectIconPicker from "./project-icon-picker";
-import ProjectPickerDialog from "./project-picker-dialog";
 
 const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
@@ -37,7 +36,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
   const { switchToProject, closeProject } = useFileSystemStore();
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
-  const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
+  const { setIsProjectPickerVisible } = useUIState();
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
   const contextMenu = useContextMenu<ProjectTab>();
 
@@ -295,14 +294,6 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           position={contextMenu.position}
           items={getContextMenuItems(contextMenu.data)}
           onClose={contextMenu.close}
-        />,
-        document.body,
-      )}
-
-      {createPortal(
-        <ProjectPickerDialog
-          isOpen={isProjectPickerVisible}
-          onClose={() => setIsProjectPickerVisible(false)}
         />,
         document.body,
       )}

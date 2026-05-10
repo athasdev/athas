@@ -8,9 +8,11 @@ import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buf
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
 import {
   closeNewTabInActivePane,
+  getWritablePaneForBuffer,
   removeBufferFromPanes,
   syncAndFocusBufferInPane,
   syncBufferToPane,
+  syncPanePreviewForBuffer,
 } from "@/features/editor/stores/buffer-pane-sync";
 import {
   clearQueuedWorkspaceSessionSave,
@@ -23,6 +25,7 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/editor-app-store";
 import type {
   EditorContent,
@@ -179,6 +182,32 @@ const applyAutoEviction = (
   return nextBuffers;
 };
 
+const getPaneReplacementBufferId = (
+  closingBufferIds: string[],
+  buffers: PaneContent[],
+): string | null => {
+  const paneStore = usePaneStore.getState();
+  const closingBufferIdSet = new Set(closingBufferIds);
+  const activePane = paneStore.actions.getActivePane();
+  const sourcePane =
+    (closingBufferIds.length === 1
+      ? paneStore.actions.getPaneByBufferId(closingBufferIds[0])
+      : null) ?? activePane;
+
+  if (!sourcePane) return null;
+
+  const openBufferIds = new Set(
+    buffers.filter((buffer) => !closingBufferIdSet.has(buffer.id)).map((buffer) => buffer.id),
+  );
+  const candidates = [
+    ...(sourcePane.mruBufferIds ?? []),
+    ...sourcePane.bufferIds,
+    ...buffers.map((buffer) => buffer.id),
+  ];
+
+  return candidates.find((bufferId) => openBufferIds.has(bufferId)) ?? null;
+};
+
 /**
  * Run extension checking and LSP logic for a newly opened editor file.
  */
@@ -272,16 +301,22 @@ export const useBufferStore = createSelectors(
                   }));
                 });
                 syncBufferToPane(existing.id);
+                syncPanePreviewForBuffer(existing.id, shouldBePreview);
                 return existing.id;
               }
 
+              const previewTargetPane = shouldBePreview ? getWritablePaneForBuffer() : null;
               let newBuffers = closeNewTabInActivePane([...buffers]);
 
               if (shouldBePreview) {
-                const existingPreview = newBuffers.find((b) => b.isPreview);
+                const existingPreview = previewTargetPane?.previewBufferId
+                  ? newBuffers.find(
+                      (b) => b.id === previewTargetPane.previewBufferId && b.isPreview,
+                    )
+                  : null;
                 if (existingPreview) {
                   cleanupBufferHistoryTracking(existingPreview.id);
-                  removeBufferFromPanes(existingPreview.id);
+                  removeBufferFromPanes(existingPreview.id, true);
                   newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
                 }
               }
@@ -299,6 +334,7 @@ export const useBufferStore = createSelectors(
               });
 
               syncBufferToPane(newBuffer.id);
+              syncPanePreviewForBuffer(newBuffer.id, shouldBePreview);
 
               // Track in recent files and check extensions (only for real files)
               if (shouldStartLsp(newBuffer)) {
@@ -463,7 +499,7 @@ export const useBufferStore = createSelectors(
                   }));
                 });
                 if (activePane) {
-                  paneStore.actions.setActivePaneBuffer(activePane.id, existingNewTab.id);
+                  ensureBufferInPane(activePane.id, existingNewTab.id, true);
                 }
                 return existingNewTab.id;
               }
@@ -979,6 +1015,9 @@ export const useBufferStore = createSelectors(
 
           cleanupBufferHistoryTracking(bufferId);
 
+          const replacementBufferId =
+            activeBufferId === bufferId ? getPaneReplacementBufferId([bufferId], buffers) : null;
+
           removeBufferFromPanes(bufferId);
 
           const closedBuffer = buffers[bufferIndex];
@@ -1040,7 +1079,9 @@ export const useBufferStore = createSelectors(
           let newActiveId = activeBufferId;
 
           if (activeBufferId === bufferId) {
-            if (newBuffers.length > 0) {
+            if (replacementBufferId) {
+              newActiveId = replacementBufferId;
+            } else if (newBuffers.length > 0) {
               const newIndex = Math.min(bufferIndex, newBuffers.length - 1);
               newActiveId = newBuffers[newIndex].id;
             } else {
@@ -1056,11 +1097,21 @@ export const useBufferStore = createSelectors(
             state.activeBufferId = newActiveId;
           });
 
+          if (newActiveId) {
+            syncAndFocusBufferInPane(newActiveId);
+          }
+
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
           if (bufferIds.length === 0) return;
+
+          const { buffers, activeBufferId } = get();
+          const replacementBufferId =
+            activeBufferId && bufferIds.includes(activeBufferId)
+              ? getPaneReplacementBufferId(bufferIds, buffers)
+              : null;
 
           bufferIds.forEach((id) => removeBufferFromPanes(id));
 
@@ -1068,14 +1119,28 @@ export const useBufferStore = createSelectors(
             state.buffers = state.buffers.filter((b) => !bufferIds.includes(b.id));
 
             if (bufferIds.includes(state.activeBufferId || "")) {
-              if (state.buffers.length > 0) {
-                state.activeBufferId = state.buffers[0].id;
-                state.buffers[0].isActive = true;
+              if (replacementBufferId) {
+                state.activeBufferId = replacementBufferId;
+                state.buffers = state.buffers.map((buffer) => ({
+                  ...buffer,
+                  isActive: buffer.id === replacementBufferId,
+                }));
+              } else if (state.buffers.length > 0) {
+                const nextBufferId = state.buffers[0].id;
+                state.activeBufferId = nextBufferId;
+                state.buffers = state.buffers.map((buffer) => ({
+                  ...buffer,
+                  isActive: buffer.id === nextBufferId,
+                }));
               } else {
                 state.activeBufferId = null;
               }
             }
           });
+
+          if (replacementBufferId) {
+            syncAndFocusBufferInPane(replacementBufferId);
+          }
 
           if (!skipSessionSave) {
             saveSessionToStore(get().buffers, get().activeBufferId);
@@ -1112,6 +1177,7 @@ export const useBufferStore = createSelectors(
 
           if (buffer.content === content && !diffData) return;
 
+          let promotedPreviewBufferId: string | null = null;
           set((state) => {
             const buf = state.buffers.find((b) => b.id === bufferId);
             if (!buf || !isEditableContent(buf)) return;
@@ -1128,12 +1194,17 @@ export const useBufferStore = createSelectors(
                 buf.isDirty = content !== buf.savedContent;
                 if (buf.isPreview && content !== buf.savedContent) {
                   buf.isPreview = false;
+                  promotedPreviewBufferId = buf.id;
                 }
               }
             } else if (buf.type === "diff") {
               buf.savedContent = content;
             }
           });
+
+          if (promotedPreviewBufferId) {
+            usePaneStore.getState().actions.clearPreviewBufferEverywhere(promotedPreviewBufferId);
+          }
         },
 
         updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => {
@@ -1199,16 +1270,19 @@ export const useBufferStore = createSelectors(
         },
 
         handleTabPin: (bufferId: string) => {
+          let isPinned = false;
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isPinned = !buffer.isPinned;
+              isPinned = buffer.isPinned;
               if (buffer.isPinned) {
                 buffer.isPreview = false;
               }
             }
           });
 
+          usePaneStore.getState().actions.setBufferPinnedEverywhere(bufferId, isPinned);
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
@@ -1234,6 +1308,8 @@ export const useBufferStore = createSelectors(
               buffer.isPreview = false;
             }
           });
+          usePaneStore.getState().actions.clearPreviewBufferEverywhere(bufferId);
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
@@ -1322,7 +1398,7 @@ export const useBufferStore = createSelectors(
           const nextBufferId = cyclableIds[nextIndex];
 
           if (activePane) {
-            paneStore.actions.setActivePaneBuffer(activePane.id, nextBufferId);
+            ensureBufferInPane(activePane.id, nextBufferId, true);
           }
           set((state) => {
             state.activeBufferId = nextBufferId;
@@ -1351,7 +1427,7 @@ export const useBufferStore = createSelectors(
           const prevBufferId = cyclableIds[prevIndex];
 
           if (activePane) {
-            paneStore.actions.setActivePaneBuffer(activePane.id, prevBufferId);
+            ensureBufferInPane(activePane.id, prevBufferId, true);
           }
           set((state) => {
             state.activeBufferId = prevBufferId;

@@ -2,6 +2,11 @@ import { memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorDecorationsStore } from "../../stores/decorations-store";
 import type { Decoration } from "../../types/editor";
+import { GUTTER_CONFIG } from "../../utils/gutter";
+import {
+  getViewZoneHeightBeforeLine,
+  type ResolvedEditorViewZone,
+} from "../../view-model/view-layout";
 
 interface GitIndicatorsProps {
   lineHeight: number;
@@ -11,6 +16,7 @@ interface GitIndicatorsProps {
   startLine: number;
   endLine: number;
   hiddenLines?: Set<number>;
+  viewZones?: ResolvedEditorViewZone[];
 }
 
 function GitIndicatorsComponent({
@@ -19,6 +25,7 @@ function GitIndicatorsComponent({
   startLine,
   endLine,
   hiddenLines,
+  viewZones = [],
 }: GitIndicatorsProps) {
   const decorations = useEditorDecorationsStore((state) => state.decorations);
 
@@ -62,7 +69,11 @@ function GitIndicatorsComponent({
         key={`${type[0]}${lineNum}`}
         style={{
           position: "absolute",
-          top: `${lineNum * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
+          top: `${
+            lineNum * lineHeight +
+            getViewZoneHeightBeforeLine(viewZones, lineNum) +
+            EDITOR_CONSTANTS.GUTTER_PADDING
+          }px`,
           left: 0,
           right: 0,
           height: `${lineHeight}px`,
@@ -100,13 +111,13 @@ function GitIndicatorsComponent({
     }
 
     return result;
-  }, [allGitDecorations, lineHeight, startLine, endLine, onIndicatorClick, hiddenLines]);
+  }, [allGitDecorations, lineHeight, startLine, endLine, onIndicatorClick, hiddenLines, viewZones]);
 
   return (
     <div
       style={{
         position: "relative",
-        width: "12px",
+        width: `${GUTTER_CONFIG.GIT_LANE_WIDTH}px`,
         zIndex: 2,
       }}
     >

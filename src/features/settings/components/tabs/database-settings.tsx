@@ -74,13 +74,13 @@ export const DatabaseSettings = () => {
             {savedConnections.map((connection) => (
               <div
                 key={connection.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Database className="text-text-lighter" />
                     <div className="ui-font ui-text-sm truncate text-text">{connection.name}</div>
-                    <Badge variant="default" shape="pill" size="compact" className="uppercase">
+                    <Badge variant="default" size="compact" className="uppercase">
                       {formatDbType(connection.db_type)}
                     </Badge>
                   </div>

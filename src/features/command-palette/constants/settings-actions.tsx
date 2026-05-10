@@ -6,6 +6,7 @@ import {
   GitBranch,
   Hash,
   Info,
+  ListBullets,
   Translate as Languages,
   Lightbulb,
   ChatCircleText as MessageSquare,
@@ -13,7 +14,6 @@ import {
   FloppyDisk as Save,
   MagnifyingGlass as Search,
   GearSix as Settings,
-  SidebarSimple,
   Sparkle as Sparkles,
   TerminalWindow as Terminal,
   TextAlignJustify as WrapText,
@@ -456,6 +456,24 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "toggle-outline-feature",
+      label: settings.coreFeatures.outline
+        ? "Features: Disable Outline"
+        : "Features: Enable Outline",
+      description: settings.coreFeatures.outline
+        ? "Hide document symbol outline"
+        : "Show document symbol outline",
+      icon: <ListBullets />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          outline: !settings.coreFeatures.outline,
+        });
+        onClose();
+      },
+    },
+    {
       id: "toggle-search-feature",
       label: settings.coreFeatures.search ? "Features: Disable Search" : "Features: Enable Search",
       description: settings.coreFeatures.search
@@ -533,24 +551,6 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           multiAgents: !settings.coreFeatures.multiAgents,
-        });
-        onClose();
-      },
-    },
-    {
-      id: "toggle-sidebar-builder-feature",
-      label: settings.coreFeatures.sidebarBuilder
-        ? "Features: Disable Sidebar Builder"
-        : "Features: Enable Sidebar Builder",
-      description: settings.coreFeatures.sidebarBuilder
-        ? "Disable the custom sidebar builder"
-        : "Enable the custom sidebar builder",
-      icon: <SidebarSimple />,
-      category: "Features",
-      action: () => {
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          sidebarBuilder: !settings.coreFeatures.sidebarBuilder,
         });
         onClose();
       },

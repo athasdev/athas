@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
+import { parseQueryResultPageInput } from "../lib/query-result-pagination";
 
 interface PaginationProps {
   currentPage: number;
@@ -26,8 +28,8 @@ export default function Pagination({
 
   const handlePageInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const page = parseInt(pageInput, 10);
-    if (page >= 1 && page <= totalPages) {
+    const page = parseQueryResultPageInput(pageInput, totalPages);
+    if (page !== null) {
       onPageChange(page);
     } else {
       setPageInput(currentPage.toString());
@@ -35,16 +37,14 @@ export default function Pagination({
   };
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInput, 10);
-    if (!(page >= 1 && page <= totalPages)) {
+    if (parseQueryResultPageInput(pageInput, totalPages) === null) {
       setPageInput(currentPage.toString());
     }
   };
 
-  // Update input when currentPage changes from external sources
-  if (pageInput !== currentPage.toString() && document.activeElement?.tagName !== "INPUT") {
+  useEffect(() => {
     setPageInput(currentPage.toString());
-  }
+  }, [currentPage]);
 
   if (totalPages <= 1) return null;
 
@@ -53,6 +53,7 @@ export default function Pagination({
       <div className="flex items-center gap-2">
         <Select
           value={pageSize.toString()}
+          aria-label="Rows per page"
           options={[
             { value: "10", label: "10" },
             { value: "25", label: "25" },
@@ -73,9 +74,11 @@ export default function Pagination({
           disabled={currentPage === 1}
           variant="ghost"
           compact
-          className="ui-text-sm text-text-lighter hover:text-text disabled:opacity-50"
+          className="text-text-lighter hover:text-text disabled:opacity-50"
+          aria-label="Previous page"
+          tooltip="Previous page"
         >
-          ← Prev
+          <ArrowLeft />
         </Button>
 
         <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
@@ -88,6 +91,7 @@ export default function Pagination({
             onBlur={handlePageInputBlur}
             min={1}
             max={totalPages}
+            aria-label="Current page"
             className="ui-font ui-text-sm h-6 w-12 px-1 py-0 text-center"
           />
           <span className="ui-font ui-text-sm text-text-lighter">/ {totalPages}</span>
@@ -98,9 +102,11 @@ export default function Pagination({
           disabled={currentPage === totalPages}
           variant="ghost"
           compact
-          className="ui-text-sm text-text-lighter hover:text-text disabled:opacity-50"
+          className="text-text-lighter hover:text-text disabled:opacity-50"
+          aria-label="Next page"
+          tooltip="Next page"
         >
-          Next →
+          <ArrowRight />
         </Button>
       </div>
     </div>

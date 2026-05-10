@@ -1,8 +1,10 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import DebuggerView from "@/features/debugger/components/debugger-view";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import {
@@ -24,7 +26,7 @@ const BottomPane = () => {
   const { settings } = useSettingsStore();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const bottomPaneBufferIds = getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds);
-  const { moveBufferToPane, setActivePane } = usePaneStore.use.actions();
+  const { moveBufferToPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
@@ -45,6 +47,16 @@ const BottomPane = () => {
       useUIState.getState().setIsBottomPaneVisible(false);
     }
   }, [bottomPaneActiveTab, isBottomPaneVisible]);
+
+  useEffect(() => {
+    if (
+      isBottomPaneVisible &&
+      bottomPaneActiveTab === "debugger" &&
+      !settings.coreFeatures.debugger
+    ) {
+      useUIState.getState().setIsBottomPaneVisible(false);
+    }
+  }, [bottomPaneActiveTab, isBottomPaneVisible, settings.coreFeatures.debugger]);
 
   useEffect(() => {
     if (
@@ -122,14 +134,14 @@ const BottomPane = () => {
         if (!tabData) return;
 
         if (tabData.source === "terminal-panel" && tabData.terminalId) {
-          setActivePane(BOTTOM_PANE_ID);
-          openTerminalBuffer({
+          const bufferId = openTerminalBuffer({
             sessionId: tabData.terminalId,
             name: tabData.name,
             command: tabData.initialCommand,
             workingDirectory: tabData.currentDirectory,
             remoteConnectionId: tabData.remoteConnectionId,
           });
+          activateBufferInPaneAndSync(BOTTOM_PANE_ID, bufferId);
           window.dispatchEvent(
             new CustomEvent("terminal-detach-to-buffer", {
               detail: { terminalId: tabData.terminalId },
@@ -137,6 +149,7 @@ const BottomPane = () => {
           );
         } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
           moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);
+          activateBufferInPaneAndSync(BOTTOM_PANE_ID, tabData.bufferId);
         } else {
           return;
         }
@@ -149,14 +162,14 @@ const BottomPane = () => {
         clearInternalTabDragData();
       }
     },
-    [moveBufferToPane, openTerminalBuffer, setActivePane],
+    [moveBufferToPane, openTerminalBuffer],
   );
 
   return (
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
+        "athas-glass-island relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
         isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
         !isBottomPaneVisible && "hidden",
@@ -202,6 +215,12 @@ const BottomPane = () => {
             onFullScreen={() => setIsFullScreen(!isFullScreen)}
             isFullScreen={isFullScreen}
           />
+        )}
+
+        {settings.coreFeatures.debugger && bottomPaneActiveTab === "debugger" && (
+          <div className="h-full">
+            <DebuggerView />
+          </div>
         )}
 
         {/* References Pane */}

@@ -4,10 +4,16 @@ import { MIN_PANE_SIZE } from "../constants/pane";
 interface PaneResizeHandleProps {
   direction: "horizontal" | "vertical";
   onResize: (sizes: [number, number]) => void;
+  onReset?: () => void;
   initialSizes: [number, number];
 }
 
-export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResizeHandleProps) {
+export function PaneResizeHandle({
+  direction,
+  onResize,
+  onReset,
+  initialSizes,
+}: PaneResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const startPositionRef = useRef(0);
@@ -79,6 +85,7 @@ export function PaneResizeHandle({ direction, onResize, initialSizes }: PaneResi
       className={`group relative flex shrink-0 items-center justify-center ${
         isHorizontal ? "h-full w-1 cursor-col-resize" : "h-1 w-full cursor-row-resize"
       }`}
+      onDoubleClick={onReset}
       onMouseDown={handleMouseDown}
       role="separator"
       aria-orientation={isHorizontal ? "vertical" : "horizontal"}

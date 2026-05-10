@@ -1351,9 +1351,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
             {queueCount > 0 && (
               <Badge
-                shape="pill"
                 size="sm"
-                className="shrink-0 gap-1 border border-accent/30 bg-accent/10 px-2.5 text-accent"
+                className="shrink-0 gap-1 rounded-full border border-accent/30 bg-accent/10 px-2.5 text-accent"
               >
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
                 <span>{queueCount}</span>

@@ -19,6 +19,8 @@ const isPersistablePaneBuffer = (buffer: PaneContent) =>
   buffer.type === "terminal" ||
   buffer.type === "webViewer";
 
+const unique = <T>(items: T[]) => Array.from(new Set(items));
+
 const serializePaneNode = (
   node: PaneNode,
   bufferPathById: Map<string, string>,
@@ -36,18 +38,46 @@ const serializePaneNode = (
     };
   }
 
-  const bufferPaths = node.bufferIds
-    .map((bufferId) => bufferPathById.get(bufferId))
-    .filter((path): path is string => !!path);
-  const activeBufferPath = node.activeBufferId
+  const bufferPaths = unique(
+    node.bufferIds
+      .map((bufferId) => bufferPathById.get(bufferId))
+      .filter((path): path is string => !!path),
+  );
+  const bufferPathSet = new Set(bufferPaths);
+  const activeBufferPathCandidate = node.activeBufferId
     ? (bufferPathById.get(node.activeBufferId) ?? null)
     : null;
+  const activeBufferPath =
+    activeBufferPathCandidate && bufferPathSet.has(activeBufferPathCandidate)
+      ? activeBufferPathCandidate
+      : null;
+  const mruBufferPaths = unique(
+    (node.mruBufferIds ?? [])
+      .map((bufferId) => bufferPathById.get(bufferId))
+      .filter((path): path is string => !!path && bufferPathSet.has(path)),
+  );
+  const pinnedBufferPaths = unique(
+    (node.pinnedBufferIds ?? [])
+      .map((bufferId) => bufferPathById.get(bufferId))
+      .filter((path): path is string => !!path && bufferPathSet.has(path)),
+  );
+  const previewBufferPathCandidate = node.previewBufferId
+    ? (bufferPathById.get(node.previewBufferId) ?? null)
+    : null;
+  const previewBufferPath =
+    previewBufferPathCandidate && bufferPathSet.has(previewBufferPathCandidate)
+      ? previewBufferPathCandidate
+      : null;
 
   return {
     id: node.id,
     type: "group",
     bufferPaths,
     activeBufferPath,
+    mruBufferPaths,
+    previewBufferPath,
+    pinnedBufferPaths,
+    locked: node.locked,
   };
 };
 
@@ -68,11 +98,27 @@ const hydratePaneNode = (
     } satisfies PaneSplit;
   }
 
-  const bufferIds = node.bufferPaths
-    .map((path) => bufferIdByPath.get(path))
-    .filter((bufferId): bufferId is string => !!bufferId);
+  const bufferIds = unique(
+    node.bufferPaths
+      .map((path) => bufferIdByPath.get(path))
+      .filter((bufferId): bufferId is string => !!bufferId),
+  );
+  const bufferIdSet = new Set(bufferIds);
   const activeBufferId = node.activeBufferPath
     ? (bufferIdByPath.get(node.activeBufferPath) ?? null)
+    : null;
+  const mruBufferIds = unique(
+    (node.mruBufferPaths ?? [])
+      .map((path) => bufferIdByPath.get(path))
+      .filter((bufferId): bufferId is string => !!bufferId && bufferIdSet.has(bufferId)),
+  );
+  const pinnedBufferIds = unique(
+    (node.pinnedBufferPaths ?? [])
+      .map((path) => bufferIdByPath.get(path))
+      .filter((bufferId): bufferId is string => !!bufferId && bufferIdSet.has(bufferId)),
+  );
+  const previewBufferId = node.previewBufferPath
+    ? (bufferIdByPath.get(node.previewBufferPath) ?? null)
     : null;
 
   return {
@@ -80,6 +126,11 @@ const hydratePaneNode = (
     type: "group",
     bufferIds,
     activeBufferId: activeBufferId && bufferIds.includes(activeBufferId) ? activeBufferId : null,
+    mruBufferIds,
+    previewBufferId:
+      previewBufferId && bufferIds.includes(previewBufferId) ? previewBufferId : null,
+    pinnedBufferIds,
+    locked: node.locked,
   };
 };
 
@@ -95,6 +146,7 @@ export const buildCurrentProjectPaneSession = (
     root: serializePaneNode(layout.root, bufferPathById),
     bottomRoot: serializePaneNode(layout.bottomRoot, bufferPathById),
     activePaneId: layout.activePaneId,
+    mostRecentActivePaneIds: layout.mostRecentActivePaneIds,
     fullscreenPaneId: layout.fullscreenPaneId,
   };
 };
@@ -108,6 +160,7 @@ export const buildPaneLayoutFromSession = (
       root: createEmptyPaneNode(ROOT_PANE_ID),
       bottomRoot: createEmptyPaneNode(BOTTOM_PANE_ID),
       activePaneId: ROOT_PANE_ID,
+      mostRecentActivePaneIds: [ROOT_PANE_ID],
       fullscreenPaneId: null,
     };
   }
@@ -120,6 +173,7 @@ export const buildPaneLayoutFromSession = (
     root: hydratePaneNode(paneState.root, bufferIdByPath),
     bottomRoot: hydratePaneNode(paneState.bottomRoot, bufferIdByPath),
     activePaneId: paneState.activePaneId,
+    mostRecentActivePaneIds: paneState.mostRecentActivePaneIds,
     fullscreenPaneId: paneState.fullscreenPaneId,
   };
 };

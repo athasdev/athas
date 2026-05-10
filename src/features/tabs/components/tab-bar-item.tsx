@@ -107,6 +107,7 @@ const TabBarItem = memo(function TabBarItem({
         action={
           <Button
             type="button"
+            compact
             variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
@@ -118,7 +119,7 @@ const TabBarItem = memo(function TabBarItem({
             }}
             className={cn(
               "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
-              "hover:bg-error/12 hover:text-text",
+              "hover:text-text",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
             tooltip={buffer.isPinned ? "Unpin tab" : "Close"}

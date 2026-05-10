@@ -123,6 +123,8 @@ export class LspClient {
   private activeServerFiles = new Map<string, Set<string>>(); // workspace:language -> tracked files
   private failedLanguageServers = new Set<string>(); // workspace:language format
   private repairLanguageServerPromises = new Map<string, Promise<boolean>>();
+  private openDocuments = new Set<string>();
+  private documentVersions = new Map<string, number>();
 
   private constructor() {
     this.setupDiagnosticsListener();
@@ -347,6 +349,30 @@ export class LspClient {
 
           // Convert URI to file path
           const filePath = filePathFromUri(uri);
+          const isOpenInEditor =
+            this.openDocuments.has(filePath) ||
+            useBufferStore
+              .getState()
+              .buffers.some((buffer) => hasTextContent(buffer) && buffer.path === filePath);
+
+          if (!isOpenInEditor) {
+            logger.debug("LSPClient", `Ignoring diagnostics for closed document: ${filePath}`);
+            return;
+          }
+
+          const publishedVersion = event.payload.version;
+          const currentVersion = this.documentVersions.get(filePath);
+          if (
+            typeof publishedVersion === "number" &&
+            typeof currentVersion === "number" &&
+            publishedVersion < currentVersion
+          ) {
+            logger.debug(
+              "LSPClient",
+              `Ignoring stale diagnostics for ${filePath}: ${publishedVersion} < ${currentVersion}`,
+            );
+            return;
+          }
 
           // Convert LSP diagnostics to our internal format
           const diagnosticsList = diagnostics || [];
@@ -360,7 +386,7 @@ export class LspClient {
 
           // Update diagnostics store
           const { setDiagnostics } = useDiagnosticsStore.getState().actions;
-          setDiagnostics(filePath, convertedDiagnostics);
+          setDiagnostics(filePath, convertedDiagnostics, "lsp");
 
           logger.debug(
             "LSPClient",
@@ -1120,6 +1146,8 @@ export class LspClient {
       const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       await invoke<void>("lsp_document_open", { filePath, content, languageId });
+      this.openDocuments.add(filePath);
+      this.documentVersions.set(filePath, 1);
     } catch (error) {
       logger.error("LSPClient", "LSP document open error:", error);
     }
@@ -1127,6 +1155,8 @@ export class LspClient {
 
   async notifyDocumentChange(filePath: string, content: string, version: number): Promise<void> {
     try {
+      this.openDocuments.add(filePath);
+      this.documentVersions.set(filePath, version);
       await invoke<void>("lsp_document_change", {
         filePath,
         content,
@@ -1146,9 +1176,12 @@ export class LspClient {
   }
 
   async notifyDocumentClose(filePath: string): Promise<void> {
+    this.openDocuments.delete(filePath);
+    this.documentVersions.delete(filePath);
+    useDiagnosticsStore.getState().actions.clearDiagnosticsForOwner(filePath, "lsp");
+
     try {
       await invoke<void>("lsp_document_close", { filePath });
-      useDiagnosticsStore.getState().actions.clearDiagnostics(filePath);
     } catch (error) {
       logger.error("LSPClient", "LSP document close error:", error);
     }

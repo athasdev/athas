@@ -60,13 +60,17 @@ export const useLspIntegration = ({
   const installedExtensions = useExtensionStore.use.installedExtensions();
 
   // Check if current file is supported
-  const isLspSupported = useMemo(() => isFileSupported(filePath), [filePath, installedExtensions]);
+  const activeFilePath = enabled ? filePath : undefined;
+  const isLspSupported = useMemo(
+    () => enabled && isFileSupported(activeFilePath),
+    [enabled, activeFilePath, installedExtensions],
+  );
 
   // LSP store actions
   const lspActions = useLspStore.use.actions();
 
   // Snippet completion integration
-  const snippetCompletion = useSnippetCompletion(filePath);
+  const snippetCompletion = useSnippetCompletion(activeFilePath);
 
   // Get layout dimensions for hover position calculations
   const { charWidth, lineHeight } = useEditorLayout();
@@ -104,7 +108,7 @@ export const useLspIntegration = ({
   const hoverHandlers = useHover({
     getHover: lspClient.getHover.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
-    filePath: filePath || "",
+    filePath: activeFilePath || "",
     lineHeight,
     charWidth,
     resolveEditorPosition,
@@ -114,7 +118,7 @@ export const useLspIntegration = ({
   const goToDefinitionHandlers = useGoToDefinition({
     getDefinition: lspClient.getDefinition.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
-    filePath: filePath || "",
+    filePath: activeFilePath || "",
     lineHeight,
     charWidth,
     resolveEditorPosition,
@@ -122,11 +126,11 @@ export const useLspIntegration = ({
 
   // Set up definition link highlighting (Cmd+hover)
   const definitionLinkHandlers = useDefinitionLink({
-    filePath: filePath || "",
-    content: value,
+    filePath: activeFilePath || "",
+    content: enabled ? value : "",
     lineHeight,
     charWidth,
-    isLanguageSupported: isLspSupported,
+    isLanguageSupported: enabled && isLspSupported,
     getDefinition: lspClient.getDefinition.bind(lspClient),
     resolveEditorPosition,
   });

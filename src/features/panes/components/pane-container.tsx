@@ -1,6 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DatabaseType } from "@/features/database/models/provider.types";
-import { PROVIDER_REGISTRY } from "@/features/database/providers/provider-registry";
+import {
+  PROVIDER_REGISTRY,
+  type DatabaseViewerProps,
+} from "@/features/database/providers/provider-registry";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { Buffer } from "@/features/editor/stores/buffer-store";
@@ -25,12 +28,18 @@ import {
   resolveDropTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { cn } from "@/utils/cn";
+import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils/pane-activation";
 import { EmptyEditorState } from "./empty-editor-state";
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
 import { hasTextContent } from "../types/pane-content";
 import type { EditorContent, PullRequestContent } from "../types/pane-content";
+import {
+  ensureBufferInPaneDropTarget,
+  getOrCreatePaneDropTarget,
+  moveBufferToPaneDropTarget,
+} from "../utils/pane-drop-actions";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 
 const AgentTab = lazy(() =>
@@ -41,7 +50,7 @@ const AgentTab = lazy(() =>
 
 const databaseViewerCache = new Map<
   DatabaseType,
-  React.LazyExoticComponent<React.ComponentType<any>>
+  React.LazyExoticComponent<React.ComponentType<DatabaseViewerProps>>
 >();
 function getDatabaseViewer(dbType: DatabaseType) {
   if (!databaseViewerCache.has(dbType)) {
@@ -226,14 +235,7 @@ function EmptyPaneState() {
 export function PaneContainer({ pane }: PaneContainerProps) {
   const buffers = useBufferStore.use.buffers();
   const activePaneId = usePaneStore.use.activePaneId();
-  const {
-    setActivePane,
-    setActivePaneBuffer,
-    addBufferToPane,
-    moveBufferToPane,
-    reorderPaneBuffers,
-    splitPane,
-  } = usePaneStore.use.actions();
+  const { reorderPaneBuffers } = usePaneStore.use.actions();
   const { closeBufferForce, openBuffer, openTerminalBuffer, showNewTabView } =
     useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
@@ -280,19 +282,15 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     if (paneBuffers.length > 0) return;
     if (suppressAutoNewTab) return;
 
-    setActivePane(pane.id);
+    activatePaneAndSyncBuffer(pane.id);
     showNewTabView();
-  }, [pane.id, paneBuffers.length, setActivePane, showNewTabView, suppressAutoNewTab]);
+  }, [pane.id, paneBuffers.length, showNewTabView, suppressAutoNewTab]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
-      setActivePane(pane.id);
-      // Sync buffer store's activeBufferId with this pane's active buffer
-      if (pane.activeBufferId) {
-        useBufferStore.getState().actions.setActiveBuffer(pane.activeBufferId);
-      }
+      activatePaneAndSyncBuffer(pane.id);
     }
-  }, [isActivePane, pane.id, pane.activeBufferId, setActivePane]);
+  }, [isActivePane, pane.id]);
 
   const handlePaneMouseDownCapture = useCallback(
     (e: React.MouseEvent) => {
@@ -308,23 +306,17 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       }
 
       if (!isActivePane) {
-        setActivePane(pane.id);
-        if (pane.activeBufferId) {
-          useBufferStore.getState().actions.setActiveBuffer(pane.activeBufferId);
-        }
+        activatePaneAndSyncBuffer(pane.id);
       }
     },
-    [isActivePane, pane.id, pane.activeBufferId, setActivePane],
+    [isActivePane, pane.id],
   );
 
   const handleTabClick = useCallback(
     (bufferId: string) => {
-      setActivePane(pane.id);
-      setActivePaneBuffer(pane.id, bufferId);
-      // Sync buffer store's activeBufferId
-      useBufferStore.getState().actions.setActiveBuffer(bufferId);
+      activateBufferInPaneAndSync(pane.id, bufferId);
     },
-    [pane.id, setActivePane, setActivePaneBuffer],
+    [pane.id],
   );
 
   const openFileTreeDropInPane = useCallback(
@@ -338,34 +330,17 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       const target = resolveDropTarget(point);
       if (target.paneId !== pane.id) return;
 
-      let targetPaneId = pane.id;
-      if (target.zone && target.zone !== "center") {
-        const direction =
-          target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-        const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
-        const newPaneId = splitPane(pane.id, direction, undefined, placement);
-        if (!newPaneId) return;
-        targetPaneId = newPaneId;
-      }
+      const targetPaneId = getOrCreatePaneDropTarget({ paneId: pane.id, zone: target.zone });
+      if (!targetPaneId) return;
 
-      setActivePane(targetPaneId);
+      activatePaneAndSyncBuffer(targetPaneId);
 
       try {
         await handleFileOpen(fileDragData.path, false);
         const openedBufferId = useBufferStore.getState().activeBufferId;
         if (openedBufferId) {
-          const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
-          if (!targetPane?.bufferIds.includes(openedBufferId)) {
-            addBufferToPane(targetPaneId, openedBufferId, true);
-          } else {
-            setActivePaneBuffer(targetPaneId, openedBufferId);
-          }
-          useBufferStore.getState().actions.setActiveBuffer(openedBufferId);
-        }
-
-        const newActivePane = usePaneStore.getState().actions.getActivePane();
-        if (newActivePane?.activeBufferId) {
-          useBufferStore.getState().actions.setActiveBuffer(newActivePane.activeBufferId);
+          ensureBufferInPaneDropTarget(openedBufferId, { paneId: targetPaneId, zone: "center" });
+          activateBufferInPaneAndSync(targetPaneId, openedBufferId);
         }
       } catch (error) {
         console.error("Failed to open file from file tree drop:", error);
@@ -373,7 +348,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         delete window.__fileDragData;
       }
     },
-    [addBufferToPane, handleFileOpen, pane.id, setActivePane, setActivePaneBuffer, splitPane],
+    [handleFileOpen, pane.id],
   );
 
   const openSidebarResourceInPane = useCallback(
@@ -383,34 +358,24 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       const target = resolveDropTarget(point);
       if (target.paneId !== pane.id) return;
 
-      let targetPaneId = pane.id;
-      if (opensBuffer && target.zone && target.zone !== "center") {
-        const direction =
-          target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-        const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
-        const newPaneId = splitPane(pane.id, direction, undefined, placement);
-        if (!newPaneId) return;
-        targetPaneId = newPaneId;
-      }
+      const targetPaneId = opensBuffer
+        ? getOrCreatePaneDropTarget({ paneId: pane.id, zone: target.zone })
+        : pane.id;
+      if (!targetPaneId) return;
 
-      setActivePane(targetPaneId);
+      activatePaneAndSyncBuffer(targetPaneId);
 
       try {
         const bufferId = await openSidebarResourceBuffer(resource);
         if (!bufferId) return;
 
-        const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
-        if (!targetPane?.bufferIds.includes(bufferId)) {
-          addBufferToPane(targetPaneId, bufferId, true);
-        } else {
-          setActivePaneBuffer(targetPaneId, bufferId);
-        }
-        useBufferStore.getState().actions.setActiveBuffer(bufferId);
+        ensureBufferInPaneDropTarget(bufferId, { paneId: targetPaneId, zone: "center" });
+        activateBufferInPaneAndSync(targetPaneId, bufferId);
       } catch (error) {
         console.error("Failed to open sidebar resource from drop:", error);
       }
     },
-    [addBufferToPane, pane.id, setActivePane, setActivePaneBuffer, splitPane],
+    [pane.id],
   );
 
   const getCarouselWidthBounds = useCallback(() => {
@@ -640,55 +605,56 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       if (zone === "center") {
         if (source === "terminal-panel" && terminalId) {
-          setActivePane(pane.id);
-          openTerminalBuffer({
+          const newBufferId = openTerminalBuffer({
             sessionId: terminalId,
             name: terminalName,
             command: initialCommand,
             workingDirectory: currentDirectory,
             remoteConnectionId,
           });
+          activateBufferInPaneAndSync(pane.id, newBufferId);
           window.dispatchEvent(
             new CustomEvent("terminal-detach-to-buffer", {
               detail: { terminalId },
             }),
           );
         } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
-          moveBufferToPane(bufferId, sourcePaneId, pane.id);
+          moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: pane.id, zone: "center" });
+          activateBufferInPaneAndSync(pane.id, bufferId);
         } else if (!sourcePaneId && bufferId) {
-          addBufferToPane(pane.id, bufferId, true);
+          ensureBufferInPaneDropTarget(bufferId, { paneId: pane.id, zone: "center" });
+          activateBufferInPaneAndSync(pane.id, bufferId);
         }
         return;
       }
 
-      // Create a split — new pane is always child[1]
-      const direction = zone === "left" || zone === "right" ? "horizontal" : "vertical";
-      const placement = zone === "left" || zone === "top" ? "before" : "after";
-      const newPaneId = splitPane(pane.id, direction, undefined, placement);
+      const newPaneId = getOrCreatePaneDropTarget({ paneId: pane.id, zone });
       if (!newPaneId) return;
 
       // Move the dragged buffer into the newly created pane.
       if (source === "terminal-panel" && terminalId) {
-        setActivePane(newPaneId);
-        openTerminalBuffer({
+        const newBufferId = openTerminalBuffer({
           sessionId: terminalId,
           name: terminalName,
           command: initialCommand,
           workingDirectory: currentDirectory,
           remoteConnectionId,
         });
+        activateBufferInPaneAndSync(newPaneId, newBufferId);
         window.dispatchEvent(
           new CustomEvent("terminal-detach-to-buffer", {
             detail: { terminalId },
           }),
         );
       } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
-        moveBufferToPane(bufferId, sourcePaneId, newPaneId);
+        moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: newPaneId, zone: "center" });
+        activateBufferInPaneAndSync(newPaneId, bufferId);
       } else if (bufferId) {
-        moveBufferToPane(bufferId, pane.id, newPaneId);
+        moveBufferToPaneDropTarget(bufferId, pane.id, { paneId: newPaneId, zone: "center" });
+        activateBufferInPaneAndSync(newPaneId, bufferId);
       }
     },
-    [pane.id, splitPane, moveBufferToPane, addBufferToPane, openTerminalBuffer, setActivePane],
+    [pane.id, openTerminalBuffer],
   );
 
   // Handle mouse up for file tree drag (which uses mouse events, not HTML5 drag API)
@@ -710,7 +676,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       e.stopPropagation();
       setIsDragOver(false);
       setIsTabDragOver(false);
-      setActivePane(pane.id);
+      activatePaneAndSyncBuffer(pane.id);
 
       // Tab drops are handled by SplitDropOverlay — skip here
       if (e.dataTransfer.types.includes("application/tab-data") || getInternalTabDragData()) {
@@ -731,18 +697,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         return;
       }
     },
-    [
-      pane.id,
-      pane.bufferIds,
-      buffers,
-      setActivePane,
-      addBufferToPane,
-      moveBufferToPane,
-      setActivePaneBuffer,
-      openBuffer,
-      handleFileOpen,
-      openSidebarResourceInPane,
-    ],
+    [pane.id, pane.bufferIds, buffers, openBuffer, handleFileOpen, openSidebarResourceInPane],
   );
 
   const handleCarouselWheel = useCallback(
@@ -918,9 +873,20 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         case "database": {
           const config = PROVIDER_REGISTRY[buffer.databaseType];
           const DatabaseViewer = getDatabaseViewer(buffer.databaseType);
-          const viewerProps = config.isFileBased
-            ? { databasePath: buffer.path }
-            : { connectionId: buffer.connectionId };
+          let viewerProps: DatabaseViewerProps;
+          if (config.isFileBased) {
+            viewerProps = { databasePath: buffer.path };
+          } else {
+            const connectionId = buffer.connectionId;
+            if (!connectionId) {
+              return (
+                <div className="flex h-full items-center justify-center text-text-lighter ui-text-sm">
+                  Missing database connection
+                </div>
+              );
+            }
+            viewerProps = { connectionId };
+          }
           return <DatabaseViewer {...viewerProps} />;
         }
 

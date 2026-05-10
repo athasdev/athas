@@ -2,6 +2,14 @@ import { invokeDatabaseProvider } from "@/features/database/services/database-pr
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { formatDatabaseError } from "../../lib/database-errors";
+import { getQueryResultTotalPages } from "../../lib/query-result-pagination";
+import {
+  addSqlHistoryEntry,
+  removeSqlHistoryEntry,
+  useSqlHistoryEntry,
+} from "../../lib/sql-history";
+import { loadSqlHistory, saveSqlHistory } from "../../lib/sql-history-storage";
 import type {
   ColumnFilter,
   ColumnInfo,
@@ -30,6 +38,7 @@ export interface SqlDatabaseState {
   dbInfo: DatabaseInfo | null;
   error: string | null;
   isLoading: boolean;
+  isCustomQueryLoading: boolean;
 
   currentPage: number;
   pageSize: number;
@@ -42,6 +51,7 @@ export interface SqlDatabaseState {
 
   customQuery: string;
   isCustomQuery: boolean;
+  lastQueryExecutionMs: number | null;
   sqlHistory: string[];
 
   columnWidths: Record<string, Record<string, number>>;
@@ -66,11 +76,20 @@ export interface SqlDatabaseActions {
 
   setCustomQuery: (query: string) => void;
   setIsCustomQuery: (is: boolean) => void;
-  executeCustomQuery: () => Promise<void>;
+  cancelCustomQuery: () => void;
+  executeCustomQuery: (queryOverride?: string) => Promise<void>;
+  useSqlHistoryEntry: (query: string) => void;
+  removeSqlHistoryEntry: (query: string) => void;
+  clearSqlHistory: () => void;
 
   insertRow: (values: Record<string, unknown>) => Promise<void>;
   updateRow: (pkColumn: string, pkValue: unknown, values: Record<string, unknown>) => Promise<void>;
+  updateRowByValues: (
+    rowData: Record<string, unknown>,
+    values: Record<string, unknown>,
+  ) => Promise<void>;
   deleteRow: (pkColumn: string, pkValue: unknown) => Promise<void>;
+  deleteRowByValues: (rowData: Record<string, unknown>) => Promise<void>;
   updateCell: (rowIndex: number, columnName: string, newValue: unknown) => Promise<void>;
   createTable: (
     name: string,
@@ -95,11 +114,27 @@ interface CommandMap {
   execute: string;
   insertRow: string;
   updateRow: string;
+  updateRowByValues: string;
   deleteRow: string;
+  deleteRowByValues: string;
   getForeignKeys: string;
 }
 
-function getCommandMap(dbType: DatabaseType): CommandMap {
+interface RowIdentity {
+  columns: string[];
+  values: unknown[];
+}
+
+export const POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS = {
+  getInfo: "get_postgres_subscription_info",
+  getStatus: "get_postgres_subscription_status",
+  create: "create_postgres_subscription",
+  drop: "drop_postgres_subscription",
+  setEnabled: "set_postgres_subscription_enabled",
+  refresh: "refresh_postgres_subscription",
+} as const;
+
+export function getSqlProviderCommandMap(dbType: DatabaseType): CommandMap {
   return {
     getTables: `get_${dbType}_tables`,
     query: `query_${dbType}`,
@@ -107,13 +142,97 @@ function getCommandMap(dbType: DatabaseType): CommandMap {
     execute: `execute_${dbType}`,
     insertRow: `insert_${dbType}_row`,
     updateRow: `update_${dbType}_row`,
+    updateRowByValues: `update_${dbType}_row_by_values`,
     deleteRow: `delete_${dbType}_row`,
+    deleteRowByValues: `delete_${dbType}_row_by_values`,
     getForeignKeys: `get_${dbType}_foreign_keys`,
   };
 }
 
+export function getSqlTableSchemaCommand(dbType: DatabaseType): string | null {
+  return dbType === "postgres" || dbType === "mysql" ? `get_${dbType}_table_schema` : null;
+}
+
 function getConnectionArg(mode: ConnectionMode, pathOrId: string) {
   return mode === "file" ? { path: pathOrId } : { connectionId: pathOrId };
+}
+
+function getActiveConnectionKey(mode: ConnectionMode, state: SqlDatabaseState): string | null {
+  return mode === "file" ? state.databasePath : state.connectionId;
+}
+
+function persistSqlHistory(
+  dbType: DatabaseType,
+  mode: ConnectionMode,
+  state: SqlDatabaseState,
+  history: string[],
+): void {
+  const connKey = getActiveConnectionKey(mode, state);
+  if (!connKey) return;
+  saveSqlHistory(dbType, mode, connKey, history);
+}
+
+function clampPage(page: number, totalPages: number): number {
+  if (!Number.isFinite(page)) return 1;
+  return Math.max(1, Math.min(Math.trunc(page), Math.max(1, totalPages)));
+}
+
+function normalizePageSize(size: number): number {
+  if (!Number.isFinite(size)) return 50;
+  return Math.max(1, Math.min(Math.trunc(size), 500));
+}
+
+function normalizeColumnFilterUpdate(
+  filter: ColumnFilter,
+  updates: Partial<ColumnFilter>,
+): ColumnFilter {
+  const nextFilter = { ...filter, ...updates };
+  if (nextFilter.operator === "isNull" || nextFilter.operator === "isNotNull") {
+    return { ...nextFilter, value: "", value2: undefined };
+  }
+  if (nextFilter.operator !== "between") {
+    return { ...nextFilter, value2: undefined };
+  }
+  return nextFilter;
+}
+
+function isSameConnectionContext(
+  mode: ConnectionMode,
+  state: SqlDatabaseState,
+  connKey: string,
+): boolean {
+  return getActiveConnectionKey(mode, state) === connKey;
+}
+
+function isSameTableMutationContext(
+  mode: ConnectionMode,
+  state: SqlDatabaseState,
+  connKey: string,
+  tableName: string,
+): boolean {
+  return (
+    getActiveConnectionKey(mode, state) === connKey &&
+    state.selectedTable === tableName &&
+    state.selectedObjectKind === "table"
+  );
+}
+
+function buildRowIdentity(columns: string[], row: unknown[]): RowIdentity {
+  return { columns, values: row };
+}
+
+function normalizeQueryResult(value: unknown): QueryResult {
+  if (!value || typeof value !== "object") return { columns: [], rows: [] };
+
+  const result = value as { columns?: unknown; rows?: unknown };
+  const columns = Array.isArray(result.columns)
+    ? result.columns.filter((column): column is string => typeof column === "string")
+    : [];
+  const rows = Array.isArray(result.rows)
+    ? result.rows.filter((row): row is unknown[] => Array.isArray(row))
+    : [];
+
+  return { columns, rows };
 }
 
 const initialState: SqlDatabaseState = {
@@ -130,6 +249,7 @@ const initialState: SqlDatabaseState = {
   dbInfo: null,
   error: null,
   isLoading: false,
+  isCustomQueryLoading: false,
   currentPage: 1,
   pageSize: 50,
   totalPages: 1,
@@ -139,17 +259,93 @@ const initialState: SqlDatabaseState = {
   sortDirection: "asc",
   customQuery: "",
   isCustomQuery: false,
+  lastQueryExecutionMs: null,
   sqlHistory: [],
   columnWidths: {},
 };
+
+function getClearedSelectionState(): Pick<
+  SqlDatabaseState,
+  | "selectedTable"
+  | "selectedObjectKind"
+  | "queryResult"
+  | "tableMeta"
+  | "foreignKeys"
+  | "subscriptionInfo"
+  | "isCustomQueryLoading"
+  | "currentPage"
+  | "totalPages"
+  | "searchTerm"
+  | "columnFilters"
+  | "sortColumn"
+  | "sortDirection"
+  | "isCustomQuery"
+  | "lastQueryExecutionMs"
+> {
+  return {
+    selectedTable: null,
+    selectedObjectKind: "table",
+    queryResult: null,
+    tableMeta: [],
+    foreignKeys: [],
+    subscriptionInfo: null,
+    isCustomQueryLoading: false,
+    currentPage: 1,
+    totalPages: 1,
+    searchTerm: "",
+    columnFilters: [],
+    sortColumn: null,
+    sortDirection: "asc",
+    isCustomQuery: false,
+    lastQueryExecutionMs: null,
+  };
+}
 
 function getObjectKind(objects: TableInfo[], name: string | null | undefined): DatabaseObjectKind {
   if (!name) return "table";
   return objects.find((object) => object.name === name)?.kind ?? "table";
 }
 
+function getObjectInfo(objects: TableInfo[], name: string | null | undefined): TableInfo | null {
+  if (!name) return null;
+  return objects.find((object) => object.name === name) ?? null;
+}
+
+function quoteIdentifier(dbType: DatabaseType, name: string) {
+  if (dbType === "mysql") {
+    return `\`${name.replace(/`/g, "``")}\``;
+  }
+
+  return `"${name.replace(/"/g, '""')}"`;
+}
+
+function buildDropObjectStatement(dbType: DatabaseType, object: TableInfo, fallbackName: string) {
+  const objectKind = object.kind ?? "table";
+  if (objectKind === "index" && dbType === "mysql") {
+    const tableName = object.table_name ?? object.tableName;
+    if (!tableName) {
+      throw new Error("MySQL index metadata is missing the table name");
+    }
+    return `DROP INDEX ${quoteIdentifier(dbType, object.name)} ON ${quoteIdentifier(dbType, tableName)}`;
+  }
+
+  const dropKeyword =
+    objectKind === "materialized_view"
+      ? "MATERIALIZED VIEW"
+      : objectKind === "view"
+        ? "VIEW"
+        : objectKind === "index"
+          ? "INDEX"
+          : "TABLE";
+  return `DROP ${dropKeyword} ${quoteIdentifier(dbType, fallbackName)}`;
+}
+
 export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
-  const cmds = getCommandMap(dbType);
+  const cmds = getSqlProviderCommandMap(dbType);
+  let initRequestId = 0;
+  let selectTableRequestId = 0;
+  let refreshRequestId = 0;
+  let customQueryRequestId = 0;
 
   const useStoreBase = create<SqlDatabaseState & { actions: SqlDatabaseActions }>()(
     immer((set, get) => ({
@@ -157,6 +353,10 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
       actions: {
         init: async (pathOrConnectionId: string) => {
+          const requestId = ++initRequestId;
+          selectTableRequestId += 1;
+          refreshRequestId += 1;
+          customQueryRequestId += 1;
           const fileName =
             mode === "file"
               ? pathOrConnectionId.split("/").pop() ||
@@ -169,11 +369,19 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               ? { databasePath: pathOrConnectionId }
               : { connectionId: pathOrConnectionId };
 
-          set({ ...connState, fileName, isLoading: true, error: null });
+          set({
+            ...initialState,
+            ...connState,
+            fileName,
+            sqlHistory: loadSqlHistory(dbType, mode, pathOrConnectionId),
+            isLoading: true,
+            error: null,
+          });
 
           try {
             const connArg = getConnectionArg(mode, pathOrConnectionId);
             const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
+            if (requestId !== initRequestId) return;
             set({ tables });
 
             if (tables.length > 0) {
@@ -201,6 +409,8 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
                   query: indexQuery,
                 })) as QueryResult;
 
+                if (requestId !== initRequestId) return;
+
                 set({
                   dbInfo: {
                     version: versionResult.rows[0]?.[0]?.toString() || "0",
@@ -210,6 +420,8 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
                   },
                 });
               } else {
+                if (requestId !== initRequestId) return;
+
                 set({
                   dbInfo: {
                     version: "",
@@ -223,19 +435,31 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               // Ignore db info errors
             }
           } catch (err) {
-            set({ error: `Failed to load database: ${err}` });
+            if (requestId !== initRequestId) return;
+            set({ error: formatDatabaseError("Failed to load database", err) });
           } finally {
-            set({ isLoading: false });
+            if (requestId === initRequestId) {
+              set({ isLoading: false });
+            }
           }
         },
 
-        reset: () => set(initialState),
+        reset: () => {
+          initRequestId += 1;
+          selectTableRequestId += 1;
+          refreshRequestId += 1;
+          customQueryRequestId += 1;
+          set(initialState);
+        },
 
         selectTable: async (tableName: string) => {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
           if (!connKey) return;
           const selectedObjectKind = getObjectKind(state.tables, tableName);
+          const requestId = ++selectTableRequestId;
+
+          refreshRequestId += 1;
 
           set({
             selectedTable: tableName,
@@ -250,6 +474,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
             foreignKeys: [],
             subscriptionInfo: null,
             isLoading: true,
+            isCustomQueryLoading: false,
           });
 
           try {
@@ -257,15 +482,17 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             if (selectedObjectKind === "subscription" && dbType === "postgres") {
               const [subscriptionInfo, queryResult] = await Promise.all([
-                invokeDatabaseProvider("get_postgres_subscription_info", {
+                invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.getInfo, {
                   ...connArg,
                   subscription: tableName,
                 }) as Promise<PostgresSubscriptionInfo>,
-                invokeDatabaseProvider("get_postgres_subscription_status", {
+                invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.getStatus, {
                   ...connArg,
                   subscription: tableName,
                 }) as Promise<QueryResult>,
               ]);
+
+              if (requestId !== selectTableRequestId) return;
 
               const tableMeta: ColumnInfo[] = queryResult.columns.map((column) => ({
                 name: column,
@@ -280,6 +507,16 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
                 queryResult,
                 tableMeta,
                 foreignKeys: [],
+                totalPages: 1,
+              });
+              return;
+            }
+
+            if (selectedObjectKind === "index") {
+              set({
+                tableMeta: [],
+                foreignKeys: [],
+                queryResult: null,
                 totalPages: 1,
               });
               return;
@@ -302,12 +539,18 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               }));
             } else {
               // For postgres/mysql, the get_tables command returns column info via a dedicated command
-              const result = (await invokeDatabaseProvider(`get_${dbType}_table_schema`, {
+              const tableSchemaCommand = getSqlTableSchemaCommand(dbType);
+              if (!tableSchemaCommand) {
+                throw new Error(`Unsupported table schema command for ${dbType}`);
+              }
+              const result = (await invokeDatabaseProvider(tableSchemaCommand, {
                 ...connArg,
                 table: tableName,
               })) as ColumnInfo[];
               tableMeta = result;
             }
+
+            if (requestId !== selectTableRequestId) return;
 
             set({ tableMeta });
 
@@ -317,16 +560,22 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
                 ...connArg,
                 table: tableName,
               })) as ForeignKeyInfo[];
+              if (requestId !== selectTableRequestId) return;
               set({ foreignKeys });
             } catch {
+              if (requestId !== selectTableRequestId) return;
               set({ foreignKeys: [] });
             }
 
+            if (requestId !== selectTableRequestId) return;
             await get().actions.refresh();
           } catch (err) {
-            set({ error: `Failed to load table: ${err}` });
+            if (requestId !== selectTableRequestId) return;
+            set({ error: formatDatabaseError("Failed to load table", err) });
           } finally {
-            set({ isLoading: false });
+            if (requestId === selectTableRequestId) {
+              set({ isLoading: false });
+            }
           }
         },
 
@@ -334,6 +583,8 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
           if (!connKey || !state.selectedTable || state.isCustomQuery) return;
+          if (state.selectedObjectKind === "index") return;
+          const requestId = ++refreshRequestId;
 
           set({ isLoading: true, error: null });
 
@@ -342,15 +593,17 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             if (state.selectedObjectKind === "subscription" && dbType === "postgres") {
               const [subscriptionInfo, queryResult] = await Promise.all([
-                invokeDatabaseProvider("get_postgres_subscription_info", {
+                invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.getInfo, {
                   ...connArg,
                   subscription: state.selectedTable,
                 }) as Promise<PostgresSubscriptionInfo>,
-                invokeDatabaseProvider("get_postgres_subscription_status", {
+                invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.getStatus, {
                   ...connArg,
                   subscription: state.selectedTable,
                 }) as Promise<QueryResult>,
               ]);
+
+              if (requestId !== refreshRequestId) return;
 
               set({
                 subscriptionInfo,
@@ -368,6 +621,11 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
             }
 
             const offset = (state.currentPage - 1) * state.pageSize;
+            const searchTerm = state.searchTerm.trim();
+            const searchColumns =
+              state.tableMeta.length > 0
+                ? state.tableMeta.map((column) => column.name)
+                : (state.queryResult?.columns ?? []);
 
             const result = (await invokeDatabaseProvider(cmds.queryFiltered, {
               ...connArg,
@@ -379,8 +637,8 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
                   value: f.value,
                   value2: f.value2 ?? null,
                 })),
-                search_term: state.searchTerm.trim() || null,
-                search_columns: state.searchTerm.trim() ? state.tableMeta.map((c) => c.name) : [],
+                search_term: searchTerm || null,
+                search_columns: searchTerm ? searchColumns : [],
                 sort_column: state.sortColumn ?? null,
                 sort_direction: state.sortDirection.toUpperCase(),
                 page_size: state.pageSize,
@@ -390,14 +648,19 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             const totalPages = Math.max(1, Math.ceil(result.total_count / state.pageSize));
 
+            if (requestId !== refreshRequestId) return;
+
             set({
               queryResult: { columns: result.columns, rows: result.rows },
               totalPages,
             });
           } catch (err) {
-            set({ error: `Query failed: ${err}`, queryResult: null });
+            if (requestId !== refreshRequestId) return;
+            set({ error: formatDatabaseError("Query failed", err) });
           } finally {
-            set({ isLoading: false });
+            if (requestId === refreshRequestId) {
+              set({ isLoading: false });
+            }
           }
         },
 
@@ -408,14 +671,30 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         },
 
         setCurrentPage: (page: number) => {
-          if (get().selectedObjectKind !== "table") return;
-          set({ currentPage: page });
+          const state = get();
+          if (state.isCustomQuery) {
+            set({ currentPage: clampPage(page, state.totalPages), error: null });
+            return;
+          }
+          if (state.selectedObjectKind !== "table") return;
+          set({ currentPage: clampPage(page, state.totalPages) });
           get().actions.refresh();
         },
 
         setPageSize: (size: number) => {
-          if (get().selectedObjectKind !== "table") return;
-          set({ pageSize: size, currentPage: 1 });
+          const state = get();
+          const pageSize = normalizePageSize(size);
+          if (state.isCustomQuery) {
+            set({
+              pageSize,
+              currentPage: 1,
+              totalPages: getQueryResultTotalPages(state.queryResult, pageSize),
+              error: null,
+            });
+            return;
+          }
+          if (state.selectedObjectKind !== "table") return;
+          set({ pageSize, currentPage: 1 });
           get().actions.refresh();
         },
 
@@ -427,16 +706,28 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         },
 
         updateColumnFilter: (index: number, updates: Partial<ColumnFilter>) => {
-          if (get().selectedObjectKind !== "table") return;
+          const state = get();
+          if (
+            state.selectedObjectKind !== "table" ||
+            index < 0 ||
+            index >= state.columnFilters.length
+          )
+            return;
           set((s) => {
-            s.columnFilters[index] = { ...s.columnFilters[index], ...updates };
+            s.columnFilters[index] = normalizeColumnFilterUpdate(s.columnFilters[index], updates);
             s.currentPage = 1;
           });
           get().actions.refresh();
         },
 
         removeColumnFilter: (index: number) => {
-          if (get().selectedObjectKind !== "table") return;
+          const state = get();
+          if (
+            state.selectedObjectKind !== "table" ||
+            index < 0 ||
+            index >= state.columnFilters.length
+          )
+            return;
           set((s) => {
             s.columnFilters.splice(index, 1);
             s.currentPage = 1;
@@ -465,101 +756,238 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         },
 
         setCustomQuery: (query: string) => set({ customQuery: query }),
-        setIsCustomQuery: (is: boolean) => set({ isCustomQuery: is }),
+        setIsCustomQuery: (is: boolean) => {
+          const wasCustomQuery = get().isCustomQuery;
+          customQueryRequestId += 1;
+          if (is) {
+            refreshRequestId += 1;
+          }
+          set((s) => {
+            s.isCustomQuery = is;
+            s.isCustomQueryLoading = false;
+            s.isLoading = is ? false : s.isLoading;
+            s.error = null;
 
-        executeCustomQuery: async () => {
+            if (is) {
+              s.currentPage = 1;
+              s.totalPages = getQueryResultTotalPages(s.queryResult, s.pageSize);
+              s.searchTerm = "";
+              s.columnFilters = [];
+              s.sortColumn = null;
+              s.sortDirection = "asc";
+            }
+          });
+          if (wasCustomQuery && !is) {
+            void get().actions.refresh();
+          }
+        },
+
+        cancelCustomQuery: () => {
+          customQueryRequestId += 1;
+          set({ isCustomQueryLoading: false });
+        },
+
+        executeCustomQuery: async (queryOverride?: string) => {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
-          if (!connKey || !state.customQuery.trim()) return;
+          const query = (queryOverride ?? state.customQuery).trim();
+          if (!connKey || !query) return;
 
-          set({ isLoading: true, error: null, isCustomQuery: true });
+          const requestId = ++customQueryRequestId;
+          refreshRequestId += 1;
+          const startedAt = performance.now();
+          set({
+            isCustomQueryLoading: true,
+            isLoading: false,
+            error: null,
+            isCustomQuery: true,
+            lastQueryExecutionMs: null,
+          });
 
           try {
             const connArg = getConnectionArg(mode, connKey);
-            const queryResult = (await invokeDatabaseProvider(cmds.query, {
-              ...connArg,
-              query: state.customQuery,
-            })) as QueryResult;
+            const queryResult = normalizeQueryResult(
+              await invokeDatabaseProvider(cmds.query, {
+                ...connArg,
+                query,
+              }),
+            );
 
-            const newHistory = state.sqlHistory.includes(state.customQuery)
-              ? state.sqlHistory
-              : [state.customQuery, ...state.sqlHistory].slice(0, 10);
+            if (requestId !== customQueryRequestId) return;
 
-            set({ queryResult, sqlHistory: newHistory });
+            const newHistory = addSqlHistoryEntry(get().sqlHistory, query);
+            persistSqlHistory(dbType, mode, get(), newHistory);
+
+            set({
+              queryResult,
+              sqlHistory: newHistory,
+              currentPage: 1,
+              totalPages: getQueryResultTotalPages(queryResult, get().pageSize),
+              lastQueryExecutionMs: Math.round(performance.now() - startedAt),
+            });
           } catch (err) {
-            set({ error: `Query error: ${err}`, queryResult: null });
+            if (requestId !== customQueryRequestId) return;
+            set({ error: formatDatabaseError("Query error", err) });
           } finally {
-            set({ isLoading: false });
+            if (requestId === customQueryRequestId) {
+              set({ isCustomQueryLoading: false });
+            }
           }
+        },
+
+        removeSqlHistoryEntry: (query: string) => {
+          const newHistory = removeSqlHistoryEntry(get().sqlHistory, query);
+          persistSqlHistory(dbType, mode, get(), newHistory);
+          set({ sqlHistory: newHistory });
+        },
+
+        useSqlHistoryEntry: (query: string) => {
+          const newHistory = useSqlHistoryEntry(get().sqlHistory, query);
+          persistSqlHistory(dbType, mode, get(), newHistory);
+          set({ sqlHistory: newHistory });
+        },
+
+        clearSqlHistory: () => {
+          persistSqlHistory(dbType, mode, get(), []);
+          set({ sqlHistory: [] });
         },
 
         insertRow: async (values: Record<string, unknown>) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
+          const tableName = state.selectedTable;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
             await invokeDatabaseProvider(cmds.insertRow, {
               ...connArg,
-              table: state.selectedTable,
+              table: tableName,
               columns: Object.keys(values),
               values: Object.values(values),
             });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
             set({ error: null });
             await get().actions.refresh();
           } catch (err) {
-            set({ error: `Insert failed: ${err}` });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: formatDatabaseError("Insert failed", err), isLoading: false });
           }
         },
 
         updateRow: async (pkColumn: string, pkValue: unknown, values: Record<string, unknown>) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
+          const tableName = state.selectedTable;
 
           const { [pkColumn]: _, ...updateValues } = values;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
             await invokeDatabaseProvider(cmds.updateRow, {
               ...connArg,
-              table: state.selectedTable,
+              table: tableName,
               setColumns: Object.keys(updateValues),
               setValues: Object.values(updateValues),
               whereColumn: pkColumn,
               whereValue: pkValue,
             });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
             set({ error: null });
             await get().actions.refresh();
           } catch (err) {
-            set({ error: `Update failed: ${err}` });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: formatDatabaseError("Update failed", err), isLoading: false });
+          }
+        },
+
+        updateRowByValues: async (
+          rowData: Record<string, unknown>,
+          values: Record<string, unknown>,
+        ) => {
+          const state = get();
+          const connKey = getActiveConnectionKey(mode, state);
+          if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
+          const tableName = state.selectedTable;
+
+          set({ isLoading: true, error: null });
+          try {
+            const connArg = getConnectionArg(mode, connKey);
+            await invokeDatabaseProvider(cmds.updateRowByValues, {
+              ...connArg,
+              table: tableName,
+              setColumns: Object.keys(values),
+              setValues: Object.values(values),
+              identity: {
+                columns: Object.keys(rowData),
+                values: Object.values(rowData),
+              },
+            });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: null });
+            await get().actions.refresh();
+          } catch (err) {
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: formatDatabaseError("Update failed", err), isLoading: false });
           }
         },
 
         deleteRow: async (pkColumn: string, pkValue: unknown) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
+          const tableName = state.selectedTable;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
             await invokeDatabaseProvider(cmds.deleteRow, {
               ...connArg,
-              table: state.selectedTable,
+              table: tableName,
               whereColumn: pkColumn,
               whereValue: pkValue,
             });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
             set({ error: null });
             await get().actions.refresh();
           } catch (err) {
-            set({ error: `Delete failed: ${err}` });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: formatDatabaseError("Delete failed", err), isLoading: false });
+          }
+        },
+
+        deleteRowByValues: async (rowData: Record<string, unknown>) => {
+          const state = get();
+          const connKey = getActiveConnectionKey(mode, state);
+          if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
+          const tableName = state.selectedTable;
+
+          set({ isLoading: true, error: null });
+          try {
+            const connArg = getConnectionArg(mode, connKey);
+            await invokeDatabaseProvider(cmds.deleteRowByValues, {
+              ...connArg,
+              table: tableName,
+              identity: {
+                columns: Object.keys(rowData),
+                values: Object.values(rowData),
+              },
+            });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: null });
+            await get().actions.refresh();
+          } catch (err) {
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: formatDatabaseError("Delete failed", err), isLoading: false });
           }
         },
 
         updateCell: async (rowIndex: number, columnName: string, newValue: unknown) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (
             !connKey ||
             !state.selectedTable ||
@@ -568,35 +996,44 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
           )
             return;
 
-          const pkColumn = state.tableMeta.find((c) => c.primary_key);
-          if (!pkColumn) {
-            set({ error: "No primary key found" });
-            return;
-          }
-
           const row = state.queryResult.rows[rowIndex];
-          const pkIndex = state.queryResult.columns.indexOf(pkColumn.name);
-          const pkValue = row[pkIndex];
+          const pkColumn = state.tableMeta.find((c) => c.primary_key);
+          const tableName = state.selectedTable;
 
-          if (pkValue === undefined || pkValue === null) {
-            set({ error: "Primary key value missing" });
-            return;
-          }
-
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
+            const pkIndex = pkColumn ? state.queryResult.columns.indexOf(pkColumn.name) : -1;
+            const pkValue = pkIndex >= 0 ? row[pkIndex] : undefined;
+
+            if (!pkColumn || pkValue === undefined || pkValue === null) {
+              await invokeDatabaseProvider(cmds.updateRowByValues, {
+                ...connArg,
+                table: tableName,
+                setColumns: [columnName],
+                setValues: [newValue],
+                identity: buildRowIdentity(state.queryResult.columns, row),
+              });
+              if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+              set({ error: null });
+              await get().actions.refresh();
+              return;
+            }
+
             await invokeDatabaseProvider(cmds.updateRow, {
               ...connArg,
-              table: state.selectedTable,
+              table: tableName,
               setColumns: [columnName],
               setValues: [newValue],
               whereColumn: pkColumn.name,
               whereValue: pkValue,
             });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
             set({ error: null });
             await get().actions.refresh();
           } catch (err) {
-            set({ error: `Cell update failed: ${err}` });
+            if (!isSameTableMutationContext(mode, get(), connKey, tableName)) return;
+            set({ error: formatDatabaseError("Cell update failed", err), isLoading: false });
           }
         },
 
@@ -605,9 +1042,11 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
           columns: { name: string; type: string; notnull: boolean }[],
         ) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey) return;
+          const selectedTableAtStart = state.selectedTable;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
             const columnDefs = columns
@@ -621,104 +1060,136 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
               statement: `CREATE TABLE "${name.replace(/"/g, '""')}" (${columnDefs})`,
             });
 
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             set({ tables, error: null });
-            await get().actions.selectTable(name);
+            if (get().selectedTable === selectedTableAtStart) {
+              await get().actions.selectTable(name);
+            } else {
+              set({ isLoading: false });
+            }
           } catch (err) {
-            set({ error: `Create table failed: ${err}` });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
+            set({ error: formatDatabaseError("Create table failed", err), isLoading: false });
           }
         },
 
         dropTable: async (name: string) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey) return;
+          const object = getObjectInfo(state.tables, name) ?? { name, kind: "table" };
+          const objectKind = object.kind ?? "table";
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
             await invokeDatabaseProvider(cmds.execute, {
               ...connArg,
-              statement: `DROP TABLE "${name.replace(/"/g, '""')}"`,
+              statement: buildDropObjectStatement(dbType, object, name),
             });
 
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             set({ tables, error: null });
 
-            if (state.selectedTable === name) {
+            if (get().selectedTable === name) {
               if (tables.length > 0) {
                 const nextObject =
                   tables.find((table) => (table.kind ?? "table") === "table") ?? tables[0];
                 await get().actions.selectTable(nextObject.name);
               } else {
                 set({
-                  selectedTable: null,
-                  selectedObjectKind: "table",
-                  queryResult: null,
-                  tableMeta: [],
-                  foreignKeys: [],
-                  subscriptionInfo: null,
+                  ...getClearedSelectionState(),
+                  isLoading: false,
                 });
               }
+            } else {
+              set({ isLoading: false });
             }
           } catch (err) {
-            set({ error: `Drop table failed: ${err}` });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
+            set({
+              error: formatDatabaseError(
+                objectKind === "view"
+                  ? "Drop view failed"
+                  : objectKind === "materialized_view"
+                    ? "Drop materialized view failed"
+                    : objectKind === "index"
+                      ? "Drop index failed"
+                      : "Drop table failed",
+                err,
+              ),
+              isLoading: false,
+            });
           }
         },
 
         createSubscription: async (params: CreatePostgresSubscriptionParams) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey || dbType !== "postgres") return;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invokeDatabaseProvider("create_postgres_subscription", {
+            await invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.create, {
               ...connArg,
               params,
             });
 
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             set({ tables, error: null });
             await get().actions.selectTable(params.name);
           } catch (err) {
-            set({ error: `Create subscription failed: ${err}` });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
+            set({
+              error: formatDatabaseError("Create subscription failed", err),
+              isLoading: false,
+            });
           }
         },
 
         dropSubscription: async (name: string, withDropSlot: boolean) => {
           const state = get();
-          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          const connKey = getActiveConnectionKey(mode, state);
           if (!connKey || dbType !== "postgres") return;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invokeDatabaseProvider("drop_postgres_subscription", {
+            await invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.drop, {
               ...connArg,
               subscription: name,
               withDropSlot,
             });
 
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             const tables = (await invokeDatabaseProvider(cmds.getTables, connArg)) as TableInfo[];
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             set({ tables, error: null });
 
-            if (state.selectedTable === name) {
+            if (get().selectedTable === name) {
               const nextObject =
                 tables.find((table) => (table.kind ?? "table") === "table") ?? tables[0];
               if (nextObject) {
                 await get().actions.selectTable(nextObject.name);
               } else {
                 set({
-                  selectedTable: null,
-                  selectedObjectKind: "table",
-                  queryResult: null,
-                  tableMeta: [],
-                  foreignKeys: [],
-                  subscriptionInfo: null,
+                  ...getClearedSelectionState(),
+                  isLoading: false,
                 });
               }
+            } else {
+              set({ isLoading: false });
             }
           } catch (err) {
-            set({ error: `Drop subscription failed: ${err}` });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
+            set({ error: formatDatabaseError("Drop subscription failed", err), isLoading: false });
           }
         },
 
@@ -727,19 +1198,27 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
           if (!connKey || dbType !== "postgres") return;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invokeDatabaseProvider("set_postgres_subscription_enabled", {
+            await invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.setEnabled, {
               ...connArg,
               subscription: name,
               enabled,
             });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             set({ error: null });
-            if (state.selectedTable === name) {
+            if (get().selectedTable === name) {
               await get().actions.refresh();
+            } else {
+              set({ isLoading: false });
             }
           } catch (err) {
-            set({ error: `Update subscription failed: ${err}` });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
+            set({
+              error: formatDatabaseError("Update subscription failed", err),
+              isLoading: false,
+            });
           }
         },
 
@@ -748,19 +1227,27 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
           if (!connKey || dbType !== "postgres") return;
 
+          set({ isLoading: true, error: null });
           try {
             const connArg = getConnectionArg(mode, connKey);
-            await invokeDatabaseProvider("refresh_postgres_subscription", {
+            await invokeDatabaseProvider(POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS.refresh, {
               ...connArg,
               subscription: name,
               copyData,
             });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
             set({ error: null });
-            if (state.selectedTable === name) {
+            if (get().selectedTable === name) {
               await get().actions.refresh();
+            } else {
+              set({ isLoading: false });
             }
           } catch (err) {
-            set({ error: `Refresh subscription failed: ${err}` });
+            if (!isSameConnectionContext(mode, get(), connKey)) return;
+            set({
+              error: formatDatabaseError("Refresh subscription failed", err),
+              isLoading: false,
+            });
           }
         },
 

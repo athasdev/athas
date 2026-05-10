@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { WarningCircle } from "@phosphor-icons/react";
+import { cva } from "class-variance-authority";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import KeybindingDisplay from "@/ui/keybinding";
@@ -9,9 +10,10 @@ import { useKeymapStore } from "../stores/store";
 import type { Command, Keybinding } from "../types";
 import { KeybindingInput } from "./keybinding-input";
 
-export const KEYBINDING_TABLE_GRID_COLS_CLASS_NAME =
-  "grid-cols-[minmax(220px,2fr)_minmax(156px,1fr)_minmax(128px,1.25fr)_72px_92px]";
-export const KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME = "min-w-[700px]";
+export const keybindingTableGridCols = cva(
+  "grid-cols-[minmax(220px,2fr)_minmax(156px,1fr)_minmax(128px,1.25fr)_72px_92px]",
+);
+export const keybindingTableMinWidth = cva("min-w-[700px]");
 
 interface KeybindingRowProps {
   command: Command;
@@ -71,8 +73,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       className={cn(
         "grid gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
         "gap-3 px-1.5 py-1.5",
-        KEYBINDING_TABLE_GRID_COLS_CLASS_NAME,
-        KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
+        keybindingTableGridCols(),
+        keybindingTableMinWidth(),
         hasConflict && "bg-error/5 hover:bg-error/10",
       )}
     >

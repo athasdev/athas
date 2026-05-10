@@ -31,6 +31,25 @@ export const calculateCursorPosition = (offset: number, lines: string[]): Positi
   };
 };
 
+export const calculateCursorPositionFromContent = (offset: number, content: string): Position => {
+  const clampedOffset = Math.max(0, Math.min(offset, content.length));
+  let line = 0;
+  let lineStartOffset = 0;
+
+  for (let index = 0; index < clampedOffset; index++) {
+    if (content.charCodeAt(index) === 10) {
+      line++;
+      lineStartOffset = index + 1;
+    }
+  }
+
+  return {
+    line,
+    column: clampedOffset - lineStartOffset,
+    offset: clampedOffset,
+  };
+};
+
 /**
  * Calculate character offset from line and column position
  */

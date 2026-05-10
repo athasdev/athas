@@ -737,6 +737,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["debug", "debugger", "breakpoint", "launch", "run"],
   },
   {
+    id: "features-outline",
+    tab: "features",
+    section: "Features",
+    label: "Outline",
+    description: "Document symbols and quick navigation for the active file",
+    keywords: ["outline", "symbols", "navigation", "document", "active file"],
+  },
+  {
     id: "features-ai-chat",
     tab: "features",
     section: "Features",
@@ -751,14 +759,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Multi Agents",
     description: "Multi-agent session sidebar",
     keywords: ["ai", "agents", "multi", "sidebar", "experimental"],
-  },
-  {
-    id: "features-sidebar-builder",
-    tab: "features",
-    section: "Features",
-    label: "Sidebar Builder",
-    description: "Customizable vertical sidebar with Git, terminal, browser, and workspace items",
-    keywords: ["sidebar", "builder", "custom", "experimental", "git", "terminal", "browser"],
   },
   {
     id: "features-breadcrumbs",

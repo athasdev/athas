@@ -62,6 +62,9 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
 
   const contentHash = useMemo(() => {
     if (!content) return "";
+    if (content.length > LARGE_FILE_CONTENT_THRESHOLD) {
+      return `large:${content.length}`;
+    }
     let hash = 0;
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i);
@@ -248,7 +251,28 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
       // File switches should refresh immediately, but content edits already have
       // their own debounced diff path below.
       lastContentKeyRef.current = latestContentKeyRef.current;
-      updateGitGutter(false);
+      let cancelled = false;
+      const refreshGitGutter = () => {
+        if (!cancelled) {
+          void updateGitGutter(false);
+        }
+      };
+
+      if ("requestIdleCallback" in window) {
+        const idleId = window.requestIdleCallback(refreshGitGutter, { timeout: 500 });
+        return () => {
+          cancelled = true;
+          window.cancelIdleCallback(idleId);
+          clearGitDecorations();
+        };
+      }
+
+      const timeoutId = globalThis.setTimeout(refreshGitGutter, 0);
+      return () => {
+        cancelled = true;
+        globalThis.clearTimeout(timeoutId);
+        clearGitDecorations();
+      };
     }
 
     return () => {

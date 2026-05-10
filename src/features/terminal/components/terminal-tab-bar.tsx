@@ -42,7 +42,8 @@ import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-st
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import {
   type TerminalTabLayout,
   type TerminalTabSidebarPosition,
@@ -315,8 +316,6 @@ const TerminalTabBar = ({
   const sessions = useTerminalStore((state) => state.sessions);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
-  const { setActivePane } = usePaneStore.use.actions();
-  const { splitPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
@@ -571,23 +570,23 @@ const TerminalTabBar = ({
     const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
 
     if (terminal && isOutsideTabBar && target.paneId) {
-      let destinationPaneId = target.paneId;
-      if (target.zone && target.zone !== "center") {
-        const direction =
-          target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-        const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
-        destinationPaneId =
-          splitPane(target.paneId, direction, undefined, placement) ?? target.paneId;
+      const destinationPaneId = getOrCreatePaneDropTarget({
+        paneId: target.paneId,
+        zone: target.zone,
+      });
+      if (!destinationPaneId) {
+        resetDrag();
+        return;
       }
 
-      setActivePane(destinationPaneId);
-      openTerminalBuffer({
+      const bufferId = openTerminalBuffer({
         sessionId: terminal.id,
         name: terminal.name,
         command: terminal.initialCommand,
         workingDirectory: terminal.currentDirectory,
         remoteConnectionId: terminal.remoteConnectionId,
       });
+      activateBufferInPaneAndSync(destinationPaneId, bufferId);
       window.dispatchEvent(
         new CustomEvent("terminal-detach-to-buffer", {
           detail: { terminalId: terminal.id },

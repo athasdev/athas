@@ -1,12 +1,4 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  CreditCard,
-  CloudArrowDown,
-  CloudArrowUp,
-  ArrowSquareOut as ExternalLink,
-  SignIn as LogIn,
-  SignOut as LogOut,
-} from "@phosphor-icons/react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import {
   disableSettingsSync,
@@ -17,6 +9,13 @@ import {
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
+import {
+  extractAutocompleteUsage,
+  formatUsageDate,
+  formatUsdFromCents,
+  getAccountPlanLabel,
+  getUsageProgress,
+} from "@/features/window/lib/account-usage";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -43,14 +42,9 @@ export const AccountSettings = () => {
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
   const isTeams = Boolean(subscription?.collaboration?.enabled);
   const isPaidPlan = isPro || isEnterprise || isTeams;
-  const planLabel =
-    subscription?.subscription?.plan === "enterprise"
-      ? "Enterprise"
-      : isTeams
-        ? "Teams"
-        : isPro
-          ? "Pro"
-          : "Free";
+  const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
+  const autocompleteUsage = extractAutocompleteUsage(subscription);
+  const usageProgress = getUsageProgress(autocompleteUsage);
 
   const handleManageAccount = async () => {
     await openUrl(new URL("/dashboard", getApiBase()).toString());
@@ -124,11 +118,62 @@ export const AccountSettings = () => {
               className="ui-text-sm"
               compact
             >
-              <LogIn />
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
           )}
         </SettingRow>
+
+        {isAuthenticated && (
+          <div
+            role="group"
+            aria-labelledby="account-ai-usage-label"
+            aria-describedby="account-ai-usage-description"
+            className="rounded-lg px-1 py-2"
+          >
+            <div className="mb-3">
+              <div className="min-w-0">
+                <div id="account-ai-usage-label" className="ui-font ui-text-sm text-text">
+                  AI Usage
+                </div>
+                <div
+                  id="account-ai-usage-description"
+                  className="ui-font ui-text-sm text-text-lighter"
+                >
+                  Monthly hosted AI usage across chat, agents, inline edits, generation, and other
+                  Athas AI features.
+                </div>
+              </div>
+            </div>
+            {autocompleteUsage ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="ui-font ui-text-xs text-text-lighter">Monthly usage</span>
+                  <span className="ui-font ui-text-sm font-medium text-text">
+                    {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
+                    {formatUsdFromCents(autocompleteUsage.budgetCents)}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
+                  <div
+                    className="h-full rounded-full bg-accent transition-[width] duration-200"
+                    style={{ width: `${usageProgress}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="ui-font ui-text-xs text-text-lighter/70">
+                    {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
+                    {formatUsageDate(autocompleteUsage.periodEnd)}
+                  </span>
+                  <span className="ui-font ui-text-xs text-text-lighter/70">
+                    Resets {formatUsageDate(autocompleteUsage.periodEnd)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="ui-font ui-text-xs text-text-lighter">Usage unavailable</div>
+            )}
+          </div>
+        )}
 
         {isAuthenticated && (
           <SettingRow label="Plan" description="Manage your Athas subscription and billing.">
@@ -136,15 +181,13 @@ export const AccountSettings = () => {
               {isPaidPlan ? (
                 <Badge
                   variant="default"
-                  shape="pill"
                   size="compact"
-                  className="border-accent/30 bg-accent/10 text-accent"
+                  className="border-accent/30 bg-accent/10 font-normal text-accent"
                 >
                   {planLabel}
                 </Badge>
               ) : null}
               <Button variant="default" onClick={handleManagePlan} className="ui-text-sm" compact>
-                <CreditCard />
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -185,7 +228,6 @@ export const AccountSettings = () => {
                 className="ui-text-sm"
                 disabled={settingsSyncIsSyncing}
               >
-                <CloudArrowUp />
                 {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
               </Button>
             </SettingRow>
@@ -200,7 +242,6 @@ export const AccountSettings = () => {
                 className="ui-text-sm"
                 disabled={settingsSyncIsSyncing}
               >
-                <CloudArrowDown />
                 Restore
               </Button>
             </SettingRow>
@@ -213,7 +254,6 @@ export const AccountSettings = () => {
             description="Open your Athas dashboard to manage billing and subscription details."
           >
             <Button variant="default" onClick={handleManageAccount} className="ui-text-sm" compact>
-              <ExternalLink />
               Open Dashboard
             </Button>
           </SettingRow>
@@ -225,7 +265,6 @@ export const AccountSettings = () => {
             description="End your current Athas account session on this device."
           >
             <Button variant="default" onClick={() => void logout()} className="ui-text-sm">
-              <LogOut />
               Sign Out
             </Button>
           </SettingRow>

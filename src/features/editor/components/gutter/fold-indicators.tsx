@@ -2,6 +2,11 @@ import { memo, useCallback, useMemo } from "react";
 import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useFoldStore } from "../../stores/fold-store";
+import { GUTTER_CONFIG } from "../../utils/gutter";
+import {
+  getViewZoneHeightBeforeLine,
+  type ResolvedEditorViewZone,
+} from "../../view-model/view-layout";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;
@@ -15,6 +20,7 @@ interface FoldIndicatorsProps {
   foldMapping?: LineMapping;
   startLine: number;
   endLine: number;
+  viewZones?: ResolvedEditorViewZone[];
 }
 
 function FoldIndicatorsComponent({
@@ -24,6 +30,7 @@ function FoldIndicatorsComponent({
   foldMapping,
   startLine,
   endLine,
+  viewZones = [],
 }: FoldIndicatorsProps) {
   const foldsByFile = useFoldStore((state) => state.foldsByFile);
   const foldActions = useFoldStore.use.actions();
@@ -59,7 +66,11 @@ function FoldIndicatorsComponent({
             type="button"
             style={{
               position: "absolute",
-              top: `${virtualLine * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
+              top: `${
+                virtualLine * lineHeight +
+                getViewZoneHeightBeforeLine(viewZones, virtualLine) +
+                EDITOR_CONSTANTS.GUTTER_PADDING
+              }px`,
               left: "0px",
               right: "0px",
               height: `${lineHeight}px`,
@@ -113,13 +124,14 @@ function FoldIndicatorsComponent({
     fontSize,
     handleFoldClick,
     foldMapping,
+    viewZones,
   ]);
 
   return (
     <div
       style={{
         position: "relative",
-        width: "18px",
+        width: `${GUTTER_CONFIG.FOLD_LANE_WIDTH}px`,
       }}
     >
       {indicators}

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { TerminalSlot } from "./terminal-slot";
 
 interface TerminalTabProps {
@@ -32,8 +32,10 @@ export function TerminalTab({
 
   const handleActivate = useCallback(() => {
     if (paneId) {
-      usePaneStore.getState().actions.setActivePane(paneId);
+      activateBufferInPaneAndSync(paneId, bufferId);
+      return;
     }
+
     useBufferStore.getState().actions.setActiveBuffer(bufferId);
   }, [bufferId, paneId]);
 

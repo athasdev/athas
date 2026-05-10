@@ -19,7 +19,7 @@
 /* Removed JS-managed .is-stuck marker; pure CSS sticky remains */
 
 /* Ensure file tree content wrapper stretches to full scrollable area */
-.file-tree-container > div:not(.file-tree-empty-state) {
+.file-tree-container > .file-tree-scroll-body {
   width: max-content !important;
   min-width: 100% !important;
 }
@@ -70,6 +70,17 @@
     --file-tree-hover-bg,
     color-mix(in srgb, var(--color-hover) 68%, transparent)
   ) !important;
+}
+
+.file-tree-search-highlight {
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  color: inherit;
+  padding: 0 1px;
+}
+
+.file-tree-search-match:not(.bg-selected) {
+  background-color: color-mix(in srgb, var(--color-accent) 7%, transparent) !important;
 }
 
 .file-tree-guides {

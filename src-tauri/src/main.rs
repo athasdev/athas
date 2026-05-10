@@ -148,6 +148,7 @@ fn main() {
          // Window commands
          create_app_window,
          uses_native_window_chrome,
+         set_macos_window_appearance,
          create_embedded_webview,
          close_embedded_webview,
          close_all_embedded_webviews,
@@ -288,6 +289,7 @@ fn main() {
          uninstall_cli_command,
          get_cli_install_command,
          get_importable_ide_projects,
+         take_pending_cli_open_requests,
          // Runtime commands
          ensure_runtime,
          get_runtime_status,

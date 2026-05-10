@@ -120,4 +120,34 @@ describe("calculateSelectionBoxes", () => {
       },
     ]);
   });
+
+  it("places selection boxes after view zones using shifted layout positions", () => {
+    const content = "first\nsecond";
+    const lines = content.split("\n");
+    const viewLayout = buildEditorViewLayout({
+      lines,
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(10),
+      measureText: measureWideText,
+      zones: [{ id: "inline-diff", afterLine: 0, height: 48 }],
+    });
+
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: "first\n".length, end: "first\nsec".length },
+      lines,
+      lineOffsets: buildLineOffsetMap(content),
+      contentLength: content.length,
+      lineHeight: 20,
+      measureText: measureWideText,
+      viewLayout,
+    });
+
+    expect(boxes[0]).toMatchObject({
+      top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20 + 48,
+      left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      width: 30,
+      height: 20,
+    });
+  });
 });

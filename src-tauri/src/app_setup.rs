@@ -82,6 +82,7 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(FffSearchState::new());
+   app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
 }
 
 fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
@@ -93,11 +94,12 @@ fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
       return;
    }
 
-   let app_handle = app.handle().clone();
-   tauri::async_runtime::spawn(async move {
-      tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
-      emit_cli_requests_to_frontend(&app_handle, open_requests);
-   });
+   log::info!(
+      "Queued {} CLI open request(s) for frontend",
+      open_requests.len()
+   );
+   app.state::<commands::development::cli_args::PendingCliOpenRequests>()
+      .push_all(open_requests);
 }
 
 pub fn handle_single_instance_open(

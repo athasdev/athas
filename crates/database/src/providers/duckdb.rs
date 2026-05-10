@@ -10,57 +10,50 @@ fn execute_query_duckdb(
       .prepare(sql)
       .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
-   let column_count = stmt.column_count();
-   let columns: Vec<String> = (0..column_count)
-      .map(|i| {
-         stmt
-            .column_name(i)
-            .map_or("unknown".to_string(), |v| v.to_string())
-      })
-      .collect();
-
-   let rows_iter = stmt
-      .query_map(params, |row| {
-         let mut row_data = Vec::new();
-         for i in 0..column_count {
-            let value: serde_json::Value = match row.get_ref(i) {
-               Ok(value_ref) => match value_ref {
-                  duckdb::types::ValueRef::Null => serde_json::Value::Null,
-                  duckdb::types::ValueRef::Int(i) => serde_json::json!(i),
-                  duckdb::types::ValueRef::BigInt(i) => serde_json::json!(i),
-                  duckdb::types::ValueRef::TinyInt(i) => serde_json::json!(i),
-                  duckdb::types::ValueRef::SmallInt(i) => serde_json::json!(i),
-                  duckdb::types::ValueRef::HugeInt(i) => {
-                     serde_json::json!(i.to_string())
-                  }
-                  duckdb::types::ValueRef::Float(f) => serde_json::Number::from_f64(f as f64)
-                     .map(serde_json::Value::Number)
-                     .unwrap_or(serde_json::Value::String(f.to_string())),
-                  duckdb::types::ValueRef::Double(f) => serde_json::Number::from_f64(f)
-                     .map(serde_json::Value::Number)
-                     .unwrap_or(serde_json::Value::String(f.to_string())),
-                  duckdb::types::ValueRef::Text(s) => {
-                     serde_json::Value::String(String::from_utf8_lossy(s).to_string())
-                  }
-                  duckdb::types::ValueRef::Blob(b) => {
-                     serde_json::Value::String(format!("<binary data: {} bytes>", b.len()))
-                  }
-                  _ => serde_json::Value::String("<unsupported type>".to_string()),
-               },
-               Err(_) => serde_json::Value::Null,
-            };
-            row_data.push(value);
-         }
-         Ok(row_data)
-      })
+   let mut rows_iter = stmt
+      .query(params)
       .map_err(|e| format!("Failed to execute query: {}", e))?;
 
+   let stmt_ref = rows_iter
+      .as_ref()
+      .ok_or_else(|| "Failed to read query metadata".to_string())?;
+   let column_count = stmt_ref.column_count();
+   let columns = stmt_ref.column_names();
+
    let mut rows = Vec::new();
-   for row in rows_iter {
-      match row {
-         Ok(row_data) => rows.push(row_data),
-         Err(e) => return Err(format!("Error reading row: {}", e)),
+   while let Some(row) = rows_iter
+      .next()
+      .map_err(|e| format!("Error reading row: {}", e))?
+   {
+      let mut row_data = Vec::new();
+      for i in 0..column_count {
+         let value: serde_json::Value = match row.get_ref(i) {
+            Ok(value_ref) => match value_ref {
+               duckdb::types::ValueRef::Null => serde_json::Value::Null,
+               duckdb::types::ValueRef::Int(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::BigInt(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::TinyInt(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::SmallInt(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::HugeInt(i) => serde_json::json!(i.to_string()),
+               duckdb::types::ValueRef::Float(f) => serde_json::Number::from_f64(f as f64)
+                  .map(serde_json::Value::Number)
+                  .unwrap_or(serde_json::Value::String(f.to_string())),
+               duckdb::types::ValueRef::Double(f) => serde_json::Number::from_f64(f)
+                  .map(serde_json::Value::Number)
+                  .unwrap_or(serde_json::Value::String(f.to_string())),
+               duckdb::types::ValueRef::Text(s) => {
+                  serde_json::Value::String(String::from_utf8_lossy(s).to_string())
+               }
+               duckdb::types::ValueRef::Blob(b) => {
+                  serde_json::Value::String(format!("<binary data: {} bytes>", b.len()))
+               }
+               _ => serde_json::Value::String("<unsupported type>".to_string()),
+            },
+            Err(_) => serde_json::Value::Null,
+         };
+         row_data.push(value);
       }
+      rows.push(row_data);
    }
 
    Ok(QueryResult { columns, rows })
@@ -72,8 +65,10 @@ pub async fn get_duckdb_tables(path: String) -> Result<Vec<TableInfo>, String> {
 
    let mut stmt = conn
       .prepare(
-         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' ORDER BY \
-          table_name",
+         "SELECT table_name AS name, CASE WHEN table_type = 'VIEW' THEN 'view' ELSE 'table' END \
+          AS kind, NULL AS table_name FROM information_schema.tables WHERE table_schema = 'main' \
+          AND table_type IN ('BASE TABLE', 'VIEW') UNION ALL SELECT index_name AS name, 'index' \
+          AS kind, table_name FROM duckdb_indexes() WHERE schema_name = 'main' ORDER BY kind, name",
       )
       .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
@@ -81,7 +76,8 @@ pub async fn get_duckdb_tables(path: String) -> Result<Vec<TableInfo>, String> {
       .query_map([], |row| {
          Ok(TableInfo {
             name: row.get(0)?,
-            kind: "table".to_string(),
+            kind: row.get(1)?,
+            table_name: row.get(2)?,
          })
       })
       .map_err(|e| format!("Failed to execute query: {}", e))?;
@@ -230,6 +226,41 @@ pub async fn update_duckdb_row(
    Ok(affected as i64)
 }
 
+pub async fn update_duckdb_row_by_values(
+   path: String,
+   table: String,
+   set_columns: Vec<String>,
+   set_values: Vec<serde_json::Value>,
+   identity: RowIdentity,
+) -> Result<i64, String> {
+   let conn =
+      Connection::open(&path).map_err(|e| format!("Failed to open DuckDB database: {}", e))?;
+   let set_clause = set_columns
+      .iter()
+      .map(|col| format!("{} = ?", escape_identifier(col)))
+      .collect::<Vec<_>>()
+      .join(", ");
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier,
+      |_| "?".to_string(),
+      &mut param_offset,
+   )?;
+   let sql = format!(
+      "UPDATE {} SET {} {}",
+      escape_identifier(&table),
+      set_clause,
+      where_clause
+   );
+   let mut all_values: Vec<String> = set_values.iter().map(json_to_sql_string).collect();
+   all_values.extend(where_values.iter().map(json_to_sql_string));
+   let affected = conn
+      .execute(&sql, duckdb::params_from_iter(all_values.iter()))
+      .map_err(|e| format!("Failed to update row: {}", e))?;
+   Ok(affected as i64)
+}
+
 pub async fn delete_duckdb_row(
    path: String,
    table: String,
@@ -250,10 +281,204 @@ pub async fn delete_duckdb_row(
    Ok(affected as i64)
 }
 
-pub async fn get_duckdb_foreign_keys(
-   _path: String,
-   _table: String,
+pub async fn delete_duckdb_row_by_values(
+   path: String,
+   table: String,
+   identity: RowIdentity,
+) -> Result<i64, String> {
+   let conn =
+      Connection::open(&path).map_err(|e| format!("Failed to open DuckDB database: {}", e))?;
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier,
+      |_| "?".to_string(),
+      &mut param_offset,
+   )?;
+   let sql = format!("DELETE FROM {} {}", escape_identifier(&table), where_clause);
+   let values: Vec<String> = where_values.iter().map(json_to_sql_string).collect();
+   let affected = conn
+      .execute(&sql, duckdb::params_from_iter(values.iter()))
+      .map_err(|e| format!("Failed to delete row: {}", e))?;
+   Ok(affected as i64)
+}
+
+fn get_duckdb_foreign_keys_for_connection(
+   conn: &Connection,
+   table: &str,
 ) -> Result<Vec<ForeignKeyInfo>, String> {
-   // DuckDB doesn't have a simple PRAGMA for FKs like SQLite; return empty for now
-   Ok(Vec::new())
+   let sql = r#"
+      SELECT
+         unnest(constraint_column_names) AS from_column,
+         referenced_table AS to_table,
+         unnest(referenced_column_names) AS to_column
+      FROM duckdb_constraints()
+      WHERE constraint_type = 'FOREIGN KEY' AND table_name = ?
+      ORDER BY constraint_index
+   "#;
+
+   let mut stmt = conn
+      .prepare(sql)
+      .map_err(|e| format!("Failed to prepare foreign key query: {}", e))?;
+   let fk_iter = stmt
+      .query_map([table], |row| {
+         Ok(ForeignKeyInfo {
+            from_column: row.get(0)?,
+            to_table: row.get(1)?,
+            to_column: row.get(2)?,
+         })
+      })
+      .map_err(|e| format!("Failed to query foreign keys: {}", e))?;
+
+   let mut foreign_keys = Vec::new();
+   for fk in fk_iter {
+      match fk {
+         Ok(fk_info) => foreign_keys.push(fk_info),
+         Err(e) => return Err(format!("Error reading foreign key: {}", e)),
+      }
+   }
+
+   Ok(foreign_keys)
+}
+
+pub async fn get_duckdb_foreign_keys(
+   path: String,
+   table: String,
+) -> Result<Vec<ForeignKeyInfo>, String> {
+   let conn =
+      Connection::open(&path).map_err(|e| format!("Failed to open DuckDB database: {}", e))?;
+   get_duckdb_foreign_keys_for_connection(&conn, &table)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn execute_query_reads_metadata_after_statement_execution() {
+      let conn = Connection::open_in_memory().unwrap();
+      conn
+         .execute_batch(
+            r#"
+            CREATE TABLE users(id INTEGER, name TEXT);
+            INSERT INTO users VALUES (1, 'Ada');
+            "#,
+         )
+         .unwrap();
+
+      let result = execute_query_duckdb(&conn, "SELECT id, name FROM users", &[]).unwrap();
+
+      assert_eq!(result.columns, vec!["id".to_string(), "name".to_string()]);
+      assert_eq!(
+         result.rows,
+         vec![vec![serde_json::json!(1), serde_json::json!("Ada")]]
+      );
+   }
+
+   #[test]
+   fn execute_query_keeps_columns_for_empty_result_sets() {
+      let conn = Connection::open_in_memory().unwrap();
+      conn
+         .execute_batch("CREATE TABLE users(id INTEGER, name TEXT);")
+         .unwrap();
+
+      let result =
+         execute_query_duckdb(&conn, "SELECT id, name FROM users WHERE id = 0", &[]).unwrap();
+
+      assert_eq!(result.columns, vec!["id".to_string(), "name".to_string()]);
+      assert!(result.rows.is_empty());
+   }
+
+   #[tokio::test]
+   async fn reads_duckdb_tables_views_and_indexes() {
+      let path = std::env::temp_dir().join(format!(
+         "athas-duckdb-objects-{}.duckdb",
+         std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+      ));
+      let conn = Connection::open(&path).unwrap();
+      conn
+         .execute_batch(
+            r#"
+            CREATE TABLE users(id INTEGER, name TEXT);
+            CREATE VIEW active_users AS SELECT * FROM users;
+            CREATE INDEX users_name_idx ON users (name);
+            "#,
+         )
+         .unwrap();
+      drop(conn);
+
+      let objects = get_duckdb_tables(path.to_string_lossy().to_string())
+         .await
+         .unwrap();
+
+      assert!(
+         objects
+            .iter()
+            .any(|object| object.name == "users" && object.kind == "table")
+      );
+      assert!(
+         objects
+            .iter()
+            .any(|object| object.name == "active_users" && object.kind == "view")
+      );
+      assert!(objects.iter().any(|object| object.name == "users_name_idx"
+         && object.kind == "index"
+         && object.table_name.as_deref() == Some("users")));
+
+      let _ = std::fs::remove_file(path);
+   }
+
+   #[test]
+   fn reads_duckdb_foreign_keys_from_constraints_metadata() {
+      let conn = Connection::open_in_memory().unwrap();
+      conn
+         .execute_batch(
+            r#"
+            CREATE TABLE authors(id INTEGER PRIMARY KEY);
+            CREATE TABLE books(
+               id INTEGER PRIMARY KEY,
+               author_id INTEGER,
+               FOREIGN KEY(author_id) REFERENCES authors(id)
+            );
+            "#,
+         )
+         .unwrap();
+
+      let foreign_keys = get_duckdb_foreign_keys_for_connection(&conn, "books").unwrap();
+
+      assert_eq!(foreign_keys.len(), 1);
+      assert_eq!(foreign_keys[0].from_column, "author_id");
+      assert_eq!(foreign_keys[0].to_table, "authors");
+      assert_eq!(foreign_keys[0].to_column, "id");
+   }
+
+   #[test]
+   fn reads_composite_duckdb_foreign_keys() {
+      let conn = Connection::open_in_memory().unwrap();
+      conn
+         .execute_batch(
+            r#"
+            CREATE TABLE parents(a INTEGER, b INTEGER, PRIMARY KEY(a, b));
+            CREATE TABLE children(
+               x INTEGER,
+               y INTEGER,
+               FOREIGN KEY(x, y) REFERENCES parents(a, b)
+            );
+            "#,
+         )
+         .unwrap();
+
+      let foreign_keys = get_duckdb_foreign_keys_for_connection(&conn, "children").unwrap();
+
+      assert_eq!(foreign_keys.len(), 2);
+      assert_eq!(foreign_keys[0].from_column, "x");
+      assert_eq!(foreign_keys[0].to_table, "parents");
+      assert_eq!(foreign_keys[0].to_column, "a");
+      assert_eq!(foreign_keys[1].from_column, "y");
+      assert_eq!(foreign_keys[1].to_table, "parents");
+      assert_eq!(foreign_keys[1].to_column, "b");
+   }
 }

@@ -57,6 +57,30 @@ interface FileExplorerTreeItemProps {
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
   getGitStatusDecoration: (file: FileEntry) => FileTreeGitStatusDecoration | null;
+  searchQuery?: string;
+  isSearchMatch?: boolean;
+  rowId?: string;
+}
+
+function renderHighlightedLabel(label: string, query: string | undefined) {
+  const trimmedQuery = query?.trim();
+  if (!trimmedQuery) return label;
+
+  const labelLower = label.toLowerCase();
+  const queryLower = trimmedQuery.toLowerCase();
+  const matchIndex = labelLower.indexOf(queryLower);
+
+  if (matchIndex === -1) return label;
+
+  return (
+    <>
+      {label.slice(0, matchIndex)}
+      <mark className="file-tree-search-highlight">
+        {label.slice(matchIndex, matchIndex + trimmedQuery.length)}
+      </mark>
+      {label.slice(matchIndex + trimmedQuery.length)}
+    </>
+  );
 }
 
 function FileExplorerTreeItemComponent({
@@ -77,6 +101,9 @@ function FileExplorerTreeItemComponent({
   onKeyDown,
   onBlur,
   getGitStatusDecoration,
+  searchQuery,
+  isSearchMatch = false,
+  rowId,
 }: FileExplorerTreeItemProps) {
   const isCut = useFileClipboardStore(
     (s) =>
@@ -171,6 +198,11 @@ function FileExplorerTreeItemComponent({
     <div className="file-tree-item w-full" data-depth={depth}>
       {renderTreeGuides()}
       <TreeRow
+        id={rowId}
+        role="treeitem"
+        aria-level={depth + 1}
+        aria-selected={isActive}
+        aria-expanded={file.isDir ? isExpanded : undefined}
         data-file-path={file.path}
         data-is-dir={file.isDir}
         data-path={file.path}
@@ -185,6 +217,7 @@ function FileExplorerTreeItemComponent({
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",
+          isSearchMatch && "file-tree-search-match",
         )}
         active={isActive}
         baseIndent={14}
@@ -204,7 +237,7 @@ function FileExplorerTreeItemComponent({
             gitStatusDecoration?.colorClassName,
           )}
         >
-          {displayName ?? file.name}
+          {renderHighlightedLabel(displayName ?? file.name, searchQuery)}
         </span>
       </TreeRow>
     </div>
@@ -230,5 +263,8 @@ export const FileExplorerTreeItem = memo(
     prev.onEditingValueChange === next.onEditingValueChange &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onBlur === next.onBlur &&
-    prev.getGitStatusDecoration === next.getGitStatusDecoration,
+    prev.getGitStatusDecoration === next.getGitStatusDecoration &&
+    prev.searchQuery === next.searchQuery &&
+    prev.isSearchMatch === next.isSearchMatch &&
+    prev.rowId === next.rowId,
 );

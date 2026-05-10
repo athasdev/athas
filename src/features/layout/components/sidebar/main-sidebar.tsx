@@ -1,19 +1,18 @@
 import { memo } from "react";
 import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-sidebar-view";
-import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar-view";
+import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import DebuggerView from "@/features/debugger/components/debugger-view";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
-import { OutlineSidebarView } from "@/features/outline/components/outline-sidebar-view";
-import { SidebarBuilderView } from "@/features/sidebar-builder/components/sidebar-builder-view";
+import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { NotificationsPane } from "@/features/window/components/notifications-sidebar";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
@@ -51,7 +50,7 @@ export const SidebarActivityRail = memo(() => {
   };
 
   return (
-    <div className="flex shrink-0 items-start px-1 pt-0 pb-1.5">
+    <div className="athas-sidebar-rail flex shrink-0 items-start px-1 pt-0 pb-1.5">
       <SidebarPaneSelector
         activeSidebarView={activeSidebarView}
         isGitViewActive={isGitViewActive}
@@ -99,29 +98,27 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
   );
   const isMultiAgentsFeatureEnabled =
     settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
-  const isSidebarBuilderFeatureEnabled = settings.coreFeatures.sidebarBuilder;
+  const isOutlineFeatureEnabled = settings.coreFeatures.outline;
   const isDisabledExperimentalViewActive =
     (activeSidebarView === "multi-agents" && !isMultiAgentsFeatureEnabled) ||
-    (activeSidebarView === "sidebar-builder" && !isSidebarBuilderFeatureEnabled) ||
+    (activeSidebarView === "outline" && !isOutlineFeatureEnabled) ||
     (activeSidebarView === "collaboration" && !isCollaborationFeatureEnabled);
   const isFilesViewActive =
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     (activeSidebarView === "files" || isDisabledExperimentalViewActive);
-  const isDebuggerViewActive =
-    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
   const isOutlineViewActive =
-    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
+    isOutlineFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "outline";
+  const isNotificationsViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "notifications";
   const isMultiAgentsViewActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     activeSidebarView === "multi-agents";
-  const isSidebarBuilderViewActive =
-    isSidebarBuilderFeatureEnabled &&
-    !isGitViewActive &&
-    !isGitHubPRsViewActive &&
-    activeSidebarView === "sidebar-builder";
   const isCollaborationViewActive =
     isCollaborationFeatureEnabled &&
     !isGitViewActive &&
@@ -191,14 +188,14 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
           )}
         </div>
 
-        {settings.coreFeatures.debugger && (
-          <div className={cn("h-full", !isDebuggerViewActive && "hidden")}>
-            <DebuggerView />
+        {isOutlineFeatureEnabled ? (
+          <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
+            <OutlineSidebar />
           </div>
-        )}
+        ) : null}
 
-        <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
-          <OutlineSidebarView />
+        <div className={cn("h-full", !isNotificationsViewActive && "hidden")}>
+          <NotificationsPane />
         </div>
 
         {isCollaborationFeatureEnabled ? (
@@ -212,12 +209,6 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
             <MultiAgentsSidebarView />
           </div>
         )}
-
-        {isSidebarBuilderFeatureEnabled ? (
-          <div className={cn("h-full", !isSidebarBuilderViewActive && "hidden")}>
-            <SidebarBuilderView />
-          </div>
-        ) : null}
 
         {Array.from(extensionViews).map(([viewId, view]) => (
           <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>

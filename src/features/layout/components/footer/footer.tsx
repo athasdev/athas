@@ -1,21 +1,28 @@
 import {
   ArrowClockwise,
+  BugBeetle,
   CaretUp,
   DownloadSimple,
+  ListBullets,
   PuzzlePiece,
   TerminalWindow,
-  UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { cva } from "class-variance-authority";
 import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
-import { buildCollaborationFooterStatus } from "@/features/collaboration/lib/collaboration-footer-status";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { Dropdown } from "@/ui/dropdown";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
+import {
+  chromeControl,
+  chromeControlGroup,
+  chromeIcon,
+  chromeItemWrapper,
+} from "@/features/layout/components/chrome-control-styles";
+import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
@@ -25,8 +32,9 @@ import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
-import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { NotificationsTrigger } from "@/features/window/components/notifications-sidebar";
+import { useDocumentOutline } from "@/features/outline/hooks/use-document-outline";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
@@ -39,15 +47,11 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const FOOTER_ICON_TAB_CLASS_NAME = "h-6 w-7 min-w-7 px-0 [&_svg]:size-4";
-const FOOTER_PILL_TAB_CLASS_NAME = "h-6 px-2 [&_svg]:size-4";
-const FOOTER_COUNT_PILL_CLASS_NAME =
-  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3";
-const FOOTER_CONTROL_GROUP_CLASS_NAME = "pointer-events-auto border-transparent bg-transparent p-0";
-const FOOTER_CONTROL_CLASS_NAME =
-  "rounded-md border-0 bg-transparent hover:bg-hover/60 data-[active=true]:bg-hover/70";
-const FOOTER_GIT_TRIGGER_CLASS_NAME = "h-6 w-fit rounded-md";
-const FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME = "pl-7 ui-text-sm";
+const footerCountPill = cva(
+  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3",
+);
+const footerGitTrigger = cva("h-6 w-fit rounded-md");
+const footerGitTriggerInput = cva("pl-7 ui-text-sm");
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -78,7 +82,7 @@ function FooterTabControl({
   const shortcut = useCommandShortcut(commandId);
 
   return (
-    <TabsList variant="segmented" className={FOOTER_CONTROL_GROUP_CLASS_NAME}>
+    <TabsList variant="segmented" className={chromeControlGroup()}>
       <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
           ref={controlRef}
@@ -88,7 +92,7 @@ function FooterTabControl({
           isActive={active}
           size="xs"
           variant="segmented"
-          className={cn(FOOTER_CONTROL_CLASS_NAME, className)}
+          className={className}
           onClick={onClick}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -106,10 +110,8 @@ function FooterTabControl({
 
 const Footer = () => {
   const settings = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const uiState = useUIState();
-  const collaboration = useAuthStore((state) => state.subscription?.collaboration);
-  const presenceTarget = useCollaborationRuntimeStore((state) => state.presenceTarget);
-  const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
@@ -152,11 +154,6 @@ const Footer = () => {
       ? gitStatus
       : workspaceGitStatus;
   const footerBranch = footerGitStatus?.branch;
-  const collaborationFooterStatus = buildCollaborationFooterStatus({
-    collaboration,
-    presenceTarget,
-    activeDocumentStream,
-  });
   const updateMenuItems = useMemo(
     () => [
       {
@@ -208,8 +205,8 @@ const Footer = () => {
                 paletteTarget
                 placement="up"
                 triggerIconSize={16}
-                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
-                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[220px]")}
+                triggerClassName={footerGitTrigger()}
+                triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[220px]")}
                 onBranchChange={async () => {
                   const status = await getGitStatus(footerRepoPath);
                   actions.setWorkspaceGitStatus(status, footerRepoPath);
@@ -222,8 +219,8 @@ const Footer = () => {
                 repoPath={footerRepoPath}
                 placement="up"
                 triggerIconSize={16}
-                triggerClassName={FOOTER_GIT_TRIGGER_CLASS_NAME}
-                triggerInputClassName={cn(FOOTER_GIT_TRIGGER_INPUT_CLASS_NAME, "max-w-[118px]")}
+                triggerClassName={footerGitTrigger()}
+                triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[118px]")}
                 onWorktreeChange={async (worktreePath) => {
                   selectRepository(worktreePath);
                   const status = await getGitStatus(worktreePath);
@@ -237,42 +234,6 @@ const Footer = () => {
           ),
         }
       : null,
-    collaborationFooterStatus
-      ? {
-          id: "collaboration",
-          label: "Collaboration",
-          content: (
-            <FooterTabControl
-              tooltip={collaborationFooterStatus.tooltip}
-              active={collaborationFooterStatus.active}
-              className={cn(
-                FOOTER_PILL_TAB_CLASS_NAME,
-                "max-w-[148px]",
-                collaborationFooterStatus.tone === "live" &&
-                  "text-accent hover:bg-accent/10 hover:text-accent",
-                collaborationFooterStatus.tone === "connecting" &&
-                  "text-warning hover:bg-warning/10 hover:text-warning",
-                collaborationFooterStatus.tone === "error" &&
-                  "text-error hover:bg-error/10 hover:text-error",
-              )}
-              onClick={() => {
-                uiState.setActiveView("collaboration");
-                uiState.setIsSidebarVisible(true);
-              }}
-            >
-              <UsersThree weight="duotone" />
-              <span className="ui-font ui-text-xs max-w-[86px] truncate font-medium">
-                {collaborationFooterStatus.label}
-              </span>
-              {collaborationFooterStatus.countLabel && (
-                <span className={cn(FOOTER_COUNT_PILL_CLASS_NAME, "bg-accent text-primary-bg")}>
-                  {collaborationFooterStatus.countLabel}
-                </span>
-              )}
-            </FooterTabControl>
-          ),
-        }
-      : null,
     settings.coreFeatures.terminal
       ? {
           id: "terminal",
@@ -281,7 +242,7 @@ const Footer = () => {
             <FooterTabControl
               tooltip="Toggle Terminal"
               active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
-              className={FOOTER_ICON_TAB_CLASS_NAME}
+              className={chromeControl()}
               commandId="workbench.toggleTerminal"
               onClick={() => {
                 uiState.setBottomPaneActiveTab("terminal");
@@ -301,6 +262,28 @@ const Footer = () => {
           ),
         }
       : null,
+    settings.coreFeatures.debugger
+      ? {
+          id: "debugger",
+          label: "Run and Debug",
+          content: (
+            <FooterTabControl
+              tooltip="Toggle Run and Debug"
+              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "debugger"}
+              className={chromeControl()}
+              commandId="workbench.showDebugger"
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("debugger");
+                const showingDebugger =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "debugger";
+                uiState.setIsBottomPaneVisible(showingDebugger);
+              }}
+            >
+              <BugBeetle weight="duotone" />
+            </FooterTabControl>
+          ),
+        }
+      : null,
     settings.coreFeatures.diagnostics
       ? {
           id: "diagnostics",
@@ -314,7 +297,7 @@ const Footer = () => {
               }
               active={isDiagnosticsBufferActive}
               className={cn(
-                FOOTER_PILL_TAB_CLASS_NAME,
+                chromeControl({ shape: "pill" }),
                 !isDiagnosticsBufferActive && diagnosticsCount > 0 && "text-warning",
               )}
               commandId="workbench.toggleDiagnostics"
@@ -337,11 +320,11 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className={cn(FOOTER_PILL_TAB_CLASS_NAME, "text-blue-400 hover:text-blue-300")}
+              className={cn(chromeControl({ shape: "pill" }), "text-blue-400 hover:text-blue-300")}
               onClick={() => uiState.openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className={cn(FOOTER_COUNT_PILL_CLASS_NAME, "bg-blue-400 text-primary-bg")}>
+              <span className={cn(footerCountPill(), "bg-blue-400 text-primary-bg")}>
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
               </span>
             </FooterTabControl>
@@ -365,7 +348,7 @@ const Footer = () => {
                         : `Update available: ${updateInfo.version}`
                 }
                 className={cn(
-                  FOOTER_PILL_TAB_CLASS_NAME,
+                  chromeControl({ shape: "pill" }),
                   downloading || installing
                     ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
                     : updateError
@@ -397,7 +380,7 @@ const Footer = () => {
                 tooltip="Update Options"
                 active={isUpdateMenuOpen}
                 className={cn(
-                  FOOTER_ICON_TAB_CLASS_NAME,
+                  chromeControl(),
                   updateError
                     ? "text-error hover:bg-error/10 hover:text-error"
                     : "text-accent hover:bg-accent/10 hover:text-accent",
@@ -424,20 +407,78 @@ const Footer = () => {
   const footerLeadingItems = footerLeadingItemsSource.filter(
     (item): item is FooterItem<FooterLeadingItemId> => item !== null,
   );
+  const { activeBuffer, symbols } = useDocumentOutline(true);
+  const shouldShowOutline =
+    settings.coreFeatures.outline &&
+    activeBuffer?.type === "editor" &&
+    !activeBuffer.isVirtual &&
+    Boolean(activeBuffer.path) &&
+    symbols.length > 0;
+  const isOutlineActive =
+    uiState.isSidebarVisible &&
+    !uiState.isGitViewActive &&
+    !uiState.isGitHubPRsViewActive &&
+    uiState.activeSidebarView === "outline";
 
-  const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [];
+  const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [
+    ...(shouldShowOutline
+      ? [
+          {
+            id: "outline" as const,
+            label: "Outline",
+            content: (
+              <FooterTabControl
+                tooltip="Outline"
+                active={isOutlineActive}
+                className={chromeControl()}
+                commandId="workbench.focusOutline"
+                onClick={() => {
+                  if (settings.sidebarPosition !== "right") {
+                    void updateSetting("sidebarPosition", "right");
+                  }
+
+                  const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
+                    {
+                      isSidebarVisible: uiState.isSidebarVisible,
+                      isGitViewActive: uiState.isGitViewActive,
+                      isGitHubPRsViewActive: uiState.isGitHubPRsViewActive,
+                      activeSidebarView: uiState.activeSidebarView,
+                    },
+                    "outline",
+                  );
+
+                  uiState.setActiveView(nextView);
+                  uiState.setIsSidebarVisible(nextIsSidebarVisible);
+                }}
+              >
+                <ListBullets className={chromeIcon()} weight="duotone" />
+              </FooterTabControl>
+            ),
+          },
+        ]
+      : []),
+    {
+      id: "notifications",
+      label: "Notifications",
+      content: <NotificationsTrigger />,
+    },
+  ];
 
   return (
-    <div className="relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+    <div className="athas-footer-bar relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerLeadingItems, settings.footerLeadingItemsOrder).map((item) => (
-          <div key={item.id}>{item.content}</div>
+          <div key={item.id} className={chromeItemWrapper()}>
+            {item.content}
+          </div>
         ))}
       </div>
 
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerTrailingItems, settings.footerTrailingItemsOrder).map((item) => (
-          <div key={item.id}>{item.content}</div>
+          <div key={item.id} className={chromeItemWrapper()}>
+            {item.content}
+          </div>
         ))}
       </div>
     </div>

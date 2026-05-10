@@ -2,14 +2,14 @@ import {
   Folder,
   GitBranch,
   GitPullRequest,
-  ListBullets,
   MagnifyingGlass,
-  SidebarSimple,
   Sparkle as Sparkles,
-  UsersThree,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import {
+  chromeControl,
+  chromeControlGroup,
+} from "@/features/layout/components/chrome-control-styles";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
@@ -56,33 +56,17 @@ export const SidebarPaneSelector = ({
   const tooltipSide = compact ? "bottom" : isVertical ? "right" : "bottom";
   const iconClassName = compact ? "size-4" : isVertical ? "size-[18px]" : undefined;
   const tabClassName = compact
-    ? "min-w-7 [&_svg]:size-4"
+    ? chromeControl()
     : isVertical
-      ? "size-9 rounded-lg"
-      : "w-8 rounded-md";
+      ? chromeControl({ shape: "sidebar" })
+      : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
-  const isOutlineActive =
-    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
   const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
-  const isSidebarBuilderFeatureEnabled = coreFeatures.sidebarBuilder;
-  const isCollaborationFeatureEnabled = useAuthStore(
-    (state) => state.subscription?.collaboration?.enabled === true,
-  );
-  const isCollaborationActive =
-    isCollaborationFeatureEnabled &&
-    !isGitViewActive &&
-    !isGitHubPRsViewActive &&
-    activeSidebarView === "collaboration";
   const isMultiAgentsActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     activeSidebarView === "multi-agents";
-  const isSidebarBuilderActive =
-    isSidebarBuilderFeatureEnabled &&
-    !isGitViewActive &&
-    !isGitHubPRsViewActive &&
-    activeSidebarView === "sidebar-builder";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
@@ -120,37 +104,6 @@ export const SidebarPaneSelector = ({
           } satisfies TabsItem,
         ]
       : []),
-    {
-      id: "outline",
-      icon: <ListBullets className={iconClassName} weight="duotone" />,
-      isActive: isOutlineActive,
-      onClick: () => onViewChange("outline"),
-      role: "tab",
-      ariaLabel: "Outline",
-      className: tabClassName,
-      tooltip: {
-        content: "Outline",
-        shortcut: "Mod+Shift+O",
-        side: tooltipSide,
-      },
-    },
-    ...(isCollaborationFeatureEnabled
-      ? [
-          {
-            id: "collaboration",
-            icon: <UsersThree className={iconClassName} weight="duotone" />,
-            isActive: isCollaborationActive,
-            onClick: () => onViewChange("collaboration"),
-            role: "tab",
-            ariaLabel: "Collaboration",
-            className: tabClassName,
-            tooltip: {
-              content: "Collaboration",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
     ...(isMultiAgentsFeatureEnabled
       ? [
           {
@@ -163,23 +116,6 @@ export const SidebarPaneSelector = ({
             className: tabClassName,
             tooltip: {
               content: "Multi Agents",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...(isSidebarBuilderFeatureEnabled
-      ? [
-          {
-            id: "sidebar-builder",
-            icon: <SidebarSimple className={iconClassName} weight="duotone" />,
-            isActive: isSidebarBuilderActive,
-            onClick: () => onViewChange("sidebar-builder"),
-            role: "tab",
-            ariaLabel: "Custom Sidebar",
-            className: tabClassName,
-            tooltip: {
-              content: "Custom Sidebar",
               side: tooltipSide,
             },
           } satisfies TabsItem,
@@ -259,7 +195,7 @@ export const SidebarPaneSelector = ({
         title={item.title}
         isActive={!!item.isActive}
         size={compact ? "xs" : "sm"}
-        variant={compact ? "segmented" : "default"}
+        variant="default"
         className={item.className}
         onClick={item.onClick}
       >
@@ -290,9 +226,9 @@ export const SidebarPaneSelector = ({
 
   return (
     <TabsList
-      variant={compact ? "segmented" : "default"}
+      variant="default"
       className={cn(
-        compact ? undefined : "gap-0.5 p-1",
+        compact ? chromeControlGroup() : "gap-0.5 p-1",
         isVertical && "flex-col items-center gap-1 rounded-none border-0 bg-transparent p-0",
       )}
     >

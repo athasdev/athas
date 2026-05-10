@@ -13,6 +13,8 @@ use std::{
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
+#[cfg(target_os = "macos")]
+use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy, clear_vibrancy};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -152,10 +154,11 @@ fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, St
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    #[cfg(target_os = "macos")]
    {
-      use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
 
-      apply_vibrancy(window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
-         .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+      if let Err(error) = apply_vibrancy(window, NSVisualEffectMaterial::Menu, None, None) {
+         log::warn!("Failed to initialize macOS window vibrancy: {error}");
+      }
    }
 
    #[cfg(target_os = "windows")]
@@ -169,19 +172,91 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    }
 }
 
+#[cfg(target_os = "macos")]
+fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Result<(), String> {
+   use objc::{class, msg_send, runtime::Object, sel, sel_impl};
+   use std::ffi::CString;
+
+   let appearance_name =
+      CString::new(appearance_name).map_err(|e| format!("Invalid macOS appearance name: {e}"))?;
+
+   unsafe {
+      let name: *mut Object =
+         msg_send![class!(NSString), stringWithUTF8String: appearance_name.as_ptr()];
+      if name.is_null() {
+         return Err("Failed to create macOS appearance name".to_string());
+      }
+
+      let appearance: *mut Object = msg_send![class!(NSAppearance), appearanceNamed: name];
+      if appearance.is_null() {
+         return Err("Failed to resolve macOS appearance".to_string());
+      }
+
+      let target = target.cast::<Object>();
+      let _: () = msg_send![target, setAppearance: appearance];
+   }
+
+   Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn sync_macos_window_appearance(
+   window: &tauri::WebviewWindow<AthasRuntime>,
+   theme_type: &str,
+) -> Result<(), String> {
+   let appearance_name = match theme_type {
+      "light" => "NSAppearanceNameAqua",
+      "dark" => "NSAppearanceNameDarkAqua",
+      _ => return Err(format!("Unsupported macOS theme appearance: {theme_type}")),
+   };
+
+   let ns_window = window
+      .ns_window()
+      .map_err(|e| format!("Failed to access macOS window: {e}"))?;
+   set_ns_appearance(ns_window, appearance_name)?;
+
+   let ns_view = window
+      .ns_view()
+      .map_err(|e| format!("Failed to access macOS webview: {e}"))?;
+   set_ns_appearance(ns_view, appearance_name)?;
+
+   if let Ok(true) = clear_vibrancy(window) {
+      apply_vibrancy(window, NSVisualEffectMaterial::Menu, None, None)
+         .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
+   }
+
+   Ok(())
+}
+
 #[command]
 pub fn uses_native_window_chrome() -> bool {
    cfg!(all(target_os = "linux", feature = "linux"))
 }
 
-pub fn create_app_window_internal(
+#[command]
+pub fn set_macos_window_appearance(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   theme_type: String,
+) -> Result<(), String> {
+   #[cfg(target_os = "macos")]
+   {
+      sync_macos_window_appearance(&window, &theme_type)?;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = window;
+      let _ = theme_type;
+   }
+
+   Ok(())
+}
+
+fn create_labeled_app_window_internal(
    app: &tauri::AppHandle<AthasRuntime>,
+   label: String,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
-   let label = format!(
-      "main-{}",
-      APP_WINDOW_COUNTER.fetch_add(1, Ordering::SeqCst) + 1
-   );
    let url = build_window_open_url(request.as_ref());
 
    let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
@@ -202,7 +277,8 @@ pub fn create_app_window_internal(
    #[cfg(target_os = "macos")]
    let builder = builder
       .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay);
+      .title_bar_style(TitleBarStyle::Overlay)
+      .transparent(true);
 
    let window = builder
       .build()
@@ -211,6 +287,18 @@ pub fn create_app_window_internal(
    configure_app_window(&window);
 
    Ok(label)
+}
+
+pub fn create_app_window_internal(
+   app: &tauri::AppHandle<AthasRuntime>,
+   request: Option<CreateAppWindowRequest>,
+) -> Result<String, String> {
+   let label = format!(
+      "main-{}",
+      APP_WINDOW_COUNTER.fetch_add(1, Ordering::SeqCst) + 1
+   );
+
+   create_labeled_app_window_internal(app, label, request)
 }
 
 #[command]

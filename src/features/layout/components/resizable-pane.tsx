@@ -178,13 +178,13 @@ export function ResizablePane({
     ],
   );
 
-  const handlePosition = position === "right" ? "left-0" : "right-0";
+  const handlePosition = position === "right" ? "left-[-8px]" : "right-[-8px]";
   return (
     <div
       ref={paneRef}
       style={{ width: hidden ? "0px" : `${width}px` }}
       className={cn(
-        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
+        "athas-resizable-pane relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
         hidden && "pointer-events-none",
         className,
       )}
@@ -194,7 +194,7 @@ export function ResizablePane({
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
+            "absolute top-0 z-50 h-full w-4 cursor-col-resize transition-colors duration-150",
             handlePosition,
           )}
           role="separator"
@@ -215,7 +215,7 @@ export function ResizablePane({
       >
         <div
           className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
+            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
             !hidden && "rounded-lg",
           )}
         >

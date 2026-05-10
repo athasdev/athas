@@ -14,6 +14,14 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
+import {
+  closeActiveEditorGroup,
+  closeOtherEditorGroups,
+  moveActiveEditorToAdjacentGroup,
+  resetEditorGroupSizes,
+  splitActiveEditorGroup,
+  toggleActiveEditorGroupLock,
+} from "@/features/panes/utils/pane-command-actions";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -363,6 +371,21 @@ const toggleTerminalPane = () => {
   }
 };
 
+const openDebuggerPane = () => {
+  const state = useUIState.getState();
+  state.setBottomPaneActiveTab("debugger");
+  state.setIsBottomPaneVisible(true);
+};
+
+const toggleDebuggerPane = () => {
+  const state = useUIState.getState();
+  if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "debugger") {
+    state.setIsBottomPaneVisible(false);
+  } else {
+    openDebuggerPane();
+  }
+};
+
 const getActiveDebugFile = () => {
   const bufferStore = useBufferStore.getState();
   const activeBuffer = bufferStore.buffers.find(
@@ -391,9 +414,7 @@ const startGeneratedDebugSession = () => {
   const config = createGeneratedDebugConfig(activeFile, rootFolderPath);
   const command = buildDebugCommand(config);
   if (!command.trim()) {
-    const state = useUIState.getState();
-    state.setActiveView("debugger");
-    state.setIsSidebarVisible(true);
+    openDebuggerPane();
     return;
   }
 
@@ -477,6 +498,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+f",
     execute: () => {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (activeElement?.closest(".file-tree-container")) {
+        window.dispatchEvent(new CustomEvent("file-tree-open-search"));
+        return;
+      }
+
       if (useKeymapStore.getState().contexts.terminalFocus) {
         window.dispatchEvent(new CustomEvent("terminal-open-search"));
         return;
@@ -563,15 +590,7 @@ const viewCommands: Command[] = [
     title: "Show Run and Debug",
     category: "View",
     keybinding: "cmd+shift+d",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isSidebarVisible && state.activeSidebarView === "debugger") {
-        state.setIsSidebarVisible(false);
-      } else {
-        state.setActiveView("debugger");
-        state.setIsSidebarVisible(true);
-      }
-    },
+    execute: toggleDebuggerPane,
   },
   {
     id: "debug.start",
@@ -742,6 +761,7 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+shift+o",
     execute: () => {
+      if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
       useUIState.getState().openCommandPaletteView("outline");
     },
   },
@@ -750,6 +770,7 @@ const navigationCommands: Command[] = [
     title: "Show Outline",
     category: "Navigation",
     execute: () => {
+      if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
       const uiState = useUIState.getState();
       uiState.setIsSidebarVisible(true);
       uiState.setActiveView("outline");
@@ -1027,6 +1048,73 @@ const navigationCommands: Command[] = [
   },
 ];
 
+const paneCommands: Command[] = [
+  {
+    id: "workbench.splitEditorRight",
+    title: "Split Editor Right",
+    category: "View",
+    execute: () => {
+      splitActiveEditorGroup("horizontal");
+    },
+  },
+  {
+    id: "workbench.splitEditorDown",
+    title: "Split Editor Down",
+    category: "View",
+    execute: () => {
+      splitActiveEditorGroup("vertical");
+    },
+  },
+  {
+    id: "workbench.closeEditorGroup",
+    title: "Close Editor Group",
+    category: "View",
+    execute: () => {
+      closeActiveEditorGroup();
+    },
+  },
+  {
+    id: "workbench.closeOtherEditorGroups",
+    title: "Close Other Editor Groups",
+    category: "View",
+    execute: () => {
+      closeOtherEditorGroups();
+    },
+  },
+  {
+    id: "workbench.moveEditorToNextGroup",
+    title: "Move Editor Into Next Group",
+    category: "View",
+    execute: () => {
+      moveActiveEditorToAdjacentGroup("next");
+    },
+  },
+  {
+    id: "workbench.moveEditorToPreviousGroup",
+    title: "Move Editor Into Previous Group",
+    category: "View",
+    execute: () => {
+      moveActiveEditorToAdjacentGroup("previous");
+    },
+  },
+  {
+    id: "workbench.resetEditorGroupSizes",
+    title: "Reset Editor Group Sizes",
+    category: "View",
+    execute: () => {
+      resetEditorGroupSizes();
+    },
+  },
+  {
+    id: "workbench.toggleEditorGroupLock",
+    title: "Toggle Editor Group Lock",
+    category: "View",
+    execute: () => {
+      toggleActiveEditorGroupLock();
+    },
+  },
+];
+
 const databaseCommands: Command[] = [
   {
     id: "database.connect",
@@ -1127,6 +1215,7 @@ const allCommands: Command[] = [
   ...terminalCommands,
   ...viewCommands,
   ...navigationCommands,
+  ...paneCommands,
   ...databaseCommands,
   ...windowCommands,
 ];

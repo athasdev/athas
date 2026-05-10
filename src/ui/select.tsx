@@ -70,7 +70,7 @@ const selectTriggerVariants = cva(
 );
 
 const selectContentVariants = cva(
-  "z-[10040] max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 ease-out",
+  "z-[10040] max-h-96 min-w-0 overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 ease-out",
 );
 
 const selectItemVariants = cva(
@@ -156,6 +156,12 @@ function SelectEmptyState() {
 
 function getFilteredOptions(options: SelectOption[], searchable: boolean, searchQuery: string) {
   return searchable ? filterSelectOptions(options, searchQuery) : options;
+}
+
+function getAnchorWidth(anchor: HTMLElement | null, minimumWidth = 0) {
+  if (!anchor) return undefined;
+  const width = anchor.getBoundingClientRect().width;
+  return Number.isFinite(width) ? Math.max(minimumWidth, Math.round(width)) : undefined;
 }
 
 function getInputTriggerText(
@@ -401,8 +407,9 @@ export default function Select({
           anchorRef={searchInputRef}
           anchorAlign="start"
           onClose={() => handleOpenChange(false)}
-          className={cn("overflow-hidden rounded-xl p-0", menuClassName)}
+          className={cn("min-w-0 overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+          style={{ width: getAnchorWidth(searchInputRef.current) }}
         >
           <div
             ref={listboxRef}
@@ -538,6 +545,7 @@ export default function Select({
         onClose={() => handleOpenChange(false)}
         className={cn(selectContentVariants(), menuClassName)}
         menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+        style={{ width: getAnchorWidth(triggerRef.current) }}
       >
         {searchable && (
           <SelectSearchField

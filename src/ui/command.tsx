@@ -144,6 +144,18 @@ export const CommandList = ({ children, ref }: CommandListProps) => (
 
 CommandList.displayName = "CommandList";
 
+interface CommandFooterProps {
+  children: React.ReactNode;
+}
+
+export const CommandFooter = ({ children }: CommandFooterProps) => (
+  <div className="sticky bottom-0 border-border border-t bg-primary-bg px-2 py-2">
+    <div className="flex items-center gap-1">{children}</div>
+  </div>
+);
+
+CommandFooter.displayName = "CommandFooter";
+
 interface CommandInputProps {
   value: string;
   onChange: (value: string) => void;

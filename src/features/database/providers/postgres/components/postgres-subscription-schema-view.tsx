@@ -1,5 +1,5 @@
 import { RadioButton as Radio } from "@phosphor-icons/react";
-import type { PostgresSubscriptionInfo } from "../../sqlite/sqlite-types";
+import type { PostgresSubscriptionInfo } from "../../../models/common.types";
 
 interface PostgresSubscriptionSchemaViewProps {
   subscriptionInfo: PostgresSubscriptionInfo;

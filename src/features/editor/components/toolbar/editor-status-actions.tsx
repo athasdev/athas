@@ -138,11 +138,10 @@ export function EditorStatusActions({
     setIsCurrentFileLspAvailable(Boolean(extensionRegistry.getLspServerPath(activeBuffer.path)));
   }, [activeBuffer?.path, currentServerEntry]);
 
-  const handleRestartServer = async (serverKey: string, displayName: string) => {
+  const handleRestartServer = async (serverKey: string) => {
     setBusyServerKey(serverKey);
     try {
       await lspClient.restartTrackedServer(serverKey);
-      toast.success(`Restarted ${displayName}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to restart language server");
     } finally {
@@ -150,11 +149,10 @@ export function EditorStatusActions({
     }
   };
 
-  const handleStopServer = async (serverKey: string, displayName: string) => {
+  const handleStopServer = async (serverKey: string) => {
     setBusyServerKey(serverKey);
     try {
       await lspClient.stopTrackedServer(serverKey);
-      toast.success(`Stopped ${displayName}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to stop language server");
     } finally {
@@ -174,7 +172,6 @@ export function EditorStatusActions({
       }
       const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
       await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
-      toast.success(`Started ${currentFileDisplayName || "language server"}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start language server");
     } finally {
@@ -444,7 +441,7 @@ export function EditorStatusActions({
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
                           type="button"
-                          onClick={() => void handleRestartServer(entry.key, entry.displayName)}
+                          onClick={() => void handleRestartServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent}
                           variant="default"
                           compact
@@ -454,7 +451,7 @@ export function EditorStatusActions({
                         </Button>
                         <Button
                           type="button"
-                          onClick={() => void handleStopServer(entry.key, entry.displayName)}
+                          onClick={() => void handleStopServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent}
                           variant="default"
                           compact

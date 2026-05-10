@@ -1,12 +1,4 @@
-import SqlDatabaseViewer from "../sql/sql-database-viewer";
+import { createConnectionSqlViewer } from "../sql/sql-provider-viewer";
 import { useMysqlStore } from "./stores/mysql-store";
 
-interface MySQLViewerProps {
-  connectionId: string;
-}
-
-export default function MySQLViewer({ connectionId }: MySQLViewerProps) {
-  return (
-    <SqlDatabaseViewer connectionId={connectionId} databaseType="mysql" useStore={useMysqlStore} />
-  );
-}
+export default createConnectionSqlViewer("mysql", useMysqlStore);

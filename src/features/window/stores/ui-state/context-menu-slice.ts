@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import type { DatabaseObjectKind, DatabaseRow } from "@/features/database/models/common.types";
 import type { DatabaseType } from "@/features/database/models/provider.types";
 
 export interface ContextMenuState {
@@ -8,12 +9,13 @@ export interface ContextMenuState {
     x: number;
     y: number;
     tableName: string;
+    objectKind?: DatabaseObjectKind;
     databaseType?: DatabaseType;
   } | null;
   databaseRowMenu: {
     x: number;
     y: number;
-    rowData: Record<string, any>;
+    rowData: DatabaseRow;
     tableName: string;
     databaseType?: DatabaseType;
   } | null;
@@ -22,13 +24,19 @@ export interface ContextMenuState {
 export interface ContextMenuActions {
   setProjectNameMenu: (v: { x: number; y: number } | null) => void;
   setDatabaseTableMenu: (
-    v: { x: number; y: number; tableName: string; databaseType?: DatabaseType } | null,
+    v: {
+      x: number;
+      y: number;
+      tableName: string;
+      objectKind?: DatabaseObjectKind;
+      databaseType?: DatabaseType;
+    } | null,
   ) => void;
   setDatabaseRowMenu: (
     v: {
       x: number;
       y: number;
-      rowData: Record<string, any>;
+      rowData: DatabaseRow;
       tableName: string;
       databaseType?: DatabaseType;
     } | null,
@@ -49,13 +57,19 @@ export const createContextMenuSlice: StateCreator<ContextMenuSlice, [], [], Cont
   // Actions
   setProjectNameMenu: (v: { x: number; y: number } | null) => set({ projectNameMenu: v }),
   setDatabaseTableMenu: (
-    v: { x: number; y: number; tableName: string; databaseType?: DatabaseType } | null,
+    v: {
+      x: number;
+      y: number;
+      tableName: string;
+      objectKind?: DatabaseObjectKind;
+      databaseType?: DatabaseType;
+    } | null,
   ) => set({ databaseTableMenu: v }),
   setDatabaseRowMenu: (
     v: {
       x: number;
       y: number;
-      rowData: Record<string, any>;
+      rowData: DatabaseRow;
       tableName: string;
       databaseType?: DatabaseType;
     } | null,

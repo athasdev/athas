@@ -2,6 +2,7 @@ import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
+import { invoke } from "@tauri-apps/api/core";
 import type { Settings, Theme } from "@/features/settings/types/settings";
 
 const ALL_THEME_CLASSES = [
@@ -95,6 +96,7 @@ export async function applyTheme(theme: Theme) {
         const appliedTheme = themeRegistry.getTheme(theme);
         if (appliedTheme) {
           cacheThemeForBootstrap(appliedTheme);
+          syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
         }
       });
       return;
@@ -104,11 +106,18 @@ export async function applyTheme(theme: Theme) {
     const appliedTheme = themeRegistry.getTheme(theme);
     if (appliedTheme) {
       cacheThemeForBootstrap(appliedTheme);
+      syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
     }
   } catch (error) {
     console.error("Failed to apply theme via registry:", error);
     applyFallbackTheme(theme);
   }
+}
+
+function syncMacOSWindowAppearance(themeType: "light" | "dark") {
+  void invoke("set_macos_window_appearance", { themeType }).catch((error) => {
+    console.warn("Failed to sync macOS window appearance", error);
+  });
 }
 
 export function cacheFontSettings(

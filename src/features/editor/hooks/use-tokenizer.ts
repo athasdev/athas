@@ -35,6 +35,17 @@ interface TextMetricsCache {
   lineCount: number;
 }
 
+interface TokenState {
+  bufferId?: string;
+  tokens: Token[];
+}
+
+export interface SyntaxTokenSnapshot {
+  bufferId: string;
+  content: string;
+  tokens: Token[];
+}
+
 export function getLanguageId(filePath: string): string | null {
   return getLanguageIdFromPath(filePath);
 }
@@ -122,6 +133,40 @@ export function retargetTokensForContentEdit(
   );
 }
 
+export function resolveSyntaxTokensForContent({
+  tokens,
+  tokenizedContent,
+  normalizedContent,
+  bufferId,
+  snapshot,
+}: {
+  tokens: Token[];
+  tokenizedContent: string;
+  normalizedContent: string;
+  bufferId?: string;
+  snapshot?: SyntaxTokenSnapshot | null;
+}): Token[] {
+  let sourceTokens = tokens;
+  let sourceContent = tokenizedContent;
+
+  if (sourceTokens.length === 0 && bufferId && snapshot?.bufferId === bufferId) {
+    sourceTokens = snapshot.tokens;
+    sourceContent = snapshot.content;
+  }
+
+  if (sourceTokens.length === 0) return [];
+  if (sourceContent === normalizedContent) return sourceTokens;
+  if (!sourceContent) return sourceTokens;
+
+  const retargetedTokens = retargetTokensForContentEdit(
+    sourceTokens,
+    sourceContent,
+    normalizedContent,
+  );
+
+  return retargetedTokens.length > 0 ? retargetedTokens : sourceTokens;
+}
+
 export function useTokenizer({
   filePath,
   bufferId,
@@ -129,7 +174,7 @@ export function useTokenizer({
   enabled = true,
   incremental = true,
 }: TokenizerOptions) {
-  const [tokens, setTokens] = useState<Token[]>([]);
+  const [tokenState, setTokenState] = useState<TokenState>({ tokens: [] });
   const [tokenizedContent, setTokenizedContent] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<TokenCache>({
@@ -141,25 +186,32 @@ export function useTokenizer({
   const backgroundSweepVersionRef = useRef(0);
   const backgroundSweepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
+  const tokens = tokenState.bufferId === bufferId ? tokenState.tokens : [];
 
-  const retargetCachedTokens = useCallback((normalizedText: string) => {
-    const cached = cacheRef.current;
-    const retargetedTokens = retargetTokensForContentEdit(
-      cached.fullTokens,
-      cached.previousContent,
-      normalizedText,
-    );
+  const retargetCachedTokens = useCallback(
+    (normalizedText: string) => {
+      if (!bufferId) return;
 
-    if (retargetedTokens === cached.fullTokens) {
-      return;
-    }
+      const cached = cacheRef.current;
+      const retargetedTokens = retargetTokensForContentEdit(
+        cached.fullTokens,
+        cached.previousContent,
+        normalizedText,
+      );
 
-    cacheRef.current = {
-      fullTokens: retargetedTokens,
-      previousContent: normalizedText,
-    };
-    setTokens(retargetedTokens);
-  }, []);
+      if (retargetedTokens === cached.fullTokens) {
+        return;
+      }
+
+      cacheRef.current = {
+        fullTokens: retargetedTokens,
+        previousContent: normalizedText,
+      };
+      setTokenState({ bufferId, tokens: retargetedTokens });
+      setTokenizedContent(normalizedText);
+    },
+    [bufferId],
+  );
 
   const getTextMetrics = useCallback((text: string): TextMetricsCache => {
     const cached = textMetricsRef.current;
@@ -186,7 +238,7 @@ export function useTokenizer({
       const languageId = languageIdOverride || getLanguageId(filePath);
       if (!languageId) {
         logger.warn("Editor", `[Tokenizer] No language mapping for ${filePath}`);
-        setTokens([]);
+        setTokenState({ bufferId, tokens: [] });
         return;
       }
       const languageAssets = getLanguageAssetConfig(languageId);
@@ -211,7 +263,7 @@ export function useTokenizer({
         if (requestVersion !== requestVersionRef.current) return;
 
         const newTokens = result.tokens.map(convertToToken);
-        setTokens(newTokens);
+        setTokenState({ bufferId, tokens: newTokens });
         setTokenizedContent(result.normalizedText);
         cacheRef.current = {
           fullTokens: newTokens,
@@ -220,7 +272,7 @@ export function useTokenizer({
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
         logger.warn("Editor", "[Tokenizer] Full tokenization failed:", error);
-        setTokens([]);
+        setTokenState({ bufferId, tokens: [] });
         setTokenizedContent("");
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -299,7 +351,7 @@ export function useTokenizer({
           (a, b) => a.start - b.start,
         );
 
-        setTokens(mergedTokens);
+        setTokenState({ bufferId, tokens: mergedTokens });
         setTokenizedContent(result.normalizedText);
         cacheRef.current.fullTokens = mergedTokens;
         cacheRef.current.previousContent = result.normalizedText;
@@ -374,7 +426,7 @@ export function useTokenizer({
       previousContent: "",
     };
     textMetricsRef.current = null;
-    setTokens([]);
+    setTokenState({ tokens: [] });
     setTokenizedContent("");
     setLoading(false);
   }, []);

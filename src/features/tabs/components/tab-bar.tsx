@@ -16,6 +16,8 @@ import {
   ArrowRight,
   ArrowsOut as Maximize2,
   ArrowsIn as Minimize2,
+  Lock,
+  LockOpen,
   SidebarSimple as PanelLeftClose,
   SplitHorizontal as SplitSquareHorizontal,
 } from "@phosphor-icons/react";
@@ -28,8 +30,11 @@ import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
+import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
+import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
@@ -71,8 +76,7 @@ const TabBar = ({
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { moveBufferToPane, setActivePane, splitPane, closePane, togglePaneFullscreen } =
-    usePaneStore.use.actions();
+  const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
   const pane = paneId
@@ -114,6 +118,7 @@ const TabBar = ({
     ? Boolean(activeWebViewerNavigation?.canGoForward)
     : jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
+  const isPaneLocked = Boolean(pane?.locked);
   const isInSplit = paneRoot.type === "split";
   const isBottomPane = paneId === BOTTOM_PANE_ID;
 
@@ -216,22 +221,18 @@ const TabBar = ({
 
   const handleSplitActivePane = useCallback(() => {
     if (!paneId) return;
-
-    // Terminal, agent, and other session-based buffers cannot be shared
-    // across panes — open the new split with an empty new-tab view instead.
-    const isSessionBuffer =
-      activeBuffer &&
-      (activeBuffer.type === "terminal" ||
-        activeBuffer.type === "agent" ||
-        activeBuffer.type === "webViewer");
-
-    splitPane(paneId, "horizontal", isSessionBuffer ? undefined : (activeBufferId ?? undefined));
-  }, [activeBuffer, activeBufferId, paneId, splitPane]);
+    splitEditorGroup(paneId, "horizontal", activeBufferId);
+  }, [activeBufferId, paneId]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
     togglePaneFullscreen(paneId);
   }, [paneId, togglePaneFullscreen]);
+
+  const handleTogglePaneLocked = useCallback(() => {
+    if (!paneId) return;
+    setPaneLocked(paneId, !isPaneLocked);
+  }, [isPaneLocked, paneId, setPaneLocked]);
 
   const canScrollTabsHorizontally = useCallback(() => {
     const container = tabBarRef.current;
@@ -547,18 +548,18 @@ const TabBar = ({
         target.paneId &&
         (target.paneId !== paneId || (target.zone && target.zone !== "center"))
       ) {
-        let destinationPaneId = target.paneId;
         const preserveEmptySource = target.paneId === paneId;
-        if (target.zone && target.zone !== "center") {
-          const direction =
-            target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-          const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
-          destinationPaneId =
-            splitPane(target.paneId, direction, undefined, placement) ?? target.paneId;
+        const destinationPaneId = moveBufferToPaneDropTarget(
+          dragged.id,
+          paneId,
+          { paneId: target.paneId, zone: target.zone },
+          preserveEmptySource,
+        );
+        if (!destinationPaneId) {
+          resetDrag();
+          return;
         }
-
-        setActivePane(destinationPaneId);
-        moveBufferToPane(dragged.id, paneId, destinationPaneId, preserveEmptySource);
+        activateBufferInPaneAndSync(destinationPaneId, dragged.id);
         if (destinationPaneId === BOTTOM_PANE_ID) {
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
@@ -576,16 +577,7 @@ const TabBar = ({
 
       resetDrag();
     },
-    [
-      handleTabClick,
-      moveBufferToPane,
-      paneId,
-      reorderBuffers,
-      resetDrag,
-      setActivePane,
-      sortedBuffers,
-      splitPane,
-    ],
+    [handleTabClick, paneId, reorderBuffers, resetDrag, sortedBuffers],
   );
 
   useEffect(() => {
@@ -786,6 +778,24 @@ const TabBar = ({
             {paneId && !disablePaneActions && !isBottomPane && (
               <Button
                 type="button"
+                onClick={handleTogglePaneLocked}
+                variant="ghost"
+                className={
+                  isPaneLocked
+                    ? "shrink-0 rounded-lg text-accent"
+                    : "shrink-0 rounded-lg text-text-lighter"
+                }
+                tooltip={isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group"}
+                tooltipSide="bottom"
+                aria-label={isPaneLocked ? "Unlock editor group" : "Lock editor group"}
+                compact
+              >
+                {isPaneLocked ? <Lock /> : <LockOpen />}
+              </Button>
+            )}
+            {paneId && !disablePaneActions && !isBottomPane && (
+              <Button
+                type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
                 className="shrink-0 rounded-lg text-text-lighter"
@@ -857,16 +867,14 @@ const TabBar = ({
         onSplitRight={
           paneId
             ? (targetPaneId, bufferId) => {
-                const { splitPane } = usePaneStore.getState().actions;
-                splitPane(targetPaneId, "horizontal", bufferId);
+                splitEditorGroup(targetPaneId, "horizontal", bufferId);
               }
             : undefined
         }
         onSplitDown={
           paneId
             ? (targetPaneId, bufferId) => {
-                const { splitPane } = usePaneStore.getState().actions;
-                splitPane(targetPaneId, "vertical", bufferId);
+                splitEditorGroup(targetPaneId, "vertical", bufferId);
               }
             : undefined
         }

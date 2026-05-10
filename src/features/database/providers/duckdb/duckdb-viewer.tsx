@@ -1,16 +1,4 @@
-import SqlDatabaseViewer from "../sql/sql-database-viewer";
+import { createFileSqlViewer } from "../sql/sql-provider-viewer";
 import { useDuckdbStore } from "./stores/duckdb-store";
 
-interface DuckDBViewerProps {
-  databasePath: string;
-}
-
-export default function DuckDBViewer({ databasePath }: DuckDBViewerProps) {
-  return (
-    <SqlDatabaseViewer
-      databasePath={databasePath}
-      databaseType="duckdb"
-      useStore={useDuckdbStore}
-    />
-  );
-}
+export default createFileSqlViewer("duckdb", useDuckdbStore);

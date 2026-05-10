@@ -11,7 +11,6 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAIChatStore } from "@/features/ai/store/store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
@@ -35,8 +34,6 @@ const newTabRowClassName =
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
-  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const { setIsDatabaseConnectionVisible } = useUIState();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -61,9 +58,8 @@ export function EmptyEditorState() {
   }, [openTerminalBuffer]);
 
   const handleOpenAgent = useCallback(() => {
-    const chatId = createNewChat(selectedAgentId);
-    openAgentBuffer(chatId);
-  }, [createNewChat, openAgentBuffer, selectedAgentId]);
+    openAgentBuffer();
+  }, [openAgentBuffer]);
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");

@@ -1,9 +1,18 @@
+use crate::sql_common::{RowIdentity, build_row_identity_where_clause};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TableInfo {
    name: String,
+   #[serde(default = "default_database_object_kind")]
+   kind: String,
+   #[serde(skip_serializing_if = "Option::is_none")]
+   table_name: Option<String>,
+}
+
+fn default_database_object_kind() -> String {
+   "table".to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -171,10 +180,10 @@ fn build_where_clause(
    {
       let search_conditions: Vec<String> = search_columns
          .iter()
-         .map(|col| format!("CAST({} AS TEXT) LIKE ?", escape_identifier(col)))
+         .map(|col| format!("LOWER(CAST({} AS TEXT)) LIKE ?", escape_identifier(col)))
          .collect();
       conditions.push(format!("({})", search_conditions.join(" OR ")));
-      let like_value = format!("%{}%", term);
+      let like_value = format!("%{}%", term.to_lowercase());
       for _ in search_columns {
          params.push(rusqlite::types::Value::Text(like_value.clone()));
       }
@@ -250,11 +259,21 @@ pub async fn get_sqlite_tables(path: String) -> Result<Vec<TableInfo>, String> {
    let conn = Connection::open(&path).map_err(|e| format!("Failed to open database: {}", e))?;
 
    let mut stmt = conn
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+      .prepare(
+         "SELECT name, type, CASE WHEN type = 'index' THEN tbl_name ELSE NULL END AS table_name \
+          FROM sqlite_master WHERE type IN ('table', 'view', 'index') AND name NOT LIKE \
+          'sqlite_%' ORDER BY type, name",
+      )
       .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
    let table_iter = stmt
-      .query_map([], |row| Ok(TableInfo { name: row.get(0)? }))
+      .query_map([], |row| {
+         Ok(TableInfo {
+            name: row.get(0)?,
+            kind: row.get(1)?,
+            table_name: row.get(2)?,
+         })
+      })
       .map_err(|e| format!("Failed to execute query: {}", e))?;
 
    let mut tables = Vec::new();
@@ -363,6 +382,55 @@ pub async fn update_sqlite_row(
    Ok(affected as i64)
 }
 
+pub async fn update_sqlite_row_by_values(
+   path: String,
+   table: String,
+   set_columns: Vec<String>,
+   set_values: Vec<serde_json::Value>,
+   identity: RowIdentity,
+) -> Result<i64, String> {
+   let conn = Connection::open(&path).map_err(|e| format!("Failed to open database: {}", e))?;
+
+   let set_clause = set_columns
+      .iter()
+      .map(|col| format!("{} = ?", escape_identifier(col)))
+      .collect::<Vec<_>>()
+      .join(", ");
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier,
+      |_| "?".to_string(),
+      &mut param_offset,
+   )?;
+   let sql = format!(
+      "UPDATE {} SET {} {}",
+      escape_identifier(&table),
+      set_clause,
+      where_clause
+   );
+
+   let mut stmt = conn
+      .prepare(&sql)
+      .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+   let mut all_values = set_values;
+   all_values.extend(where_values);
+
+   let rusqlite_values: Result<Vec<_>, String> = all_values.iter().map(json_to_rusqlite).collect();
+   let rusqlite_values = rusqlite_values?;
+   let params: Vec<&dyn rusqlite::ToSql> = rusqlite_values
+      .iter()
+      .map(|v| v as &dyn rusqlite::ToSql)
+      .collect();
+
+   let affected = stmt
+      .execute(&params[..])
+      .map_err(|e| format!("Failed to execute update: {}", e))?;
+
+   Ok(affected as i64)
+}
+
 /// Delete rows from a table
 pub async fn delete_sqlite_row(
    path: String,
@@ -386,6 +454,41 @@ pub async fn delete_sqlite_row(
 
    let affected = stmt
       .execute([&rusqlite_value])
+      .map_err(|e| format!("Failed to execute delete: {}", e))?;
+
+   Ok(affected as i64)
+}
+
+pub async fn delete_sqlite_row_by_values(
+   path: String,
+   table: String,
+   identity: RowIdentity,
+) -> Result<i64, String> {
+   let conn = Connection::open(&path).map_err(|e| format!("Failed to open database: {}", e))?;
+
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier,
+      |_| "?".to_string(),
+      &mut param_offset,
+   )?;
+   let sql = format!("DELETE FROM {} {}", escape_identifier(&table), where_clause);
+
+   let mut stmt = conn
+      .prepare(&sql)
+      .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+   let rusqlite_values: Result<Vec<_>, String> =
+      where_values.iter().map(json_to_rusqlite).collect();
+   let rusqlite_values = rusqlite_values?;
+   let params: Vec<&dyn rusqlite::ToSql> = rusqlite_values
+      .iter()
+      .map(|v| v as &dyn rusqlite::ToSql)
+      .collect();
+
+   let affected = stmt
+      .execute(&params[..])
       .map_err(|e| format!("Failed to execute delete: {}", e))?;
 
    Ok(affected as i64)
@@ -587,10 +690,15 @@ mod tests {
    fn test_build_where_clause_search_term() {
       let search_columns = vec!["name".to_string(), "email".to_string()];
       let (clause, params) =
-         build_where_clause(&[], &Some("alice".to_string()), &search_columns, "AND");
-      assert!(clause.contains("CAST(\"name\" AS TEXT) LIKE ?"));
-      assert!(clause.contains("CAST(\"email\" AS TEXT) LIKE ?"));
+         build_where_clause(&[], &Some("Alice".to_string()), &search_columns, "AND");
+      assert!(clause.contains("LOWER(CAST(\"name\" AS TEXT)) LIKE ?"));
+      assert!(clause.contains("LOWER(CAST(\"email\" AS TEXT)) LIKE ?"));
       assert_eq!(params.len(), 2);
+      if let rusqlite::types::Value::Text(ref v) = params[0] {
+         assert_eq!(v, "%alice%");
+      } else {
+         panic!("Expected text param");
+      }
    }
 
    #[test]
@@ -665,6 +773,48 @@ mod tests {
       } else {
          panic!("Expected real");
       }
+   }
+
+   #[tokio::test]
+   async fn test_get_sqlite_tables_includes_views() {
+      let path = std::env::temp_dir().join(format!(
+         "athas-sqlite-views-{}.sqlite",
+         std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+      ));
+      let conn = Connection::open(&path).unwrap();
+      conn
+         .execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)", [])
+         .unwrap();
+      conn
+         .execute("CREATE VIEW active_users AS SELECT * FROM users", [])
+         .unwrap();
+      conn
+         .execute("CREATE INDEX users_name_idx ON users (name)", [])
+         .unwrap();
+      drop(conn);
+
+      let objects = get_sqlite_tables(path.to_string_lossy().to_string())
+         .await
+         .unwrap();
+
+      assert!(
+         objects
+            .iter()
+            .any(|object| object.name == "users" && object.kind == "table")
+      );
+      assert!(
+         objects
+            .iter()
+            .any(|object| object.name == "active_users" && object.kind == "view")
+      );
+      assert!(objects.iter().any(|object| object.name == "users_name_idx"
+         && object.kind == "index"
+         && object.table_name.as_deref() == Some("users")));
+
+      let _ = std::fs::remove_file(path);
    }
 
    #[test]

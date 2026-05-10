@@ -801,7 +801,6 @@ const DiagnosticsPane = ({
               {activeFilterCount > 0 && (
                 <Badge
                   variant="accent"
-                  shape="pill"
                   className="ui-text-sm -top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1"
                 >
                   {activeFilterCount}
@@ -864,7 +863,6 @@ const DiagnosticsPane = ({
                     {activeFilterCount > 0 && (
                       <Badge
                         variant="accent"
-                        shape="pill"
                         className="ui-text-sm -top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1"
                       >
                         {activeFilterCount}

@@ -1,4 +1,5 @@
 import type { FileEntry } from "@/features/file-system/types/app";
+import { matchesSearchQuery } from "@/utils/search-match";
 
 export interface VisibleFileTreeRow {
   file: FileEntry;
@@ -9,6 +10,13 @@ export interface VisibleFileTreeRow {
 
 export interface BuildVisibleFileTreeRowsOptions {
   compactFolders?: boolean;
+}
+
+export interface FilterFileTreeForSearchResult {
+  files: FileEntry[];
+  expandedPaths: Set<string>;
+  matchedPaths: Set<string>;
+  matchCount: number;
 }
 
 function getCompactFolderChild(item: FileEntry): FileEntry | null {
@@ -67,6 +75,58 @@ export function buildVisibleFileTreeRows(
 
   walk(files, 0);
   return rows;
+}
+
+export function filterFileTreeForSearch(
+  files: FileEntry[],
+  query: string,
+): FilterFileTreeForSearchResult {
+  const trimmedQuery = query.trim();
+  const expandedPaths = new Set<string>();
+  const matchedPaths = new Set<string>();
+
+  if (!trimmedQuery) {
+    return {
+      files,
+      expandedPaths,
+      matchedPaths,
+      matchCount: 0,
+    };
+  }
+
+  const walk = (items: FileEntry[]): FileEntry[] =>
+    items.flatMap((item) => {
+      const matchingChildren = item.children ? walk(item.children) : [];
+      const isMatch = matchesSearchQuery(trimmedQuery, [item.name]);
+
+      if (!isMatch && matchingChildren.length === 0) {
+        return [];
+      }
+
+      if (isMatch) {
+        matchedPaths.add(item.path);
+      }
+
+      if (item.isDir && matchingChildren.length > 0) {
+        expandedPaths.add(item.path);
+      }
+
+      return [
+        {
+          ...item,
+          children: matchingChildren.length > 0 ? matchingChildren : item.children,
+        },
+      ];
+    });
+
+  const filteredFiles = walk(files);
+
+  return {
+    files: filteredFiles,
+    expandedPaths,
+    matchedPaths,
+    matchCount: matchedPaths.size,
+  };
 }
 
 export function getStickyAncestorRow(

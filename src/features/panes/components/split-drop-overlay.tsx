@@ -1,31 +1,13 @@
 import { useCallback, useState } from "react";
 import { cn } from "@/utils/cn";
+import { getPaneDropZoneFromRect, type PaneDropZone } from "../utils/pane-drop-zones";
 
-export type DropZone = "left" | "right" | "top" | "bottom" | "center" | null;
+export type DropZone = PaneDropZone;
 
 interface SplitDropOverlayProps {
   activeZoneOverride?: DropZone;
   onDrop: (zone: DropZone, e: React.DragEvent) => void;
   visible: boolean;
-}
-
-function getDropZone(e: React.DragEvent, rect: DOMRect): DropZone {
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const w = rect.width;
-  const h = rect.height;
-
-  const nx = x / w;
-  const ny = y / h;
-
-  const threshold = 0.25;
-
-  if (nx < threshold && nx < ny && nx < 1 - ny) return "left";
-  if (nx > 1 - threshold && 1 - nx < ny && 1 - nx < 1 - ny) return "right";
-  if (ny < threshold) return "top";
-  if (ny > 1 - threshold) return "bottom";
-
-  return "center";
 }
 
 const zoneStyles: Record<string, string> = {
@@ -44,7 +26,7 @@ export function SplitDropOverlay({ activeZoneOverride, onDrop, visible }: SplitD
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
     const rect = e.currentTarget.getBoundingClientRect();
-    setActiveZone(getDropZone(e, rect));
+    setActiveZone(getPaneDropZoneFromRect({ x: e.clientX, y: e.clientY }, rect));
   }, []);
 
   const handleDrop = useCallback(
@@ -52,7 +34,7 @@ export function SplitDropOverlay({ activeZoneOverride, onDrop, visible }: SplitD
       e.preventDefault();
       e.stopPropagation();
       const rect = e.currentTarget.getBoundingClientRect();
-      const zone = getDropZone(e, rect);
+      const zone = getPaneDropZoneFromRect({ x: e.clientX, y: e.clientY }, rect);
       setActiveZone(null);
       onDrop(zone, e);
     },

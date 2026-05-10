@@ -12,8 +12,8 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useMemo, useState } from "react";
 import {
-  KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
   KeybindingRow,
+  keybindingTableMinWidth,
 } from "@/features/keymaps/components/keybinding-row";
 import {
   type KeybindingPreset,
@@ -297,7 +297,7 @@ export const KeyboardSettings = () => {
 
             <div className="flex-1 overflow-hidden">
               <div className="h-full overflow-x-auto overflow-y-auto">
-                <div className={KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME}>
+                <div className={keybindingTableMinWidth()}>
                   <TableHeader
                     gridCols="minmax(220px,2fr) minmax(156px,1fr) minmax(128px,1.25fr) 72px 92px"
                     className="gap-3 px-1.5 py-1"

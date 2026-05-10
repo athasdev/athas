@@ -3,6 +3,10 @@ export interface PaneGroup {
   type: "group";
   bufferIds: string[];
   activeBufferId: string | null;
+  mruBufferIds?: string[];
+  previewBufferId?: string | null;
+  pinnedBufferIds?: string[];
+  locked?: boolean;
 }
 
 export interface PaneSplit {
@@ -21,5 +25,6 @@ export type SplitPlacement = "before" | "after";
 export interface PaneState {
   root: PaneNode;
   activePaneId: string;
+  mostRecentActivePaneIds?: string[];
   fullscreenPaneId?: string | null;
 }

@@ -76,9 +76,10 @@ IssueRow.displayName = "IssueRow";
 
 interface GitHubIssuesViewProps {
   refreshNonce?: number;
+  searchQuery?: string;
 }
 
-const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
+const GitHubIssuesView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubIssuesViewProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
@@ -95,6 +96,7 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const deferredIssues = useDeferredValue(issues);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const fetchIssues = useCallback(
     async (force = false) => {
@@ -169,6 +171,21 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
     }
   }, [fetchIssues, isAuthenticated, refreshNonce]);
 
+  const filteredIssues = useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
+    if (!query) return deferredIssues;
+
+    return deferredIssues.filter((issue) =>
+      [
+        issue.title,
+        `#${issue.number}`,
+        issue.author.login,
+        issue.state,
+        ...issue.labels.map((label) => label.name),
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [deferredIssues, deferredSearchQuery]);
+
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -189,9 +206,14 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
           />
         ) : deferredIssues.length === 0 && !isLoading ? (
           <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No open issues" />
+        ) : filteredIssues.length === 0 ? (
+          <GitHubSidebarState
+            icon={<MessageSquare className="size-4" />}
+            title="No matching issues"
+          />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
-            {deferredIssues.map((issue) => (
+            {filteredIssues.map((issue) => (
               <IssueRow
                 key={issue.number}
                 issue={issue}

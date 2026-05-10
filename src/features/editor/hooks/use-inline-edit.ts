@@ -31,6 +31,7 @@ const INLINE_EDIT_POPOVER_Y_OFFSET = 10;
 const INLINE_EDIT_TOP_THRESHOLD = 64;
 
 interface UseInlineEditOptions {
+  enabled?: boolean;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   buffer: { id: string; content: string; path: string; language: string } | undefined;
   selection: Range | undefined;
@@ -47,6 +48,7 @@ interface UseInlineEditOptions {
 }
 
 export function useInlineEdit({
+  enabled = true,
   inputRef,
   buffer,
   selection,
@@ -87,6 +89,12 @@ export function useInlineEdit({
   const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
 
   useEffect(() => {
+    if (!enabled) {
+      setInlineEditError(null);
+      setInlineEditSelectionAnchor(null);
+      return;
+    }
+
     if (!inlineEditVisible) {
       setInlineEditError(null);
       const restoreTarget = focusRestoreRef.current;
@@ -130,9 +138,10 @@ export function useInlineEdit({
     return () => {
       cancelled = true;
     };
-  }, [inlineEditVisible]);
+  }, [enabled, inlineEditVisible]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!inlineEditVisible) return;
 
     const loadModels = async () => {
@@ -156,9 +165,13 @@ export function useInlineEdit({
 
     void checkAllProviderApiKeys();
     void loadModels();
-  }, [inlineEditVisible, aiAutocompleteModelId, updateSetting, checkAllProviderApiKeys]);
+  }, [enabled, inlineEditVisible, aiAutocompleteModelId, updateSetting, checkAllProviderApiKeys]);
 
   useEffect(() => {
+    if (!enabled) {
+      setInlineEditSelectionAnchor(null);
+      return;
+    }
     if (!inlineEditVisible) {
       setInlineEditSelectionAnchor(null);
       return;
@@ -168,9 +181,11 @@ export function useInlineEdit({
     const end = inputRef.current.selectionEnd;
     const anchorPos = calculateCursorPosition(Math.max(start, end), lines);
     setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
-  }, [inlineEditVisible, inlineEditSelectionAnchor, lines, inputRef]);
+  }, [enabled, inlineEditVisible, inlineEditSelectionAnchor, lines, inputRef]);
 
   const resolveInlineEditRange = useCallback((): Range | null => {
+    if (!enabled) return null;
+
     if (selection && selection.start.offset !== selection.end.offset) {
       const start =
         selection.start.offset <= selection.end.offset ? selection.start : selection.end;
@@ -201,9 +216,14 @@ export function useInlineEdit({
         offset: lineEndOffset,
       },
     };
-  }, [inputRef, lines, selection]);
+  }, [enabled, inputRef, lines, selection]);
 
   const handleApplyInlineEdit = useCallback(async () => {
+    if (!enabled) {
+      inlineEditToolbarActions.hide();
+      return;
+    }
+
     if (!buffer) {
       toast.warning("Inline edit requires an open buffer.");
       inlineEditToolbarActions.hide();
@@ -324,9 +344,11 @@ export function useInlineEdit({
     setSelection,
     inlineEditToolbarActions,
     inputRef,
+    enabled,
   ]);
 
   const popoverPosition = (() => {
+    if (!enabled) return null;
     if (!inlineEditVisible || !inlineEditSelectionAnchor) return null;
     if (inlineEditSelectionAnchor.line < 0 || inlineEditSelectionAnchor.line >= lines.length) {
       return null;

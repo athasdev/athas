@@ -1,59 +1,103 @@
-import { Funnel as Filter } from "@phosphor-icons/react";
+import {
+  Calendar,
+  FileText,
+  Funnel as Filter,
+  Hash,
+  Key,
+  Link,
+  TextT as Type,
+} from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
-import type { ColumnInfo } from "../models/common.types";
+import {
+  formatForeignKeyLabel,
+  getColumnConstraintLabels,
+  mapForeignKeysByColumn,
+} from "../lib/database-schema";
+import type { ColumnInfo, ForeignKeyInfo } from "../models/common.types";
+
+const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
+  int: { icon: Hash, color: "text-accent" },
+  num: { icon: Hash, color: "text-accent" },
+  text: { icon: Type, color: "text-text-lighter" },
+  varchar: { icon: Type, color: "text-text-lighter" },
+  char: { icon: Type, color: "text-text-lighter" },
+  date: { icon: Calendar, color: "text-accent" },
+  time: { icon: Calendar, color: "text-accent" },
+  blob: { icon: FileText, color: "text-text-lighter" },
+  binary: { icon: FileText, color: "text-text-lighter" },
+};
+
+function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
+  if (isPrimaryKey) return <Key className="text-text-lighter" />;
+  if (isForeignKey) return <Link className="text-accent" />;
+  const lowerType = type.toLowerCase();
+  for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
+    if (lowerType.includes(key)) return <Icon className={color} />;
+  }
+  return <Type className="text-text-lighter" />;
+}
 
 interface SchemaViewProps {
-  selectedTable: string;
-  tableMeta: ColumnInfo[];
-  onAddColumnFilter: (column: string) => void;
-  getColumnIcon: (type: string, isPrimaryKey: boolean) => React.ReactNode;
+  tableName: string;
+  columns: ColumnInfo[];
+  foreignKeys: ForeignKeyInfo[];
+  onAddFilter: (column: string) => void;
+  canFilter?: boolean;
 }
 
 export default function SchemaView({
-  selectedTable,
-  tableMeta,
-  onAddColumnFilter,
-  getColumnIcon,
+  tableName,
+  columns,
+  foreignKeys,
+  onAddFilter,
+  canFilter = true,
 }: SchemaViewProps) {
-  return (
-    <div className="flex-1 overflow-auto">
-      <div className="border-border border-b bg-secondary-bg p-3">
-        <div className="ui-font ui-text-md">{selectedTable}</div>
-        <div className="ui-font ui-text-sm text-text-lighter">{tableMeta.length} columns</div>
-      </div>
+  const fkMap = mapForeignKeysByColumn(foreignKeys);
 
-      <div className="divide-y divide-border">
-        {tableMeta.map((column) => (
-          <div
-            key={column.name}
-            className="flex items-center justify-between px-3 py-2 hover:bg-hover"
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {getColumnIcon(column.type, column.primary_key)}
-              <div className="ui-font ui-text-md truncate">{column.name}</div>
-              <div className="ui-font ui-text-sm text-text-lighter">{column.type}</div>
-              {column.primary_key && <div className="ui-font ui-text-sm text-text-lighter">PK</div>}
-              {column.notnull && <div className="ui-font ui-text-sm text-text-lighter">NN</div>}
-              {column.default_value && (
-                <div
-                  className="ui-font ui-text-sm truncate text-text-lighter"
-                  title={`default: ${column.default_value}`}
+  return (
+    <div className="flex-1 overflow-auto ui-font">
+      <div className="px-3 py-3">
+        <div className="ui-text-sm text-text">{tableName}</div>
+        <div className="ui-text-xs text-text-lighter">{columns.length} columns</div>
+      </div>
+      <div className="mx-3 mb-3 divide-y divide-border/60 rounded-lg border border-border/60 bg-secondary-bg/40">
+        {columns.map((column) => {
+          const fk = fkMap.get(column.name);
+          const constraintLabels = getColumnConstraintLabels(column);
+          return (
+            <div
+              key={column.name}
+              className="flex items-center justify-between px-3 py-2 transition-colors hover:bg-hover"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                {getColumnIcon(column.type, column.primary_key, !!fk)}
+                <span className="truncate ui-text-sm text-text">{column.name}</span>
+                <span className="ui-text-xs text-text-lighter">{column.type}</span>
+                {constraintLabels.map((label) => (
+                  <span key={label} className="truncate ui-text-xs text-text-lighter">
+                    {label}
+                  </span>
+                ))}
+                {fk && (
+                  <span className="truncate ui-text-xs text-accent">
+                    {formatForeignKeyLabel(fk)}
+                  </span>
+                )}
+              </div>
+              {canFilter && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onAddFilter(column.name)}
+                  className="rounded-md text-text-lighter opacity-60 hover:text-text hover:opacity-100"
+                  aria-label={`Filter by ${column.name}`}
                 >
-                  def: {column.default_value}
-                </div>
+                  <Filter />
+                </Button>
               )}
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onAddColumnFilter(column.name)}
-              className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
-              tooltip="Filter by this column"
-            >
-              <Filter />
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

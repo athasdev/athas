@@ -16,7 +16,7 @@ export type SettingsTab =
   | "terminal"
   | "file-explorer";
 
-export type BottomPaneTab = "terminal" | "diagnostics" | "references" | "buffers";
+export type BottomPaneTab = "terminal" | "debugger" | "diagnostics" | "references" | "buffers";
 
 export interface QuickEditSelection {
   text: string;

@@ -38,6 +38,24 @@ fn mysql_row_to_json(row: &sqlx::mysql::MySqlRow) -> Vec<serde_json::Value> {
    values
 }
 
+const GET_MYSQL_TABLES_SQL: &str = r#"
+      SELECT
+        table_name AS name,
+        CASE WHEN table_type = 'VIEW' THEN 'view' ELSE 'table' END AS kind,
+        NULL AS table_name
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE() AND table_type IN ('BASE TABLE', 'VIEW')
+      UNION ALL
+      SELECT
+        index_name AS name,
+        'index' AS kind,
+        table_name
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE() AND index_name <> 'PRIMARY'
+      GROUP BY table_name, index_name
+      ORDER BY kind, name
+      "#;
+
 pub async fn get_mysql_tables(
    connection_id: String,
    manager: &ConnectionManager,
@@ -51,7 +69,7 @@ pub async fn get_mysql_tables(
       _ => return Err("Invalid pool type".to_string()),
    };
 
-   let rows = sqlx::query("SHOW TABLES")
+   let rows = sqlx::query(GET_MYSQL_TABLES_SQL)
       .fetch_all(pool)
       .await
       .map_err(|e| format!("Failed to get tables: {}", e))?;
@@ -59,8 +77,9 @@ pub async fn get_mysql_tables(
    Ok(rows
       .iter()
       .map(|r| TableInfo {
-         name: r.get::<String, _>(0),
-         kind: "table".to_string(),
+         name: r.get("name"),
+         kind: r.get("kind"),
+         table_name: r.get("table_name"),
       })
       .collect())
 }
@@ -157,14 +176,16 @@ pub async fn query_mysql_filtered(
       String::new()
    };
 
+   let (page_size, row_offset) = normalized_pagination(params.page_size, params.offset);
    let data_sql = format!(
-      "SELECT * FROM {} {} {} LIMIT {} OFFSET {}",
-      table, where_clause, order_clause, params.page_size, params.offset
+      "SELECT * FROM {} {} {} LIMIT ? OFFSET ?",
+      table, where_clause, order_clause
    );
    let mut data_query = sqlx::query(&data_sql);
    for p in &where_params {
       data_query = data_query.bind(p);
    }
+   data_query = data_query.bind(page_size).bind(row_offset);
    let rows = data_query
       .fetch_all(pool)
       .await
@@ -369,6 +390,56 @@ pub async fn update_mysql_row(
    Ok(result.rows_affected() as i64)
 }
 
+pub async fn update_mysql_row_by_values(
+   connection_id: String,
+   table: String,
+   set_columns: Vec<String>,
+   set_values: Vec<serde_json::Value>,
+   identity: RowIdentity,
+   manager: &ConnectionManager,
+) -> Result<i64, String> {
+   let pool_arc = manager
+      .get_pool(&connection_id)
+      .await
+      .ok_or("Not connected")?;
+   let pool = match pool_arc.as_ref() {
+      DatabasePool::MySql(p) => p,
+      _ => return Err("Invalid pool type".to_string()),
+   };
+
+   let set_clauses: Vec<String> = set_columns
+      .iter()
+      .map(|c| format!("{} = ?", escape_identifier_mysql(c)))
+      .collect();
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier_mysql,
+      |_| "?".to_string(),
+      &mut param_offset,
+   )?;
+   let sql = format!(
+      "UPDATE {} SET {} {}",
+      escape_identifier_mysql(&table),
+      set_clauses.join(", "),
+      where_clause
+   );
+
+   let mut query = sqlx::query(&sql);
+   for v in &set_values {
+      query = query.bind(json_to_sql_string(v));
+   }
+   for v in &where_values {
+      query = query.bind(json_to_sql_string(v));
+   }
+
+   let result = query
+      .execute(pool)
+      .await
+      .map_err(|e| format!("Update failed: {}", e))?;
+   Ok(result.rows_affected() as i64)
+}
+
 pub async fn delete_mysql_row(
    connection_id: String,
    table: String,
@@ -397,4 +468,57 @@ pub async fn delete_mysql_row(
       .await
       .map_err(|e| format!("Delete failed: {}", e))?;
    Ok(result.rows_affected() as i64)
+}
+
+pub async fn delete_mysql_row_by_values(
+   connection_id: String,
+   table: String,
+   identity: RowIdentity,
+   manager: &ConnectionManager,
+) -> Result<i64, String> {
+   let pool_arc = manager
+      .get_pool(&connection_id)
+      .await
+      .ok_or("Not connected")?;
+   let pool = match pool_arc.as_ref() {
+      DatabasePool::MySql(p) => p,
+      _ => return Err("Invalid pool type".to_string()),
+   };
+
+   let mut param_offset = 0;
+   let (where_clause, where_values) = build_row_identity_where_clause(
+      &identity,
+      escape_identifier_mysql,
+      |_| "?".to_string(),
+      &mut param_offset,
+   )?;
+   let sql = format!(
+      "DELETE FROM {} {}",
+      escape_identifier_mysql(&table),
+      where_clause
+   );
+
+   let mut query = sqlx::query(&sql);
+   for v in &where_values {
+      query = query.bind(json_to_sql_string(v));
+   }
+
+   let result = query
+      .execute(pool)
+      .await
+      .map_err(|e| format!("Delete failed: {}", e))?;
+   Ok(result.rows_affected() as i64)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn mysql_catalog_query_includes_user_indexes_with_table_name() {
+      assert!(GET_MYSQL_TABLES_SQL.contains("'index' AS kind"));
+      assert!(GET_MYSQL_TABLES_SQL.contains("information_schema.statistics"));
+      assert!(GET_MYSQL_TABLES_SQL.contains("index_name <> 'PRIMARY'"));
+      assert!(GET_MYSQL_TABLES_SQL.contains("GROUP BY table_name, index_name"));
+   }
 }

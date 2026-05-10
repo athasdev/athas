@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { IS_MAC } from "@/utils/platform";
 import { usePaneStore } from "../stores/pane-store";
+import { activatePaneAndSyncBuffer } from "../utils/pane-activation";
+import { splitActiveEditorGroup } from "../utils/pane-command-actions";
 
 export function usePaneKeyboard() {
   useEffect(() => {
@@ -15,20 +16,14 @@ export function usePaneKeyboard() {
       // Cmd+\ or Ctrl+\ - Split right
       if (e.key === "\\" && !e.shiftKey) {
         e.preventDefault();
-        const activePane = paneStore.actions.getActivePane();
-        if (activePane?.activeBufferId) {
-          paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
-        }
+        splitActiveEditorGroup("horizontal");
         return;
       }
 
       // Cmd+Shift+\ or Ctrl+Shift+\ - Split down
       if (e.key === "\\" && e.shiftKey) {
         e.preventDefault();
-        const activePane = paneStore.actions.getActivePane();
-        if (activePane?.activeBufferId) {
-          paneStore.actions.splitPane(activePane.id, "vertical", activePane.activeBufferId);
-        }
+        splitActiveEditorGroup("vertical");
         return;
       }
 
@@ -43,10 +38,9 @@ export function usePaneKeyboard() {
         };
         paneStore.actions.navigateToPane(directionMap[e.key]);
 
-        // Sync buffer store's activeBufferId with the newly active pane
         const newActivePane = paneStore.actions.getActivePane();
-        if (newActivePane?.activeBufferId) {
-          useBufferStore.getState().actions.setActiveBuffer(newActivePane.activeBufferId);
+        if (newActivePane) {
+          activatePaneAndSyncBuffer(newActivePane.id);
         }
         return;
       }
