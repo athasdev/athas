@@ -109,7 +109,6 @@ export const defaultSettings: Settings = {
     aiChat: true,
     teamCollaboration: true,
     multiAgents: false,
-    sidebarBuilder: false,
     breadcrumbs: true,
     persistentCommands: true,
   },

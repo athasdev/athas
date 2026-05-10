@@ -8,7 +8,6 @@ import {
   NavigationArrow as Navigation,
   MagnifyingGlass as Search,
   HardDrives as Server,
-  SidebarSimple,
   Sparkle,
   TerminalWindow as TerminalIcon,
   UsersThree,
@@ -86,14 +85,6 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Multi-agent session sidebar",
     icon: Sparkle,
     enabled: coreFeatures.multiAgents,
-    status: "experimental",
-  },
-  {
-    id: "sidebarBuilder",
-    name: "Sidebar Builder",
-    description: "Customizable vertical sidebar with Git, terminal, browser, and workspace items",
-    icon: SidebarSimple,
-    enabled: coreFeatures.sidebarBuilder,
     status: "experimental",
   },
   {

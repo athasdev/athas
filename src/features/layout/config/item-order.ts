@@ -9,7 +9,6 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
   "search",
   "multi-agents",
-  "sidebar-builder",
   "git",
   "debugger",
   "github-prs",

@@ -6,7 +6,6 @@ export type SidebarView =
   | "collaboration"
   | "notifications"
   | "multi-agents"
-  | "sidebar-builder"
   | (string & {});
 
 interface SidebarPaneState {

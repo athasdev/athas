@@ -9,7 +9,6 @@ import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
-import { SidebarBuilderView } from "@/features/sidebar-builder/components/sidebar-builder-view";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -100,10 +99,8 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
   );
   const isMultiAgentsFeatureEnabled =
     settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
-  const isSidebarBuilderFeatureEnabled = settings.coreFeatures.sidebarBuilder;
   const isDisabledExperimentalViewActive =
     (activeSidebarView === "multi-agents" && !isMultiAgentsFeatureEnabled) ||
-    (activeSidebarView === "sidebar-builder" && !isSidebarBuilderFeatureEnabled) ||
     (activeSidebarView === "collaboration" && !isCollaborationFeatureEnabled);
   const isFilesViewActive =
     !isGitViewActive &&
@@ -120,11 +117,6 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     activeSidebarView === "multi-agents";
-  const isSidebarBuilderViewActive =
-    isSidebarBuilderFeatureEnabled &&
-    !isGitViewActive &&
-    !isGitHubPRsViewActive &&
-    activeSidebarView === "sidebar-builder";
   const isCollaborationViewActive =
     isCollaborationFeatureEnabled &&
     !isGitViewActive &&
@@ -219,12 +211,6 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
             <MultiAgentsSidebarView />
           </div>
         )}
-
-        {isSidebarBuilderFeatureEnabled ? (
-          <div className={cn("h-full", !isSidebarBuilderViewActive && "hidden")}>
-            <SidebarBuilderView />
-          </div>
-        ) : null}
 
         {Array.from(extensionViews).map(([viewId, view]) => (
           <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>

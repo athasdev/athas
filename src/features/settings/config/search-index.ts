@@ -753,14 +753,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "agents", "multi", "sidebar", "experimental"],
   },
   {
-    id: "features-sidebar-builder",
-    tab: "features",
-    section: "Features",
-    label: "Sidebar Builder",
-    description: "Customizable vertical sidebar with Git, terminal, browser, and workspace items",
-    keywords: ["sidebar", "builder", "custom", "experimental", "git", "terminal", "browser"],
-  },
-  {
     id: "features-breadcrumbs",
     tab: "features",
     section: "Features",

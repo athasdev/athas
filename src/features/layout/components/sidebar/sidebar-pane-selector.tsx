@@ -3,7 +3,6 @@ import {
   GitBranch,
   GitPullRequest,
   MagnifyingGlass,
-  SidebarSimple,
   Sparkle as Sparkles,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
@@ -63,17 +62,11 @@ export const SidebarPaneSelector = ({
       : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const isMultiAgentsFeatureEnabled = coreFeatures.aiChat && coreFeatures.multiAgents;
-  const isSidebarBuilderFeatureEnabled = coreFeatures.sidebarBuilder;
   const isMultiAgentsActive =
     isMultiAgentsFeatureEnabled &&
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     activeSidebarView === "multi-agents";
-  const isSidebarBuilderActive =
-    isSidebarBuilderFeatureEnabled &&
-    !isGitViewActive &&
-    !isGitHubPRsViewActive &&
-    activeSidebarView === "sidebar-builder";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
@@ -123,23 +116,6 @@ export const SidebarPaneSelector = ({
             className: tabClassName,
             tooltip: {
               content: "Multi Agents",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...(isSidebarBuilderFeatureEnabled
-      ? [
-          {
-            id: "sidebar-builder",
-            icon: <SidebarSimple className={iconClassName} weight="duotone" />,
-            isActive: isSidebarBuilderActive,
-            onClick: () => onViewChange("sidebar-builder"),
-            role: "tab",
-            ariaLabel: "Custom Sidebar",
-            className: tabClassName,
-            tooltip: {
-              content: "Custom Sidebar",
               side: tooltipSide,
             },
           } satisfies TabsItem,

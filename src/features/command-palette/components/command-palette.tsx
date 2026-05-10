@@ -47,7 +47,6 @@ import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
 import { createPaneActions } from "../constants/pane-actions";
 import { createSettingsActions } from "../constants/settings-actions";
-import { createSidebarBuilderActions } from "../constants/sidebar-builder-actions";
 import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../models/action.types";
@@ -206,13 +205,6 @@ const CommandPalette = () => {
     ...createPaneActions({
       onClose,
     }),
-    ...(settings.coreFeatures.sidebarBuilder
-      ? createSidebarBuilderActions({
-          setIsSidebarVisible,
-          setActiveView,
-          onClose,
-        })
-      : []),
     ...createFileActions({
       activeBufferId,
       buffers,
