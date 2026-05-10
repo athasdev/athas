@@ -13,7 +13,7 @@ export interface Token {
  */
 interface LineOffsetCache {
   offsets: number[];
-  contentHash: string;
+  content: string;
 }
 
 let lineOffsetCache: LineOffsetCache | null = null;
@@ -23,6 +23,7 @@ let lineOffsetCache: LineOffsetCache | null = null;
  * This ensures consistent offset calculations across platforms
  */
 export function normalizeLineEndings(content: string): string {
+  if (!content.includes("\r")) return content;
   return content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
@@ -36,22 +37,20 @@ export function buildLineOffsetMap(content: string): number[] {
   const normalizedContent = normalizeLineEndings(content);
 
   // Check cache first
-  const contentHash = `${normalizedContent.length}-${normalizedContent.substring(0, 100)}`;
-  if (lineOffsetCache && lineOffsetCache.contentHash === contentHash) {
+  if (lineOffsetCache && lineOffsetCache.content === normalizedContent) {
     return lineOffsetCache.offsets;
   }
 
-  const lines = normalizedContent.split("\n");
-  const offsets: number[] = Array.from({ length: lines.length }, () => 0);
-  let offset = 0;
+  const offsets = [0];
 
-  for (let i = 0; i < lines.length; i++) {
-    offsets[i] = offset;
-    offset += lines[i].length + 1; // +1 for newline
+  for (let index = 0; index < normalizedContent.length; index++) {
+    if (normalizedContent.charCodeAt(index) === 10) {
+      offsets.push(index + 1);
+    }
   }
 
   // Cache the result
-  lineOffsetCache = { offsets, contentHash };
+  lineOffsetCache = { offsets, content: normalizedContent };
   return offsets;
 }
 

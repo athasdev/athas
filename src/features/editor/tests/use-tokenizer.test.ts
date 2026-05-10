@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { retargetTokensForContentEdit } from "../hooks/use-tokenizer";
+import {
+  resolveSyntaxTokensForContent,
+  retargetTokensForContentEdit,
+} from "../hooks/use-tokenizer";
 
 describe("retargetTokensForContentEdit", () => {
   it("shifts tokens after an insertion", () => {
@@ -32,5 +35,43 @@ describe("retargetTokensForContentEdit", () => {
       { start: 0, end: 5, class_name: "token-keyword" },
       { start: 7, end: 12, class_name: "token-function" },
     ]);
+  });
+
+  it("retargets the last good snapshot when current tokenizer state is empty", () => {
+    expect(
+      resolveSyntaxTokensForContent({
+        tokens: [],
+        tokenizedContent: "",
+        normalizedContent: "const new value",
+        bufferId: "buffer-a",
+        snapshot: {
+          bufferId: "buffer-a",
+          content: "const value",
+          tokens: [
+            { start: 0, end: 5, class_name: "token-keyword" },
+            { start: 6, end: 11, class_name: "token-variable" },
+          ],
+        },
+      }),
+    ).toEqual([
+      { start: 0, end: 5, class_name: "token-keyword" },
+      { start: 10, end: 15, class_name: "token-variable" },
+    ]);
+  });
+
+  it("does not reuse token snapshots across buffers", () => {
+    expect(
+      resolveSyntaxTokensForContent({
+        tokens: [],
+        tokenizedContent: "",
+        normalizedContent: "const value",
+        bufferId: "buffer-b",
+        snapshot: {
+          bufferId: "buffer-a",
+          content: "const value",
+          tokens: [{ start: 0, end: 5, class_name: "token-keyword" }],
+        },
+      }),
+    ).toEqual([]);
   });
 });

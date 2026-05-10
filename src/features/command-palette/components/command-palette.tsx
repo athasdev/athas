@@ -202,6 +202,7 @@ const CommandPalette = () => {
       setIsQuickOpenVisible,
       openCommandPaletteView,
       openSettingsDialog,
+      coreFeatures: settings.coreFeatures,
       onClose,
     }),
     ...createPaneActions({

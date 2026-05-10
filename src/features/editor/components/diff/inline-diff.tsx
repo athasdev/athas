@@ -12,8 +12,41 @@ interface InlineDiffProps {
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
+  top?: number;
   onClose: () => void;
   onRevert?: (lineNumber: number, originalContent: string) => void;
+}
+
+const INLINE_DIFF_MAX_VISIBLE_LINES = 8;
+const INLINE_DIFF_CHROME_HEIGHT = 2;
+
+export function calculateInlineDiffHeight(diffLinesCount: number, lineHeight: number): number {
+  if (diffLinesCount <= 0) {
+    return lineHeight + INLINE_DIFF_CHROME_HEIGHT;
+  }
+
+  return (
+    Math.min(diffLinesCount, INLINE_DIFF_MAX_VISIBLE_LINES) * lineHeight + INLINE_DIFF_CHROME_HEIGHT
+  );
+}
+
+export function getInlineDiffLinesToShow(
+  diffLines: GitDiffLine[],
+  lineNumber: number,
+  type: "added" | "modified" | "deleted",
+): GitDiffLine[] {
+  return diffLines.filter((line) => {
+    if (type === "added") {
+      return line.new_line_number === lineNumber + 1 && line.line_type === "added";
+    }
+    if (type === "deleted") {
+      return line.old_line_number === lineNumber + 1 && line.line_type === "removed";
+    }
+    return (
+      (line.old_line_number === lineNumber + 1 && line.line_type === "removed") ||
+      (line.new_line_number === lineNumber + 1 && line.line_type === "added")
+    );
+  });
 }
 
 function highlightCharDiff(
@@ -58,6 +91,7 @@ function InlineDiffComponent({
   fontSize,
   fontFamily,
   lineHeight,
+  top,
   onClose,
   onRevert,
 }: InlineDiffProps) {
@@ -78,18 +112,7 @@ function InlineDiffComponent({
     };
   }, [onClose]);
 
-  const linesToShow = diffLines.filter((line) => {
-    if (type === "added") {
-      return line.new_line_number === lineNumber + 1 && line.line_type === "added";
-    }
-    if (type === "deleted") {
-      return line.old_line_number === lineNumber + 1 && line.line_type === "removed";
-    }
-    return (
-      (line.old_line_number === lineNumber + 1 && line.line_type === "removed") ||
-      (line.new_line_number === lineNumber + 1 && line.line_type === "added")
-    );
-  });
+  const linesToShow = getInlineDiffLinesToShow(diffLines, lineNumber, type);
 
   const charHighlights = useMemo(() => {
     if (type !== "modified") return null;
@@ -171,13 +194,7 @@ function InlineDiffComponent({
     return " ";
   };
 
-  const getLineNumber = (line: GitDiffLine) => {
-    if (line.line_type === "removed") return line.old_line_number ?? "";
-    if (line.line_type === "added") return line.new_line_number ?? "";
-    return line.new_line_number ?? line.old_line_number ?? "";
-  };
-
-  const topPosition = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + (lineNumber + 1) * lineHeight;
+  const topPosition = top ?? EDITOR_CONSTANTS.EDITOR_PADDING_TOP + (lineNumber + 1) * lineHeight;
 
   const handleRevert = () => {
     if (!onRevert) return;
@@ -246,7 +263,7 @@ function InlineDiffComponent({
       {linesToShow.length > 0 ? (
         <div
           style={{
-            maxHeight: `${Math.max(lineHeight * 8, 160)}px`,
+            maxHeight: `${calculateInlineDiffHeight(linesToShow.length, lineHeight)}px`,
             overflow: "auto",
           }}
         >
@@ -256,7 +273,7 @@ function InlineDiffComponent({
               style={{
                 position: "relative",
                 display: "grid",
-                gridTemplateColumns: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 34}px 20px minmax(0, 1fr)`,
+                gridTemplateColumns: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px 22px minmax(0, 1fr)`,
                 minHeight: `${lineHeight}px`,
                 lineHeight: `${lineHeight}px`,
                 fontSize: `${fontSize}px`,
@@ -265,19 +282,7 @@ function InlineDiffComponent({
                 boxShadow: `inset 3px 0 0 ${getLineAccent(line.line_type)}`,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  paddingRight: "10px",
-                  color: "var(--text-lighter)",
-                  backgroundColor: "color-mix(in srgb, var(--secondary-bg) 45%, transparent)",
-                  userSelect: "none",
-                }}
-              >
-                {getLineNumber(line)}
-              </div>
+              <div />
               <div
                 style={{
                   display: "flex",
@@ -317,7 +322,7 @@ function InlineDiffComponent({
             lineHeight: `${lineHeight}px`,
             fontSize: `${fontSize}px`,
             fontFamily,
-            paddingLeft: "72px",
+            paddingLeft: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px`,
             color: "var(--text-light)",
             fontStyle: "italic",
             backgroundColor: "var(--primary-bg)",

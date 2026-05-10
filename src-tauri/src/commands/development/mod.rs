@@ -7,6 +7,7 @@ pub mod runtime;
 pub mod tools;
 
 pub use cli::*;
+pub use cli_args::*;
 pub use debugger::*;
 pub use ide_recents::*;
 pub use lsp::*;

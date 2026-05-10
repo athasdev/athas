@@ -6,6 +6,7 @@ import {
   GitBranch,
   Hash,
   Info,
+  ListBullets,
   Translate as Languages,
   Lightbulb,
   ChatCircleText as MessageSquare,
@@ -450,6 +451,24 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           debugger: !settings.coreFeatures.debugger,
+        });
+        onClose();
+      },
+    },
+    {
+      id: "toggle-outline-feature",
+      label: settings.coreFeatures.outline
+        ? "Features: Disable Outline"
+        : "Features: Enable Outline",
+      description: settings.coreFeatures.outline
+        ? "Hide document symbol outline"
+        : "Show document symbol outline",
+      icon: <ListBullets />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          outline: !settings.coreFeatures.outline,
         });
         onClose();
       },

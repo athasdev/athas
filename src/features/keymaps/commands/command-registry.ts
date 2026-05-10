@@ -761,6 +761,7 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+shift+o",
     execute: () => {
+      if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
       useUIState.getState().openCommandPaletteView("outline");
     },
   },
@@ -769,6 +770,7 @@ const navigationCommands: Command[] = [
     title: "Show Outline",
     category: "Navigation",
     execute: () => {
+      if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
       const uiState = useUIState.getState();
       uiState.setIsSidebarVisible(true);
       uiState.setActiveView("outline");

@@ -15,4 +15,16 @@ describe("features config", () => {
       status: "experimental",
     });
   });
+
+  it("includes Outline in core features", () => {
+    const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
+      (item) => item.id === "outline",
+    );
+
+    expect(feature).toMatchObject({
+      name: "Outline",
+      description: "Document symbols and quick navigation for the active file",
+      enabled: true,
+    });
+  });
 });

@@ -38,9 +38,16 @@ import { useInlineEdit } from "../hooks/use-inline-edit";
 import { usePerformanceMonitor } from "../hooks/use-performance";
 import { useResolvedEditorSettings } from "../hooks/use-resolved-settings";
 import { useSelectionScope } from "../hooks/use-selection-scope";
-import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
+import {
+  getLanguageId,
+  resolveSyntaxTokensForContent,
+  retargetTokensForContentEdit,
+  useTokenizer,
+  type SyntaxTokenSnapshot,
+} from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import type { InlayHint } from "../lsp/use-inlay-hints";
+import type { SemanticTokenState } from "../lsp/use-semantic-tokens";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { useFoldStore } from "../stores/fold-store";
@@ -48,6 +55,7 @@ import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import { useInlineEditToolbarStore } from "../stores/inline-edit-toolbar-store";
 import type { Position, Range } from "../types/editor";
 import {
   applyVirtualEdit,
@@ -55,18 +63,39 @@ import {
   transformTokensForFolding,
 } from "../utils/fold-transformer";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
-import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
-import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
+import { buildLineOffsetMap, normalizeLineEndings } from "../utils/html";
+import {
+  countLines,
+  createSparseLineArray,
+  getLargeEditorModeInfo,
+  getLineOffset,
+  isTooLargeForEditorServices,
+} from "../utils/large-file";
+import { calculateLineHeight, splitLines } from "../utils/lines";
+import {
+  calculateCursorPosition,
+  calculateCursorPositionFromContent,
+  getAccurateCursorX,
+} from "../utils/position";
+import {
+  canApplySemanticTokenState,
+  mergeTokenLayers,
+  semanticTokensToEditorTokens,
+} from "../utils/token-layers";
 import {
   buildEditorViewLayout,
   type EditorCoordinateResolver,
+  type EditorViewZone,
   type EditorModelPositionResolver,
 } from "../view-model/view-layout";
-import { InlineDiff } from "./diff/inline-diff";
+import {
+  calculateInlineDiffHeight,
+  getInlineDiffLinesToShow,
+  InlineDiff,
+} from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
 import { DefinitionLinkLayer } from "./layers/definition-link-layer";
-import { DiagnosticLayer } from "./layers/diagnostic-layer";
 import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
@@ -102,6 +131,9 @@ interface EditorProps {
     previousSelection?: Range,
   ) => void;
   inlayHints?: InlayHint[];
+  semanticTokens?: SemanticTokenState;
+  largeContentMode?: boolean;
+  largeContentLineCount?: number;
   onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
 }
@@ -109,6 +141,7 @@ interface EditorProps {
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
 const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
 const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
+const INLINE_EDIT_VIEW_ZONE_HEIGHT = 96;
 
 function estimateInlayHintWidth(
   label: string,
@@ -139,6 +172,9 @@ export function Editor({
   lineNumberMap,
   onContentChange,
   inlayHints = [],
+  semanticTokens,
+  largeContentMode: largeContentModeOverride,
+  largeContentLineCount,
   onCoordinateResolverChange,
   onModelPositionResolverChange,
 }: EditorProps) {
@@ -155,6 +191,7 @@ export function Editor({
   const gitBlameRef = useRef<HTMLDivElement>(null);
   const inlineDiffRef = useRef<HTMLDivElement>(null);
   const suppressedNativeHistoryInputRef = useRef<"historyUndo" | "historyRedo" | null>(null);
+  const syntaxTokenSnapshotRef = useRef<SyntaxTokenSnapshot | null>(null);
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
@@ -199,7 +236,7 @@ export function Editor({
 
   const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
-  const wordWrap = useEditorSettingsStore.use.wordWrap();
+  const wordWrapSetting = useEditorSettingsStore.use.wordWrap();
 
   const rawBuffer = buffers.find((b) => b.id === bufferId);
   const buffer = rawBuffer && isEditorContent(rawBuffer) ? rawBuffer : undefined;
@@ -212,11 +249,41 @@ export function Editor({
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
   const [suppressInlayHintsForTyping, setSuppressInlayHintsForTyping] = useState(false);
+  const { startMeasure, endMeasure } = usePerformanceMonitor("Editor");
+
+  const actualLineCount = useMemo(
+    () => largeContentLineCount ?? countLines(content),
+    [content, largeContentLineCount],
+  );
+  const largeContentMode =
+    largeContentModeOverride ??
+    isTooLargeForEditorServices({
+      contentLength: content.length,
+      lineCount: actualLineCount,
+    });
+
+  const actualLines = useMemo(() => {
+    if (largeContentMode) {
+      return createSparseLineArray(actualLineCount);
+    }
+
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "split-start");
+    }
+    startMeasure(`splitLines (len: ${content.length})`);
+    const res = splitLines(content);
+    endMeasure(`splitLines (len: ${content.length})`);
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "split-done", `${res.length} lines`);
+    }
+    return res;
+  }, [actualLineCount, content, filePath, largeContentMode, startMeasure, endMeasure]);
 
   useGitGutter({
     filePath: filePath || "",
     content,
-    enabled: !!filePath && gitGutterEnabled && isActiveSurface && !isPreviewMode,
+    enabled:
+      !!filePath && gitGutterEnabled && isActiveSurface && !isPreviewMode && !largeContentMode,
   });
 
   const foldActions = useFoldStore.use.actions();
@@ -240,7 +307,7 @@ export function Editor({
   }, [filePath, content.length]);
 
   useEffect(() => {
-    if (!isActiveSurface || isPreviewMode) return;
+    if (!isActiveSurface || isPreviewMode || largeContentMode) return;
     if (filePath && content) {
       let cancelled = false;
       const computeFolds = () => {
@@ -268,9 +335,13 @@ export function Editor({
         globalThis.clearTimeout(timeoutId);
       };
     }
-  }, [filePath, content, foldActions, isActiveSurface, isPreviewMode]);
+  }, [filePath, content, foldActions, isActiveSurface, isPreviewMode, largeContentMode]);
 
-  const foldTransform = useFoldTransform(filePath, content);
+  const foldTransform = useFoldTransform(
+    largeContentMode ? undefined : filePath,
+    content,
+    actualLines,
+  );
   const collapsedSignature = useMemo(() => {
     if (!fileFoldState) return "";
     return Array.from(fileFoldState.collapsedLines)
@@ -335,22 +406,10 @@ export function Editor({
   const contextMenu = useContextMenu();
   const inlineDiff = useInlineDiff(filePath, content);
 
-  const { startMeasure, endMeasure } = usePerformanceMonitor("Editor");
-
-  const actualLines = useMemo(() => {
-    if (filePath && fileOpenBenchmark.has(filePath)) {
-      fileOpenBenchmark.mark(filePath, "split-start");
-    }
-    startMeasure(`splitLines (len: ${content.length})`);
-    const res = splitLines(content);
-    endMeasure(`splitLines (len: ${content.length})`);
-    if (filePath && fileOpenBenchmark.has(filePath)) {
-      fileOpenBenchmark.mark(filePath, "split-done", `${res.length} lines`);
-    }
-    return res;
-  }, [content, filePath, startMeasure, endMeasure]);
+  const wordWrap = largeContentMode ? false : wordWrapSetting;
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
+  const textareaContent = largeContentMode ? "" : displayContent;
 
   const lineHeight = useMemo(
     () => calculateLineHeight(fontSize, lineHeightMultiplier),
@@ -360,6 +419,59 @@ export function Editor({
     (text: string) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
     [fontSize, fontFamily, tabSize],
   );
+  const isInlineEditToolbarVisible = useInlineEditToolbarStore.use.isVisible();
+  const viewZones = useMemo(() => {
+    const zones: EditorViewZone[] = [];
+
+    if (inlineDiff.state.isOpen && !largeContentMode) {
+      const visualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.actualToVirtual.get(inlineDiff.state.lineNumber) ??
+          inlineDiff.state.lineNumber)
+        : inlineDiff.state.lineNumber;
+
+      if (visualLine >= 0 && visualLine < lines.length) {
+        const linesToShow = getInlineDiffLinesToShow(
+          inlineDiff.state.diffLines,
+          inlineDiff.state.lineNumber,
+          inlineDiff.state.type,
+        );
+
+        zones.push({
+          id: "inline-diff",
+          afterLine: visualLine,
+          height: calculateInlineDiffHeight(linesToShow.length, lineHeight),
+        });
+      }
+    }
+
+    if (isInlineEditToolbarVisible && !largeContentMode) {
+      const visualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.actualToVirtual.get(cursorPosition.line) ?? cursorPosition.line)
+        : cursorPosition.line;
+
+      if (visualLine >= 0 && visualLine < lines.length) {
+        zones.push({
+          id: "inline-edit",
+          afterLine: visualLine,
+          height: INLINE_EDIT_VIEW_ZONE_HEIGHT,
+        });
+      }
+    }
+
+    return zones;
+  }, [
+    cursorPosition.line,
+    foldTransform.hasActiveFolds,
+    foldTransform.mapping,
+    inlineDiff.state.diffLines,
+    inlineDiff.state.isOpen,
+    inlineDiff.state.lineNumber,
+    inlineDiff.state.type,
+    isInlineEditToolbarVisible,
+    largeContentMode,
+    lineHeight,
+    lines.length,
+  ]);
   const viewLayout = useMemo(
     () =>
       buildEditorViewLayout({
@@ -368,12 +480,15 @@ export function Editor({
         wordWrap,
         contentWidth,
         measureText: measureEditorText,
+        zones: viewZones,
+        compact: largeContentMode,
       }),
-    [lines, lineHeight, wordWrap, contentWidth, measureEditorText],
+    [lines, lineHeight, wordWrap, contentWidth, measureEditorText, viewZones, largeContentMode],
   );
   const shouldVirtualizeRendering =
     !wordWrap && lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
-  const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
+  const tokenizationEnabled = hasSyntaxHighlighting && !largeContentMode;
+  const useIncrementalTokenization = tokenizationEnabled && shouldVirtualizeRendering;
 
   const {
     viewportRange,
@@ -390,18 +505,91 @@ export function Editor({
       bufferId: bufferId || undefined,
       languageIdOverride,
       incremental: useIncrementalTokenization,
-      enabled: hasSyntaxHighlighting,
+      enabled: tokenizationEnabled,
     });
-  const baseTokens = tokens.length > 0 ? tokens : (buffer?.tokens ?? []);
+  const normalizedEditorContent = useMemo(() => normalizeLineEndings(content), [content]);
+  const displayLineOffsets = useMemo(
+    () =>
+      largeContentMode
+        ? []
+        : foldTransform.hasActiveFolds
+          ? buildLineOffsetMap(displayContent)
+          : buildLineOffsetMap(normalizedEditorContent),
+    [displayContent, foldTransform.hasActiveFolds, largeContentMode, normalizedEditorContent],
+  );
+  const getVisualLineOffset = useCallback(
+    (lineIndex: number) => {
+      if (largeContentMode && !foldTransform.hasActiveFolds) {
+        return getLineOffset(normalizedEditorContent, lineIndex);
+      }
+
+      const clampedLine = Math.max(
+        0,
+        Math.min(lineIndex, Math.max(displayLineOffsets.length - 1, 0)),
+      );
+      return displayLineOffsets[clampedLine] ?? displayContent.length;
+    },
+    [
+      displayContent.length,
+      displayLineOffsets,
+      foldTransform.hasActiveFolds,
+      largeContentMode,
+      normalizedEditorContent,
+    ],
+  );
+  useEffect(() => {
+    if (!bufferId || tokens.length === 0 || !tokenizedContent) return;
+    syntaxTokenSnapshotRef.current = {
+      bufferId,
+      content: tokenizedContent,
+      tokens,
+    };
+  }, [bufferId, tokenizedContent, tokens]);
+  const baseTokens = useMemo(
+    () =>
+      largeContentMode
+        ? []
+        : resolveSyntaxTokensForContent({
+            tokens,
+            tokenizedContent,
+            normalizedContent: normalizedEditorContent,
+            bufferId: bufferId || undefined,
+            snapshot: syntaxTokenSnapshotRef.current,
+          }),
+    [bufferId, largeContentMode, normalizedEditorContent, tokenizedContent, tokens],
+  );
+  const semanticEditorTokens = useMemo(() => {
+    if (largeContentMode) return [];
+    if (!canApplySemanticTokenState(semanticTokens, filePath)) return [];
+
+    const semanticContent = semanticTokens.content || normalizedEditorContent;
+    const tokensForSemanticContent = semanticTokensToEditorTokens(
+      semanticTokens.tokens,
+      buildLineOffsetMap(semanticContent),
+      semanticContent.length,
+    );
+
+    if (semanticContent === normalizedEditorContent) return tokensForSemanticContent;
+
+    return retargetTokensForContentEdit(
+      tokensForSemanticContent,
+      semanticContent,
+      normalizedEditorContent,
+    );
+  }, [filePath, largeContentMode, normalizedEditorContent, semanticTokens]);
+  const layeredTokens = useMemo(
+    () => mergeTokenLayers(baseTokens, semanticEditorTokens),
+    [baseTokens, semanticEditorTokens],
+  );
   const effectiveTokens = useMemo(() => {
-    if (!foldTransform.hasActiveFolds) return baseTokens;
+    if (!foldTransform.hasActiveFolds) return layeredTokens;
     return transformTokensForFolding(
       content,
       foldTransform.virtualLines,
       foldTransform.mapping,
-      baseTokens,
+      layeredTokens,
     );
-  }, [baseTokens, content, foldTransform]);
+  }, [content, foldTransform, layeredTokens]);
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -420,7 +608,7 @@ export function Editor({
     enabled: isActiveSurface,
     bufferId,
     viewStateKey: viewStateKey ?? bufferId ?? null,
-    content: displayContent,
+    content: textareaContent,
     textareaRef: inputRef,
     forceUpdateViewport,
     totalLines: lines.length,
@@ -429,7 +617,7 @@ export function Editor({
 
   // Listen for extension and language changes to re-trigger tokenization
   useEffect(() => {
-    if (!isActiveSurface) return;
+    if (!isActiveSurface || !tokenizationEnabled) return;
     const handleSyntaxHighlightingRefresh = (event: Event) => {
       const customEvent = event as CustomEvent<{ extensionId: string; filePath: string }>;
       if (customEvent.detail.filePath === filePath && content) {
@@ -446,7 +634,7 @@ export function Editor({
         handleSyntaxHighlightingRefresh,
       );
     };
-  }, [filePath, content, forceFullTokenize, isActiveSurface]);
+  }, [filePath, content, forceFullTokenize, isActiveSurface, tokenizationEnabled]);
 
   const visualCursorLine = useMemo(() => {
     if (foldTransform.hasActiveFolds) {
@@ -576,12 +764,15 @@ export function Editor({
       const virtualLineText = lines[virtualLine] ?? "";
       const virtualColumn = Math.min(position.column, virtualLineText.length);
 
-      return Math.min(
-        calculateLineOffset(lines, virtualLine) + virtualColumn,
-        displayContent.length,
-      );
+      return Math.min(getVisualLineOffset(virtualLine) + virtualColumn, displayContent.length);
     },
-    [displayContent.length, foldTransform.hasActiveFolds, foldTransform.mapping, lines],
+    [
+      displayContent.length,
+      foldTransform.hasActiveFolds,
+      foldTransform.mapping,
+      getVisualLineOffset,
+      lines,
+    ],
   );
 
   useLayoutEffect(() => {
@@ -590,10 +781,18 @@ export function Editor({
 
     const previousScrollTop = textarea.scrollTop;
     const previousScrollLeft = textarea.scrollLeft;
-    const valueChanged = textarea.value !== displayContent;
+    const valueChanged = textarea.value !== textareaContent;
 
     if (valueChanged) {
-      textarea.value = displayContent;
+      textarea.value = textareaContent;
+    }
+
+    if (largeContentMode) {
+      if (valueChanged) {
+        textarea.scrollTop = previousScrollTop;
+        textarea.scrollLeft = previousScrollLeft;
+      }
+      return;
     }
 
     const selectionStart = selection
@@ -610,7 +809,7 @@ export function Editor({
       textarea.scrollTop = previousScrollTop;
       textarea.scrollLeft = previousScrollLeft;
     }
-  }, [cursorPosition, displayContent, getInputOffsetForPosition, selection]);
+  }, [cursorPosition, getInputOffsetForPosition, largeContentMode, selection, textareaContent]);
 
   const handleInput = useCallback(
     (newVirtualContent: string, event?: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -664,14 +863,14 @@ export function Editor({
           previousActualContent,
           previousCursorPosition,
           previousSelection,
+          { contentAlreadyApplied: true },
         );
       }
 
       if (!useGlobalEditorState) return;
 
       const selectionStart = inputRef.current.selectionStart;
-      const virtualLines = splitLines(newVirtualContent);
-      const position = calculateCursorPosition(selectionStart, virtualLines);
+      const position = calculateCursorPositionFromContent(selectionStart, newVirtualContent);
 
       if (foldTransform.hasActiveFolds) {
         const actualLine =
@@ -727,17 +926,114 @@ export function Editor({
     }
   }, []);
 
+  const handleLargeModeBeforeInput = useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
+    const inputEvent = event.nativeEvent as InputEvent;
+    if (inputEvent.inputType === "insertFromPaste") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (inputEvent.inputType === "historyUndo") {
+      editorAPI.undo();
+    } else if (inputEvent.inputType === "historyRedo") {
+      editorAPI.redo();
+    }
+  }, []);
+
+  const handleLargeModeInput = useCallback(
+    (_content: string, event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      event.currentTarget.value = "";
+    },
+    [],
+  );
+
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (readOnly) return;
+      if (!bufferId || !inputRef.current) return;
+
+      const pastedText = event.clipboardData.getData("text");
+      if (!pastedText) return;
+
+      const textarea = inputRef.current;
+      const selectionStart = largeContentMode
+        ? cursorPosition.offset
+        : Math.min(textarea.selectionStart, textarea.selectionEnd);
+      const selectionEnd = largeContentMode
+        ? cursorPosition.offset
+        : Math.max(textarea.selectionStart, textarea.selectionEnd);
+      const newVirtualContent =
+        displayContent.slice(0, selectionStart) + pastedText + displayContent.slice(selectionEnd);
+
+      if (!getLargeEditorModeInfo(newVirtualContent).largeContentMode) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const newActualContent = foldTransform.hasActiveFolds
+        ? applyVirtualEdit(content, newVirtualContent, foldTransform.mapping)
+        : newVirtualContent;
+      const previousActualContent = content;
+      const previousCursorPosition = cursorPosition;
+      const previousSelection = selection;
+      const nextOffset = selectionStart + pastedText.length;
+
+      textarea.value = "";
+      updateBufferContent(bufferId, newActualContent);
+      if (onContentChange) {
+        onContentChange(
+          newActualContent,
+          previousActualContent,
+          previousCursorPosition,
+          previousSelection,
+        );
+      } else {
+        onChange(
+          newActualContent,
+          previousActualContent,
+          previousCursorPosition,
+          previousSelection,
+          { contentAlreadyApplied: true },
+        );
+      }
+
+      if (!useGlobalEditorState) return;
+
+      setEditorCursorPosition(calculateCursorPositionFromContent(nextOffset, newActualContent));
+      setSelection(undefined);
+      useEditorUIStore.getState().actions.setLastInputTimestamp(Date.now());
+    },
+    [
+      bufferId,
+      content,
+      cursorPosition,
+      displayContent,
+      foldTransform,
+      largeContentMode,
+      onChange,
+      onContentChange,
+      readOnly,
+      selection,
+      setEditorCursorPosition,
+      setSelection,
+      updateBufferContent,
+      useGlobalEditorState,
+    ],
+  );
+
   const editorOps = useEditorOperations({
     inputRef,
     content,
     bufferId,
-    updateBufferContent,
     handleInput,
     tabSize,
   });
 
   // Inline edit hook
   const inlineEditState = useInlineEdit({
+    enabled: !largeContentMode,
     inputRef,
     buffer: buffer
       ? {
@@ -783,10 +1079,11 @@ export function Editor({
         ? {
             ...vimVisualSelection.end,
             offset:
-              calculateLineOffset(lines, vimVisualSelection.end.line) +
-              vimVisualSelection.end.column,
+              getVisualLineOffset(vimVisualSelection.end.line) + vimVisualSelection.end.column,
           }
-        : calculateCursorPosition(selectionStart, lines);
+        : largeContentMode
+          ? calculateCursorPositionFromContent(selectionStart, displayContent)
+          : calculateCursorPosition(selectionStart, lines);
 
     if (foldTransform.hasActiveFolds) {
       const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
@@ -801,10 +1098,16 @@ export function Editor({
     }
 
     if (selectionStart !== selectionEnd) {
-      const startPos = calculateCursorPosition(selectionStart, lines);
-      const endPos = calculateCursorPosition(selectionEnd, lines);
+      const startPos = largeContentMode
+        ? calculateCursorPositionFromContent(selectionStart, displayContent)
+        : calculateCursorPosition(selectionStart, lines);
+      const endPos = largeContentMode
+        ? calculateCursorPositionFromContent(selectionEnd, displayContent)
+        : calculateCursorPosition(selectionEnd, lines);
       const anchorOffset = Math.max(selectionStart, selectionEnd);
-      const anchorPos = calculateCursorPosition(anchorOffset, lines);
+      const anchorPos = largeContentMode
+        ? calculateCursorPositionFromContent(anchorOffset, displayContent)
+        : calculateCursorPosition(anchorOffset, lines);
       inlineEditState.setInlineEditSelectionAnchor({
         line: anchorPos.line,
         column: anchorPos.column,
@@ -846,8 +1149,11 @@ export function Editor({
     uiActions.setIsHovering(false);
   }, [
     bufferId,
+    displayContent,
     lines,
     actualLines,
+    getVisualLineOffset,
+    largeContentMode,
     setEditorCursorPosition,
     setSelection,
     foldTransform,
@@ -894,28 +1200,32 @@ export function Editor({
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent<HTMLTextAreaElement>) => {
-      if (!useGlobalEditorState || readOnly || wordWrap || event.button !== 0) return;
+      if (!useGlobalEditorState || readOnly || event.button !== 0) return;
       if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey || event.detail > 1) {
         return;
       }
 
       const textarea = inputRef.current;
-      if (!textarea || visualInlayHints.length === 0) return;
+      if (!textarea) return;
+      if (visualInlayHints.length === 0 && viewLayout.totalZoneHeight === 0) return;
 
       const rect = textarea.getBoundingClientRect();
-      const x =
-        event.clientX - rect.left - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + textarea.scrollLeft;
-      const y = event.clientY - rect.top - EDITOR_CONSTANTS.EDITOR_PADDING_TOP + textarea.scrollTop;
-      const visualLine = Math.max(0, Math.min(lines.length - 1, Math.floor(y / lineHeight)));
+      const editorX = event.clientX - rect.left + textarea.scrollLeft;
+      const editorY = event.clientY - rect.top + textarea.scrollTop;
+      const position = viewLayout.editorPointToModelPosition(editorX, editorY);
+      const visualLine = Math.max(0, Math.min(lines.length - 1, position.modelLine));
       const lineHints = visualInlayHints.filter((hint) => hint.line === visualLine);
-      if (lineHints.length === 0) return;
 
       event.preventDefault();
 
       const lineText = lines[visualLine] || "";
-      const column = getColumnForInlayAdjustedX(lineText, lineHints, Math.max(0, x));
+      const localX = Math.max(0, editorX - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
+      const column =
+        lineHints.length > 0
+          ? getColumnForInlayAdjustedX(lineText, lineHints, localX)
+          : position.column;
       const virtualOffset = Math.min(
-        calculateLineOffset(lines, visualLine) + column,
+        getVisualLineOffset(visualLine) + column,
         displayContent.length,
       );
 
@@ -946,14 +1256,14 @@ export function Editor({
       displayContent.length,
       foldTransform,
       getColumnForInlayAdjustedX,
-      lineHeight,
+      getVisualLineOffset,
       lines,
       readOnly,
       setEditorCursorPosition,
       setSelection,
       useGlobalEditorState,
       visualInlayHints,
-      wordWrap,
+      viewLayout,
     ],
   );
 
@@ -997,7 +1307,9 @@ export function Editor({
       }
 
       const selectionStart = inputRef.current.selectionStart;
-      const clickedPosition = calculateCursorPosition(selectionStart, lines);
+      const clickedPosition = largeContentMode
+        ? calculateCursorPositionFromContent(selectionStart, displayContent)
+        : calculateCursorPosition(selectionStart, lines);
       const clickedLine = lines[clickedPosition.line] || "";
       const accordionMeta = parseDiffAccordionLine(clickedLine);
 
@@ -1054,7 +1366,12 @@ export function Editor({
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
 
   useAutocomplete({
-    enabled: aiCompletionEnabled && !isPreviewMode && !readOnly,
+    enabled:
+      aiCompletionEnabled &&
+      !isPreviewMode &&
+      !readOnly &&
+      !inlineEditState.inlineEditVisible &&
+      !largeContentMode,
     provider: aiAutocompleteProvider,
     model:
       aiAutocompleteProvider === "custom" ? aiAutocompleteCustomModelId : aiAutocompleteModelId,
@@ -1104,7 +1421,7 @@ export function Editor({
     bufferId,
     viewStateKey: viewStateKey ?? bufferId ?? null,
     linesCount: lines.length,
-    minimapEnabled,
+    minimapEnabled: minimapEnabled && !largeContentMode,
     lockVerticalScroll: !scrollable,
     switchGuardRef,
     highlightRef,
@@ -1265,7 +1582,7 @@ export function Editor({
   const tokenizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!buffer?.content || !buffer?.path) return;
+    if (!tokenizationEnabled || !buffer?.content || !buffer?.path) return;
 
     if (tokenizeRafRef.current !== null) {
       cancelAnimationFrame(tokenizeRafRef.current);
@@ -1281,7 +1598,7 @@ export function Editor({
     if (
       !useIncrementalTokenization &&
       tokens.length > 0 &&
-      tokenizedContent === contentToTokenize
+      tokenizedContent === normalizeLineEndings(contentToTokenize)
     ) {
       return;
     }
@@ -1338,6 +1655,7 @@ export function Editor({
     viewportRange?.endLine,
     isScrollingRef,
     useGlobalEditorState,
+    tokenizationEnabled,
   ]);
 
   const handleLineClick = useCallback(
@@ -1349,7 +1667,7 @@ export function Editor({
         return;
       }
 
-      const lineStart = calculateLineOffset(lines, lineIndex);
+      const lineStart = getVisualLineOffset(lineIndex);
       const lineEnd = lineStart + lines[lineIndex].length;
 
       inputRef.current.selectionStart = lineStart;
@@ -1385,6 +1703,7 @@ export function Editor({
     },
     [
       lines,
+      getVisualLineOffset,
       foldTransform,
       actualLines,
       setEditorCursorPosition,
@@ -1457,6 +1776,35 @@ export function Editor({
     cursorViewPosition,
   ]);
 
+  const inlineDiffTop = useMemo(() => {
+    if (!inlineDiff.state.isOpen) return undefined;
+    const zone = viewLayout.zones.find((entry) => entry.id === "inline-diff");
+    if (zone) return zone.top;
+
+    const visualLine = foldTransform.hasActiveFolds
+      ? (foldTransform.mapping.actualToVirtual.get(inlineDiff.state.lineNumber) ??
+        inlineDiff.state.lineNumber)
+      : inlineDiff.state.lineNumber;
+
+    if (visualLine < 0 || visualLine >= lines.length) return undefined;
+
+    const lineText = lines[visualLine] ?? "";
+    const segment = viewLayout.getSegmentForModelPosition(visualLine, lineText.length);
+    return segment.top + segment.height;
+  }, [
+    foldTransform.hasActiveFolds,
+    foldTransform.mapping,
+    inlineDiff.state.isOpen,
+    inlineDiff.state.lineNumber,
+    lines,
+    viewLayout,
+  ]);
+
+  const inlineEditZoneTop = useMemo(() => {
+    const zone = viewLayout.zones.find((entry) => entry.id === "inline-edit");
+    return zone?.top;
+  }, [viewLayout]);
+
   if (!buffer) return null;
 
   return (
@@ -1469,15 +1817,16 @@ export function Editor({
           lineHeight={lineHeight}
           textareaRef={inputRef}
           virtualize={shouldVirtualizeRendering}
-          filePath={filePath}
-          onLineClick={handleLineClick}
-          onGitIndicatorClick={inlineDiff.toggle}
+          filePath={largeContentMode ? undefined : filePath}
+          onLineClick={largeContentMode ? undefined : handleLineClick}
+          onGitIndicatorClick={largeContentMode ? undefined : inlineDiff.toggle}
           foldMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
           wordWrap={wordWrap}
           lines={lines}
           contentWidth={contentWidth}
           lineNumberStart={lineNumberStart}
           lineNumberMap={lineNumberMap}
+          viewZones={viewLayout.zones}
         />
       )}
 
@@ -1491,35 +1840,51 @@ export function Editor({
         onClick={onClick}
       >
         {backgroundLayer}
-        {hasSyntaxHighlighting && (
-          <HighlightLayer
-            ref={highlightRef}
-            content={displayContent}
-            tokens={effectiveTokens}
-            foldMarkers={foldTransform.hasActiveFolds ? foldTransform.foldMarkers : undefined}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-            lineHeight={lineHeight}
-            tabSize={tabSize}
-            wordWrap={wordWrap}
-            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
-            inlayHints={visualInlayHints}
-          />
-        )}
+        <HighlightLayer
+          ref={highlightRef}
+          filePath={largeContentMode ? undefined : filePath}
+          content={displayContent}
+          lines={lines}
+          lineCount={lines.length}
+          lineOffsets={displayLineOffsets}
+          lazyLineSlicing={largeContentMode}
+          tokens={effectiveTokens}
+          foldMarkers={foldTransform.hasActiveFolds ? foldTransform.foldMarkers : undefined}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          lineHeight={lineHeight}
+          tabSize={tabSize}
+          wordWrap={wordWrap}
+          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+          lineMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
+          viewZones={viewLayout.zones}
+          inlayHints={largeContentMode ? [] : visualInlayHints}
+        />
         <InputLayer
           textareaRef={inputRef}
-          content={displayContent}
+          content={textareaContent}
           filePath={filePath}
-          onInput={handleInput}
-          onBeforeInput={readOnly || !useGlobalEditorState ? undefined : handleBeforeInput}
-          onKeyDown={readOnly || !useGlobalEditorState ? undefined : handleKeyDown}
+          onInput={largeContentMode ? handleLargeModeInput : handleInput}
+          onBeforeInput={
+            readOnly || !useGlobalEditorState
+              ? undefined
+              : largeContentMode
+                ? handleLargeModeBeforeInput
+                : handleBeforeInput
+          }
+          onKeyDown={
+            readOnly || !useGlobalEditorState || largeContentMode ? undefined : handleKeyDown
+          }
           onScroll={handleScroll}
           onSelect={useGlobalEditorState ? handleCursorChange : undefined}
           onClick={
-            useGlobalEditorState || readOnly || onReadonlySurfaceClick ? handleClick : undefined
+            !largeContentMode && (useGlobalEditorState || readOnly || onReadonlySurfaceClick)
+              ? handleClick
+              : undefined
           }
-          onMouseDown={useGlobalEditorState ? handleMouseDown : undefined}
-          onContextMenu={useGlobalEditorState ? contextMenu.open : undefined}
+          onMouseDown={useGlobalEditorState && !largeContentMode ? handleMouseDown : undefined}
+          onContextMenu={useGlobalEditorState && !largeContentMode ? contextMenu.open : undefined}
+          onPaste={useGlobalEditorState ? handlePaste : undefined}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
@@ -1527,11 +1892,14 @@ export function Editor({
           wordWrap={wordWrap}
           readOnly={readOnly}
           scrollable={scrollable}
-          customCaret={useGlobalEditorState && !readOnly}
+          customCaret={useGlobalEditorState && !readOnly && !largeContentMode}
+          nativeSelection={largeContentMode}
+          scrollPaddingBottom={
+            largeContentMode ? viewLayout.totalHeight : viewLayout.totalZoneHeight
+          }
           bufferId={bufferId || undefined}
-          showText={!hasSyntaxHighlighting}
         />
-        {useGlobalEditorState && !readOnly && (
+        {useGlobalEditorState && !readOnly && !largeContentMode && (
           <PrimaryCursorLayer
             ref={primaryCursorRef}
             cursorPosition={cursorPosition}
@@ -1546,7 +1914,7 @@ export function Editor({
             hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
         )}
-        {useGlobalEditorState && (
+        {useGlobalEditorState && !largeContentMode && (
           <SelectionLayer
             ref={selectionLayerRef}
             textareaRef={inputRef}
@@ -1559,137 +1927,131 @@ export function Editor({
             viewLayout={viewLayout}
           />
         )}
-        <DiagnosticLayer
-          filePath={filePath}
-          content={displayContent}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          lineHeight={lineHeight}
-          tabSize={tabSize}
-          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
-          viewLayout={viewLayout}
-          foldMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
-        />
-        {inlineEditState.inlineEditVisible && inlineEditState.popoverPosition && (
-          <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
+        {!largeContentMode &&
+          inlineEditState.inlineEditVisible &&
+          inlineEditState.popoverPosition && (
             <div
-              ref={inlineEditState.inlineEditPopoverRef}
-              role="dialog"
-              aria-modal="false"
-              aria-labelledby="inline-edit-title"
-              aria-describedby="inline-edit-description"
-              className="pointer-events-auto absolute w-[360px] overflow-hidden rounded-lg border border-border/60 bg-primary-bg shadow-lg"
-              style={{
-                top: `${inlineEditState.popoverPosition.top}px`,
-                left: `${inlineEditState.popoverPosition.left}px`,
-              }}
+              ref={inlineEditOverlayRef}
+              className="pointer-events-none absolute inset-0 z-[200]"
             >
-              <div className="px-2 py-1.5">
-                <div className="sr-only">
-                  <div id="inline-edit-title">Inline edit</div>
-                  <div id="inline-edit-description">
-                    Describe the code change, then press Enter to apply or Escape to close.
+              <div
+                ref={inlineEditState.inlineEditPopoverRef}
+                role="dialog"
+                aria-modal="false"
+                aria-labelledby="inline-edit-title"
+                aria-describedby="inline-edit-description"
+                className="pointer-events-auto absolute right-4 max-w-[720px] overflow-hidden rounded-md border border-border/60 bg-primary-bg shadow-lg"
+                style={{
+                  top: `${inlineEditZoneTop ?? inlineEditState.popoverPosition.top}px`,
+                  left: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px`,
+                }}
+              >
+                <div className="px-2 py-1.5">
+                  <div className="sr-only">
+                    <div id="inline-edit-title">Inline edit</div>
+                    <div id="inline-edit-description">
+                      Describe the code change, then press Enter to apply or Escape to close.
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    ref={inlineEditState.inlineEditInstructionRef}
-                    autoFocus
-                    value={inlineEditState.inlineEditInstruction}
-                    onChange={(e) => {
-                      inlineEditState.setInlineEditInstruction(e.target.value);
-                      if (inlineEditState.inlineEditError) {
-                        inlineEditState.setInlineEditError(null);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void inlineEditState.handleApplyInlineEdit();
-                      }
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        if (!inlineEditState.isInlineEditRunning) {
-                          inlineEditState.inlineEditToolbarActions.hide();
+                  <div className="flex items-center gap-2">
+                    <Input
+                      ref={inlineEditState.inlineEditInstructionRef}
+                      autoFocus
+                      value={inlineEditState.inlineEditInstruction}
+                      onChange={(e) => {
+                        inlineEditState.setInlineEditInstruction(e.target.value);
+                        if (inlineEditState.inlineEditError) {
+                          inlineEditState.setInlineEditError(null);
                         }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void inlineEditState.handleApplyInlineEdit();
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          if (!inlineEditState.isInlineEditRunning) {
+                            inlineEditState.inlineEditToolbarActions.hide();
+                          }
+                        }
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Inline edit instruction"
+                      aria-describedby={
+                        inlineEditState.inlineEditError
+                          ? "inline-edit-description inline-edit-error"
+                          : "inline-edit-description"
                       }
-                    }}
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Inline edit instruction"
-                    aria-describedby={
-                      inlineEditState.inlineEditError
-                        ? "inline-edit-description inline-edit-error"
-                        : "inline-edit-description"
-                    }
-                    aria-invalid={inlineEditState.inlineEditError ? true : undefined}
-                    className="ui-font h-8 flex-1 bg-transparent px-0 text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
-                    placeholder={
-                      selection && selection.start.offset !== selection.end.offset
-                        ? "Describe the edit for the selection..."
-                        : "Describe the edit for the current line..."
-                    }
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
-                    className="text-text-lighter hover:text-text"
-                    tooltip="Close inline edit"
-                    shortcut="escape"
-                  >
-                    <X />
-                  </Button>
-                </div>
-                {inlineEditState.inlineEditError && (
-                  <div
-                    id="inline-edit-error"
-                    role="alert"
-                    aria-live="assertive"
-                    className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300"
-                  >
-                    {inlineEditState.inlineEditError}
+                      aria-invalid={inlineEditState.inlineEditError ? true : undefined}
+                      className="ui-font h-8 flex-1 bg-transparent px-0 text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
+                      placeholder={
+                        selection && selection.start.offset !== selection.end.offset
+                          ? "Describe the edit for the selection..."
+                          : "Describe the edit for the current line..."
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
+                      className="text-text-lighter hover:text-text"
+                      tooltip="Close inline edit"
+                      shortcut="escape"
+                    >
+                      <X />
+                    </Button>
                   </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between px-2 py-1">
-                <div className="min-w-0 flex-1">
-                  <InlineEditModelSelector
-                    models={inlineEditState.inlineEditModels}
-                    value={inlineEditState.aiAutocompleteModelId}
-                    onChange={(modelId) =>
-                      inlineEditState.updateSetting("aiAutocompleteModelId", modelId)
-                    }
-                    disabled={inlineEditState.isInlineEditRunning}
-                    isLoading={inlineEditState.isInlineEditModelLoading}
-                  />
+                  {inlineEditState.inlineEditError && (
+                    <div
+                      id="inline-edit-error"
+                      role="alert"
+                      aria-live="assertive"
+                      className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300"
+                    >
+                      {inlineEditState.inlineEditError}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => void inlineEditState.handleApplyInlineEdit()}
-                    disabled={inlineEditState.isInlineEditRunning}
-                    className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"
-                    aria-label={
-                      inlineEditState.isInlineEditRunning
-                        ? "Applying inline edit"
-                        : "Apply inline edit"
-                    }
-                    tooltip="Apply inline edit"
-                    shortcut="enter"
-                  >
-                    <CornerDownLeft />
-                    {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}
-                  </Button>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <div className="min-w-0 flex-1">
+                    <InlineEditModelSelector
+                      models={inlineEditState.inlineEditModels}
+                      value={inlineEditState.aiAutocompleteModelId}
+                      onChange={(modelId) =>
+                        inlineEditState.updateSetting("aiAutocompleteModelId", modelId)
+                      }
+                      disabled={inlineEditState.isInlineEditRunning}
+                      isLoading={inlineEditState.isInlineEditModelLoading}
+                    />
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void inlineEditState.handleApplyInlineEdit()}
+                      disabled={inlineEditState.isInlineEditRunning}
+                      className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"
+                      aria-label={
+                        inlineEditState.isInlineEditRunning
+                          ? "Applying inline edit"
+                          : "Apply inline edit"
+                      }
+                      tooltip="Apply inline edit"
+                      shortcut="enter"
+                    >
+                      <CornerDownLeft />
+                      {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-        {inlineAutocompletePreview && (
+          )}
+        {!largeContentMode && inlineAutocompletePreview && (
           <div
             ref={autocompleteCompletionRef}
             className="pointer-events-none absolute inset-0 z-[3]"
@@ -1728,12 +2090,15 @@ export function Editor({
             </div>
           </div>
         )}
-        {autocompleteCompletion && !isLspCompletionVisible && !inlineAutocompletePreview && (
-          <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 text-[11px] text-text-lighter/80">
-            Tab to accept AI suggestion
-          </div>
-        )}
-        {useGlobalEditorState && multiCursorState && (
+        {!largeContentMode &&
+          autocompleteCompletion &&
+          !isLspCompletionVisible &&
+          !inlineAutocompletePreview && (
+            <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 text-[11px] text-text-lighter/80">
+              Tab to accept AI suggestion
+            </div>
+          )}
+        {useGlobalEditorState && !largeContentMode && multiCursorState && (
           <MultiCursorLayer
             ref={multiCursorRef}
             cursors={multiCursorState.cursors}
@@ -1745,7 +2110,7 @@ export function Editor({
           />
         )}
 
-        {useGlobalEditorState && vimModeEnabled && (
+        {useGlobalEditorState && !largeContentMode && vimModeEnabled && (
           <VimCursorLayer
             ref={vimCursorRef}
             visualLine={visualCursorLine}
@@ -1759,7 +2124,7 @@ export function Editor({
           />
         )}
 
-        {(highlightMatches?.length || searchMatches.length > 0) && (
+        {!largeContentMode && (highlightMatches?.length || searchMatches.length > 0) && (
           <SearchHighlightLayer
             ref={searchHighlightRef}
             searchMatches={highlightMatches ?? searchMatches}
@@ -1774,7 +2139,7 @@ export function Editor({
           />
         )}
 
-        {useGlobalEditorState && (
+        {useGlobalEditorState && !largeContentMode && (
           <DefinitionLinkLayer
             fontSize={fontSize}
             fontFamily={fontFamily}
@@ -1788,6 +2153,9 @@ export function Editor({
         {useGlobalEditorState &&
           filePath &&
           inlineGitBlameEnabled &&
+          !largeContentMode &&
+          !autocompleteCompletion &&
+          !isLspCompletionVisible &&
           !(foldTransform.hasActiveFolds && foldTransform.foldMarkers.has(visualCursorLine)) &&
           !inlineEditState.inlineEditVisible && (
             <GitBlameLayer
@@ -1805,7 +2173,7 @@ export function Editor({
             />
           )}
 
-        {inlineDiff.state.isOpen && (
+        {!largeContentMode && inlineDiff.state.isOpen && (
           <div
             ref={inlineDiffRef}
             style={{
@@ -1822,6 +2190,7 @@ export function Editor({
               fontSize={fontSize}
               fontFamily={fontFamily}
               lineHeight={lineHeight}
+              top={inlineDiffTop}
               onClose={inlineDiff.close}
               onRevert={handleRevertChange}
             />
@@ -1829,7 +2198,7 @@ export function Editor({
         )}
       </div>
 
-      {minimapEnabled && (
+      {minimapEnabled && !largeContentMode && (
         <Minimap
           content={displayContent}
           tokens={effectiveTokens}

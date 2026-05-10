@@ -18,6 +18,7 @@ interface InputLayerProps {
   onMouseDown?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   onMouseUp?: () => void;
   onContextMenu?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -30,6 +31,8 @@ interface InputLayerProps {
   readOnly?: boolean;
   scrollable?: boolean;
   customCaret?: boolean;
+  nativeSelection?: boolean;
+  scrollPaddingBottom?: number;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -44,6 +47,7 @@ const InputLayerComponent = ({
   onMouseDown,
   onMouseUp,
   onContextMenu,
+  onPaste,
   fontSize,
   fontFamily,
   lineHeight,
@@ -54,6 +58,8 @@ const InputLayerComponent = ({
   readOnly = false,
   scrollable = true,
   customCaret = false,
+  nativeSelection = false,
+  scrollPaddingBottom = 0,
   textareaRef,
 }: InputLayerProps) => {
   const localRef = useRef<HTMLTextAreaElement>(null);
@@ -80,9 +86,14 @@ const InputLayerComponent = ({
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
       onContextMenu={onContextMenu}
+      onPaste={onPaste}
       onScroll={onScroll}
       className={`input-layer editor-textarea editor-viewport ${
-        customCaret || !wordWrap ? "selection-transparent" : "native-selection"
+        nativeSelection
+          ? "native-selection"
+          : customCaret || !wordWrap
+            ? "selection-transparent"
+            : "native-selection"
       }`}
       style={{
         position: "absolute",
@@ -101,6 +112,10 @@ const InputLayerComponent = ({
         whiteSpace: wordWrap ? "pre-wrap" : "pre",
         overflowWrap: wordWrap ? "anywhere" : "normal",
         wordBreak: wordWrap ? "break-word" : "normal",
+        paddingBottom:
+          scrollPaddingBottom > 0
+            ? `calc(var(--editor-padding-bottom) + ${scrollPaddingBottom}px)`
+            : undefined,
         ...(showText && { color: "var(--text, #d4d4d4)" }),
       }}
       wrap={wordWrap ? "soft" : "off"}
@@ -129,6 +144,8 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.showText === next.showText &&
     prev.scrollable === next.scrollable &&
     prev.customCaret === next.customCaret &&
+    prev.nativeSelection === next.nativeSelection &&
+    prev.scrollPaddingBottom === next.scrollPaddingBottom &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
     prev.onBeforeInput === next.onBeforeInput &&
@@ -140,6 +157,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.onMouseDown === next.onMouseDown &&
     prev.onMouseUp === next.onMouseUp &&
     prev.onContextMenu === next.onContextMenu &&
+    prev.onPaste === next.onPaste &&
     prev.readOnly === next.readOnly
   );
 });

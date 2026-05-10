@@ -2,6 +2,10 @@ import { memo, useMemo } from "react";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { GUTTER_CONFIG } from "@/features/editor/utils/gutter";
+import {
+  getViewZoneHeightBeforeLine,
+  type ResolvedEditorViewZone,
+} from "@/features/editor/view-model/view-layout";
 
 interface DebugBreakpointIndicatorsProps {
   filePath?: string;
@@ -9,6 +13,7 @@ interface DebugBreakpointIndicatorsProps {
   startLine: number;
   endLine: number;
   hiddenLines?: Set<number>;
+  viewZones?: ResolvedEditorViewZone[];
 }
 
 function DebugBreakpointIndicatorsComponent({
@@ -17,6 +22,7 @@ function DebugBreakpointIndicatorsComponent({
   startLine,
   endLine,
   hiddenLines,
+  viewZones = [],
 }: DebugBreakpointIndicatorsProps) {
   const breakpoints = useDebuggerStore.use.breakpoints();
   const { toggleBreakpoint } = useDebuggerStore.use.actions();
@@ -49,7 +55,11 @@ function DebugBreakpointIndicatorsComponent({
           aria-label={`${hasBreakpoint ? "Remove" : "Add"} breakpoint on line ${lineNum + 1}`}
           style={{
             position: "absolute",
-            top: `${lineNum * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
+            top: `${
+              lineNum * lineHeight +
+              getViewZoneHeightBeforeLine(viewZones, lineNum) +
+              EDITOR_CONSTANTS.GUTTER_PADDING
+            }px`,
             left: 0,
             right: 0,
             height: `${lineHeight}px`,
@@ -74,7 +84,16 @@ function DebugBreakpointIndicatorsComponent({
     }
 
     return items;
-  }, [breakpointsByLine, endLine, filePath, hiddenLines, lineHeight, startLine, toggleBreakpoint]);
+  }, [
+    breakpointsByLine,
+    endLine,
+    filePath,
+    hiddenLines,
+    lineHeight,
+    startLine,
+    toggleBreakpoint,
+    viewZones,
+  ]);
 
   return (
     <div

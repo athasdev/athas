@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
 
@@ -62,14 +63,31 @@ export function mapCliOpenPayloadToWindowOpenRequest(
 
 export function useCliOpen() {
   useEffect(() => {
-    const unlisten = listen<CliOpenPayload>("cli_open_request", (event) => {
-      const request = mapCliOpenPayloadToWindowOpenRequest(event.payload);
+    let disposed = false;
+    const enqueuePayload = (payload: CliOpenPayload) => {
+      const request = mapCliOpenPayloadToWindowOpenRequest(payload);
       if (request) {
         void enqueueWindowOpenRequest(request);
       }
+    };
+
+    const unlisten = listen<CliOpenPayload>("cli_open_request", (event) => {
+      enqueuePayload(event.payload);
     });
 
+    void invoke<CliOpenPayload[]>("take_pending_cli_open_requests")
+      .then((payloads) => {
+        if (disposed) return;
+        for (const payload of payloads) {
+          enqueuePayload(payload);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load pending CLI open requests:", error);
+      });
+
     return () => {
+      disposed = true;
       unlisten.then((fn) => fn());
     };
   }, []);

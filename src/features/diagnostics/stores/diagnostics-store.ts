@@ -7,10 +7,12 @@ import type { Diagnostic } from "../types/diagnostics";
 interface DiagnosticsState {
   // Map of file path to diagnostics
   diagnosticsByFile: Map<string, Diagnostic[]>;
+  diagnosticsByOwner: Map<string, Map<string, Diagnostic[]>>;
   // Actions
   actions: {
-    setDiagnostics: (filePath: string, diagnostics: Diagnostic[]) => void;
+    setDiagnostics: (filePath: string, diagnostics: Diagnostic[], owner?: string) => void;
     clearDiagnostics: (filePath: string) => void;
+    clearDiagnosticsForOwner: (filePath: string, owner: string) => void;
     clearAllDiagnostics: () => void;
     getDiagnosticsForFile: (filePath: string) => Diagnostic[];
     getAllDiagnostics: () => Diagnostic[];
@@ -74,16 +76,27 @@ export function convertLintDiagnostic(filePath: string, lintDiag: LintDiagnostic
 export const useDiagnosticsStore = createSelectors(
   create<DiagnosticsState>()((set, get) => ({
     diagnosticsByFile: new Map(),
+    diagnosticsByOwner: new Map(),
 
     actions: {
-      setDiagnostics: (filePath: string, diagnostics: Diagnostic[]) => {
+      setDiagnostics: (filePath: string, diagnostics: Diagnostic[], owner = "default") => {
         set((state) => {
-          const newMap = new Map(state.diagnosticsByFile);
-          newMap.set(
+          const normalizedDiagnostics = diagnostics.map((diagnostic) => ({
+            ...diagnostic,
             filePath,
-            diagnostics.map((diagnostic) => ({ ...diagnostic, filePath })),
-          );
-          return { diagnosticsByFile: newMap };
+            owner,
+          }));
+          const nextDiagnosticsByOwner = new Map(state.diagnosticsByOwner);
+          const fileOwners = new Map(nextDiagnosticsByOwner.get(filePath) ?? []);
+          fileOwners.set(owner, normalizedDiagnostics);
+          nextDiagnosticsByOwner.set(filePath, fileOwners);
+
+          const newMap = new Map(state.diagnosticsByFile);
+          newMap.set(filePath, Array.from(fileOwners.values()).flat());
+          return {
+            diagnosticsByFile: newMap,
+            diagnosticsByOwner: nextDiagnosticsByOwner,
+          };
         });
       },
 
@@ -91,12 +104,39 @@ export const useDiagnosticsStore = createSelectors(
         set((state) => {
           const newMap = new Map(state.diagnosticsByFile);
           newMap.delete(filePath);
-          return { diagnosticsByFile: newMap };
+          const nextDiagnosticsByOwner = new Map(state.diagnosticsByOwner);
+          nextDiagnosticsByOwner.delete(filePath);
+          return {
+            diagnosticsByFile: newMap,
+            diagnosticsByOwner: nextDiagnosticsByOwner,
+          };
+        });
+      },
+
+      clearDiagnosticsForOwner: (filePath: string, owner: string) => {
+        set((state) => {
+          const nextDiagnosticsByOwner = new Map(state.diagnosticsByOwner);
+          const fileOwners = new Map(nextDiagnosticsByOwner.get(filePath) ?? []);
+          fileOwners.delete(owner);
+
+          const nextDiagnosticsByFile = new Map(state.diagnosticsByFile);
+          if (fileOwners.size === 0) {
+            nextDiagnosticsByOwner.delete(filePath);
+            nextDiagnosticsByFile.delete(filePath);
+          } else {
+            nextDiagnosticsByOwner.set(filePath, fileOwners);
+            nextDiagnosticsByFile.set(filePath, Array.from(fileOwners.values()).flat());
+          }
+
+          return {
+            diagnosticsByFile: nextDiagnosticsByFile,
+            diagnosticsByOwner: nextDiagnosticsByOwner,
+          };
         });
       },
 
       clearAllDiagnostics: () => {
-        set({ diagnosticsByFile: new Map() });
+        set({ diagnosticsByFile: new Map(), diagnosticsByOwner: new Map() });
       },
 
       getDiagnosticsForFile: (filePath: string) => {

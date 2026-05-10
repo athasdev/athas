@@ -22,6 +22,7 @@ interface NavigationActionsParams {
   setIsQuickOpenVisible: (v: boolean) => void;
   openCommandPaletteView?: (view: "outline") => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
+  coreFeatures: { outline: boolean };
   onClose: () => void;
 }
 
@@ -34,6 +35,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setIsQuickOpenVisible,
     openCommandPaletteView,
     openSettingsDialog,
+    coreFeatures,
     onClose,
   } = params;
 
@@ -90,19 +92,23 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
         onClose();
       },
     },
-    {
-      id: "view-show-outline",
-      label: "View: Show Outline",
-      description: "Show symbols for the active file in the sidebar",
-      icon: <ListBullets />,
-      category: "Navigation",
-      commandId: "workbench.showOutline",
-      action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("outline");
-        onClose();
-      },
-    },
+    ...(coreFeatures.outline
+      ? [
+          {
+            id: "view-show-outline",
+            label: "View: Show Outline",
+            description: "Show symbols for the active file in the sidebar",
+            icon: <ListBullets />,
+            category: "Navigation",
+            commandId: "workbench.showOutline",
+            action: () => {
+              setIsSidebarVisible(true);
+              setActiveView("outline");
+              onClose();
+            },
+          } satisfies Action,
+        ]
+      : []),
     {
       id: "search-global",
       label: "Search: Global Search",

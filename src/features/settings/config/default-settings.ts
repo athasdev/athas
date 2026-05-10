@@ -106,6 +106,7 @@ export const defaultSettings: Settings = {
     search: true,
     diagnostics: true,
     debugger: false,
+    outline: true,
     aiChat: true,
     teamCollaboration: true,
     multiAgents: false,

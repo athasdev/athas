@@ -13,6 +13,7 @@ interface FileOpenBenchmarkSession {
 
 const sessions = new Map<string, FileOpenBenchmarkSession>();
 const DEV_ENABLED = import.meta.env.DEV;
+const BUILD_ENABLED = import.meta.env.VITE_FILE_OPEN_BENCHMARK === "1";
 const STORAGE_KEY = "athas:file-open-benchmark";
 
 function now(): number {
@@ -20,7 +21,7 @@ function now(): number {
 }
 
 function isEnabled(): boolean {
-  if (DEV_ENABLED) return true;
+  if (DEV_ENABLED || BUILD_ENABLED) return true;
 
   try {
     return localStorage.getItem(STORAGE_KEY) === "1";

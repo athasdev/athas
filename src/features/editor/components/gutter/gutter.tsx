@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { calculateTotalGutterWidth } from "../../utils/gutter";
+import type { ResolvedEditorViewZone } from "../../view-model/view-layout";
 import { DebugBreakpointIndicators } from "@/features/debugger/components/debug-breakpoint-indicators";
 import { FoldIndicators } from "./fold-indicators";
 import { GitIndicators } from "./git-indicators";
@@ -30,6 +31,7 @@ interface GutterProps {
   contentWidth?: number;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
+  viewZones?: ResolvedEditorViewZone[];
 }
 
 const BUFFER_LINES = 20;
@@ -52,6 +54,7 @@ function GutterComponent({
   contentWidth,
   lineNumberStart = 1,
   lineNumberMap,
+  viewZones = [],
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -77,7 +80,8 @@ function GutterComponent({
     lineNumberStart + totalLines - 1,
   );
   const totalWidth = calculateTotalGutterWidth(largestDisplayedLine);
-  const totalContentHeight = totalLines * lineHeight + GUTTER_PADDING * 2;
+  const totalZoneHeight = viewZones.reduce((height, zone) => height + zone.height, 0);
+  const totalContentHeight = totalLines * lineHeight + totalZoneHeight + GUTTER_PADDING * 2;
   const isDiffAccordionBuffer = filePath?.startsWith("diff-editor://") ?? false;
 
   // When word wrap is on, use flow-based gutter that syncs scrollTop directly
@@ -279,6 +283,7 @@ function GutterComponent({
             filePath={filePath}
             lineNumberStart={lineNumberStart}
             lineNumberMap={lineNumberMap}
+            viewZones={viewZones}
           />
         ) : (
           <>
@@ -289,6 +294,7 @@ function GutterComponent({
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
               hiddenLines={accordionLineSet}
+              viewZones={viewZones}
             />
 
             <GitIndicators
@@ -299,6 +305,7 @@ function GutterComponent({
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
               hiddenLines={accordionLineSet}
+              viewZones={viewZones}
             />
 
             <FoldIndicators
@@ -308,6 +315,7 @@ function GutterComponent({
               foldMapping={foldMapping}
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
+              viewZones={viewZones}
             />
 
             <LineNumbers
@@ -322,6 +330,7 @@ function GutterComponent({
               hiddenLines={accordionLineSet}
               lineNumberStart={lineNumberStart}
               lineNumberMap={lineNumberMap}
+              viewZones={viewZones}
             />
           </>
         )}
@@ -345,6 +354,7 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.lines === next.lines &&
     prev.contentWidth === next.contentWidth &&
     prev.lineNumberStart === next.lineNumberStart &&
-    prev.lineNumberMap === next.lineNumberMap
+    prev.lineNumberMap === next.lineNumberMap &&
+    prev.viewZones === next.viewZones
   );
 });

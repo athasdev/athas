@@ -1,5 +1,33 @@
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::{
+   path::{Path, PathBuf},
+   sync::Mutex,
+};
+use tauri::State;
+
+#[derive(Default)]
+pub struct PendingCliOpenRequests(Mutex<Vec<CliRequest>>);
+
+impl PendingCliOpenRequests {
+   pub fn push_all(&self, requests: Vec<CliRequest>) {
+      if requests.is_empty() {
+         return;
+      }
+
+      let mut pending = self.0.lock().expect("pending CLI requests lock poisoned");
+      pending.extend(requests);
+   }
+}
+
+#[tauri::command]
+pub fn take_pending_cli_open_requests(state: State<'_, PendingCliOpenRequests>) -> Vec<CliRequest> {
+   let mut pending = state.0.lock().expect("pending CLI requests lock poisoned");
+   let requests = std::mem::take(&mut *pending);
+   if !requests.is_empty() {
+      log::info!("Drained {} pending CLI open request(s)", requests.len());
+   }
+   requests
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct OpenRequest {

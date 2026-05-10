@@ -98,15 +98,20 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
   );
   const isMultiAgentsFeatureEnabled =
     settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
+  const isOutlineFeatureEnabled = settings.coreFeatures.outline;
   const isDisabledExperimentalViewActive =
     (activeSidebarView === "multi-agents" && !isMultiAgentsFeatureEnabled) ||
+    (activeSidebarView === "outline" && !isOutlineFeatureEnabled) ||
     (activeSidebarView === "collaboration" && !isCollaborationFeatureEnabled);
   const isFilesViewActive =
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     (activeSidebarView === "files" || isDisabledExperimentalViewActive);
   const isOutlineViewActive =
-    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
+    isOutlineFeatureEnabled &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "outline";
   const isNotificationsViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "notifications";
   const isMultiAgentsViewActive =
@@ -183,9 +188,11 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
           )}
         </div>
 
-        <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
-          <OutlineSidebar />
-        </div>
+        {isOutlineFeatureEnabled ? (
+          <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
+            <OutlineSidebar />
+          </div>
+        ) : null}
 
         <div className={cn("h-full", !isNotificationsViewActive && "hidden")}>
           <NotificationsPane />

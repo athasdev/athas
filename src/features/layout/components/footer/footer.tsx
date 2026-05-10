@@ -409,6 +409,7 @@ const Footer = () => {
   );
   const { activeBuffer, symbols } = useDocumentOutline(true);
   const shouldShowOutline =
+    settings.coreFeatures.outline &&
     activeBuffer?.type === "editor" &&
     !activeBuffer.isVirtual &&
     Boolean(activeBuffer.path) &&

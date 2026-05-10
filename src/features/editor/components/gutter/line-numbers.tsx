@@ -2,6 +2,10 @@ import { memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
 import { calculateLineNumberWidth } from "../../utils/gutter";
+import {
+  getViewZoneHeightBeforeLine,
+  type ResolvedEditorViewZone,
+} from "../../view-model/view-layout";
 
 interface LineMapping {
   virtualToActual: Map<number, number>;
@@ -20,6 +24,7 @@ interface LineNumbersProps {
   hiddenLines?: Set<number>;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
+  viewZones?: ResolvedEditorViewZone[];
 }
 
 function LineNumbersComponent({
@@ -34,6 +39,7 @@ function LineNumbersComponent({
   hiddenLines,
   lineNumberStart = 1,
   lineNumberMap,
+  viewZones = [],
 }: LineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const mappedLargestLine = lineNumberMap?.reduce<number>(
@@ -66,7 +72,11 @@ function LineNumbersComponent({
           key={i}
           style={{
             position: "absolute",
-            top: `${i * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
+            top: `${
+              i * lineHeight +
+              getViewZoneHeightBeforeLine(viewZones, i) +
+              EDITOR_CONSTANTS.GUTTER_PADDING
+            }px`,
             left: 0,
             right: 0,
             height: `${lineHeight}px`,
@@ -100,6 +110,7 @@ function LineNumbersComponent({
     hiddenLines,
     lineNumberStart,
     lineNumberMap,
+    viewZones,
   ]);
 
   return (

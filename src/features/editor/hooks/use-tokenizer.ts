@@ -40,6 +40,12 @@ interface TokenState {
   tokens: Token[];
 }
 
+export interface SyntaxTokenSnapshot {
+  bufferId: string;
+  content: string;
+  tokens: Token[];
+}
+
 export function getLanguageId(filePath: string): string | null {
   return getLanguageIdFromPath(filePath);
 }
@@ -127,6 +133,40 @@ export function retargetTokensForContentEdit(
   );
 }
 
+export function resolveSyntaxTokensForContent({
+  tokens,
+  tokenizedContent,
+  normalizedContent,
+  bufferId,
+  snapshot,
+}: {
+  tokens: Token[];
+  tokenizedContent: string;
+  normalizedContent: string;
+  bufferId?: string;
+  snapshot?: SyntaxTokenSnapshot | null;
+}): Token[] {
+  let sourceTokens = tokens;
+  let sourceContent = tokenizedContent;
+
+  if (sourceTokens.length === 0 && bufferId && snapshot?.bufferId === bufferId) {
+    sourceTokens = snapshot.tokens;
+    sourceContent = snapshot.content;
+  }
+
+  if (sourceTokens.length === 0) return [];
+  if (sourceContent === normalizedContent) return sourceTokens;
+  if (!sourceContent) return sourceTokens;
+
+  const retargetedTokens = retargetTokensForContentEdit(
+    sourceTokens,
+    sourceContent,
+    normalizedContent,
+  );
+
+  return retargetedTokens.length > 0 ? retargetedTokens : sourceTokens;
+}
+
 export function useTokenizer({
   filePath,
   bufferId,
@@ -168,6 +208,7 @@ export function useTokenizer({
         previousContent: normalizedText,
       };
       setTokenState({ bufferId, tokens: retargetedTokens });
+      setTokenizedContent(normalizedText);
     },
     [bufferId],
   );

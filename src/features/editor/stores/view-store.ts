@@ -3,16 +3,19 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { LineToken } from "../types/editor";
+import { createSparseLineArray, getLargeEditorModeInfo } from "../utils/large-file";
 import { useBufferStore } from "./buffer-store";
 
 interface EditorViewState {
   // Computed views of the active buffer
   lines: string[];
+  lineCount: number;
   lineTokens: Map<number, LineToken[]>;
 
   // Actions
   actions: {
     getLines: () => string[];
+    getLineCount: () => number;
     getLineTokens: () => Map<number, LineToken[]>;
     getContent: () => string;
   };
@@ -130,13 +133,24 @@ export const useEditorViewStore = createSelectors(
     (_set, _get) => ({
       // These will be computed from the active buffer
       lines: [""],
+      lineCount: 1,
       lineTokens: new Map(),
 
       actions: {
         getLines: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
           if (!activeBuffer || !isEditorContent(activeBuffer)) return [""];
+          const largeEditorInfo = getLargeEditorModeInfo(activeBuffer.content);
+          if (largeEditorInfo.largeContentMode) {
+            return createSparseLineArray(largeEditorInfo.lineCount);
+          }
           return activeBuffer.content.split("\n");
+        },
+
+        getLineCount: () => {
+          const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return 1;
+          return getLargeEditorModeInfo(activeBuffer.content).lineCount;
         },
 
         getLineTokens: () => {
@@ -177,14 +191,28 @@ useBufferStore.subscribe((state) => {
       id: activeBuffer.id,
       content: activeBuffer.content,
     };
+
+    const largeEditorInfo = getLargeEditorModeInfo(activeBuffer.content);
+    if (largeEditorInfo.largeContentMode) {
+      useEditorViewStore.setState({
+        lines: createSparseLineArray(largeEditorInfo.lineCount),
+        lineCount: largeEditorInfo.lineCount,
+        lineTokens: new Map(),
+      });
+      return;
+    }
+
+    const lines = activeBuffer.content.split("\n");
     useEditorViewStore.setState({
-      lines: activeBuffer.content.split("\n"),
+      lines,
+      lineCount: lines.length,
       lineTokens: new Map(),
     });
   } else {
     previousActiveBufferSnapshot = null;
     useEditorViewStore.setState({
       lines: [""],
+      lineCount: 1,
       lineTokens: new Map(),
     });
   }

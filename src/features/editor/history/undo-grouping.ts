@@ -11,7 +11,11 @@ interface ContentDelta {
   startOffset: number;
   insertedText: string;
   removedText: string;
+  insertedLength: number;
+  removedLength: number;
 }
+
+const LARGE_UNDO_DELTA_TEXT_THRESHOLD = 256 * 1024;
 
 function isTypingOperation(operation: UndoEditOperation): boolean {
   return operation.startsWith("typing.");
@@ -51,10 +55,21 @@ function getContentDelta(previousContent: string, nextContent: string): ContentD
     suffixLength += 1;
   }
 
+  const insertedLength = nextContent.length - suffixLength - prefixLength;
+  const removedLength = previousContent.length - suffixLength - prefixLength;
+
   return {
     startOffset: prefixLength,
-    insertedText: nextContent.slice(prefixLength, nextContent.length - suffixLength),
-    removedText: previousContent.slice(prefixLength, previousContent.length - suffixLength),
+    insertedText:
+      insertedLength > LARGE_UNDO_DELTA_TEXT_THRESHOLD
+        ? ""
+        : nextContent.slice(prefixLength, nextContent.length - suffixLength),
+    removedText:
+      removedLength > LARGE_UNDO_DELTA_TEXT_THRESHOLD
+        ? ""
+        : previousContent.slice(prefixLength, previousContent.length - suffixLength),
+    insertedLength,
+    removedLength,
   };
 }
 
@@ -74,7 +89,7 @@ export function getUndoEditDelta(
   return {
     ...delta,
     operation,
-    endOffset: delta.startOffset + delta.insertedText.length,
+    endOffset: delta.startOffset + delta.insertedLength,
   };
 }
 
@@ -87,13 +102,16 @@ export function classifyUndoEdit(
     return "other";
   }
 
-  const { insertedText, removedText } = getContentDelta(previousContent, nextContent);
+  const { insertedText, insertedLength, removedLength } = getContentDelta(
+    previousContent,
+    nextContent,
+  );
 
-  if (insertedText && removedText) {
+  if (insertedLength > 0 && removedLength > 0) {
     return "replace";
   }
 
-  if (removedText) {
+  if (removedLength > 0) {
     return "delete";
   }
 
@@ -109,8 +127,8 @@ export function classifyUndoEdit(
   }
 
   if (
+    insertedLength === 1 &&
     insertedText &&
-    insertedText.length === 1 &&
     !insertedText.includes("\n") &&
     !insertedText.includes("\t")
   ) {
@@ -162,7 +180,7 @@ export function shouldStartNewUndoGroupForDelta(
   if (nextDelta.operation === "delete") {
     return (
       nextDelta.startOffset !== previousDelta.startOffset &&
-      nextDelta.startOffset !== previousDelta.startOffset - nextDelta.removedText.length
+      nextDelta.startOffset !== previousDelta.startOffset - nextDelta.removedLength
     );
   }
 

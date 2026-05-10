@@ -193,6 +193,7 @@ interface EditorState {
     previousValue?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    options?: { contentAlreadyApplied?: boolean },
   ) => void;
   filePath: string;
   editorRef: RefObject<HTMLDivElement | null> | null;
@@ -239,6 +240,7 @@ interface EditorStateActions {
       previousValue?: string,
       previousCursorPosition?: Position,
       previousSelection?: Range,
+      options?: { contentAlreadyApplied?: boolean },
     ) => void,
   ) => void;
   setFileInfo: (filePath: string) => void;

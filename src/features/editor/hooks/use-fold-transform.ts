@@ -20,14 +20,16 @@ interface FoldTransformResult {
 export function useFoldTransform(
   filePath: string | undefined,
   content: string,
+  baseLines?: string[],
 ): FoldTransformResult {
   const foldsByFile = useFoldStore((state) => state.foldsByFile);
 
   return useMemo(() => {
     if (!filePath) {
+      const lines = baseLines ?? splitLines(content);
       return {
         virtualContent: content,
-        virtualLines: splitLines(content),
+        virtualLines: lines,
         mapping: {
           actualToVirtual: new Map<number, number>(),
           virtualToActual: new Map<number, number>(),
@@ -40,9 +42,10 @@ export function useFoldTransform(
 
     const fileState = foldsByFile.get(filePath);
     if (!fileState || fileState.collapsedLines.size === 0) {
+      const lines = baseLines ?? splitLines(content);
       return {
         virtualContent: content,
-        virtualLines: splitLines(content),
+        virtualLines: lines,
         mapping: {
           actualToVirtual: new Map<number, number>(),
           virtualToActual: new Map<number, number>(),
@@ -58,5 +61,5 @@ export function useFoldTransform(
       ...result,
       hasActiveFolds: true,
     };
-  }, [filePath, content, foldsByFile]);
+  }, [filePath, content, baseLines, foldsByFile]);
 }

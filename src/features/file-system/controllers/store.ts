@@ -15,6 +15,7 @@ import {
   useBufferStore,
 } from "@/features/editor/stores/buffer-store";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
+import { getLineSlice } from "@/features/editor/utils/large-file";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
@@ -1233,17 +1234,11 @@ export const useFileSystemStore = createSelectors(
             requestAnimationFrame(() => {
               if (codeEditorRef.current?.textarea) {
                 const textarea = codeEditorRef.current.textarea;
-                const lines = content.split("\n");
-                let targetPosition = 0;
-
-                if (line) {
-                  for (let i = 0; i < line - 1 && i < lines.length; i++) {
-                    targetPosition += lines[i].length + 1;
-                  }
-                  if (column) {
-                    targetPosition += Math.min(column - 1, lines[line - 1]?.length || 0);
-                  }
-                }
+                const targetLine = Math.max(0, (line ?? 1) - 1);
+                const targetLineSlice = getLineSlice(content, targetLine);
+                const targetPosition =
+                  targetLineSlice.offset +
+                  (column ? Math.min(column - 1, targetLineSlice.line.length) : 0);
 
                 textarea.focus();
                 if (

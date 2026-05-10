@@ -6,6 +6,7 @@ import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
 import { useFoldStore } from "../../stores/fold-store";
 import { calculateLineNumberWidth, GUTTER_CONFIG } from "../../utils/gutter";
+import type { ResolvedEditorViewZone } from "../../view-model/view-layout";
 
 interface LineMapping {
   virtualToActual: Map<number, number>;
@@ -23,6 +24,7 @@ interface FlowLineNumbersProps {
   filePath?: string;
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
+  viewZones?: ResolvedEditorViewZone[];
 }
 
 function FlowLineNumbersComponent({
@@ -36,6 +38,7 @@ function FlowLineNumbersComponent({
   filePath,
   lineNumberStart = 1,
   lineNumberMap,
+  viewZones = [],
 }: FlowLineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const breakpoints = useDebuggerStore.use.breakpoints();
@@ -94,7 +97,7 @@ function FlowLineNumbersComponent({
         paddingBottom: `${EDITOR_CONSTANTS.GUTTER_PADDING}px`,
       }}
     >
-      {lines.map((line, i) => {
+      {lines.flatMap((line, i) => {
         const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
         const mappedLineNumber = lineNumberMap?.[actualLineNumber];
         const displayedLineNumber = mappedLineNumber ?? lineNumberStart + actualLineNumber;
@@ -102,7 +105,7 @@ function FlowLineNumbersComponent({
         const isActive = i === visualCursorLine;
         const isAccordionLine = isDiffAccordionBuffer && parseDiffAccordionLine(line) !== null;
 
-        return (
+        const row = (
           <div
             key={i}
             style={{
@@ -249,6 +252,19 @@ function FlowLineNumbersComponent({
             </div>
           </div>
         );
+        const zones = viewZones
+          .filter((zone) => zone.afterLine === i)
+          .map((zone) => (
+            <div
+              key={`zone-${zone.id}`}
+              aria-hidden
+              style={{
+                height: `${zone.height}px`,
+              }}
+            />
+          ));
+
+        return [row, ...zones];
       })}
     </div>
   );

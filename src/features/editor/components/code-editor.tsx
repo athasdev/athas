@@ -8,6 +8,7 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings-store"
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { getLargeEditorModeInfo, getLineSlice } from "@/features/editor/utils/large-file";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
 import type {
   EditorCoordinateResolver,
@@ -27,6 +28,7 @@ import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
+import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import type { Position, Range } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
@@ -138,7 +140,10 @@ const CodeEditor = ({
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
-  const enableInlayHints = enableInteractiveServices && settings.parameterHints;
+  const largeEditorModeInfo = useMemo(() => getLargeEditorModeInfo(value), [value]);
+  const largeContentMode = largeEditorModeInfo.largeContentMode;
+  const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
+  const enableInlayHints = enableRichEditorServices && settings.parameterHints;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -227,7 +232,7 @@ const CodeEditor = ({
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
-    enabled: enableInteractiveServices,
+    enabled: enableRichEditorServices,
     filePath,
     value,
     cursorPosition,
@@ -236,7 +241,7 @@ const CodeEditor = ({
   });
 
   // Rename symbol support
-  const rename = useRename(enableInteractiveServices ? filePath : undefined);
+  const rename = useRename(enableRichEditorServices ? filePath : undefined);
 
   // Inlay hints
   const inlayHints = useInlayHints(
@@ -244,11 +249,16 @@ const CodeEditor = ({
     enableInlayHints,
     lspVisibleLineRange,
   );
+  const semanticTokens = useSemanticTokens(
+    enableRichEditorServices ? filePath : undefined,
+    enableRichEditorServices,
+    value,
+  );
 
   // Code lens
   const codeLenses = useCodeLens(
-    enableInteractiveServices ? filePath : undefined,
-    enableInteractiveServices,
+    enableRichEditorServices ? filePath : undefined,
+    enableRichEditorServices,
   );
 
   const handleCodeLensExecute = useCallback(
@@ -353,22 +363,16 @@ const CodeEditor = ({
 
       const { fontSize, lineHeight: editorLineHeight } = useEditorSettingsStore.getState();
       const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
-      const lines = currentContent.split("\n");
-
       // Convert to 0-indexed line number and clamp to valid range
-      const targetLine = Math.max(0, Math.min(lineNumber - 1, lines.length - 1));
+      const targetLine = Math.max(0, Math.min(lineNumber - 1, largeEditorModeInfo.lineCount - 1));
+      const targetLineSlice = getLineSlice(currentContent, targetLine);
 
       const targetColumn = Math.max(
         0,
-        Math.min((columnNumber ?? 1) - 1, lines[targetLine]?.length ?? 0),
+        Math.min((columnNumber ?? 1) - 1, targetLineSlice.line.length),
       );
 
-      // Calculate character offset for the target line
-      let offset = 0;
-      for (let i = 0; i < targetLine; i++) {
-        offset += lines[i].length + 1;
-      }
-      offset += targetColumn;
+      const offset = targetLineSlice.offset + targetColumn;
 
       // Set cursor position in textarea
       textarea.selectionStart = offset;
@@ -410,7 +414,7 @@ const CodeEditor = ({
     return () => {
       window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
     };
-  }, [filePath, isActiveSurface]);
+  }, [filePath, isActiveSurface, largeEditorModeInfo.lineCount]);
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
@@ -418,7 +422,7 @@ const CodeEditor = ({
       clearTimeout(searchTimerRef.current);
     }
 
-    if (!enableInteractiveServices || !isFindVisible) {
+    if (!enableInteractiveServices || largeContentMode || !isFindVisible) {
       setSearchMatches([]);
       setCurrentMatchIndex(-1);
       return;
@@ -452,6 +456,7 @@ const CodeEditor = ({
     };
   }, [
     enableInteractiveServices,
+    largeContentMode,
     isFindVisible,
     searchQuery,
     searchOptions,
@@ -462,7 +467,7 @@ const CodeEditor = ({
 
   // Effect to handle search navigation - scroll to current match and move cursor
   useEffect(() => {
-    if (!enableInteractiveServices) return;
+    if (!enableInteractiveServices || largeContentMode) return;
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (match && editorRef.current) {
@@ -491,6 +496,7 @@ const CodeEditor = ({
   }, [
     currentMatchIndex,
     enableInteractiveServices,
+    largeContentMode,
     resolveModelPosition,
     searchMatches,
     settings.editorLineHeight,
@@ -531,13 +537,13 @@ const CodeEditor = ({
           }}
         >
           {/* Hover Tooltip */}
-          {enableInteractiveServices && <HoverTooltip />}
+          {enableRichEditorServices && <HoverTooltip />}
 
           {/* Completion Dropdown */}
-          {enableInteractiveServices && <CompletionDropdown />}
+          {enableRichEditorServices && <CompletionDropdown />}
 
           {/* Code Lens */}
-          {enableInteractiveServices && codeLenses.length > 0 && (
+          {enableRichEditorServices && codeLenses.length > 0 && (
             <CodeLensOverlay
               ref={codeLensRef}
               lenses={codeLenses}
@@ -551,7 +557,7 @@ const CodeEditor = ({
           )}
 
           {/* Signature Help */}
-          {enableInteractiveServices && (
+          {enableRichEditorServices && (
             <SignatureHelpTooltip
               editorRef={editorRef}
               filePath={filePath}
@@ -561,7 +567,7 @@ const CodeEditor = ({
           )}
 
           {/* Rename Input */}
-          {enableInteractiveServices && rename.renameState && (
+          {enableRichEditorServices && rename.renameState && (
             <RenameInput
               ref={renameInputRef}
               symbol={rename.renameState.symbol}
@@ -601,14 +607,15 @@ const CodeEditor = ({
                 lineNumberMap={lineNumberMap}
                 onContentChange={onContentChange}
                 inlayHints={enableInlayHints ? inlayHints : []}
+                semanticTokens={semanticTokens}
+                largeContentMode={largeContentMode}
+                largeContentLineCount={largeEditorModeInfo.lineCount}
                 onCoordinateResolverChange={handleCoordinateResolverChange}
                 onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                onMouseEnter={
-                  enableInteractiveServices ? hoverHandlers.handleMouseEnter : undefined
-                }
-                onClick={enableInteractiveServices ? goToDefinitionHandlers.handleClick : undefined}
+                onMouseEnter={enableRichEditorServices ? hoverHandlers.handleMouseEnter : undefined}
+                onClick={enableRichEditorServices ? goToDefinitionHandlers.handleClick : undefined}
               />
             )}
           </div>

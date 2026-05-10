@@ -55,6 +55,7 @@ interface AppActions {
     previousContent?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    options?: { contentAlreadyApplied?: boolean },
   ) => Promise<void>;
   handleSave: () => Promise<void>;
   openQuickEdit: (params: {
@@ -81,6 +82,7 @@ export const useEditorAppStore = createSelectors(
           previousContent?: string,
           previousCursorPosition?: Position,
           previousSelection?: Range,
+          options?: { contentAlreadyApplied?: boolean },
         ) => {
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } =
@@ -90,6 +92,7 @@ export const useEditorAppStore = createSelectors(
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
           const { markPendingSave } = useFileWatcherStore.getState();
+          const contentAlreadyApplied = options?.contentAlreadyApplied === true;
 
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
@@ -124,12 +127,18 @@ export const useEditorAppStore = createSelectors(
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
 
           if (isRemoteFile) {
-            updateBufferContent(activeBuffer.id, content, false);
+            if (!contentAlreadyApplied) {
+              updateBufferContent(activeBuffer.id, content, false);
+            }
           } else if (collaborationNoteTarget) {
-            updateBufferContent(activeBuffer.id, content, true);
+            if (!contentAlreadyApplied) {
+              updateBufferContent(activeBuffer.id, content, true);
+            }
             markBufferDirty(activeBuffer.id, content !== activeBuffer.savedContent);
           } else {
-            updateBufferContent(activeBuffer.id, content, true);
+            if (!contentAlreadyApplied) {
+              updateBufferContent(activeBuffer.id, content, true);
+            }
 
             if (!activeBuffer.isVirtual && settings.autoSave) {
               const { autoSaveTimeoutId } = get();
@@ -302,6 +311,7 @@ export const useEditorAppStore = createSelectors(
                     lintResult.diagnostics.map((diagnostic) =>
                       convertLintDiagnostic(activeBuffer.path, diagnostic),
                     ),
+                    "linter",
                   );
                 }
               }

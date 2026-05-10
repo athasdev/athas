@@ -4,6 +4,7 @@ import {
   BugBeetle,
   GitBranch,
   GitPullRequest,
+  ListBullets,
   ChatCircleText as MessageSquare,
   NavigationArrow as Navigation,
   MagnifyingGlass as Search,
@@ -64,6 +65,13 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     icon: BugBeetle,
     enabled: coreFeatures.debugger,
     status: "experimental",
+  },
+  {
+    id: "outline",
+    name: "Outline",
+    description: "Document symbols and quick navigation for the active file",
+    icon: ListBullets,
+    enabled: coreFeatures.outline,
   },
   {
     id: "aiChat",

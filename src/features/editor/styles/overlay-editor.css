@@ -167,6 +167,25 @@ textarea.input-layer.selection-transparent::-moz-selection {
   box-shadow: 0 1px 3px color-mix(in srgb, #000 12%, transparent);
 }
 
+.diagnostic-decoration {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.4px;
+  text-underline-offset: 3px;
+}
+
+.diagnostic-error {
+  text-decoration-color: var(--error, #f85149);
+}
+
+.diagnostic-warning {
+  text-decoration-color: var(--warning, #d29922);
+}
+
+.diagnostic-info {
+  text-decoration-color: var(--info, #58a6ff);
+}
+
 .editor-selection-box {
   background-color: rgba(106, 155, 204, 0.42);
   background-color: color-mix(in srgb, var(--accent, #6a9bcc) 44%, transparent);

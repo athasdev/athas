@@ -289,6 +289,7 @@ fn main() {
          uninstall_cli_command,
          get_cli_install_command,
          get_importable_ide_projects,
+         take_pending_cli_open_requests,
          // Runtime commands
          ensure_runtime,
          get_runtime_status,
