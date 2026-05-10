@@ -187,7 +187,7 @@ export function WebViewerToolbar({
               className={dropdownItemClassName("justify-between")}
             >
               <span>Reset zoom</span>
-              <span className="text-text-lighter text-xs">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-text-lighter ui-text-xs">{Math.round(zoomLevel * 100)}%</span>
             </Button>
           </div>
         </Dropdown>

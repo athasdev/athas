@@ -153,7 +153,7 @@ export default function ChatHistoryDropdown({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs">
+                  <div className="truncate ui-text-xs">
                     <span className={cn(isCurrent && "text-accent")}>{chat.title}</span>
                   </div>
                 </div>

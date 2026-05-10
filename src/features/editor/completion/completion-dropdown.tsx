@@ -189,7 +189,7 @@ export const CompletionDropdown = memo(
                       }
                     }}
                     className={cn(
-                      "editor-completion-item ui-font cursor-pointer px-2 py-1 text-xs",
+                      "editor-completion-item ui-font cursor-pointer px-2 py-1 ui-text-xs",
                       isSelected
                         ? "editor-completion-item-selected text-text"
                         : "text-text hover:bg-hover",
@@ -220,10 +220,12 @@ export const CompletionDropdown = memo(
                 }}
               >
                 {selectedDetail && (
-                  <div className="ui-font mb-1 font-medium text-text text-xs">{selectedDetail}</div>
+                  <div className="ui-font mb-1 font-medium text-text ui-text-xs">
+                    {selectedDetail}
+                  </div>
                 )}
                 {selectedDocumentation && (
-                  <div className="ui-font whitespace-pre-wrap text-text-lighter text-xs">
+                  <div className="ui-font whitespace-pre-wrap text-text-lighter ui-text-xs">
                     {selectedDocumentation}
                   </div>
                 )}

@@ -644,7 +644,7 @@ const GitHubPRsView = memo(() => {
                 type="button"
                 variant="ghost"
                 compact
-                className="h-7 min-w-0 rounded-md px-1.5 text-xs text-text-lighter"
+                className="h-7 min-w-0 rounded-md px-1.5 ui-text-xs text-text-lighter"
                 disabled={!effectiveRepoPath}
                 tooltip="New Pull Request"
                 tooltipSide="top"
@@ -657,7 +657,7 @@ const GitHubPRsView = memo(() => {
                 type="button"
                 variant="ghost"
                 compact
-                className="h-7 min-w-0 rounded-md px-1.5 text-xs text-text-lighter"
+                className="h-7 min-w-0 rounded-md px-1.5 ui-text-xs text-text-lighter"
                 disabled={!effectiveRepoPath}
                 tooltip="New Issue"
                 tooltipSide="top"
@@ -670,7 +670,7 @@ const GitHubPRsView = memo(() => {
                 type="button"
                 variant="ghost"
                 compact
-                className="h-7 min-w-0 rounded-md px-1.5 text-xs text-text-lighter"
+                className="h-7 min-w-0 rounded-md px-1.5 ui-text-xs text-text-lighter"
                 disabled={!effectiveRepoPath}
                 tooltip="Run Workflow"
                 tooltipSide="top"

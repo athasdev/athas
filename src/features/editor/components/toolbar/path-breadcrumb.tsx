@@ -57,7 +57,7 @@ export function PathBreadcrumb({
                 variant="ghost"
                 compact
                 className={cn(
-                  "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 text-xs",
+                  "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 ui-text-xs",
                   isLast
                     ? "font-medium text-text hover:text-text"
                     : "text-text-lighter hover:text-text",
@@ -71,7 +71,7 @@ export function PathBreadcrumb({
               <Tooltip content={getSegmentPath(index)} side="bottom">
                 <span
                   className={cn(
-                    "truncate rounded px-1 py-0.5 text-xs",
+                    "truncate rounded px-1 py-0.5 ui-text-xs",
                     isLast ? "font-medium text-text" : "text-text-lighter",
                   )}
                 >

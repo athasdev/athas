@@ -767,7 +767,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         disabled={!canInitializeRepository || isInitializingRepo}
         variant="accent"
         compact
-        className="mt-1.5 h-6 px-2 text-xs"
+        className="mt-1.5 h-6 px-2 ui-text-xs"
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
@@ -1071,7 +1071,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     </div>
                     <div className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter/80">
                       <span className="truncate">{formatRelativeDate(stash.date)}</span>
-                      <span className="rounded border border-border/50 px-1 text-[10px] leading-4">
+                      <span className="rounded border border-border/50 px-1 ui-text-xs leading-4">
                         {getStashPositionLabel(stash.index)}
                       </span>
                     </div>

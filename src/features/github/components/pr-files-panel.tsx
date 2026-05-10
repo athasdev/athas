@@ -13,7 +13,7 @@ import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(
   buttonVariants({ variant: "ghost", compact: true }),
-  "h-5 rounded px-1.5 text-[10px] text-text-lighter hover:bg-hover hover:text-text",
+  "h-5 rounded px-1.5 ui-text-xs text-text-lighter hover:bg-hover hover:text-text",
 );
 
 interface DiffFileItem {
@@ -200,7 +200,7 @@ export const PRFilesPanel = memo(
                 >
                   <div className="min-w-0 flex-1">
                     <div className="ui-text-sm truncate leading-4 text-current">{file.path}</div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-text-lighter">
+                    <div className="mt-0.5 flex items-center gap-1.5 ui-text-xs text-text-lighter">
                       <span className="capitalize">{file.status}</span>
                       <span className="text-git-added">+{file.additions}</span>
                       <span className="text-git-deleted">-{file.deletions}</span>

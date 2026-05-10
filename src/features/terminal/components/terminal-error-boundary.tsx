@@ -32,8 +32,8 @@ export class TerminalErrorBoundary extends Component<Props, State> {
         this.props.fallback || (
           <div className="flex h-full items-center justify-center bg-primary-bg p-4">
             <div className="text-center">
-              <p className="mb-2 text-error text-sm">Terminal Error</p>
-              <p className="text-text-lighter text-xs">
+              <p className="mb-2 text-error ui-text-sm">Terminal Error</p>
+              <p className="text-text-lighter ui-text-xs">
                 {this.state.error?.message || "Failed to initialize terminal"}
               </p>
               <Button

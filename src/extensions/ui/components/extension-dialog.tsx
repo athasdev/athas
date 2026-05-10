@@ -26,7 +26,7 @@ export function ExtensionDialogs() {
             }}
           >
             <div className="flex items-center justify-between border-border border-b px-4 py-3">
-              <h2 className="font-medium text-sm text-text">{dialog.title}</h2>
+              <h2 className="font-medium ui-text-sm text-text">{dialog.title}</h2>
               <Button
                 onClick={() => closeDialog(dialog.id)}
                 variant="ghost"

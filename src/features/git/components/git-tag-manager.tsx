@@ -549,7 +549,7 @@ const GitTagManager = ({
                       ) : null}
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Type</span>
-                        <Badge variant="muted" size="compact" className="text-[10px]">
+                        <Badge variant="muted" size="compact" className="ui-text-xs">
                           {tag.is_annotated ? "Annotated" : "Lightweight"}
                         </Badge>
                       </div>

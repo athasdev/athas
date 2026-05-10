@@ -48,7 +48,7 @@ export function ImageEditorToolbar({
   currentFileName,
 }: ImageEditorToolbarProps) {
   const menuItemClass = cn(
-    "ui-font h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text text-xs",
+    "ui-font h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text ui-text-xs",
   );
 
   const [showEditMenu, setShowEditMenu] = useState(false);
@@ -84,7 +84,7 @@ export function ImageEditorToolbar({
           disabled={isProcessing}
           tooltip="Edit operations"
         >
-          <span className="text-xs">Edit</span>
+          <span className="ui-text-xs">Edit</span>
           <ChevronDown className="ml-1" />
         </Button>
 
@@ -179,7 +179,7 @@ export function ImageEditorToolbar({
           disabled={isProcessing}
           tooltip="Convert format"
         >
-          <span className="text-xs">Convert</span>
+          <span className="ui-text-xs">Convert</span>
           <ChevronDown className="ml-1" />
         </Button>
 

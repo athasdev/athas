@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -18,7 +17,7 @@ function getProfileInitials(name: string) {
 
 export function ProfilePicture({ name, online }: { name: string; online?: boolean }) {
   return (
-    <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary-bg text-[10px] font-medium text-text">
+    <span className="ui-text-xs relative flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary-bg font-medium text-text">
       {getProfileInitials(name)}
       {online !== undefined ? (
         <span
@@ -33,40 +32,12 @@ export function ProfilePicture({ name, online }: { name: string; online?: boolea
 }
 
 export function StatusDot({ online }: { online: boolean }) {
+  if (!online) return null;
+
   return (
-    <Tooltip content={online ? "Online" : "Offline"} side="top">
-      <span className={cn("block size-2 rounded-full bg-text-lighter/55", online && "bg-accent")} />
+    <Tooltip content="Online" side="top">
+      <span className="block size-2 rounded-full bg-accent" />
     </Tooltip>
-  );
-}
-
-export function SidebarHoverCard({ children, card }: { children: ReactNode; card: ReactNode }) {
-  const [rect, setRect] = useState<DOMRect | null>(null);
-
-  return (
-    <div
-      className="block min-w-0"
-      onMouseEnter={(event) => setRect(event.currentTarget.getBoundingClientRect())}
-      onMouseLeave={() => setRect(null)}
-      onFocus={(event) => setRect(event.currentTarget.getBoundingClientRect())}
-      onBlur={() => setRect(null)}
-    >
-      {children}
-      {rect
-        ? createPortal(
-            <div
-              className="pointer-events-none fixed z-[10060] w-56 rounded-xl border border-border bg-secondary-bg/95 p-2.5 text-xs shadow-lg backdrop-blur-sm"
-              style={{
-                left: Math.min(rect.right + 8, window.innerWidth - 232),
-                top: Math.min(rect.top, window.innerHeight - 120),
-              }}
-            >
-              {card}
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
   );
 }
 
@@ -97,7 +68,7 @@ export function RemoteMediaTile({ share }: { share: RemoteMediaShare }) {
         />
       ) : null}
       <audio ref={setAudioElement} autoPlay />
-      <div className="flex items-center justify-between px-2 py-1 text-text-lighter text-[11px]">
+      <div className="ui-text-xs flex items-center justify-between px-2 py-1 text-text-lighter">
         <span className="truncate">{share.deviceId}</span>
         <span>{hasVideo ? "screen" : "audio"}</span>
       </div>

@@ -388,7 +388,7 @@ const DiffFileSection = memo(function DiffFileSection({
                   {directoryPath}
                 </span>
               </span>
-              <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px]">
+              <span className="ml-auto flex shrink-0 items-center gap-2 ui-text-xs">
                 {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
                 {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
                 <Badge

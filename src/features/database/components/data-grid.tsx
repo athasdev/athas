@@ -588,7 +588,7 @@ export default function DataGrid({
                               if (e.key === "Escape") setEditing(null);
                             }}
                             onBlur={handleSubmit}
-                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 text-xs focus:border-accent/60"
+                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 ui-text-xs focus:border-accent/60"
                           />
                         ) : (
                           <CellRenderer

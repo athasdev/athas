@@ -143,23 +143,23 @@ function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 text-[11px] leading-5 text-text-lighter">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-xs leading-5 text-text-lighter">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words text-xs leading-5 text-text-lighter">
+          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-xs leading-5 text-text-lighter">
             {summary}
           </pre>
         </div>
       </div>
 
       <div className="border-t border-border/60 bg-secondary-bg/80 px-4 py-2">
-        <div className="truncate text-xs font-medium text-text">
+        <div className="truncate ui-text-xs font-medium text-text">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
-        <div className="truncate text-[11px] text-text-lighter">{buffer.path}</div>
+        <div className="truncate ui-text-xs text-text-lighter">{buffer.path}</div>
       </div>
     </div>
   );
@@ -181,12 +181,12 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-green-500/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font text-[11px] text-text-lighter">
+              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
                 #{buffer.prNumber ?? "--"}
               </span>
-              <div className="min-w-0 truncate font-medium text-sm text-text">{buffer.name}</div>
+              <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-lighter">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-xs text-text-lighter">
               <span className="font-medium text-text-light">
                 {authorLogin ? `@${authorLogin}` : "Pull request"}
               </span>
@@ -194,7 +194,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <span>{commitCount ?? "--"} commits</span>
               <span>{commentCount ?? "--"} comments</span>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-xs">
               <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
                 Description
               </span>
@@ -210,13 +210,13 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
       </div>
       <div className="min-h-0 flex-1 bg-primary-bg/40 px-3 py-3">
         <div className="rounded-lg bg-secondary-bg/35 px-3 py-2">
-          <div className="line-clamp-5 text-sm leading-6 text-text-lighter">
+          <div className="line-clamp-5 ui-text-sm leading-6 text-text-lighter">
             {details?.body?.trim()
               ? details.body
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 text-xs text-text-lighter">
+        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-xs text-text-lighter">
           {buffer.path}
         </div>
       </div>

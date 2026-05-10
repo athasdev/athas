@@ -160,7 +160,7 @@ export const MainSidebar = memo(
 
             {isFileTreeLoading && !isSwitchingProject && (
               <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-3">
-                <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 text-text-lighter text-xs shadow-lg backdrop-blur-sm">
+                <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 text-text-lighter ui-text-xs shadow-lg backdrop-blur-sm">
                   Loading files...
                 </div>
               </div>

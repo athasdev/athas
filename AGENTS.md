@@ -60,6 +60,7 @@
 - Do not add exported Tailwind class string constants such as `*_CLASS_NAME`; use CVA variants or UI primitives for reusable styling.
 - Use CSS variables for theme colors; do not hardcode hex values in UI code.
 - Keep font size, font family, theme colors, keymaps, and shortcuts in their existing system-level homes instead of redefining them ad hoc in feature components.
+- Never use hardcoded font-size utilities such as `text-[11px]` in UI code; use the shared UI font-size classes such as `ui-text-xs`, `ui-text-sm`, and related system primitives instead.
 - Interactive elements must remain accessible, including accessible names for icon-only controls and usable keyboard/focus behavior.
 
 ## Zustand

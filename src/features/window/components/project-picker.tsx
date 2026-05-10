@@ -258,9 +258,9 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       <Folder className="shrink-0 text-text-lighter" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs">
+                      <div className="truncate ui-text-xs">
                         <span className="text-text">{folder.name}</span>
-                        <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
                           {folder.path}
                         </span>
                       </div>
@@ -269,7 +269,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       <PushPin className="shrink-0 fill-current text-accent" />
                     ) : null}
                     {folder.missing ? (
-                      <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium text-[10px] text-warning">
+                      <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium ui-text-xs text-warning">
                         Missing
                       </span>
                     ) : null}
@@ -298,12 +298,12 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                   >
                     <Server className="shrink-0 text-text-lighter" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs">
+                      <div className="truncate ui-text-xs">
                         <span className="text-text">{connection.name}</span>
-                        <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
                           {connection.type.toUpperCase()}
                         </span>
-                        <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
                           {connectingMap[connection.id]
                             ? "Connecting..."
                             : statusMap[connection.id] === "error"

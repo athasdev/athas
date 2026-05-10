@@ -103,7 +103,7 @@ export function ProviderSelector({
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("w-fit max-w-[128px]")
-      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
+      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
 
@@ -247,7 +247,7 @@ export function ProviderSelector({
                 onPointerMove={() => setActiveIndex(filteredProviders.indexOf(provider))}
                 className={cn(
                   dropdownItemClassName(),
-                  "mb-1 min-h-8 gap-2 py-2 text-xs last:mb-0",
+                  "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
                   isActive && "bg-hover",
                   isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                 )}

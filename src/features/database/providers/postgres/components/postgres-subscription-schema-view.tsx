@@ -48,17 +48,17 @@ export default function PostgresSubscriptionSchemaView({
       <div className="flex items-center gap-2 px-3 py-3">
         <Radio className="text-text-lighter" />
         <div>
-          <div className="text-sm">{subscriptionInfo.name}</div>
-          <div className="text-text-lighter text-xs">logical replication subscription</div>
+          <div className="ui-text-sm">{subscriptionInfo.name}</div>
+          <div className="text-text-lighter ui-text-xs">logical replication subscription</div>
         </div>
       </div>
       <div className="mx-3 mb-3 divide-y divide-border/60 rounded-xl bg-secondary-bg/40">
         {fields.map((field) => (
           <div key={field.label} className="px-3 py-2">
-            <div className="text-text-lighter text-[11px] uppercase tracking-wide">
+            <div className="text-text-lighter ui-text-xs uppercase tracking-wide">
               {field.label}
             </div>
-            <div className="mt-1 break-all text-sm">{field.value}</div>
+            <div className="mt-1 break-all ui-text-sm">{field.value}</div>
           </div>
         ))}
       </div>

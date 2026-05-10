@@ -1985,7 +1985,7 @@ export function Editor({
                           : "inline-edit-description"
                       }
                       aria-invalid={inlineEditState.inlineEditError ? true : undefined}
-                      className="ui-font h-8 flex-1 bg-transparent px-0 text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
+                      className="ui-font h-8 flex-1 bg-transparent px-0 ui-text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
                       placeholder={
                         selection && selection.start.offset !== selection.end.offset
                           ? "Describe the edit for the selection..."
@@ -2008,7 +2008,7 @@ export function Editor({
                       id="inline-edit-error"
                       role="alert"
                       aria-live="assertive"
-                      className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300"
+                      className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 ui-text-xs text-red-300"
                     >
                       {inlineEditState.inlineEditError}
                     </div>
@@ -2094,7 +2094,7 @@ export function Editor({
           autocompleteCompletion &&
           !isLspCompletionVisible &&
           !inlineAutocompletePreview && (
-            <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 text-[11px] text-text-lighter/80">
+            <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 ui-text-xs text-text-lighter/80">
               Tab to accept AI suggestion
             </div>
           )}

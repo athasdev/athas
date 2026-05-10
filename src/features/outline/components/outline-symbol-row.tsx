@@ -127,9 +127,9 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
           <OutlineSymbolIcon kind={symbol.kind} />
         </span>
         <span className="ml-1.5 min-w-0 flex-1 truncate">
-          <span className="text-xs text-text">{symbol.name}</span>
+          <span className="ui-text-xs text-text">{symbol.name}</span>
           {symbol.detail ? (
-            <span className="ml-1.5 text-[10px] text-text-lighter opacity-70">{symbol.detail}</span>
+            <span className="ml-1.5 ui-text-xs text-text-lighter opacity-70">{symbol.detail}</span>
           ) : null}
         </span>
       </TreeRow>

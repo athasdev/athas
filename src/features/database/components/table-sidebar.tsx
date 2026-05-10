@@ -81,7 +81,7 @@ export default function TableSidebar({
                     variant="ghost"
                     compact
                     className={cn(
-                      "flex h-auto w-full items-start justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover",
+                      "flex h-auto w-full items-start justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left ui-text-xs hover:bg-hover",
                       selectedTable === t.name && "bg-selected text-text",
                     )}
                     aria-label={`Select ${group.kind} ${t.name}`}

@@ -94,7 +94,7 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
               href={resource.uri}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent text-xs hover:bg-hover"
+              className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent ui-text-xs hover:bg-hover"
             >
               <span className="truncate">{resource.name || resource.uri}</span>
             </a>

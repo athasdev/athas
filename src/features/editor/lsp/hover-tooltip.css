@@ -5,7 +5,7 @@
 
 .hover-tooltip-content {
   font-family: var(--app-font-family);
-  font-size: var(--hover-tooltip-font-size, 14px);
+  font-size: var(--hover-tooltip-font-size, var(--ui-text-sm));
   line-height: var(--hover-tooltip-line-height, 20px);
   max-width: 100%;
   overflow-wrap: anywhere;

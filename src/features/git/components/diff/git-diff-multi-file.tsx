@@ -288,7 +288,7 @@ const MultiFileDiffViewer = memo(({ multiDiff, onClose }: MultiFileDiffViewerPro
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-border border-t bg-primary-bg px-3 py-1 text-[10px] text-text-lighter">
+      <div className="flex items-center justify-between border-border border-t bg-primary-bg px-3 py-1 ui-text-xs text-text-lighter">
         <span className="flex items-center gap-1.5">
           {multiDiff.isLoading && <Loader2 className="size-3 animate-spin" />}
           {multiDiff.isLoading

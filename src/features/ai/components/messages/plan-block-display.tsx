@@ -42,7 +42,7 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
       <div className="my-2 rounded-2xl border border-accent/20 bg-accent/5">
         <div className="flex items-center gap-1.5 border-accent/20 border-b px-3 py-2">
           <ListChecks className="text-accent" />
-          <span className="font-medium text-accent text-xs">
+          <span className="font-medium text-accent ui-text-xs">
             Plan ({plan.steps.length} {plan.steps.length === 1 ? "step" : "steps"})
           </span>
         </div>

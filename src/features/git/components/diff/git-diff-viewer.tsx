@@ -26,7 +26,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="text-sm text-text-lighter">Loading diff...</div>
+        <div className="ui-text-sm text-text-lighter">Loading diff...</div>
       </div>
     );
   }
@@ -34,7 +34,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   if (error) {
     return (
       <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="text-error text-sm">{error}</div>
+        <div className="text-error ui-text-sm">{error}</div>
       </div>
     );
   }
@@ -42,7 +42,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   if (!diff || !filePath) {
     return (
       <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="text-sm text-text-lighter">No diff data available</div>
+        <div className="ui-text-sm text-text-lighter">No diff data available</div>
       </div>
     );
   }

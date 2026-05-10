@@ -234,7 +234,7 @@ export const IconThemeSelectorContent = ({
               >
                 <div className="shrink-0 text-text-lighter">{theme.icon || <Palette />}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 truncate text-xs">
+                  <div className="flex items-center gap-2 truncate ui-text-xs">
                     <span className="truncate">{theme.name}</span>
                     {isCurrent && !isPreviewing && (
                       <Badge variant="accent" className="px-1 py-0.5">

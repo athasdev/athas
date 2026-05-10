@@ -254,7 +254,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       }
     >
       {installedDbTypes.length === 0 ? (
-        <div className="rounded-lg border border-border bg-secondary-bg/35 px-3 py-2 text-text-lighter text-sm">
+        <div className="rounded-lg border border-border bg-secondary-bg/35 px-3 py-2 text-text-lighter ui-text-sm">
           Install a database provider from Settings &gt; Extensions to connect to databases.
         </div>
       ) : null}
@@ -300,7 +300,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       {mode === "form" ? (
         <div className="space-y-3">
           <div className="space-y-1">
-            <label htmlFor="db-conn-name" className="ui-font block text-sm text-text">
+            <label htmlFor="db-conn-name" className="ui-font block ui-text-sm text-text">
               Connection Name
             </label>
             <Input
@@ -314,7 +314,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
 
           {isFileBased ? (
             <div className="space-y-1">
-              <label htmlFor="db-conn-file" className="ui-font block text-sm text-text">
+              <label htmlFor="db-conn-file" className="ui-font block ui-text-sm text-text">
                 Database File
               </label>
               <div className="flex gap-2">
@@ -341,7 +341,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             <>
               <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-host" className="ui-font block text-sm text-text">
+                  <label htmlFor="db-conn-host" className="ui-font block ui-text-sm text-text">
                     Host
                   </label>
                   <Input
@@ -352,7 +352,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   />
                 </div>
                 <div className="w-24 space-y-1">
-                  <label htmlFor="db-conn-port" className="ui-font block text-sm text-text">
+                  <label htmlFor="db-conn-port" className="ui-font block ui-text-sm text-text">
                     Port
                   </label>
                   <Input
@@ -366,7 +366,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               </div>
               {dbType !== "redis" && (
                 <div className="space-y-1">
-                  <label htmlFor="db-conn-database" className="ui-font block text-sm text-text">
+                  <label htmlFor="db-conn-database" className="ui-font block ui-text-sm text-text">
                     Database
                   </label>
                   <Input
@@ -379,7 +379,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               )}
               <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-username" className="ui-font block text-sm text-text">
+                  <label htmlFor="db-conn-username" className="ui-font block ui-text-sm text-text">
                     Username
                   </label>
                   <Input
@@ -390,7 +390,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-password" className="ui-font block text-sm text-text">
+                  <label htmlFor="db-conn-password" className="ui-font block ui-text-sm text-text">
                     Password
                   </label>
                   <Input
@@ -409,14 +409,14 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   onChange={(checked) => updateConnectionField(setSaveCredential, checked)}
                   ariaLabel="Save password securely"
                 />
-                <span className="ui-font text-text-lighter text-xs">Save password securely</span>
+                <span className="ui-font text-text-lighter ui-text-xs">Save password securely</span>
               </label>
             </>
           )}
         </div>
       ) : (
         <div className="space-y-1">
-          <label htmlFor="db-conn-string" className="ui-font block text-sm text-text">
+          <label htmlFor="db-conn-string" className="ui-font block ui-text-sm text-text">
             Connection String
           </label>
           <Input
@@ -430,13 +430,13 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 text-xs">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 ui-text-xs">
           {error}
         </div>
       )}
 
       {testResult === true && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-green-400 text-xs">
+        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-green-400 ui-text-xs">
           Connection test successful
         </div>
       )}

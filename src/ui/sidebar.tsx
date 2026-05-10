@@ -1,4 +1,4 @@
-import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { CaretRight, type Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,
@@ -207,6 +207,41 @@ export function SidebarListItem({
   );
 }
 
+export function SidebarSectionHeader({
+  children,
+  count,
+  expanded = true,
+  onToggle,
+  className,
+  ...props
+}: Omit<ComponentProps<"button">, "children"> & {
+  children: ReactNode;
+  count?: ReactNode;
+  expanded?: boolean;
+  onToggle?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "ui-font ui-text-xs flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
+        className,
+      )}
+      aria-expanded={expanded}
+      onClick={onToggle}
+      {...props}
+    >
+      <CaretRight
+        className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
+      />
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {count !== undefined ? (
+        <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">{count}</span>
+      ) : null}
+    </button>
+  );
+}
+
 export interface SidebarSectionSwitcherItem {
   id: string;
   label: string;
@@ -330,7 +365,7 @@ export function SidebarSectionSwitcher({
             aria-label={item.label}
             disabled={item.disabled}
             className={cn(
-              "ui-font flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full text-[11px] outline-none transition-[background-color,color,width,padding]",
+              "ui-font ui-text-xs flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
               selected
                 ? "max-w-28 bg-hover px-2 text-text"
                 : "w-7 px-0 text-text-lighter hover:bg-hover/70 hover:text-text",
@@ -429,14 +464,16 @@ export function SidebarEmptyActionState({
         {message}
       </div>
       {description ? (
-        <div className="max-w-[24ch] text-xs leading-[1.35] text-text-lighter">{description}</div>
+        <div className="ui-text-xs max-w-[24ch] leading-[1.35] text-text-lighter">
+          {description}
+        </div>
       ) : null}
       {actionLabel && onAction ? (
         <Button
           type="button"
           variant="ghost"
           compact
-          className={cn("h-6 px-2 text-text-lighter text-xs hover:text-text", actionClassName)}
+          className={cn("ui-text-xs h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
           disabled={actionDisabled}
           onClick={onAction}
         >

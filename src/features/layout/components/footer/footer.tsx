@@ -7,6 +7,7 @@ import {
   ListBullets,
   PuzzlePiece,
   TerminalWindow,
+  TreeStructure,
   UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
@@ -52,7 +53,7 @@ type FooterItem<T extends string> = {
 };
 
 const footerCountPill = cva(
-  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3",
+  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 ui-text-xs leading-3",
 );
 const footerGitTrigger = cva("h-6 w-fit rounded-md");
 const footerGitTriggerInput = cva("pl-7 ui-text-sm");
@@ -118,6 +119,8 @@ const Footer = () => {
   const isCollaborationFeatureEnabled = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
   );
+  const isMultiAgentsFeatureEnabled =
+    settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
   const { openSidebarView } = useSidebarPaneController();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -421,14 +424,40 @@ const Footer = () => {
     uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "databases";
   const isCollaborationActive =
     uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "collaboration";
+  const isMultiAgentsActive =
+    uiState.isAgentSidebarVisible && uiState.activeAgentSidebarView === "multi-agents";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
-    return normalizeItemOrder(
+    const normalizedOrder = normalizeItemOrder(
       settings.footerTrailingItemsOrder,
       FOOTER_TRAILING_ITEM_IDS,
     ) as FooterTrailingItemId[];
+
+    if (!normalizedOrder.includes("multi-agents")) return normalizedOrder;
+
+    return ["multi-agents", ...normalizedOrder.filter((itemId) => itemId !== "multi-agents")];
   }, [settings.footerTrailingItemsOrder]);
 
   const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [
+    ...(isMultiAgentsFeatureEnabled
+      ? [
+          {
+            id: "multi-agents" as const,
+            label: "Multi Agents",
+            content: (
+              <FooterTabControl
+                tooltip="Multi Agents"
+                active={isMultiAgentsActive}
+                className={chromeControl()}
+                onClick={() => {
+                  openSidebarView("multi-agents", { triggerSide: "right" });
+                }}
+              >
+                <TreeStructure className={chromeIcon()} weight="duotone" />
+              </FooterTabControl>
+            ),
+          },
+        ]
+      : []),
     ...(shouldShowOutline
       ? [
           {

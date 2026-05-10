@@ -306,18 +306,20 @@ export const InlineGitBlame = ({
           >
             <div className="flex max-w-96 flex-col gap-2 p-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium text-sm text-text">{blameLine.author}</span>
-                <div className="flex shrink-0 items-center gap-1 text-text-lighter text-xs">
+                <span className="truncate font-medium ui-text-sm text-text">
+                  {blameLine.author}
+                </span>
+                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-xs">
                   <Clock />
                   <span>{formatRelativeTime(blameLine.time)}</span>
                 </div>
               </div>
 
-              <pre className="whitespace-pre-wrap break-words text-text-light text-xs leading-relaxed">
+              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-xs leading-relaxed">
                 {blameLine.commit.trim()}
               </pre>
 
-              <div className="flex items-center gap-1.5 text-text-lighter text-xs">
+              <div className="flex items-center gap-1.5 text-text-lighter ui-text-xs">
                 <Button
                   type="button"
                   variant="ghost"

@@ -302,7 +302,7 @@ export function ContextSelector({
                       onClick={() => onToggleBuffer(buffer.id)}
                       onMouseEnter={() => setSelectedContextIndex(index)}
                       className={cn(
-                        "ui-font flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left text-xs leading-[1.35] transition-colors",
+                        "ui-font flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left ui-text-xs leading-[1.35] transition-colors",
                         selectedContextIndex === index
                           ? "bg-selected text-text"
                           : isSelected
@@ -417,12 +417,7 @@ export function ContextSelector({
               {item.name}
             </span>
             {item.type === "buffer" && item.isDirty && (
-              <span
-                className="text-[length:calc(var(--ui-text-xs)*0.7)] text-warning"
-                title="Unsaved changes"
-              >
-                ●
-              </span>
+              <span className="size-1.5 rounded-full bg-warning" title="Unsaved changes" />
             )}
             <Button
               onClick={() => {

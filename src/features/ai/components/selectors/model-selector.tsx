@@ -210,7 +210,7 @@ export function ModelSelector({
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("w-fit max-w-[176px]")
-      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
+      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
 
@@ -328,14 +328,14 @@ export function ModelSelector({
           onWheel={(event) => event.stopPropagation()}
         >
           {modelFetchError && (
-            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter text-xs">
+            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-xs">
               <WarningCircle className="shrink-0 text-warning" />
               <span>{modelFetchError}</span>
             </div>
           )}
 
           {filteredModels.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">No models found</div>
+            <div className="p-4 text-center text-text-lighter ui-text-xs">No models found</div>
           ) : (
             filteredModels.map((model) => {
               const isCurrent = model.id === modelId;
@@ -366,7 +366,7 @@ export function ModelSelector({
                   disabled={isLocked}
                   className={cn(
                     dropdownItemClassName(),
-                    "mb-1 min-h-8 gap-2 py-2 text-xs last:mb-0",
+                    "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
                     isActive && "bg-hover",
                     isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                   )}

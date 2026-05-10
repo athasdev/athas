@@ -115,7 +115,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
     <div className="flex h-full min-h-0 w-full overflow-auto bg-primary-bg">
       <div className="mx-auto flex w-full max-w-[820px] flex-col px-8 py-10">
         <div className="mb-7">
-          <h1 className="ui-font text-2xl font-semibold text-text">{viewModel.title}</h1>
+          <h1 className="ui-font ui-text-lg font-semibold text-text">{viewModel.title}</h1>
           <p className="ui-font ui-text-sm mt-2 text-text-light">{viewModel.description}</p>
         </div>
 

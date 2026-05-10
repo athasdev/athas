@@ -93,7 +93,7 @@ function SqlEditor({
           ref={highlightRef}
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-2 font-mono text-sm leading-5",
+            "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-2 font-mono ui-text-sm leading-5",
             disabled && "opacity-60",
           )}
         >
@@ -145,7 +145,7 @@ function SqlEditor({
             highlightRef.current.scrollTop = event.currentTarget.scrollTop;
             highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
           }}
-          className="relative h-full resize-none border-0 bg-transparent font-mono text-sm leading-5 text-transparent caret-text placeholder:text-transparent selection:bg-accent/30 focus:ring-0"
+          className="relative h-full resize-none border-0 bg-transparent font-mono ui-text-sm leading-5 text-transparent caret-text placeholder:text-transparent selection:bg-accent/30 focus:ring-0"
           placeholder="SELECT * FROM table_name"
           spellCheck={false}
           disabled={disabled}
@@ -165,7 +165,7 @@ function SqlEditor({
               aria-label={`Insert SQL ${item.detail} ${item.label}`}
               tooltip={item.detail}
             >
-              <span className="ui-font text-[11px]">{item.label}</span>
+              <span className="ui-font ui-text-xs">{item.label}</span>
             </Button>
           ))}
         </div>

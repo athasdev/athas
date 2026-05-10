@@ -1,7 +1,5 @@
-import { Plus } from "@phosphor-icons/react";
-import { forwardRef, memo, useMemo, useState } from "react";
+import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -36,8 +34,6 @@ export const ChatMessages = memo(
       })),
     );
     const skills = useSettingsStore((state) => state.settings.aiSkills);
-    const [isSkillsOpen, setIsSkillsOpen] = useState(false);
-    const [skillsInitialView, setSkillsInitialView] = useState<"list" | "editor">("list");
 
     const currentChat = useMemo(
       () => chats.find((chat) => chat.id === (chatId ?? currentChatId)),
@@ -78,11 +74,6 @@ export const ChatMessages = memo(
       [skills],
     );
 
-    const openNewSkill = () => {
-      setSkillsInitialView("editor");
-      setIsSkillsOpen(true);
-    };
-
     const handleSkillSelect = (skill: AIChatSkill) => {
       dispatchAIChatSkillInsert(skill);
     };
@@ -97,30 +88,13 @@ export const ChatMessages = memo(
                 type="button"
                 variant="ghost"
                 onClick={() => handleSkillSelect(skill)}
-                className="h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
-                tooltip={skill.title}
+                className="ui-text-xs h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
                 aria-label={`Use skill ${skill.title}`}
               >
                 <span className="min-w-0 truncate">{skill.title}</span>
               </Button>
             ))}
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={openNewSkill}
-              className="h-6 rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/65 hover:border-border-strong hover:bg-transparent hover:text-text"
-              compact
-            >
-              <Plus size={12} />
-              <span>New skill</span>
-            </Button>
           </div>
-          <SkillsCommand
-            isOpen={isSkillsOpen}
-            initialView={skillsInitialView}
-            onClose={() => setIsSkillsOpen(false)}
-            onSelectSkill={handleSkillSelect}
-          />
         </div>
       );
     }

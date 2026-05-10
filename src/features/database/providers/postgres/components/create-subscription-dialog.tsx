@@ -77,7 +77,7 @@ export default function CreateSubscriptionDialog({
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-1">
-          <label htmlFor="postgres-subscription-name" className="text-sm">
+          <label htmlFor="postgres-subscription-name" className="ui-text-sm">
             Name
           </label>
           <Input
@@ -89,7 +89,7 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="postgres-subscription-connection-string" className="text-sm">
+          <label htmlFor="postgres-subscription-connection-string" className="ui-text-sm">
             Connection String
           </label>
           <Textarea
@@ -107,7 +107,7 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="postgres-subscription-publications" className="text-sm">
+          <label htmlFor="postgres-subscription-publications" className="ui-text-sm">
             Publications
           </label>
           <Input
@@ -127,7 +127,7 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="postgres-subscription-slot-name" className="text-sm">
+          <label htmlFor="postgres-subscription-slot-name" className="ui-text-sm">
             Slot Name
           </label>
           <Input
@@ -139,35 +139,35 @@ export default function CreateSubscriptionDialog({
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.enabled}
               onChange={(checked) => setForm((prev) => ({ ...prev, enabled: checked }))}
             />
             Enabled
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.create_slot}
               onChange={(checked) => setForm((prev) => ({ ...prev, create_slot: checked }))}
             />
             Create Slot
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.copy_data}
               onChange={(checked) => setForm((prev) => ({ ...prev, copy_data: checked }))}
             />
             Copy Existing Data
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.connect}
               onChange={(checked) => setForm((prev) => ({ ...prev, connect: checked }))}
             />
             Connect Immediately
           </label>
-          <label className="col-span-2 flex items-center gap-2 text-sm">
+          <label className="col-span-2 flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.failover}
               onChange={(checked) => setForm((prev) => ({ ...prev, failover: checked }))}

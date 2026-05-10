@@ -56,11 +56,11 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 rounded-full bg-secondary-bg/70 px-2.5 py-1">
             <Database className="text-text-lighter" />
-            <span className="ui-font text-sm">{store.fileName}</span>
+            <span className="ui-font ui-text-sm">{store.fileName}</span>
           </div>
           {store.selectedDatabase && (
             <>
-              <span className="text-text-lighter text-xs">Database</span>
+              <span className="text-text-lighter ui-text-xs">Database</span>
               <Select
                 value={store.selectedDatabase}
                 onChange={actions.selectDatabase}
@@ -71,7 +71,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               />
             </>
           )}
-          <div className="ml-auto flex items-center gap-1 text-text-lighter text-xs">
+          <div className="ml-auto flex items-center gap-1 text-text-lighter ui-text-xs">
             <Layers />
             <span>{store.collections.length} collections</span>
           </div>
@@ -82,7 +82,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
         <div className="flex w-56 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
             <Layers className="text-text-lighter" />
-            <span className="ui-font text-text-lighter text-xs">Collections</span>
+            <span className="ui-font text-text-lighter ui-text-xs">Collections</span>
           </div>
           <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
             {store.collections.map((col) => (
@@ -92,7 +92,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 variant="ghost"
                 compact
                 className={cn(
-                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left text-xs",
+                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-xs",
                   store.selectedCollection === col.name && "bg-selected",
                 )}
                 aria-label={`Select collection ${col.name}`}
@@ -148,8 +148,8 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           {!store.isLoading && !store.selectedCollection && (
             <div className="flex flex-1 items-center justify-center px-6">
               <div className="rounded-2xl border border-border/60 bg-secondary-bg/40 px-5 py-4 text-center">
-                <div className="text-sm">Select a collection</div>
-                <div className="mt-1 text-text-lighter text-xs">
+                <div className="ui-text-sm">Select a collection</div>
+                <div className="mt-1 text-text-lighter ui-text-xs">
                   Choose a collection from the sidebar to browse documents.
                 </div>
               </div>
@@ -157,14 +157,14 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {store.error && (
-            <div className="mx-3 mt-3 mb-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 text-xs">
+            <div className="mx-3 mt-3 mb-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 ui-text-xs">
               {store.error}
             </div>
           )}
 
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <div className="flex items-center gap-2 text-sm text-text-lighter">
+              <div className="flex items-center gap-2 ui-text-sm text-text-lighter">
                 <RefreshCw className="animate-spin" />
                 Loading...
               </div>
@@ -174,11 +174,11 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           {!store.isLoading && store.documents.length > 0 && (
             <div className="custom-scrollbar flex-1 overflow-auto p-3">
               <div className="mb-3 flex items-center justify-between">
-                <div className="text-text-lighter text-xs">
+                <div className="text-text-lighter ui-text-xs">
                   {store.totalCount} document{store.totalCount === 1 ? "" : "s"}
                 </div>
                 {store.selectedCollection && (
-                  <div className="rounded-full bg-secondary-bg/70 px-2.5 py-1 text-text-lighter text-xs">
+                  <div className="rounded-full bg-secondary-bg/70 px-2.5 py-1 text-text-lighter ui-text-xs">
                     {store.selectedCollection}
                   </div>
                 )}
@@ -197,7 +197,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                       className="group rounded-2xl border border-border/60 bg-secondary-bg/40 p-3 shadow-[0_10px_30px_-28px_rgba(0,0,0,0.55)]"
                     >
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <div className="truncate text-text-lighter text-xs">
+                        <div className="truncate text-text-lighter ui-text-xs">
                           Document {displayIndex}
                         </div>
                         <Button
@@ -210,7 +210,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           <Trash2 />
                         </Button>
                       </div>
-                      <pre className="ui-font overflow-x-auto whitespace-pre-wrap rounded-xl bg-primary-bg/70 p-3 text-xs leading-5">
+                      <pre className="ui-font overflow-x-auto whitespace-pre-wrap rounded-xl bg-primary-bg/70 p-3 ui-text-xs leading-5">
                         {JSON.stringify(doc, null, 2)}
                       </pre>
                     </div>
@@ -223,8 +223,8 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           {!store.isLoading && store.documents.length === 0 && store.selectedCollection && (
             <div className="flex flex-1 items-center justify-center px-6">
               <div className="rounded-2xl border border-border/60 bg-secondary-bg/40 px-5 py-4 text-center">
-                <div className="text-sm">No documents found</div>
-                <div className="mt-1 text-text-lighter text-xs">
+                <div className="ui-text-sm">No documents found</div>
+                <div className="mt-1 text-text-lighter ui-text-xs">
                   The current filter returned an empty result set.
                 </div>
               </div>
@@ -248,10 +248,10 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   size="xs"
                   className="min-w-16"
                 />
-                <span className="ui-font text-text-lighter text-xs">per page</span>
+                <span className="ui-font text-text-lighter ui-text-xs">per page</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="mr-2 ui-font text-text-lighter text-xs">
+                <span className="mr-2 ui-font text-text-lighter ui-text-xs">
                   Page {store.currentPage} of {store.totalPages}
                 </span>
                 <Button

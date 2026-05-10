@@ -1358,7 +1358,7 @@ function FileExplorerTreeComponent({
             </Button>
           }
         >
-          <p className="text-text text-xs">{alertDialog.message}</p>
+          <p className="text-text ui-text-xs">{alertDialog.message}</p>
         </Dialog>
       )}
       {openAllFilesDialog && (
@@ -1387,7 +1387,7 @@ function FileExplorerTreeComponent({
             </>
           }
         >
-          <p className="text-text text-xs">
+          <p className="text-text ui-text-xs">
             {openAllFilesDialog.filePaths.length} files will be opened in tabs. Continue?
           </p>
         </Dialog>
@@ -1420,7 +1420,7 @@ function FileExplorerTreeComponent({
             </>
           }
         >
-          <p className="text-text text-xs">
+          <p className="text-text ui-text-xs">
             {deleteCandidate.isDir
               ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
               : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}

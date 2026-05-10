@@ -643,7 +643,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Puzzle className="size-4 text-accent" />
-            <h3 className="font-medium text-sm text-text">Create UI Extension</h3>
+            <h3 className="font-medium ui-text-sm text-text">Create UI Extension</h3>
           </div>
           <Badge variant="muted" size="compact">
             Hosted
@@ -652,11 +652,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
         <div className="flex flex-1 flex-col justify-center gap-4">
           <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
-            <p className="font-medium text-sm text-text">{title}</p>
-            <p className="mt-1 text-text-lighter text-xs">{description}</p>
+            <p className="font-medium ui-text-sm text-text">{title}</p>
+            <p className="mt-1 text-text-lighter ui-text-xs">{description}</p>
           </div>
 
-          <div className="grid gap-2 text-xs text-text-lighter">
+          <div className="grid gap-2 ui-text-xs text-text-lighter">
             <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
               Sidebar views for custom tools and dashboards
             </div>
@@ -721,7 +721,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           )}
           <div className="flex items-center gap-2">
             <Puzzle className="size-4 text-accent" />
-            <h3 className="font-medium text-sm text-text">
+            <h3 className="font-medium ui-text-sm text-text">
               {step === "type" && "Create UI Extension"}
               {step === "describe" && "Describe your extension"}
               {step === "generating" && "Generating extension"}
@@ -737,8 +737,8 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "type" && (
         <div className="flex flex-col gap-3">
           <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
-            <p className="font-medium text-sm text-text">Build a UI extension from a prompt</p>
-            <p className="mt-1 text-text-lighter text-xs">
+            <p className="font-medium ui-text-sm text-text">Build a UI extension from a prompt</p>
+            <p className="mt-1 text-text-lighter ui-text-xs">
               Choose where it should live, describe the workflow, then install it directly into
               Athas.
             </p>
@@ -754,8 +754,8 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 <option.icon className="size-4 text-text" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm text-text">{option.label}</p>
-                <p className="text-text-lighter text-xs">{option.description}</p>
+                <p className="font-medium ui-text-sm text-text">{option.label}</p>
+                <p className="text-text-lighter ui-text-xs">{option.description}</p>
               </div>
               <ArrowRight className="ml-auto size-4 text-text-lighter" />
             </button>
@@ -766,10 +766,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "describe" && (
         <div className="flex flex-1 flex-col gap-3">
           <div className="rounded-lg border border-border/60 bg-secondary-bg/30 p-3">
-            <p className="font-medium text-sm text-text">
+            <p className="font-medium ui-text-sm text-text">
               {CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label}
             </p>
-            <p className="mt-1 text-text-lighter text-xs">
+            <p className="mt-1 text-text-lighter ui-text-xs">
               Describe what it should show, what actions it should support, and how the user should
               interact with it.
             </p>
@@ -784,11 +784,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   ? "e.g., A toolbar button that summarizes the current file and opens the result in a side panel."
                   : "e.g., A command that generates a changelog draft from the current git diff."
             }
-            className="min-h-[120px] flex-1 resize-none rounded-lg border border-border bg-secondary-bg px-3 py-2 text-sm text-text placeholder:text-text-lighter/60 transition-[border-color,box-shadow,background-color] focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35"
+            className="min-h-[120px] flex-1 resize-none rounded-lg border border-border bg-secondary-bg px-3 py-2 ui-text-sm text-text placeholder:text-text-lighter/60 transition-[border-color,box-shadow,background-color] focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35"
             autoFocus
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-text-lighter text-xs">
+            <p className="text-text-lighter ui-text-xs">
               Hosted generation. No user API key required.
             </p>
             <Button
@@ -807,9 +807,9 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
       {step === "generating" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <p className="font-medium text-sm text-text">Generating</p>
+          <p className="font-medium ui-text-sm text-text">Generating</p>
           <Loader2 className="size-6 animate-spin text-accent" />
-          <p className="min-h-4 text-center text-text-lighter text-xs">
+          <p className="min-h-4 text-center text-text-lighter ui-text-xs">
             {GENERATING_MESSAGES[generationMessageIndex]}
           </p>
         </div>
@@ -819,22 +819,24 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <p className="text-red-400 text-xs">{error}</p>
+              <p className="text-red-400 ui-text-xs">{error}</p>
             </div>
           ) : generatedExtension ? (
             <>
               <div className="rounded-lg border border-border/60 bg-secondary-bg/40 p-3">
                 <div className="mb-1 flex items-center gap-2">
                   <Check className="size-4 text-green-500" />
-                  <span className="font-medium text-sm text-text">{generatedExtension.name}</span>
+                  <span className="font-medium ui-text-sm text-text">
+                    {generatedExtension.name}
+                  </span>
                 </div>
-                <p className="text-text-lighter text-xs">{generatedExtension.description}</p>
+                <p className="text-text-lighter ui-text-xs">{generatedExtension.description}</p>
               </div>
 
               {isInstalled ? (
                 <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
                   <Check className="size-4 text-green-500" />
-                  <p className="text-green-400 text-sm">
+                  <p className="text-green-400 ui-text-sm">
                     Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}

@@ -357,7 +357,7 @@ export function DatabaseSidebar() {
             onClick={() => setMode("list")}
           >
             <ArrowLeft />
-            <span className="ui-font truncate text-xs">Databases</span>
+            <span className="ui-font truncate ui-text-xs">Databases</span>
           </Button>
         )}
         <SidebarHeaderIconButton
@@ -383,7 +383,9 @@ export function DatabaseSidebar() {
               installedDbTypes.map((type) => (
                 <CommandItem key={type} onClick={() => chooseProvider(type)}>
                   <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-                  <span className="ui-font text-xs text-text">{PROVIDER_REGISTRY[type].label}</span>
+                  <span className="ui-font ui-text-xs text-text">
+                    {PROVIDER_REGISTRY[type].label}
+                  </span>
                 </CommandItem>
               ))
             )}
@@ -399,7 +401,7 @@ export function DatabaseSidebar() {
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
               <FolderOpen className="size-5" weight="duotone" />
-              <span className="ui-font text-xs">
+              <span className="ui-font ui-text-xs">
                 Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
               </span>
             </button>
@@ -461,7 +463,7 @@ export function DatabaseSidebar() {
                   onChange={setSaveCredential}
                   ariaLabel="Save password securely"
                 />
-                <span className="ui-font text-text-lighter text-xs">Save password securely</span>
+                <span className="ui-font text-text-lighter ui-text-xs">Save password securely</span>
               </label>
             </div>
           </CommandList>
@@ -490,8 +492,8 @@ export function DatabaseSidebar() {
                     onClick={() => void openConnection(connection)}
                     disabled={isBusy}
                   >
-                    <div className="ui-font truncate text-text text-xs">{connection.name}</div>
-                    <div className="ui-font truncate text-[11px] text-text-lighter">
+                    <div className="ui-font truncate text-text ui-text-xs">{connection.name}</div>
+                    <div className="ui-font truncate ui-text-xs text-text-lighter">
                       {getConnectionSubtitle(connection)}
                     </div>
                   </button>
@@ -535,11 +537,11 @@ export function DatabaseSidebar() {
       ) : null}
 
       {error ? (
-        <div className="border-border border-t px-2 py-1.5 text-error text-xs">{error}</div>
+        <div className="border-border border-t px-2 py-1.5 text-error ui-text-xs">{error}</div>
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border border-accent bg-primary-bg/85 text-accent text-xs backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border border-accent bg-primary-bg/85 text-accent ui-text-xs backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}

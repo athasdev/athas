@@ -55,6 +55,7 @@ import {
   SidebarHeaderSearch,
   SidebarListItem,
   SidebarPanel,
+  SidebarSectionHeader,
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
@@ -73,7 +74,6 @@ import { CollaborationMessageComposer } from "./collaboration-message-composer";
 import {
   ProfilePicture,
   RemoteMediaTile,
-  SidebarHoverCard,
   StatusDot,
   type RemoteMediaShare,
 } from "./collaboration-sidebar-ui";
@@ -138,6 +138,8 @@ export function CollaborationSidebarView() {
   const [channelFilter, setChannelFilter] = useState<CollaborationChannelFilter>("all");
   const [peopleFilter, setPeopleFilter] = useState<CollaborationPeopleFilter>("all");
   const [notesFilter, setNotesFilter] = useState<CollaborationNotesFilter>("notes");
+  const [isChannelsSectionCollapsed, setIsChannelsSectionCollapsed] = useState(false);
+  const [isPrivateChatsSectionCollapsed, setIsPrivateChatsSectionCollapsed] = useState(false);
   const [isChannelFilterOpen, setIsChannelFilterOpen] = useState(false);
   const [isPeopleFilterOpen, setIsPeopleFilterOpen] = useState(false);
   const [isNotesFilterOpen, setIsNotesFilterOpen] = useState(false);
@@ -553,7 +555,7 @@ export function CollaborationSidebarView() {
     return (
       <SidebarPanel>
         <SidebarHeader>
-          <div className="ui-font flex items-center gap-2 text-text text-sm">
+          <div className="ui-font flex items-center gap-2 text-text ui-text-sm">
             <UsersThree weight="duotone" />
             Collaboration
           </div>
@@ -1045,7 +1047,7 @@ export function CollaborationSidebarView() {
     <div className="h-full min-h-0 overflow-hidden">
       {openConversation === null ? (
         <div
-          className="h-full overflow-y-auto px-2 py-2"
+          className="h-full select-none overflow-y-auto px-1 py-1"
           onContextMenu={(event) => channelsContextMenu.open(event)}
         >
           <SidebarHeader>
@@ -1077,7 +1079,7 @@ export function CollaborationSidebarView() {
                 type="button"
                 variant="ghost"
                 compact
-                className="h-7 w-full justify-start px-2 text-xs"
+                className="h-7 w-full justify-start px-2 ui-text-xs"
                 onClick={() => {
                   setChannelFilter(item.id);
                   setIsChannelFilterOpen(false);
@@ -1091,106 +1093,102 @@ export function CollaborationSidebarView() {
             ))}
           </Dropdown>
           <div className="space-y-px">
-            {isCreatingChannel ? (
-              <form
-                className="mb-1 flex h-8 items-center gap-1 rounded-md bg-hover/70 px-1.5"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void createChannel(newChannelName);
-                }}
-              >
-                <Hash className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
-                <Input
-                  autoFocus
-                  value={newChannelName}
-                  variant="ghost"
-                  size="xs"
-                  placeholder="channel-name"
-                  disabled={isSending}
-                  className="h-6 min-w-0 bg-transparent text-xs"
-                  onChange={(event) => setNewChannelName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") {
+            <SidebarSectionHeader
+              expanded={!isChannelsSectionCollapsed}
+              count={filteredChannels.length}
+              onToggle={() => setIsChannelsSectionCollapsed((collapsed) => !collapsed)}
+            >
+              Channels
+            </SidebarSectionHeader>
+            {!isChannelsSectionCollapsed ? (
+              <>
+                {isCreatingChannel ? (
+                  <form
+                    className="mb-1 flex h-8 items-center gap-1 rounded-sm bg-hover/70 px-1.5"
+                    onSubmit={(event) => {
                       event.preventDefault();
-                      setIsCreatingChannel(false);
-                      setNewChannelName("");
+                      void createChannel(newChannelName);
+                    }}
+                  >
+                    <Hash className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
+                    <Input
+                      autoFocus
+                      value={newChannelName}
+                      variant="ghost"
+                      size="xs"
+                      placeholder="channel-name"
+                      disabled={isSending}
+                      className="h-6 min-w-0 bg-transparent ui-text-xs"
+                      onChange={(event) => setNewChannelName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setIsCreatingChannel(false);
+                          setNewChannelName("");
+                        }
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      className="ui-text-xs h-6 px-2"
+                      disabled={!newChannelName.trim() || isSending}
+                    >
+                      Create
+                    </Button>
+                  </form>
+                ) : null}
+                {filteredChannels.map((channel) => (
+                  <SidebarListItem
+                    key={channel.id}
+                    type="button"
+                    className={cn("min-h-8 py-1 ui-text-xs")}
+                    active={selectedChannel?.id === channel.id}
+                    onClick={() => openChannelChat(channel.id)}
+                    onContextMenu={(event) => channelsContextMenu.open(event, channel)}
+                    leading={
+                      <span className="ui-text-xs flex size-4 items-center justify-center">
+                        {renderChannelIcon(channelIcons[String(channel.id)])}
+                      </span>
                     }
-                  }}
-                />
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  className="h-6 px-2 text-[11px]"
-                  disabled={!newChannelName.trim() || isSending}
-                >
-                  Create
-                </Button>
-              </form>
+                    trailing={
+                      <Tooltip content={`${channel.memberCount} members`} side="top">
+                        <span className="ui-text-xs">{channel.memberCount}</span>
+                      </Tooltip>
+                    }
+                  >
+                    <span className="block truncate font-medium">#{channel.slug}</span>
+                  </SidebarListItem>
+                ))}
+              </>
             ) : null}
-            {filteredChannels.map((channel) => (
-              <SidebarHoverCard
-                key={channel.id}
-                card={
-                  <div className="space-y-1">
-                    <div className="truncate font-medium text-text">#{channel.slug}</div>
-                    <div className="text-text-lighter">{channel.memberCount} members</div>
-                    {channel.description ? (
-                      <div className="line-clamp-3 text-text-lighter">{channel.description}</div>
-                    ) : null}
-                  </div>
-                }
+            {channelFilter === "all" ? (
+              <SidebarSectionHeader
+                className="mt-2"
+                expanded={!isPrivateChatsSectionCollapsed}
+                count={filteredPrivateChatParticipants.length}
+                onToggle={() => setIsPrivateChatsSectionCollapsed((collapsed) => !collapsed)}
               >
-                <SidebarListItem
-                  type="button"
-                  className={cn("min-h-8 py-1 text-xs")}
-                  active={selectedChannel?.id === channel.id}
-                  onClick={() => openChannelChat(channel.id)}
-                  onContextMenu={(event) => channelsContextMenu.open(event, channel)}
-                  leading={
-                    <span className="flex size-4 items-center justify-center text-[13px]">
-                      {renderChannelIcon(channelIcons[String(channel.id)])}
-                    </span>
-                  }
-                  trailing={
-                    <Tooltip content={`${channel.memberCount} members`} side="top">
-                      <span className="text-[11px]">{channel.memberCount}</span>
-                    </Tooltip>
-                  }
-                >
-                  <span className="block truncate font-medium">#{channel.slug}</span>
-                </SidebarListItem>
-              </SidebarHoverCard>
-            ))}
-            {filteredPrivateChatParticipants.length > 0 ? (
-              <div className="pt-2">
-                <div className="px-2 pb-1 text-text-lighter text-[11px]">Private chats</div>
+                Private chats
+              </SidebarSectionHeader>
+            ) : null}
+            {channelFilter === "all" &&
+            !isPrivateChatsSectionCollapsed &&
+            filteredPrivateChatParticipants.length > 0 ? (
+              <div>
                 <div className="space-y-px">
                   {filteredPrivateChatParticipants.map((participant) => (
-                    <SidebarHoverCard
+                    <SidebarListItem
                       key={participant.id}
-                      card={
-                        <div className="flex min-w-0 items-center gap-2">
-                          <ProfilePicture name={participant.name} online={participant.online} />
-                          <div className="min-w-0">
-                            <div className="truncate font-medium text-text">{participant.name}</div>
-                            <div className="truncate text-text-lighter">
-                              {participant.online ? "Online" : "Offline"}
-                            </div>
-                          </div>
-                        </div>
-                      }
+                      type="button"
+                      className="min-h-8 ui-text-xs"
+                      onClick={() => openPrivateChat(participant.id)}
+                      onContextMenu={(event) => participantContextMenu.open(event, participant)}
+                      leading={<ProfilePicture name={participant.name} />}
+                      trailing={<StatusDot online={participant.online} />}
                     >
-                      <SidebarListItem
-                        type="button"
-                        className="min-h-8 text-xs"
-                        onClick={() => openPrivateChat(participant.id)}
-                        onContextMenu={(event) => participantContextMenu.open(event, participant)}
-                        leading={<ProfilePicture name={participant.name} />}
-                        trailing={<StatusDot online={participant.online} />}
-                      >
-                        <span className="block truncate font-medium">{participant.name}</span>
-                      </SidebarListItem>
-                    </SidebarHoverCard>
+                      <span className="block truncate font-medium">{participant.name}</span>
+                    </SidebarListItem>
                   ))}
                 </div>
               </div>
@@ -1223,11 +1221,11 @@ export function CollaborationSidebarView() {
                   type="button"
                   variant="ghost"
                   active={openChannel?.id === channel.id}
-                  className="h-7 max-w-[128px] rounded-md px-2 text-xs"
+                  className="h-7 max-w-[128px] rounded-md px-2 ui-text-xs"
                   onClick={() => openChannelChat(channel.id)}
                   onContextMenu={(event) => channelsContextMenu.open(event, channel)}
                 >
-                  <span className="shrink-0 text-[12px]">
+                  <span className="shrink-0 ui-text-xs">
                     {renderChannelIcon(channelIcons[String(channel.id)])}
                   </span>
                   <span className="truncate">#{channel.slug}</span>
@@ -1235,27 +1233,27 @@ export function CollaborationSidebarView() {
               ))}
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
             <div className="space-y-1.5">
               {model.chatGroups.length > 0 ? (
                 model.chatGroups.slice(-10).map((group) => (
                   <div key={group.id} className="flex gap-2">
                     <ProfilePicture name={group.author} />
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="px-1 text-text-lighter text-[11px]">{group.author}</div>
+                      <div className="px-1 text-text-lighter ui-text-xs">{group.author}</div>
                       <div className="space-y-px">
                         {group.entries.map((entry, index) => (
                           <div
                             key={entry.id}
                             className={cn(
-                              "border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text text-xs leading-5",
+                              "border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-xs leading-5",
                               index === 0 && "rounded-t-lg",
                               index === group.entries.length - 1 && "rounded-b-lg",
                               group.entries.length === 1 && "rounded-lg",
                             )}
                           >
                             {entry.kind === "document" ? (
-                              <span className="mb-0.5 flex items-center gap-1.5 text-text-lighter text-[11px]">
+                              <span className="mb-0.5 flex items-center gap-1.5 text-text-lighter ui-text-xs">
                                 <FileText className="size-3" weight="duotone" />
                                 Document
                               </span>
@@ -1307,14 +1305,14 @@ export function CollaborationSidebarView() {
                   name={openPrivateParticipant.name}
                   online={openPrivateParticipant.online}
                 />
-                <div className="min-w-0 flex-1 truncate text-text text-xs">
+                <div className="min-w-0 flex-1 truncate text-text ui-text-xs">
                   {openPrivateParticipant.name}
                 </div>
                 <StatusDot online={openPrivateParticipant.online} />
               </>
             ) : null}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
             <div className="space-y-1.5">
               {privateChatEntries.length > 0 ? (
                 privateChatEntries.map((entry) => {
@@ -1326,8 +1324,8 @@ export function CollaborationSidebarView() {
                     <div key={entry.id} className="flex gap-2">
                       <ProfilePicture name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
-                        <div className="px-1 text-text-lighter text-[11px]">{authorName}</div>
-                        <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text text-xs leading-5">
+                        <div className="px-1 text-text-lighter ui-text-xs">{authorName}</div>
+                        <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-xs leading-5">
                           {entry.body}
                         </div>
                       </div>
@@ -1359,7 +1357,7 @@ export function CollaborationSidebarView() {
   );
 
   const peopleContent = (
-    <div className="h-full overflow-y-auto px-2 py-2">
+    <div className="h-full overflow-y-auto px-1 py-1">
       <SidebarHeader>
         <SidebarHeaderSearch
           value={peopleSearchQuery}
@@ -1389,7 +1387,7 @@ export function CollaborationSidebarView() {
             type="button"
             variant="ghost"
             compact
-            className="h-7 w-full justify-start px-2 text-xs"
+            className="h-7 w-full justify-start px-2 ui-text-xs"
             onClick={() => {
               setPeopleFilter(item.id);
               setIsPeopleFilterOpen(false);
@@ -1413,62 +1411,41 @@ export function CollaborationSidebarView() {
       <div className="space-y-px">
         {filteredParticipants.length > 0 ? (
           filteredParticipants.map((participant) => (
-            <SidebarHoverCard
+            <SidebarListItem
               key={participant.id}
-              card={
-                <div className="flex min-w-0 items-center gap-2">
-                  <ProfilePicture name={participant.name} online={participant.online} />
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-text">{participant.name}</div>
-                    <div className="truncate text-text-lighter">
-                      {participant.online ? "Online" : "Offline"}
-                    </div>
-                    {participant.activeFilePath ? (
-                      <div className="mt-1 truncate text-text-lighter">
-                        {participant.activeFilePath}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
+              className={cn("min-h-8 ui-text-xs", participant.online && "text-text")}
+              active={presenceTarget.followingUserId === participant.followableUserId}
+              onContextMenu={(event) => participantContextMenu.open(event, participant)}
+              onClick={() =>
+                participant.followableUserId &&
+                participant.followableUserId !== user?.id &&
+                collaborationActions.setFollowingUser(participant.followableUserId)
+              }
+              disabled={!participant.followableUserId || participant.followableUserId === user?.id}
+              leading={<ProfilePicture name={participant.name} />}
+              trailing={
+                <span className="flex items-center gap-1">
+                  <StatusDot online={participant.online} />
+                  {participant.microphone ? <Mic className="size-3 shrink-0" /> : null}
+                  {participant.screen ? <Monitor className="size-3 shrink-0" /> : null}
+                  {participant.activeFilePath ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-6 px-2 ui-text-xs"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void openParticipantFile(participant.activeFilePath!);
+                      }}
+                    >
+                      Open
+                    </Button>
+                  ) : null}
+                </span>
               }
             >
-              <SidebarListItem
-                className={cn("min-h-8 text-xs", participant.online && "text-text")}
-                active={presenceTarget.followingUserId === participant.followableUserId}
-                onContextMenu={(event) => participantContextMenu.open(event, participant)}
-                onClick={() =>
-                  participant.followableUserId &&
-                  participant.followableUserId !== user?.id &&
-                  collaborationActions.setFollowingUser(participant.followableUserId)
-                }
-                disabled={
-                  !participant.followableUserId || participant.followableUserId === user?.id
-                }
-                leading={<ProfilePicture name={participant.name} />}
-                trailing={
-                  <span className="flex items-center gap-1">
-                    <StatusDot online={participant.online} />
-                    {participant.microphone ? <Mic className="size-3 shrink-0" /> : null}
-                    {participant.screen ? <Monitor className="size-3 shrink-0" /> : null}
-                    {participant.activeFilePath ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-6 px-2 text-[11px]"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void openParticipantFile(participant.activeFilePath!);
-                        }}
-                      >
-                        Open
-                      </Button>
-                    ) : null}
-                  </span>
-                }
-              >
-                <span className="block truncate">{participant.name}</span>
-              </SidebarListItem>
-            </SidebarHoverCard>
+              <span className="block truncate">{participant.name}</span>
+            </SidebarListItem>
           ))
         ) : (
           <SidebarEmptyActionState
@@ -1484,7 +1461,7 @@ export function CollaborationSidebarView() {
 
   const notesContent = (
     <div
-      className="h-full overflow-y-auto px-2 py-2"
+      className="h-full overflow-y-auto px-1 py-1"
       onContextMenu={(event) => notesContextMenu.open(event)}
     >
       <SidebarHeader>
@@ -1516,7 +1493,7 @@ export function CollaborationSidebarView() {
             type="button"
             variant="ghost"
             compact
-            className="h-7 w-full justify-start px-2 text-xs"
+            className="h-7 w-full justify-start px-2 ui-text-xs"
             onClick={() => {
               setNotesFilter(item.id);
               setIsNotesFilterOpen(false);
@@ -1535,7 +1512,7 @@ export function CollaborationSidebarView() {
             <SidebarListItem
               key={`${item.type}:${item.path}`}
               type="button"
-              className={cn("min-h-7 text-xs")}
+              className={cn("min-h-7 ui-text-xs")}
               active={
                 (item.type === "file" &&
                   selectedNoteItemType === "file" &&
@@ -1590,7 +1567,7 @@ export function CollaborationSidebarView() {
   );
 
   return (
-    <SidebarPanel className="gap-2 p-2">
+    <SidebarPanel className="gap-1 p-1">
       <SidebarHeader className="relative z-[10020] bg-transparent px-0 py-0 backdrop-blur-none">
         <SidebarSectionSwitcher
           items={collaborationTabs}
@@ -1600,7 +1577,7 @@ export function CollaborationSidebarView() {
       </SidebarHeader>
 
       <SidebarSectionPager
-        className="flex-1 rounded-b-xl"
+        className="flex-1"
         items={[
           { id: "channels", content: channelsContent },
           { id: "people", content: peopleContent },

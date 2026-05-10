@@ -156,7 +156,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       {/* Header / Toolbar */}
       <div className="absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2 transition-opacity hover:opacity-100">
         <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate font-medium text-text text-xs" title={fileName}>
+          <span className="truncate font-medium text-text ui-text-xs" title={fileName}>
             {fileName}
           </span>
         </div>

@@ -372,7 +372,7 @@ const GitStatusPanel = ({
   const renderSectionHeader = (title: string, count: number) => (
     <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center justify-between gap-2 px-2.5 py-1 text-text-lighter">
       <span>{title}</span>
-      <span className="rounded bg-hover px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-text-lighter/80">
+      <span className="rounded bg-hover px-1.5 py-0.5 ui-text-xs uppercase tracking-[0.08em] text-text-lighter/80">
         {count}
       </span>
     </div>

@@ -63,7 +63,7 @@ export default function SqlHistoryList({
                 compact
                 className={cn(
                   "min-w-0 flex-1 justify-start truncate rounded-lg px-2.5 py-1.5 text-left",
-                  compact ? "text-xs" : "ui-text-sm",
+                  compact ? "ui-text-xs" : "ui-text-sm",
                 )}
                 tooltip={query}
                 aria-label={`Open query: ${preview}`}

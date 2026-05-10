@@ -127,7 +127,7 @@ const GitStashPanel = ({
                       </div>
                       <div className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
                         <span className="truncate">{formatRelativeDate(stash.date)}</span>
-                        <span className="rounded border border-border/50 px-1 text-[10px] leading-4 text-text-lighter/80">
+                        <span className="rounded border border-border/50 px-1 ui-text-xs leading-4 text-text-lighter/80">
                           {getStashPositionLabel(stash.index)}
                         </span>
                       </div>

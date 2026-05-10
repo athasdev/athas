@@ -20,7 +20,7 @@ export function ImageZoomControls({
       <Button onClick={onZoomOut} variant="ghost" tooltip="Zoom out" compact>
         <Minus />
       </Button>
-      <span className={cn("ui-font min-w-[50px] px-2 text-center", "text-text-lighter text-xs")}>
+      <span className={cn("ui-font min-w-[50px] px-2 text-center", "text-text-lighter ui-text-xs")}>
         {Math.round(zoom * 100)}%
       </span>
       <Button onClick={onZoomIn} variant="ghost" tooltip="Zoom in" compact>

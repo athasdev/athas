@@ -387,7 +387,7 @@ export function SkillsCommand({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
-                          <div className="truncate text-xs text-text">{skill.title}</div>
+                          <div className="truncate ui-text-xs text-text">{skill.title}</div>
                           {skill.version ? (
                             <span className="ui-text-xs shrink-0 text-text-lighter">
                               v{skill.version}
@@ -457,7 +457,7 @@ export function SkillsCommand({
                     className="group mb-1 px-3 py-2 last:mb-0"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs text-text">{skill.title}</div>
+                      <div className="truncate ui-text-xs text-text">{skill.title}</div>
                       {(skill.source === "marketplace" || hasLocalOverride) && (
                         <div className="ui-text-xs mt-1 flex items-center gap-1.5 text-text-lighter">
                           {skill.source === "marketplace" ? <span>Marketplace</span> : null}

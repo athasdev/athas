@@ -114,7 +114,7 @@ export function DebugWatchPanel({
       </div>
 
       {watchExpressions.length === 0 ? (
-        <div className="px-1 py-3 text-center text-text-lighter text-xs">
+        <div className="px-1 py-3 text-center text-text-lighter ui-text-xs">
           Add expressions to inspect while paused.
         </div>
       ) : (
@@ -131,7 +131,7 @@ export function DebugWatchPanel({
                 <div className="flex items-start gap-2">
                   <button
                     type="button"
-                    className="min-w-0 flex-1 truncate text-left font-mono text-[11px] text-text"
+                    className="min-w-0 flex-1 truncate text-left font-mono ui-text-xs text-text"
                     onClick={() =>
                       void evaluateExpression(watchExpression.id, watchExpression.expression)
                     }
@@ -147,7 +147,7 @@ export function DebugWatchPanel({
                     <Trash />
                   </Button>
                 </div>
-                <div className="mt-1 truncate font-mono text-[11px] text-text-lighter">
+                <div className="mt-1 truncate font-mono ui-text-xs text-text-lighter">
                   {isPending
                     ? "Evaluating..."
                     : result?.error

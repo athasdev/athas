@@ -72,7 +72,7 @@ export function ChannelIconPicker({
             key={tab}
             type="button"
             className={cn(
-              "h-7 rounded-md text-xs capitalize text-text-lighter hover:bg-hover hover:text-text",
+              "ui-text-xs h-7 rounded-md capitalize text-text-lighter hover:bg-hover hover:text-text",
               activeTab === tab && "bg-hover text-text",
             )}
             onClick={() => onTabChange(tab)}
@@ -112,7 +112,7 @@ export function ChannelIconPicker({
       {activeTab === "icon" ? (
         <button
           type="button"
-          className="mt-2 h-7 w-full rounded-md text-center text-text-lighter text-xs hover:bg-hover hover:text-text"
+          className="ui-text-xs mt-2 h-7 w-full rounded-md text-center text-text-lighter hover:bg-hover hover:text-text"
           onClick={onClear}
         >
           Reset to default

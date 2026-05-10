@@ -76,7 +76,7 @@ export function DebugVariablesPanel({
       return (
         <div key={`${parentReference}-${variable.name}-${index}`}>
           <div
-            className="grid grid-cols-[minmax(0,0.42fr)_minmax(0,0.58fr)] gap-2 py-1 pr-3 text-[11px]"
+            className="grid grid-cols-[minmax(0,0.42fr)_minmax(0,0.58fr)] gap-2 py-1 pr-3 ui-text-xs"
             style={{ paddingLeft: 18 + depth * 12 }}
           >
             <button
@@ -119,12 +119,12 @@ export function DebugVariablesPanel({
         const variables = variablesByReference[scope.variablesReference] ?? [];
         return (
           <div key={`${scope.name}-${scope.variablesReference}`}>
-            <div className="flex items-center justify-between px-3 py-1.5 text-xs">
+            <div className="flex items-center justify-between px-3 py-1.5 ui-text-xs">
               <span className="font-medium text-text">{scope.name}</span>
-              <span className="text-[10px] text-text-lighter">{variables.length}</span>
+              <span className="ui-text-xs text-text-lighter">{variables.length}</span>
             </div>
             {variables.length === 0 ? (
-              <div className="px-6 pb-1.5 text-[11px] text-text-lighter">Empty</div>
+              <div className="px-6 pb-1.5 ui-text-xs text-text-lighter">Empty</div>
             ) : (
               renderVariables(variables, scope.variablesReference)
             )}

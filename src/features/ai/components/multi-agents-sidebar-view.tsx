@@ -99,7 +99,6 @@ export function MultiAgentsSidebarView() {
   const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
   const createNewChat = useAIChatStore((state) => state.createNewChat);
   const registerActiveAgentChat = useAIChatStore((state) => state.registerActiveAgentChat);
-  const switchToChat = useAIChatStore((state) => state.switchToChat);
   const deleteChat = useAIChatStore((state) => state.deleteChat);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
@@ -237,10 +236,9 @@ export function MultiAgentsSidebarView() {
 
   const openChat = useCallback(
     (chatId: string) => {
-      switchToChat(chatId);
       openAgentBuffer(chatId);
     },
-    [openAgentBuffer, switchToChat],
+    [openAgentBuffer],
   );
 
   const resumeRemoteSession = useCallback(
@@ -399,7 +397,7 @@ export function MultiAgentsSidebarView() {
           size={16}
           className={cn("shrink-0", agent.running ? "text-success" : "text-text-lighter")}
         />
-        <span className="min-w-0 flex-1 truncate font-medium text-text text-xs">
+        <span className="min-w-0 flex-1 truncate font-medium text-text ui-text-xs">
           {getDisplayTitle(agent.title)}
         </span>
         <Button
@@ -448,7 +446,7 @@ export function MultiAgentsSidebarView() {
                 <span className="block text-text">
                   {searchQuery ? "No matching agents" : "No agent history"}
                 </span>
-                <span className="mt-1 block text-xs">
+                <span className="mt-1 block ui-text-xs">
                   {searchQuery ? "Try another search." : "Start a new agent chat."}
                 </span>
               </>
@@ -467,7 +465,7 @@ export function MultiAgentsSidebarView() {
           <div className="flex flex-col gap-2">
             {pinnedChats.length > 0 ? (
               <section className="flex flex-col gap-1">
-                <div className="px-2 text-[10px] font-medium uppercase tracking-wide text-text-lighter">
+                <div className="px-2 ui-text-xs font-medium uppercase tracking-wide text-text-lighter">
                   Pinned
                 </div>
                 <div className="flex flex-col gap-1">{pinnedChats.map(renderChatRow)}</div>
@@ -485,7 +483,7 @@ export function MultiAgentsSidebarView() {
                       <button
                         type="button"
                         onClick={() => toggleGroup(workspaceKey)}
-                        className="flex h-6 items-center gap-1 rounded-md px-1.5 text-left text-text-lighter text-xs hover:bg-hover/50 hover:text-text"
+                        className="flex h-6 items-center gap-1 rounded-md px-1.5 text-left text-text-lighter ui-text-xs hover:bg-hover/50 hover:text-text"
                       >
                         <CaretRight
                           className={cn(
@@ -509,7 +507,7 @@ export function MultiAgentsSidebarView() {
                                   type="button"
                                   variant="ghost"
                                   onClick={showMoreHistory}
-                                  className="h-6 px-1.5 text-[11px] text-text-lighter hover:text-text"
+                                  className="h-6 px-1.5 ui-text-xs text-text-lighter hover:text-text"
                                   compact
                                 >
                                   {visibleSessionCount < EXPANDED_VISIBLE_SESSIONS
@@ -522,7 +520,7 @@ export function MultiAgentsSidebarView() {
                                   type="button"
                                   variant="ghost"
                                   onClick={() => setVisibleSessionCount(INITIAL_VISIBLE_SESSIONS)}
-                                  className="h-6 px-1.5 text-[11px] text-text-lighter hover:text-text"
+                                  className="h-6 px-1.5 ui-text-xs text-text-lighter hover:text-text"
                                 >
                                   Show less
                                 </Button>
