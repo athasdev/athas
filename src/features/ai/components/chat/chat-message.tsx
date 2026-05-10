@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
@@ -12,10 +13,15 @@ import { ChatLoadingIndicator } from "./chat-loading-indicator";
 interface ChatMessageProps {
   message: Message;
   isLastMessage: boolean;
+  agentIconId?: string;
   onApplyCode?: (code: string, language?: string) => void;
 }
 
-export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({
+  message,
+  agentIconId,
+  onApplyCode,
+}: ChatMessageProps) {
   const isToolOnlyMessage =
     message.role === "assistant" &&
     message.toolCalls &&
@@ -44,21 +50,23 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
 
   if (isToolOnlyMessage) {
     return (
-      <div className="space-y-0.5">
-        {message.toolCalls!.map((toolCall, toolIndex) => (
-          <ToolCallDisplay
-            key={`${message.id}-tool-${toolIndex}`}
-            toolName={toolCall.name}
-            input={toolCall.input}
-            output={toolCall.output}
-            error={toolCall.error}
-            kind={toolCall.kind}
-            status={toolCall.status}
-            locations={toolCall.locations}
-            isStreaming={!toolCall.isComplete && message.isStreaming}
-          />
-        ))}
-      </div>
+      <AssistantMessageFrame agentIconId={agentIconId}>
+        <div className="space-y-0.5">
+          {message.toolCalls!.map((toolCall, toolIndex) => (
+            <ToolCallDisplay
+              key={`${message.id}-tool-${toolIndex}`}
+              toolName={toolCall.name}
+              input={toolCall.input}
+              output={toolCall.output}
+              error={toolCall.error}
+              kind={toolCall.kind}
+              status={toolCall.status}
+              locations={toolCall.locations}
+              isStreaming={!toolCall.isComplete && message.isStreaming}
+            />
+          ))}
+        </div>
+      </AssistantMessageFrame>
     );
   }
 
@@ -68,11 +76,15 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    return <ChatLoadingIndicator label="waiting for response" compact />;
+    return (
+      <AssistantMessageFrame agentIconId={agentIconId}>
+        <ChatLoadingIndicator label="waiting for response" compact />
+      </AssistantMessageFrame>
+    );
   }
 
   return (
-    <div className="group relative w-full">
+    <AssistantMessageFrame agentIconId={agentIconId}>
       {message.images && message.images.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {message.images.map((image, index) => (
@@ -143,6 +155,23 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
           ))}
         </div>
       )}
-    </div>
+    </AssistantMessageFrame>
   );
 });
+
+function AssistantMessageFrame({
+  agentIconId,
+  children,
+}: {
+  agentIconId?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group relative flex w-full gap-2.5">
+      <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-secondary-bg/55 text-text-lighter">
+        <ProviderIcon providerId={agentIconId ?? "custom"} size={13} />
+      </div>
+      <div className="min-w-0 flex-1 pt-0.5">{children}</div>
+    </div>
+  );
+}
