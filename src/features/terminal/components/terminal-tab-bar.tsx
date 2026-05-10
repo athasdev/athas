@@ -694,7 +694,7 @@ const TerminalTabBar = ({
           className={cn(
             orientation === "vertical"
               ? "relative flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg"
-              : "relative flex min-h-8 items-center justify-between gap-1 overflow-hidden bg-primary-bg px-1.5 py-1",
+              : "relative flex h-7 min-h-7 items-center justify-between gap-1 overflow-hidden bg-primary-bg px-1.5 py-0.5",
             "scrollbar-hidden [overscroll-behavior-x:contain]",
           )}
           style={orientation === "vertical" ? { width: tabSidebarWidth } : undefined}

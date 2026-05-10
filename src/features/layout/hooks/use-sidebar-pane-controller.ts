@@ -4,11 +4,13 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import {
   getSidebarPaneLevel,
   resolveSidebarPaneTrigger,
+  type SidebarPaneLevel,
   type SidebarTriggerSide,
   type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
 
 interface OpenSidebarViewOptions {
+  paneLevel?: SidebarPaneLevel;
   triggerSide?: SidebarTriggerSide;
 }
 
@@ -33,17 +35,23 @@ export function useSidebarPaneController() {
 
   const openSidebarView = useCallback(
     (view: SidebarView, options: OpenSidebarViewOptions = {}) => {
-      const paneLevel = getSidebarPaneLevel(view);
+      const paneLevel = options.paneLevel ?? getSidebarPaneLevel(view);
 
       if (paneLevel === "edge") {
         setActiveRightSidebarView(view);
         setIsRightSidebarVisible(!(isRightSidebarVisible && activeRightSidebarView === view));
+        if (activeAgentSidebarView === view) {
+          setIsAgentSidebarVisible(false);
+        }
         return;
       }
 
       if (paneLevel === "agent") {
         setActiveAgentSidebarView(view);
         setIsAgentSidebarVisible(!(isAgentSidebarVisible && activeAgentSidebarView === view));
+        if (activeRightSidebarView === view) {
+          setIsRightSidebarVisible(false);
+        }
         return;
       }
 

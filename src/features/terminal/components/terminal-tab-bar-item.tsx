@@ -93,11 +93,12 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
+        size="xs"
         labelPosition={orientation === "vertical" ? "start" : "center"}
         className={cn(
           orientation === "vertical"
-            ? "w-full max-w-none justify-start pr-5 pl-2"
-            : "min-w-[88px] w-fit pr-5 pl-2",
+            ? "w-full max-w-none justify-start pr-6 pl-2"
+            : "min-w-[88px] w-fit pr-6 pl-2",
           isActive ? "bg-hover/80" : undefined,
           isEditing ? "pr-2" : undefined,
         )}
@@ -110,6 +111,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           !isEditing ? (
             <Button
               type="button"
+              compact
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
@@ -120,8 +122,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                 }
               }}
               className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
-                "hover:bg-hover/80 hover:text-text",
+                "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
+                "hover:text-text",
                 terminal.isPinned || isActive
                   ? "opacity-100"
                   : "opacity-0 group-hover/tab:opacity-100",

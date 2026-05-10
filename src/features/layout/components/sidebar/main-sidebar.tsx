@@ -212,7 +212,9 @@ export const MainSidebar = memo(
           }) satisfies SidebarPaneEntry,
       ),
     ];
-    const paneEntries = allPaneEntries.filter((pane) => getSidebarPaneLevel(pane.id) === paneLevel);
+    const paneEntries = allPaneEntries.filter(
+      (pane) => pane.id === activeSidebarView || getSidebarPaneLevel(pane.id) === paneLevel,
+    );
     const activePane = (() => {
       const requestedIndex = paneEntries.findIndex((pane) => pane.id === activePaneId);
       if (requestedIndex >= 0) return paneEntries[requestedIndex];

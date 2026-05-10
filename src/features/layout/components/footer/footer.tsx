@@ -6,8 +6,8 @@ import {
   DownloadSimple,
   ListBullets,
   PuzzlePiece,
+  Sparkle,
   TerminalWindow,
-  TreeStructure,
   UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
@@ -425,7 +425,7 @@ const Footer = () => {
   const isCollaborationActive =
     uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "collaboration";
   const isMultiAgentsActive =
-    uiState.isAgentSidebarVisible && uiState.activeAgentSidebarView === "multi-agents";
+    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "multi-agents";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
     const normalizedOrder = normalizeItemOrder(
       settings.footerTrailingItemsOrder,
@@ -449,10 +449,10 @@ const Footer = () => {
                 active={isMultiAgentsActive}
                 className={chromeControl()}
                 onClick={() => {
-                  openSidebarView("multi-agents", { triggerSide: "right" });
+                  openSidebarView("multi-agents", { paneLevel: "edge", triggerSide: "right" });
                 }}
               >
-                <TreeStructure className={chromeIcon()} weight="duotone" />
+                <Sparkle className={chromeIcon()} weight="duotone" />
               </FooterTabControl>
             ),
           },
