@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-sidebar-view";
-import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar-view";
+import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import GitView from "@/features/git/components/git-view";

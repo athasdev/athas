@@ -59,6 +59,7 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
+import { EmojiPicker } from "@/ui/emoji-picker";
 import Input from "@/ui/input";
 import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { SidebarHeader, SidebarHeaderSearch } from "@/ui/sidebar";
@@ -85,20 +86,6 @@ type SidebarNoteItem = NonNullable<
 >["notesItems"][number];
 
 const CHANNEL_ICON_STORAGE_KEY = "athas.collaboration.channel-icons";
-const CHANNEL_EMOJI_OPTIONS = [
-  "💬",
-  "🛠️",
-  "🚀",
-  "🧪",
-  "📣",
-  "🔒",
-  "📌",
-  "⚡",
-  "✅",
-  "🔥",
-  "🎯",
-  "🧠",
-];
 const CHANNEL_SYMBOL_OPTIONS = [
   { id: "hash", label: "Channel", icon: Hash },
   { id: "chat", label: "Chat", icon: ChatCircleText },
@@ -211,22 +198,12 @@ function ChannelIconPicker({
         ))}
       </div>
 
-      <div className="mt-2 grid grid-cols-6 gap-1">
-        {activeTab === "emoji"
-          ? CHANNEL_EMOJI_OPTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-md text-base hover:bg-hover",
-                  selected === emoji && "bg-hover",
-                )}
-                onClick={() => onSelect(emoji)}
-              >
-                {emoji}
-              </button>
-            ))
-          : CHANNEL_SYMBOL_OPTIONS.map((option) => {
+      <div className="mt-2">
+        {activeTab === "emoji" ? (
+          <EmojiPicker selected={selected} onSelect={onSelect} onClear={onClear} />
+        ) : (
+          <div className="grid grid-cols-6 gap-1">
+            {CHANNEL_SYMBOL_OPTIONS.map((option) => {
               const Icon = option.icon;
               const value = `icon:${option.id}`;
               return (
@@ -244,15 +221,19 @@ function ChannelIconPicker({
                 </Tooltip>
               );
             })}
+          </div>
+        )}
       </div>
 
-      <button
-        type="button"
-        className="mt-2 h-7 w-full rounded-md text-center text-text-lighter text-xs hover:bg-hover hover:text-text"
-        onClick={onClear}
-      >
-        Reset to default
-      </button>
+      {activeTab === "icon" ? (
+        <button
+          type="button"
+          className="mt-2 h-7 w-full rounded-md text-center text-text-lighter text-xs hover:bg-hover hover:text-text"
+          onClick={onClear}
+        >
+          Reset to default
+        </button>
+      ) : null}
     </div>
   );
 }
