@@ -105,6 +105,7 @@ export function AgentSelector({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const previousOpenSignalRef = useRef(openSignal);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
@@ -195,6 +196,11 @@ export function AgentSelector({
   useEffect(() => {
     setSelectedIndex(0);
   }, [search]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, selectedIndex]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -365,8 +371,8 @@ export function AgentSelector({
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
         portalContainer={portalContainer}
-        className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
-        style={{ maxHeight: "420px" }}
+        className="flex w-[min(360px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
+        style={{ maxHeight: "min(620px, calc(100vh - 24px))" }}
       >
         <div className="bg-secondary-bg px-1.5 py-1.5" onKeyDown={handleKeyDown}>
           <Input
@@ -383,7 +389,7 @@ export function AgentSelector({
           />
         </div>
 
-        <div className="max-h-[360px] min-h-0 flex-1 overflow-y-auto p-1 pr-1.5 pb-2 [overscroll-behavior:contain]">
+        <div className="min-h-0 flex-1 overflow-y-auto p-1 pr-1.5 pb-2 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
@@ -395,6 +401,9 @@ export function AgentSelector({
               return (
                 <div
                   key={item.id}
+                  ref={(element) => {
+                    itemRefs.current[itemIndex] = element;
+                  }}
                   role="button"
                   tabIndex={-1}
                   onMouseEnter={() => setSelectedIndex(itemIndex)}
@@ -408,7 +417,7 @@ export function AgentSelector({
                     }
                   }}
                   className={cn(
-                    "group mb-1 flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors last:mb-2",
+                    "group mb-1 flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors last:mb-2",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     !item.isInstalled && item.id !== "custom" && "text-text-lighter",
@@ -422,7 +431,7 @@ export function AgentSelector({
                       className="text-text-lighter"
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-left text-text text-xs leading-4">
+                      <div className="truncate text-left font-medium text-sm text-text leading-4">
                         {item.name}
                       </div>
                       {!item.isInstalled && item.id !== "custom" ? (
@@ -446,7 +455,7 @@ export function AgentSelector({
                         }}
                         variant="ghost"
                         compact
-                        className="h-6 min-w-[4.75rem] px-2 text-[10px]"
+                        className="h-6 min-w-[4.75rem] px-2 text-[11px]"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                         aria-label={
                           item.isInstalling ? `Installing ${item.name}` : `Install ${item.name}`
