@@ -76,6 +76,7 @@ interface AgentSelectorProps {
   onOpenSettings?: () => void;
   selectedAgentId?: AgentType;
   onSelectAgent?: (agentId: AgentType) => void;
+  onAgentChatCreated?: (chatId: string) => void;
   portalContainer?: Element | DocumentFragment | null;
   triggerClassName?: string;
   triggerTooltip?: string;
@@ -87,6 +88,7 @@ export function AgentSelector({
   onOpenSettings,
   selectedAgentId,
   onSelectAgent,
+  onAgentChatCreated,
   portalContainer,
   triggerClassName,
   triggerTooltip,
@@ -235,6 +237,7 @@ export function AgentSelector({
 
       if (variant === "header") {
         const newChatId = createNewChat(agentId);
+        onAgentChatCreated?.(newChatId);
         if (agentId !== "custom") {
           void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {
             console.error(`Failed to prepare ${agentId} session:`, error);
@@ -251,6 +254,7 @@ export function AgentSelector({
       setSelectedAgentId,
       changeCurrentChatAgent,
       createNewChat,
+      onAgentChatCreated,
     ],
   );
 

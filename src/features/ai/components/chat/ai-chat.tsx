@@ -235,6 +235,7 @@ const AIChat = memo(function AIChat({
   const chatState = useChatState();
   const chatActions = useChatActions();
   const { showToast } = useToast();
+  const updateBuffer = useBufferStore.use.actions().updateBuffer;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -265,6 +266,20 @@ const AIChat = memo(function AIChat({
 
     chatActions.switchToChat(effectiveChatId);
   }, [chatActions, chatState.chats, chatState.currentChatId, effectiveChatId, isActiveSurface]);
+
+  const handleAgentChatCreated = useCallback(
+    (chatId: string) => {
+      if (activeBuffer?.type !== "agent") return;
+
+      updateBuffer({
+        ...activeBuffer,
+        path: `agent://${chatId}`,
+        sessionId: chatId,
+        name: "New Chat",
+      });
+    },
+    [activeBuffer, updateBuffer],
+  );
 
   useEffect(() => {
     chatActions.checkApiKey(settings.aiProviderId);
@@ -1141,7 +1156,11 @@ details: ${errorDetails || mainError}
     <div
       className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
-      <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
+      <ChatHeader
+        chatId={effectiveChatId}
+        onAgentChatCreated={handleAgentChatCreated}
+        onDeleteChat={handleDeleteChat}
+      />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">

@@ -85,9 +85,10 @@ function EditableChatTitle({
 interface ChatHeaderProps {
   chatId?: string | null;
   onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
+  onAgentChatCreated?: (chatId: string) => void;
 }
 
-export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
+export function ChatHeader({ chatId, onDeleteChat, onAgentChatCreated }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const chats = useAIChatStore((state) => state.chats);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
@@ -134,7 +135,11 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
           <History />
         </PaneIconButton>
 
-        <AgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
+        <AgentSelector
+          variant="header"
+          onAgentChatCreated={onAgentChatCreated}
+          onOpenSettings={() => openSettingsDialog("ai")}
+        />
       </div>
 
       <ChatHistoryDropdown
