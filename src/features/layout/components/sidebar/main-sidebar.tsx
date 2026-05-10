@@ -3,7 +3,6 @@ import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-si
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar-view";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import DebuggerView from "@/features/debugger/components/debugger-view";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
@@ -106,8 +105,6 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
     !isGitViewActive &&
     !isGitHubPRsViewActive &&
     (activeSidebarView === "files" || isDisabledExperimentalViewActive);
-  const isDebuggerViewActive =
-    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
   const isOutlineViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "outline";
   const isNotificationsViewActive =
@@ -185,12 +182,6 @@ export const MainSidebar = memo(({ showActivityRail = true }: MainSidebarProps) 
             </div>
           )}
         </div>
-
-        {settings.coreFeatures.debugger && (
-          <div className={cn("h-full", !isDebuggerViewActive && "hidden")}>
-            <DebuggerView />
-          </div>
-        )}
 
         <div className={cn("h-full", !isOutlineViewActive && "hidden")}>
           <OutlineSidebar />

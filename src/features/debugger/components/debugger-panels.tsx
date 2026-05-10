@@ -1,6 +1,8 @@
 import { CaretRight, Circle, CircleNotch, Pause, Stack, Trash } from "@phosphor-icons/react";
+import { cva } from "class-variance-authority";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
@@ -13,49 +15,59 @@ export const EMPTY_DEBUG_SECTION_MESSAGES = {
   breakpoints: "Click a gutter line or toggle the current line.",
 };
 
+const debugSectionVariants = cva(
+  "flex min-h-0 flex-col overflow-hidden rounded-md border border-border/70 bg-secondary-bg/30",
+);
+
 export function DebugSection({
   title,
   count,
   children,
   defaultOpen = true,
   action,
+  className,
+  contentClassName,
 }: {
   title: string;
   count?: number;
   children: ReactNode;
   defaultOpen?: boolean;
   action?: ReactNode;
+  className?: string;
+  contentClassName?: string;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <section className="border-border/70 border-b last:border-b-0">
-      <button
-        type="button"
-        className="flex h-8 w-full items-center gap-2 px-3 text-left hover:bg-hover/50"
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <CaretRight
-          size={12}
-          className={cn("shrink-0 text-text-lighter transition-transform", isOpen && "rotate-90")}
-        />
-        <span className="min-w-0 flex-1 truncate font-medium text-[11px] text-text-lighter uppercase tracking-wide">
-          {title}
-        </span>
-        {typeof count === "number" ? (
-          <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
-            {count}
-          </span>
-        ) : null}
-        {action}
-      </button>
-      {isOpen ? children : null}
+    <section className={cn(debugSectionVariants(), className)}>
+      <div className="flex h-8 shrink-0 items-center gap-1 border-border/60 border-b px-1.5">
+        <button
+          type="button"
+          className="ui-font flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-left text-text-lighter hover:bg-hover/60 hover:text-text"
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <CaretRight
+            size={12}
+            className={cn("shrink-0 transition-transform", isOpen && "rotate-90")}
+          />
+          <span className="min-w-0 flex-1 truncate font-medium text-[11px] uppercase">{title}</span>
+          {typeof count === "number" ? (
+            <Badge size="compact" variant="muted" className="h-5 tabular-nums">
+              {count}
+            </Badge>
+          ) : null}
+        </button>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      {isOpen ? (
+        <div className={cn("min-h-0 flex-1 overflow-auto", contentClassName)}>{children}</div>
+      ) : null}
     </section>
   );
 }
 
 export function DebugEmptyState({ children }: { children: ReactNode }) {
-  return <div className="px-3 py-4 text-center text-text-lighter text-xs">{children}</div>;
+  return <div className="ui-font px-3 py-6 text-center text-text-lighter text-xs">{children}</div>;
 }
 
 export function DebugSessionStatusIcon({ status }: { status: "idle" | "running" | "paused" }) {
@@ -92,8 +104,8 @@ export function DebugStackFrames({
             key={frame.id}
             type="button"
             className={cn(
-              "flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover/70",
-              isSelected && "bg-hover/80",
+              "ui-font flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover/70",
+              isSelected && "bg-selected/70",
             )}
             onClick={() => void onSelect(frame.id, frame.sourcePath, frame.line)}
           >
@@ -133,7 +145,7 @@ export function DebugBreakpointsList({
       {breakpoints.map((breakpoint) => (
         <div
           key={breakpoint.id}
-          className="group flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-hover/70"
+          className="group ui-font flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-hover/70"
         >
           <button
             type="button"
@@ -157,6 +169,7 @@ export function DebugBreakpointsList({
             className="opacity-0 group-hover:opacity-100"
             tooltip="Remove breakpoint"
             onClick={() => onRemove(breakpoint)}
+            compact
           >
             <Trash />
           </Button>

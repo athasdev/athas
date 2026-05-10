@@ -10,12 +10,12 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "search",
   "multi-agents",
   "git",
-  "debugger",
   "github-prs",
 ] as const;
 export const FOOTER_LEADING_ITEM_IDS = [
   "branch",
   "terminal",
+  "debugger",
   "diagnostics",
   "extensions",
   "updates",

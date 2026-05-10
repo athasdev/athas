@@ -197,6 +197,8 @@ const CommandPalette = () => {
     ...createNavigationActions({
       setIsSidebarVisible,
       setActiveView,
+      setIsBottomPaneVisible,
+      setBottomPaneActiveTab,
       setIsQuickOpenVisible,
       openCommandPaletteView,
       openSettingsDialog,

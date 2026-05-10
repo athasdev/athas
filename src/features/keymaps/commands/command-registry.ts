@@ -371,6 +371,21 @@ const toggleTerminalPane = () => {
   }
 };
 
+const openDebuggerPane = () => {
+  const state = useUIState.getState();
+  state.setBottomPaneActiveTab("debugger");
+  state.setIsBottomPaneVisible(true);
+};
+
+const toggleDebuggerPane = () => {
+  const state = useUIState.getState();
+  if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "debugger") {
+    state.setIsBottomPaneVisible(false);
+  } else {
+    openDebuggerPane();
+  }
+};
+
 const getActiveDebugFile = () => {
   const bufferStore = useBufferStore.getState();
   const activeBuffer = bufferStore.buffers.find(
@@ -399,9 +414,7 @@ const startGeneratedDebugSession = () => {
   const config = createGeneratedDebugConfig(activeFile, rootFolderPath);
   const command = buildDebugCommand(config);
   if (!command.trim()) {
-    const state = useUIState.getState();
-    state.setActiveView("debugger");
-    state.setIsSidebarVisible(true);
+    openDebuggerPane();
     return;
   }
 
@@ -577,15 +590,7 @@ const viewCommands: Command[] = [
     title: "Show Run and Debug",
     category: "View",
     keybinding: "cmd+shift+d",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isSidebarVisible && state.activeSidebarView === "debugger") {
-        state.setIsSidebarVisible(false);
-      } else {
-        state.setActiveView("debugger");
-        state.setIsSidebarVisible(true);
-      }
-    },
+    execute: toggleDebuggerPane,
   },
   {
     id: "debug.start",

@@ -5,6 +5,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
@@ -46,6 +47,17 @@ const getActiveDebuggableFile = () => {
     language: activeBuffer.language,
   };
 };
+
+function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" }) {
+  const variant = status === "paused" ? "default" : status === "running" ? "accent" : "muted";
+
+  return (
+    <Badge variant={variant} size="compact" className="gap-1.5 capitalize">
+      <DebugSessionStatusIcon status={status} />
+      {status}
+    </Badge>
+  );
+}
 
 export default function DebuggerView() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -293,7 +305,10 @@ export default function DebuggerView() {
     <div className="flex h-full min-h-0 flex-col bg-primary-bg text-text">
       <div className="flex h-10 shrink-0 items-center gap-2 border-border/70 border-b px-3">
         <Bug size={16} className="text-text-lighter" weight="duotone" />
-        <div className="min-w-0 flex-1 font-medium text-sm">Debug</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-sm">Run and Debug</div>
+        </div>
+        {activeSession ? <DebugStatusBadge status={activeSession.status} /> : null}
         <Button
           variant="ghost"
           tooltip="Toggle breakpoint on current line"
@@ -305,215 +320,229 @@ export default function DebuggerView() {
         </Button>
       </div>
 
-      <div className="space-y-2 border-border/70 border-b p-2.5">
-        <Select
-          value={selectedConfig.id}
-          onChange={(value) => debuggerActions.setActiveConfigId(value)}
-          options={allConfigs.map((config) => ({ value: config.id, label: config.name }))}
-          size="sm"
-          aria-label="Debug configuration"
-        />
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+        <aside className="flex min-h-0 flex-col border-border/70 border-r">
+          <div className="space-y-3 p-3">
+            <div className="space-y-1.5">
+              <div className="ui-font text-text-lighter text-xs">Configuration</div>
+              <Select
+                value={selectedConfig.id}
+                onChange={(value) => debuggerActions.setActiveConfigId(value)}
+                options={allConfigs.map((config) => ({ value: config.id, label: config.name }))}
+                size="sm"
+                variant="default"
+                searchable
+                aria-label="Debug configuration"
+              />
+            </div>
 
-        {resolvedSelectedConfig.runtime === "custom" ? (
-          <Input
-            value={customCommand}
-            onChange={(event) => setCustomCommand(event.target.value)}
-            placeholder="Command to run"
-            size="sm"
-          />
-        ) : (
-          <div className="truncate rounded-md border border-border/60 bg-secondary-bg px-2 py-1.5 font-mono text-[11px] text-text-lighter">
-            {adapterCommandPreview || selectedCommand || "No command available"}
-          </div>
-        )}
+            <div className="space-y-1.5">
+              <div className="ui-font text-text-lighter text-xs">Command</div>
+              {resolvedSelectedConfig.runtime === "custom" ? (
+                <Input
+                  value={customCommand}
+                  onChange={(event) => setCustomCommand(event.target.value)}
+                  placeholder="Command to run"
+                  size="sm"
+                />
+              ) : (
+                <div className="ui-font min-h-8 truncate rounded-md border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono text-[11px] text-text-lighter">
+                  {adapterCommandPreview || selectedCommand || "No command available"}
+                </div>
+              )}
+            </div>
 
-        <div className="grid grid-cols-[1fr_auto_auto] gap-1.5">
-          <Button
-            variant="accent"
-            onClick={startDebugging}
-            disabled={!canStartDebugging || isActiveSession}
-            commandId="debug.start"
-            compact
-          >
-            <Play />
-            Start
-          </Button>
-          <Button
-            variant="default"
-            tooltip={isPaused ? "Continue" : "Pause"}
-            disabled={!canSendAdapterThreadRequest}
-            onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
-            aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
-          >
-            {isPaused ? <Play /> : <Pause />}
-          </Button>
-          <Button
-            variant="danger"
-            tooltip="Stop"
-            disabled={!isActiveSession}
-            onClick={stopDebugging}
-            commandId="debug.stop"
-            compact
-          >
-            <Square />
-          </Button>
-        </div>
+            <div className="grid grid-cols-[1fr_auto_auto] gap-1.5">
+              <Button
+                variant="accent"
+                onClick={startDebugging}
+                disabled={!canStartDebugging || isActiveSession}
+                commandId="debug.start"
+              >
+                <Play />
+                Start
+              </Button>
+              <Button
+                variant="default"
+                tooltip={isPaused ? "Continue" : "Pause"}
+                disabled={!canSendAdapterThreadRequest}
+                onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
+                aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
+              >
+                {isPaused ? <Play /> : <Pause />}
+              </Button>
+              <Button
+                variant="danger"
+                tooltip="Stop"
+                disabled={!isActiveSession}
+                onClick={stopDebugging}
+                commandId="debug.stop"
+              >
+                <Square />
+              </Button>
+            </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
-          <Button
-            variant="default"
-            tooltip="Step over"
-            disabled={!canStep}
-            onClick={() => void sendAdapterThreadRequest("next")}
-          >
-            Over
-          </Button>
-          <Button
-            variant="default"
-            tooltip="Step into"
-            disabled={!canStep}
-            onClick={() => void sendAdapterThreadRequest("stepIn")}
-          >
-            Into
-          </Button>
-          <Button
-            variant="default"
-            tooltip="Step out"
-            disabled={!canStep}
-            onClick={() => void sendAdapterThreadRequest("stepOut")}
-          >
-            Out
-          </Button>
-        </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <Button
+                variant="default"
+                tooltip="Step over"
+                disabled={!canStep}
+                onClick={() => void sendAdapterThreadRequest("next")}
+                compact
+              >
+                Over
+              </Button>
+              <Button
+                variant="default"
+                tooltip="Step into"
+                disabled={!canStep}
+                onClick={() => void sendAdapterThreadRequest("stepIn")}
+                compact
+              >
+                Into
+              </Button>
+              <Button
+                variant="default"
+                tooltip="Step out"
+                disabled={!canStep}
+                onClick={() => void sendAdapterThreadRequest("stepOut")}
+                compact
+              >
+                Out
+              </Button>
+            </div>
 
-        {startError ? <div className="text-[11px] text-error">{startError}</div> : null}
-      </div>
-
-      {activeSession && activeSession.status !== "idle" ? (
-        <div className="border-border/70 border-b px-3 py-2 text-xs">
-          <div className="flex items-center gap-2">
-            <DebugSessionStatusIcon status={activeSession.status} />
-            <span className="truncate font-medium">{activeSession.name}</span>
-            {stoppedState ? (
-              <span className="shrink-0 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">
-                Paused
-              </span>
+            {startError ? (
+              <div className="ui-font rounded-md border border-error/30 bg-error/5 px-2 py-1.5 text-error text-xs">
+                {startError}
+              </div>
             ) : null}
           </div>
-          <div className="mt-1 truncate text-[11px] text-text-lighter">
-            {stoppedState?.description || stoppedState?.reason || activeSession.command}
-          </div>
-        </div>
-      ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <DebugSection title="Stack" count={stackFrames.length}>
-          <DebugStackFrames
-            frames={stackFrames}
-            selectedFrameId={selectedFrameId}
-            onSelect={selectStackFrame}
-          />
-        </DebugSection>
-
-        <DebugSection title="Watch" count={watchExpressions.length}>
-          <DebugWatchPanel
-            activeSessionId={activeSession?.id}
-            selectedFrameId={selectedFrameId}
-            isPaused={isPaused}
-            pendingRequests={pendingRequests}
-          />
-        </DebugSection>
-
-        <DebugSection title="Variables" count={scopes.length}>
-          <DebugVariablesPanel
-            activeSessionId={activeSession?.id}
-            selectedFrameId={selectedFrameId}
-            scopes={scopes}
-            variablesByReference={variablesByReference}
-            pendingRequests={pendingRequests}
-          />
-        </DebugSection>
-
-        <DebugSection
-          title="Console"
-          count={activeAdapterOutput.length}
-          defaultOpen={false}
-          action={
-            activeAdapterOutput.length > 0 ? (
-              <Button
-                variant="ghost"
-                tooltip="Clear console"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  debuggerActions.clearAdapterTranscript();
-                }}
-              >
-                <Trash />
-              </Button>
-            ) : null
-          }
-        >
-          {activeAdapterOutput.length === 0 ? (
-            <DebugEmptyState>Adapter output appears here.</DebugEmptyState>
-          ) : (
-            <div className="py-1">
-              {activeAdapterOutput.map((output, index) => (
-                <div
-                  key={`${output.sessionId}-${index}`}
-                  className={cn(
-                    "whitespace-pre-wrap break-words px-3 py-1 font-mono text-[11px]",
-                    output.stream === "stderr" ? "text-error" : "text-text-lighter",
-                  )}
-                >
-                  {output.data.trimEnd()}
-                </div>
-              ))}
+          {activeSession && activeSession.status !== "idle" ? (
+            <div className="border-border/70 border-t px-3 py-2 text-xs">
+              <div className="flex items-center gap-2">
+                <DebugSessionStatusIcon status={activeSession.status} />
+                <span className="truncate font-medium">{activeSession.name}</span>
+                {stoppedState ? (
+                  <Badge variant="default" size="compact" className="text-warning">
+                    Paused
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="mt-1 line-clamp-2 text-[11px] text-text-lighter">
+                {stoppedState?.description || stoppedState?.reason || activeSession.command}
+              </div>
             </div>
-          )}
-        </DebugSection>
+          ) : null}
 
-        <DebugSection
-          title="Breakpoints"
-          count={sortedBreakpoints.length}
-          action={
-            sortedBreakpoints.length > 0 ? (
-              <Button
-                variant="ghost"
-                tooltip="Clear breakpoints"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  debuggerActions.clearBreakpoints();
-                }}
-              >
-                <Trash />
-              </Button>
-            ) : null
-          }
-        >
-          <DebugBreakpointsList
-            breakpoints={sortedBreakpoints}
-            onOpen={async (breakpoint) => {
-              await handleFileOpen?.(breakpoint.filePath, false);
-              window.dispatchEvent(
-                new CustomEvent("menu-go-to-line", {
-                  detail: { path: breakpoint.filePath, line: breakpoint.line + 1 },
-                }),
-              );
-            }}
-            onToggle={(breakpoint) =>
-              debuggerActions.setBreakpointEnabled(breakpoint.id, !breakpoint.enabled)
+          <div className="mt-auto border-border/70 border-t px-3 py-2 text-[11px] text-text-lighter">
+            <div className="flex items-center gap-1.5">
+              <FolderOpen size={12} />
+              <span className="truncate">
+                {rootFolderPath || launchLoadError || "Open a project to load launch.json"}
+              </span>
+            </div>
+          </div>
+        </aside>
+
+        <div className="grid min-h-0 grid-cols-2 gap-2 p-2">
+          <DebugSection title="Stack" count={stackFrames.length}>
+            <DebugStackFrames
+              frames={stackFrames}
+              selectedFrameId={selectedFrameId}
+              onSelect={selectStackFrame}
+            />
+          </DebugSection>
+
+          <DebugSection title="Variables" count={scopes.length}>
+            <DebugVariablesPanel
+              activeSessionId={activeSession?.id}
+              selectedFrameId={selectedFrameId}
+              scopes={scopes}
+              variablesByReference={variablesByReference}
+              pendingRequests={pendingRequests}
+            />
+          </DebugSection>
+
+          <DebugSection title="Watch" count={watchExpressions.length}>
+            <DebugWatchPanel
+              activeSessionId={activeSession?.id}
+              selectedFrameId={selectedFrameId}
+              isPaused={isPaused}
+              pendingRequests={pendingRequests}
+            />
+          </DebugSection>
+
+          <DebugSection
+            title="Console"
+            count={activeAdapterOutput.length}
+            defaultOpen
+            action={
+              activeAdapterOutput.length > 0 ? (
+                <Button
+                  variant="ghost"
+                  tooltip="Clear console"
+                  onClick={debuggerActions.clearAdapterTranscript}
+                  compact
+                >
+                  <Trash />
+                </Button>
+              ) : null
             }
-            onRemove={(breakpoint) => debuggerActions.removeBreakpoint(breakpoint.id)}
-          />
-        </DebugSection>
-      </div>
+          >
+            {activeAdapterOutput.length === 0 ? (
+              <DebugEmptyState>Adapter output appears here.</DebugEmptyState>
+            ) : (
+              <div className="py-1">
+                {activeAdapterOutput.map((output, index) => (
+                  <div
+                    key={`${output.sessionId}-${index}`}
+                    className={cn(
+                      "whitespace-pre-wrap break-words px-3 py-1 font-mono text-[11px]",
+                      output.stream === "stderr" ? "text-error" : "text-text-lighter",
+                    )}
+                  >
+                    {output.data.trimEnd()}
+                  </div>
+                ))}
+              </div>
+            )}
+          </DebugSection>
 
-      <div className="shrink-0 border-border/70 border-t px-3 py-2 text-[11px] text-text-lighter">
-        <div className="flex items-center gap-1.5">
-          <FolderOpen size={12} />
-          <span className="truncate">
-            {rootFolderPath || launchLoadError || "Open a project to load launch.json"}
-          </span>
+          <DebugSection
+            title="Breakpoints"
+            count={sortedBreakpoints.length}
+            className="col-span-2"
+            action={
+              sortedBreakpoints.length > 0 ? (
+                <Button
+                  variant="ghost"
+                  tooltip="Clear breakpoints"
+                  onClick={debuggerActions.clearBreakpoints}
+                  compact
+                >
+                  <Trash />
+                </Button>
+              ) : null
+            }
+          >
+            <DebugBreakpointsList
+              breakpoints={sortedBreakpoints}
+              onOpen={async (breakpoint) => {
+                await handleFileOpen?.(breakpoint.filePath, false);
+                window.dispatchEvent(
+                  new CustomEvent("menu-go-to-line", {
+                    detail: { path: breakpoint.filePath, line: breakpoint.line + 1 },
+                  }),
+                );
+              }}
+              onToggle={(breakpoint) =>
+                debuggerActions.setBreakpointEnabled(breakpoint.id, !breakpoint.enabled)
+              }
+              onRemove={(breakpoint) => debuggerActions.removeBreakpoint(breakpoint.id)}
+            />
+          </DebugSection>
         </div>
       </div>
     </div>

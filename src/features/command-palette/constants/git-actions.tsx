@@ -18,7 +18,7 @@ interface GitActionsParams {
   rootFolderPath: string | null | undefined;
   activeRepoPath?: string | null;
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "github-prs" | "debugger") => void;
+  setActiveView: (view: "files" | "git" | "github-prs") => void;
   showToast: (params: { message: string; type: "success" | "error" | "info" }) => void;
   gitStore: {
     actions: {

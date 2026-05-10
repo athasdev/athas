@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-session";
@@ -36,7 +37,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
     const state = get() as ViewSlice & {
       isSidebarVisible?: boolean;
       isBottomPaneVisible?: boolean;
-      bottomPaneActiveTab?: "terminal" | "diagnostics" | "references" | "buffers";
+      bottomPaneActiveTab?: BottomPaneTab;
     };
 
     useSessionStore.getState().saveUiState(projectPath, {

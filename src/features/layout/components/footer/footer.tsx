@@ -1,5 +1,6 @@
 import {
   ArrowClockwise,
+  BugBeetle,
   CaretUp,
   DownloadSimple,
   ListBullets,
@@ -257,6 +258,28 @@ const Footer = () => {
               }}
             >
               <TerminalWindow weight="duotone" />
+            </FooterTabControl>
+          ),
+        }
+      : null,
+    settings.coreFeatures.debugger
+      ? {
+          id: "debugger",
+          label: "Run and Debug",
+          content: (
+            <FooterTabControl
+              tooltip="Toggle Run and Debug"
+              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "debugger"}
+              className={chromeControl()}
+              commandId="workbench.showDebugger"
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("debugger");
+                const showingDebugger =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "debugger";
+                uiState.setIsBottomPaneVisible(showingDebugger);
+              }}
+            >
+              <BugBeetle weight="duotone" />
             </FooterTabControl>
           ),
         }

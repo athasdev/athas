@@ -14,7 +14,7 @@ type GitHubSidebarSection = "pull-requests" | "issues" | "actions";
 
 interface GitHubActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "github-prs" | "debugger") => void;
+  setActiveView: (view: "files" | "git" | "github-prs") => void;
   settings: Pick<Settings, "showGitHubPullRequests" | "showGitHubIssues" | "showGitHubActions">;
   updateSetting: (key: string, value: any) => void | Promise<void>;
   checkAuth: (options?: { force?: boolean }) => Promise<void>;
