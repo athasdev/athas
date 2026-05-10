@@ -493,6 +493,13 @@ pub enum AcpEvent {
       title: Option<String>,
       updated_at: Option<String>,
    },
+   /// Session token/context usage updated
+   #[serde(rename_all = "camelCase")]
+   UsageUpdate {
+      session_id: String,
+      used: u64,
+      size: u64,
+   },
    /// Prompt turn completed with a stop reason
    #[serde(rename_all = "camelCase")]
    PromptComplete {

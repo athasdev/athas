@@ -272,6 +272,12 @@ export type AcpEvent =
       updatedAt: string | null;
     }
   | {
+      type: "usage_update";
+      sessionId: string;
+      used: number;
+      size: number;
+    }
+  | {
       type: "prompt_complete";
       sessionId: string;
       stopReason: StopReason;

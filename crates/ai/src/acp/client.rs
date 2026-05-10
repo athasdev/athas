@@ -61,6 +61,51 @@ impl AthasAcpClient {
       self.permission_tx.clone()
    }
 
+   fn map_permission_option_kind(
+      kind: acp::PermissionOptionKind,
+   ) -> super::types::AcpPermissionOptionKind {
+      match kind {
+         acp::PermissionOptionKind::AllowOnce => super::types::AcpPermissionOptionKind::AllowOnce,
+         acp::PermissionOptionKind::AllowAlways => {
+            super::types::AcpPermissionOptionKind::AllowAlways
+         }
+         acp::PermissionOptionKind::RejectOnce => super::types::AcpPermissionOptionKind::RejectOnce,
+         acp::PermissionOptionKind::RejectAlways => {
+            super::types::AcpPermissionOptionKind::RejectAlways
+         }
+         _ => super::types::AcpPermissionOptionKind::RejectOnce,
+      }
+   }
+
+   fn permission_response_for_choice(
+      options: &[acp::PermissionOption],
+      approved: bool,
+   ) -> acp::RequestPermissionResponse {
+      let selected_option = options
+         .iter()
+         .find(|opt| {
+            if approved {
+               matches!(
+                  opt.kind,
+                  acp::PermissionOptionKind::AllowOnce | acp::PermissionOptionKind::AllowAlways
+               )
+            } else {
+               matches!(
+                  opt.kind,
+                  acp::PermissionOptionKind::RejectOnce | acp::PermissionOptionKind::RejectAlways
+               )
+            }
+         })
+         .or_else(|| options.first())
+         .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
+
+      if let Some(selected) = selected_option {
+         acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Selected(selected))
+      } else {
+         acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Cancelled)
+      }
+   }
+
    pub async fn set_session_id(&self, session_id: String) {
       let mut current = self.current_session_id.lock().await;
       *current = Some(session_id);
@@ -209,23 +254,7 @@ impl AthasAcpClient {
    fn fallback_permission_response(
       args: &acp::RequestPermissionRequest,
    ) -> acp::RequestPermissionResponse {
-      let selected_option = args
-         .options
-         .iter()
-         .find(|opt| {
-            matches!(
-               opt.kind,
-               acp::PermissionOptionKind::RejectOnce | acp::PermissionOptionKind::RejectAlways
-            )
-         })
-         .or_else(|| args.options.first())
-         .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
-
-      if let Some(selected) = selected_option {
-         acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Selected(selected))
-      } else {
-         acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Cancelled)
-      }
+      Self::permission_response_for_choice(&args.options, false)
    }
 
    fn map_plan_priority(priority: acp::PlanEntryPriority) -> AcpPlanEntryPriority {
@@ -348,6 +377,14 @@ impl AthasAcpClient {
          .collect()
    }
 
+   fn map_usage_update(session_id: String, update: acp::UsageUpdate) -> AcpEvent {
+      AcpEvent::UsageUpdate {
+         session_id,
+         used: update.used,
+         size: update.size,
+      }
+   }
+
    pub(crate) fn map_session_config_option(
       option: acp::SessionConfigOption,
    ) -> Option<SessionConfigOption> {
@@ -418,21 +455,7 @@ impl acp::Client for AthasAcpClient {
             .map(|option| super::types::AcpPermissionOption {
                id: option.option_id.to_string(),
                name: option.name.clone(),
-               kind: match option.kind {
-                  acp::PermissionOptionKind::AllowOnce => {
-                     super::types::AcpPermissionOptionKind::AllowOnce
-                  }
-                  acp::PermissionOptionKind::AllowAlways => {
-                     super::types::AcpPermissionOptionKind::AllowAlways
-                  }
-                  acp::PermissionOptionKind::RejectOnce => {
-                     super::types::AcpPermissionOptionKind::RejectOnce
-                  }
-                  acp::PermissionOptionKind::RejectAlways => {
-                     super::types::AcpPermissionOptionKind::RejectAlways
-                  }
-                  _ => super::types::AcpPermissionOptionKind::RejectOnce,
-               },
+               kind: Self::map_permission_option_kind(option.kind),
             })
             .collect(),
       });
@@ -486,53 +509,9 @@ impl acp::Client for AthasAcpClient {
                   return Ok(Self::fallback_permission_response(&args));
                }
 
-               // Prefer allow-once/allow-always options if available
-               let selected_option = args
-                  .options
-                  .iter()
-                  .find(|opt| {
-                     matches!(
-                        opt.kind,
-                        acp::PermissionOptionKind::AllowOnce
-                           | acp::PermissionOptionKind::AllowAlways
-                     )
-                  })
-                  .or_else(|| args.options.first())
-                  .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
-
-               if let Some(selected) = selected_option {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Selected(selected),
-                  ))
-               } else {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Cancelled,
-                  ))
-               }
+               Ok(Self::permission_response_for_choice(&args.options, true))
             } else {
-               // Prefer reject-once/reject-always options if available
-               let selected_option = args
-                  .options
-                  .iter()
-                  .find(|opt| {
-                     matches!(
-                        opt.kind,
-                        acp::PermissionOptionKind::RejectOnce
-                           | acp::PermissionOptionKind::RejectAlways
-                     )
-                  })
-                  .or_else(|| args.options.first())
-                  .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
-
-               if let Some(selected) = selected_option {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Selected(selected),
-                  ))
-               } else {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Cancelled,
-                  ))
-               }
+               Ok(Self::permission_response_for_choice(&args.options, false))
             }
          }
          _ => Ok(acp::RequestPermissionResponse::new(
@@ -694,6 +673,9 @@ impl acp::Client for AthasAcpClient {
                title: update.title.take(),
                updated_at: update.updated_at.take(),
             });
+         }
+         acp::SessionUpdate::UsageUpdate(update) => {
+            self.emit_event(Self::map_usage_update(session_id, update));
          }
          acp::SessionUpdate::AvailableCommandsUpdate(commands_update) => {
             self.emit_event(AcpEvent::SlashCommandsUpdate {
@@ -1159,5 +1141,103 @@ impl acp::Client for AthasAcpClient {
          args.params.get()
       );
       Ok(())
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn permission_option(
+      id: &'static str,
+      kind: acp::PermissionOptionKind,
+   ) -> acp::PermissionOption {
+      acp::PermissionOption::new(id, id, kind)
+   }
+
+   fn selected_option_id(response: acp::RequestPermissionResponse) -> Option<String> {
+      match response.outcome {
+         acp::RequestPermissionOutcome::Selected(selected) => Some(selected.option_id.to_string()),
+         acp::RequestPermissionOutcome::Cancelled => None,
+         _ => None,
+      }
+   }
+
+   #[test]
+   fn usage_update_maps_to_frontend_event() {
+      let event = AthasAcpClient::map_usage_update(
+         "session-1".to_string(),
+         acp::UsageUpdate::new(1234, 200000),
+      );
+
+      match event {
+         AcpEvent::UsageUpdate {
+            session_id,
+            used,
+            size,
+         } => {
+            assert_eq!(session_id, "session-1");
+            assert_eq!(used, 1234);
+            assert_eq!(size, 200000);
+         }
+         other => panic!("expected usage update event, got {other:?}"),
+      }
+   }
+
+   #[test]
+   fn permission_option_kinds_map_to_frontend_kinds() {
+      assert!(matches!(
+         AthasAcpClient::map_permission_option_kind(acp::PermissionOptionKind::AllowOnce),
+         super::super::types::AcpPermissionOptionKind::AllowOnce
+      ));
+      assert!(matches!(
+         AthasAcpClient::map_permission_option_kind(acp::PermissionOptionKind::AllowAlways),
+         super::super::types::AcpPermissionOptionKind::AllowAlways
+      ));
+      assert!(matches!(
+         AthasAcpClient::map_permission_option_kind(acp::PermissionOptionKind::RejectOnce),
+         super::super::types::AcpPermissionOptionKind::RejectOnce
+      ));
+      assert!(matches!(
+         AthasAcpClient::map_permission_option_kind(acp::PermissionOptionKind::RejectAlways),
+         super::super::types::AcpPermissionOptionKind::RejectAlways
+      ));
+   }
+
+   #[test]
+   fn approved_permission_prefers_allow_options() {
+      let options = vec![
+         permission_option("reject-once", acp::PermissionOptionKind::RejectOnce),
+         permission_option("allow-always", acp::PermissionOptionKind::AllowAlways),
+      ];
+
+      let response = AthasAcpClient::permission_response_for_choice(&options, true);
+
+      assert_eq!(
+         selected_option_id(response).as_deref(),
+         Some("allow-always")
+      );
+   }
+
+   #[test]
+   fn rejected_permission_prefers_reject_options() {
+      let options = vec![
+         permission_option("allow-once", acp::PermissionOptionKind::AllowOnce),
+         permission_option("reject-always", acp::PermissionOptionKind::RejectAlways),
+      ];
+
+      let response = AthasAcpClient::permission_response_for_choice(&options, false);
+
+      assert_eq!(
+         selected_option_id(response).as_deref(),
+         Some("reject-always")
+      );
+   }
+
+   #[test]
+   fn permission_choice_cancels_when_options_are_empty() {
+      let response = AthasAcpClient::permission_response_for_choice(&[], true);
+
+      assert_eq!(selected_option_id(response), None);
    }
 }
