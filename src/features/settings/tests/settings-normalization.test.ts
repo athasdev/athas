@@ -112,4 +112,51 @@ describe("settings normalization", () => {
       upstreamUpdatedAt: "2026-04-01T00:00:00.000Z",
     });
   });
+
+  it("normalizes ACP agent server settings", () => {
+    const normalized = normalizeSettingValue("agentServers", {
+      " codex-acp ": {
+        type: "registry",
+        env: {
+          CODEX_API_KEY: "secret",
+          EMPTY_ALLOWED: "",
+          ignored: 1,
+        },
+        defaultMode: " plan ",
+        defaultModel: " gpt-5.5 ",
+      },
+      " custom-agent ": {
+        type: "custom",
+        command: " node ",
+        args: ["agent.js", 123],
+        env: {
+          CUSTOM_ENV: "1",
+        },
+      },
+      broken: {
+        type: "custom",
+        command: " ",
+      },
+    } as unknown as ReturnType<typeof getDefaultSettingsSnapshot>["agentServers"]);
+
+    expect(normalized).toEqual({
+      "codex-acp": {
+        type: "registry",
+        env: {
+          CODEX_API_KEY: "secret",
+          EMPTY_ALLOWED: "",
+        },
+        defaultMode: "plan",
+        defaultModel: "gpt-5.5",
+      },
+      "custom-agent": {
+        type: "custom",
+        command: "node",
+        args: ["agent.js"],
+        env: {
+          CUSTOM_ENV: "1",
+        },
+      },
+    });
+  });
 });

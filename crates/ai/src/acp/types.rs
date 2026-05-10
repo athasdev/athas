@@ -204,6 +204,8 @@ pub struct AgentConfig {
    pub binary_path: Option<String>,
    pub args: Vec<String>,
    pub env_vars: HashMap<String, String>,
+   pub default_mode: Option<String>,
+   pub default_model: Option<String>,
    pub icon: Option<String>,
    pub description: Option<String>,
    pub installed: bool,
@@ -213,6 +215,8 @@ pub struct AgentConfig {
    pub install_download_url: Option<String>,
    pub install_command: Option<String>,
    pub can_install: bool,
+   #[serde(default)]
+   pub update_available: bool,
 }
 
 impl AgentConfig {
@@ -224,6 +228,8 @@ impl AgentConfig {
          binary_path: None,
          args: Vec::new(),
          env_vars: HashMap::new(),
+         default_mode: None,
+         default_model: None,
          icon: None,
          description: None,
          installed: false,
@@ -232,6 +238,7 @@ impl AgentConfig {
          install_download_url: None,
          install_command: None,
          can_install: false,
+         update_available: false,
       }
    }
 
@@ -370,6 +377,13 @@ pub struct AcpSessionList {
    pub next_cursor: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpErrorKind {
+   AuthenticationRequired,
+   ProviderSetupRequired,
+}
+
 /// Events emitted to the frontend via Tauri
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -445,6 +459,7 @@ pub enum AcpEvent {
    Error {
       session_id: Option<String>,
       error: String,
+      error_kind: Option<AcpErrorKind>,
    },
    /// Agent status changed
    #[serde(rename_all = "camelCase")]
@@ -485,6 +500,13 @@ pub enum AcpEvent {
       session_id: String,
       title: Option<String>,
       updated_at: Option<String>,
+   },
+   /// Session token/context usage updated
+   #[serde(rename_all = "camelCase")]
+   UsageUpdate {
+      session_id: String,
+      used: u64,
+      size: u64,
    },
    /// Prompt turn completed with a stop reason
    #[serde(rename_all = "camelCase")]

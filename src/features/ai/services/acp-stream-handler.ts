@@ -162,14 +162,21 @@ export class AcpStreamHandler {
     const message = error instanceof Error ? error.message : String(error);
     const normalized = message.toLowerCase();
 
+    if (
+      normalized.includes("auth") ||
+      normalized.includes("credential") ||
+      normalized.includes("api key") ||
+      normalized.includes("login") ||
+      normalized.includes("log in") ||
+      normalized.includes("setup")
+    ) {
+      return `${this.agentId} requires authentication or setup before it can answer prompts.`;
+    }
     if (normalized.includes("runtime")) {
       return `${this.agentId} could not start because a required runtime is unavailable.`;
     }
     if (normalized.includes("install")) {
       return `${this.agentId} could not be installed automatically. Check network access and local tool permissions.`;
-    }
-    if (normalized.includes("auth")) {
-      return `${this.agentId} requires authentication before it can answer prompts.`;
     }
 
     return `${this.agentId} is currently unavailable.`;
@@ -311,6 +318,9 @@ export class AcpStreamHandler {
       case "session_info_update":
         break;
 
+      case "usage_update":
+        break;
+
       case "prompt_complete":
         this.handlePromptComplete(event);
         break;
@@ -327,6 +337,7 @@ export class AcpStreamHandler {
     // The stop reason can be used to determine how to handle the completion
     if (event.stopReason === "cancelled") {
       // User cancelled the prompt
+      this.finalizeActiveToolsAsCancelled();
       this.cleanup();
       this.handlers.onComplete();
       return;
@@ -542,10 +553,19 @@ export class AcpStreamHandler {
     }
   }
 
+  private finalizeActiveToolsAsCancelled(): void {
+    if (!this.handlers.onToolComplete || this.activeTools.size === 0) return;
+
+    for (const [toolId, toolName] of this.activeTools) {
+      this.handlers.onToolComplete(toolName, toolId, undefined, "Cancelled");
+    }
+  }
+
   private forceStop(): void {
     if (this.sessionComplete || this.cancelled) return;
     this.cancelled = true;
     this.pendingNewMessage = false;
+    this.finalizeActiveToolsAsCancelled();
     this.cleanup();
     this.handlers.onComplete();
   }

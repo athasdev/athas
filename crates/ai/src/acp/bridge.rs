@@ -6,8 +6,8 @@ use super::{
    config::AgentRegistry,
    process::{stop_child_tree, terminate_process_group},
    types::{
-      AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AcpSessionInfo, AcpSessionList, AgentConfig,
-      SessionConfigOption,
+      AcpAgentCapabilities, AcpAgentStatus, AcpErrorKind, AcpEvent, AcpSessionInfo, AcpSessionList,
+      AgentConfig, SessionConfigOption,
    },
 };
 use crate::runtime::AthasAppHandle as AppHandle;
@@ -23,6 +23,24 @@ use tokio::{
    sync::{Mutex, mpsc, oneshot},
    task::LocalSet,
 };
+
+fn classify_acp_error(error: &str) -> Option<AcpErrorKind> {
+   let lower = error.to_lowercase();
+
+   if lower.contains("authentication required") {
+      return Some(AcpErrorKind::AuthenticationRequired);
+   }
+
+   let requires_provider_setup = lower.contains("no api key found")
+      || lower.contains("missing api key")
+      || (lower.contains("api key") && lower.contains("required"))
+      || lower.contains("environment variable")
+      || lower.contains("--setup")
+      || lower.contains("not logged in")
+      || lower.contains("login required");
+
+   requires_provider_setup.then_some(AcpErrorKind::ProviderSetupRequired)
+}
 
 /// Worker state running on the LocalSet thread
 pub(super) struct AcpWorker {
@@ -68,6 +86,7 @@ impl AcpWorker {
                   AcpEvent::Error {
                      session_id: session_id.clone(),
                      error: format!("ACP agent process exited: {}", status),
+                     error_kind: None,
                   },
                );
                let _ = app_handle.emit(
@@ -188,11 +207,13 @@ impl AcpWorker {
          .await
          {
             log::error!("Failed to run ACP prompt: {}", err);
+            let error = format!("Failed to run prompt: {}", err);
             let _ = app_handle.emit(
                "acp-event",
                AcpEvent::Error {
                   session_id: Some(session_id.to_string()),
-                  error: format!("Failed to run prompt: {}", err),
+                  error_kind: classify_acp_error(&error),
+                  error,
                },
             );
          }
@@ -639,5 +660,34 @@ impl AcpAgentBridge {
             status: status.clone(),
          },
       );
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn classifies_provider_setup_errors() {
+      let error =
+         "Failed to run prompt: No API key found. Set Z_AI_API_KEY or run glm-acp-agent --setup";
+
+      assert_eq!(
+         classify_acp_error(error),
+         Some(AcpErrorKind::ProviderSetupRequired)
+      );
+   }
+
+   #[test]
+   fn classifies_authentication_required_errors() {
+      assert_eq!(
+         classify_acp_error("Authentication required before sending prompt"),
+         Some(AcpErrorKind::AuthenticationRequired)
+      );
+   }
+
+   #[test]
+   fn leaves_plain_runtime_errors_unclassified() {
+      assert_eq!(classify_acp_error("ACP agent process exited: 1"), None);
    }
 }

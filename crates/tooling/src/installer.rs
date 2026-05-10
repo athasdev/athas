@@ -104,7 +104,7 @@ impl ToolInstaller {
    }
 
    fn known_node_companion_packages(package: &str) -> &'static [&'static str] {
-      match package {
+      match Self::node_package_name(package).as_str() {
          // typescript-language-server declares TypeScript as a peer dependency
          // and exits during LSP initialize if it cannot resolve it locally.
          "typescript-language-server" => &["typescript"],
@@ -127,6 +127,52 @@ impl ToolInstaller {
       }
 
       packages
+   }
+
+   pub fn managed_dir_name(input: &str) -> String {
+      let name = input
+         .chars()
+         .map(|character| match character {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' | '@' => character,
+            _ => '_',
+         })
+         .collect::<String>();
+      if name.is_empty() {
+         "tool".to_string()
+      } else if name == "." || name == ".." {
+         name.replace('.', "_")
+      } else {
+         name
+      }
+   }
+
+   fn node_package_name(package_spec: &str) -> String {
+      let spec = package_spec.trim();
+      if let Some(scoped) = spec.strip_prefix('@') {
+         let mut segments = scoped.splitn(3, '/');
+         let Some(scope) = segments.next() else {
+            return spec.to_string();
+         };
+         let Some(name_and_version) = segments.next() else {
+            return spec.to_string();
+         };
+         let name = name_and_version
+            .rsplit_once('@')
+            .map(|(name, _)| name)
+            .unwrap_or(name_and_version);
+         if name.is_empty() {
+            spec.to_string()
+         } else {
+            format!("@{scope}/{name}")
+         }
+      } else {
+         spec
+            .rsplit_once('@')
+            .map(|(name, _)| name)
+            .filter(|name| !name.is_empty())
+            .unwrap_or(spec)
+            .to_string()
+      }
    }
 
    fn node_companion_packages_to_validate(
@@ -219,7 +265,9 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Option<PathBuf> {
-      let package_root = package_dir.join("node_modules").join(package);
+      let package_root = package_dir
+         .join("node_modules")
+         .join(Self::node_package_name(package));
       Self::resolve_node_package_entrypoint_from_root(&package_root, command_name, true)
          .filter(|path| path.exists())
    }
@@ -458,7 +506,9 @@ impl ToolInstaller {
    }
 
    fn binary_install_dir(app_handle: &AppHandle, name: &str) -> Result<PathBuf, ToolError> {
-      Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
+      Ok(Self::get_tools_dir(app_handle)?
+         .join("binary")
+         .join(Self::managed_dir_name(name)))
    }
 
    fn install_extracted_binary(
@@ -535,7 +585,13 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_pip(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_pip(
+               app_handle,
+               package,
+               Self::configured_command_name(config),
+               &config.packages,
+            )
+            .await
          }
          ToolRuntime::Go => {
             let package = config
@@ -603,7 +659,7 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("bun").join(package);
+      let package_dir = tools_dir.join("bun").join(Self::managed_dir_name(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
@@ -652,7 +708,7 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("npm").join(package);
+      let package_dir = tools_dir.join("npm").join(Self::managed_dir_name(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
@@ -699,6 +755,7 @@ impl ToolInstaller {
       app_handle: &AppHandle,
       package: &str,
       command_name: &str,
+      companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
       let runtime_root = Self::get_runtime_root(app_handle)?;
       let python_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Python)
@@ -706,7 +763,9 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let venv_dir = tools_dir.join("python").join(package);
+      let venv_dir = tools_dir
+         .join("python")
+         .join(Self::managed_dir_name(package));
       std::fs::create_dir_all(&venv_dir)?;
 
       log::info!(
@@ -737,9 +796,14 @@ impl ToolInstaller {
          venv_dir.join("bin").join("pip")
       };
 
+      let mut packages = Vec::with_capacity(1 + companion_packages.len());
+      packages.push(package);
+      packages.extend(companion_packages.iter().map(String::as_str));
+
       let mut command = Command::new(&pip_path);
       let output = configure_background_command(&mut command)
-         .args(["install", package])
+         .arg("install")
+         .args(packages)
          .output()
          .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
 
@@ -931,7 +995,7 @@ impl ToolInstaller {
       })?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("ruby").join(package);
+      let package_dir = tools_dir.join("ruby").join(Self::managed_dir_name(package));
       let gem_home = package_dir.join("gems");
       let gem_bin_dir = package_dir.join("gem-bin");
       std::fs::create_dir_all(&gem_home)?;
@@ -1046,7 +1110,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("bun").join(package);
+            let package_dir = tools_dir.join("bun").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
             Ok(
                Self::resolve_node_package_binary(&package_dir, package, command_name)
@@ -1064,7 +1128,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("npm").join(package);
+            let package_dir = tools_dir.join("npm").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
             Ok(
                Self::resolve_node_package_binary(&package_dir, package, command_name)
@@ -1085,7 +1149,7 @@ impl ToolInstaller {
             let scripts_dir = if cfg!(windows) { "Scripts" } else { "bin" };
             Ok(tools_dir
                .join("python")
-               .join(package)
+               .join(Self::managed_dir_name(package))
                .join(scripts_dir)
                .join(bin_name))
          }
@@ -1103,7 +1167,7 @@ impl ToolInstaller {
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             Ok(Self::ruby_wrapper_path(
-               &tools_dir.join("ruby").join(package),
+               &tools_dir.join("ruby").join(Self::managed_dir_name(package)),
                Self::configured_command_name(config),
             ))
          }
@@ -1117,7 +1181,9 @@ impl ToolInstaller {
                return Ok(system_path);
             }
 
-            let install_dir = tools_dir.join("binary").join(&config.name);
+            let install_dir = tools_dir
+               .join("binary")
+               .join(Self::managed_dir_name(&config.name));
             if install_dir.exists()
                && let Ok(path) = Self::pick_binary(&install_dir, command_name)
             {
@@ -1148,7 +1214,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("bun").join(package);
+            let package_dir = tools_dir.join("bun").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
 
             if let Some(entrypoint) =
@@ -1172,7 +1238,7 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("npm").join(package);
+            let package_dir = tools_dir.join("npm").join(Self::managed_dir_name(package));
             Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
 
             if let Some(entrypoint) =
@@ -1305,6 +1371,39 @@ mod tests {
    }
 
    #[test]
+   fn managed_dir_name_rejects_path_components() {
+      assert_eq!(
+         ToolInstaller::managed_dir_name("@scope/package@1.2.3"),
+         "@scope_package@1.2.3"
+      );
+      assert_eq!(
+         ToolInstaller::managed_dir_name("../../Library/LaunchAgents/demo"),
+         ".._.._Library_LaunchAgents_demo"
+      );
+      assert_eq!(
+         ToolInstaller::managed_dir_name("/tmp/absolute"),
+         "_tmp_absolute"
+      );
+      assert_eq!(ToolInstaller::managed_dir_name(".."), "__");
+   }
+
+   #[test]
+   fn resolves_node_package_name_from_versioned_specs() {
+      assert_eq!(
+         ToolInstaller::node_package_name("typescript-language-server@4.4.1"),
+         "typescript-language-server"
+      );
+      assert_eq!(
+         ToolInstaller::node_package_name("@vtsls/language-server@0.2.9"),
+         "@vtsls/language-server"
+      );
+      assert_eq!(
+         ToolInstaller::node_package_name("@vtsls/language-server"),
+         "@vtsls/language-server"
+      );
+   }
+
+   #[test]
    fn resolves_node_bin_shim_when_present() {
       let temp = tempfile::tempdir().unwrap();
       let package_dir = temp.path().join("bun").join("typescript-language-server");
@@ -1353,6 +1452,41 @@ mod tests {
          &package_dir,
          "@vue/language-server",
          "vue-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));
+   }
+
+   #[test]
+   fn resolves_versioned_node_package_entrypoint() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp
+         .path()
+         .join("npm")
+         .join("@agentclientprotocol")
+         .join("claude-agent-acp@0.33.1");
+      let package_root = package_dir
+         .join("node_modules")
+         .join("@agentclientprotocol")
+         .join("claude-agent-acp");
+      let entrypoint = package_root.join("bin").join("claude-agent-acp.js");
+      fs::create_dir_all(entrypoint.parent().unwrap()).unwrap();
+      fs::write(
+         package_root.join("package.json"),
+         r#"{
+  "name": "@agentclientprotocol/claude-agent-acp",
+  "bin": {
+    "claude-agent-acp": "./bin/claude-agent-acp.js"
+  }
+}"#,
+      )
+      .unwrap();
+      fs::write(&entrypoint, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_binary(
+         &package_dir,
+         "@agentclientprotocol/claude-agent-acp@0.33.1",
+         "claude-agent-acp",
       );
 
       assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));

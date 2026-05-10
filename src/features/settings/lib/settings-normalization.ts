@@ -77,6 +77,11 @@ function normalizeBaseUrl(value: string | undefined): string {
 }
 
 const MAX_SYNCED_AI_SKILLS = 200;
+const MAX_AGENT_SERVERS = 100;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
   if (!Array.isArray(skills)) {
@@ -146,6 +151,83 @@ function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
     }));
 }
 
+function normalizeEnv(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const env = Object.fromEntries(
+    Object.entries(value)
+      .filter(
+        (entry): entry is [string, string] =>
+          typeof entry[0] === "string" &&
+          entry[0].trim().length > 0 &&
+          typeof entry[1] === "string",
+      )
+      .map(([key, envValue]) => [key.trim().slice(0, 160), envValue]),
+  );
+
+  return Object.keys(env).length > 0 ? env : undefined;
+}
+
+function normalizeAgentServers(value: Settings["agentServers"]): Settings["agentServers"] {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  const entries: Array<[string, Settings["agentServers"][string]]> = [];
+
+  for (const [id, server] of Object.entries(value)
+    .filter(([id, server]) => typeof id === "string" && id.trim().length > 0 && isRecord(server))
+    .slice(0, MAX_AGENT_SERVERS)) {
+    const trimmedId = id.trim().slice(0, 160);
+    const env = normalizeEnv(server.env);
+    const defaultMode =
+      typeof server.defaultMode === "string" && server.defaultMode.trim()
+        ? server.defaultMode.trim().slice(0, 160)
+        : undefined;
+    const defaultModel =
+      typeof server.defaultModel === "string" && server.defaultModel.trim()
+        ? server.defaultModel.trim().slice(0, 240)
+        : undefined;
+
+    if (server.type === "custom") {
+      if (typeof server.command !== "string" || !server.command.trim()) {
+        continue;
+      }
+      const args = Array.isArray(server.args)
+        ? server.args.filter((arg): arg is string => typeof arg === "string")
+        : undefined;
+      entries.push([
+        trimmedId,
+        {
+          type: "custom",
+          command: server.command.trim(),
+          ...(args ? { args } : {}),
+          ...(env ? { env } : {}),
+          ...(defaultMode ? { defaultMode } : {}),
+          ...(defaultModel ? { defaultModel } : {}),
+        },
+      ]);
+      continue;
+    }
+
+    if (server.type === "registry") {
+      entries.push([
+        trimmedId,
+        {
+          type: "registry",
+          ...(env ? { env } : {}),
+          ...(defaultMode ? { defaultMode } : {}),
+          ...(defaultModel ? { defaultModel } : {}),
+        },
+      ]);
+    }
+  }
+
+  return Object.fromEntries(entries);
+}
+
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
   const provider =
@@ -191,6 +273,7 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAutocompleteCustomModelId =
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
+  normalizedSettings.agentServers = normalizeAgentServers(normalizedSettings.agentServers);
 
   return normalizedSettings;
 }
@@ -308,6 +391,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "aiSkills") {
     return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
+  }
+
+  if (key === "agentServers") {
+    return normalizeAgentServers(value as Settings["agentServers"]) as Settings[K];
   }
 
   if (key === "aiCustomBaseUrl") {

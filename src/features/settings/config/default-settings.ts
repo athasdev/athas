@@ -56,7 +56,7 @@ export const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   sidebarTabsPosition: "top",
-  titleBarProjectMode: "window",
+  titleBarProjectMode: "tabs",
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
@@ -76,6 +76,7 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
   aiSkills: [],
+  agentServers: {},
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
@@ -164,6 +165,9 @@ export function getDefaultSettingsSnapshot(): Settings {
     footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
     footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
+    agentServers: Object.fromEntries(
+      Object.entries(defaultSettings.agentServers).map(([id, agent]) => [id, { ...agent }]),
+    ),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }

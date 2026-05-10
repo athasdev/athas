@@ -6,7 +6,14 @@ import {
   SlidersHorizontal as Settings2,
   SpinnerGap,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -23,14 +30,60 @@ const ATHAS_AGENT_OPTION = {
   id: "custom",
   name: "Athas Agent",
   description: "Use Athas chat settings and provider configuration",
+  icon: null,
   isAcp: false,
 };
+
+function AgentIcon({
+  agentId,
+  icon,
+  size,
+  className,
+}: {
+  agentId: string;
+  icon?: string | null;
+  size: number;
+  className?: string;
+}) {
+  const [didFail, setDidFail] = useState(false);
+
+  if (icon && !didFail) {
+    const hue = agentIconHue(agentId);
+
+    return (
+      <img
+        aria-hidden="true"
+        src={icon}
+        alt=""
+        width={size}
+        height={size}
+        referrerPolicy="no-referrer"
+        onError={() => setDidFail(true)}
+        className={cn("shrink-0 object-contain", className)}
+        style={{
+          filter: `brightness(0) saturate(100%) invert(82%) sepia(82%) saturate(1180%) hue-rotate(${hue}deg) brightness(101%) contrast(96%)`,
+        }}
+      />
+    );
+  }
+
+  return <ProviderIcon providerId={agentId} size={size} className={className} />;
+}
+
+function agentIconHue(agentId: string) {
+  let hash = 0;
+  for (let index = 0; index < agentId.length; index++) {
+    hash = (hash * 31 + agentId.charCodeAt(index)) >>> 0;
+  }
+  return hash % 360;
+}
 
 interface AgentSelectorProps {
   variant?: "header" | "input";
   onOpenSettings?: () => void;
   selectedAgentId?: AgentType;
   onSelectAgent?: (agentId: AgentType) => void;
+  onAgentChatCreated?: (chatId: string) => void;
   portalContainer?: Element | DocumentFragment | null;
   triggerClassName?: string;
   triggerTooltip?: string;
@@ -42,6 +95,7 @@ export function AgentSelector({
   onOpenSettings,
   selectedAgentId,
   onSelectAgent,
+  onAgentChatCreated,
   portalContainer,
   triggerClassName,
   triggerTooltip,
@@ -60,6 +114,8 @@ export function AgentSelector({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const previousOpenSignalRef = useRef(openSignal);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
@@ -93,6 +149,7 @@ export function AgentSelector({
       id: string;
       name: string;
       description: string;
+      icon?: string | null;
       isInstalled?: boolean;
       isCurrent?: boolean;
       canInstall?: boolean;
@@ -120,6 +177,7 @@ export function AgentSelector({
         id: agent.id,
         name: agent.name,
         description: agentConfig?.description ?? agent.description ?? "ACP-compatible coding agent",
+        icon: agentConfig?.icon ?? agent.icon,
         isInstalled,
         isCurrent: agent.id === currentAgentId,
         canInstall: agent.id === "custom" ? false : (agentConfig?.canInstall ?? true),
@@ -150,11 +208,30 @@ export function AgentSelector({
   }, [search]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, selectedIndex]);
+
+  useEffect(() => {
     if (!isOpen) {
       setSearch("");
       setSelectedIndex(0);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, selectedIndex]);
+
+  const handleAgentListWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    const list = event.currentTarget;
+    if (list.scrollHeight <= list.clientHeight || event.deltaY === 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    list.scrollTop += event.deltaY;
+  }, []);
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
@@ -182,6 +259,7 @@ export function AgentSelector({
 
       if (variant === "header") {
         const newChatId = createNewChat(agentId);
+        onAgentChatCreated?.(newChatId);
         if (agentId !== "custom") {
           void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {
             console.error(`Failed to prepare ${agentId} session:`, error);
@@ -198,6 +276,7 @@ export function AgentSelector({
       setSelectedAgentId,
       changeCurrentChatAgent,
       createNewChat,
+      onAgentChatCreated,
     ],
   );
 
@@ -206,6 +285,14 @@ export function AgentSelector({
       if (agentId === "custom" || installingAgentId) return;
 
       setInstallingAgentId(agentId);
+      const toastKey = `acp-agent-install:${agentId}`;
+      toast.show({
+        key: toastKey,
+        message: `Installing ${agentName}...`,
+        description: "Downloading and preparing the ACP agent.",
+        type: "info",
+        duration: 10000,
+      });
       try {
         const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
         setAgentConfigs((current) => {
@@ -214,12 +301,18 @@ export function AgentSelector({
           return next;
         });
         setInstalledAgents((current) => new Set(current).add(installedAgent.id));
-        toast.success(`${agentName} installed`);
+        toast.show({
+          key: toastKey,
+          message: `${agentName} installed`,
+          type: "success",
+        });
       } catch (error) {
-        toast.error(
-          `Failed to install ${agentName}`,
-          error instanceof Error ? error.message : "Unknown error",
-        );
+        toast.show({
+          key: toastKey,
+          message: `Failed to install ${agentName}`,
+          description: error instanceof Error ? error.message : "Unknown error",
+          type: "error",
+        });
       } finally {
         setInstallingAgentId(null);
         void loadInstalledAgents();
@@ -284,7 +377,12 @@ export function AgentSelector({
           compact
           className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
-          <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
+          <AgentIcon
+            agentId={currentAgentId}
+            icon={currentAgent.icon}
+            size={11}
+            className="text-text-lighter"
+          />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
           <ChevronDown
             className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
@@ -299,8 +397,8 @@ export function AgentSelector({
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
         portalContainer={portalContainer}
-        className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
-        style={{ maxHeight: "240px" }}
+        className="flex w-[min(360px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
+        style={{ maxHeight: "min(620px, calc(100vh - 24px))" }}
       >
         <div className="bg-secondary-bg px-1.5 py-1.5" onKeyDown={handleKeyDown}>
           <Input
@@ -317,7 +415,11 @@ export function AgentSelector({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1 [overscroll-behavior:contain]">
+        <div
+          ref={listRef}
+          className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-1 pr-1.5 pb-2"
+          onWheel={handleAgentListWheel}
+        >
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
@@ -329,6 +431,9 @@ export function AgentSelector({
               return (
                 <div
                   key={item.id}
+                  ref={(element) => {
+                    itemRefs.current[itemIndex] = element;
+                  }}
                   role="button"
                   tabIndex={-1}
                   onMouseEnter={() => setSelectedIndex(itemIndex)}
@@ -342,21 +447,30 @@ export function AgentSelector({
                     }
                   }}
                   className={cn(
-                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors",
+                    "group mb-1 flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors last:mb-2",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     !item.isInstalled && item.id !== "custom" && "text-text-lighter",
                   )}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
+                    <AgentIcon
+                      agentId={item.id}
+                      icon={item.icon}
+                      size={12}
+                      className="text-text-lighter"
+                    />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-left text-text text-xs leading-4">
+                      <div className="truncate text-left font-medium text-sm text-text leading-4">
                         {item.name}
                       </div>
                       {!item.isInstalled && item.id !== "custom" ? (
                         <div className="truncate text-left text-[10px] text-text-lighter leading-3">
-                          {item.canInstall ? "Not installed" : item.description}
+                          {item.isInstalling
+                            ? "Installing..."
+                            : item.canInstall
+                              ? "Not installed"
+                              : item.description}
                         </div>
                       ) : null}
                     </div>
@@ -371,10 +485,20 @@ export function AgentSelector({
                         }}
                         variant="ghost"
                         compact
-                        className="h-6 px-2 text-[10px]"
+                        className="h-6 min-w-[4.75rem] px-2 text-[11px]"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
+                        aria-label={
+                          item.isInstalling ? `Installing ${item.name}` : `Install ${item.name}`
+                        }
                       >
-                        {item.isInstalling ? <SpinnerGap className="animate-spin" /> : "Install"}
+                        {item.isInstalling ? (
+                          <>
+                            <SpinnerGap className="animate-spin" />
+                            <span>Installing</span>
+                          </>
+                        ) : (
+                          "Install"
+                        )}
                       </Button>
                     ) : null}
                     {item.id === "custom" && onOpenSettings ? (

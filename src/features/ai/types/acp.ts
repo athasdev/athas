@@ -7,12 +7,15 @@ export interface AgentConfig {
   binaryPath: string | null;
   args: string[];
   envVars: Record<string, string>;
+  defaultMode: string | null;
+  defaultModel: string | null;
   icon: string | null;
   description: string | null;
   installed: boolean;
   installRuntime: "node" | "python" | "go" | "rust" | "binary" | null;
   installPackage: string | null;
   canInstall: boolean;
+  updateAvailable?: boolean;
 }
 
 export interface AcpAgentStatus {
@@ -232,6 +235,7 @@ export type AcpEvent =
       type: "error";
       sessionId: string | null;
       error: string;
+      errorKind?: "authentication_required" | "provider_setup_required" | null;
     }
   | {
       type: "status_changed";
@@ -267,6 +271,12 @@ export type AcpEvent =
       sessionId: string;
       title: string | null;
       updatedAt: string | null;
+    }
+  | {
+      type: "usage_update";
+      sessionId: string;
+      used: number;
+      size: number;
     }
   | {
       type: "prompt_complete";

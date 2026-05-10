@@ -46,4 +46,28 @@ describe("settings import/export", () => {
 
     expect(imported?.wordWrap).toBe(true);
   });
+
+  it("imports ACP agent server settings", () => {
+    const imported = parseSettingsImportJson(
+      JSON.stringify({
+        agentServers: {
+          "codex-acp": {
+            type: "registry",
+            env: {
+              CODEX_HOME: "/tmp/codex",
+            },
+            defaultMode: "plan",
+          },
+        },
+      }),
+    );
+
+    expect(imported?.agentServers["codex-acp"]).toEqual({
+      type: "registry",
+      env: {
+        CODEX_HOME: "/tmp/codex",
+      },
+      defaultMode: "plan",
+    });
+  });
 });

@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { Key as KeyRound } from "@phosphor-icons/react";
 import type React from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import {
   appendChatAcpEvent,
@@ -10,6 +10,7 @@ import {
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { classifyAcpProviderError } from "@/features/ai/lib/acp-provider-errors";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import {
@@ -161,6 +162,38 @@ function getAcpToolTarget(event: Extract<AcpEvent, { type: "tool_start" | "tool_
   return undefined;
 }
 
+function parseStructuredErrorMessage(value: string): string | null {
+  const jsonStart = value.indexOf("{");
+  if (jsonStart < 0) return null;
+
+  try {
+    const parsed = JSON.parse(value.slice(jsonStart)) as {
+      error?: { message?: unknown };
+      message?: unknown;
+    };
+    const message = parsed.error?.message ?? parsed.message;
+    return typeof message === "string" && message.trim() ? message.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatStructuredTransportError(value: string): string | null {
+  const codeMatch = value.match(/error:\s*(\d+)/i);
+  const message = parseStructuredErrorMessage(value);
+  if (!codeMatch || !message) return null;
+
+  const code = codeMatch[1];
+  const title = code === "402" ? "Payment Required" : "Agent Error";
+
+  return `[ERROR_BLOCK]
+title: ${title}
+code: ${code}
+message: ${message}
+details: ${message}
+[/ERROR_BLOCK]`;
+}
+
 function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false) {
   switch (kind) {
     case "edit":
@@ -203,6 +236,7 @@ const AIChat = memo(function AIChat({
   const chatState = useChatState();
   const chatActions = useChatActions();
   const { showToast } = useToast();
+  const updateBuffer = useBufferStore.use.actions().updateBuffer;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -218,8 +252,13 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
-  const effectiveChatId =
-    chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
+  const activeAgentChatId = useMemo(() => {
+    if (activeBuffer?.type !== "agent") return null;
+    return chatState.chats.some((chat) => chat.id === activeBuffer.sessionId)
+      ? activeBuffer.sessionId
+      : null;
+  }, [activeBuffer, chatState.chats]);
+  const effectiveChatId = chatId ?? activeAgentChatId ?? chatState.currentChatId;
 
   useEffect(() => {
     if (isActiveSurface && activeBuffer) {
@@ -233,6 +272,20 @@ const AIChat = memo(function AIChat({
 
     chatActions.switchToChat(effectiveChatId);
   }, [chatActions, chatState.chats, chatState.currentChatId, effectiveChatId, isActiveSurface]);
+
+  const handleAgentChatCreated = useCallback(
+    (chatId: string) => {
+      if (activeBuffer?.type !== "agent") return;
+
+      updateBuffer({
+        ...activeBuffer,
+        path: `agent://${chatId}`,
+        sessionId: chatId,
+        name: "New Chat",
+      });
+    },
+    [activeBuffer, updateBuffer],
+  );
 
   useEffect(() => {
     chatActions.checkApiKey(settings.aiProviderId);
@@ -495,6 +548,13 @@ const AIChat = memo(function AIChat({
     if (!chatId) {
       chatId = chatActions.createNewChat(currentAgentId);
     }
+    if (activeBuffer?.type === "agent" && activeBuffer.sessionId !== chatId) {
+      useBufferStore.getState().actions.updateBuffer({
+        ...activeBuffer,
+        path: `agent://${chatId}`,
+        sessionId: chatId,
+      });
+    }
 
     const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
       messageContent.trim(),
@@ -590,8 +650,9 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
+          const nextChunk = isAcp ? (formatStructuredTransportError(chunk) ?? chunk) : chunk;
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            content: (currentMessage?.content || "") + chunk,
+            content: (currentMessage?.content || "") + nextChunk,
           }));
           requestAnimationFrame(() => scrollToBottom());
         },
@@ -665,6 +726,12 @@ details: The agent session started, but no content, tool output, or resource was
             errorDetails = parts[1];
           }
 
+          const structuredErrorMessage = parseStructuredErrorMessage(errorDetails || mainError);
+          if (structuredErrorMessage) {
+            errorMessage = structuredErrorMessage;
+            errorDetails = structuredErrorMessage;
+          }
+
           const codeMatch = mainError.match(/error:\s*(\d+)/i);
           if (codeMatch) {
             errorCode = codeMatch[1];
@@ -678,6 +745,11 @@ details: The agent session started, but no content, tool output, or resource was
             } else if (errorCode === "403") {
               errorTitle = "Access Denied";
               errorMessage = "You don't have permission to access this resource.";
+            } else if (errorCode === "402") {
+              errorTitle = "Payment Required";
+              if (!structuredErrorMessage) {
+                errorMessage = "The selected agent requires paid credits before it can run.";
+              }
             } else if (errorCode === "500") {
               errorTitle = "Server Error";
               errorMessage = "The API server encountered an error. Please try again later.";
@@ -696,27 +768,15 @@ details: The agent session started, but no content, tool output, or resource was
             }
           }
 
-          const isAcpAuthError =
-            isAcpAgent(currentAgentId) &&
-            (mainError.includes("Authentication required") ||
-              errorDetails.includes("Authentication required"));
+          const acpProviderError = isAcpAgent(currentAgentId)
+            ? classifyAcpProviderError(mainError, errorDetails)
+            : null;
 
-          if (isAcpAuthError) {
-            errorTitle = "Authentication Required";
-            errorCode = "AUTH_REQUIRED";
-            errorMessage =
-              "The selected agent needs external authentication before it can accept prompts.";
-
-            if (
-              mainError.includes("Method not implemented") ||
-              errorDetails.includes("Method not implemented")
-            ) {
-              errorDetails =
-                "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again.";
-            } else if (!errorDetails) {
-              errorDetails =
-                "Complete authentication in the underlying CLI/adapter, then try again.";
-            }
+          if (acpProviderError) {
+            errorTitle = acpProviderError.title;
+            errorCode = acpProviderError.code;
+            errorMessage = acpProviderError.message;
+            errorDetails = acpProviderError.detail;
           }
 
           if (canReconnect) {
@@ -958,10 +1018,11 @@ details: ${errorDetails || mainError}
               useAIChatStore.getState().setAcpStatus(event.status);
               break; // internal state sync
             case "error":
+              const acpProviderError = classifyAcpProviderError(event.error, "", event.errorKind);
               appendAcpEvent({
                 kind: "error",
-                label: "Agent error",
-                detail: truncateDetail(event.error),
+                label: acpProviderError?.activityLabel ?? "Agent error",
+                detail: truncateDetail(acpProviderError?.detail ?? event.error),
                 state: "error",
               });
               break;
@@ -1097,7 +1158,11 @@ details: ${errorDetails || mainError}
     <div
       className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
-      <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
+      <ChatHeader
+        chatId={effectiveChatId}
+        onAgentChatCreated={handleAgentChatCreated}
+        onDeleteChat={handleDeleteChat}
+      />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">

@@ -53,6 +53,7 @@ interface UnifiedExtension {
   marketplaceSkill?: MarketplaceSkill;
   agentId?: string;
   canInstall?: boolean;
+  updateAvailable?: boolean;
   packageSize?: number;
   contributionSummary?: string[];
 }
@@ -146,11 +147,11 @@ const ExtensionRow = ({
       : extension.extensions?.map((ext) => `.${ext}`);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
+    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="ui-font ui-text-md text-text">{extension.name}</span>
-          <Badge variant="default" size="compact">
+          <Badge variant="default" size="compact" className="rounded-full">
             {getCategoryLabel(extension.category)}
           </Badge>
           {extension.version && (
@@ -160,7 +161,7 @@ const ExtensionRow = ({
             <Badge
               variant="default"
               size="compact"
-              className="border-warning/25 bg-warning/10 text-warning"
+              className="rounded-full border-warning/25 bg-warning/10 text-warning"
             >
               Local override
             </Badge>
@@ -193,21 +194,21 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
-          <Badge variant="accent" size="compact">
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="accent" size="compact" className="rounded-full">
             Built-in
           </Badge>
         </div>
       ) : isInstalling ? (
         <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
       ) : isUnavailableAgent ? (
-        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
+        <div className="flex shrink-0 items-center gap-2">
           <Button disabled variant="default" tooltip="Unavailable" compact>
             Unavailable
           </Button>
         </div>
       ) : extension.isInstalled ? (
-        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
+        <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
             <Button onClick={onUpdate} variant="default" tooltip="Update available" compact>
               {hasRuntimeIssue ? "Reinstall" : "Update"}
@@ -234,7 +235,7 @@ const ExtensionRow = ({
           </Button>
         </div>
       ) : (
-        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
+        <div className="flex shrink-0 items-center gap-2">
           <Button onClick={onToggle} variant="default" tooltip={installLabel} compact>
             {installLabel}
           </Button>
@@ -302,6 +303,7 @@ export const ExtensionsSettings = () => {
           runtimeIssues: ext.runtimeIssues,
           agentId: contribution.id,
           canInstall: agent?.canInstall ?? Boolean(contribution.install),
+          updateAvailable: agent?.updateAvailable ?? false,
           contributionSummary: [
             `agent:${contribution.id}`,
             agent?.binaryName ?? contribution.binaryName,
@@ -483,6 +485,7 @@ export const ExtensionsSettings = () => {
         isMarketplace: true,
         agentId: agent.id,
         canInstall: agent.canInstall,
+        updateAvailable: agent.updateAvailable ?? false,
         contributionSummary: [`agent:${agent.id}`, agent.binaryName],
       });
     }
@@ -506,6 +509,51 @@ export const ExtensionsSettings = () => {
   }, []);
 
   const handleUpdate = async (extension: UnifiedExtension) => {
+    if (extension.category === "agent") {
+      if (extension.canInstall === false) {
+        showToast({
+          message: `${extension.name} cannot be reinstalled automatically`,
+          type: "error",
+          duration: 5000,
+        });
+        return;
+      }
+
+      const agentId = extension.agentId ?? extension.id.replace(/^agent:/, "");
+      setInstallingAgentIds((current) => new Set(current).add(agentId));
+
+      try {
+        const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
+        setAgents((current) => {
+          const next = new Map(current.map((agent) => [agent.id, agent]));
+          next.set(installedAgent.id, installedAgent);
+          return Array.from(next.values());
+        });
+        void loadAgents();
+        showToast({
+          message: `${extension.name} reinstalled successfully`,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to reinstall ${extension.name}:`, error);
+        showToast({
+          message: `Failed to reinstall ${extension.name}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          type: "error",
+          duration: 5000,
+        });
+      } finally {
+        setInstallingAgentIds((current) => {
+          const next = new Set(current);
+          next.delete(agentId);
+          return next;
+        });
+      }
+      return;
+    }
+
     if (extension.category === "skill") {
       if (!extension.skill || !extension.marketplaceSkill) return;
 
@@ -756,6 +804,7 @@ export const ExtensionsSettings = () => {
     );
 
   const hasExtensionUpdate = (extension: UnifiedExtension) =>
+    (extension.category === "agent" && Boolean(extension.updateAvailable)) ||
     extensionsWithUpdates.has(extension.id) ||
     Boolean(
       extension.skill &&
