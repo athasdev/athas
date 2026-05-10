@@ -12,6 +12,8 @@ import { TreeRow } from "@/ui/tree-row";
 import { cn } from "@/utils/cn";
 import { FileExplorerIcon } from "./file-explorer-icon";
 
+export const FILE_TREE_BASE_INDENT = 10;
+
 export interface FileTreeGuideTarget {
   path: string;
   name: string;
@@ -109,7 +111,7 @@ function FileExplorerTreeItemComponent({
     (s) =>
       s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
   );
-  const paddingLeft = 14 + depth * indentSize;
+  const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const densityConfig = FILE_TREE_DENSITY_CONFIG[density];
   const gitStatusDecoration = getGitStatusDecoration(file);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
@@ -130,7 +132,7 @@ function FileExplorerTreeItemComponent({
             title={target?.name}
             style={
               {
-                left: `calc(${14 + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
+                left: `calc(${FILE_TREE_BASE_INDENT + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
                 top: startsHere ? "4px" : "0",
                 bottom: endsHere ? "4px" : "0",
               } as React.CSSProperties
@@ -195,7 +197,11 @@ function FileExplorerTreeItemComponent({
   }
 
   return (
-    <div className="file-tree-item w-full" data-depth={depth}>
+    <div
+      className="file-tree-item w-full"
+      data-active={isActive ? "true" : undefined}
+      data-depth={depth}
+    >
       {renderTreeGuides()}
       <TreeRow
         id={rowId}
@@ -220,7 +226,7 @@ function FileExplorerTreeItemComponent({
           isSearchMatch && "file-tree-search-match",
         )}
         active={isActive}
-        baseIndent={14}
+        baseIndent={FILE_TREE_BASE_INDENT}
         depth={depth}
         indentSize={indentSize}
       >

@@ -20,7 +20,7 @@ export function NewTabMenu({ onClose }: NewTabMenuProps) {
       type="button"
       variant="ghost"
       onClick={handleClick}
-      className="text-text-lighter hover:border-border/70 hover:text-text"
+      className="h-5 min-w-5 px-1 text-text-lighter hover:border-border/70 hover:text-text"
       tooltip="New Tab"
       commandId="workbench.newTab"
       aria-label="New Tab"

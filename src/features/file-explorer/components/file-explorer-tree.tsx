@@ -41,7 +41,12 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { SidebarHeader, SidebarHeaderIconButton, SidebarHeaderSearch } from "@/ui/sidebar";
+import {
+  SidebarEmptyActionState,
+  SidebarHeader,
+  SidebarHeaderIconButton,
+  SidebarHeaderSearch,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -55,7 +60,7 @@ import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-m
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
-import { FileExplorerTreeItem } from "./file-explorer-tree-item";
+import { FILE_TREE_BASE_INDENT, FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
 import { FileExplorerIcon } from "./file-explorer-icon";
 import "../styles/file-explorer-tree.css";
@@ -107,6 +112,7 @@ interface OpenAllFilesDialogState {
 }
 
 const FILE_TREE_CONTAINER_INSET = 4;
+const FILE_TREE_HEADER_HEIGHT = 32;
 const getFileTreeRowId = (path: string) => `file-tree-row-${path.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 
 function FileExplorerTreeComponent({
@@ -372,8 +378,6 @@ function FileExplorerTreeComponent({
     !settings.showHiddenFilesInFileTree ||
     !settings.showGitignoredFilesInFileTree ||
     !settings.showGitStatusInFileTree;
-  const shouldShowTreeSearch =
-    treeSearchOpen || isTreeSearchActive || hasActiveFileTreeFilters || isFileTreeFilterMenuOpen;
   const fileTreeFilterMenuItems = useMemo<MenuItem[]>(
     () => [
       {
@@ -966,7 +970,7 @@ function FileExplorerTreeComponent({
   return (
     <div
       className={cn(
-        "file-tree-container relative flex min-w-full flex-1 select-none flex-col overflow-auto p-1",
+        "file-tree-container relative flex min-w-full flex-1 select-none flex-col overflow-auto p-0",
         dragState.dragOverPath === "__ROOT__" &&
           "border-2! border-dashed! border-accent! bg-accent! bg-opacity-10!",
       )}
@@ -1145,74 +1149,61 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      {shouldShowTreeSearch && (
-        <SidebarHeader
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <SidebarHeaderSearch
-            ref={searchInputRef}
-            value={treeSearchQuery}
-            onChange={setTreeSearchQuery}
-            leftIcon={Search}
-            placeholder="Search"
-            aria-label="Filter files in tree"
-            aria-controls="file-tree-results"
-            autoCapitalize="none"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck="false"
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.preventDefault();
-                e.stopPropagation();
-                closeTreeSearch();
-                return;
-              }
+      <SidebarHeader onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+        <SidebarHeaderSearch
+          ref={searchInputRef}
+          value={treeSearchQuery}
+          onChange={setTreeSearchQuery}
+          leftIcon={Search}
+          placeholder="Search"
+          aria-label="Filter files in tree"
+          aria-controls="file-tree-results"
+          autoCapitalize="none"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              closeTreeSearch();
+              return;
+            }
 
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                navigateTreeSearchMatch(e.shiftKey ? -1 : 1);
-              }
-            }}
-          />
-          <SidebarHeaderIconButton
-            ref={filterButtonRef}
-            active={hasActiveFileTreeFilters}
-            className="shrink-0"
-            tooltip="Filter Files"
-            tooltipSide="bottom"
-            onClick={() => setIsFileTreeFilterMenuOpen(true)}
-          >
-            <Funnel />
-          </SidebarHeaderIconButton>
-        </SidebarHeader>
-      )}
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              navigateTreeSearchMatch(e.shiftKey ? -1 : 1);
+            }
+          }}
+        />
+        <SidebarHeaderIconButton
+          ref={filterButtonRef}
+          active={hasActiveFileTreeFilters}
+          className="shrink-0"
+          tooltip="Filter Files"
+          tooltipSide="bottom"
+          onClick={() => setIsFileTreeFilterMenuOpen(true)}
+        >
+          <Funnel />
+        </SidebarHeaderIconButton>
+      </SidebarHeader>
       {!rootFolderPath ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-          <div className="ui-font flex flex-col items-center text-center">
-            <span className="text-[0.78em] text-text-lighter">No folder open</span>
-            <Button
-              onClick={handleOpenFolder}
-              variant="ghost"
-              className="mt-1.5 text-[0.78em] text-accent hover:text-accent/80"
-              compact
-            >
-              Open Folder
-            </Button>
-          </div>
+          <SidebarEmptyActionState
+            message="No folder open"
+            actionLabel="Open Folder"
+            onAction={handleOpenFolder}
+          />
         </div>
       ) : displayedFiles.length === 0 ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-          <div className="ui-font flex flex-col items-center text-center">
-            <span className="text-[0.78em] text-text-lighter">
-              {isTreeSearchActive ? "No matching files" : "Folder is empty"}
-            </span>
-          </div>
+          <SidebarEmptyActionState
+            message={isTreeSearchActive ? "No matching files" : "Folder is empty"}
+          />
         </div>
       ) : (
-        <div id="file-tree-results" className="file-tree-scroll-body">
+        <div id="file-tree-results" className="file-tree-scroll-body p-1">
           {(() => {
             const items = rowVirtualizer.getVirtualItems();
             const paddingTop = items.length ? items[0].start : 0;
@@ -1234,6 +1225,7 @@ function FileExplorerTreeComponent({
               stickyMarkerIndex >= 0 ? getStickyAncestorRows(visibleRows, stickyMarkerIndex) : [];
             const stickyAncestorsStyle = {
               "--file-tree-container-inset": `${FILE_TREE_CONTAINER_INSET}px`,
+              "--file-tree-header-height": `${FILE_TREE_HEADER_HEIGHT}px`,
               "--file-tree-sticky-row-height": `${densityConfig.rowHeight}px`,
               "--file-tree-sticky-stack-height": `${
                 stickyAncestors.length * densityConfig.rowHeight
@@ -1249,7 +1241,7 @@ function FileExplorerTreeComponent({
                           stickyAncestor.displayName ?? stickyAncestor.file.name;
                         const stickyAncestorGitStatus = getGitStatusDecoration(stickyAncestor.file);
                         const stickyAncestorPaddingLeft =
-                          14 +
+                          FILE_TREE_BASE_INDENT +
                           FILE_TREE_CONTAINER_INSET +
                           stickyAncestor.depth * settings.fileTreeIndentSize;
 

@@ -122,7 +122,7 @@ export const defaultSettings: Settings = {
   maxOpenTabs: 100,
   horizontalTabScroll: false,
   //// File tree
-  fileTreeIndentSize: 20,
+  fileTreeIndentSize: 16,
   compactFoldersInFileTree: false,
   fileTreeDensity: "default",
   showHiddenFilesInFileTree: true,

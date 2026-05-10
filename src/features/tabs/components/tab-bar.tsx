@@ -682,7 +682,7 @@ const TabBar = ({
         <div
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1"
+          className="relative flex h-7 shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-0.5"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -693,7 +693,7 @@ const TabBar = ({
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              className="shrink-0 rounded-lg text-text-lighter"
+              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
               commandId="navigation.goBack"
@@ -707,7 +707,7 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              className="shrink-0 rounded-lg text-text-lighter"
+              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
               commandId="navigation.goForward"
@@ -753,7 +753,7 @@ const TabBar = ({
                 onClick={() => closePane(paneId)}
                 variant="ghost"
                 compact
-                className="shrink-0 rounded-lg text-text-lighter"
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 tooltip="Close Split"
                 tooltipSide="bottom"
                 aria-label="Close split pane"
@@ -766,7 +766,7 @@ const TabBar = ({
                 type="button"
                 onClick={handleSplitActivePane}
                 variant="ghost"
-                className="shrink-0 rounded-lg text-text-lighter"
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 tooltip="Split Editor"
                 tooltipSide="bottom"
                 aria-label="Split editor"
@@ -782,8 +782,8 @@ const TabBar = ({
                 variant="ghost"
                 className={
                   isPaneLocked
-                    ? "shrink-0 rounded-lg text-accent"
-                    : "shrink-0 rounded-lg text-text-lighter"
+                    ? "h-5 min-w-5 shrink-0 rounded-md px-1 text-accent"
+                    : "h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 }
                 tooltip={isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group"}
                 tooltipSide="bottom"
@@ -798,7 +798,7 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                className="shrink-0 rounded-lg text-text-lighter"
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"

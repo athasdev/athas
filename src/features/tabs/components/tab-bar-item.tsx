@@ -97,7 +97,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        className={isActive ? "bg-hover/80" : undefined}
+        className={cn("h-5 pl-2 pr-6", isActive && "bg-hover/80")}
         onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
@@ -118,7 +118,7 @@ const TabBarItem = memo(function TabBarItem({
               }
             }}
             className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
+              "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
               "hover:text-text",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
@@ -196,7 +196,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
+            "ui-font ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}
