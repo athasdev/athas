@@ -6,6 +6,7 @@ import { SidebarFooter } from "@/ui/sidebar";
 type ShareState = "idle" | "active" | "error";
 
 export function CollaborationMediaFooter({
+  workspaceName,
   micState,
   screenState,
   onlineCount,
@@ -15,6 +16,7 @@ export function CollaborationMediaFooter({
   onToggleScreenShare,
   onStopFollowing,
 }: {
+  workspaceName: string;
   micState: ShareState;
   screenState: ShareState;
   onlineCount: number;
@@ -53,9 +55,13 @@ export function CollaborationMediaFooter({
         >
           <Monitor />
         </Button>
-        <span className="min-w-0 truncate text-text-lighter text-[11px]">
-          {onlineCount} online · {streamStatus}
-        </span>
+        <div className="min-w-0 flex-1 truncate px-1 text-[11px]">
+          <span className="font-medium text-text">{workspaceName}</span>
+          <span className="px-1 text-text-lighter">·</span>
+          <span className="text-text-lighter">{onlineCount} online</span>
+          <span className="px-1 text-text-lighter">·</span>
+          <span className="text-text-lighter">{streamStatus}</span>
+        </div>
         {isFollowing ? (
           <Button
             type="button"

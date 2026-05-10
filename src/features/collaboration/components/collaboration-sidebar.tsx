@@ -1,10 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   CaretLeft,
+  Check,
   ChatCircleText,
   FileText,
+  Funnel,
   Folder,
-  GearSix,
   Hash,
   Microphone as Mic,
   Monitor,
@@ -43,7 +44,6 @@ import {
   type CollaborationMediaSignal,
 } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
@@ -80,6 +80,9 @@ import {
 
 type ShareState = "idle" | "active" | "error";
 type CollaborationSidebarTab = "channels" | "people" | "notes";
+type CollaborationChannelFilter = "all" | "active" | "with-guests" | "empty";
+type CollaborationPeopleFilter = "all" | "online" | "offline" | "sharing" | "has-file";
+type CollaborationNotesFilter = "notes" | "secrets" | "all";
 type CollaborationConversation =
   | { type: "channel"; id: number }
   | { type: "private"; participantId: string };
@@ -125,7 +128,6 @@ export function CollaborationSidebarView() {
   const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const mediaState = useCollaborationRuntimeStore((state) => state.mediaState);
   const collaborationActions = useCollaborationRuntimeStore((state) => state.actions);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const openBuffer = useBufferStore.use.actions().openBuffer;
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
   const [activeTab, setActiveTab] = useState<CollaborationSidebarTab>("channels");
@@ -133,6 +135,12 @@ export function CollaborationSidebarView() {
   const [channelSearchQuery, setChannelSearchQuery] = useState("");
   const [peopleSearchQuery, setPeopleSearchQuery] = useState("");
   const [notesSearchQuery, setNotesSearchQuery] = useState("");
+  const [channelFilter, setChannelFilter] = useState<CollaborationChannelFilter>("all");
+  const [peopleFilter, setPeopleFilter] = useState<CollaborationPeopleFilter>("all");
+  const [notesFilter, setNotesFilter] = useState<CollaborationNotesFilter>("notes");
+  const [isChannelFilterOpen, setIsChannelFilterOpen] = useState(false);
+  const [isPeopleFilterOpen, setIsPeopleFilterOpen] = useState(false);
+  const [isNotesFilterOpen, setIsNotesFilterOpen] = useState(false);
   const [channelIconPickerTab, setChannelIconPickerTab] = useState<"emoji" | "icon">("emoji");
   const [channelIcons, setChannelIcons] = useState<Record<string, string>>(loadChannelIcons);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
@@ -148,6 +156,9 @@ export function CollaborationSidebarView() {
   const micStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const channelFilterButtonRef = useRef<HTMLButtonElement>(null);
+  const peopleFilterButtonRef = useRef<HTMLButtonElement>(null);
+  const notesFilterButtonRef = useRef<HTMLButtonElement>(null);
   const remoteSharesRef = useRef<RemoteMediaShare[]>([]);
   const lastMediaSignalIdRef = useRef(0);
   const localDeviceIdRef = useRef<string | null>(null);
@@ -200,7 +211,20 @@ export function CollaborationSidebarView() {
   const peopleSearch = normalizeSearchQuery(deferredPeopleSearchQuery);
   const notesSearch = normalizeSearchQuery(deferredNotesSearchQuery);
   const filteredChannels = useMemo(() => {
-    const channels = model?.channels ?? [];
+    let channels = model?.channels ?? [];
+
+    if (channelFilter === "active") {
+      channels = selectedChannel
+        ? channels.filter((channel) => channel.id === selectedChannel.id)
+        : [];
+    } else if (channelFilter === "with-guests") {
+      channels = channels.filter((channel) => channel.guestCount > 0);
+    } else if (channelFilter === "empty") {
+      channels = channels.filter(
+        (channel) => channel.memberCount === 0 && channel.guestCount === 0,
+      );
+    }
+
     if (!channelSearch) return channels;
 
     return channels.filter((channel) =>
@@ -208,12 +232,26 @@ export function CollaborationSidebarView() {
         channel.slug,
         channel.description,
         channel.memberCount,
+        channel.guestCount,
         channel.id,
       ]),
     );
-  }, [channelSearch, model?.channels]);
+  }, [channelFilter, channelSearch, model?.channels, selectedChannel]);
   const filteredParticipants = useMemo(() => {
-    const participants = model?.participants ?? [];
+    let participants = model?.participants ?? [];
+
+    if (peopleFilter === "online") {
+      participants = participants.filter((participant) => participant.online);
+    } else if (peopleFilter === "offline") {
+      participants = participants.filter((participant) => !participant.online);
+    } else if (peopleFilter === "sharing") {
+      participants = participants.filter(
+        (participant) => participant.microphone || participant.screen,
+      );
+    } else if (peopleFilter === "has-file") {
+      participants = participants.filter((participant) => Boolean(participant.activeFilePath));
+    }
+
     if (!peopleSearch) return participants;
 
     return participants.filter((participant) =>
@@ -226,8 +264,10 @@ export function CollaborationSidebarView() {
         participant.screen ? "screen" : null,
       ]),
     );
-  }, [model?.participants, peopleSearch]);
+  }, [model?.participants, peopleFilter, peopleSearch]);
   const filteredPrivateChatParticipants = useMemo(() => {
+    if (channelFilter !== "all") return [];
+
     const participants = model?.participants ?? [];
     if (!channelSearch) return participants;
 
@@ -239,8 +279,10 @@ export function CollaborationSidebarView() {
         participant.activeFilePath,
       ]),
     );
-  }, [channelSearch, model?.participants]);
+  }, [channelFilter, channelSearch, model?.participants]);
   const filteredNoteItems = useMemo(() => {
+    if (notesFilter === "secrets") return [];
+
     const items = model?.notesItems ?? [];
     if (!notesSearch) return items;
 
@@ -251,7 +293,7 @@ export function CollaborationSidebarView() {
         item.type === "file" ? item.content : null,
       ]),
     );
-  }, [model?.notesItems, notesSearch]);
+  }, [model?.notesItems, notesFilter, notesSearch]);
   const remoteDeviceIds = useMemo(() => {
     if (!selectedChannel || !collaboration?.presence) return [];
     const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
@@ -523,13 +565,6 @@ export function CollaborationSidebarView() {
       </SidebarPanel>
     );
   }
-
-  const streamTone =
-    activeDocumentStream.status === "live"
-      ? "text-accent"
-      : activeDocumentStream.status === "error"
-        ? "text-error"
-        : "text-text-lighter";
 
   const sendMessage = async () => {
     if (!selectedChannel || !model.canEditNotes || !draft.trim()) return;
@@ -978,6 +1013,33 @@ export function CollaborationSidebarView() {
       icon: <FileText size={16} weight="duotone" />,
     },
   ];
+  const channelFilterItems: Array<{
+    id: CollaborationChannelFilter;
+    label: string;
+  }> = [
+    { id: "all", label: "All" },
+    { id: "active", label: "Active" },
+    { id: "with-guests", label: "With guests" },
+    { id: "empty", label: "Empty" },
+  ];
+  const peopleFilterItems: Array<{
+    id: CollaborationPeopleFilter;
+    label: string;
+  }> = [
+    { id: "all", label: "All" },
+    { id: "online", label: "Online" },
+    { id: "offline", label: "Offline" },
+    { id: "sharing", label: "Sharing" },
+    { id: "has-file", label: "Has file" },
+  ];
+  const notesFilterItems: Array<{
+    id: CollaborationNotesFilter;
+    label: string;
+  }> = [
+    { id: "notes", label: "Notes" },
+    { id: "secrets", label: "Secrets" },
+    { id: "all", label: "All" },
+  ];
 
   const channelsContent = (
     <div className="h-full min-h-0 overflow-hidden">
@@ -992,7 +1054,42 @@ export function CollaborationSidebarView() {
               onChange={setChannelSearchQuery}
               leftIcon={Search}
             />
+            <SidebarHeaderIconButton
+              ref={channelFilterButtonRef}
+              active={channelFilter !== "all"}
+              tooltip="Filter Channels"
+              tooltipSide="bottom"
+              onClick={() => setIsChannelFilterOpen(true)}
+            >
+              <Funnel />
+            </SidebarHeaderIconButton>
           </SidebarHeader>
+          <Dropdown
+            isOpen={isChannelFilterOpen}
+            anchorRef={channelFilterButtonRef}
+            anchorAlign="end"
+            onClose={() => setIsChannelFilterOpen(false)}
+            className="min-w-32"
+          >
+            {channelFilterItems.map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                variant="ghost"
+                compact
+                className="h-7 w-full justify-start px-2 text-xs"
+                onClick={() => {
+                  setChannelFilter(item.id);
+                  setIsChannelFilterOpen(false);
+                }}
+              >
+                <span className="flex size-3.5 items-center justify-center">
+                  {channelFilter === item.id ? <Check /> : null}
+                </span>
+                {item.label}
+              </Button>
+            ))}
+          </Dropdown>
           <div className="space-y-px">
             {isCreatingChannel ? (
               <form
@@ -1098,10 +1195,10 @@ export function CollaborationSidebarView() {
                 </div>
               </div>
             ) : null}
-            {channelSearch &&
+            {(channelSearch || channelFilter !== "all") &&
             filteredChannels.length === 0 &&
             filteredPrivateChatParticipants.length === 0 ? (
-              <SidebarEmptyActionState className="min-h-24" message="No matches." />
+              <SidebarEmptyActionState className="min-h-24" message="No matching channels." />
             ) : null}
           </div>
         </div>
@@ -1269,7 +1366,42 @@ export function CollaborationSidebarView() {
           onChange={setPeopleSearchQuery}
           leftIcon={Search}
         />
+        <SidebarHeaderIconButton
+          ref={peopleFilterButtonRef}
+          active={peopleFilter !== "all"}
+          tooltip="Filter People"
+          tooltipSide="bottom"
+          onClick={() => setIsPeopleFilterOpen(true)}
+        >
+          <Funnel />
+        </SidebarHeaderIconButton>
       </SidebarHeader>
+      <Dropdown
+        isOpen={isPeopleFilterOpen}
+        anchorRef={peopleFilterButtonRef}
+        anchorAlign="end"
+        onClose={() => setIsPeopleFilterOpen(false)}
+        className="min-w-32"
+      >
+        {peopleFilterItems.map((item) => (
+          <Button
+            key={item.id}
+            type="button"
+            variant="ghost"
+            compact
+            className="h-7 w-full justify-start px-2 text-xs"
+            onClick={() => {
+              setPeopleFilter(item.id);
+              setIsPeopleFilterOpen(false);
+            }}
+          >
+            <span className="flex size-3.5 items-center justify-center">
+              {peopleFilter === item.id ? <Check /> : null}
+            </span>
+            {item.label}
+          </Button>
+        ))}
+      </Dropdown>
       {remoteShares.length > 0 ? (
         <div className="mb-1 space-y-1.5">
           {remoteShares.map((share) => (
@@ -1341,7 +1473,9 @@ export function CollaborationSidebarView() {
         ) : (
           <SidebarEmptyActionState
             className="min-h-24"
-            message={peopleSearch ? "No matching members." : "No members yet."}
+            message={
+              peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."
+            }
           />
         )}
       </div>
@@ -1359,17 +1493,42 @@ export function CollaborationSidebarView() {
           onChange={setNotesSearchQuery}
           leftIcon={Search}
         />
-      </SidebarHeader>
-      <div className="mb-1 flex justify-end px-1">
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-6 shrink-0 px-2 text-xs"
-          onClick={() => openSettingsDialog("collaboration")}
+        <SidebarHeaderIconButton
+          ref={notesFilterButtonRef}
+          active={notesFilter !== "notes"}
+          tooltip="Filter Notes"
+          tooltipSide="bottom"
+          onClick={() => setIsNotesFilterOpen(true)}
         >
-          Secrets
-        </Button>
-      </div>
+          <Funnel />
+        </SidebarHeaderIconButton>
+      </SidebarHeader>
+      <Dropdown
+        isOpen={isNotesFilterOpen}
+        anchorRef={notesFilterButtonRef}
+        anchorAlign="end"
+        onClose={() => setIsNotesFilterOpen(false)}
+        className="min-w-32"
+      >
+        {notesFilterItems.map((item) => (
+          <Button
+            key={item.id}
+            type="button"
+            variant="ghost"
+            compact
+            className="h-7 w-full justify-start px-2 text-xs"
+            onClick={() => {
+              setNotesFilter(item.id);
+              setIsNotesFilterOpen(false);
+            }}
+          >
+            <span className="flex size-3.5 items-center justify-center">
+              {notesFilter === item.id ? <Check /> : null}
+            </span>
+            {item.label}
+          </Button>
+        ))}
+      </Dropdown>
       <div className="space-y-px">
         {filteredNoteItems.map((item) => {
           return (
@@ -1416,7 +1575,15 @@ export function CollaborationSidebarView() {
           );
         })}
         {filteredNoteItems.length === 0 ? (
-          <SidebarEmptyActionState className="min-h-24" message="No matching notes." />
+          <SidebarEmptyActionState
+            className="min-h-24"
+            message={notesFilter === "secrets" ? "No secrets yet." : "No matching notes."}
+            description={
+              notesFilter === "secrets"
+                ? "Shared environment files will appear here when they are added."
+                : undefined
+            }
+          />
         ) : null}
       </div>
     </div>
@@ -1425,30 +1592,12 @@ export function CollaborationSidebarView() {
   return (
     <SidebarPanel className="gap-2 p-2">
       <SidebarHeader className="relative z-[10020] bg-transparent px-0 py-0 backdrop-blur-none">
-        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-          <div className="ui-font flex min-w-0 items-center gap-1.5 text-xs">
-            <span className="truncate font-medium text-text">{model.workspaceName}</span>
-            <span className="text-text-lighter">·</span>
-            <span className="shrink-0 text-text-lighter">{model.onlineCount} online</span>
-            <span className="text-text-lighter">·</span>
-            <span className={cn("shrink-0", streamTone)}>{activeDocumentStream.status}</span>
-          </div>
-          <SidebarHeaderIconButton
-            type="button"
-            tooltip="Collaboration Settings"
-            tooltipSide="bottom"
-            onClick={() => openSettingsDialog("collaboration")}
-          >
-            <GearSix />
-          </SidebarHeaderIconButton>
-        </div>
+        <SidebarSectionSwitcher
+          items={collaborationTabs}
+          value={activeTab}
+          onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
+        />
       </SidebarHeader>
-
-      <SidebarSectionSwitcher
-        items={collaborationTabs}
-        value={activeTab}
-        onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
-      />
 
       <SidebarSectionPager
         className="flex-1 rounded-b-xl"
@@ -1462,6 +1611,7 @@ export function CollaborationSidebarView() {
       />
 
       <CollaborationMediaFooter
+        workspaceName={model.workspaceName}
         micState={micState}
         screenState={screenState}
         onlineCount={model.onlineCount}
