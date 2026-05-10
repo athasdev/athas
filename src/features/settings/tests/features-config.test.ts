@@ -3,15 +3,16 @@ import { defaultSettings } from "@/features/settings/config/default-settings";
 import { createCoreFeaturesList } from "@/features/settings/config/features";
 
 describe("features config", () => {
-  it("keeps Teams Collaboration copy compact", () => {
+  it("keeps Collaboration copy compact", () => {
     const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
       (item) => item.id === "teamCollaboration",
     );
 
     expect(feature).toMatchObject({
-      name: "Teams Collaboration",
+      name: "Collaboration",
       description: "Team workspace invites, roles, projects, and channels",
       enabled: true,
+      status: "experimental",
     });
   });
 });

@@ -74,10 +74,11 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
   },
   {
     id: "teamCollaboration",
-    name: "Teams Collaboration",
+    name: "Collaboration",
     description: "Team workspace invites, roles, projects, and channels",
     icon: UsersThree,
     enabled: coreFeatures.teamCollaboration,
+    status: "experimental",
   },
   {
     id: "multiAgents",
