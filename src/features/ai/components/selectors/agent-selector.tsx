@@ -6,7 +6,14 @@ import {
   SlidersHorizontal as Settings2,
   SpinnerGap,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -107,6 +114,7 @@ export function AgentSelector({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const previousOpenSignalRef = useRef(openSignal);
 
@@ -210,6 +218,20 @@ export function AgentSelector({
       setSelectedIndex(0);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, selectedIndex]);
+
+  const handleAgentListWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    const list = event.currentTarget;
+    if (list.scrollHeight <= list.clientHeight || event.deltaY === 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    list.scrollTop += event.deltaY;
+  }, []);
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
@@ -393,7 +415,11 @@ export function AgentSelector({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1 pr-1.5 pb-2 [overscroll-behavior:contain]">
+        <div
+          ref={listRef}
+          className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-1 pr-1.5 pb-2"
+          onWheel={handleAgentListWheel}
+        >
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
