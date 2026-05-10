@@ -1,7 +1,9 @@
 import { ClockCounterClockwise as History } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { useSettingsStore } from "@/features/settings/store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
@@ -90,6 +92,7 @@ interface ChatHeaderProps {
 export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const chats = useAIChatStore((state) => state.chats);
+  const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
@@ -103,6 +106,10 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;
+  const workspaceChats = useMemo(
+    () => filterChatsByWorkspace(chats, workspacePath),
+    [chats, workspacePath],
+  );
 
   return (
     <div className={cn("relative z-[10020]", paneHeaderClassName())}>
@@ -140,7 +147,7 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
       <ChatHistoryDropdown
         isOpen={isChatHistoryVisible}
         onClose={() => setIsChatHistoryVisible(false)}
-        chats={chats}
+        chats={workspaceChats}
         currentChatId={effectiveChatId}
         onSwitchToChat={switchToChat}
         onDeleteChat={onDeleteChat ?? (() => {})}

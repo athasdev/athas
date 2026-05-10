@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
+import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
@@ -21,7 +22,10 @@ import {
   saveChatToDb,
 } from "@/features/ai/services/ai-chat-history-service";
 import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import type { AIChatActions, AIChatState } from "./types";
+
+const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
   immer(
@@ -252,6 +256,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             lastMessageAt: new Date(),
             agentId: chatAgentId,
             acpSessionId: null,
+            workspacePath: getCurrentWorkspacePath(),
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -275,15 +280,18 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
         ensureChatForAgent: (agentId: AgentType) => {
           const state = get();
+          const workspacePath = getCurrentWorkspacePath();
 
           if (state.currentChatId) {
             const current = state.chats.find((c) => c.id === state.currentChatId);
-            if (current) {
+            if (current && isChatInWorkspace(current, workspacePath)) {
               return current.id;
             }
           }
 
-          const matchingChat = state.chats.find((c) => c.agentId === agentId);
+          const matchingChat = state.chats.find(
+            (c) => c.agentId === agentId && isChatInWorkspace(c, workspacePath),
+          );
           if (matchingChat) {
             set((state) => {
               state.currentChatId = matchingChat.id;
@@ -292,8 +300,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             return matchingChat.id;
           }
 
-          if (state.chats.length > 0) {
-            const fallback = state.chats[0];
+          const fallback = state.chats.find((chat) => isChatInWorkspace(chat, workspacePath));
+          if (fallback) {
             set((state) => {
               state.currentChatId = fallback.id;
               state.isChatHistoryVisible = false;
@@ -330,8 +338,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
             // If we deleted the current chat, switch to the most recent one
             if (chatId === state.currentChatId) {
-              if (state.chats.length > 0) {
-                const mostRecent = [...state.chats].sort(
+              const workspacePath = getCurrentWorkspacePath();
+              const workspaceChats = state.chats.filter((chat) =>
+                isChatInWorkspace(chat, workspacePath),
+              );
+              if (workspaceChats.length > 0) {
+                const mostRecent = [...workspaceChats].sort(
                   (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
                 )[0];
                 state.currentChatId = mostRecent.id;

@@ -3,6 +3,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AgentSelector } from "@/features/ai/components/selectors/agent-selector";
 import ChatHistoryDropdown from "@/features/ai/components/history/sidebar";
+import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpSessionInfo } from "@/features/ai/types/acp";
@@ -163,7 +164,7 @@ export function MultiAgentsSidebarView() {
   }, [acpStatus, rootFolderPath]);
 
   const sidebarChats = useMemo<SidebarAgentChat[]>(() => {
-    const localChats = [...chats]
+    const localChats = filterChatsByWorkspace(chats, rootFolderPath)
       .sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime())
       .map((chat) => ({
         agentId: chat.agentId,
@@ -196,7 +197,7 @@ export function MultiAgentsSidebarView() {
     return [...localChats, ...remoteChats].sort(
       (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
     );
-  }, [acpStatus, chats, remoteSessions]);
+  }, [acpStatus, chats, remoteSessions, rootFolderPath]);
 
   const filteredChats = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase();
@@ -226,8 +227,11 @@ export function MultiAgentsSidebarView() {
   );
 
   const sortedChatsForHistory = useMemo(
-    () => [...chats].sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime()),
-    [chats],
+    () =>
+      filterChatsByWorkspace(chats, rootFolderPath).sort(
+        (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
+      ),
+    [chats, rootFolderPath],
   );
 
   useEffect(() => {

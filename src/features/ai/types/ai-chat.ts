@@ -68,6 +68,7 @@ export interface Chat {
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
   acpSessionId?: string | null;
+  workspacePath?: string | null;
 }
 
 export interface ContextInfo {
