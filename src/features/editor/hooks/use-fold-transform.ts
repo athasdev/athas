@@ -40,20 +40,12 @@ export function useFoldTransform(
 
     const fileState = foldsByFile.get(filePath);
     if (!fileState || fileState.collapsedLines.size === 0) {
-      const lines = splitLines(content);
-      const actualToVirtual = new Map<number, number>();
-      const virtualToActual = new Map<number, number>();
-      lines.forEach((_, i) => {
-        actualToVirtual.set(i, i);
-        virtualToActual.set(i, i);
-      });
-
       return {
         virtualContent: content,
-        virtualLines: lines,
+        virtualLines: splitLines(content),
         mapping: {
-          actualToVirtual,
-          virtualToActual,
+          actualToVirtual: new Map<number, number>(),
+          virtualToActual: new Map<number, number>(),
           foldedRanges: [],
         },
         foldMarkers: new Map<number, number>(),

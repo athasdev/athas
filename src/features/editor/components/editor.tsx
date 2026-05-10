@@ -66,6 +66,7 @@ import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
 import { DefinitionLinkLayer } from "./layers/definition-link-layer";
+import { DiagnosticLayer } from "./layers/diagnostic-layer";
 import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
@@ -241,13 +242,31 @@ export function Editor({
   useEffect(() => {
     if (!isActiveSurface || isPreviewMode) return;
     if (filePath && content) {
-      if (fileOpenBenchmark.has(filePath)) {
-        fileOpenBenchmark.mark(filePath, "fold-start");
+      let cancelled = false;
+      const computeFolds = () => {
+        if (cancelled) return;
+        if (fileOpenBenchmark.has(filePath)) {
+          fileOpenBenchmark.mark(filePath, "fold-start");
+        }
+        foldActions.computeFoldRegions(filePath, content);
+        if (fileOpenBenchmark.has(filePath)) {
+          fileOpenBenchmark.mark(filePath, "fold-done");
+        }
+      };
+
+      if ("requestIdleCallback" in window) {
+        const idleId = window.requestIdleCallback(computeFolds, { timeout: 500 });
+        return () => {
+          cancelled = true;
+          window.cancelIdleCallback(idleId);
+        };
       }
-      foldActions.computeFoldRegions(filePath, content);
-      if (fileOpenBenchmark.has(filePath)) {
-        fileOpenBenchmark.mark(filePath, "fold-done");
-      }
+
+      const timeoutId = globalThis.setTimeout(computeFolds, 0);
+      return () => {
+        cancelled = true;
+        globalThis.clearTimeout(timeoutId);
+      };
     }
   }, [filePath, content, foldActions, isActiveSurface, isPreviewMode]);
 
@@ -1540,6 +1559,17 @@ export function Editor({
             viewLayout={viewLayout}
           />
         )}
+        <DiagnosticLayer
+          filePath={filePath}
+          content={displayContent}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          lineHeight={lineHeight}
+          tabSize={tabSize}
+          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+          viewLayout={viewLayout}
+          foldMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
+        />
         {inlineEditState.inlineEditVisible && inlineEditState.popoverPosition && (
           <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
             <div
@@ -1783,7 +1813,6 @@ export function Editor({
               inset: 0,
               pointerEvents: "none",
               zIndex: 20,
-              padding: `var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom) var(--editor-padding-left)`,
             }}
           >
             <InlineDiff

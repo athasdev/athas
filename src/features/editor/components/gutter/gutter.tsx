@@ -2,7 +2,6 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { calculateTotalGutterWidth } from "../../utils/gutter";
-import { DiagnosticIndicators } from "./diagnostic-indicators";
 import { DebugBreakpointIndicators } from "@/features/debugger/components/debug-breakpoint-indicators";
 import { FoldIndicators } from "./fold-indicators";
 import { GitIndicators } from "./git-indicators";
@@ -297,16 +296,6 @@ function GutterComponent({
               fontSize={fontSize}
               fontFamily={fontFamily}
               onIndicatorClick={onGitIndicatorClick}
-              startLine={computedViewport.startLine}
-              endLine={computedViewport.endLine}
-              hiddenLines={accordionLineSet}
-            />
-
-            <DiagnosticIndicators
-              filePath={filePath}
-              lineHeight={lineHeight}
-              fontSize={fontSize}
-              fontFamily={fontFamily}
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
               hiddenLines={accordionLineSet}

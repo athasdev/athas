@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo } from "react";
 import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useFoldStore } from "../../stores/fold-store";
+import { GUTTER_CONFIG } from "../../utils/gutter";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;
@@ -119,7 +120,7 @@ function FoldIndicatorsComponent({
     <div
       style={{
         position: "relative",
-        width: "18px",
+        width: `${GUTTER_CONFIG.FOLD_LANE_WIDTH}px`,
       }}
     >
       {indicators}

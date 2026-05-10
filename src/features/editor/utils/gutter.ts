@@ -1,11 +1,10 @@
 export const GUTTER_CONFIG = {
-  DEBUG_LANE_WIDTH: 14,
-  GIT_LANE_WIDTH: 12,
-  DIAGNOSTIC_LANE_WIDTH: 14,
-  FOLD_LANE_WIDTH: 16,
-  LINE_NUMBER_PADDING: 16,
-  CHAR_WIDTH: 10,
-  MIN_LINE_NUMBER_WIDTH: 40,
+  DEBUG_LANE_WIDTH: 12,
+  GIT_LANE_WIDTH: 8,
+  FOLD_LANE_WIDTH: 14,
+  LINE_NUMBER_PADDING: 10,
+  CHAR_WIDTH: 8,
+  MIN_LINE_NUMBER_WIDTH: 34,
 } as const;
 
 export function calculateLineNumberWidth(totalLines: number): number {
@@ -21,7 +20,6 @@ export function calculateTotalGutterWidth(totalLines: number): number {
   return (
     GUTTER_CONFIG.DEBUG_LANE_WIDTH +
     GUTTER_CONFIG.GIT_LANE_WIDTH +
-    GUTTER_CONFIG.DIAGNOSTIC_LANE_WIDTH +
     lineNumberWidth +
     GUTTER_CONFIG.FOLD_LANE_WIDTH
   );

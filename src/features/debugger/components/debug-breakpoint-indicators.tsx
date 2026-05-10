@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { GUTTER_CONFIG } from "@/features/editor/utils/gutter";
 
 interface DebugBreakpointIndicatorsProps {
   filePath?: string;
@@ -79,7 +80,7 @@ function DebugBreakpointIndicatorsComponent({
     <div
       style={{
         position: "relative",
-        width: "14px",
+        width: `${GUTTER_CONFIG.DEBUG_LANE_WIDTH}px`,
         zIndex: 3,
       }}
     >

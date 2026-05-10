@@ -54,7 +54,6 @@ function FlowLineNumbersComponent({
   const lineNumberOffset =
     GUTTER_CONFIG.DEBUG_LANE_WIDTH +
     GUTTER_CONFIG.GIT_LANE_WIDTH +
-    GUTTER_CONFIG.DIAGNOSTIC_LANE_WIDTH +
     (isDiffAccordionBuffer ? 0 : GUTTER_CONFIG.FOLD_LANE_WIDTH);
 
   const visualCursorLine = useMemo(() => {
@@ -168,7 +167,7 @@ function FlowLineNumbersComponent({
               {!isDiffAccordionBuffer && (
                 <div
                   style={{
-                    width: `${GUTTER_CONFIG.GIT_LANE_WIDTH + GUTTER_CONFIG.DIAGNOSTIC_LANE_WIDTH}px`,
+                    width: `${GUTTER_CONFIG.GIT_LANE_WIDTH}px`,
                     flexShrink: 0,
                   }}
                 />

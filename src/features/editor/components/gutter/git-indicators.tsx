@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorDecorationsStore } from "../../stores/decorations-store";
 import type { Decoration } from "../../types/editor";
+import { GUTTER_CONFIG } from "../../utils/gutter";
 
 interface GitIndicatorsProps {
   lineHeight: number;
@@ -106,7 +107,7 @@ function GitIndicatorsComponent({
     <div
       style={{
         position: "relative",
-        width: "12px",
+        width: `${GUTTER_CONFIG.GIT_LANE_WIDTH}px`,
         zIndex: 2,
       }}
     >

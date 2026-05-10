@@ -72,7 +72,7 @@ function LineNumbersComponent({
             height: `${lineHeight}px`,
             lineHeight: `${lineHeight}px`,
             textAlign: "right",
-            paddingRight: "12px",
+            paddingRight: "8px",
             visibility: hiddenLines?.has(i) || !hasDisplayedLineNumber ? "hidden" : "visible",
             color: isActive
               ? "var(--text, #d4d4d4)"
