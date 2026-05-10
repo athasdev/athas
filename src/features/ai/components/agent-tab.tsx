@@ -12,10 +12,26 @@ interface AgentTabProps {
 export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   const buffers = useBufferStore.use.buffers();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const createNewChat = useAIChatStore((state) => state.createNewChat);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
+  const hasChat = useAIChatStore((state) =>
+    state.chats.some((chat) => chat.id === buffer.sessionId),
+  );
   const chatTitle = useAIChatStore(
     (state) => state.chats.find((chat) => chat.id === buffer.sessionId)?.title,
   );
   const activeBuffer = buffers.find((b) => b.id === buffer.id) ?? (buffer as PaneContent);
+
+  useEffect(() => {
+    if (hasChat) return;
+
+    const chatId = createNewChat(selectedAgentId);
+    updateBuffer({
+      ...buffer,
+      path: `agent://${chatId}`,
+      sessionId: chatId,
+    });
+  }, [buffer, createNewChat, hasChat, selectedAgentId, updateBuffer]);
 
   useEffect(() => {
     if (!chatTitle || chatTitle === buffer.name) return;

@@ -161,6 +161,38 @@ function getAcpToolTarget(event: Extract<AcpEvent, { type: "tool_start" | "tool_
   return undefined;
 }
 
+function parseStructuredErrorMessage(value: string): string | null {
+  const jsonStart = value.indexOf("{");
+  if (jsonStart < 0) return null;
+
+  try {
+    const parsed = JSON.parse(value.slice(jsonStart)) as {
+      error?: { message?: unknown };
+      message?: unknown;
+    };
+    const message = parsed.error?.message ?? parsed.message;
+    return typeof message === "string" && message.trim() ? message.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatStructuredTransportError(value: string): string | null {
+  const codeMatch = value.match(/error:\s*(\d+)/i);
+  const message = parseStructuredErrorMessage(value);
+  if (!codeMatch || !message) return null;
+
+  const code = codeMatch[1];
+  const title = code === "402" ? "Payment Required" : "Agent Error";
+
+  return `[ERROR_BLOCK]
+title: ${title}
+code: ${code}
+message: ${message}
+details: ${message}
+[/ERROR_BLOCK]`;
+}
+
 function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false) {
   switch (kind) {
     case "edit":
@@ -590,8 +622,9 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
+          const nextChunk = isAcp ? (formatStructuredTransportError(chunk) ?? chunk) : chunk;
           updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            content: (currentMessage?.content || "") + chunk,
+            content: (currentMessage?.content || "") + nextChunk,
           }));
           requestAnimationFrame(() => scrollToBottom());
         },
@@ -665,6 +698,12 @@ details: The agent session started, but no content, tool output, or resource was
             errorDetails = parts[1];
           }
 
+          const structuredErrorMessage = parseStructuredErrorMessage(errorDetails || mainError);
+          if (structuredErrorMessage) {
+            errorMessage = structuredErrorMessage;
+            errorDetails = structuredErrorMessage;
+          }
+
           const codeMatch = mainError.match(/error:\s*(\d+)/i);
           if (codeMatch) {
             errorCode = codeMatch[1];
@@ -678,6 +717,11 @@ details: The agent session started, but no content, tool output, or resource was
             } else if (errorCode === "403") {
               errorTitle = "Access Denied";
               errorMessage = "You don't have permission to access this resource.";
+            } else if (errorCode === "402") {
+              errorTitle = "Payment Required";
+              if (!structuredErrorMessage) {
+                errorMessage = "The selected agent requires paid credits before it can run.";
+              }
             } else if (errorCode === "500") {
               errorTitle = "Server Error";
               errorMessage = "The API server encountered an error. Please try again later.";
