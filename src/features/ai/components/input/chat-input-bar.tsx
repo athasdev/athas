@@ -28,6 +28,7 @@ import {
 import { useSettingsStore } from "@/features/settings/store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, isMac } from "@/utils/platform";
@@ -1251,321 +1252,316 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
 
   return (
-    <div
+    <SidebarFooter
       ref={aiChatContainerRef}
-      className="ai-chat-container relative z-20 bg-transparent px-3 pt-1.5 pb-1"
+      surface
+      attached={hasAttachedComposerDropdown}
+      data-ai-context-drop-target
+      onDragOver={handleContextDragOver}
+      onDragLeave={handleContextDragLeave}
+      onDrop={handleContextDrop}
+      className={cn(
+        "ai-chat-container relative z-20",
+        isContextDragOver && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
+      )}
     >
-      <div
-        data-ai-context-drop-target
-        onDragOver={handleContextDragOver}
-        onDragLeave={handleContextDragLeave}
-        onDrop={handleContextDrop}
-        className={cn(
-          "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-          hasAttachedComposerDropdown ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
-          isContextDragOver && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
-        )}
-      >
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]">
-          {pastedImages.length > 0 && (
-            <div className="flex flex-wrap gap-2 px-3 pt-3">
-              {pastedImages.map((image) => (
-                <div
-                  key={image.id}
-                  className="group relative overflow-hidden rounded border border-border bg-secondary-bg"
+      <SidebarComposerBody>
+        {pastedImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-3 pt-3">
+            {pastedImages.map((image) => (
+              <div
+                key={image.id}
+                className="group relative overflow-hidden rounded border border-border bg-secondary-bg"
+              >
+                <img
+                  src={image.dataUrl}
+                  alt={image.name}
+                  className="h-16 w-auto max-w-[120px] object-cover"
+                />
+                <Button
+                  onClick={() => removePastedImage(image.id)}
+                  variant="ghost"
+                  compact
+                  className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
+                  aria-label="Remove image"
                 >
-                  <img
-                    src={image.dataUrl}
-                    alt={image.name}
-                    className="h-16 w-auto max-w-[120px] object-cover"
-                  />
-                  <Button
-                    onClick={() => removePastedImage(image.id)}
-                    variant="ghost"
-                    compact
-                    className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
-                    aria-label="Remove image"
-                  >
-                    <X />
-                  </Button>
-                </div>
-              ))}
-            </div>
+                  <X />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div
+          ref={inputRef}
+          contentEditable={isInputEnabled}
+          onInput={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onMouseDown={handleEditableMouseDown}
+          onFocus={() => setIsComposerFocused(true)}
+          onBlur={() => setIsComposerFocused(false)}
+          onPaste={handlePaste}
+          data-placeholder={
+            isInputEnabled
+              ? hasSlashCommands
+                ? "Ask anything... (@ files, / commands)"
+                : "Ask anything... (@ to mention files)"
+              : "Configure API key to enable AI chat..."
+          }
+          className={cn(
+            "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
+            "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
+            "whitespace-pre-wrap focus:outline-none",
+            hasAttachedComposerDropdown && "border-none",
+            !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
+            "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
+          )}
+          style={
+            {
+              lineHeight: "1.4",
+              wordWrap: "break-word",
+              overflowWrap: "break-word",
+            } as React.CSSProperties
+          }
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Message input"
+          tabIndex={isInputEnabled ? 0 : -1}
+        />
+
+        <div className="flex items-end gap-2 px-2 pb-2 pt-1">
+          <div ref={contextDropdownRef} className="min-w-0 flex-1">
+            <ContextSelector
+              buffers={buffers}
+              selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
+              onToggleBuffer={toggleBufferSelection}
+              onToggleFile={toggleFileSelection}
+              isOpen={isContextDropdownOpen}
+              onToggleOpen={() => {
+                if (!isContextDropdownOpen) {
+                  closeInlineMenus();
+                }
+                setIsContextDropdownOpen(!isContextDropdownOpen);
+              }}
+              selectedItemsClassName="max-h-14 pr-1"
+            />
+          </div>
+
+          {queueCount > 0 && (
+            <Badge
+              size="sm"
+              className="shrink-0 gap-1 border border-accent/30 bg-accent/10 px-2.5 text-accent"
+            >
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+              <span>{queueCount}</span>
+            </Badge>
           )}
 
-          <div
-            ref={inputRef}
-            contentEditable={isInputEnabled}
-            onInput={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onMouseDown={handleEditableMouseDown}
-            onFocus={() => setIsComposerFocused(true)}
-            onBlur={() => setIsComposerFocused(false)}
-            onPaste={handlePaste}
-            data-placeholder={
-              isInputEnabled
-                ? hasSlashCommands
-                  ? "Ask anything... (@ files, / commands)"
-                  : "Ask anything... (@ to mention files)"
-                : "Configure API key to enable AI chat..."
-            }
-            className={cn(
-              "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
-              "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
-              "whitespace-pre-wrap focus:outline-none",
-              hasAttachedComposerDropdown && "border-none",
-              !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
-              "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
-            )}
-            style={
-              {
-                lineHeight: "1.4",
-                wordWrap: "break-word",
-                overflowWrap: "break-word",
-              } as React.CSSProperties
-            }
-            role="textbox"
-            aria-multiline="true"
-            aria-label="Message input"
-            tabIndex={isInputEnabled ? 0 : -1}
-          />
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+              onClick={toggleVoiceInput}
+              variant="ghost"
+              className={cn(
+                chatComposerIconButtonClassName(),
+                isListening && "bg-accent/10 text-accent hover:bg-accent/14 hover:text-accent",
+              )}
+              tooltip={
+                isMacDevSpeechRecognitionBlocked
+                  ? "Voice input is disabled in macOS dev mode"
+                  : !isSpeechRecognitionSupported
+                    ? "Voice input is not supported"
+                    : isListening
+                      ? interimTranscript || "Stop voice input"
+                      : "Start voice input"
+              }
+              aria-label={isListening ? "Stop voice input" : "Start voice input"}
+              aria-pressed={isListening}
+              compact
+            >
+              <Mic size={12} className={cn(isListening && "animate-pulse")} />
+            </Button>
 
-          <div className="flex items-end gap-2 px-2 pb-2 pt-1">
-            <div ref={contextDropdownRef} className="min-w-0 flex-1">
-              <ContextSelector
-                buffers={buffers}
-                selectedBufferIds={selectedBufferIds}
-                selectedFilesPaths={selectedFilesPaths}
-                onToggleBuffer={toggleBufferSelection}
-                onToggleFile={toggleFileSelection}
-                isOpen={isContextDropdownOpen}
-                onToggleOpen={() => {
-                  if (!isContextDropdownOpen) {
-                    closeInlineMenus();
-                  }
-                  setIsContextDropdownOpen(!isContextDropdownOpen);
-                }}
-                selectedItemsClassName="max-h-14 pr-1"
-              />
-            </div>
-
-            {queueCount > 0 && (
-              <Badge
-                size="sm"
-                className="shrink-0 gap-1 border border-accent/30 bg-accent/10 px-2.5 text-accent"
-              >
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-                <span>{queueCount}</span>
-              </Badge>
-            )}
-
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                type="button"
-                disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-                onClick={toggleVoiceInput}
-                variant="ghost"
-                className={cn(
-                  chatComposerIconButtonClassName(),
-                  isListening && "bg-accent/10 text-accent hover:bg-accent/14 hover:text-accent",
-                )}
-                tooltip={
-                  isMacDevSpeechRecognitionBlocked
-                    ? "Voice input is disabled in macOS dev mode"
-                    : !isSpeechRecognitionSupported
-                      ? "Voice input is not supported"
-                      : isListening
-                        ? interimTranscript || "Stop voice input"
-                        : "Start voice input"
-                }
-                aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                aria-pressed={isListening}
-                compact
-              >
-                <Mic size={12} className={cn(isListening && "animate-pulse")} />
-              </Button>
-
-              <Button
-                type="button"
-                disabled={isSendDisabled}
-                onClick={isStreaming ? onStopStreaming : handleSendMessage}
-                variant="ghost"
-                className={cn(
-                  chatComposerIconButtonClassName(),
-                  isSendDisabled
-                    ? "cursor-not-allowed bg-hover/40 text-text-lighter opacity-50"
-                    : isStreaming
-                      ? "bg-error/10 text-error hover:bg-error/15 hover:text-error"
-                      : (hasInputText || hasImages) && isInputEnabled
-                        ? "bg-accent text-white hover:bg-accent/85 hover:text-white"
-                        : "bg-hover/70 text-text-lighter hover:bg-hover hover:text-text",
-                )}
-                tooltip={
-                  isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
-                }
-                shortcut={isStreaming ? "escape" : "enter"}
-                aria-label={isStreaming ? "Stop generation" : "Send message"}
-              >
-                {isStreaming ? <Stop /> : <ArrowUp />}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              disabled={isSendDisabled}
+              onClick={isStreaming ? onStopStreaming : handleSendMessage}
+              variant="ghost"
+              className={cn(
+                chatComposerIconButtonClassName(),
+                isSendDisabled
+                  ? "cursor-not-allowed bg-hover/40 text-text-lighter opacity-50"
+                  : isStreaming
+                    ? "bg-error/10 text-error hover:bg-error/15 hover:text-error"
+                    : (hasInputText || hasImages) && isInputEnabled
+                      ? "bg-accent text-white hover:bg-accent/85 hover:text-white"
+                      : "bg-hover/70 text-text-lighter hover:bg-hover hover:text-text",
+              )}
+              tooltip={
+                isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
+              }
+              shortcut={isStreaming ? "escape" : "enter"}
+              aria-label={isStreaming ? "Stop generation" : "Send message"}
+            >
+              {isStreaming ? <Stop /> : <ArrowUp />}
+            </Button>
           </div>
         </div>
+      </SidebarComposerBody>
 
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
-          {isAcpMetadataLoading ? (
-            <ChatLoadingIndicator label="loading session" compact />
-          ) : (
-            <>
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                {acpInlineConfigOptions.map(({ option, category }) => {
-                  const controlId = `config:${option.id}`;
-                  return (
-                    <AcpConfigSelector
-                      key={option.id}
-                      option={option}
-                      onChange={(value) => void changeSessionConfigOption(option.id, value)}
-                      open={activeInlineControl === controlId}
-                      onOpenChange={(open) => {
-                        if (open) {
-                          closeInlineMenus();
-                          setActiveInlineControl(controlId);
-                          return;
-                        }
-                        setActiveInlineControl((current) =>
-                          current === controlId ? null : current,
-                        );
-                      }}
-                      className={category === "model" ? "max-w-[180px]" : "max-w-[132px]"}
-                      menuClassName="!min-w-0 w-max max-w-[240px]"
-                    />
-                  );
-                })}
-
-                {isCustomAgent && (
-                  <>
-                    <ProviderSelector
-                      providerId={aiProviderId}
-                      onChange={handleAthasProviderChange}
-                      appearance="composer"
-                      open={activeInlineControl === "provider"}
-                      onOpenChange={(open) => {
-                        if (open) {
-                          closeInlineMenus();
-                          setActiveInlineControl("provider");
-                          return;
-                        }
-                        setActiveInlineControl((current) =>
-                          current === "provider" ? null : current,
-                        );
-                      }}
-                      triggerClassName="max-w-[128px]"
-                      tooltip="Select provider"
-                    />
-                    <ModelSelector
-                      providerId={aiProviderId}
-                      modelId={aiModelId}
-                      onChange={handleAthasModelChange}
-                      appearance="composer"
-                      open={activeInlineControl === "model"}
-                      onOpenChange={(open) => {
-                        if (open) {
-                          closeInlineMenus();
-                          setActiveInlineControl("model");
-                          return;
-                        }
-                        setActiveInlineControl((current) => (current === "model" ? null : current));
-                      }}
-                      triggerClassName="max-w-[176px]"
-                      tooltip="Select model"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className={chatComposerIconButtonClassName()}
-                      tooltip="API keys"
-                      aria-label="Manage API keys"
-                      onClick={() => {
-                        closeInlineMenus();
-                        setIsApiKeyManagerOpen(true);
-                      }}
-                    >
-                      <Key />
-                    </Button>
-                  </>
-                )}
-
-                {(isCustomAgent || !hasAcpConfigModeOption) && (
-                  <ModeSelector
-                    open={activeInlineControl === "mode"}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
+        {isAcpMetadataLoading ? (
+          <ChatLoadingIndicator label="loading session" compact />
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              {acpInlineConfigOptions.map(({ option, category }) => {
+                const controlId = `config:${option.id}`;
+                return (
+                  <AcpConfigSelector
+                    key={option.id}
+                    option={option}
+                    onChange={(value) => void changeSessionConfigOption(option.id, value)}
+                    open={activeInlineControl === controlId}
                     onOpenChange={(open) => {
                       if (open) {
                         closeInlineMenus();
-                        setActiveInlineControl("mode");
+                        setActiveInlineControl(controlId);
                         return;
                       }
-                      setActiveInlineControl((current) => (current === "mode" ? null : current));
+                      setActiveInlineControl((current) => (current === controlId ? null : current));
                     }}
-                    iconOnly
+                    className={category === "model" ? "max-w-[180px]" : "max-w-[132px]"}
+                    menuClassName="!min-w-0 w-max max-w-[240px]"
                   />
-                )}
+                );
+              })}
 
-                {hasSlashCommands && (
-                  <Button
-                    onClick={() => {
-                      if (inputRef.current && isInputEnabled) {
-                        if (slashCommandState.active) {
-                          setActiveInlineControl(null);
-                          hideSlashCommands();
-                          return;
-                        }
+              {isCustomAgent && (
+                <>
+                  <ProviderSelector
+                    providerId={aiProviderId}
+                    onChange={handleAthasProviderChange}
+                    appearance="composer"
+                    open={activeInlineControl === "provider"}
+                    onOpenChange={(open) => {
+                      if (open) {
                         closeInlineMenus();
-                        inputRef.current.textContent = "/";
-                        setInput("/");
-                        setHasInputText(true);
-                        inputRef.current.focus();
-                        const selection = window.getSelection();
-                        if (selection) {
-                          const range = document.createRange();
-                          range.selectNodeContents(inputRef.current);
-                          range.collapse(false);
-                          selection.removeAllRanges();
-                          selection.addRange(range);
-                        }
-                        slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
-                        setActiveInlineControl("commands");
-                        showSlashCommands(getSlashDropdownPosition(), "");
+                        setActiveInlineControl("provider");
+                        return;
                       }
+                      setActiveInlineControl((current) =>
+                        current === "provider" ? null : current,
+                      );
                     }}
+                    triggerClassName="max-w-[128px]"
+                    tooltip="Select provider"
+                  />
+                  <ModelSelector
+                    providerId={aiProviderId}
+                    modelId={aiModelId}
+                    onChange={handleAthasModelChange}
+                    appearance="composer"
+                    open={activeInlineControl === "model"}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        closeInlineMenus();
+                        setActiveInlineControl("model");
+                        return;
+                      }
+                      setActiveInlineControl((current) => (current === "model" ? null : current));
+                    }}
+                    triggerClassName="max-w-[176px]"
+                    tooltip="Select model"
+                  />
+                  <Button
+                    type="button"
                     variant="ghost"
-                    compact
-                    active={slashCommandState.active}
                     className={chatComposerIconButtonClassName()}
-                    tooltip="Show slash commands"
-                    aria-label="Show slash commands"
+                    tooltip="API keys"
+                    aria-label="Manage API keys"
+                    onClick={() => {
+                      closeInlineMenus();
+                      setIsApiKeyManagerOpen(true);
+                    }}
                   >
-                    <CommandIcon size={12} />
+                    <Key />
                   </Button>
-                )}
-              </div>
+                </>
+              )}
 
-              <Button
-                type="button"
-                onClick={() => {
-                  closeInlineMenus();
-                  setIsSkillsOpen(true);
-                }}
-                variant="ghost"
-                compact
-                className={chatComposerIconButtonClassName("ml-auto shrink-0")}
-                tooltip="Skills"
-                aria-label="Skills"
-              >
-                <BookOpen />
-              </Button>
-            </>
-          )}
-        </div>
+              {(isCustomAgent || !hasAcpConfigModeOption) && (
+                <ModeSelector
+                  open={activeInlineControl === "mode"}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      closeInlineMenus();
+                      setActiveInlineControl("mode");
+                      return;
+                    }
+                    setActiveInlineControl((current) => (current === "mode" ? null : current));
+                  }}
+                  iconOnly
+                />
+              )}
+
+              {hasSlashCommands && (
+                <Button
+                  onClick={() => {
+                    if (inputRef.current && isInputEnabled) {
+                      if (slashCommandState.active) {
+                        setActiveInlineControl(null);
+                        hideSlashCommands();
+                        return;
+                      }
+                      closeInlineMenus();
+                      inputRef.current.textContent = "/";
+                      setInput("/");
+                      setHasInputText(true);
+                      inputRef.current.focus();
+                      const selection = window.getSelection();
+                      if (selection) {
+                        const range = document.createRange();
+                        range.selectNodeContents(inputRef.current);
+                        range.collapse(false);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
+                      slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
+                      setActiveInlineControl("commands");
+                      showSlashCommands(getSlashDropdownPosition(), "");
+                    }
+                  }}
+                  variant="ghost"
+                  compact
+                  active={slashCommandState.active}
+                  className={chatComposerIconButtonClassName()}
+                  tooltip="Show slash commands"
+                  aria-label="Show slash commands"
+                >
+                  <CommandIcon size={12} />
+                </Button>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => {
+                closeInlineMenus();
+                setIsSkillsOpen(true);
+              }}
+              variant="ghost"
+              compact
+              className={chatComposerIconButtonClassName("ml-auto shrink-0")}
+              tooltip="Skills"
+              aria-label="Skills"
+            >
+              <BookOpen />
+            </Button>
+          </>
+        )}
       </div>
 
       {(isActiveSurface || isComposerFocused) && mentionState.active && (
@@ -1593,7 +1589,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         onClose={() => setIsApiKeyManagerOpen(false)}
         initialProviderId={aiProviderId}
       />
-    </div>
+    </SidebarFooter>
   );
 });
 

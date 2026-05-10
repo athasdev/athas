@@ -8,6 +8,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { SidebarEmptyActionState } from "@/ui/sidebar";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -592,10 +593,12 @@ const GitStatusPanel = ({
       ) : null}
 
       {collapseEmptyGitSections && !hasFiles && (
-        <div className="ui-text-sm mx-1 flex items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/55 px-3 py-2 text-text-lighter">
-          <Check className="text-success" />
-          <span className="italic">Working tree clean</span>
-        </div>
+        <SidebarEmptyActionState
+          className="mx-1 min-h-24"
+          icon={<Check />}
+          message="Working tree clean"
+          tone="success"
+        />
       )}
 
       <ContextMenu

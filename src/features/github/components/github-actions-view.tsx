@@ -19,7 +19,7 @@ import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { WorkflowRunListItem } from "../types/github";
 import { GITHUB_ACTION_LIST_TTL_MS, githubActionListCache } from "../utils/github-data-cache";
-import { Button } from "@/ui/button";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
@@ -29,7 +29,7 @@ interface WorkflowRunRowProps {
 }
 
 const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunRowProps) => (
-  <Button
+  <SidebarListItem
     onClick={onSelect}
     draggable
     onDragStart={(event) => {
@@ -43,14 +43,14 @@ const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunR
         name: title,
       });
     }}
-    variant="ghost"
-    compact
     active={isActive}
-    className="h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing"
+    className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
+    leading={
+      <div className="grid size-5 place-content-center rounded-full bg-secondary-bg text-text-lighter">
+        <Activity className="size-3.5" />
+      </div>
+    }
   >
-    <div className="grid size-5 shrink-0 place-content-center rounded-full bg-secondary-bg text-text-lighter">
-      <Activity className="size-3.5" />
-    </div>
     <div className="min-w-0 flex-1">
       <div className="ui-text-sm truncate leading-4 text-text">
         {run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`}
@@ -65,7 +65,7 @@ const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunR
           .join(" · ")}
       </div>
     </div>
-  </Button>
+  </SidebarListItem>
 ));
 
 WorkflowRunRow.displayName = "WorkflowRunRow";
@@ -196,8 +196,8 @@ const GitHubActionsView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubAc
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-1 mb-1 mt-1" />
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
         {error ? (
           <GitHubSidebarState
             icon={<AlertCircle className="size-4" />}
@@ -212,7 +212,7 @@ const GitHubActionsView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubAc
             title="No matching workflow runs"
           />
         ) : (
-          <div className="space-y-1 overflow-x-hidden">
+          <div className="space-y-px overflow-x-hidden">
             {filteredRuns.map((run) => (
               <WorkflowRunRow
                 key={run.databaseId}

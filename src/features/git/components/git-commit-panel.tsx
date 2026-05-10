@@ -12,6 +12,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { SidebarComposerBody } from "@/ui/sidebar";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { toast } from "@/ui/toast";
@@ -374,8 +375,8 @@ const GitCommitPanel = ({
   ];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1">
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]">
+    <>
+      <SidebarComposerBody>
         {error && (
           <div
             className={cn(
@@ -403,7 +404,7 @@ const GitCommitPanel = ({
           rows={2}
           disabled={isCommitting}
         />
-      </div>
+      </SidebarComposerBody>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -511,7 +512,7 @@ const GitCommitPanel = ({
           </Button>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

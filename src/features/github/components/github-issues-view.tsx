@@ -22,8 +22,7 @@ import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
 import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
-import { Button } from "@/ui/button";
-import { cn } from "@/utils/cn";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface IssueListItemProps {
   issue: IssueListItem;
@@ -33,7 +32,7 @@ interface IssueListItemProps {
 }
 
 const IssueRow = memo(({ issue, isActive, onSelect, repoPath }: IssueListItemProps) => (
-  <Button
+  <SidebarListItem
     onClick={onSelect}
     draggable
     onDragStart={(event) => {
@@ -49,27 +48,25 @@ const IssueRow = memo(({ issue, isActive, onSelect, repoPath }: IssueListItemPro
         name: `Issue #${issue.number}`,
       });
     }}
-    variant="ghost"
-    compact
     active={isActive}
-    className={cn(
-      "h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing",
-    )}
+    className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
+    leading={
+      <img
+        src={
+          issue.author.avatarUrl ||
+          `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=40`
+        }
+        alt={issue.author.login}
+        className="size-5 rounded-full bg-secondary-bg"
+        loading="lazy"
+      />
+    }
   >
-    <img
-      src={
-        issue.author.avatarUrl ||
-        `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=40`
-      }
-      alt={issue.author.login}
-      className="size-5 shrink-0 self-start rounded-full bg-secondary-bg"
-      loading="lazy"
-    />
     <div className="min-w-0 flex-1">
       <div className="ui-text-sm truncate leading-4 text-text">{issue.title}</div>
       <div className="ui-text-sm mt-1 text-text-lighter">{`#${issue.number} by ${issue.author.login}`}</div>
     </div>
-  </Button>
+  </SidebarListItem>
 ));
 
 IssueRow.displayName = "IssueRow";
@@ -196,8 +193,8 @@ const GitHubIssuesView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubIss
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-1 mb-1 mt-1" />
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
         {error ? (
           <GitHubSidebarState
             icon={<AlertCircle className="size-4" />}
@@ -212,7 +209,7 @@ const GitHubIssuesView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubIss
             title="No matching issues"
           />
         ) : (
-          <div className="space-y-1 overflow-x-hidden">
+          <div className="space-y-px overflow-x-hidden">
             {filteredIssues.map((issue) => (
               <IssueRow
                 key={issue.number}
