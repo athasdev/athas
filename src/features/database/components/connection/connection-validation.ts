@@ -8,7 +8,6 @@ const CONNECTION_DB_TYPES: DatabaseType[] = [
   "mongodb",
   "redis",
 ];
-const DATABASE_SIDECAR_PROTOCOL_VERSION = 1;
 
 export interface DatabaseExtensionAvailability {
   isInstalled?: boolean;
@@ -27,28 +26,9 @@ export interface ConnectionValidationInput {
 }
 
 export function getInstalledDatabaseTypes(
-  availableExtensions: Map<string, DatabaseExtensionAvailability>,
+  _availableExtensions: Map<string, DatabaseExtensionAvailability>,
 ): DatabaseType[] {
-  const installedTypes = new Set<DatabaseType>();
-
-  for (const extension of availableExtensions.values()) {
-    if (!extension.isInstalled) {
-      continue;
-    }
-
-    for (const provider of extension.manifest.databaseProviders ?? []) {
-      if (provider.protocolVersion !== DATABASE_SIDECAR_PROTOCOL_VERSION) {
-        continue;
-      }
-
-      const providerId = provider.id.trim() as DatabaseType;
-      if (CONNECTION_DB_TYPES.includes(providerId)) {
-        installedTypes.add(providerId);
-      }
-    }
-  }
-
-  return CONNECTION_DB_TYPES.filter((type) => installedTypes.has(type));
+  return CONNECTION_DB_TYPES;
 }
 
 export function validateConnectionInput(input: ConnectionValidationInput): string | null {

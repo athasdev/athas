@@ -7,6 +7,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
@@ -27,6 +28,7 @@ interface ConnectionDialogProps {
 
 export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
   const { actions } = useConnectionStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const [mode, setMode] = useState<"form" | "string">("form");
   const [dbType, setDbType] = useState<DatabaseType>("sqlite");
@@ -112,11 +114,13 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       dbType,
       mode,
       name,
+      filePath,
       host,
       port,
       database,
       username,
       connectionString,
+      workspacePath: rootFolderPath,
     });
 
   const handleBrowseDatabaseFile = async () => {
@@ -180,8 +184,11 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     setError(null);
     try {
       if (isFileBased) {
-        const bufferName = name.trim() || filePath.split("/").pop() || provider.label;
-        useBufferStore.getState().actions.openDatabaseBuffer(filePath, bufferName, dbType);
+        const config = buildConfig();
+        await actions.saveConnection(config);
+        useBufferStore
+          .getState()
+          .actions.openDatabaseBuffer(config.file_path ?? filePath, config.name, dbType);
         onClose();
         return;
       }

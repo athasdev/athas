@@ -1118,10 +1118,12 @@ const paneCommands: Command[] = [
 const databaseCommands: Command[] = [
   {
     id: "database.connect",
-    title: "Connect to Database",
+    title: "Show Databases",
     category: "Database",
     execute: () => {
-      useUIState.getState().setIsDatabaseConnectionVisible(true);
+      const state = useUIState.getState();
+      state.setActiveRightSidebarView("databases");
+      state.setIsRightSidebarVisible(true);
     },
   },
 ];

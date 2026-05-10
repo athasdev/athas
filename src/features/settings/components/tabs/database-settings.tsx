@@ -39,12 +39,9 @@ export const DatabaseSettings = () => {
     <div className="space-y-4">
       <Section
         title="Connections"
-        description="Manage saved database connections for network databases."
+        description="Manage saved database connections for the current workspace."
       >
-        <SettingRow
-          label="New Connection"
-          description="Open the database connection dialog to add a new saved connection or open a SQLite file."
-        >
+        <SettingRow label="New Connection" description="Add a database to this workspace.">
           <Button
             onClick={() => setIsDatabaseConnectionVisible(true)}
             variant="default"
@@ -59,7 +56,7 @@ export const DatabaseSettings = () => {
 
       <Section
         title="Saved Connections"
-        description="SQLite files open directly and are not stored here. Saved entries are used for PostgreSQL, MySQL, MongoDB, and Redis."
+        description="Saved entries are scoped to the workspace they were added from."
       >
         {isLoadingSaved ? (
           <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
@@ -85,8 +82,9 @@ export const DatabaseSettings = () => {
                     </Badge>
                   </div>
                   <div className="ui-font ui-text-sm mt-1 truncate text-text-lighter">
-                    {connection.host}:{connection.port}
-                    {connection.database ? ` / ${connection.database}` : ""}
+                    {connection.file_path
+                      ? connection.file_path
+                      : `${connection.host}:${connection.port}${connection.database ? ` / ${connection.database}` : ""}`}
                   </div>
                 </div>
                 <Button

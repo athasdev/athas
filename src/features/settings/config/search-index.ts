@@ -427,7 +427,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Connections",
     label: "New Connection",
     description:
-      "Open the database connection dialog to connect to SQLite, PostgreSQL, MySQL, MongoDB, or Redis",
+      "Open workspace database connections for SQLite, DuckDB, PostgreSQL, MySQL, MongoDB, or Redis",
     keywords: [
       "database",
       "connection",
@@ -444,7 +444,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "databases",
     section: "Connections",
     label: "Saved Connections",
-    description: "Manage saved network database connections",
+    description: "Manage saved workspace database connections",
     keywords: [
       "database",
       "saved",

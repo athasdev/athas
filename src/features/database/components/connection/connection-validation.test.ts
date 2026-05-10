@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { getInstalledDatabaseTypes, validateConnectionInput } from "./connection-validation";
 
 describe("database connection validation", () => {
-  it("returns installed database provider types in registry order", () => {
+  it("returns built-in database provider types in registry order", () => {
     const extensions = new Map([
       [
         "athas.database.redis",
@@ -27,10 +27,17 @@ describe("database connection validation", () => {
       ],
     ]);
 
-    expect(getInstalledDatabaseTypes(extensions)).toEqual(["postgres", "redis"]);
+    expect(getInstalledDatabaseTypes(extensions)).toEqual([
+      "sqlite",
+      "duckdb",
+      "postgres",
+      "mysql",
+      "mongodb",
+      "redis",
+    ]);
   });
 
-  it("ignores installed database providers with unsupported sidecar protocols", () => {
+  it("does not hide built-in providers when extension metadata is incomplete", () => {
     const extensions = new Map([
       [
         "athas.database.sqlite",
@@ -55,7 +62,14 @@ describe("database connection validation", () => {
       ],
     ]);
 
-    expect(getInstalledDatabaseTypes(extensions)).toEqual(["redis"]);
+    expect(getInstalledDatabaseTypes(extensions)).toEqual([
+      "sqlite",
+      "duckdb",
+      "postgres",
+      "mysql",
+      "mongodb",
+      "redis",
+    ]);
   });
 
   it("requires a file path for file-based providers", () => {

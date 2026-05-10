@@ -289,7 +289,7 @@ const CustomMenuBar = ({
       ),
       Tools: (
         <Menu aria-label="Tools">
-          <MenuItem onClick={() => handleCommand("database.connect")}>Connect to Database</MenuItem>
+          <MenuItem onClick={() => handleCommand("database.connect")}>Databases</MenuItem>
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_open_settings")}>Preferences</MenuItem>
           <MenuItem onClick={() => handleClickEmit("menu_open_extensions")}>Extensions</MenuItem>

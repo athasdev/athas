@@ -14,6 +14,7 @@ describe("database connection config", () => {
           database: "  app  ",
           username: "  admin  ",
           connectionString: "postgres://ignored",
+          filePath: "",
         },
         "pg-prod",
       ),
@@ -41,6 +42,7 @@ describe("database connection config", () => {
           database: "app",
           username: "root",
           connectionString: "  mysql://root@localhost/app  ",
+          filePath: "",
         },
         "mysql-local",
       ),
@@ -66,6 +68,7 @@ describe("database connection config", () => {
           database: "app",
           username: "admin",
           connectionString: "",
+          filePath: "",
         },
         "   ",
       ),
@@ -87,12 +90,44 @@ describe("database connection config", () => {
           database: "app",
           username: "admin",
           connectionString: "",
+          filePath: "",
         },
         "pg-local",
       ),
     ).toMatchObject({
       id: "pg-local",
       port: 5432,
+    });
+  });
+
+  it("keeps file database connections scoped to the workspace", () => {
+    expect(
+      buildSavedConnectionConfig(
+        {
+          dbType: "sqlite",
+          mode: "form",
+          name: "  Local data  ",
+          host: "",
+          port: 0,
+          database: "",
+          username: "",
+          connectionString: "",
+          filePath: "  /workspace/data.sqlite  ",
+          workspacePath: "  /workspace  ",
+        },
+        "sqlite-local",
+      ),
+    ).toEqual({
+      id: "sqlite-local",
+      name: "Local data",
+      db_type: "sqlite",
+      workspace_path: "/workspace",
+      file_path: "/workspace/data.sqlite",
+      host: "",
+      port: 0,
+      database: "",
+      username: "",
+      connection_string: undefined,
     });
   });
 });

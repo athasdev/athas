@@ -293,9 +293,6 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
   },
 
-  // Database
-  { key: "cmd+shift+d", command: "database.connect", source: "default" },
-
   // Window Operations
   { key: "F11", command: "window.toggleFullscreen", source: "default" },
   {

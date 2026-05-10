@@ -7,6 +7,8 @@ pub struct SavedConnection {
    pub id: String,
    pub name: String,
    pub db_type: String,
+   pub workspace_path: Option<String>,
+   pub file_path: Option<String>,
    pub host: String,
    pub port: u16,
    pub database: String,

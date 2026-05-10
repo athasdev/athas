@@ -3,23 +3,23 @@ import type { Action } from "../models/action.types";
 
 interface DatabaseActionsParams {
   onClose: () => void;
-  setIsDatabaseConnectionVisible: (v: boolean) => void;
+  openDatabaseSidebar: () => void;
 }
 
 export const createDatabaseActions = (params: DatabaseActionsParams): Action[] => {
-  const { onClose, setIsDatabaseConnectionVisible } = params;
+  const { onClose, openDatabaseSidebar } = params;
 
   return [
     {
       id: "database-connect",
-      label: "Database: Connect to Database",
-      description: "Open database connection dialog",
+      label: "Database: Show Databases",
+      description: "Open workspace database connections",
       icon: <Database />,
       category: "Database",
       commandId: "database.connect",
       action: () => {
         onClose();
-        setIsDatabaseConnectionVisible(true);
+        openDatabaseSidebar();
       },
     },
   ];

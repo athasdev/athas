@@ -4,11 +4,14 @@ import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { formatDatabaseError, normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../models/provider.types";
+import { PROVIDER_REGISTRY } from "../providers/provider-registry";
 
 export interface SavedConnection {
   id: string;
   name: string;
   db_type: DatabaseType;
+  workspace_path?: string;
+  file_path?: string;
   host: string;
   port: number;
   database: string;
@@ -49,7 +52,9 @@ interface ConnectionActions {
 const activeConnectRequests = new Map<string, number>();
 let nextConnectRequestId = 0;
 let savedConnectionsRequestId = 0;
-const SAVED_CONNECTION_DB_TYPES = new Set<DatabaseType>(["postgres", "mysql", "mongodb", "redis"]);
+const SAVED_CONNECTION_DB_TYPES = new Set<DatabaseType>(
+  Object.keys(PROVIDER_REGISTRY) as DatabaseType[],
+);
 
 function startConnectRequest(connectionId: string) {
   const requestId = ++nextConnectRequestId;
@@ -84,7 +89,38 @@ function normalizeSavedConnection(value: unknown): SavedConnection | null {
   if (
     typeof candidate.id !== "string" ||
     typeof candidate.name !== "string" ||
-    typeof candidate.db_type !== "string" ||
+    typeof candidate.db_type !== "string"
+  ) {
+    return null;
+  }
+
+  const id = candidate.id.trim();
+  const name = candidate.name.trim();
+  const dbType = candidate.db_type.trim() as DatabaseType;
+  if (!id || !name || !SAVED_CONNECTION_DB_TYPES.has(dbType)) return null;
+
+  const provider = PROVIDER_REGISTRY[dbType];
+  const filePath = typeof candidate.file_path === "string" ? candidate.file_path.trim() : "";
+  const workspacePath =
+    typeof candidate.workspace_path === "string" ? candidate.workspace_path.trim() : "";
+
+  if (provider.isFileBased) {
+    if (!filePath) return null;
+    return {
+      id,
+      name,
+      db_type: dbType,
+      ...(workspacePath ? { workspace_path: workspacePath } : {}),
+      file_path: filePath,
+      host: "",
+      port: 0,
+      database: "",
+      username: "",
+      connection_string: undefined,
+    };
+  }
+
+  if (
     typeof candidate.host !== "string" ||
     typeof candidate.database !== "string" ||
     typeof candidate.username !== "string" ||
@@ -96,11 +132,6 @@ function normalizeSavedConnection(value: unknown): SavedConnection | null {
     return null;
   }
 
-  const id = candidate.id.trim();
-  const name = candidate.name.trim();
-  const dbType = candidate.db_type.trim() as DatabaseType;
-  if (!id || !name || !SAVED_CONNECTION_DB_TYPES.has(dbType)) return null;
-
   const connectionString =
     typeof candidate.connection_string === "string" ? candidate.connection_string.trim() : "";
   const host = candidate.host.trim();
@@ -110,6 +141,7 @@ function normalizeSavedConnection(value: unknown): SavedConnection | null {
     id,
     name,
     db_type: dbType,
+    ...(workspacePath ? { workspace_path: workspacePath } : {}),
     host,
     port,
     database: candidate.database.trim(),
@@ -151,6 +183,19 @@ function normalizeConnectionId(connectionId: string): string {
 
 function normalizeCredentialResult(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function toConnectionCommandConfig(connection: SavedConnection) {
+  return {
+    id: connection.id,
+    name: connection.name,
+    db_type: connection.db_type,
+    host: connection.host,
+    port: connection.port,
+    database: connection.database,
+    username: connection.username,
+    connection_string: connection.connection_string ?? null,
+  };
 }
 
 const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionActions }>()(
@@ -204,16 +249,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
 
         try {
           await invoke("connect_database", {
-            config: {
-              id: normalizedConfig.id,
-              name: normalizedConfig.name,
-              db_type: normalizedConfig.db_type,
-              host: normalizedConfig.host,
-              port: normalizedConfig.port,
-              database: normalizedConfig.database,
-              username: normalizedConfig.username,
-              connection_string: normalizedConfig.connection_string ?? null,
-            },
+            config: toConnectionCommandConfig(normalizedConfig),
             password: password ?? null,
           });
 
@@ -333,16 +369,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
         try {
           const normalizedConfig = normalizeConnectionConfig(config);
           await invoke("test_connection", {
-            config: {
-              id: normalizedConfig.id,
-              name: normalizedConfig.name,
-              db_type: normalizedConfig.db_type,
-              host: normalizedConfig.host,
-              port: normalizedConfig.port,
-              database: normalizedConfig.database,
-              username: normalizedConfig.username,
-              connection_string: normalizedConfig.connection_string ?? null,
-            },
+            config: toConnectionCommandConfig(normalizedConfig),
             password: password ?? null,
           });
           return { ok: true };

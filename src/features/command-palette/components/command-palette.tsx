@@ -69,9 +69,10 @@ const CommandPalette = () => {
     isFindVisible,
     setIsFindVisible,
     setActiveView,
+    setActiveRightSidebarView,
     setIsQuickOpenVisible,
     openCommandPaletteView,
-    setIsDatabaseConnectionVisible,
+    setIsRightSidebarVisible,
     openSettingsDialog,
   } = useUIState();
   const { openQuickEdit } = useEditorAppStore.use.actions();
@@ -257,7 +258,10 @@ const CommandPalette = () => {
     }),
     ...createDatabaseActions({
       onClose,
-      setIsDatabaseConnectionVisible,
+      openDatabaseSidebar: () => {
+        setActiveRightSidebarView("databases");
+        setIsRightSidebarVisible(true);
+      },
     }),
     ...createAdvancedActions({
       lspStatus,
