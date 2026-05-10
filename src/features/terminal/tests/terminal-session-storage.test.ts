@@ -93,14 +93,14 @@ describe("terminal session storage", () => {
     ).toEqual([persistedTerminal("terminal-a", "A"), persistedTerminal("terminal-b", "B")]);
   });
 
-  it("prefers project session terminals over storage fallback", () => {
+  it("prefers project session terminals when that snapshot has terminals", () => {
     expect(
       buildTerminalRestorePayload({
-        projectSessionTerminals: [],
+        projectSessionTerminals: [persistedTerminal("session")],
         storageTerminals: [persistedTerminal("stale-storage")],
         preferProjectSession: true,
       }),
-    ).toEqual([]);
+    ).toEqual([persistedTerminal("session")]);
 
     expect(
       buildTerminalRestorePayload({
@@ -109,5 +109,15 @@ describe("terminal session storage", () => {
         preferProjectSession: false,
       }),
     ).toEqual([persistedTerminal("storage")]);
+  });
+
+  it("falls back to workspace storage when an older project session has no terminals", () => {
+    expect(
+      buildTerminalRestorePayload({
+        projectSessionTerminals: [],
+        storageTerminals: [persistedTerminal("storage-terminal")],
+        preferProjectSession: true,
+      }),
+    ).toEqual([persistedTerminal("storage-terminal")]);
   });
 });

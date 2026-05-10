@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
+import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import {
@@ -7,12 +7,13 @@ import {
   buildPaneLayoutFromSession,
 } from "../stores/workspace-pane-session";
 
-const editorBuffer = (id: string, path: string) =>
+const editorBuffer = (id: string, path: string, isActive = false) =>
   ({
     id,
     path,
     type: "editor",
     isVirtual: false,
+    isActive,
   }) as PaneContent;
 
 describe("workspace UI pane session helpers", () => {
@@ -185,6 +186,49 @@ describe("workspace UI pane session helpers", () => {
       type: "group",
       bufferIds: ["new-buffer-a"],
       activeBufferId: "new-buffer-a",
+    });
+  });
+
+  it("keeps restored buffers visible when a legacy session has no pane state", () => {
+    const layout = buildPaneLayoutFromSession(null, [
+      editorBuffer("buffer-a", "/workspace/a.ts"),
+      editorBuffer("buffer-b", "/workspace/b.ts", true),
+    ]);
+
+    expect(layout.root).toMatchObject({
+      id: ROOT_PANE_ID,
+      type: "group",
+      bufferIds: ["buffer-b", "buffer-a"],
+      activeBufferId: "buffer-b",
+    });
+  });
+
+  it("attaches restored buffers that are missing from stale pane state", () => {
+    const layout = buildPaneLayoutFromSession(
+      {
+        root: {
+          id: ROOT_PANE_ID,
+          type: "group",
+          bufferPaths: ["/workspace/a.ts"],
+          activeBufferPath: "/workspace/a.ts",
+        },
+        bottomRoot: {
+          id: BOTTOM_PANE_ID,
+          type: "group",
+          bufferPaths: [],
+          activeBufferPath: null,
+        },
+        activePaneId: ROOT_PANE_ID,
+        fullscreenPaneId: null,
+      },
+      [editorBuffer("buffer-a", "/workspace/a.ts"), editorBuffer("buffer-b", "/workspace/b.ts")],
+    );
+
+    expect(layout.root).toMatchObject({
+      id: ROOT_PANE_ID,
+      type: "group",
+      bufferIds: ["buffer-a", "buffer-b"],
+      activeBufferId: "buffer-a",
     });
   });
 });

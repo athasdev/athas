@@ -2,6 +2,7 @@ import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import type { PaneLayoutSnapshot } from "@/features/panes/stores/pane-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import type { PaneGroup, PaneNode, PaneSplit } from "@/features/panes/types/pane";
+import { findPaneGroup, getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import type {
   ProjectPaneSession,
   ProjectPaneSessionNode,
@@ -134,6 +135,76 @@ const hydratePaneNode = (
   };
 };
 
+const addBuffersToPaneNode = (
+  node: PaneNode,
+  paneId: string,
+  bufferIds: string[],
+  setActiveWhenEmpty: boolean,
+): PaneNode => {
+  if (node.type === "split") {
+    return {
+      ...node,
+      children: [
+        addBuffersToPaneNode(node.children[0], paneId, bufferIds, setActiveWhenEmpty),
+        addBuffersToPaneNode(node.children[1], paneId, bufferIds, setActiveWhenEmpty),
+      ],
+    };
+  }
+
+  if (node.id !== paneId) {
+    return node;
+  }
+
+  const nextBufferIds = unique([...node.bufferIds, ...bufferIds]);
+  const shouldSetActive = setActiveWhenEmpty && !node.activeBufferId && node.bufferIds.length === 0;
+  const activeBufferId = shouldSetActive ? (bufferIds[0] ?? null) : node.activeBufferId;
+
+  return {
+    ...node,
+    bufferIds: nextBufferIds,
+    activeBufferId,
+    mruBufferIds: unique([
+      ...(activeBufferId ? [activeBufferId] : []),
+      ...(node.mruBufferIds ?? []),
+      ...nextBufferIds,
+    ]).filter((bufferId) => nextBufferIds.includes(bufferId)),
+  };
+};
+
+const attachMissingBuffersToLayout = (
+  layout: PaneLayoutSnapshot,
+  buffers: PaneContent[],
+): PaneLayoutSnapshot => {
+  const persistableBufferIds = buffers.filter(isPersistablePaneBuffer).map((buffer) => buffer.id);
+  if (persistableBufferIds.length === 0) {
+    return layout;
+  }
+
+  const paneBufferIds = new Set(
+    [...getAllPaneGroups(layout.root), ...getAllPaneGroups(layout.bottomRoot)].flatMap(
+      (pane) => pane.bufferIds,
+    ),
+  );
+  const missingBufferIds = persistableBufferIds.filter((bufferId) => !paneBufferIds.has(bufferId));
+  if (missingBufferIds.length === 0) {
+    return layout;
+  }
+
+  const activeBufferId = buffers.find((buffer) => buffer.isActive)?.id;
+  const orderedMissingBufferIds =
+    activeBufferId && missingBufferIds.includes(activeBufferId)
+      ? [activeBufferId, ...missingBufferIds.filter((bufferId) => bufferId !== activeBufferId)]
+      : missingBufferIds;
+  const targetPaneId = findPaneGroup(layout.root, layout.activePaneId)
+    ? layout.activePaneId
+    : ROOT_PANE_ID;
+
+  return {
+    ...layout,
+    root: addBuffersToPaneNode(layout.root, targetPaneId, orderedMissingBufferIds, true),
+  };
+};
+
 export const buildCurrentProjectPaneSession = (
   layout: PaneLayoutSnapshot,
   buffers: PaneContent[],
@@ -156,24 +227,30 @@ export const buildPaneLayoutFromSession = (
   buffers: PaneContent[],
 ): PaneLayoutSnapshot => {
   if (!paneState) {
-    return {
-      root: createEmptyPaneNode(ROOT_PANE_ID),
-      bottomRoot: createEmptyPaneNode(BOTTOM_PANE_ID),
-      activePaneId: ROOT_PANE_ID,
-      mostRecentActivePaneIds: [ROOT_PANE_ID],
-      fullscreenPaneId: null,
-    };
+    return attachMissingBuffersToLayout(
+      {
+        root: createEmptyPaneNode(ROOT_PANE_ID),
+        bottomRoot: createEmptyPaneNode(BOTTOM_PANE_ID),
+        activePaneId: ROOT_PANE_ID,
+        mostRecentActivePaneIds: [ROOT_PANE_ID],
+        fullscreenPaneId: null,
+      },
+      buffers,
+    );
   }
 
   const bufferIdByPath = new Map(
     buffers.filter(isPersistablePaneBuffer).map((buffer) => [buffer.path, buffer.id] as const),
   );
 
-  return {
-    root: hydratePaneNode(paneState.root, bufferIdByPath),
-    bottomRoot: hydratePaneNode(paneState.bottomRoot, bufferIdByPath),
-    activePaneId: paneState.activePaneId,
-    mostRecentActivePaneIds: paneState.mostRecentActivePaneIds,
-    fullscreenPaneId: paneState.fullscreenPaneId,
-  };
+  return attachMissingBuffersToLayout(
+    {
+      root: hydratePaneNode(paneState.root, bufferIdByPath),
+      bottomRoot: hydratePaneNode(paneState.bottomRoot, bufferIdByPath),
+      activePaneId: paneState.activePaneId,
+      mostRecentActivePaneIds: paneState.mostRecentActivePaneIds,
+      fullscreenPaneId: paneState.fullscreenPaneId,
+    },
+    buffers,
+  );
 };

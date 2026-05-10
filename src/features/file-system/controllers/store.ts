@@ -367,9 +367,29 @@ const openLocalWorkspace = async (
   const { path, traceLabel, treeState, restoreUiState } = options;
   const openStartedAt = performance.now();
   logWorkspaceOpenStep("start", traceLabel, path);
+  const currentRootPath = get().rootFolderPath;
+  const isReplacingCurrentWorkspace = !!currentRootPath && currentRootPath !== path;
+  const currentBufferIds = isReplacingCurrentWorkspace
+    ? useBufferStore.getState().buffers.map((buffer) => buffer.id)
+    : [];
 
   try {
-    persistCurrentProjectUiState(get().rootFolderPath);
+    if (isReplacingCurrentWorkspace) {
+      const currentBuffers = [...useBufferStore.getState().buffers];
+      if (
+        !(await prepareProjectTransitionWithUnsavedBuffers("switching projects", currentBuffers))
+      ) {
+        logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
+        return false;
+      }
+
+      get().persistActiveProjectSession();
+      if (currentBufferIds.length > 0) {
+        useBufferStore.getState().actions.closeBuffersBatch(currentBufferIds, true);
+      }
+    } else {
+      persistCurrentProjectUiState(currentRootPath);
+    }
 
     set((state) => {
       state.isFileTreeLoading = true;
@@ -576,7 +596,7 @@ export const useFileSystemStore = createSelectors(
 
         const terminalsToRestore = buildTerminalRestorePayload({
           projectSessionTerminals: session?.terminals,
-          storageTerminals: session ? [] : readPersistedTerminalSessions(projectPath),
+          storageTerminals: readPersistedTerminalSessions(projectPath),
           preferProjectSession: !!session,
         });
         window.dispatchEvent(
