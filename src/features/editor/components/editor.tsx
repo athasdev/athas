@@ -870,6 +870,7 @@ export function Editor({
       if (!useGlobalEditorState) return;
 
       const selectionStart = inputRef.current.selectionStart;
+      const selectionEnd = inputRef.current.selectionEnd;
       const position = calculateCursorPositionFromContent(selectionStart, newVirtualContent);
 
       if (foldTransform.hasActiveFolds) {
@@ -889,6 +890,43 @@ export function Editor({
         setEditorCursorPosition(position);
       }
 
+      if (selectionStart !== selectionEnd) {
+        const startPos = calculateCursorPositionFromContent(selectionStart, newVirtualContent);
+        const endPos = calculateCursorPositionFromContent(selectionEnd, newVirtualContent);
+
+        if (foldTransform.hasActiveFolds) {
+          const actualStartLine =
+            foldTransform.mapping.virtualToActual.get(startPos.line) ?? startPos.line;
+          const actualEndLine =
+            foldTransform.mapping.virtualToActual.get(endPos.line) ?? endPos.line;
+
+          setSelection({
+            start: {
+              line: actualStartLine,
+              column: startPos.column,
+              offset: calculateActualOffset(
+                splitLines(newActualContent),
+                actualStartLine,
+                startPos.column,
+              ),
+            },
+            end: {
+              line: actualEndLine,
+              column: endPos.column,
+              offset: calculateActualOffset(
+                splitLines(newActualContent),
+                actualEndLine,
+                endPos.column,
+              ),
+            },
+          });
+        } else {
+          setSelection({ start: startPos, end: endPos });
+        }
+      } else {
+        setSelection(undefined);
+      }
+
       const timestamp = Date.now();
       useEditorUIStore.getState().actions.setLastInputTimestamp(timestamp);
     },
@@ -896,6 +934,7 @@ export function Editor({
       bufferId,
       updateBufferContent,
       setEditorCursorPosition,
+      setSelection,
       content,
       cursorPosition,
       displayContent,
