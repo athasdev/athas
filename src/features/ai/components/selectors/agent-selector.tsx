@@ -253,6 +253,14 @@ export function AgentSelector({
       if (agentId === "custom" || installingAgentId) return;
 
       setInstallingAgentId(agentId);
+      const toastKey = `acp-agent-install:${agentId}`;
+      toast.show({
+        key: toastKey,
+        message: `Installing ${agentName}...`,
+        description: "Downloading and preparing the ACP agent.",
+        type: "info",
+        duration: 10000,
+      });
       try {
         const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
         setAgentConfigs((current) => {
@@ -261,12 +269,18 @@ export function AgentSelector({
           return next;
         });
         setInstalledAgents((current) => new Set(current).add(installedAgent.id));
-        toast.success(`${agentName} installed`);
+        toast.show({
+          key: toastKey,
+          message: `${agentName} installed`,
+          type: "success",
+        });
       } catch (error) {
-        toast.error(
-          `Failed to install ${agentName}`,
-          error instanceof Error ? error.message : "Unknown error",
-        );
+        toast.show({
+          key: toastKey,
+          message: `Failed to install ${agentName}`,
+          description: error instanceof Error ? error.message : "Unknown error",
+          type: "error",
+        });
       } finally {
         setInstallingAgentId(null);
         void loadInstalledAgents();
@@ -413,7 +427,11 @@ export function AgentSelector({
                       </div>
                       {!item.isInstalled && item.id !== "custom" ? (
                         <div className="truncate text-left text-[10px] text-text-lighter leading-3">
-                          {item.canInstall ? "Not installed" : item.description}
+                          {item.isInstalling
+                            ? "Installing..."
+                            : item.canInstall
+                              ? "Not installed"
+                              : item.description}
                         </div>
                       ) : null}
                     </div>
@@ -428,10 +446,20 @@ export function AgentSelector({
                         }}
                         variant="ghost"
                         compact
-                        className="h-6 px-2 text-[10px]"
+                        className="h-6 min-w-[4.75rem] px-2 text-[10px]"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
+                        aria-label={
+                          item.isInstalling ? `Installing ${item.name}` : `Install ${item.name}`
+                        }
                       >
-                        {item.isInstalling ? <SpinnerGap className="animate-spin" /> : "Install"}
+                        {item.isInstalling ? (
+                          <>
+                            <SpinnerGap className="animate-spin" />
+                            <span>Installing</span>
+                          </>
+                        ) : (
+                          "Install"
+                        )}
                       </Button>
                     ) : null}
                     {item.id === "custom" && onOpenSettings ? (
