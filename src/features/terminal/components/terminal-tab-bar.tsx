@@ -56,7 +56,9 @@ import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import {
+  applyDropZoneGates,
   clearInternalTabDragData,
+  isDragAborted,
   resolveDropTarget,
   setInternalTabDragHover,
   setInternalTabDragData,
@@ -570,11 +572,17 @@ const TerminalTabBar = ({
     const point = getDragPoint(event);
     const target = point ? resolveDropTarget(point) : { paneId: null, zone: null };
     const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
+    const gatedZone = applyDropZoneGates(target.zone);
+
+    if (isDragAborted()) {
+      resetDrag();
+      return;
+    }
 
     if (terminal && isOutsideTabBar && target.paneId) {
       const destinationPaneId = getOrCreatePaneDropTarget({
         paneId: target.paneId,
-        zone: target.zone,
+        zone: gatedZone,
       });
       if (!destinationPaneId) {
         resetDrag();
