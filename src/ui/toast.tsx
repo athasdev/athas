@@ -4,10 +4,10 @@ import {
   Warning as AlertTriangle,
   CheckCircle as CheckCircle2,
   Info,
-  SpinnerGap as Loader2,
   X,
 } from "@phosphor-icons/react";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
+import { LoadingIndicator } from "@/ui/loading";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface Toast {
@@ -273,7 +273,7 @@ export const ToastContainer = () => {
         info: <Info size={18} />,
         warning: <AlertTriangle size={18} />,
         error: <AlertTriangle size={18} />,
-        loading: <Loader2 size={18} className="animate-spin" />,
+        loading: <LoadingIndicator label="Loading" compact />,
         close: <X size={14} />,
       }}
       toastOptions={{

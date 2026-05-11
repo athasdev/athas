@@ -291,10 +291,29 @@ const editCommands: Command[] = [
     },
   },
   {
+    id: "editor.selectNextOccurrence",
+    title: "Add Selection To Next Find Match",
+    category: "Edit",
+    keybinding: "cmd+d",
+    execute: () => {
+      const textarea = editorAPI.getTextareaRef();
+      if (!textarea) return;
+      textarea.focus();
+      textarea.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "d",
+          metaKey: isMac(),
+          ctrlKey: !isMac(),
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    },
+  },
+  {
     id: "editor.duplicateLine",
     title: "Duplicate Line",
     category: "Edit",
-    keybinding: "cmd+d",
     execute: () => editorAPI.duplicateLine(),
   },
   {

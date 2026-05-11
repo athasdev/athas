@@ -1,22 +1,29 @@
 import { useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { buildHtmlPreviewDocument } from "./html-preview-document";
 
 export function HtmlPreview() {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  const { hasSourceBuffer, sourceContent, sourcePath } = useBufferStore(
+    useShallow((state) => {
+      const activeBuffer = state.activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+        : null;
+      const sourceBuffer =
+        activeBuffer?.type === "htmlPreview"
+          ? (state.buffers.find((buffer) => buffer.path === activeBuffer.sourceFilePath) ??
+            activeBuffer)
+          : activeBuffer;
 
-  // If this is a preview buffer, find the source buffer (which has text content)
-  const sourceBuffer =
-    activeBuffer?.type === "htmlPreview"
-      ? (buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer)
-      : activeBuffer;
-
-  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
-  const sourcePath = sourceBuffer?.path;
+      return {
+        hasSourceBuffer: Boolean(sourceBuffer),
+        sourceContent: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "",
+        sourcePath: sourceBuffer?.path,
+      };
+    }),
+  );
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
 
   const [iframeContent, setIframeContent] = useState("");
@@ -26,7 +33,7 @@ export function HtmlPreview() {
     setIframeContent(buildHtmlPreviewDocument(sourceContent, { sourcePath, rootFolderPath }));
   }, [sourceContent, sourcePath, rootFolderPath]);
 
-  if (!sourceBuffer) {
+  if (!hasSourceBuffer) {
     return (
       <div className="flex h-full items-center justify-center text-text-lighter">
         No active buffer

@@ -13,6 +13,39 @@ export interface LargeEditorModeInfo {
   largeContentMode: boolean;
 }
 
+const INCREMENTAL_LARGE_FILE_INFO_EDIT_THRESHOLD = 1000;
+
+function findCommonPrefixLength(a: string, b: string): number {
+  const minLength = Math.min(a.length, b.length);
+  let index = 0;
+  while (index < minLength && a[index] === b[index]) {
+    index++;
+  }
+  return index;
+}
+
+function findCommonSuffixLength(a: string, b: string, prefixLength: number): number {
+  const maxSuffixLength = Math.min(a.length - prefixLength, b.length - prefixLength);
+  let suffixLength = 0;
+
+  while (
+    suffixLength < maxSuffixLength &&
+    a[a.length - 1 - suffixLength] === b[b.length - 1 - suffixLength]
+  ) {
+    suffixLength++;
+  }
+
+  return suffixLength;
+}
+
+function countNewlines(text: string): number {
+  let count = 0;
+  for (let index = 0; index < text.length; index++) {
+    if (text.charCodeAt(index) === 10) count++;
+  }
+  return count;
+}
+
 export function isTooLargeForEditorServices({ contentLength, lineCount }: LargeFileCheck): boolean {
   if (contentLength > LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD) return true;
   if (lineCount != null && lineCount > LARGE_FILE_TOKENIZATION_LINE_THRESHOLD) return true;
@@ -59,6 +92,43 @@ export function getLargeEditorModeInfo(content: string): LargeEditorModeInfo {
       content.length >= RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD ||
       crossedResponsiveLineThreshold ||
       isTooLargeForEditorServices({ contentLength: content.length, lineCount }),
+  };
+}
+
+export function applyIncrementalLargeEditorModeInfo(
+  previousContent: string,
+  nextContent: string,
+  previousInfo: LargeEditorModeInfo,
+): LargeEditorModeInfo | null {
+  if (previousContent === nextContent) {
+    return previousInfo;
+  }
+
+  const prefixLength = findCommonPrefixLength(previousContent, nextContent);
+  const suffixLength = findCommonSuffixLength(previousContent, nextContent, prefixLength);
+  const previousEndOffset = previousContent.length - suffixLength;
+  const nextEndOffset = nextContent.length - suffixLength;
+  const removedLength = previousEndOffset - prefixLength;
+  const insertedLength = nextEndOffset - prefixLength;
+
+  if (
+    removedLength < 0 ||
+    insertedLength < 0 ||
+    Math.max(removedLength, insertedLength) > INCREMENTAL_LARGE_FILE_INFO_EDIT_THRESHOLD
+  ) {
+    return null;
+  }
+
+  const removedNewlines = countNewlines(previousContent.slice(prefixLength, previousEndOffset));
+  const insertedNewlines = countNewlines(nextContent.slice(prefixLength, nextEndOffset));
+  const lineCount = Math.max(1, previousInfo.lineCount + insertedNewlines - removedNewlines);
+
+  return {
+    lineCount,
+    largeContentMode: isTooLargeForEditorServices({
+      contentLength: nextContent.length,
+      lineCount,
+    }),
   };
 }
 

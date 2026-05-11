@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiffAgainstContent } from "@/features/git/api/git-diff-api";
 import type { GitDiffLine } from "@/features/git/types/git-types";
@@ -17,12 +17,17 @@ interface UseInlineDiffReturn {
 }
 
 export function useInlineDiff(filePath: string | undefined, content: string): UseInlineDiffReturn {
+  const latestContentRef = useRef(content);
   const [state, setState] = useState<InlineDiffState>({
     isOpen: false,
     lineNumber: 0,
     type: "added",
     diffLines: [],
   });
+
+  useEffect(() => {
+    latestContentRef.current = content;
+  }, [content]);
 
   const toggle = useCallback(
     async (lineIndex: number, type: "added" | "modified" | "deleted") => {
@@ -36,7 +41,11 @@ export function useInlineDiff(filePath: string | undefined, content: string): Us
         return;
       }
 
-      const diff = await getFileDiffAgainstContent(rootFolderPath, filePath, content);
+      const diff = await getFileDiffAgainstContent(
+        rootFolderPath,
+        filePath,
+        latestContentRef.current,
+      );
       if (diff) {
         setState({
           isOpen: true,
@@ -46,7 +55,7 @@ export function useInlineDiff(filePath: string | undefined, content: string): Us
         });
       }
     },
-    [filePath, content, state.isOpen, state.lineNumber],
+    [filePath, state.isOpen, state.lineNumber],
   );
 
   const close = useCallback(() => {

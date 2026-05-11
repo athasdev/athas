@@ -32,6 +32,7 @@ interface GutterProps {
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
   viewZones?: ResolvedEditorViewZone[];
+  visualCursorLine: number;
 }
 
 const BUFFER_LINES = 20;
@@ -55,6 +56,7 @@ function GutterComponent({
   lineNumberStart = 1,
   lineNumberMap,
   viewZones = [],
+  visualCursorLine,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -284,6 +286,7 @@ function GutterComponent({
             lineNumberStart={lineNumberStart}
             lineNumberMap={lineNumberMap}
             viewZones={viewZones}
+            visualCursorLine={visualCursorLine}
           />
         ) : (
           <>
@@ -331,6 +334,7 @@ function GutterComponent({
               lineNumberStart={lineNumberStart}
               lineNumberMap={lineNumberMap}
               viewZones={viewZones}
+              visualCursorLine={visualCursorLine}
             />
           </>
         )}
@@ -355,6 +359,7 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.contentWidth === next.contentWidth &&
     prev.lineNumberStart === next.lineNumberStart &&
     prev.lineNumberMap === next.lineNumberMap &&
-    prev.viewZones === next.viewZones
+    prev.viewZones === next.viewZones &&
+    prev.visualCursorLine === next.visualCursorLine
   );
 });

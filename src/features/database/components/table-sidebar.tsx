@@ -40,8 +40,8 @@ export default function TableSidebar({
   } satisfies Record<DatabaseObjectKind, typeof Table>;
 
   return (
-    <div className="flex w-64 flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
-      <div className="group border-border/70 border-b px-3 py-2">
+    <div className="flex w-64 flex-col overflow-hidden">
+      <div className="group px-3 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 ui-font ui-text-sm text-text-lighter">
             <Database />

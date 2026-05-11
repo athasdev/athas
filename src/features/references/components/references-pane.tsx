@@ -2,7 +2,6 @@ import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
   FileCode,
-  SpinnerGap as Loader2,
   ArrowsOut as Maximize2,
   ArrowsIn as Minimize2,
   X,
@@ -11,7 +10,8 @@ import { useCallback, useMemo, useState } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import { LoadingIndicator } from "@/ui/loading";
+import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { useReferencesStore } from "../stores/references-store";
 import type { Reference } from "../types/reference";
 
@@ -92,8 +92,8 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       <div className={paneHeaderClassName("justify-between border-border/70 border-b")}>
         <div className="flex items-center gap-1.5">
           <span className="ui-font ui-text-sm font-medium text-text">References</span>
-          {query && <span className={PANE_CHIP_BASE}>{query.symbol}</span>}
-          <span className={PANE_CHIP_BASE}>{isLoading ? "..." : references.length}</span>
+          {query && <PaneChip>{query.symbol}</PaneChip>}
+          <PaneChip>{isLoading ? "..." : references.length}</PaneChip>
         </div>
         <div className="flex items-center gap-0.5">
           {onFullScreen && (
@@ -117,8 +117,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center gap-2 px-3 py-4 text-text-lighter">
-            <Loader2 size={14} className="animate-spin" />
-            <span className="ui-font ui-text-sm">Finding references...</span>
+            <LoadingIndicator label="Finding references" showLabel compact />
           </div>
         ) : references.length === 0 ? (
           <div className="px-3 py-4 text-text-lighter">

@@ -14,10 +14,10 @@ import {
 } from "@/features/editor/services/editor-inline-edit-service";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position, Range } from "../types/editor";
-import { splitLines } from "../utils/lines";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import {
-  calculateCursorPosition,
+  calculateCursorPositionFromContent,
+  calculateCursorPositionFromLineOffsets,
   calculateOffsetFromPosition,
   getAccurateCursorX,
 } from "../utils/position";
@@ -36,6 +36,7 @@ interface UseInlineEditOptions {
   buffer: { id: string; content: string; path: string; language: string } | undefined;
   selection: Range | undefined;
   lines: string[];
+  lineOffsets: number[];
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -53,6 +54,7 @@ export function useInlineEdit({
   buffer,
   selection,
   lines,
+  lineOffsets,
   fontSize,
   fontFamily,
   lineHeight,
@@ -179,9 +181,13 @@ export function useInlineEdit({
     if (inlineEditSelectionAnchor || !inputRef.current) return;
     const start = inputRef.current.selectionStart;
     const end = inputRef.current.selectionEnd;
-    const anchorPos = calculateCursorPosition(Math.max(start, end), lines);
+    const anchorPos = calculateCursorPositionFromLineOffsets(
+      Math.max(start, end),
+      lines,
+      lineOffsets,
+    );
     setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
-  }, [enabled, inlineEditVisible, inlineEditSelectionAnchor, lines, inputRef]);
+  }, [enabled, inlineEditVisible, inlineEditSelectionAnchor, lineOffsets, lines, inputRef]);
 
   const resolveInlineEditRange = useCallback((): Range | null => {
     if (!enabled) return null;
@@ -199,9 +205,11 @@ export function useInlineEdit({
     }
 
     const cursorOffset = textarea.selectionStart;
-    const cursorPosition = calculateCursorPosition(cursorOffset, lines);
+    const cursorPosition = calculateCursorPositionFromLineOffsets(cursorOffset, lines, lineOffsets);
     const lineText = lines[cursorPosition.line] ?? "";
-    const lineStartOffset = calculateOffsetFromPosition(cursorPosition.line, 0, lines);
+    const lineStartOffset =
+      lineOffsets[cursorPosition.line] ??
+      calculateOffsetFromPosition(cursorPosition.line, 0, lines);
     const lineEndOffset = lineStartOffset + lineText.length;
 
     return {
@@ -216,7 +224,7 @@ export function useInlineEdit({
         offset: lineEndOffset,
       },
     };
-  }, [enabled, inputRef, lines, selection]);
+  }, [enabled, inputRef, lineOffsets, lines, selection]);
 
   const handleApplyInlineEdit = useCallback(async () => {
     if (!enabled) {
@@ -306,7 +314,7 @@ export function useInlineEdit({
       updateBufferContent(buffer.id, newContent, true);
 
       const newCursorOffset = startOffset + editedText.length;
-      const newPosition = calculateCursorPosition(newCursorOffset, splitLines(newContent));
+      const newPosition = calculateCursorPositionFromContent(newCursorOffset, newContent);
       setCursorPosition(newPosition);
       setSelection(undefined);
       setInlineEditSelectionAnchor(null);

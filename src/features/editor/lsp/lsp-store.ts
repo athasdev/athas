@@ -4,6 +4,7 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { expandSnippet } from "@/features/editor/snippets/snippet-expander";
 import { logger } from "@/features/editor/utils/logger";
+import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
 import { toast } from "@/ui/toast";
 import { detectCompletionContext, extractPrefix, filterCompletions } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -272,8 +273,8 @@ export const useLspStore = createSelectors(
         const prefix = extractPrefix(value, cursorPos);
         completionActions.setCurrentPrefix(prefix);
 
-        const lines = value.substring(0, cursorPos).split("\n");
-        const character = lines[lines.length - 1].length;
+        const cursorPosition = calculateCursorPositionFromContent(cursorPos, value);
+        const character = cursorPosition.column;
 
         // Hide immediately when cursor is at start of line (after deletion) or no prefix
         if (character === 0 || (prefix.length === 0 && cursorPos === 0)) {
@@ -295,7 +296,7 @@ export const useLspStore = createSelectors(
           return;
         }
 
-        const line = lines.length - 1;
+        const line = cursorPosition.line;
 
         // Cache by prefix start position so "st", "str", "struct" all hit the same cache
         const prefixStartColumn = Math.max(0, character - prefix.length);
@@ -459,9 +460,7 @@ export const useLspStore = createSelectors(
             }
 
             // Calculate position for snippet expansion
-            const lines = value.substring(0, cursorPos).split("\n");
-            const line = lines.length - 1;
-            const column = lines[lines.length - 1].length;
+            const { line, column } = calculateCursorPositionFromContent(cursorPos, value);
 
             // Expand the snippet with variables resolved
             const session = expandSnippet(

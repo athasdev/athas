@@ -14,9 +14,9 @@ import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keym
 import { matchKeybinding } from "@/features/keymaps/utils/matcher";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Decoration, MultiCursorState, Position, Range } from "../types/editor";
-import { calculateLineOffset, splitLines } from "../utils/lines";
+import { calculateLineOffset } from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
-import { calculateCursorPosition } from "../utils/position";
+import { calculateCursorPositionFromLineOffsets } from "../utils/position";
 import { getLanguageId } from "./use-tokenizer";
 
 const AUTO_PAIRS: Record<string, string> = {
@@ -86,6 +86,17 @@ function shouldTreatAltAsTextInput(e: React.KeyboardEvent<HTMLTextAreaElement>):
 
 function escapeForRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeRange(range: Range): Range {
+  return range.start.offset <= range.end.offset ? range : { start: range.end, end: range.start };
+}
+
+function rangesOverlap(start: number, end: number, ranges: Range[]): boolean {
+  return ranges.some((range) => {
+    const normalized = normalizeRange(range);
+    return start < normalized.end.offset && end > normalized.start.offset;
+  });
 }
 
 function getLineCommentToken(languageId: string | null): string | null {
@@ -161,6 +172,7 @@ interface UseEditorKeyDownOptions {
   filePath: string | undefined;
   tabSize: number;
   lines: string[];
+  lineOffsets: number[];
   cursorPosition: Position;
   selection: Range | undefined;
   multiCursorState: MultiCursorState | null;
@@ -191,6 +203,7 @@ export function useEditorKeyDown({
   filePath,
   tabSize,
   lines,
+  lineOffsets,
   cursorPosition,
   selection,
   multiCursorState,
@@ -222,6 +235,123 @@ export function useEditorKeyDown({
       const isAltTextInput = shouldTreatAltAsTextInput(e);
       const hasBlockedModifier =
         e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph && !isAltTextInput);
+
+      // Cmd/Ctrl+D follows the editor's multi-cursor model, so handle it before
+      // the global keymap resolver can route it to generic duplicate-line commands.
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const textarea = inputRef.current;
+        if (!textarea || content.length === 0) return;
+
+        const existingSelections =
+          multiCursorState?.cursors
+            .map((cursor) => cursor.selection)
+            .filter((cursorSelection): cursorSelection is Range => !!cursorSelection)
+            .map(normalizeRange) ?? [];
+        let selectedRanges = existingSelections;
+        let searchText = "";
+        let searchFrom = 0;
+        let firstRange: Range | null = null;
+
+        if (selectedRanges.length > 0) {
+          const sortedRanges = [...selectedRanges].sort((a, b) => a.start.offset - b.start.offset);
+          firstRange = sortedRanges[0];
+          searchText = content.slice(firstRange.start.offset, firstRange.end.offset);
+          searchFrom = Math.max(...sortedRanges.map((range) => range.end.offset));
+        } else {
+          let selectionStart = Math.min(textarea.selectionStart, textarea.selectionEnd);
+          let selectionEnd = Math.max(textarea.selectionStart, textarea.selectionEnd);
+          const hadSelection = selectionStart !== selectionEnd;
+
+          if (selectionStart === selectionEnd) {
+            const lineText = lines[cursorPosition.line] || "";
+            const wordRegex = /[a-zA-Z0-9_]+/g;
+            let match: RegExpExecArray | null;
+
+            match = wordRegex.exec(lineText);
+            while (match !== null) {
+              const wordStart = match.index;
+              const wordEnd = match.index + match[0].length;
+              if (cursorPosition.column >= wordStart && cursorPosition.column <= wordEnd) {
+                const lineOffset =
+                  lineOffsets[cursorPosition.line] ??
+                  calculateLineOffset(lines, cursorPosition.line);
+                selectionStart = lineOffset + wordStart;
+                selectionEnd = lineOffset + wordEnd;
+                break;
+              }
+              match = wordRegex.exec(lineText);
+            }
+          }
+
+          if (selectionStart === selectionEnd) return;
+
+          searchText = content.slice(selectionStart, selectionEnd);
+          firstRange = {
+            start: calculateCursorPositionFromLineOffsets(selectionStart, lines, lineOffsets),
+            end: calculateCursorPositionFromLineOffsets(selectionEnd, lines, lineOffsets),
+          };
+          selectedRanges = [firstRange];
+          searchFrom = selectionEnd;
+
+          textarea.selectionStart = selectionStart;
+          textarea.selectionEnd = selectionEnd;
+          setCursorPosition(firstRange.end);
+          setSelection(firstRange);
+
+          if (!hadSelection) return;
+        }
+
+        if (!searchText || !firstRange) return;
+
+        const findNextMatch = (startOffset: number, wrap: boolean) => {
+          let index = content.indexOf(searchText, startOffset);
+          const step = Math.max(searchText.length, 1);
+
+          while (index !== -1) {
+            const end = index + searchText.length;
+            if (!rangesOverlap(index, end, selectedRanges)) {
+              return index;
+            }
+            index = content.indexOf(searchText, index + step);
+          }
+
+          if (!wrap || startOffset === 0) return -1;
+
+          index = content.indexOf(searchText, 0);
+          while (index !== -1 && index < startOffset) {
+            const end = index + searchText.length;
+            if (!rangesOverlap(index, end, selectedRanges)) {
+              return index;
+            }
+            index = content.indexOf(searchText, index + step);
+          }
+
+          return -1;
+        };
+
+        const searchIndex = findNextMatch(searchFrom, true);
+        if (searchIndex === -1) return;
+
+        const matchStart = calculateCursorPositionFromLineOffsets(searchIndex, lines, lineOffsets);
+        const matchEnd = calculateCursorPositionFromLineOffsets(
+          searchIndex + searchText.length,
+          lines,
+          lineOffsets,
+        );
+        const newSelection: Range = {
+          start: matchStart,
+          end: matchEnd,
+        };
+
+        if (!multiCursorState) {
+          enableMultiCursor();
+        }
+        addCursor(matchEnd, newSelection);
+        return;
+      }
 
       if (hasBlockedModifier && !useSettingsStore.getState().settings.nativeMenuBar) {
         const contexts = useKeymapStore.getState().contexts;
@@ -313,25 +443,29 @@ export function useEditorKeyDown({
         if (e.key === "]") {
           const nextChange = changedLines.find((line) => line > currentLine);
           if (nextChange !== undefined) {
-            const lineStart = calculateLineOffset(lines, nextChange);
+            const lineStart = lineOffsets[nextChange] ?? calculateLineOffset(lines, nextChange);
             if (inputRef.current) {
               inputRef.current.selectionStart = lineStart;
               inputRef.current.selectionEnd = lineStart;
               inputRef.current.focus();
             }
-            setCursorPosition(calculateCursorPosition(lineStart, lines));
+            setCursorPosition(
+              calculateCursorPositionFromLineOffsets(lineStart, lines, lineOffsets),
+            );
           }
         } else {
           const prevChanges = changedLines.filter((line) => line < currentLine);
           if (prevChanges.length > 0) {
             const prevChange = prevChanges[prevChanges.length - 1];
-            const lineStart = calculateLineOffset(lines, prevChange);
+            const lineStart = lineOffsets[prevChange] ?? calculateLineOffset(lines, prevChange);
             if (inputRef.current) {
               inputRef.current.selectionStart = lineStart;
               inputRef.current.selectionEnd = lineStart;
               inputRef.current.focus();
             }
-            setCursorPosition(calculateCursorPosition(lineStart, lines));
+            setCursorPosition(
+              calculateCursorPositionFromLineOffsets(lineStart, lines, lineOffsets),
+            );
           }
         }
         return;
@@ -359,20 +493,15 @@ export function useEditorKeyDown({
       if (!isAltGraph && e.shiftKey && e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
         e.preventDefault();
 
-        const contentLines = splitLines(content);
         const targetLine =
           e.key === "ArrowDown" ? cursorPosition.line + 1 : cursorPosition.line - 1;
 
-        if (targetLine < 0 || targetLine >= contentLines.length) return;
+        if (targetLine < 0 || targetLine >= lines.length) return;
 
-        const targetLineText = contentLines[targetLine] || "";
+        const targetLineText = lines[targetLine] || "";
         const targetColumn = Math.min(cursorPosition.column, targetLineText.length);
-
-        let offset = 0;
-        for (let i = 0; i < targetLine; i++) {
-          offset += (contentLines[i]?.length || 0) + 1;
-        }
-        offset += targetColumn;
+        const offset =
+          (lineOffsets[targetLine] ?? calculateLineOffset(lines, targetLine)) + targetColumn;
 
         const newPosition: Position = {
           line: targetLine,
@@ -384,81 +513,6 @@ export function useEditorKeyDown({
           enableMultiCursor();
         }
         addCursor(newPosition);
-        return;
-      }
-
-      // Cmd+D to select next occurrence
-      if ((e.metaKey || e.ctrlKey) && e.key === "d") {
-        e.preventDefault();
-
-        let searchText = "";
-        let selectionStart = inputRef.current?.selectionStart || 0;
-        let selectionEnd = inputRef.current?.selectionEnd || 0;
-
-        if (selectionStart !== selectionEnd) {
-          searchText = content.substring(selectionStart, selectionEnd);
-        } else {
-          const contentLines = splitLines(content);
-          const lineText = contentLines[cursorPosition.line] || "";
-          const wordRegex = /[a-zA-Z0-9_]+/g;
-          let match: RegExpExecArray | null;
-
-          match = wordRegex.exec(lineText);
-          while (match !== null) {
-            const wordStart = match.index;
-            const wordEnd = match.index + match[0].length;
-            if (cursorPosition.column >= wordStart && cursorPosition.column <= wordEnd) {
-              searchText = match[0];
-              let lineOffset = 0;
-              for (let i = 0; i < cursorPosition.line; i++) {
-                lineOffset += (contentLines[i]?.length || 0) + 1;
-              }
-              selectionStart = lineOffset + wordStart;
-              selectionEnd = lineOffset + wordEnd;
-              break;
-            }
-            match = wordRegex.exec(lineText);
-          }
-        }
-
-        if (!searchText) return;
-
-        const searchIndex = content.indexOf(searchText, selectionEnd);
-        if (searchIndex === -1) return;
-
-        const contentLines = splitLines(content);
-        let line = 0;
-        let currentOffset = 0;
-        for (let i = 0; i < contentLines.length; i++) {
-          const lineLen = contentLines[i].length + 1;
-          if (currentOffset + lineLen > searchIndex) {
-            line = i;
-            break;
-          }
-          currentOffset += lineLen;
-        }
-        const column = searchIndex - currentOffset;
-        const endColumn = column + searchText.length;
-
-        const newPosition: Position = {
-          line,
-          column: endColumn,
-          offset: searchIndex + searchText.length,
-        };
-
-        const newSelection: Range = {
-          start: { line, column, offset: searchIndex },
-          end: { line, column: endColumn, offset: searchIndex + searchText.length },
-        };
-
-        if (!multiCursorState) {
-          enableMultiCursor();
-          if (inputRef.current) {
-            inputRef.current.selectionStart = selectionStart;
-            inputRef.current.selectionEnd = selectionEnd;
-          }
-        }
-        addCursor(newPosition, newSelection);
         return;
       }
 
@@ -781,6 +835,7 @@ export function useEditorKeyDown({
       cursorPosition.column,
       setCursorPosition,
       lines,
+      lineOffsets,
       selection,
       inlineEditToolbarActions,
       inlineEditVisible,

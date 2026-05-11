@@ -173,36 +173,152 @@ export const useEditorViewStore = createSelectors(
 let previousActiveBufferSnapshot: {
   id: string;
   content: string;
+  lines: string[];
 } | null = null;
+
+const INCREMENTAL_LINE_EDIT_THRESHOLD = 1000;
+
+function isSparseLineArray(lines: string[]): boolean {
+  return lines.length > 0 && Object.keys(lines).length === 0;
+}
+
+function findCommonPrefixLength(a: string, b: string): number {
+  const minLength = Math.min(a.length, b.length);
+  let index = 0;
+  while (index < minLength && a[index] === b[index]) {
+    index++;
+  }
+  return index;
+}
+
+function findCommonSuffixLength(a: string, b: string, prefixLength: number): number {
+  const maxSuffixLength = Math.min(a.length - prefixLength, b.length - prefixLength);
+  let suffixLength = 0;
+
+  while (
+    suffixLength < maxSuffixLength &&
+    a[a.length - 1 - suffixLength] === b[b.length - 1 - suffixLength]
+  ) {
+    suffixLength++;
+  }
+
+  return suffixLength;
+}
+
+function getLinePositionForOffset(lines: string[], offset: number) {
+  let currentOffset = 0;
+
+  for (let line = 0; line < lines.length; line++) {
+    const lineLength = lines[line].length;
+    const lineEnd = currentOffset + lineLength;
+
+    if (offset <= lineEnd) {
+      return { line, column: offset - currentOffset };
+    }
+
+    currentOffset = lineEnd + 1;
+  }
+
+  const lastLine = Math.max(0, lines.length - 1);
+  return { line: lastLine, column: lines[lastLine]?.length ?? 0 };
+}
+
+export function applyIncrementalLineEdit(
+  previousContent: string,
+  nextContent: string,
+  previousLines: string[],
+): string[] | null {
+  if (isSparseLineArray(previousLines)) {
+    return null;
+  }
+
+  if (previousContent === nextContent) {
+    return previousLines;
+  }
+
+  const prefixLength = findCommonPrefixLength(previousContent, nextContent);
+  const suffixLength = findCommonSuffixLength(previousContent, nextContent, prefixLength);
+  const previousEndOffset = previousContent.length - suffixLength;
+  const nextEndOffset = nextContent.length - suffixLength;
+  const removedLength = previousEndOffset - prefixLength;
+  const insertedLength = nextEndOffset - prefixLength;
+
+  if (
+    removedLength < 0 ||
+    insertedLength < 0 ||
+    Math.max(removedLength, insertedLength) > INCREMENTAL_LINE_EDIT_THRESHOLD
+  ) {
+    return null;
+  }
+
+  const start = getLinePositionForOffset(previousLines, prefixLength);
+  const end = getLinePositionForOffset(previousLines, previousEndOffset);
+  const insertedText = nextContent.slice(prefixLength, nextEndOffset);
+  const insertedLines = insertedText.split("\n");
+  const linePrefix = previousLines[start.line]?.slice(0, start.column) ?? "";
+  const lineSuffix = previousLines[end.line]?.slice(end.column) ?? "";
+  const replacement =
+    insertedLines.length === 1
+      ? [`${linePrefix}${insertedLines[0]}${lineSuffix}`]
+      : [
+          `${linePrefix}${insertedLines[0]}`,
+          ...insertedLines.slice(1, -1),
+          `${insertedLines[insertedLines.length - 1]}${lineSuffix}`,
+        ];
+
+  return [
+    ...previousLines.slice(0, start.line),
+    ...replacement,
+    ...previousLines.slice(end.line + 1),
+  ];
+}
 
 // Subscribe to buffer changes and update computed values
 useBufferStore.subscribe((state) => {
   const activeBuffer = state.actions.getActiveBuffer();
   if (activeBuffer && isEditorContent(activeBuffer)) {
+    const previousSnapshot = previousActiveBufferSnapshot;
+
     if (
-      previousActiveBufferSnapshot &&
-      previousActiveBufferSnapshot.id === activeBuffer.id &&
-      previousActiveBufferSnapshot.content === activeBuffer.content
+      previousSnapshot &&
+      previousSnapshot.id === activeBuffer.id &&
+      previousSnapshot.content === activeBuffer.content
     ) {
       return;
     }
 
-    previousActiveBufferSnapshot = {
-      id: activeBuffer.id,
-      content: activeBuffer.content,
-    };
-
     const largeEditorInfo = getLargeEditorModeInfo(activeBuffer.content);
     if (largeEditorInfo.largeContentMode) {
+      const lines = createSparseLineArray(largeEditorInfo.lineCount);
+      previousActiveBufferSnapshot = {
+        id: activeBuffer.id,
+        content: activeBuffer.content,
+        lines,
+      };
       useEditorViewStore.setState({
-        lines: createSparseLineArray(largeEditorInfo.lineCount),
+        lines,
         lineCount: largeEditorInfo.lineCount,
         lineTokens: new Map(),
       });
       return;
     }
 
-    const lines = activeBuffer.content.split("\n");
+    const previousLines = previousSnapshot?.id === activeBuffer.id ? previousSnapshot.lines : [""];
+    const lines =
+      previousSnapshot?.id === activeBuffer.id
+        ? (applyIncrementalLineEdit(
+            previousSnapshot.content,
+            activeBuffer.content,
+            previousLines,
+          ) ?? activeBuffer.content.split("\n"))
+        : activeBuffer.content.split("\n");
+
+    previousActiveBufferSnapshot = {
+      id: activeBuffer.id,
+      content: activeBuffer.content,
+      lines,
+    };
+
     useEditorViewStore.setState({
       lines,
       lineCount: lines.length,

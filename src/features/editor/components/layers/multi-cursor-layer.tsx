@@ -4,10 +4,9 @@
  * This layer renders additional cursors when in multi-cursor mode
  */
 
-import { forwardRef, memo, useMemo } from "react";
+import { forwardRef, memo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Cursor } from "../../types/editor";
-import { buildLineOffsetMap } from "../../utils/html";
 import { calculateSelectionBoxes } from "../../utils/selection-boxes";
 import type { EditorViewLayout } from "../../view-model/view-layout";
 
@@ -15,16 +14,27 @@ interface MultiCursorLayerProps {
   cursors: Cursor[];
   primaryCursorId: string;
   lineHeight: number;
-  content: string;
+  lines: string[];
+  lineOffsets: number[];
+  contentLength: number;
   measureText: (text: string) => number;
   viewLayout?: EditorViewLayout;
 }
 
 const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerProps>(
-  ({ cursors, primaryCursorId, lineHeight, content, measureText, viewLayout }, ref) => {
-    const lines = useMemo(() => content.split("\n"), [content]);
-    const lineOffsets = useMemo(() => buildLineOffsetMap(content), [content]);
-
+  (
+    {
+      cursors,
+      primaryCursorId,
+      lineHeight,
+      lines,
+      lineOffsets,
+      contentLength,
+      measureText,
+      viewLayout,
+    },
+    ref,
+  ) => {
     // Calculate pixel position for a cursor based on line/column
     // Adds padding offset to match textarea/highlight layer positioning
     const getCursorPosition = (line: number, column: number): { top: number; left: number } => {
@@ -79,7 +89,7 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
               },
               lines,
               lineOffsets,
-              contentLength: content.length,
+              contentLength,
               lineHeight,
               measureText,
               viewLayout,
@@ -134,7 +144,9 @@ export const MultiCursorLayer = memo(MultiCursorLayerComponent, (prev, next) => 
     prev.cursors === next.cursors &&
     prev.primaryCursorId === next.primaryCursorId &&
     prev.lineHeight === next.lineHeight &&
-    prev.content === next.content &&
+    prev.lines === next.lines &&
+    prev.lineOffsets === next.lineOffsets &&
+    prev.contentLength === next.contentLength &&
     prev.measureText === next.measureText &&
     prev.viewLayout === next.viewLayout
   );

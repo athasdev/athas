@@ -1,6 +1,8 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -38,6 +40,29 @@ type DefinitionLinkRange = {
   startColumn: number;
   endColumn: number;
 };
+
+function getActiveTextContent(): string {
+  const { activeBufferId, buffers } = useBufferStore.getState();
+  const activeBuffer = activeBufferId
+    ? buffers.find((buffer) => buffer.id === activeBufferId)
+    : null;
+  return activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
+}
+
+function areSearchMatchesEqual(a: SearchMatch[], b: SearchMatch[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+
+  for (let index = 0; index < a.length; index++) {
+    const left = a[index];
+    const right = b[index];
+    if (!left || !right || left.start !== right.start || left.end !== right.end) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 interface EditorUIState {
   // Completion state
@@ -83,10 +108,12 @@ interface EditorUIActions {
   setAiCompletion: (enabled: boolean) => void;
   setAutocompleteCompletion: (completion: AutocompleteCompletion | null) => void;
   setLastInputTimestamp: (timestamp: number) => void;
+  clearTypingTransientState: () => void;
 
   // Search actions
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: SearchMatch[]) => void;
+  setSearchResults: (matches: SearchMatch[], preferredMatchIndex: number) => void;
   setCurrentMatchIndex: (index: number) => void;
   setReplaceQuery: (query: string) => void;
   setIsReplaceVisible: (visible: boolean) => void;
@@ -138,29 +165,150 @@ export const useEditorUIStore = createSelectors(
     // Actions
     actions: {
       // Completion actions
-      setLspCompletions: (completions) => set({ lspCompletions: completions }),
-      setFilteredCompletions: (completions) => set({ filteredCompletions: completions }),
-      setCurrentPrefix: (prefix) => set({ currentPrefix: prefix }),
-      setSelectedLspIndex: (index) => set({ selectedLspIndex: index }),
-      setIsLspCompletionVisible: (visible) => set({ isLspCompletionVisible: visible }),
-      setCompletionPosition: (position) => set({ completionPosition: position }),
-      setHoverInfo: (info) => set({ hoverInfo: info }),
-      setIsHovering: (hovering) => set({ isHovering: hovering }),
-      setIsApplyingCompletion: (applying) => set({ isApplyingCompletion: applying }),
-      setAiCompletion: (enabled) => set({ aiCompletion: enabled }),
-      setAutocompleteCompletion: (completion) => set({ autocompleteCompletion: completion }),
-      setLastInputTimestamp: (timestamp) => set({ lastInputTimestamp: timestamp }),
+      setLspCompletions: (completions) => {
+        if (get().lspCompletions !== completions) {
+          set({ lspCompletions: completions });
+        }
+      },
+      setFilteredCompletions: (completions) => {
+        if (get().filteredCompletions !== completions) {
+          set({ filteredCompletions: completions });
+        }
+      },
+      setCurrentPrefix: (prefix) => {
+        if (get().currentPrefix !== prefix) {
+          set({ currentPrefix: prefix });
+        }
+      },
+      setSelectedLspIndex: (index) => {
+        if (get().selectedLspIndex !== index) {
+          set({ selectedLspIndex: index });
+        }
+      },
+      setIsLspCompletionVisible: (visible) => {
+        if (get().isLspCompletionVisible !== visible) {
+          set({ isLspCompletionVisible: visible });
+        }
+      },
+      setCompletionPosition: (position) => {
+        const current = get().completionPosition;
+        if (current.top !== position.top || current.left !== position.left) {
+          set({ completionPosition: position });
+        }
+      },
+      setHoverInfo: (info) => {
+        if (get().hoverInfo !== info) {
+          set({ hoverInfo: info });
+        }
+      },
+      setIsHovering: (hovering) => {
+        if (get().isHovering !== hovering) {
+          set({ isHovering: hovering });
+        }
+      },
+      setIsApplyingCompletion: (applying) => {
+        if (get().isApplyingCompletion !== applying) {
+          set({ isApplyingCompletion: applying });
+        }
+      },
+      setAiCompletion: (enabled) => {
+        if (get().aiCompletion !== enabled) {
+          set({ aiCompletion: enabled });
+        }
+      },
+      setAutocompleteCompletion: (completion) => {
+        const current = get().autocompleteCompletion;
+        if (
+          current === completion ||
+          (current &&
+            completion &&
+            current.text === completion.text &&
+            current.cursorOffset === completion.cursorOffset)
+        ) {
+          return;
+        }
+        set({ autocompleteCompletion: completion });
+      },
+      setLastInputTimestamp: (timestamp) => {
+        if (get().lastInputTimestamp !== timestamp) {
+          set({ lastInputTimestamp: timestamp });
+        }
+      },
+      clearTypingTransientState: () => {
+        const state = get();
+        if (
+          state.hoverInfo === null &&
+          !state.isHovering &&
+          state.autocompleteCompletion === null
+        ) {
+          return;
+        }
+
+        set({
+          hoverInfo: null,
+          isHovering: false,
+          autocompleteCompletion: null,
+        });
+      },
 
       // Search actions
-      setSearchQuery: (query) => set({ searchQuery: query }),
-      setSearchMatches: (matches) => set({ searchMatches: matches }),
-      setCurrentMatchIndex: (index) => set({ currentMatchIndex: index }),
-      setReplaceQuery: (query) => set({ replaceQuery: query }),
-      setIsReplaceVisible: (visible) => set({ isReplaceVisible: visible }),
+      setSearchQuery: (query) => {
+        if (get().searchQuery !== query) {
+          set({ searchQuery: query });
+        }
+      },
+      setSearchMatches: (matches) => {
+        const current = get().searchMatches;
+        if (areSearchMatchesEqual(current, matches)) {
+          return;
+        }
+        set({ searchMatches: matches });
+      },
+      setSearchResults: (matches, preferredMatchIndex) => {
+        const state = get();
+        const matchesAreEqual = areSearchMatchesEqual(state.searchMatches, matches);
+        const nextMatchIndex =
+          matches.length === 0
+            ? -1
+            : matchesAreEqual &&
+                state.currentMatchIndex >= 0 &&
+                state.currentMatchIndex < matches.length
+              ? state.currentMatchIndex
+              : Math.max(0, Math.min(preferredMatchIndex, matches.length - 1));
+
+        if (matchesAreEqual && state.currentMatchIndex === nextMatchIndex) {
+          return;
+        }
+
+        set({
+          searchMatches: matchesAreEqual ? state.searchMatches : matches,
+          currentMatchIndex: nextMatchIndex,
+        });
+      },
+      setCurrentMatchIndex: (index) => {
+        if (get().currentMatchIndex === index) {
+          return;
+        }
+        set({ currentMatchIndex: index });
+      },
+      setReplaceQuery: (query) => {
+        if (get().replaceQuery !== query) {
+          set({ replaceQuery: query });
+        }
+      },
+      setIsReplaceVisible: (visible) => {
+        if (get().isReplaceVisible !== visible) {
+          set({ isReplaceVisible: visible });
+        }
+      },
       setSearchOption: (option, value) =>
-        set((state) => ({
-          searchOptions: { ...state.searchOptions, [option]: value },
-        })),
+        set((state) =>
+          state.searchOptions[option] === value
+            ? state
+            : {
+                searchOptions: { ...state.searchOptions, [option]: value },
+              },
+        ),
       clearSearch: () =>
         set({
           searchQuery: "",
@@ -191,7 +339,8 @@ export const useEditorUIStore = createSelectors(
         if (!match) return;
 
         // Get current content from editor state
-        const { value, onChange } = useEditorStateStore.getState();
+        const { onChange } = useEditorStateStore.getState();
+        const value = getActiveTextContent();
         if (!value || !onChange) return;
 
         // Replace the current match
@@ -227,7 +376,8 @@ export const useEditorUIStore = createSelectors(
         if (searchMatches.length === 0) return;
 
         // Get current content from editor state
-        const { value, onChange } = useEditorStateStore.getState();
+        const { onChange } = useEditorStateStore.getState();
+        const value = getActiveTextContent();
         if (!value || !onChange) return;
 
         // Replace all matches in reverse order to maintain offset validity

@@ -1,4 +1,3 @@
-import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import CreateSubscriptionDialog from "../postgres/components/create-subscription-dialog";
 import PostgresSubscriptionSchemaView from "../postgres/components/postgres-subscription-schema-view";
@@ -20,6 +19,7 @@ import {
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { LoadingIndicator } from "@/ui/loading";
 import type { DatabaseObjectKind, ViewMode } from "../../models/common.types";
 import type { DatabaseType } from "../../models/provider.types";
 import type { SqlDatabaseActions, SqlDatabaseState } from "./create-sql-store";
@@ -266,10 +266,7 @@ export default function SqlDatabaseViewer({
 
           {isBusy && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <div className="flex items-center gap-2 ui-font ui-text-sm text-text-lighter">
-                <RefreshCw className="animate-spin" />
-                Loading...
-              </div>
+              <LoadingIndicator label="Loading" showLabel />
             </div>
           )}
 

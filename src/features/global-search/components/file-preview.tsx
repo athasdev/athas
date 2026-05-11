@@ -9,6 +9,7 @@ import {
   isBinaryFile,
   isImageFile,
 } from "@/features/file-system/controllers/file-utils";
+import { LoadingIndicator } from "@/ui/loading";
 import { useFilePreview } from "../hooks/use-file-preview";
 
 interface FilePreviewProps {
@@ -298,7 +299,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   if (isLoading) {
     return (
       <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
-        Loading preview...
+        <LoadingIndicator label="Loading preview" showLabel />
       </div>
     );
   }
@@ -315,7 +316,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
     if (isImageLoading) {
       return (
         <div className="ui-text-sm flex h-full items-center justify-center p-4 text-center text-text-lighter">
-          Loading image preview...
+          <LoadingIndicator label="Loading image preview" showLabel />
         </div>
       );
     }

@@ -1,9 +1,9 @@
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import type { Position } from "../types/editor";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { LspClient } from "./lsp-client";
 
@@ -28,22 +28,26 @@ const DEFAULT_TRIGGER_CHARS = ["(", ","];
 interface SignatureHelpTooltipProps {
   editorRef: RefObject<HTMLDivElement | null>;
   filePath: string | undefined;
-  cursorPosition: Position;
   resolveModelPosition?: EditorModelPositionResolver;
 }
 
 export const SignatureHelpTooltip = ({
   editorRef,
   filePath,
-  cursorPosition,
   resolveModelPosition,
 }: SignatureHelpTooltipProps) => {
   const [signatureHelp, setSignatureHelp] = useState<SignatureHelpResult | null>(null);
   const { charWidth, lineHeight } = useEditorLayout();
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
   const requestIdRef = useRef(0);
   const scrollOffsetRef = useRef({ top: 0, left: 0 });
+  const cursorPositionRef = useRef(useEditorStateStore.getState().cursorPosition);
+  const signatureHelpRef = useRef<SignatureHelpResult | null>(null);
+  const [tooltipCursorPosition, setTooltipCursorPosition] = useState(cursorPositionRef.current);
   const [triggerCharacters, setTriggerCharacters] = useState(DEFAULT_TRIGGER_CHARS);
+
+  useEffect(() => {
+    signatureHelpRef.current = signatureHelp;
+  }, [signatureHelp]);
 
   // Track scroll position
   useEffect(() => {
@@ -89,6 +93,7 @@ export const SignatureHelpTooltip = ({
 
     const id = ++requestIdRef.current;
     const lspClient = LspClient.getInstance();
+    const cursorPosition = cursorPositionRef.current;
     const result = await lspClient.getSignatureHelp(
       filePath,
       cursorPosition.line,
@@ -102,39 +107,76 @@ export const SignatureHelpTooltip = ({
     } else {
       setSignatureHelp(null);
     }
-  }, [filePath, cursorPosition.line, cursorPosition.column]);
+  }, [filePath]);
+
+  useEffect(() => {
+    let previousOffset = useEditorStateStore.getState().cursorPosition.offset;
+    let refreshTimeout: ReturnType<typeof globalThis.setTimeout> | null = null;
+
+    const unsubscribe = useEditorStateStore.subscribe((state) => {
+      const nextPosition = state.cursorPosition;
+      cursorPositionRef.current = nextPosition;
+
+      if (nextPosition.offset === previousOffset) {
+        return;
+      }
+      previousOffset = nextPosition.offset;
+
+      if (!signatureHelpRef.current) {
+        return;
+      }
+
+      setTooltipCursorPosition(nextPosition);
+      if (refreshTimeout !== null) {
+        globalThis.clearTimeout(refreshTimeout);
+      }
+      refreshTimeout = globalThis.setTimeout(() => {
+        void fetchSignatureHelp();
+        refreshTimeout = null;
+      }, 100);
+    });
+
+    return () => {
+      unsubscribe();
+      if (refreshTimeout !== null) {
+        globalThis.clearTimeout(refreshTimeout);
+      }
+    };
+  }, [fetchSignatureHelp]);
 
   // Trigger on typing
   useEffect(() => {
-    if (lastInputTimestamp === 0) return;
+    let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
 
-    // Check if the character just typed is a trigger character
-    const textarea = editorRef.current?.querySelector("textarea");
-    if (!textarea) return;
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastInputTimestamp) {
+        return;
+      }
 
-    const content = textarea.value;
-    const offset = cursorPosition.offset;
-    if (offset <= 0) return;
+      lastInputTimestamp = state.lastInputTimestamp;
 
-    const charBefore = content[offset - 1];
-    if (triggerCharacters.includes(charBefore)) {
-      void fetchSignatureHelp();
-    } else if (charBefore === ")") {
-      setSignatureHelp(null);
-    }
-  }, [editorRef, lastInputTimestamp, cursorPosition.offset, fetchSignatureHelp, triggerCharacters]);
+      // Check if the character just typed is a trigger character
+      const textarea = editorRef.current?.querySelector("textarea");
+      if (!textarea) return;
 
-  // Hide on cursor navigation (no typing)
-  useEffect(() => {
-    if (!signatureHelp) return;
-    // When cursor moves without typing, hide the tooltip
-    const timeout = setTimeout(() => {
-      void fetchSignatureHelp();
-    }, 100);
-    return () => clearTimeout(timeout);
-  }, [cursorPosition.offset, signatureHelp, fetchSignatureHelp]);
+      const content = textarea.value;
+      const offset = cursorPositionRef.current.offset;
+      if (offset <= 0) return;
+
+      const charBefore = content[offset - 1];
+      if (triggerCharacters.includes(charBefore)) {
+        setTooltipCursorPosition(cursorPositionRef.current);
+        void fetchSignatureHelp();
+      } else if (charBefore === ")") {
+        setSignatureHelp(null);
+      }
+    });
+
+    return unsubscribe;
+  }, [editorRef, fetchSignatureHelp, triggerCharacters]);
 
   const position = useMemo(() => {
+    const cursorPosition = tooltipCursorPosition;
     const resolvedPosition = resolveModelPosition?.(cursorPosition.line, cursorPosition.column);
 
     return {
@@ -149,7 +191,7 @@ export const SignatureHelpTooltip = ({
           EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + cursorPosition.column * charWidth) -
         scrollOffsetRef.current.left,
     };
-  }, [cursorPosition.line, cursorPosition.column, charWidth, lineHeight, resolveModelPosition]);
+  }, [tooltipCursorPosition, charWidth, lineHeight, resolveModelPosition]);
 
   if (!signatureHelp || signatureHelp.signatures.length === 0) return null;
 

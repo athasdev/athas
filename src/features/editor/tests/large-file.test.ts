@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  applyIncrementalLargeEditorModeInfo,
   countLines,
   createSparseLineArray,
   getLargeEditorModeInfo,
@@ -9,7 +10,11 @@ import {
   shouldUseLargeEditorMode,
   sliceContentLines,
 } from "../utils/large-file";
-import { calculateCursorPositionFromContent } from "../utils/position";
+import {
+  calculateCursorPositionFromContent,
+  calculateCursorPositionFromLineOffsets,
+  calculateOffsetFromContentPosition,
+} from "../utils/position";
 import { getUndoEditDelta } from "../history/undo-grouping";
 
 describe("large file editor mode", () => {
@@ -40,6 +45,26 @@ describe("large file editor mode", () => {
     });
 
     expect(getLargeEditorModeInfo(`${"x\n".repeat(50_000)}`).largeContentMode).toBe(true);
+  });
+
+  it("updates large mode info incrementally for small edits", () => {
+    const previousContent = "one\ntwo\nthree";
+    const previousInfo = getLargeEditorModeInfo(previousContent);
+    const nextContent = "one\ntwo\ninserted\nthree";
+
+    expect(applyIncrementalLargeEditorModeInfo(previousContent, nextContent, previousInfo)).toEqual(
+      getLargeEditorModeInfo(nextContent),
+    );
+  });
+
+  it("falls back for large large-mode bookkeeping edits", () => {
+    const previousContent = "one\ntwo";
+    const previousInfo = getLargeEditorModeInfo(previousContent);
+    const nextContent = `${previousContent}\n${"x".repeat(1200)}`;
+
+    expect(applyIncrementalLargeEditorModeInfo(previousContent, nextContent, previousInfo)).toBe(
+      null,
+    );
   });
 
   it("counts lines without allocating a line array", () => {
@@ -77,6 +102,40 @@ describe("large file editor mode", () => {
       column: 4,
       offset: content.length,
     });
+  });
+
+  it("calculates cursor position at line boundaries", () => {
+    const content = "alpha\nbeta\n";
+    const lines = ["alpha", "beta", ""];
+    const lineOffsets = [0, 6, 11];
+
+    expect(calculateCursorPositionFromContent(0, content)).toEqual({
+      line: 0,
+      column: 0,
+      offset: 0,
+    });
+    expect(calculateCursorPositionFromContent(6, content)).toEqual({
+      line: 1,
+      column: 0,
+      offset: 6,
+    });
+    expect(calculateCursorPositionFromContent(999, content)).toEqual({
+      line: 2,
+      column: 0,
+      offset: content.length,
+    });
+    expect(calculateCursorPositionFromLineOffsets(10, lines, lineOffsets)).toEqual({
+      line: 1,
+      column: 4,
+      offset: 10,
+    });
+    expect(calculateCursorPositionFromLineOffsets(11, lines, lineOffsets)).toEqual({
+      line: 2,
+      column: 0,
+      offset: 11,
+    });
+    expect(calculateOffsetFromContentPosition(content, 1, 2)).toBe(8);
+    expect(calculateOffsetFromContentPosition(content, 99, 2)).toBe(content.length);
   });
 
   it("keeps the large paste bookkeeping path allocation-light", () => {

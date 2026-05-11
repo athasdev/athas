@@ -6,7 +6,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
 import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
-import { ArrowSquareOut as ExternalLink, SpinnerGap as Loader2 } from "@phosphor-icons/react";
+import { ArrowSquareOut as ExternalLink } from "@phosphor-icons/react";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -14,6 +14,7 @@ import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
@@ -206,8 +207,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             onLoadError={onDocumentLoadError}
             loading={
               <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-                <Loader2 className="animate-spin" />
-                <span>Loading PDF...</span>
+                <LoadingIndicator label="Loading PDF" showLabel />
               </div>
             }
             error={
@@ -245,7 +245,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
                         height: pageDimensions ? pageDimensions.height * zoom : 800 * zoom,
                       }}
                     >
-                      <Loader2 className="animate-spin text-gray-400" />
+                      <LoadingIndicator label="Loading page" compact />
                     </div>
                   }
                 />
@@ -254,8 +254,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
           </Document>
         ) : (
           <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-            <Loader2 className="animate-spin" />
-            <span>Reading file...</span>
+            <LoadingIndicator label="Reading file" showLabel />
           </div>
         )}
       </div>

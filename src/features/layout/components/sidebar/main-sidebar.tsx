@@ -18,6 +18,7 @@ import { NotificationsPane } from "@/features/window/components/notifications-si
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
+import { LoadingIndicator } from "@/ui/loading";
 import { SidebarPanel } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -98,9 +99,11 @@ export const MainSidebar = memo(
     const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
     const { settings } = useSettingsStore();
-    const isCollaborationFeatureEnabled = useAuthStore(
+    const hasTeamsCollaborationAccess = useAuthStore(
       (state) => state.subscription?.collaboration?.enabled === true,
     );
+    const isCollaborationFeatureEnabled =
+      hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
     const isMultiAgentsFeatureEnabled =
       settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
     const isOutlineFeatureEnabled = settings.coreFeatures.outline;
@@ -160,8 +163,8 @@ export const MainSidebar = memo(
 
             {isFileTreeLoading && !isSwitchingProject && (
               <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-3">
-                <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 text-text-lighter ui-text-xs shadow-lg backdrop-blur-sm">
-                  Loading files...
+                <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+                  <LoadingIndicator label="Loading files" showLabel compact />
                 </div>
               </div>
             )}

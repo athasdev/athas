@@ -10,7 +10,10 @@ import { isEditorContent } from "@/features/panes/types/pane-content";
 import type { Decoration, Position, Range } from "../types/editor";
 import { toggleLineComment, getLineCommentTokenForLanguage } from "../utils/comment-toggle";
 import { logger } from "../utils/logger";
-import { calculateCursorPosition } from "../utils/position";
+import {
+  calculateCursorPositionFromContent,
+  calculateOffsetFromContentPosition,
+} from "../utils/position";
 import type {
   EditorAPI,
   EditorEvent,
@@ -387,13 +390,11 @@ class EditorAPIImpl implements EditorAPI {
 
       const newContent = `${content.slice(0, lineStart)}${lineContent}\n${lineContent}${content.slice(actualLineEnd)}`;
       const newCursorLine = currentLine;
-
-      let newOffset = 0;
-      for (let i = 0; i < newCursorLine; i++) {
-        const lines = newContent.split("\n");
-        newOffset += lines[i].length + 1;
-      }
-      newOffset += currentPosition.column;
+      const newOffset = calculateOffsetFromContentPosition(
+        newContent,
+        newCursorLine,
+        currentPosition.column,
+      );
 
       this.textareaRef.value = newContent;
       this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
@@ -420,13 +421,11 @@ class EditorAPIImpl implements EditorAPI {
 
       const newContent = `${content.slice(0, actualLineEnd)}\n${lineContent}${content.slice(actualLineEnd)}`;
       const newCursorLine = currentLine + 1;
-
-      let newOffset = 0;
-      for (let i = 0; i < newCursorLine; i++) {
-        const lines = newContent.split("\n");
-        newOffset += lines[i].length + 1;
-      }
-      newOffset += currentPosition.column;
+      const newOffset = calculateOffsetFromContentPosition(
+        newContent,
+        newCursorLine,
+        currentPosition.column,
+      );
 
       this.textareaRef.value = newContent;
       this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
@@ -654,14 +653,13 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   private syncSelectionFromOffsets(content: string, selectionStart: number, selectionEnd: number) {
-    const lines = content.split("\n");
-    const cursor = calculateCursorPosition(selectionStart, lines);
+    const cursor = calculateCursorPositionFromContent(selectionStart, content);
     const selection =
       selectionStart === selectionEnd
         ? undefined
         : {
-            start: calculateCursorPosition(selectionStart, lines),
-            end: calculateCursorPosition(selectionEnd, lines),
+            start: cursor,
+            end: calculateCursorPositionFromContent(selectionEnd, content),
           };
 
     this.cursorPosition = cursor;
@@ -674,26 +672,7 @@ class EditorAPIImpl implements EditorAPI {
 
   private offsetToPosition(offset: number): Position {
     const content = this.getContent();
-    const lines = content.split("\n");
-    let currentOffset = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-      const lineLength = lines[i].length + (i < lines.length - 1 ? 1 : 0);
-      if (currentOffset + lineLength >= offset) {
-        return {
-          line: i,
-          column: offset - currentOffset,
-          offset,
-        };
-      }
-      currentOffset += lineLength;
-    }
-
-    return {
-      line: lines.length - 1,
-      column: lines[lines.length - 1].length,
-      offset: content.length,
-    };
+    return calculateCursorPositionFromContent(offset, content);
   }
 }
 

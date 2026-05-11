@@ -19,6 +19,26 @@ interface UseHoverProps {
   resolveEditorPosition?: EditorCoordinateResolver;
 }
 
+function getLineTextAtLine(content: string, targetLine: number): string {
+  if (targetLine <= 0) {
+    const end = content.indexOf("\n");
+    return end === -1 ? content : content.slice(0, end);
+  }
+
+  let currentLine = 0;
+  let lineStart = 0;
+
+  while (currentLine < targetLine) {
+    const nextNewline = content.indexOf("\n", lineStart);
+    if (nextNewline === -1) return "";
+    lineStart = nextNewline + 1;
+    currentLine++;
+  }
+
+  const lineEnd = content.indexOf("\n", lineStart);
+  return lineEnd === -1 ? content.slice(lineStart) : content.slice(lineStart, lineEnd);
+}
+
 export const useHover = ({
   getHover,
   isLanguageSupported,
@@ -65,28 +85,30 @@ export const useHover = ({
         const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
         const scrollTop = textarea?.scrollTop ?? 0;
         const scrollLeft = textarea?.scrollLeft ?? 0;
-        const textLines = (textarea?.value ?? "").split("\n");
-        const totalLines = textLines.length;
-
-        if (totalLines === 0) return;
+        const textContent = textarea?.value ?? "";
 
         const resolvedPosition = resolveEditorPosition?.(clientX, clientY);
         const line =
           resolvedPosition?.line ?? Math.floor((y - paddingTop + scrollTop) / lineHeight);
-        const clampedLine = Math.max(0, Math.min(line, totalLines - 1));
-        const lineLength = textLines[clampedLine]?.length ?? 0;
+        const clampedLine = Math.max(0, line);
+        const lineText = getLineTextAtLine(textContent, clampedLine);
+        const lineLength = lineText.length;
 
         const character =
           resolvedPosition?.column ?? Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
         const clampedCharacter = Math.max(0, Math.min(character, lineLength));
 
         if (clampedLine >= 0 && clampedCharacter >= 0) {
-          const diagnostic = getDiagnosticAtPosition(
-            useDiagnosticsStore.getState().diagnosticsByFile.get(filePath) ?? [],
-            textLines,
-            clampedLine,
-            clampedCharacter,
-          );
+          const diagnostics = useDiagnosticsStore.getState().diagnosticsByFile.get(filePath) ?? [];
+          const diagnostic =
+            diagnostics.length > 0
+              ? getDiagnosticAtPosition(
+                  diagnostics,
+                  textContent.split("\n"),
+                  clampedLine,
+                  clampedCharacter,
+                )
+              : null;
           if (diagnostic) {
             const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;
             const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;

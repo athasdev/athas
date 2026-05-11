@@ -1,9 +1,10 @@
-import { CaretRight, Circle, CircleNotch, Pause, Stack, Trash } from "@phosphor-icons/react";
+import { CaretRight, Circle, Pause, Stack, Trash } from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
 import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger";
@@ -74,7 +75,7 @@ export function DebugEmptyState({ children }: { children: ReactNode }) {
 
 export function DebugSessionStatusIcon({ status }: { status: "idle" | "running" | "paused" }) {
   if (status === "running") {
-    return <CircleNotch size={12} className="shrink-0 animate-spin text-success" />;
+    return <LoadingIndicator label="Running" compact />;
   }
 
   if (status === "paused") {

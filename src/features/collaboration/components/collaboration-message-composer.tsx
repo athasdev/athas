@@ -1,6 +1,7 @@
-import { ArrowClockwise, FilePlus, PaperPlaneTilt } from "@phosphor-icons/react";
+import { FilePlus, PaperPlaneTilt } from "@phosphor-icons/react";
 import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
 import Textarea from "@/ui/textarea";
 
@@ -71,7 +72,7 @@ export function CollaborationMessageComposer({
           tooltipSide="top"
           onClick={onSubmit}
         >
-          {isSending ? <ArrowClockwise className="animate-spin" /> : <PaperPlaneTilt />}
+          {isSending ? <LoadingIndicator label="Sending" compact /> : <PaperPlaneTilt />}
         </Button>
       </div>
     </SidebarFooter>

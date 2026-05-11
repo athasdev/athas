@@ -16,18 +16,17 @@ import { useDefinitionLink } from "@/features/editor/lsp/use-definition-link";
 import { useGoToDefinition } from "@/features/editor/lsp/use-go-to-definition";
 import { useHover } from "@/features/editor/lsp/use-hover";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { logger } from "../utils/logger";
-import type { Position } from "../types/editor";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface UseLspIntegrationOptions {
   enabled?: boolean;
   filePath: string | undefined;
   value: string;
-  cursorPosition: Position;
   editorRef: RefObject<HTMLDivElement | null> | RefObject<HTMLTextAreaElement>;
   resolveEditorPosition?: EditorCoordinateResolver;
 }
@@ -41,6 +40,8 @@ const isFileSupported = (filePath: string | undefined): boolean => {
   return extensionRegistry.isLspSupported(filePath);
 };
 
+const DOCUMENT_CHANGE_DEBOUNCE_MS = 75;
+
 /**
  * Hook that manages all LSP integration for the editor
  */
@@ -48,7 +49,6 @@ export const useLspIntegration = ({
   enabled = true,
   filePath,
   value,
-  cursorPosition,
   editorRef,
   resolveEditorPosition,
 }: UseLspIntegrationOptions) => {
@@ -77,6 +77,7 @@ export const useLspIntegration = ({
 
   // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const documentChangeTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Track cursor position where completions were triggered (to hide on cursor movement)
   const completionTriggerOffsetRef = useRef<number | null>(null);
@@ -86,15 +87,48 @@ export const useLspIntegration = ({
 
   // Track document versions per file path for LSP sync
   const documentVersionsRef = useRef<Map<string, number>>(new Map());
+  const latestValueRef = useRef(value);
+  const cursorPositionRef = useRef(useEditorStateStore.getState().cursorPosition);
+  const lastInputTimestampRef = useRef(useEditorUIStore.getState().lastInputTimestamp);
 
   // Track which documents have been opened (to avoid sending changes before open)
   const openedDocumentsRef = useRef<Set<string>>(new Set());
 
-  // Get completion application state
-  const isApplyingCompletion = useEditorUIStore.use.isApplyingCompletion();
+  useEffect(() => {
+    latestValueRef.current = value;
+  }, [value]);
 
-  // Track when user actually types (not just cursor movement)
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
+  useEffect(() => {
+    let previousOffset = useEditorStateStore.getState().cursorPosition.offset;
+    cursorPositionRef.current = useEditorStateStore.getState().cursorPosition;
+
+    const unsubscribe = useEditorStateStore.subscribe((state) => {
+      const nextPosition = state.cursorPosition;
+      cursorPositionRef.current = nextPosition;
+      if (!enabled || nextPosition.offset === previousOffset) {
+        previousOffset = nextPosition.offset;
+        return;
+      }
+
+      previousOffset = nextPosition.offset;
+      const { isLspCompletionVisible } = useEditorUIStore.getState();
+
+      if (!isLspCompletionVisible) {
+        prevInputTimestampRef.current = lastInputTimestampRef.current;
+        return;
+      }
+
+      if (lastInputTimestampRef.current !== prevInputTimestampRef.current) {
+        prevInputTimestampRef.current = lastInputTimestampRef.current;
+        return;
+      }
+
+      useEditorUIStore.getState().actions.setIsLspCompletionVisible(false);
+      completionTriggerOffsetRef.current = null;
+    });
+
+    return unsubscribe;
+  }, [enabled]);
 
   // Set up LSP completion handlers
   useEffect(() => {
@@ -189,7 +223,7 @@ export const useLspIntegration = ({
           return;
         }
         // Notify LSP about document open
-        await lspClient.notifyDocumentOpen(filePath, value);
+        await lspClient.notifyDocumentOpen(filePath, latestValueRef.current);
         // Mark document as opened so changes can be sent
         openedDocumentsRef.current.add(filePath);
         logger.debug("LspIntegration", `LSP started and document opened for ${filePath}`);
@@ -201,7 +235,7 @@ export const useLspIntegration = ({
     initLsp();
 
     return cleanupDocument;
-  }, [enabled, filePath, isLspSupported, lspClient, rootFolderPath, value]);
+  }, [enabled, filePath, isLspSupported, lspClient, rootFolderPath]);
 
   // Handle document content changes
   useEffect(() => {
@@ -213,14 +247,32 @@ export const useLspIntegration = ({
       return;
     }
 
-    // Increment document version for this file
-    const currentVersion = documentVersionsRef.current.get(filePath) || 1;
-    const newVersion = currentVersion + 1;
-    documentVersionsRef.current.set(filePath, newVersion);
+    if (documentChangeTimerRef.current) {
+      clearTimeout(documentChangeTimerRef.current);
+    }
 
-    lspClient.notifyDocumentChange(filePath, value, newVersion).catch((error) => {
-      console.error("LSP document change error:", error);
-    });
+    documentChangeTimerRef.current = setTimeout(() => {
+      if (!openedDocumentsRef.current.has(filePath)) {
+        return;
+      }
+
+      // Increment document version only for the flushed content. Full-sync LSP servers do not
+      // need every intermediate keystroke, but they do need monotonically increasing versions.
+      const currentVersion = documentVersionsRef.current.get(filePath) || 1;
+      const newVersion = currentVersion + 1;
+      documentVersionsRef.current.set(filePath, newVersion);
+
+      lspClient.notifyDocumentChange(filePath, value, newVersion).catch((error) => {
+        console.error("LSP document change error:", error);
+      });
+    }, DOCUMENT_CHANGE_DEBOUNCE_MS);
+
+    return () => {
+      if (documentChangeTimerRef.current) {
+        clearTimeout(documentChangeTimerRef.current);
+        documentChangeTimerRef.current = undefined;
+      }
+    };
   }, [enabled, value, filePath, isLspSupported, lspClient]);
 
   useEffect(() => {
@@ -231,89 +283,82 @@ export const useLspIntegration = ({
       clearTimeout(completionTimerRef.current);
       completionTimerRef.current = undefined;
     }
+    if (documentChangeTimerRef.current) {
+      clearTimeout(documentChangeTimerRef.current);
+      documentChangeTimerRef.current = undefined;
+    }
   }, [filePath]);
 
   // Handle completion triggers - only when user types (not on cursor movement)
   useEffect(() => {
     if (!enabled) return;
-    // Safety: reset stuck isApplyingCompletion flag
-    // This can happen if a previous completion application didn't complete properly
-    if (isApplyingCompletion && lastInputTimestamp > 0) {
-      useEditorUIStore.getState().actions.setIsApplyingCompletion(false);
-    }
 
-    // Only trigger completions when user actually types
-    if (
-      !filePath ||
-      !editorRef.current ||
-      !isLspSupported ||
-      lastInputTimestamp === 0 ||
-      !openedDocumentsRef.current.has(filePath)
-    ) {
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      const lastInputTimestamp = state.lastInputTimestamp;
+      lastInputTimestampRef.current = lastInputTimestamp;
+
+      // Safety: reset stuck isApplyingCompletion flag
+      // This can happen if a previous completion application didn't complete properly.
+      if (state.isApplyingCompletion && lastInputTimestamp > 0) {
+        useEditorUIStore.getState().actions.setIsApplyingCompletion(false);
+      }
+
+      // Only trigger completions when user actually types.
+      if (
+        !filePath ||
+        !editorRef.current ||
+        !isLspSupported ||
+        lastInputTimestamp === 0 ||
+        !openedDocumentsRef.current.has(filePath)
+      ) {
+        if (completionTimerRef.current) {
+          clearTimeout(completionTimerRef.current);
+          completionTimerRef.current = undefined;
+        }
+        return;
+      }
+
+      // Skip file switches and repeated renders that did not originate from a new edit in this file.
+      if (lastInputTimestamp <= lastHandledCompletionInputRef.current) {
+        return;
+      }
+
+      lastHandledCompletionInputRef.current = lastInputTimestamp;
+
       if (completionTimerRef.current) {
         clearTimeout(completionTimerRef.current);
       }
-      return;
-    }
 
-    // Skip file switches and repeated renders that did not originate from a new edit in this file.
-    if (lastInputTimestamp <= lastHandledCompletionInputRef.current) {
-      return;
-    }
+      // Debounce completion trigger with fixed delay for predictable behavior
+      completionTimerRef.current = setTimeout(() => {
+        // Get latest value at trigger time (not from effect deps)
+        const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
+        if (!buffer || !hasTextContent(buffer)) return;
 
-    lastHandledCompletionInputRef.current = lastInputTimestamp;
+        const cursorOffset = cursorPositionRef.current.offset;
 
-    // Debounce completion trigger with fixed delay for predictable behavior
-    completionTimerRef.current = setTimeout(() => {
-      // Get latest value at trigger time (not from effect deps)
-      const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
-      if (!buffer || !hasTextContent(buffer)) return;
+        // Store the cursor offset where completion was triggered
+        completionTriggerOffsetRef.current = cursorOffset;
 
-      // Store the cursor offset where completion was triggered
-      completionTriggerOffsetRef.current = cursorPosition.offset;
-
-      lspActions.requestCompletion({
-        filePath,
-        cursorPos: cursorPosition.offset,
-        value: buffer.content, // Use latest content from store
-        editorRef: editorRef as RefObject<HTMLDivElement | null>,
-      });
-    }, EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS);
+        lspActions.requestCompletion({
+          filePath,
+          cursorPos: cursorOffset,
+          value: buffer.content, // Use latest content from store
+          editorRef: editorRef as RefObject<HTMLDivElement | null>,
+        });
+      }, EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS);
+    });
 
     return () => {
+      unsubscribe();
       if (completionTimerRef.current) {
         clearTimeout(completionTimerRef.current);
+        completionTimerRef.current = undefined;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cursorPosition and isApplyingCompletion are read at render time, not as triggers
-  }, [enabled, lastInputTimestamp, filePath, lspActions, isLspSupported, editorRef]);
+  }, [enabled, filePath, lspActions, isLspSupported, editorRef]);
 
-  // Hide completions when cursor moves via navigation (not typing)
-  // Navigation = cursor moves but lastInputTimestamp doesn't change
   const prevInputTimestampRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const { isLspCompletionVisible } = useEditorUIStore.getState();
-
-    // Only check if completions are visible
-    if (!isLspCompletionVisible) {
-      prevInputTimestampRef.current = lastInputTimestamp;
-      return;
-    }
-
-    // If lastInputTimestamp changed, this cursor movement was caused by typing
-    // Don't hide completions in this case
-    if (lastInputTimestamp !== prevInputTimestampRef.current) {
-      prevInputTimestampRef.current = lastInputTimestamp;
-      return;
-    }
-
-    // lastInputTimestamp didn't change, so this is navigation (arrow keys, click, etc.)
-    // Hide completions
-    useEditorUIStore.getState().actions.setIsLspCompletionVisible(false);
-    completionTriggerOffsetRef.current = null;
-  }, [enabled, cursorPosition.offset, lastInputTimestamp]);
 
   return {
     lspClient,

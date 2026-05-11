@@ -1,7 +1,5 @@
 import {
   BracketsCurly as Braces,
-  CaretDown,
-  CaretRight,
   Code,
   Cube,
   Function as FunctionIcon,
@@ -14,7 +12,7 @@ import {
   TextT,
 } from "@phosphor-icons/react";
 import { forwardRef } from "react";
-import { TreeRow } from "@/ui/tree-row";
+import { SidebarTreeDisclosure, SidebarTreeIcon, SidebarTreeRow } from "@/ui/sidebar-tree";
 import type { OutlineSymbol } from "../types/outline-symbol";
 
 function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; className?: string }) {
@@ -89,12 +87,10 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
     const rowHeightClassName = compact ? "h-6" : "h-7";
 
     return (
-      <TreeRow
+      <SidebarTreeRow
         ref={ref}
         active={selected}
-        baseIndent={8}
         depth={symbol.depth}
-        indentSize={14}
         onClick={() => onClick(symbol)}
         onMouseEnter={onMouseEnter}
         onContextMenu={onContextMenu}
@@ -102,37 +98,23 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
         tabIndex={tabIndex}
         className={rowHeightClassName}
       >
-        <span
-          className={[
-            "mr-0.5 flex size-4 shrink-0 items-center justify-center rounded text-text-lighter transition-colors",
-            hasChildren ? "hover:text-text" : "pointer-events-none text-transparent",
-          ].join(" ")}
+        <SidebarTreeDisclosure
+          visible={hasChildren}
+          expanded={!collapsed}
           onClick={(event) => {
             event.stopPropagation();
             if (hasChildren) onToggle?.(symbol);
           }}
-        >
-          {hasChildren ? (
-            collapsed ? (
-              <CaretRight className="size-3" weight="bold" />
-            ) : (
-              <CaretDown className="size-3" weight="bold" />
-            )
-          ) : (
-            <span className="size-3" />
-          )}
-        </span>
+        />
 
-        <span className="shrink-0">
-          <OutlineSymbolIcon kind={symbol.kind} />
-        </span>
+        <SidebarTreeIcon icon={<OutlineSymbolIcon kind={symbol.kind} />} />
         <span className="ml-1.5 min-w-0 flex-1 truncate">
           <span className="ui-text-xs text-text">{symbol.name}</span>
           {symbol.detail ? (
             <span className="ml-1.5 ui-text-xs text-text-lighter opacity-70">{symbol.detail}</span>
           ) : null}
         </span>
-      </TreeRow>
+      </SidebarTreeRow>
     );
   },
 );

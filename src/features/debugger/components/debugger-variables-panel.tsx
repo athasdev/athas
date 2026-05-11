@@ -1,5 +1,6 @@
 import { CaretRight } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger-store";
@@ -99,7 +100,11 @@ export function DebugVariablesPanel({
               <span className="truncate">{variable.name}</span>
             </button>
             <span className="truncate font-mono text-text">
-              {isLoading ? "Loading..." : variable.value || variable.type || ""}
+              {isLoading ? (
+                <LoadingIndicator label="Loading variable" compact />
+              ) : (
+                variable.value || variable.type || ""
+              )}
             </span>
           </div>
           {isExpanded && childVariables.length > 0

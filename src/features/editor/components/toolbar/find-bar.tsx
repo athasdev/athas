@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -11,17 +12,29 @@ import {
 } from "@/ui/search";
 
 const FindBar = () => {
-  // Get data from stores
-  const { isFindVisible, setIsFindVisible } = useUIState();
-  const searchQuery = useEditorUIStore.use.searchQuery();
-  const searchMatches = useEditorUIStore.use.searchMatches();
-  const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
-  const replaceQuery = useEditorUIStore.use.replaceQuery();
-  const isReplaceVisible = useEditorUIStore.use.isReplaceVisible();
-  const searchOptions = useEditorUIStore.use.searchOptions();
-  const selection = useEditorStateStore((state) => state.selection);
-  const editorValue = useEditorStateStore((state) => state.value);
-  const editorRef = useEditorStateStore((state) => state.editorRef);
+  const { isFindVisible, setIsFindVisible } = useUIState(
+    useShallow((state) => ({
+      isFindVisible: state.isFindVisible,
+      setIsFindVisible: state.setIsFindVisible,
+    })),
+  );
+  const {
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+    replaceQuery,
+    isReplaceVisible,
+    searchOptions,
+  } = useEditorUIStore(
+    useShallow((state) => ({
+      searchQuery: state.searchQuery,
+      searchMatches: state.searchMatches,
+      currentMatchIndex: state.currentMatchIndex,
+      replaceQuery: state.replaceQuery,
+      isReplaceVisible: state.isReplaceVisible,
+      searchOptions: state.searchOptions,
+    })),
+  );
   const {
     setSearchQuery,
     searchNext,
@@ -36,6 +49,7 @@ const FindBar = () => {
   const isVisible = isFindVisible;
   const onClose = () => {
     setIsFindVisible(false);
+    const { editorRef } = useEditorStateStore.getState();
     const textarea = editorRef?.current?.querySelector("textarea");
     if (textarea instanceof HTMLTextAreaElement) {
       textarea.focus();
@@ -56,6 +70,7 @@ const FindBar = () => {
   const wasVisibleRef = useRef(false);
 
   const getSelectedSearchText = () => {
+    const { selection, editorRef } = useEditorStateStore.getState();
     if (!selection) return "";
 
     const startOffset = Math.min(selection.start.offset, selection.end.offset);
@@ -63,7 +78,10 @@ const FindBar = () => {
 
     if (startOffset === endOffset) return "";
 
-    const selectedText = editorValue.slice(startOffset, endOffset);
+    const textarea = editorRef?.current?.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) return "";
+
+    const selectedText = textarea.value.slice(startOffset, endOffset);
     if (!selectedText || selectedText.includes("\n")) return "";
 
     return selectedText;
@@ -87,7 +105,7 @@ const FindBar = () => {
         inputRef.current.select();
       }
     }
-  }, [isVisible, searchQuery, selection, editorValue, setSearchQuery]);
+  }, [isVisible, searchQuery, setSearchQuery]);
 
   // Global find navigation shortcuts while the popover is open
   useEffect(() => {

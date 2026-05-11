@@ -78,4 +78,53 @@ describe("editor view store large files", () => {
     expect(Object.keys(viewState.lines)).toHaveLength(0);
     expect(useEditorViewStore.getState().actions.getLines()).toHaveLength(50_000);
   });
+
+  it("updates cached lines incrementally for small typing edits", async () => {
+    const { applyIncrementalLineEdit } = await import("../stores/view-store");
+    const previousContent = "first line\nsecond line\nthird line";
+    const previousLines = previousContent.split("\n");
+
+    expect(
+      applyIncrementalLineEdit(
+        previousContent,
+        "first line\nsecond fast line\nthird line",
+        previousLines,
+      ),
+    ).toEqual(["first line", "second fast line", "third line"]);
+
+    expect(
+      applyIncrementalLineEdit(
+        previousContent,
+        "first line\nsecond line\ninserted\nthird line",
+        previousLines,
+      ),
+    ).toEqual(["first line", "second line", "inserted", "third line"]);
+
+    expect(
+      applyIncrementalLineEdit(previousContent, "first line\nthird line", previousLines),
+    ).toEqual(["first line", "third line"]);
+
+    expect(
+      applyIncrementalLineEdit(previousContent, `x${".".repeat(1001)}`, previousLines),
+    ).toBeNull();
+  });
+
+  it("matches full line rebuild for boundary edits", async () => {
+    const { applyIncrementalLineEdit } = await import("../stores/view-store");
+    const cases = [
+      ["alpha\nbeta\ngamma", "xalpha\nbeta\ngamma"],
+      ["alpha\nbeta\ngamma", "alpha\nxbeta\ngamma"],
+      ["alpha\nbeta\ngamma", "alpha\nbeta\ngammax"],
+      ["alpha\nbeta\ngamma", "alpha\nbeta\n\ngamma"],
+      ["alpha\nbeta\ngamma", "alpha\nbe\nta\ngamma"],
+      ["alpha\nbeta\ngamma\n", "alpha\nbeta\ngamma\nx"],
+      ["alpha\nbeta\ngamma", "alpha\nbeta"],
+    ];
+
+    for (const [previousContent, nextContent] of cases) {
+      expect(
+        applyIncrementalLineEdit(previousContent, nextContent, previousContent.split("\n")),
+      ).toEqual(nextContent.split("\n"));
+    }
+  });
 });

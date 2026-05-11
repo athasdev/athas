@@ -6,7 +6,6 @@ import type { RefObject } from "react";
 import { memo, useMemo } from "react";
 import { useEditorSettingsStore } from "../../stores/settings-store";
 import { useEditorUIStore } from "../../stores/ui-store";
-import { buildLineOffsetMap } from "../../utils/html";
 import { getAccurateCursorX } from "../../utils/position";
 import { calculateSelectionBoxes } from "../../utils/selection-boxes";
 import type { EditorViewLayout } from "../../view-model/view-layout";
@@ -15,7 +14,9 @@ interface DefinitionLinkLayerProps {
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
-  content: string;
+  lines: string[];
+  lineOffsets: number[];
+  contentLength: number;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   viewLayout?: EditorViewLayout;
 }
@@ -25,7 +26,9 @@ export const DefinitionLinkLayer = memo(
     fontSize,
     fontFamily,
     lineHeight,
-    content,
+    lines,
+    lineOffsets,
+    contentLength,
     textareaRef,
     viewLayout,
   }: DefinitionLinkLayerProps) => {
@@ -35,8 +38,6 @@ export const DefinitionLinkLayer = memo(
     const highlightStyles = useMemo(() => {
       if (!definitionLinkRange) return null;
 
-      const lines = content.split("\n");
-      const lineOffsets = buildLineOffsetMap(content);
       const { line, startColumn, endColumn } = definitionLinkRange;
 
       if (line < 0 || line >= lines.length) return null;
@@ -55,7 +56,7 @@ export const DefinitionLinkLayer = memo(
         },
         lines,
         lineOffsets,
-        contentLength: content.length,
+        contentLength,
         lineHeight,
         measureText: (text) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
         viewLayout,
@@ -67,7 +68,9 @@ export const DefinitionLinkLayer = memo(
       }));
     }, [
       definitionLinkRange,
-      content,
+      lines,
+      lineOffsets,
+      contentLength,
       fontSize,
       fontFamily,
       lineHeight,

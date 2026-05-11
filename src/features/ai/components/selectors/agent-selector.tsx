@@ -4,7 +4,6 @@ import {
   Plus,
   MagnifyingGlass as Search,
   SlidersHorizontal as Settings2,
-  SpinnerGap,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
@@ -12,6 +11,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import type { AgentType } from "@/features/ai/types/ai-chat";
+import { LoadingIndicator } from "@/ui/loading";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -374,7 +374,11 @@ export function AgentSelector({
                         className="h-6 px-2 ui-text-xs"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
-                        {item.isInstalling ? <SpinnerGap className="animate-spin" /> : "Install"}
+                        {item.isInstalling ? (
+                          <LoadingIndicator label="Installing" compact />
+                        ) : (
+                          "Install"
+                        )}
                       </Button>
                     ) : null}
                     {item.id === "custom" && onOpenSettings ? (

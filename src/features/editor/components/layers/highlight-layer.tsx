@@ -1,4 +1,4 @@
-import { forwardRef, memo, type ReactNode, useMemo } from "react";
+import { forwardRef, memo, type ReactNode, useMemo, useRef } from "react";
 import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
@@ -48,26 +48,21 @@ const EMPTY_DIAGNOSTIC_DECORATIONS: DiagnosticDecoration[] = [];
 const EMPTY_INLAY_HINTS: InlayHint[] = [];
 const EMPTY_TOKENS: Token[] = [];
 
+interface LineTokensCacheEntry {
+  tokens: Token[];
+}
+
 interface LineProps {
   lineContent: string;
   tokens: Token[];
   foldedCount?: number;
-  lineStart: number;
   lineIndex: number;
   inlayHints?: InlayHint[];
   diagnostics?: DiagnosticDecoration[];
 }
 
 const Line = memo<LineProps>(
-  ({
-    lineContent,
-    tokens,
-    foldedCount,
-    lineStart,
-    lineIndex,
-    inlayHints = [],
-    diagnostics = [],
-  }) => {
+  ({ lineContent, tokens, foldedCount, lineIndex, inlayHints = [], diagnostics = [] }) => {
     const accordionMeta = useMemo(() => parseDiffAccordionLine(lineContent), [lineContent]);
 
     const spans = useMemo((): ReactNode[] => {
@@ -189,9 +184,8 @@ const Line = memo<LineProps>(
       }
 
       for (const token of tokens) {
-        // Calculate token position relative to this line
-        const tokenStartInLine = token.start - lineStart;
-        const tokenEndInLine = token.end - lineStart;
+        const tokenStartInLine = token.start;
+        const tokenEndInLine = token.end;
 
         // Skip tokens that don't overlap with this line
         if (tokenEndInLine <= 0 || tokenStartInLine >= lineContent.length) {
@@ -230,7 +224,7 @@ const Line = memo<LineProps>(
       appendHintsThrough(lineContent.length);
 
       return result;
-    }, [lineContent, tokens, lineStart, lineIndex, inlayHints, diagnostics]);
+    }, [lineContent, tokens, lineIndex, inlayHints, diagnostics]);
 
     if (accordionMeta) {
       const Icon = accordionMeta.name.endsWith(".json") ? FileJson2 : FileText;
@@ -269,7 +263,6 @@ const Line = memo<LineProps>(
     // Only re-render if line content or tokens changed
     return (
       prev.lineContent === next.lineContent &&
-      prev.lineStart === next.lineStart &&
       prev.tokens === next.tokens &&
       prev.inlayHints === next.inlayHints &&
       prev.diagnostics === next.diagnostics &&
@@ -306,8 +299,15 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
     const diagnosticsForFile = useDiagnosticsStore((state) =>
       filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
     );
-    // Normalize line endings first to ensure consistent rendering with textarea
-    const normalizedContent = useMemo(() => normalizeLineEndings(content), [content]);
+    const hasProvidedLineModel =
+      !lazyLineSlicing &&
+      providedLines !== undefined &&
+      providedLineCount !== undefined &&
+      providedLineOffsets !== undefined;
+    const normalizedContent = useMemo(
+      () => (hasProvidedLineModel ? content : normalizeLineEndings(content)),
+      [content, hasProvidedLineModel],
+    );
 
     const lines = useMemo(() => {
       if (providedLines) return providedLines;
@@ -318,6 +318,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       providedLineCount ?? (lazyLineSlicing ? countLines(normalizedContent) : lines.length);
 
     const sortedTokens = useMemo(() => [...tokens].sort((a, b) => a.start - b.start), [tokens]);
+    const lineTokensCacheRef = useRef<Map<number, LineTokensCacheEntry>>(new Map());
 
     // Calculate line offsets once when content changes, independent of viewport
     const lineOffsets = useMemo(
@@ -327,6 +328,8 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 
     const lineTokensMap = useMemo(() => {
       const map = new Map<number, Token[]>();
+      const previousCache = lineTokensCacheRef.current;
+      const nextCache = new Map<number, LineTokensCacheEntry>();
       let firstCandidateTokenIndex = 0;
 
       // Only process lines in viewport if viewportRange is provided
@@ -355,16 +358,35 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
         while (tokenIndex < sortedTokens.length && sortedTokens[tokenIndex].start < lineEnd) {
           const token = sortedTokens[tokenIndex];
           if (token.end > offset) {
-            lineTokens.push(token);
+            lineTokens.push({
+              start: Math.max(0, token.start - offset),
+              end: Math.min(lineLength, token.end - offset),
+              class_name: token.class_name,
+            });
           }
           tokenIndex++;
         }
 
         if (lineTokens.length > 0) {
-          map.set(lineIndex, lineTokens);
+          const cached = previousCache.get(lineIndex);
+          const canReuseCachedTokens =
+            cached?.tokens.length === lineTokens.length &&
+            cached.tokens.every((token, index) => {
+              const nextToken = lineTokens[index];
+              return (
+                token.start === nextToken.start &&
+                token.end === nextToken.end &&
+                token.class_name === nextToken.class_name
+              );
+            });
+          const stableLineTokens = canReuseCachedTokens ? cached.tokens : lineTokens;
+
+          nextCache.set(lineIndex, { tokens: stableLineTokens });
+          map.set(lineIndex, stableLineTokens);
         }
       }
 
+      lineTokensCacheRef.current = nextCache;
       return map;
     }, [lazyLineSlicing, lineCount, lines, sortedTokens, lineOffsets, viewportRange]);
 
@@ -446,9 +468,6 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
         const lineTokens = lineTokensMap.get(i) ?? EMPTY_TOKENS;
         const lineHints = lineHintsMap.get(i) ?? EMPTY_INLAY_HINTS;
         const lineDiagnostics = diagnosticDecorationsByLine.get(i) ?? EMPTY_DIAGNOSTIC_DECORATIONS;
-        const lineStart = visibleSlice
-          ? (visibleSlice.offsets[visibleIndex] ?? 0)
-          : (lineOffsets[i] ?? 0);
         const foldedCount = foldMarkers?.get(i);
 
         result.push(
@@ -459,7 +478,6 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
             inlayHints={lineHints}
             diagnostics={lineDiagnostics}
             foldedCount={foldedCount}
-            lineStart={lineStart}
             lineIndex={i}
           />,
         );

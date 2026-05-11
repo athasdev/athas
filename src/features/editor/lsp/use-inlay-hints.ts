@@ -27,7 +27,6 @@ export const useInlayHints = (
   const [hints, setHints] = useState<InlayHint[]>([]);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const fetchHints = useCallback(async () => {
     const id = ++requestIdRef.current;
@@ -52,17 +51,29 @@ export const useInlayHints = (
 
   // Re-fetch after typing (debounced)
   useEffect(() => {
-    if (lastInputTimestamp === 0) return;
+    if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
+      return;
+    }
 
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      void fetchHints();
-    }, DEBOUNCE_MS);
+    let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastInputTimestamp) {
+        return;
+      }
+
+      lastInputTimestamp = state.lastInputTimestamp;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        void fetchHints();
+      }, DEBOUNCE_MS);
+    });
 
     return () => {
+      unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [lastInputTimestamp, fetchHints]);
+  }, [fetchHints]);
 
   return hints;
 };

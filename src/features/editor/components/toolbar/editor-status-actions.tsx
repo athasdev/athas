@@ -1,18 +1,19 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import {
   Check,
-  SpinnerGap as Loader2,
   SlidersHorizontal,
   Square,
   Lightning as Zap,
   LightningSlash as ZapOff,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import type { Position } from "@/features/editor/types/editor";
+import { LoadingIndicator } from "@/ui/loading";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import {
@@ -20,7 +21,7 @@ import {
   getLanguageDisplayName,
   getLanguageIdFromPath,
 } from "@/features/editor/utils/language-id";
-import { hasTextContent, isEditorContent } from "@/features/panes/types/pane-content";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
@@ -54,17 +55,31 @@ function getLanguageDisplayNameOrNull(languageId: string | null) {
 
 interface EditorStatusActionsProps {
   bufferId?: string;
-  cursorPosition?: Position;
+  editorViewKey?: string | null;
 }
 
-export function EditorStatusActions({
-  bufferId,
-  cursorPosition: cursorPositionOverride,
-}: EditorStatusActionsProps = {}) {
-  const { rootFolderPath } = useFileSystemStore();
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
+  const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const displayedCursorPosition = useMemo<Position>(() => {
+    if (!editorViewKey || activeEditorViewKey === editorViewKey) {
+      return cursorPosition;
+    }
+
+    const cachedCursor = useEditorStateStore.getState().actions.getCachedPosition(editorViewKey);
+    return cachedCursor ?? { line: 0, column: 0, offset: 0 };
+  }, [activeEditorViewKey, cursorPosition, editorViewKey]);
+
+  return (
+    <span className={statusChipClass}>
+      {displayedCursorPosition.line + 1}:{displayedCursorPosition.column + 1}
+    </span>
+  );
+}
+
+export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusActionsProps = {}) {
+  const { rootFolderPath } = useFileSystemStore();
+  const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
   const { settings, updateSetting } = useSettingsStore();
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
@@ -89,7 +104,7 @@ export function EditorStatusActions({
         };
       case "connecting":
         return {
-          icon: <Loader2 className="animate-spin" />,
+          icon: <LoadingIndicator label="Connecting" compact />,
           color: "text-yellow-400",
           title: "Connecting to Language Server...",
         };
@@ -112,13 +127,25 @@ export function EditorStatusActions({
   const activeServers = lspStatus.supportedLanguages || [];
   const hasActiveServers = lspStatus.status === "connected" && activeServers.length > 0;
   const projectName = rootFolderPath ? getFilenameFromPath(rootFolderPath) : "No Project";
-  const resolvedBufferId = bufferId ?? activeBufferId;
-  const activeBuffer = buffers.find((buffer) => buffer.id === resolvedBufferId) || null;
-  const displayedCursorPosition = cursorPositionOverride ?? cursorPosition;
+  const activeBuffer = useBufferStore(
+    useShallow((state) => {
+      const buffer = resolvedBufferId
+        ? state.buffers.find((candidate) => candidate.id === resolvedBufferId)
+        : null;
+      return buffer
+        ? {
+            id: buffer.id,
+            path: buffer.path,
+            type: buffer.type,
+            languageOverride: buffer.type === "editor" ? buffer.languageOverride : undefined,
+          }
+        : null;
+    }),
+  );
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
   const currentFileLanguageId =
-    activeBuffer && isEditorContent(activeBuffer) && activeBuffer.languageOverride
+    activeBuffer?.type === "editor" && activeBuffer.languageOverride
       ? activeBuffer.languageOverride
       : activeBuffer?.path
         ? getLanguageIdFromPath(activeBuffer.path) ||
@@ -170,7 +197,11 @@ export function EditorStatusActions({
       if (!started) {
         throw new Error("Language server did not start.");
       }
-      const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
+      const fullActiveBuffer = resolvedBufferId
+        ? useBufferStore.getState().buffers.find((buffer) => buffer.id === resolvedBufferId)
+        : null;
+      const bufferContent =
+        fullActiveBuffer && hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
       await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start language server");
@@ -192,7 +223,7 @@ export function EditorStatusActions({
 
   const handleLanguageChange = useCallback(
     async (languageId: string) => {
-      if (!activeBuffer || !resolvedBufferId || !isEditorContent(activeBuffer)) return;
+      if (!activeBuffer || !resolvedBufferId || activeBuffer.type !== "editor") return;
       if (languageId === currentFileLanguageId) {
         setIsLanguageOpen(false);
         return;
@@ -213,7 +244,11 @@ export function EditorStatusActions({
           if (!started) {
             throw new Error("Language server did not start.");
           }
-          const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
+          const fullActiveBuffer = useBufferStore
+            .getState()
+            .buffers.find((buffer) => buffer.id === resolvedBufferId);
+          const bufferContent =
+            fullActiveBuffer && hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
           await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
         } catch {
           // LSP restart is best-effort
@@ -313,11 +348,9 @@ export function EditorStatusActions({
 
   return (
     <>
-      <span className={statusChipClass}>
-        {displayedCursorPosition.line + 1}:{displayedCursorPosition.column + 1}
-      </span>
+      <CursorPositionChip editorViewKey={editorViewKey} />
 
-      {activeBuffer && isEditorContent(activeBuffer) && (
+      {activeBuffer?.type === "editor" && (
         <div className="relative flex h-5 items-center self-center">
           <Button
             ref={languageButtonRef}
@@ -488,8 +521,7 @@ export function EditorStatusActions({
               </div>
             ) : lspStatus.status === "connecting" ? (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
-                <Loader2 className="animate-spin text-yellow-400" />
-                <span className="ui-text-xs">Connecting...</span>
+                <LoadingIndicator label="Connecting" showLabel compact />
               </div>
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">

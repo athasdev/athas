@@ -20,6 +20,14 @@ interface UseViewportLinesOptions {
 const LARGE_FILE_VIEWPORT_THRESHOLD = 20000;
 const LARGE_FILE_SIGNIFICANT_LINE_DIFF = 40;
 
+function areViewportRangesEqual(left: ViewportRange, right: ViewportRange): boolean {
+  return (
+    left.startLine === right.startLine &&
+    left.endLine === right.endLine &&
+    left.totalLines === right.totalLines
+  );
+}
+
 export function useViewportLines(options: UseViewportLinesOptions) {
   const { lineHeight, bufferLines = EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES } = options;
 
@@ -108,7 +116,9 @@ export function useViewportLines(options: UseViewportLinesOptions) {
         containerHeight,
         totalLines,
       );
-      setViewportRange(initialRange);
+      setViewportRange((prev) =>
+        areViewportRangesEqual(prev, initialRange) ? prev : initialRange,
+      );
     },
     [calculateViewportRange],
   );
@@ -119,7 +129,7 @@ export function useViewportLines(options: UseViewportLinesOptions) {
   const forceUpdateViewport = useCallback(
     (scrollTop: number, totalLines: number) => {
       const newRange = calculateViewportRange(scrollTop, containerHeightRef.current, totalLines);
-      setViewportRange(newRange);
+      setViewportRange((prev) => (areViewportRangesEqual(prev, newRange) ? prev : newRange));
     },
     [calculateViewportRange],
   );

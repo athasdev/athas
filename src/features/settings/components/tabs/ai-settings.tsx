@@ -20,6 +20,7 @@ import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp";
 import { getAvailableProviders } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
+import { LoadingIndicator } from "@/ui/loading";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
@@ -549,9 +550,7 @@ export const AISettings = () => {
                 leftIcon={Globe}
                 className={cn("w-56 max-w-full", ollamaStatus === "error" && "border-error/60")}
               />
-              {ollamaStatus === "checking" && (
-                <RefreshCw className="animate-spin text-text-lighter" />
-              )}
+              {ollamaStatus === "checking" && <LoadingIndicator label="Checking" compact />}
               {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
               {ollamaStatus === "error" && <AlertCircle className="text-error" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
@@ -791,7 +790,11 @@ export const AISettings = () => {
                     title="Refresh model list"
                     compact
                   >
-                    <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+                    {isLoadingAutocompleteModels ? (
+                      <LoadingIndicator label="Loading models" compact />
+                    ) : (
+                      <RefreshCw />
+                    )}
                   </Button>
                   <Select
                     value={hasAutocompleteModels ? settings.aiAutocompleteModelId : ""}

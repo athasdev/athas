@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
@@ -164,10 +165,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
 
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <div className="flex items-center gap-2 ui-text-sm text-text-lighter">
-                <RefreshCw className="animate-spin" />
-                Loading...
-              </div>
+              <LoadingIndicator label="Loading" showLabel />
             </div>
           )}
 

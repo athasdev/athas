@@ -3,38 +3,45 @@
  * The native browser caret is hidden in these modes, so we render a custom cursor
  */
 
-import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useEffect, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
-import { useEditorStateStore } from "../../stores/state-store";
+import type { Position } from "../../types/editor";
 import type { ViewPosition } from "../../view-model/view-layout";
 
 interface VimCursorLayerProps {
   visualLine: number;
   cursorViewPosition?: ViewPosition;
+  cursorPosition: Position;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
   tabSize: number;
-  content: string;
+  lineText: string;
   vimMode: "normal" | "insert" | "visual" | "command";
 }
 
 const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
   (
-    { visualLine, cursorViewPosition, fontSize, fontFamily, lineHeight, tabSize, content, vimMode },
+    {
+      visualLine,
+      cursorViewPosition,
+      cursorPosition,
+      fontSize,
+      fontFamily,
+      lineHeight,
+      tabSize,
+      lineText,
+      vimMode,
+    },
     ref,
   ) => {
-    // Read cursor position directly from store to ensure we always have latest value
-    const cursorPosition = useEditorStateStore.use.cursorPosition();
-    const lines = useMemo(() => content.split("\n"), [content]);
     const measureRef = useRef<HTMLSpanElement>(null);
     const [cursorStyle, setCursorStyle] = useState<{ left: number; width: number }>({
       left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
       width: fontSize * 0.6,
     });
 
-    const { line, column } = cursorPosition;
-    const lineText = lines[visualLine] || lines[line] || "";
+    const { column } = cursorPosition;
     const textBeforeCursor = lineText.substring(0, column);
     const charUnderCursor = lineText[column] || " ";
     const top =
@@ -108,11 +115,12 @@ export const VimCursorLayer = memo(VimCursorLayerComponent, (prev, next) => {
   return (
     prev.visualLine === next.visualLine &&
     prev.cursorViewPosition === next.cursorViewPosition &&
+    prev.cursorPosition === next.cursorPosition &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
-    prev.content === next.content &&
+    prev.lineText === next.lineText &&
     prev.vimMode === next.vimMode
   );
 });

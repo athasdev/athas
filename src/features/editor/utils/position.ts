@@ -34,18 +34,55 @@ export const calculateCursorPosition = (offset: number, lines: string[]): Positi
 export const calculateCursorPositionFromContent = (offset: number, content: string): Position => {
   const clampedOffset = Math.max(0, Math.min(offset, content.length));
   let line = 0;
-  let lineStartOffset = 0;
+  let searchFrom = 0;
 
-  for (let index = 0; index < clampedOffset; index++) {
-    if (content.charCodeAt(index) === 10) {
-      line++;
-      lineStartOffset = index + 1;
-    }
+  while (searchFrom < clampedOffset) {
+    const newlineIndex = content.indexOf("\n", searchFrom);
+    if (newlineIndex === -1 || newlineIndex >= clampedOffset) break;
+    line++;
+    searchFrom = newlineIndex + 1;
   }
 
   return {
     line,
-    column: clampedOffset - lineStartOffset,
+    column: clampedOffset - searchFrom,
+    offset: clampedOffset,
+  };
+};
+
+export const calculateCursorPositionFromLineOffsets = (
+  offset: number,
+  lines: string[],
+  lineOffsets: number[],
+): Position => {
+  const maxOffset =
+    lineOffsets.length > 0
+      ? (lineOffsets[lineOffsets.length - 1] ?? 0) + (lines[lines.length - 1]?.length ?? 0)
+      : 0;
+  const clampedOffset = Math.max(0, Math.min(offset, maxOffset));
+
+  let low = 0;
+  let high = Math.max(0, lineOffsets.length - 1);
+  let line = 0;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const lineOffset = lineOffsets[mid] ?? 0;
+
+    if (lineOffset <= clampedOffset) {
+      line = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  const lineText = lines[line] ?? "";
+  const lineStartOffset = lineOffsets[line] ?? 0;
+
+  return {
+    line,
+    column: Math.max(0, Math.min(clampedOffset - lineStartOffset, lineText.length)),
     offset: clampedOffset,
   };
 };
@@ -71,6 +108,34 @@ export const calculateOffsetFromPosition = (
   }
 
   return offset;
+};
+
+export const calculateOffsetFromContentPosition = (
+  content: string,
+  line: number,
+  column: number,
+): number => {
+  if (line <= 0) {
+    return Math.max(0, Math.min(column, content.length));
+  }
+
+  let currentLine = 0;
+  let lineStartOffset = 0;
+
+  for (let index = 0; index < content.length; index++) {
+    if (content.charCodeAt(index) !== 10) continue;
+
+    currentLine++;
+    lineStartOffset = index + 1;
+
+    if (currentLine === line) {
+      const nextNewline = content.indexOf("\n", lineStartOffset);
+      const lineEndOffset = nextNewline === -1 ? content.length : nextNewline;
+      return lineStartOffset + Math.max(0, Math.min(column, lineEndOffset - lineStartOffset));
+    }
+  }
+
+  return content.length;
 };
 
 /**

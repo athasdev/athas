@@ -4,7 +4,6 @@ import {
   Package,
   PaintBrush,
   Plus,
-  ArrowClockwise as RefreshCw,
   Robot,
   MagnifyingGlass as Search,
   TextT,
@@ -34,6 +33,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { SegmentedControl } from "@/ui/segmented-control";
 import { PLATFORM_ARCH } from "@/utils/platform";
 
@@ -805,21 +805,13 @@ export const ExtensionsSettings = () => {
             <Plus />
             New Skill
           </Button>
-          {isLoadingSkills ? (
-            <div className="ui-text-sm flex items-center gap-1.5 text-text-lighter">
-              <RefreshCw className="animate-spin" />
-              Loading skills
-            </div>
-          ) : null}
+          {isLoadingSkills ? <LoadingIndicator label="Loading skills" showLabel compact /> : null}
         </div>
       )}
 
       {(settings.extensionsActiveTab === "agent" || settings.extensionsActiveTab === "all") &&
       isLoadingAgents ? (
-        <div className="ui-text-sm mb-3 flex items-center gap-1.5 text-text-lighter">
-          <RefreshCw className="animate-spin" />
-          Loading agents
-        </div>
+        <LoadingIndicator label="Loading agents" showLabel compact className="mb-3" />
       ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">

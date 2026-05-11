@@ -14,8 +14,9 @@ interface UseAutocompleteOptions {
   languageId: string | null;
   content: string;
   cursorOffset: number;
-  lastInputTimestamp: number;
   hasActiveFolds: boolean;
+  getLastInputTimestamp?: () => number;
+  subscribeToInputTimestamp?: (listener: (timestamp: number) => void) => () => void;
   setAutocompleteCompletion: (completion: { text: string; cursorOffset: number } | null) => void;
 }
 
@@ -106,17 +107,13 @@ export function useAutocomplete({
   languageId,
   content,
   cursorOffset,
-  lastInputTimestamp,
   hasActiveFolds,
+  getLastInputTimestamp,
+  subscribeToInputTimestamp,
   setAutocompleteCompletion,
 }: UseAutocompleteOptions) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
-
-  const requestIdRef = useRef(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const previousInputTimestampRef = useRef<number>(0);
 
   const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
@@ -124,6 +121,44 @@ export function useAutocomplete({
   const isPro = subscriptionStatus === "pro";
   const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
   const needsAthasAuth = provider !== "custom";
+
+  const requestIdRef = useRef(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const previousInputTimestampRef = useRef<number>(getLastInputTimestamp?.() ?? 0);
+  const latestContentRef = useRef(content);
+  const latestOptionsRef = useRef({
+    enabled,
+    provider,
+    model,
+    customBaseUrl,
+    filePath,
+    languageId,
+    cursorOffset,
+    hasActiveFolds,
+    isAuthenticated,
+    managedPolicy,
+    useByok: false,
+    needsAthasAuth: false,
+    setAutocompleteCompletion,
+  });
+
+  latestContentRef.current = content;
+  latestOptionsRef.current = {
+    enabled,
+    provider,
+    model,
+    customBaseUrl,
+    filePath,
+    languageId,
+    cursorOffset,
+    hasActiveFolds,
+    isAuthenticated,
+    managedPolicy,
+    useByok,
+    needsAthasAuth,
+    setAutocompleteCompletion,
+  };
 
   useEffect(() => {
     return () => {
@@ -135,146 +170,188 @@ export function useAutocomplete({
   }, []);
 
   useEffect(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+    setAutocompleteCompletion(null);
+  }, [cursorOffset, setAutocompleteCompletion]);
 
-    abortControllerRef.current?.abort();
-
-    const didUserType = lastInputTimestamp !== previousInputTimestampRef.current;
-    previousInputTimestampRef.current = lastInputTimestamp;
-
-    if (
-      !enabled ||
-      (needsAthasAuth && !isAuthenticated) ||
-      (managedPolicy ? !managedPolicy.aiCompletionEnabled : false) ||
-      !model.trim() ||
-      (provider === "custom" && !customBaseUrl.trim()) ||
-      hasActiveFolds ||
-      lastInputTimestamp === 0 ||
-      cursorOffset <= 0
-    ) {
-      setAutocompleteCompletion(null);
-      return;
-    }
-
-    // Do not fetch new suggestions for pure cursor navigation events.
-    if (!didUserType) {
-      setAutocompleteCompletion(null);
-      return;
-    }
-
-    if (!shouldTriggerForCharacter(content, cursorOffset)) {
-      setAutocompleteCompletion(null);
-      return;
-    }
-
-    const requestId = ++requestIdRef.current;
-
-    timerRef.current = setTimeout(async () => {
-      const beforeCursor = content.slice(
-        Math.max(0, cursorOffset - BEFORE_CURSOR_CONTEXT),
-        cursorOffset,
-      );
-      const afterCursor = content.slice(cursorOffset, cursorOffset + AFTER_CURSOR_CONTEXT);
-
-      if (!beforeCursor.trim()) {
-        setAutocompleteCompletion(null);
-        return;
-      }
-
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      try {
-        const result = await requestAutocomplete(
-          {
-            model,
-            beforeCursor,
-            afterCursor,
-            filePath: filePath || undefined,
-            languageId: languageId || undefined,
-          },
-          {
-            useByok: provider === "custom" ? false : useByok,
-            provider,
-            customBaseUrl,
-            onChunk: (partialCompletion) => {
-              if (abortController.signal.aborted || requestIdRef.current !== requestId) {
-                return;
-              }
-
-              const normalizedText = normalizeCompletionText(
-                partialCompletion,
-                beforeCursor,
-                afterCursor,
-              );
-              if (!normalizedText) return;
-
-              setAutocompleteCompletion({ text: normalizedText, cursorOffset });
-            },
-          },
-        );
-
-        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
-          return;
-        }
-
-        const text = result.completion;
-        if (!text) {
-          setAutocompleteCompletion(null);
-          return;
-        }
-
-        const normalizedText = normalizeCompletionText(text, beforeCursor, afterCursor);
-        if (!normalizedText) {
-          setAutocompleteCompletion(null);
-          return;
-        }
-
-        setAutocompleteCompletion({ text: normalizedText, cursorOffset });
-      } catch (error) {
-        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
-          return;
-        }
-
-        if (
-          error instanceof AutocompleteError &&
-          (error.status === 401 || error.status === 402 || error.status === 403)
-        ) {
-          setAutocompleteCompletion(null);
-          return;
-        }
-
-        console.error("Autocomplete failed:", error);
-        setAutocompleteCompletion(null);
-      }
-    }, DEBOUNCE_MS);
-
-    return () => {
+  useEffect(() => {
+    const clearPendingRequest = () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+      abortControllerRef.current?.abort();
     };
+
+    const isRequestBlocked = () => {
+      const options = latestOptionsRef.current;
+      return (
+        !options.enabled ||
+        (options.needsAthasAuth && !options.isAuthenticated) ||
+        (options.managedPolicy ? !options.managedPolicy.aiCompletionEnabled : false) ||
+        !options.model.trim() ||
+        (options.provider === "custom" && !options.customBaseUrl.trim()) ||
+        options.hasActiveFolds ||
+        options.cursorOffset <= 0
+      );
+    };
+
+    if (isRequestBlocked()) {
+      clearPendingRequest();
+      setAutocompleteCompletion(null);
+    }
   }, [
     enabled,
     provider,
-    needsAthasAuth,
     isAuthenticated,
     managedPolicy,
-    useByok,
-    filePath,
     hasActiveFolds,
-    lastInputTimestamp,
     cursorOffset,
-    content,
     model,
     customBaseUrl,
     languageId,
     setAutocompleteCompletion,
   ]);
+
+  useEffect(() => {
+    if (!subscribeToInputTimestamp) return;
+
+    const unsubscribe = subscribeToInputTimestamp((lastInputTimestamp) => {
+      if (lastInputTimestamp === 0 || lastInputTimestamp === previousInputTimestampRef.current) {
+        return;
+      }
+
+      previousInputTimestampRef.current = lastInputTimestamp;
+
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      abortControllerRef.current?.abort();
+
+      const requestId = ++requestIdRef.current;
+
+      timerRef.current = setTimeout(async () => {
+        const requestOptions = latestOptionsRef.current;
+        const requestContent = latestContentRef.current;
+
+        if (
+          !requestOptions.enabled ||
+          (requestOptions.needsAthasAuth && !requestOptions.isAuthenticated) ||
+          (requestOptions.managedPolicy
+            ? !requestOptions.managedPolicy.aiCompletionEnabled
+            : false) ||
+          !requestOptions.model.trim() ||
+          (requestOptions.provider === "custom" && !requestOptions.customBaseUrl.trim()) ||
+          requestOptions.hasActiveFolds ||
+          requestOptions.cursorOffset <= 0
+        ) {
+          requestOptions.setAutocompleteCompletion(null);
+          return;
+        }
+
+        if (!shouldTriggerForCharacter(requestContent, requestOptions.cursorOffset)) {
+          requestOptions.setAutocompleteCompletion(null);
+          return;
+        }
+
+        const beforeCursor = requestContent.slice(
+          Math.max(0, requestOptions.cursorOffset - BEFORE_CURSOR_CONTEXT),
+          requestOptions.cursorOffset,
+        );
+        const afterCursor = requestContent.slice(
+          requestOptions.cursorOffset,
+          requestOptions.cursorOffset + AFTER_CURSOR_CONTEXT,
+        );
+
+        if (!beforeCursor.trim()) {
+          requestOptions.setAutocompleteCompletion(null);
+          return;
+        }
+
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
+        try {
+          const result = await requestAutocomplete(
+            {
+              model: requestOptions.model,
+              beforeCursor,
+              afterCursor,
+              filePath: requestOptions.filePath || undefined,
+              languageId: requestOptions.languageId || undefined,
+            },
+            {
+              useByok: requestOptions.provider === "custom" ? false : requestOptions.useByok,
+              provider: requestOptions.provider,
+              customBaseUrl: requestOptions.customBaseUrl,
+              onChunk: (partialCompletion) => {
+                if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+                  return;
+                }
+
+                const normalizedText = normalizeCompletionText(
+                  partialCompletion,
+                  beforeCursor,
+                  afterCursor,
+                );
+                if (!normalizedText) return;
+
+                requestOptions.setAutocompleteCompletion({
+                  text: normalizedText,
+                  cursorOffset: requestOptions.cursorOffset,
+                });
+              },
+            },
+          );
+
+          if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+            return;
+          }
+
+          const text = result.completion;
+          if (!text) {
+            requestOptions.setAutocompleteCompletion(null);
+            return;
+          }
+
+          const normalizedText = normalizeCompletionText(text, beforeCursor, afterCursor);
+          if (!normalizedText) {
+            requestOptions.setAutocompleteCompletion(null);
+            return;
+          }
+
+          requestOptions.setAutocompleteCompletion({
+            text: normalizedText,
+            cursorOffset: requestOptions.cursorOffset,
+          });
+        } catch (error) {
+          if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+            return;
+          }
+
+          if (
+            error instanceof AutocompleteError &&
+            (error.status === 401 || error.status === 402 || error.status === 403)
+          ) {
+            requestOptions.setAutocompleteCompletion(null);
+            return;
+          }
+
+          console.error("Autocomplete failed:", error);
+          requestOptions.setAutocompleteCompletion(null);
+        }
+      }, DEBOUNCE_MS);
+    });
+
+    return () => {
+      unsubscribe();
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      abortControllerRef.current?.abort();
+    };
+  }, [subscribeToInputTimestamp]);
 }
 
 export const __test__ = {

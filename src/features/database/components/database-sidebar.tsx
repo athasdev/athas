@@ -18,6 +18,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { CommandFooter, CommandInput, CommandItem, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,
@@ -34,6 +35,12 @@ import {
   DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
   getDatabaseTypeForFilePath,
 } from "../utils/database-file-drop";
+import {
+  getDatabaseFilePathKey,
+  getSavedFileConnectionPathKeys,
+  getWorkspaceDatabaseFiles,
+  type WorkspaceDatabaseFile,
+} from "../utils/workspace-database-files";
 import { buildSavedConnectionConfig } from "./connection/connection-config";
 import {
   getInstalledDatabaseTypes,
@@ -58,6 +65,8 @@ function getConnectionSubtitle(connection: SavedConnection) {
 
 export function DatabaseSidebar() {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const filesVersion = useFileSystemStore((state) => state.filesVersion);
+  const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const savedConnections = useConnectionStore.use.savedConnections();
   const activeConnections = useConnectionStore.use.activeConnections();
   const isLoadingSaved = useConnectionStore.use.isLoadingSaved();
@@ -84,12 +93,18 @@ export function DatabaseSidebar() {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [busyConnectionId, setBusyConnectionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [workspaceDatabaseFiles, setWorkspaceDatabaseFiles] = useState<WorkspaceDatabaseFile[]>([]);
+  const [isScanningWorkspaceDatabases, setIsScanningWorkspaceDatabases] = useState(false);
 
   useEffect(() => {
     void loadSavedConnections();
   }, [loadSavedConnections, rootFolderPath]);
 
   const installedDbTypes = useMemo(() => getInstalledDatabaseTypes(new Map()), []);
+  const savedFileConnectionPathKeys = useMemo(
+    () => getSavedFileConnectionPathKeys(savedConnections),
+    [savedConnections],
+  );
 
   const workspaceConnections = useMemo(() => {
     const normalizedWorkspace = rootFolderPath?.trim();
@@ -106,6 +121,51 @@ export function DatabaseSidebar() {
         );
       });
   }, [query, rootFolderPath, savedConnections]);
+
+  const detectedWorkspaceDatabases = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return workspaceDatabaseFiles
+      .filter((file) => !savedFileConnectionPathKeys.has(getDatabaseFilePathKey(file.path)))
+      .filter((file) => {
+        if (!normalizedQuery) return true;
+        const providerLabel = PROVIDER_REGISTRY[file.dbType].label.toLowerCase();
+        return (
+          file.name.toLowerCase().includes(normalizedQuery) ||
+          file.relativePath.toLowerCase().includes(normalizedQuery) ||
+          providerLabel.includes(normalizedQuery)
+        );
+      });
+  }, [query, savedFileConnectionPathKeys, workspaceDatabaseFiles]);
+
+  useEffect(() => {
+    if (!rootFolderPath) {
+      setWorkspaceDatabaseFiles([]);
+      setIsScanningWorkspaceDatabases(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsScanningWorkspaceDatabases(true);
+    void getAllProjectFiles()
+      .then((files) => {
+        if (!isCurrent) return;
+        setWorkspaceDatabaseFiles(
+          getWorkspaceDatabaseFiles(files, rootFolderPath, savedFileConnectionPathKeys),
+        );
+      })
+      .catch((err) => {
+        if (!isCurrent) return;
+        console.warn("Failed to scan workspace database files", err);
+        setWorkspaceDatabaseFiles([]);
+      })
+      .finally(() => {
+        if (isCurrent) setIsScanningWorkspaceDatabases(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [filesVersion, getAllProjectFiles, rootFolderPath, savedFileConnectionPathKeys]);
 
   const getActiveStatus = (connectionId: string) =>
     activeConnections.find((connection) => connection.id === connectionId)?.status;
@@ -320,6 +380,11 @@ export function DatabaseSidebar() {
     }
   };
 
+  const openDetectedDatabase = (file: WorkspaceDatabaseFile) => {
+    setError(null);
+    openDatabaseBuffer(file.path, file.name, file.dbType);
+  };
+
   const handleDeleteConnection = async (connectionId: string) => {
     setError(null);
     setBusyConnectionId(connectionId);
@@ -470,8 +535,16 @@ export function DatabaseSidebar() {
         ) : !rootFolderPath ? (
           <SidebarEmptyState>Open a workspace to add databases.</SidebarEmptyState>
         ) : isLoadingSaved ? (
-          <SidebarEmptyState>Loading databases...</SidebarEmptyState>
-        ) : workspaceConnections.length === 0 ? (
+          <SidebarEmptyState>
+            <LoadingIndicator label="Loading databases" showLabel compact />
+          </SidebarEmptyState>
+        ) : workspaceConnections.length === 0 &&
+          detectedWorkspaceDatabases.length === 0 &&
+          isScanningWorkspaceDatabases ? (
+          <SidebarEmptyState>
+            <LoadingIndicator label="Loading databases" showLabel compact />
+          </SidebarEmptyState>
+        ) : workspaceConnections.length === 0 && detectedWorkspaceDatabases.length === 0 ? (
           <SidebarEmptyState>
             {query.trim() ? "No matching databases." : "No databases in this workspace."}
           </SidebarEmptyState>
@@ -516,6 +589,24 @@ export function DatabaseSidebar() {
                 </div>
               );
             })}
+            {detectedWorkspaceDatabases.map((file) => (
+              <div
+                key={file.id}
+                className="group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
+              >
+                <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => openDetectedDatabase(file)}
+                >
+                  <div className="ui-font truncate text-text ui-text-xs">{file.name}</div>
+                  <div className="ui-font truncate ui-text-xs text-text-lighter">
+                    {PROVIDER_REGISTRY[file.dbType].label} / {file.relativePath}
+                  </div>
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -1,12 +1,11 @@
 import {
-  ArrowClockwise,
   BugBeetle,
   CaretUp,
   Database,
   DownloadSimple,
   ListBullets,
+  Network,
   PuzzlePiece,
-  Sparkle,
   TerminalWindow,
   UsersThree,
   WarningCircle,
@@ -14,6 +13,7 @@ import {
 import { cva } from "class-variance-authority";
 import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
+import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
 import { Dropdown } from "@/ui/dropdown";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
@@ -116,9 +116,11 @@ function FooterTabControl({
 const Footer = () => {
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
-  const isCollaborationFeatureEnabled = useAuthStore(
+  const hasTeamsCollaborationAccess = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
   );
+  const isCollaborationFeatureEnabled =
+    hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
   const isMultiAgentsFeatureEnabled =
     settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
   const { openSidebarView } = useSidebarPaneController();
@@ -372,7 +374,7 @@ const Footer = () => {
                 }}
               >
                 {downloading || installing ? (
-                  <ArrowClockwise className="animate-spin" weight="duotone" />
+                  <LoadingIndicator label={downloading ? "Downloading" : "Installing"} compact />
                 ) : (
                   <DownloadSimple weight="duotone" />
                 )}
@@ -452,7 +454,7 @@ const Footer = () => {
                   openSidebarView("multi-agents", { paneLevel: "edge", triggerSide: "right" });
                 }}
               >
-                <Sparkle className={chromeIcon()} weight="duotone" />
+                <Network className={chromeIcon()} weight="duotone" />
               </FooterTabControl>
             ),
           },

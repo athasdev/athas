@@ -4,6 +4,7 @@ import {
   type ReactNode,
   type RefObject,
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -55,6 +56,7 @@ import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import { applyIncrementalLineEdit } from "../stores/view-store";
 import { useInlineEditToolbarStore } from "../stores/inline-edit-toolbar-store";
 import type { Position, Range } from "../types/editor";
 import {
@@ -63,7 +65,11 @@ import {
   transformTokensForFolding,
 } from "../utils/fold-transformer";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
-import { buildLineOffsetMap, normalizeLineEndings } from "../utils/html";
+import {
+  applyIncrementalLineOffsetEdit,
+  buildLineOffsetMap,
+  normalizeLineEndings,
+} from "../utils/html";
 import {
   countLines,
   createSparseLineArray,
@@ -75,6 +81,8 @@ import { calculateLineHeight, splitLines } from "../utils/lines";
 import {
   calculateCursorPosition,
   calculateCursorPositionFromContent,
+  calculateCursorPositionFromLineOffsets,
+  calculateOffsetFromContentPosition,
   getAccurateCursorX,
 } from "../utils/position";
 import {
@@ -140,7 +148,10 @@ interface EditorProps {
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
 const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
+const INCREMENTAL_TOKENIZATION_LINE_THRESHOLD = 1000;
+const TOKENIZE_AFTER_TYPING_DEBOUNCE_MS = 260;
 const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
+const FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS = 250;
 const INLINE_EDIT_VIEW_ZONE_HEIGHT = 96;
 
 function estimateInlayHintWidth(
@@ -192,14 +203,28 @@ export function Editor({
   const inlineDiffRef = useRef<HTMLDivElement>(null);
   const suppressedNativeHistoryInputRef = useRef<"historyUndo" | "historyRedo" | null>(null);
   const syntaxTokenSnapshotRef = useRef<SyntaxTokenSnapshot | null>(null);
+  const actualLinesCacheRef = useRef<{
+    content: string;
+    lineCount: number;
+    largeContentMode: boolean;
+    lines: string[];
+  } | null>(null);
+  const displayLineOffsetsCacheRef = useRef<{
+    content: string;
+    offsets: number[];
+  } | null>(null);
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
 
-  const globalActiveBufferId = useBufferStore.use.activeBufferId();
-  const bufferId = propBufferId ?? globalActiveBufferId;
-  const buffers = useBufferStore.use.buffers();
+  const bufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
+  const rawBuffer = useBufferStore(
+    useCallback(
+      (state) => (bufferId ? state.buffers.find((candidate) => candidate.id === bufferId) : null),
+      [bufferId],
+    ),
+  );
   const { updateBufferContent, updateBufferTokens } = useBufferStore.use.actions();
   const {
     setCursorPosition,
@@ -238,23 +263,42 @@ export function Editor({
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const wordWrapSetting = useEditorSettingsStore.use.wordWrap();
 
-  const rawBuffer = buffers.find((b) => b.id === bufferId);
   const buffer = rawBuffer && isEditorContent(rawBuffer) ? rawBuffer : undefined;
   const content = buffer?.content || "";
   const filePath = buffer?.path;
   const languageIdOverride = buffer?.languageOverride;
   const useGlobalEditorState = isActiveSurface;
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
   const [suppressInlayHintsForTyping, setSuppressInlayHintsForTyping] = useState(false);
   const { startMeasure, endMeasure } = usePerformanceMonitor("Editor");
 
-  const actualLineCount = useMemo(
-    () => largeContentLineCount ?? countLines(content),
-    [content, largeContentLineCount],
-  );
+  const actualLineCount = useMemo(() => {
+    if (largeContentLineCount != null) return largeContentLineCount;
+
+    const cached = actualLinesCacheRef.current;
+    if (cached?.content === content) {
+      return cached.lineCount;
+    }
+
+    const incrementallyUpdatedLines =
+      cached && !cached.largeContentMode
+        ? applyIncrementalLineEdit(cached.content, content, cached.lines)
+        : null;
+
+    if (incrementallyUpdatedLines) {
+      actualLinesCacheRef.current = {
+        content,
+        lineCount: incrementallyUpdatedLines.length,
+        largeContentMode: false,
+        lines: incrementallyUpdatedLines,
+      };
+      return incrementallyUpdatedLines.length;
+    }
+
+    return countLines(content);
+  }, [content, largeContentLineCount]);
   const largeContentMode =
     largeContentModeOverride ??
     isTooLargeForEditorServices({
@@ -264,7 +308,43 @@ export function Editor({
 
   const actualLines = useMemo(() => {
     if (largeContentMode) {
-      return createSparseLineArray(actualLineCount);
+      const cached = actualLinesCacheRef.current;
+      if (
+        cached &&
+        cached.content === content &&
+        cached.lineCount === actualLineCount &&
+        cached.largeContentMode
+      ) {
+        return cached.lines;
+      }
+
+      const lines = createSparseLineArray(actualLineCount);
+      actualLinesCacheRef.current = {
+        content,
+        lineCount: actualLineCount,
+        largeContentMode,
+        lines,
+      };
+      return lines;
+    }
+
+    const cached = actualLinesCacheRef.current;
+    if (cached && cached.content === content && !cached.largeContentMode) {
+      return cached.lines;
+    }
+
+    const incrementallyUpdatedLines =
+      cached && !cached.largeContentMode
+        ? applyIncrementalLineEdit(cached.content, content, cached.lines)
+        : null;
+    if (incrementallyUpdatedLines) {
+      actualLinesCacheRef.current = {
+        content,
+        lineCount: incrementallyUpdatedLines.length,
+        largeContentMode,
+        lines: incrementallyUpdatedLines,
+      };
+      return incrementallyUpdatedLines;
     }
 
     if (filePath && fileOpenBenchmark.has(filePath)) {
@@ -276,6 +356,12 @@ export function Editor({
     if (filePath && fileOpenBenchmark.has(filePath)) {
       fileOpenBenchmark.mark(filePath, "split-done", `${res.length} lines`);
     }
+    actualLinesCacheRef.current = {
+      content,
+      lineCount: res.length,
+      largeContentMode,
+      lines: res,
+    };
     return res;
   }, [actualLineCount, content, filePath, largeContentMode, startMeasure, endMeasure]);
 
@@ -310,6 +396,8 @@ export function Editor({
     if (!isActiveSurface || isPreviewMode || largeContentMode) return;
     if (filePath && content) {
       let cancelled = false;
+      let idleId: number | null = null;
+      let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
       const computeFolds = () => {
         if (cancelled) return;
         if (fileOpenBenchmark.has(filePath)) {
@@ -320,19 +408,33 @@ export function Editor({
           fileOpenBenchmark.mark(filePath, "fold-done");
         }
       };
+      const scheduleFoldCompute = () => {
+        if (cancelled) return;
+        if ("requestIdleCallback" in window) {
+          idleId = window.requestIdleCallback(computeFolds, { timeout: 500 });
+          return;
+        }
+        timeoutId = globalThis.setTimeout(computeFolds, 0);
+      };
 
-      if ("requestIdleCallback" in window) {
-        const idleId = window.requestIdleCallback(computeFolds, { timeout: 500 });
-        return () => {
-          cancelled = true;
-          window.cancelIdleCallback(idleId);
-        };
+      const latestInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+      const isTypingUpdate =
+        latestInputTimestamp > 0 &&
+        Date.now() - latestInputTimestamp < FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS;
+      if (isTypingUpdate) {
+        timeoutId = globalThis.setTimeout(scheduleFoldCompute, FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS);
+      } else {
+        scheduleFoldCompute();
       }
 
-      const timeoutId = globalThis.setTimeout(computeFolds, 0);
       return () => {
         cancelled = true;
-        globalThis.clearTimeout(timeoutId);
+        if (idleId !== null) {
+          window.cancelIdleCallback(idleId);
+        }
+        if (timeoutId !== null) {
+          globalThis.clearTimeout(timeoutId);
+        }
       };
     }
   }, [filePath, content, foldActions, isActiveSurface, isPreviewMode, largeContentMode]);
@@ -481,14 +583,23 @@ export function Editor({
         contentWidth,
         measureText: measureEditorText,
         zones: viewZones,
-        compact: largeContentMode,
+        compact: largeContentMode || (!wordWrap && viewZones.length === 0),
       }),
     [lines, lineHeight, wordWrap, contentWidth, measureEditorText, viewZones, largeContentMode],
+  );
+  const editorBottomSafePadding = useMemo(
+    () =>
+      Math.max(
+        EDITOR_CONSTANTS.COMPLETION_DROPDOWN_SAFE_AREA,
+        lineHeight * EDITOR_CONSTANTS.CURSOR_BOTTOM_SAFE_AREA_LINES,
+      ),
+    [lineHeight],
   );
   const shouldVirtualizeRendering =
     !wordWrap && lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const tokenizationEnabled = hasSyntaxHighlighting && !largeContentMode;
-  const useIncrementalTokenization = tokenizationEnabled && shouldVirtualizeRendering;
+  const useIncrementalTokenization =
+    tokenizationEnabled && lines.length >= INCREMENTAL_TOKENIZATION_LINE_THRESHOLD;
 
   const {
     viewportRange,
@@ -508,15 +619,30 @@ export function Editor({
       enabled: tokenizationEnabled,
     });
   const normalizedEditorContent = useMemo(() => normalizeLineEndings(content), [content]);
-  const displayLineOffsets = useMemo(
+  const normalizedDisplayContent = useMemo(
     () =>
-      largeContentMode
-        ? []
-        : foldTransform.hasActiveFolds
-          ? buildLineOffsetMap(displayContent)
-          : buildLineOffsetMap(normalizedEditorContent),
-    [displayContent, foldTransform.hasActiveFolds, largeContentMode, normalizedEditorContent],
+      foldTransform.hasActiveFolds ? normalizeLineEndings(displayContent) : normalizedEditorContent,
+    [displayContent, foldTransform.hasActiveFolds, normalizedEditorContent],
   );
+  const displayLineOffsets = useMemo(() => {
+    if (largeContentMode) return [];
+
+    const cached = displayLineOffsetsCacheRef.current;
+    if (cached?.content === normalizedDisplayContent) {
+      return cached.offsets;
+    }
+
+    const incrementalOffsets = cached
+      ? applyIncrementalLineOffsetEdit(cached.content, normalizedDisplayContent, cached.offsets)
+      : null;
+    const offsets = incrementalOffsets ?? buildLineOffsetMap(normalizedDisplayContent);
+
+    displayLineOffsetsCacheRef.current = {
+      content: normalizedDisplayContent,
+      offsets,
+    };
+    return offsets;
+  }, [largeContentMode, normalizedDisplayContent]);
   const getVisualLineOffset = useCallback(
     (lineIndex: number) => {
       if (largeContentMode && !foldTransform.hasActiveFolds) {
@@ -536,6 +662,13 @@ export function Editor({
       largeContentMode,
       normalizedEditorContent,
     ],
+  );
+  const getCursorPositionForVisualOffset = useCallback(
+    (offset: number) =>
+      largeContentMode
+        ? calculateCursorPositionFromContent(offset, displayContent)
+        : calculateCursorPositionFromLineOffsets(offset, lines, displayLineOffsets),
+    [displayContent, displayLineOffsets, largeContentMode, lines],
   );
   useEffect(() => {
     if (!bufferId || tokens.length === 0 || !tokenizedContent) return;
@@ -590,6 +723,10 @@ export function Editor({
       layeredTokens,
     );
   }, [content, foldTransform, layeredTokens]);
+  const deferredMinimapLines = useDeferredValue(lines);
+  const deferredMinimapLineOffsets = useDeferredValue(displayLineOffsets);
+  const deferredMinimapTokens = useDeferredValue(effectiveTokens);
+  const useCustomInsertCaret = false;
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -712,23 +849,43 @@ export function Editor({
     const viewportHeight = textarea.clientHeight || 0;
     if (viewportHeight <= 0) return;
 
+    const safeViewportHeight = Math.max(lineHeight * 2, viewportHeight - editorBottomSafePadding);
+
     if (targetTop < currentScrollTop) {
       textarea.scrollTop = targetTop;
-    } else if (targetBottom > currentScrollTop + viewportHeight) {
-      textarea.scrollTop = Math.max(0, targetBottom - viewportHeight);
+    } else if (targetBottom > currentScrollTop + safeViewportHeight) {
+      textarea.scrollTop = Math.max(0, targetBottom - safeViewportHeight);
     }
-  }, [cursorViewPosition, useGlobalEditorState]);
+  }, [cursorViewPosition, editorBottomSafePadding, lineHeight, useGlobalEditorState]);
 
   useEffect(() => {
-    if (lastInputTimestamp === 0) return;
+    let lastHandledTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+    let timeout: ReturnType<typeof globalThis.setTimeout> | null = null;
 
-    setSuppressInlayHintsForTyping(true);
-    const timeout = setTimeout(() => {
-      setSuppressInlayHintsForTyping(false);
-    }, INLAY_HINT_TYPING_SUPPRESS_MS);
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastHandledTimestamp) {
+        return;
+      }
 
-    return () => clearTimeout(timeout);
-  }, [lastInputTimestamp]);
+      lastHandledTimestamp = state.lastInputTimestamp;
+      setSuppressInlayHintsForTyping(true);
+
+      if (timeout !== null) {
+        globalThis.clearTimeout(timeout);
+      }
+      timeout = globalThis.setTimeout(() => {
+        setSuppressInlayHintsForTyping(false);
+        timeout = null;
+      }, INLAY_HINT_TYPING_SUPPRESS_MS);
+    });
+
+    return () => {
+      unsubscribe();
+      if (timeout !== null) {
+        globalThis.clearTimeout(timeout);
+      }
+    };
+  }, []);
 
   const visualInlayHints = useMemo(() => {
     if (suppressInlayHintsForTyping) return [];
@@ -747,9 +904,9 @@ export function Editor({
 
   const setEditorCursorPosition = useCallback(
     (position: Parameters<typeof setCursorPosition>[0]) => {
-      setCursorPosition(position, { ensureVisible: !foldTransform.hasActiveFolds });
+      setCursorPosition(position, { ensureVisible: false });
     },
-    [foldTransform.hasActiveFolds, setCursorPosition],
+    [setCursorPosition],
   );
 
   const getInputOffsetForPosition = useCallback(
@@ -834,9 +991,7 @@ export function Editor({
       }
 
       const uiActions = useEditorUIStore.getState().actions;
-      uiActions.setHoverInfo(null);
-      uiActions.setIsHovering(false);
-      uiActions.setAutocompleteCompletion(null);
+      uiActions.clearTypingTransientState();
 
       let newActualContent: string;
       if (foldTransform.hasActiveFolds) {
@@ -871,28 +1026,35 @@ export function Editor({
 
       const selectionStart = inputRef.current.selectionStart;
       const selectionEnd = inputRef.current.selectionEnd;
-      const position = calculateCursorPositionFromContent(selectionStart, newVirtualContent);
+      const nextVirtualLineOffsets = applyIncrementalLineOffsetEdit(
+        displayContent,
+        newVirtualContent,
+        displayLineOffsets,
+      );
+      const nextVirtualLines = nextVirtualLineOffsets
+        ? applyIncrementalLineEdit(displayContent, newVirtualContent, lines)
+        : null;
+      const getNextVirtualPosition = (offset: number) =>
+        nextVirtualLineOffsets && nextVirtualLines
+          ? calculateCursorPositionFromLineOffsets(offset, nextVirtualLines, nextVirtualLineOffsets)
+          : calculateCursorPositionFromContent(offset, newVirtualContent);
+      const position = getNextVirtualPosition(selectionStart);
 
       if (foldTransform.hasActiveFolds) {
         const actualLine =
           foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
-        const actualOffset = calculateActualOffset(
-          splitLines(newActualContent),
-          actualLine,
-          position.column,
-        );
         setEditorCursorPosition({
           line: actualLine,
           column: position.column,
-          offset: actualOffset,
+          offset: calculateOffsetFromContentPosition(newActualContent, actualLine, position.column),
         });
       } else {
         setEditorCursorPosition(position);
       }
 
       if (selectionStart !== selectionEnd) {
-        const startPos = calculateCursorPositionFromContent(selectionStart, newVirtualContent);
-        const endPos = calculateCursorPositionFromContent(selectionEnd, newVirtualContent);
+        const startPos = getNextVirtualPosition(selectionStart);
+        const endPos = getNextVirtualPosition(selectionEnd);
 
         if (foldTransform.hasActiveFolds) {
           const actualStartLine =
@@ -904,8 +1066,8 @@ export function Editor({
             start: {
               line: actualStartLine,
               column: startPos.column,
-              offset: calculateActualOffset(
-                splitLines(newActualContent),
+              offset: calculateOffsetFromContentPosition(
+                newActualContent,
                 actualStartLine,
                 startPos.column,
               ),
@@ -913,8 +1075,8 @@ export function Editor({
             end: {
               line: actualEndLine,
               column: endPos.column,
-              offset: calculateActualOffset(
-                splitLines(newActualContent),
+              offset: calculateOffsetFromContentPosition(
+                newActualContent,
                 actualEndLine,
                 endPos.column,
               ),
@@ -938,7 +1100,9 @@ export function Editor({
       content,
       cursorPosition,
       displayContent,
+      displayLineOffsets,
       foldTransform,
+      lines,
       onContentChange,
       onChange,
       readOnly,
@@ -1084,6 +1248,7 @@ export function Editor({
       : undefined,
     selection,
     lines,
+    lineOffsets: displayLineOffsets,
     fontSize,
     fontFamily,
     lineHeight,
@@ -1120,9 +1285,7 @@ export function Editor({
             offset:
               getVisualLineOffset(vimVisualSelection.end.line) + vimVisualSelection.end.column,
           }
-        : largeContentMode
-          ? calculateCursorPositionFromContent(selectionStart, displayContent)
-          : calculateCursorPosition(selectionStart, lines);
+        : getCursorPositionForVisualOffset(selectionStart);
 
     if (foldTransform.hasActiveFolds) {
       const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
@@ -1137,16 +1300,10 @@ export function Editor({
     }
 
     if (selectionStart !== selectionEnd) {
-      const startPos = largeContentMode
-        ? calculateCursorPositionFromContent(selectionStart, displayContent)
-        : calculateCursorPosition(selectionStart, lines);
-      const endPos = largeContentMode
-        ? calculateCursorPositionFromContent(selectionEnd, displayContent)
-        : calculateCursorPosition(selectionEnd, lines);
+      const startPos = getCursorPositionForVisualOffset(selectionStart);
+      const endPos = getCursorPositionForVisualOffset(selectionEnd);
       const anchorOffset = Math.max(selectionStart, selectionEnd);
-      const anchorPos = largeContentMode
-        ? calculateCursorPositionFromContent(anchorOffset, displayContent)
-        : calculateCursorPosition(anchorOffset, lines);
+      const anchorPos = getCursorPositionForVisualOffset(anchorOffset);
       inlineEditState.setInlineEditSelectionAnchor({
         line: anchorPos.line,
         column: anchorPos.column,
@@ -1188,11 +1345,9 @@ export function Editor({
     uiActions.setIsHovering(false);
   }, [
     bufferId,
-    displayContent,
-    lines,
     actualLines,
+    getCursorPositionForVisualOffset,
     getVisualLineOffset,
-    largeContentMode,
     setEditorCursorPosition,
     setSelection,
     foldTransform,
@@ -1315,15 +1470,14 @@ export function Editor({
 
         const selectionStart = inputRef.current.selectionStart;
         const selectionEnd = inputRef.current.selectionEnd;
-        const contentLines = splitLines(content);
 
-        const clickedPosition = calculateCursorPosition(selectionStart, contentLines);
+        const clickedPosition = getCursorPositionForVisualOffset(selectionStart);
 
         const clickSelection =
           selectionStart !== selectionEnd
             ? {
-                start: calculateCursorPosition(selectionStart, contentLines),
-                end: calculateCursorPosition(selectionEnd, contentLines),
+                start: getCursorPositionForVisualOffset(selectionStart),
+                end: getCursorPositionForVisualOffset(selectionEnd),
               }
             : undefined;
 
@@ -1346,9 +1500,7 @@ export function Editor({
       }
 
       const selectionStart = inputRef.current.selectionStart;
-      const clickedPosition = largeContentMode
-        ? calculateCursorPositionFromContent(selectionStart, displayContent)
-        : calculateCursorPosition(selectionStart, lines);
+      const clickedPosition = getCursorPositionForVisualOffset(selectionStart);
       const clickedLine = lines[clickedPosition.line] || "";
       const accordionMeta = parseDiffAccordionLine(clickedLine);
 
@@ -1386,6 +1538,7 @@ export function Editor({
       addCursor,
       clearSecondaryCursors,
       lines,
+      getCursorPositionForVisualOffset,
       filePath,
       foldTransform,
       foldActions,
@@ -1403,6 +1556,15 @@ export function Editor({
     useEditorUIStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const getLastInputTimestamp = useCallback(
+    () => useEditorUIStore.getState().lastInputTimestamp,
+    [],
+  );
+  const subscribeToInputTimestamp = useCallback(
+    (listener: (timestamp: number) => void) =>
+      useEditorUIStore.subscribe((state) => listener(state.lastInputTimestamp)),
+    [],
+  );
 
   useAutocomplete({
     enabled:
@@ -1419,8 +1581,9 @@ export function Editor({
     languageId: filePath ? getLanguageId(filePath) : null,
     content,
     cursorOffset: cursorPosition.offset,
-    lastInputTimestamp,
     hasActiveFolds: foldTransform.hasActiveFolds,
+    getLastInputTimestamp,
+    subscribeToInputTimestamp,
     setAutocompleteCompletion,
   });
 
@@ -1432,6 +1595,7 @@ export function Editor({
     filePath,
     tabSize,
     lines,
+    lineOffsets: displayLineOffsets,
     cursorPosition,
     selection,
     multiCursorState,
@@ -1616,7 +1780,8 @@ export function Editor({
     };
   }, []);
 
-  // Tokenization scheduled via requestAnimationFrame
+  // Tokenization is intentionally delayed while typing. Rendering uses the previous
+  // token snapshot until the editor is idle enough to refresh syntax highlights.
   const tokenizeRafRef = useRef<number | null>(null);
   const tokenizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1633,6 +1798,9 @@ export function Editor({
     const contentToTokenize = buffer.content;
     const targetViewportRange = useIncrementalTokenization ? viewportRange : undefined;
     const isLargeFile = lines.length >= LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD;
+    const latestInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+    const msSinceInput = latestInputTimestamp > 0 ? Date.now() - latestInputTimestamp : Infinity;
+    const isTypingUpdate = msSinceInput < TOKENIZE_AFTER_TYPING_DEBOUNCE_MS;
 
     if (
       !useIncrementalTokenization &&
@@ -1647,6 +1815,19 @@ export function Editor({
         tokenize(contentToTokenize, targetViewportRange);
         tokenizeTimeoutRef.current = null;
       }, LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS);
+
+      return () => {
+        if (tokenizeTimeoutRef.current !== null) {
+          clearTimeout(tokenizeTimeoutRef.current);
+        }
+      };
+    }
+
+    if (isTypingUpdate) {
+      tokenizeTimeoutRef.current = setTimeout(() => {
+        tokenize(contentToTokenize, targetViewportRange);
+        tokenizeTimeoutRef.current = null;
+      }, TOKENIZE_AFTER_TYPING_DEBOUNCE_MS);
 
       return () => {
         if (tokenizeTimeoutRef.current !== null) {
@@ -1866,6 +2047,7 @@ export function Editor({
           lineNumberStart={lineNumberStart}
           lineNumberMap={lineNumberMap}
           viewZones={viewLayout.zones}
+          visualCursorLine={visualCursorLine}
         />
       )}
 
@@ -1931,14 +2113,16 @@ export function Editor({
           wordWrap={wordWrap}
           readOnly={readOnly}
           scrollable={scrollable}
-          customCaret={useGlobalEditorState && !readOnly && !largeContentMode}
+          customCaret={useCustomInsertCaret}
           nativeSelection={largeContentMode}
           scrollPaddingBottom={
-            largeContentMode ? viewLayout.totalHeight : viewLayout.totalZoneHeight
+            largeContentMode
+              ? viewLayout.totalHeight
+              : viewLayout.totalZoneHeight + editorBottomSafePadding
           }
           bufferId={bufferId || undefined}
         />
-        {useGlobalEditorState && !readOnly && !largeContentMode && (
+        {useCustomInsertCaret && (
           <PrimaryCursorLayer
             ref={primaryCursorRef}
             cursorPosition={cursorPosition}
@@ -1948,7 +2132,7 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            content={displayContent}
+            lineText={lines[visualCursorLine] ?? ""}
             textareaRef={inputRef}
             hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
@@ -1957,7 +2141,9 @@ export function Editor({
           <SelectionLayer
             ref={selectionLayerRef}
             textareaRef={inputRef}
-            content={displayContent}
+            lines={lines}
+            lineOffsets={displayLineOffsets}
+            contentLength={displayContent.length}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -2143,25 +2329,31 @@ export function Editor({
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
             lineHeight={lineHeight}
-            content={displayContent}
+            lines={lines}
+            lineOffsets={displayLineOffsets}
+            contentLength={displayContent.length}
             measureText={measureEditorText}
             viewLayout={wordWrap ? viewLayout : undefined}
           />
         )}
 
-        {useGlobalEditorState && !largeContentMode && vimModeEnabled && (
-          <VimCursorLayer
-            ref={vimCursorRef}
-            visualLine={visualCursorLine}
-            cursorViewPosition={cursorViewPosition}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-            lineHeight={lineHeight}
-            tabSize={tabSize}
-            content={displayContent}
-            vimMode={vimMode}
-          />
-        )}
+        {useGlobalEditorState &&
+          !largeContentMode &&
+          vimModeEnabled &&
+          (vimMode === "normal" || vimMode === "visual") && (
+            <VimCursorLayer
+              ref={vimCursorRef}
+              visualLine={visualCursorLine}
+              cursorViewPosition={cursorViewPosition}
+              cursorPosition={cursorPosition}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              lineHeight={lineHeight}
+              tabSize={tabSize}
+              lineText={lines[visualCursorLine] ?? ""}
+              vimMode={vimMode}
+            />
+          )}
 
         {!largeContentMode && (highlightMatches?.length || searchMatches.length > 0) && (
           <SearchHighlightLayer
@@ -2172,7 +2364,9 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            content={displayContent}
+            lines={lines}
+            lineOffsets={displayLineOffsets}
+            contentLength={displayContent.length}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
             viewLayout={wordWrap ? viewLayout : undefined}
           />
@@ -2183,7 +2377,9 @@ export function Editor({
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
-            content={displayContent}
+            lines={lines}
+            lineOffsets={displayLineOffsets}
+            contentLength={displayContent.length}
             textareaRef={inputRef}
             viewLayout={wordWrap ? viewLayout : undefined}
           />
@@ -2202,7 +2398,7 @@ export function Editor({
               filePath={filePath}
               cursorLine={cursorPosition.line}
               visualCursorLine={visualCursorLine}
-              visualContent={displayContent}
+              lines={lines}
               fontSize={fontSize}
               fontFamily={fontFamily}
               lineHeight={lineHeight}
@@ -2239,8 +2435,9 @@ export function Editor({
 
       {minimapEnabled && !largeContentMode && (
         <Minimap
-          content={displayContent}
-          tokens={effectiveTokens}
+          lines={deferredMinimapLines}
+          lineStarts={deferredMinimapLineOffsets}
+          tokens={deferredMinimapTokens}
           scrollTop={editorScrollTop}
           viewportHeight={editorViewportHeight}
           totalHeight={viewLayout.totalHeight}

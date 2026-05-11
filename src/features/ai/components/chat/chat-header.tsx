@@ -6,7 +6,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
-import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
+import { PaneChip, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
 import ChatHistoryDropdown from "../history/sidebar";
@@ -115,9 +115,9 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
     <div className={cn("relative z-[10020]", paneHeaderClassName())}>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
+          <PaneChip className="size-6 justify-center px-0">
             <ProviderIcon providerId={currentHeaderIconId} size={12} />
-          </span>
+          </PaneChip>
           {effectiveChatId ? (
             <EditableChatTitle
               title={currentChat ? currentChat.title : "New Chat"}

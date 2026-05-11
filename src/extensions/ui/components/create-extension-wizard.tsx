@@ -4,7 +4,6 @@ import {
   Check,
   RowsPlusTop as Columns3,
   SignIn as LogIn,
-  SpinnerGap as Loader2,
   CursorClick as MousePointerClick,
   PuzzlePiece as Puzzle,
   Sparkle as Sparkles,
@@ -13,6 +12,7 @@ import {
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useProFeature } from "../hooks/use-pro-feature";
@@ -807,8 +807,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
       {step === "generating" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <p className="font-medium ui-text-sm text-text">Generating</p>
-          <Loader2 className="size-6 animate-spin text-accent" />
+          <LoadingIndicator label="Generating" showLabel />
           <p className="min-h-4 text-center text-text-lighter ui-text-xs">
             {GENERATING_MESSAGES[generationMessageIndex]}
           </p>

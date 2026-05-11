@@ -3,7 +3,6 @@ import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-
 import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../../config/constants";
-import { useEditorStateStore } from "../../stores/state-store";
 import { useFoldStore } from "../../stores/fold-store";
 import { calculateLineNumberWidth, GUTTER_CONFIG } from "../../utils/gutter";
 import type { ResolvedEditorViewZone } from "../../view-model/view-layout";
@@ -25,6 +24,7 @@ interface FlowLineNumbersProps {
   lineNumberStart?: number;
   lineNumberMap?: Array<number | null>;
   viewZones?: ResolvedEditorViewZone[];
+  visualCursorLine: number;
 }
 
 function FlowLineNumbersComponent({
@@ -39,8 +39,8 @@ function FlowLineNumbersComponent({
   lineNumberStart = 1,
   lineNumberMap,
   viewZones = [],
+  visualCursorLine,
 }: FlowLineNumbersProps) {
-  const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const breakpoints = useDebuggerStore.use.breakpoints();
   const debuggerActions = useDebuggerStore.use.actions();
   const foldsByFile = useFoldStore((state) => state.foldsByFile);
@@ -58,13 +58,6 @@ function FlowLineNumbersComponent({
     GUTTER_CONFIG.DEBUG_LANE_WIDTH +
     GUTTER_CONFIG.GIT_LANE_WIDTH +
     (isDiffAccordionBuffer ? 0 : GUTTER_CONFIG.FOLD_LANE_WIDTH);
-
-  const visualCursorLine = useMemo(() => {
-    if (foldMapping?.actualToVirtual) {
-      return foldMapping.actualToVirtual.get(actualCursorLine) ?? actualCursorLine;
-    }
-    return actualCursorLine;
-  }, [actualCursorLine, foldMapping]);
 
   const fileState = filePath ? foldsByFile.get(filePath) : undefined;
   const breakpointsByLine = useMemo(() => {

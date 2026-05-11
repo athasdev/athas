@@ -14,8 +14,11 @@ interface EditorContextMenuProps extends EditorContextMenuHandlers {
 }
 
 const EditorContextMenu = ({ isOpen, position, onClose, ...handlers }: EditorContextMenuProps) => {
-  const selection = useEditorStateStore.use.selection?.() ?? undefined;
-  const hasSelection = Boolean(selection && selection.start.offset !== selection.end.offset);
+  const hasSelection = (() => {
+    if (!isOpen) return false;
+    const selection = useEditorStateStore.getState().selection;
+    return Boolean(selection && selection.start.offset !== selection.end.offset);
+  })();
   const modifierKey = IS_MAC ? "Cmd" : "Ctrl";
   const altKey = IS_MAC ? "Option" : "Alt";
 

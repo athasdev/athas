@@ -52,23 +52,21 @@ export const useSemanticTokens = (
   enabled: boolean,
   content = "",
 ): SemanticTokenState => {
-  const normalizedContent = normalizeLineEndings(content);
-  const [tokenState, setTokenState] = useState<SemanticTokenState>({
+  const [tokenState, setTokenState] = useState<SemanticTokenState>(() => ({
     tokens: [],
-    content: normalizedContent,
+    content: normalizeLineEndings(content),
     filePath,
-  });
-  const contentRef = useRef(normalizedContent);
+  }));
+  const contentRef = useRef(content);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   useEffect(() => {
-    contentRef.current = normalizedContent;
-  }, [normalizedContent]);
+    contentRef.current = content;
+  }, [content]);
 
   const fetchTokens = useCallback(
-    async (contentSnapshot = contentRef.current) => {
+    async (contentSnapshot = normalizeLineEndings(contentRef.current)) => {
       const id = ++requestIdRef.current;
 
       if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
@@ -91,22 +89,34 @@ export const useSemanticTokens = (
   );
 
   useEffect(() => {
-    void fetchTokens(normalizedContent);
+    void fetchTokens();
   }, [fetchTokens]);
 
   useEffect(() => {
-    if (lastInputTimestamp === 0) return;
+    if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
+      return;
+    }
 
-    if (timerRef.current) clearTimeout(timerRef.current);
-    const contentSnapshot = normalizedContent;
-    timerRef.current = setTimeout(() => {
-      void fetchTokens(contentSnapshot);
-    }, DEBOUNCE_MS);
+    let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastInputTimestamp) {
+        return;
+      }
+
+      lastInputTimestamp = state.lastInputTimestamp;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        const contentSnapshot = normalizeLineEndings(contentRef.current);
+        void fetchTokens(contentSnapshot);
+      }, DEBOUNCE_MS);
+    });
 
     return () => {
+      unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [lastInputTimestamp, fetchTokens, normalizedContent]);
+  }, [fetchTokens]);
 
   return tokenState;
 };

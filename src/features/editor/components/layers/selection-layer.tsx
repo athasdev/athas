@@ -1,5 +1,4 @@
-import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
-import { buildLineOffsetMap } from "../../utils/html";
+import { forwardRef, memo, useEffect, useRef, useState } from "react";
 import {
   calculateSelectionBoxes,
   type SelectionBox,
@@ -9,7 +8,9 @@ import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface SelectionLayerProps {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  content: string;
+  lines: string[];
+  lineOffsets: number[];
+  contentLength: number;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -22,7 +23,9 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
   (
     {
       textareaRef,
-      content,
+      lines,
+      lineOffsets,
+      contentLength,
       fontSize,
       fontFamily,
       lineHeight,
@@ -33,8 +36,6 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
     ref,
   ) => {
     const textarea = textareaRef.current;
-    const lines = useMemo(() => content.split("\n"), [content]);
-    const lineOffsets = useMemo(() => buildLineOffsetMap(content), [content]);
     const measureRef = useRef<HTMLSpanElement>(null);
     const [selectionOffsets, setSelectionOffsets] = useState<SelectionOffsets | null>(null);
     const [selectionBoxes, setSelectionBoxes] = useState<SelectionBox[]>([]);
@@ -100,13 +101,13 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
           selectionOffsets,
           lines,
           lineOffsets,
-          contentLength: content.length,
+          contentLength,
           lineHeight,
           measureText: getTextWidth,
           viewLayout: wordWrap ? viewLayout : undefined,
         }),
       );
-    }, [selectionOffsets, lines, lineOffsets, content.length, lineHeight, wordWrap, viewLayout]);
+    }, [selectionOffsets, lines, lineOffsets, contentLength, lineHeight, wordWrap, viewLayout]);
 
     return (
       <div
@@ -154,7 +155,9 @@ SelectionLayerComponent.displayName = "SelectionLayer";
 export const SelectionLayer = memo(SelectionLayerComponent, (prev, next) => {
   return (
     prev.textareaRef === next.textareaRef &&
-    prev.content === next.content &&
+    prev.lines === next.lines &&
+    prev.lineOffsets === next.lineOffsets &&
+    prev.contentLength === next.contentLength &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&

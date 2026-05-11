@@ -8,7 +8,13 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings-store"
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
-import { getLargeEditorModeInfo, getLineSlice } from "@/features/editor/utils/large-file";
+import {
+  applyIncrementalLargeEditorModeInfo,
+  getLargeEditorModeInfo,
+  getLineSlice,
+  type LargeEditorModeInfo,
+} from "@/features/editor/utils/large-file";
+import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
 import type {
   EditorCoordinateResolver,
@@ -100,9 +106,14 @@ const CodeEditor = ({
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const codeLensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
+  const valueRef = useRef("");
   const lspScrollRafRef = useRef<number | null>(null);
   const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
   const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
+  const largeEditorModeInfoRef = useRef<{
+    content: string;
+    info: LargeEditorModeInfo;
+  } | null>(null);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -111,19 +122,24 @@ const CodeEditor = ({
     useEditorStateStore.use.actions();
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
-  const buffers = useBufferStore.use.buffers();
-  const globalActiveBufferId = useBufferStore.use.activeBufferId();
-  const activeBufferId = propBufferId ?? globalActiveBufferId;
-  const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
+  const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const activeBuffer = useBufferStore(
+    useCallback(
+      (state) =>
+        activeBufferId
+          ? state.buffers.find((buffer) => buffer.id === activeBufferId) || null
+          : null,
+      [activeBufferId],
+    ),
+  );
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange } = useEditorAppStore.use.actions();
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const searchOptions = useEditorUIStore.use.searchOptions();
-  const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
+  const { setSearchResults } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const lspClient = useMemo(() => LspClient.getInstance(), []);
@@ -134,13 +150,26 @@ const CodeEditor = ({
 
   // Extract values from active buffer or use defaults
   const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
+  valueRef.current = value;
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
-  const largeEditorModeInfo = useMemo(() => getLargeEditorModeInfo(value), [value]);
+  const largeEditorModeInfo = useMemo(() => {
+    const cached = largeEditorModeInfoRef.current;
+    if (cached?.content === value) {
+      return cached.info;
+    }
+
+    const incrementalInfo = cached
+      ? applyIncrementalLargeEditorModeInfo(cached.content, value, cached.info)
+      : null;
+    const info = incrementalInfo ?? getLargeEditorModeInfo(value);
+    largeEditorModeInfoRef.current = { content: value, info };
+    return info;
+  }, [value]);
   const largeContentMode = largeEditorModeInfo.largeContentMode;
   const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
   const enableInlayHints = enableRichEditorServices && settings.parameterHints;
@@ -180,8 +209,8 @@ const CodeEditor = ({
   // Sync content and file info with editor instance store
   useEffect(() => {
     if (!isActiveSurface) return;
-    setContent(value, onChange);
-  }, [isActiveSurface, value, onChange, setContent]);
+    setContent("", onChange);
+  }, [isActiveSurface, onChange, setContent]);
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -196,19 +225,6 @@ const CodeEditor = ({
     setDisabled(false);
   }, [isActiveSurface, setDisabled]);
 
-  // Get cursor position for LSP integration
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
-  const displayCursorPosition = useMemo<Position>(() => {
-    if (activeEditorViewKey === editorViewKey) {
-      return cursorPosition;
-    }
-
-    const cachedCursor = editorViewKey
-      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
-      : null;
-
-    return cachedCursor ?? { line: 0, column: 0, offset: 0 };
-  }, [activeEditorViewKey, cursorPosition, editorViewKey]);
   const resolveEditorPosition = useCallback<EditorCoordinateResolver>(
     (clientX, clientY) => editorCoordinateResolverRef.current?.(clientX, clientY) ?? null,
     [],
@@ -235,7 +251,6 @@ const CodeEditor = ({
     enabled: enableRichEditorServices,
     filePath,
     value,
-    cursorPosition,
     editorRef,
     resolveEditorPosition,
   });
@@ -423,15 +438,13 @@ const CodeEditor = ({
     }
 
     if (!enableInteractiveServices || largeContentMode || !isFindVisible) {
-      setSearchMatches([]);
-      setCurrentMatchIndex(-1);
+      setSearchResults([], -1);
       return;
     }
 
     // Clear matches immediately if no query
     if (!searchQuery.trim() || !value) {
-      setSearchMatches([]);
-      setCurrentMatchIndex(-1);
+      setSearchResults([], -1);
       return;
     }
 
@@ -439,14 +452,12 @@ const CodeEditor = ({
     searchTimerRef.current = setTimeout(() => {
       const regex = buildSearchRegex(searchQuery, searchOptions);
       if (!regex) {
-        setSearchMatches([]);
-        setCurrentMatchIndex(-1);
+        setSearchResults([], -1);
         return;
       }
 
       const matches = findAllMatches(value, regex);
-      setSearchMatches(matches);
-      setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+      setSearchResults(matches, matches.length > 0 ? 0 : -1);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => {
@@ -461,8 +472,7 @@ const CodeEditor = ({
     searchQuery,
     searchOptions,
     value,
-    setSearchMatches,
-    setCurrentMatchIndex,
+    setSearchResults,
   ]);
 
   // Effect to handle search navigation - scroll to current match and move cursor
@@ -477,11 +487,7 @@ const CodeEditor = ({
           textarea.selectionStart = match.start;
           textarea.selectionEnd = match.end;
 
-          // Convert match offset to line number
-          let line = 0;
-          for (let i = 0; i < match.start && i < value.length; i++) {
-            if (value[i] === "\n") line++;
-          }
+          const { line } = calculateCursorPositionFromContent(match.start, valueRef.current);
 
           // Calculate scroll position to center the match in viewport
           const lineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
@@ -489,7 +495,9 @@ const CodeEditor = ({
           const viewportHeight = textarea.clientHeight;
           const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
 
-          textarea.scrollTop = centeredScrollTop;
+          if (textarea.scrollTop !== centeredScrollTop) {
+            textarea.scrollTop = centeredScrollTop;
+          }
         }
       }
     }
@@ -500,7 +508,6 @@ const CodeEditor = ({
     resolveModelPosition,
     searchMatches,
     settings.editorLineHeight,
-    value,
     zoomedFontSize,
   ]);
 
@@ -516,8 +523,8 @@ const CodeEditor = ({
         {showToolbar && (
           <Breadcrumb
             {...breadcrumbProps}
+            editorViewKey={editorViewKey}
             bufferId={activeBufferId ?? undefined}
-            cursorPosition={displayCursorPosition}
             filePathOverride={breadcrumbProps?.filePathOverride ?? filePath}
           />
         )}
@@ -561,7 +568,6 @@ const CodeEditor = ({
             <SignatureHelpTooltip
               editorRef={editorRef}
               filePath={filePath}
-              cursorPosition={displayCursorPosition}
               resolveModelPosition={resolveModelPosition}
             />
           )}

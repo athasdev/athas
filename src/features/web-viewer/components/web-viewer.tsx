@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { WarningCircle as AlertCircle, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
+import { WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { LoadingIndicator } from "@/ui/loading";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
 import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation-store";
 import { getEmbeddedWebViewerUserAgent, getWebViewerProfileKey } from "../utils/web-viewer-profile";
@@ -865,7 +866,7 @@ export function WebViewer({
 
         {isLoading && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
-            <RefreshCw className="animate-spin text-text-lighter" />
+            <LoadingIndicator label="Loading page" showLabel />
           </div>
         )}
       </div>

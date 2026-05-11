@@ -92,7 +92,7 @@ export const defaultKeymaps: Keybinding[] = [
   },
   {
     key: "cmd+d",
-    command: "editor.duplicateLine",
+    command: "editor.selectNextOccurrence",
     source: "default",
     when: "editorFocus",
   },

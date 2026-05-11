@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { useRedisStore } from "./stores/redis-store";
 
@@ -99,7 +100,11 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               disabled={store.isScanningKeys}
               aria-label="Refresh keys"
             >
-              <RefreshCw className={store.isScanningKeys ? "animate-spin" : undefined} />
+              {store.isScanningKeys ? (
+                <LoadingIndicator label="Refreshing keys" compact />
+              ) : (
+                <RefreshCw />
+              )}
             </Button>
           </div>
         </div>
@@ -125,7 +130,11 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               aria-label="Search keys"
               compact
             >
-              {store.isScanningKeys ? <RefreshCw className="animate-spin" /> : <Search />}
+              {store.isScanningKeys ? (
+                <LoadingIndicator label="Scanning keys" compact />
+              ) : (
+                <Search />
+              )}
             </Button>
           </div>
           <div ref={keyListRef} className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
@@ -182,10 +191,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <div className="flex items-center gap-2 ui-text-sm text-text-lighter">
-                <RefreshCw className="animate-spin" />
-                Loading...
-              </div>
+              <LoadingIndicator label="Loading" showLabel />
             </div>
           )}
 

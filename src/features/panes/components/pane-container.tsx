@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { DatabaseType } from "@/features/database/models/provider.types";
 import {
   PROVIDER_REGISTRY,
@@ -33,7 +34,6 @@ import { EmptyEditorState } from "./empty-editor-state";
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
-import { hasTextContent } from "../types/pane-content";
 import type { EditorContent, PullRequestContent } from "../types/pane-content";
 import {
   ensureBufferInPaneDropTarget,
@@ -71,7 +71,7 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
-const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
+const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const ImageViewer = lazy(() =>
@@ -108,10 +108,14 @@ const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
 
-function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
-  const previewText = hasTextContent(buffer)
-    ? buffer.content.split("\n").slice(0, 14).join("\n").trim()
-    : "";
+type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
+type PaneRenderBuffer = Exclude<Buffer, EditorContent> | EditorBufferShell;
+
+function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
+  const previewText =
+    "content" in buffer && typeof buffer.content === "string"
+      ? buffer.content.split("\n").slice(0, 14).join("\n").trim()
+      : "";
 
   const summary =
     buffer.type === "terminal"
@@ -224,7 +228,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
   );
 }
 
-function isStandardEditorBuffer(buffer: Buffer): buffer is EditorContent {
+function isStandardEditorBuffer(buffer: PaneRenderBuffer): buffer is EditorBufferShell {
   return buffer.type === "editor";
 }
 
@@ -233,11 +237,9 @@ function EmptyPaneState() {
 }
 
 export function PaneContainer({ pane }: PaneContainerProps) {
-  const buffers = useBufferStore.use.buffers();
   const activePaneId = usePaneStore.use.activePaneId();
   const { reorderPaneBuffers } = usePaneStore.use.actions();
-  const { closeBufferForce, openBuffer, openTerminalBuffer, showNewTabView } =
-    useBufferStore.use.actions();
+  const { closeBufferForce, openTerminalBuffer, showNewTabView } = useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
@@ -256,12 +258,26 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const suppressAutoCenterRef = useRef(false);
   const isActivePane = pane.id === activePaneId;
 
-  const paneBuffers = useMemo(
-    () =>
-      pane.bufferIds
-        .map((bufferId) => buffers.find((buffer) => buffer.id === bufferId))
-        .filter((buffer): buffer is Buffer => buffer !== undefined),
-    [buffers, pane.bufferIds],
+  const paneBuffers = useBufferStore(
+    useShallow((state) => {
+      const buffersById = new Map(state.buffers.map((buffer) => [buffer.id, buffer]));
+
+      return pane.bufferIds
+        .map((bufferId) => {
+          const buffer = buffersById.get(bufferId);
+          if (!buffer) return undefined;
+          if (buffer.type === "editor") {
+            return {
+              id: buffer.id,
+              path: buffer.path,
+              name: buffer.name,
+              type: buffer.type,
+            } satisfies EditorBufferShell;
+          }
+          return buffer;
+        })
+        .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
+    }),
   );
 
   const activeBuffer = useMemo(() => {
@@ -697,7 +713,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         return;
       }
     },
-    [pane.id, pane.bufferIds, buffers, openBuffer, handleFileOpen, openSidebarResourceInPane],
+    [pane.id, handleFileOpen, openSidebarResourceInPane],
   );
 
   const handleCarouselWheel = useCallback(
@@ -798,7 +814,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     horizontalBufferCarousel && (paneBuffers.length > 1 || shouldShowNewTabCard);
 
   const renderActiveBuffer = useCallback(
-    (buffer: Buffer) => {
+    (buffer: PaneRenderBuffer) => {
       switch (buffer.type) {
         case "newTab":
           return null;
@@ -826,7 +842,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
 
         case "pullRequest":
-          return <PRViewer prNumber={buffer.prNumber} />;
+          return <GitHubPRViewer prNumber={buffer.prNumber} />;
 
         case "githubIssue":
           return (

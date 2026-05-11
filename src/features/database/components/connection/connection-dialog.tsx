@@ -1,9 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  FolderOpen,
-  SpinnerGap as Loader2,
-  PlugsConnected as PlugZap,
-} from "@phosphor-icons/react";
+import { FolderOpen, PlugsConnected as PlugZap } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -12,6 +8,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { Tab, TabsList } from "@/ui/tabs";
 import { normalizeDatabaseError } from "../../lib/database-errors";
@@ -235,7 +232,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               aria-label="Test connection"
               compact
             >
-              {isTesting ? <Loader2 className="animate-spin" /> : <PlugZap />}
+              {isTesting ? <LoadingIndicator label="Testing" compact /> : <PlugZap />}
               Test
             </Button>
           )}
@@ -247,7 +244,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             aria-label={isFileBased ? "Open database" : "Connect"}
             compact
           >
-            {isConnecting && <Loader2 className="animate-spin" />}
+            {isConnecting && <LoadingIndicator label="Connecting" compact />}
             {isFileBased ? "Open Database" : "Connect"}
           </Button>
         </>

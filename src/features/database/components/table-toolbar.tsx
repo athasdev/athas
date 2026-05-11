@@ -91,7 +91,7 @@ export default function TableToolbar({
   const jsonLabel = isCustomQuery ? "Copy visible query page as JSON" : "Copy as JSON";
 
   return (
-    <div className="mx-2 mt-2 rounded-lg border border-border/70 bg-primary-bg px-3 py-2">
+    <div className="px-3 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 items-center gap-1.5">
@@ -111,7 +111,7 @@ export default function TableToolbar({
                 variant={viewMode === mode ? "default" : "ghost"}
                 compact
                 className={cn(
-                  "rounded px-2.5 text-text-lighter",
+                  "rounded px-2.5 ui-text-xs text-text-lighter",
                   viewMode === mode ? "text-text" : "text-text-lighter",
                 )}
                 aria-label={`Switch to ${label} view`}

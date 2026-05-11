@@ -1,7 +1,6 @@
 import {
   PencilSimple as Edit,
   FolderOpen,
-  SpinnerGap as Loader2,
   Plus,
   HardDrives as Server,
   Trash as Trash2,
@@ -11,6 +10,7 @@ import {
 import type React from "react";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection } from "./types";
 
@@ -212,7 +212,7 @@ const ConnectionList = ({
                       aria-label="Connect"
                     >
                       {connectingMap[connection.id] ? (
-                        <Loader2 className="animate-spin" />
+                        <LoadingIndicator label="Connecting" compact />
                       ) : (
                         <Wifi />
                       )}

@@ -1,4 +1,5 @@
 import { CommandEmpty } from "@/ui/command";
+import { LoadingIndicator } from "@/ui/loading";
 
 interface EmptyStateProps {
   isLoadingFiles: boolean;
@@ -21,12 +22,6 @@ export const EmptyState = ({
     if (!hasRootFolder) {
       return "Open a folder to start searching files";
     }
-    if (isIndexing) {
-      return "Indexing project files...";
-    }
-    if (isLoadingFiles) {
-      return "Loading files...";
-    }
     if (debouncedQuery) {
       return "No matching files found";
     }
@@ -41,7 +36,15 @@ export const EmptyState = ({
 
   return (
     <CommandEmpty>
-      <div className="ui-font text-text-lighter">{getMessage()}</div>
+      <div className="ui-font text-text-lighter">
+        {isIndexing ? (
+          <LoadingIndicator label="Indexing project files" showLabel compact />
+        ) : isLoadingFiles ? (
+          <LoadingIndicator label="Loading files" showLabel compact />
+        ) : (
+          getMessage()
+        )}
+      </div>
     </CommandEmpty>
   );
 };

@@ -12,7 +12,7 @@ interface PrimaryCursorLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize: number;
-  content: string;
+  lineText: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   hidden?: boolean;
 }
@@ -27,7 +27,7 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
       fontFamily,
       lineHeight,
       tabSize,
-      content,
+      lineText,
       textareaRef,
       hidden = false,
     },
@@ -67,8 +67,6 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
       return null;
     }
 
-    const lines = content.split("\n");
-    const lineText = lines[visualLine] || "";
     const cursorColumn = Math.min(cursorPosition.column, lineText.length);
     const left =
       cursorViewPosition?.left ??
@@ -107,7 +105,7 @@ export const PrimaryCursorLayer = memo(PrimaryCursorLayerComponent, (prev, next)
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
-    prev.content === next.content &&
+    prev.lineText === next.lineText &&
     prev.textareaRef === next.textareaRef &&
     prev.hidden === next.hidden
   );

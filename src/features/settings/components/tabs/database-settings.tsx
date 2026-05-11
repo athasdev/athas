@@ -4,6 +4,7 @@ import { useConnectionStore } from "@/features/database/stores/connection-store"
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import Section, { SettingRow } from "../settings-section";
 
 const formatDbType = (dbType: string) => {
@@ -60,7 +61,7 @@ export const DatabaseSettings = () => {
       >
         {isLoadingSaved ? (
           <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
-            Loading saved connections...
+            <LoadingIndicator label="Loading saved connections" showLabel compact />
           </div>
         ) : savedConnections.length === 0 ? (
           <div className="ui-font ui-text-sm rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 text-text-lighter">

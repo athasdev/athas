@@ -25,7 +25,7 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
@@ -94,8 +94,6 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
 
 const CONTROL_PILL_BASE =
   "ui-font ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
-
-const CHIP_BASE = PANE_CHIP_BASE;
 
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
@@ -930,7 +928,7 @@ const DiagnosticsPane = ({
                         {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
                       </span>
 
-                      <span className={CHIP_BASE}>{group.items.length}</span>
+                      <PaneChip>{group.items.length}</PaneChip>
                     </Button>
                   )}
 
@@ -976,9 +974,9 @@ const DiagnosticsPane = ({
                                 {summary}
                               </span>
 
-                              <span className={CHIP_BASE}>
+                              <PaneChip>
                                 {diagnostic.line + 1}:{diagnostic.column + 1}
-                              </span>
+                              </PaneChip>
                             </div>
 
                             <div className="mt-1 pl-5">
@@ -1000,13 +998,9 @@ const DiagnosticsPane = ({
                                   {diagnostic.filePath}
                                 </span>
 
-                                {diagnostic.source && (
-                                  <span className={CHIP_BASE}>{diagnostic.source}</span>
-                                )}
+                                {diagnostic.source && <PaneChip>{diagnostic.source}</PaneChip>}
 
-                                {diagnostic.code && (
-                                  <span className={CHIP_BASE}>{diagnostic.code}</span>
-                                )}
+                                {diagnostic.code && <PaneChip>{diagnostic.code}</PaneChip>}
                               </div>
                             </div>
                           </div>

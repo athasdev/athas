@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Eye, MagnifyingGlass as Search, Sparkle as Sparkles } from "@phosphor-icons/react";
+import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import type { Position } from "@/features/editor/types/editor";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
@@ -14,7 +14,7 @@ import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
 export interface BreadcrumbProps {
   bufferId?: string;
-  cursorPosition?: Position;
+  editorViewKey?: string | null;
   filePathOverride?: string;
   rightContent?: ReactNode;
   extraLeftContent?: ReactNode;
@@ -25,7 +25,7 @@ export interface BreadcrumbProps {
 
 export default function Breadcrumb({
   bufferId,
-  cursorPosition,
+  editorViewKey,
   filePathOverride,
   rightContent,
   extraLeftContent,
@@ -33,12 +33,29 @@ export default function Breadcrumb({
   interactive = true,
   showPath = true,
 }: BreadcrumbProps = {}) {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const resolvedBufferId = bufferId ?? activeBufferId;
-  const activeBuffer = buffers.find((b) => b.id === resolvedBufferId) || null;
+  const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
+  const activeBuffer = useBufferStore(
+    useShallow((state) => {
+      const buffer = resolvedBufferId
+        ? state.buffers.find((candidate) => candidate.id === resolvedBufferId)
+        : null;
+      return buffer
+        ? {
+            id: buffer.id,
+            path: buffer.path,
+            name: buffer.name,
+            type: buffer.type,
+          }
+        : null;
+    }),
+  );
   const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
-  const { isFindVisible, setIsFindVisible } = useUIState();
+  const { isFindVisible, setIsFindVisible } = useUIState(
+    useShallow((state) => ({
+      isFindVisible: state.isFindVisible,
+      setIsFindVisible: state.setIsFindVisible,
+    })),
+  );
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
   const extensionActions = useExtensionActions();
 
@@ -69,23 +86,26 @@ export default function Breadcrumb({
   };
 
   const handlePreviewClick = () => {
+    const fullActiveBuffer = resolvedBufferId
+      ? useBufferStore.getState().buffers.find((buffer) => buffer.id === resolvedBufferId)
+      : null;
     if (
-      !activeBuffer ||
-      activeBuffer.type === "markdownPreview" ||
-      activeBuffer.type === "htmlPreview" ||
-      activeBuffer.type === "csvPreview"
+      !fullActiveBuffer ||
+      fullActiveBuffer.type === "markdownPreview" ||
+      fullActiveBuffer.type === "htmlPreview" ||
+      fullActiveBuffer.type === "csvPreview"
     )
       return;
 
     const { openBuffer } = useBufferStore.getState().actions;
-    const previewPath = `${activeBuffer.path}:preview`;
-    const previewName = `${activeBuffer.name} (Preview)`;
+    const previewPath = `${fullActiveBuffer.path}:preview`;
+    const previewName = `${fullActiveBuffer.name} (Preview)`;
 
     const isMarkdown = isMarkdownFile();
     const isHtml = isHtmlFile();
     const isCsv = isCsvFile();
 
-    const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
+    const bufferContent = hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
 
     openBuffer(
       previewPath,
@@ -99,7 +119,7 @@ export default function Breadcrumb({
       isMarkdown, // isMarkdownPreview
       isHtml, // isHtmlPreview
       isCsv, // isCsvPreview
-      activeBuffer.path, // sourceFilePath
+      fullActiveBuffer.path, // sourceFilePath
     );
   };
 
@@ -150,7 +170,7 @@ export default function Breadcrumb({
         <div className="mx-1 h-3.5 w-px bg-border/70" />
         <EditorStatusActions
           bufferId={resolvedBufferId ?? undefined}
-          cursorPosition={cursorPosition}
+          editorViewKey={editorViewKey}
         />
       </>
     ) : null;

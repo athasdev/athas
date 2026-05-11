@@ -1,14 +1,11 @@
 import { memo, useEffect, useRef } from "react";
 import { useEditorSettingsStore } from "../../stores/settings-store";
 import type { Token } from "../../utils/html";
-import {
-  bucketTokensByLine,
-  buildMinimapLineMetrics,
-  getMinimapHorizontalMetrics,
-} from "./minimap-utils";
+import { bucketTokensByLine, getMinimapHorizontalMetrics } from "./minimap-utils";
 
 interface MinimapCanvasProps {
-  content: string;
+  lines: string[];
+  lineStarts: number[];
   tokens: Token[];
   width: number;
   height: number;
@@ -83,7 +80,8 @@ function drawMinimapSpan({
 }
 
 function MinimapCanvasComponent({
-  content,
+  lines,
+  lineStarts,
   tokens,
   width,
   height,
@@ -112,7 +110,6 @@ function MinimapCanvasComponent({
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    const { lines, lineStarts } = buildMinimapLineMetrics(content);
     const scaledLineHeight = lineHeight * scale;
     const xOffset = 3;
     const { charWidth } = getMinimapHorizontalMetrics({ lines, width, horizontalPadding: xOffset });
@@ -200,7 +197,7 @@ function MinimapCanvasComponent({
         });
       }
     }
-  }, [content, tokens, width, height, scale, lineHeight, theme]);
+  }, [lines, lineStarts, tokens, width, height, scale, lineHeight, theme]);
 
   return (
     <canvas

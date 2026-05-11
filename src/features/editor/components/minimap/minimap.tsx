@@ -2,14 +2,14 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Token } from "../../utils/html";
 import { MinimapCanvas } from "./minimap-canvas";
 import {
-  buildMinimapLineMetrics,
   buildSearchMarks,
   getMinimapRenderMetrics,
   getScrollTopFromMinimapY,
 } from "./minimap-utils";
 
 interface MinimapProps {
-  content: string;
+  lines: string[];
+  lineStarts: number[];
   tokens: Token[];
   scrollTop: number;
   viewportHeight: number;
@@ -24,7 +24,8 @@ interface MinimapProps {
 }
 
 function MinimapComponent({
-  content,
+  lines,
+  lineStarts,
   tokens,
   scrollTop,
   viewportHeight,
@@ -67,23 +68,16 @@ function MinimapComponent({
     [containerHeight, scale, scrollTop, totalHeight, viewportHeight],
   );
 
-  const lineMetrics = useMemo(() => buildMinimapLineMetrics(content), [content]);
   const searchMarks = useMemo(
     () =>
       buildSearchMarks({
         matches: searchMatches,
         currentMatchIndex: currentSearchMatchIndex,
-        lineStarts: lineMetrics.lineStarts,
+        lineStarts,
         lineHeight,
         renderScale: metrics.renderScale,
       }),
-    [
-      currentSearchMatchIndex,
-      lineHeight,
-      lineMetrics.lineStarts,
-      metrics.renderScale,
-      searchMatches,
-    ],
+    [currentSearchMatchIndex, lineHeight, lineStarts, metrics.renderScale, searchMatches],
   );
 
   const calculateScrollFromY = useCallback(
@@ -156,7 +150,8 @@ function MinimapComponent({
       onPointerCancel={handlePointerCancel}
     >
       <MinimapCanvas
-        content={content}
+        lines={lines}
+        lineStarts={lineStarts}
         tokens={tokens}
         width={width}
         height={metrics.renderHeight}

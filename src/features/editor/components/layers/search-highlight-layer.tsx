@@ -6,9 +6,8 @@
  * pattern as VimCursorLayer for consistent, accurate font metrics.
  */
 
-import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useEffect, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
-import { buildLineOffsetMap } from "../../utils/html";
 import { calculateSelectionBoxes } from "../../utils/selection-boxes";
 import type { EditorViewLayout } from "../../view-model/view-layout";
 
@@ -24,7 +23,9 @@ interface SearchHighlightLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize: number;
-  content: string;
+  lines: string[];
+  lineOffsets: number[];
+  contentLength: number;
   viewportRange?: { startLine: number; endLine: number };
   viewLayout?: EditorViewLayout;
 }
@@ -83,14 +84,14 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
       fontFamily,
       lineHeight,
       tabSize,
-      content,
+      lines,
+      lineOffsets,
+      contentLength,
       viewportRange,
       viewLayout,
     },
     ref,
   ) => {
-    const lines = useMemo(() => content.split("\n"), [content]);
-    const lineOffsets = useMemo(() => buildLineOffsetMap(content), [content]);
     const measureRef = useRef<HTMLSpanElement>(null);
     const [highlightBoxes, setHighlightBoxes] = useState<HighlightBox[]>([]);
 
@@ -124,7 +125,7 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
             },
             lines,
             lineOffsets,
-            contentLength: content.length,
+            contentLength,
             lineHeight,
             measureText: getTextWidth,
             viewLayout,
@@ -154,8 +155,8 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
       };
 
       searchMatches.forEach((match, matchIndex) => {
-        const startPos = offsetToLineColumn(match.start, lineOffsets, content.length);
-        const endPos = offsetToLineColumn(match.end, lineOffsets, content.length);
+        const startPos = offsetToLineColumn(match.start, lineOffsets, contentLength);
+        const endPos = offsetToLineColumn(match.end, lineOffsets, contentLength);
         const overlapEndLine = findLineForOffset(Math.max(match.start, match.end - 1), lineOffsets);
 
         if (
@@ -226,7 +227,7 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
     }, [
       searchMatches,
       currentMatchIndex,
-      content,
+      contentLength,
       lineOffsets,
       lines,
       lineHeight,
@@ -286,7 +287,9 @@ export const SearchHighlightLayer = memo(SearchHighlightLayerComponent, (prev, n
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
-    prev.content === next.content &&
+    prev.lines === next.lines &&
+    prev.lineOffsets === next.lineOffsets &&
+    prev.contentLength === next.contentLength &&
     prev.viewLayout === next.viewLayout &&
     prev.viewportRange?.startLine === next.viewportRange?.startLine &&
     prev.viewportRange?.endLine === next.viewportRange?.endLine

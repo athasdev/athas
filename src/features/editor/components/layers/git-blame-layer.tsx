@@ -1,6 +1,5 @@
-import { forwardRef, memo, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useLayoutEffect, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { splitLines } from "@/features/editor/utils/lines";
 import type { ViewPosition } from "@/features/editor/view-model/view-layout";
 import { InlineGitBlame } from "@/features/git/components/git-inline-blame";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
@@ -9,7 +8,7 @@ interface GitBlameLayerProps {
   filePath: string;
   cursorLine: number;
   visualCursorLine: number;
-  visualContent: string;
+  lines: string[];
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -24,7 +23,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
       filePath,
       cursorLine,
       visualCursorLine,
-      visualContent,
+      lines,
       fontSize,
       fontFamily,
       lineHeight,
@@ -39,7 +38,6 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
     const measureRef = useRef<HTMLSpanElement>(null);
     const [lineContentWidth, setLineContentWidth] = useState(0);
 
-    const lines = useMemo(() => splitLines(visualContent), [visualContent]);
     const currentLineContent = lines[visualCursorLine] || "";
 
     // Reset width when file changes to prevent stale positioning during file switches

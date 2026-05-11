@@ -3,7 +3,6 @@ import {
   CheckCircle,
   Eye,
   EyeSlash as EyeOff,
-  SpinnerGap as Loader2,
   HardDrives as Server,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { testRemoteConnection } from "./services/remote-connection-actions";
@@ -184,13 +184,7 @@ const ConnectionDialog = ({
             compact
             disabled={isTesting}
           >
-            {isTesting ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="animate-spin" /> Testing
-              </span>
-            ) : (
-              "Test Connection"
-            )}
+            {isTesting ? <LoadingIndicator label="Testing" showLabel compact /> : "Test Connection"}
           </Button>
           <Button onClick={handleSave} disabled={!isFormValid || isValidating} compact>
             {isValidating

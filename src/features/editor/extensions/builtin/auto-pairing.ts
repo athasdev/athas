@@ -118,13 +118,17 @@ export class AutoPairingExtension implements EditorExtension {
     return this.autoPairs.some((pair) => pair.open === key);
   }
 
+  private getLineAtPosition(content: string, position: LSPPosition): string {
+    const lineStart = Math.max(0, position.offset - position.character);
+    const lineEnd = content.indexOf("\n", position.offset);
+    return content.slice(lineStart, lineEnd === -1 ? content.length : lineEnd);
+  }
+
   private handleAutoPair(key: string, content: string, position: LSPPosition) {
     const pair = this.autoPairs.find((p) => p.open === key);
     if (!pair) return null;
 
-    const lines = content.split("\n");
-    const currentLineIndex = position.line;
-    const currentLine = lines[currentLineIndex] || "";
+    const currentLine = this.getLineAtPosition(content, position);
 
     // Early exit for quotes that shouldn't be auto-paired
     if (this.isQuote(key) && this.shouldSkipAutoPairQuote(key, currentLine, position)) {
@@ -158,8 +162,7 @@ export class AutoPairingExtension implements EditorExtension {
   }
 
   private handleSkipOver(key: string, content: string, position: LSPPosition) {
-    const lines = content.split("\n");
-    const currentLine = lines[position.line] || "";
+    const currentLine = this.getLineAtPosition(content, position);
 
     if (currentLine[position.character] === key) {
       if (this.isQuote(key)) {
@@ -181,8 +184,7 @@ export class AutoPairingExtension implements EditorExtension {
   }
 
   private handleBackspace(content: string, position: LSPPosition) {
-    const lines = content.split("\n");
-    const currentLine = lines[position.line] || "";
+    const currentLine = this.getLineAtPosition(content, position);
 
     // Boundary checks
     if (position.character === 0 || position.character > currentLine.length) {

@@ -2,6 +2,7 @@ import { readFile } from "@tauri-apps/plugin-fs";
 import { File as FileIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 
@@ -197,9 +198,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="ui-text-sm rounded-lg border border-border/60 bg-secondary-bg px-3 py-2 text-text-lighter">
-          Loading binary file...
-        </div>
+        <LoadingIndicator label="Loading binary file" showLabel />
       </div>
     );
   }
