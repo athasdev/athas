@@ -296,6 +296,10 @@ const TabBar = ({
     (buffer: PaneContent) => {
       if (buffer.type === "terminal") {
         const session = terminalSessions.get(buffer.sessionId);
+        if (session?.customName) {
+          return session.name?.trim() || buffer.name;
+        }
+
         const title = session?.title?.trim();
         if (isUsefulTerminalTitle(title)) return title!;
 

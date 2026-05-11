@@ -20,8 +20,16 @@ const generateTerminalId = (name: string): string => {
 const terminalReducer = (state: TerminalState, action: TerminalAction): TerminalState => {
   switch (action.type) {
     case "CREATE_TERMINAL": {
-      const { name, currentDirectory, shell, id, remoteConnectionId, profileId, initialCommand } =
-        action.payload;
+      const {
+        name,
+        currentDirectory,
+        shell,
+        id,
+        remoteConnectionId,
+        profileId,
+        initialCommand,
+        customName,
+      } = action.payload;
       if (id && state.terminals.some((terminal) => terminal.id === id)) {
         return {
           terminals: state.terminals.map((terminal) => ({
@@ -51,6 +59,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         profileId,
         initialCommand,
         remoteConnectionId,
+        customName: customName ?? false,
         createdAt: new Date(),
         lastActivity: new Date(),
       };
@@ -123,7 +132,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       return {
         ...state,
         terminals: state.terminals.map((terminal) =>
-          terminal.id === id ? { ...terminal, name } : terminal,
+          terminal.id === id ? { ...terminal, name, customName: true } : terminal,
         ),
       };
     }
@@ -199,6 +208,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         isPinned: pt.isPinned,
         shell: pt.shell,
         profileId: pt.profileId,
+        customName: pt.customName ?? false,
         remoteConnectionId: pt.remoteConnectionId,
         createdAt: new Date(),
         lastActivity: new Date(),
@@ -376,6 +386,7 @@ export const useTerminalTabs = () => {
           id: pt.id,
           remoteConnectionId: pt.remoteConnectionId,
           profileId: pt.profileId,
+          customName: pt.customName,
         },
       });
       if (pt.isPinned) {

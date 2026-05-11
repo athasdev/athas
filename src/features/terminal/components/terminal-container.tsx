@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
@@ -255,6 +256,15 @@ const TerminalContainer = ({
       if (!trimmedName) return;
 
       updateTerminalName(terminalId, trimmedName);
+      useTerminalStore.getState().updateSession(terminalId, {
+        name: trimmedName,
+        customName: true,
+      });
+
+      const { buffers, actions } = useBufferStore.getState();
+      buffers
+        .filter((buffer) => buffer.type === "terminal" && buffer.sessionId === terminalId)
+        .forEach((buffer) => actions.updateBuffer({ ...buffer, name: trimmedName }));
     },
     [updateTerminalName],
   );

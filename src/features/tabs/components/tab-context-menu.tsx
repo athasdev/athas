@@ -2,6 +2,7 @@ import {
   Columns as Columns2,
   Copy,
   FolderOpen,
+  PencilSimpleLine,
   PushPin as Pin,
   PushPinSlash as PinOff,
   ArrowCounterClockwise as RotateCcw,
@@ -12,7 +13,9 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { isVirtualContent } from "@/features/panes/types/pane-content";
+import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { primitivePrompt } from "@/ui/primitive-dialog-service";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
@@ -64,6 +67,33 @@ const TabContextMenu = ({
       icon: buffer.isPinned ? <PinOff /> : <Pin />,
       onClick: () => onPin(buffer.id),
     },
+    ...(buffer.type === "terminal"
+      ? [
+          {
+            id: "rename-terminal",
+            label: "Rename",
+            icon: <PencilSimpleLine />,
+            onClick: async () => {
+              const nextName = (
+                await primitivePrompt("Enter a terminal name:", {
+                  title: "Rename Terminal",
+                  defaultValue: buffer.name,
+                  placeholder: "Terminal name",
+                  confirmLabel: "Rename",
+                })
+              )?.trim();
+
+              if (!nextName) return;
+
+              useTerminalStore.getState().updateSession(buffer.sessionId, {
+                name: nextName,
+                customName: true,
+              });
+              useBufferStore.getState().actions.updateBuffer({ ...buffer, name: nextName });
+            },
+          },
+        ]
+      : []),
     { id: "sep-1", label: "", separator: true, onClick: () => {} },
     ...(paneId && onSplitRight
       ? [

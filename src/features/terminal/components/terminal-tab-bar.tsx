@@ -373,7 +373,7 @@ const TerminalTabBar = ({
       renameStartedAtRef.current = Date.now();
       onTabClick(terminalId);
       setEditingTerminalId(terminalId);
-      setEditingName(terminal.name);
+      setEditingName(getTerminalDisplayName(terminal));
     });
   };
 
@@ -475,6 +475,8 @@ const TerminalTabBar = ({
     return true;
   };
   const getTerminalDisplayName = (terminal: Terminal) => {
+    if (terminal.customName && terminal.name.trim()) return terminal.name;
+
     const session = sessions.get(terminal.id);
     const title = session?.title?.trim();
     if (isUsefulTerminalTitle(title)) return title!;

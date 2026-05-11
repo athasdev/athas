@@ -24,6 +24,7 @@ export const serializeTerminals = (terminals: Terminal[]): PersistedTerminal[] =
     shell: terminal.shell,
     profileId: terminal.profileId,
     title: terminal.title,
+    customName: terminal.customName,
     remoteConnectionId: terminal.remoteConnectionId,
   }));
 
