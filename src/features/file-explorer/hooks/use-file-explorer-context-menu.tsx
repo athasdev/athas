@@ -251,7 +251,9 @@ export function useFileExplorerContextMenu({
         },
         {
           id: "collapse-all",
-          label: isWorkspaceRootPath?.(contextMenu.path) ? "Collapse Descendants" : "Collapse Folder",
+          label: isWorkspaceRootPath?.(contextMenu.path)
+            ? "Collapse Descendants"
+            : "Collapse Folder",
           icon: <CaretDoubleUp />,
           onClick: () => {
             if (onCollapseDirectory) {

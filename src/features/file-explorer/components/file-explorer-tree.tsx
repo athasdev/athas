@@ -954,7 +954,9 @@ function FileExplorerTreeComponent({
     if (!openingPath) return;
 
     const descendantVisiblePaths = visibleRows
-      .filter((row) => row.file.path !== openingPath && pathStartsWithRoot(row.file.path, openingPath))
+      .filter(
+        (row) => row.file.path !== openingPath && pathStartsWithRoot(row.file.path, openingPath),
+      )
       .map((row) => row.file.path);
 
     pendingOpenAnimationPathRef.current = null;
