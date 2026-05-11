@@ -51,6 +51,10 @@ import {
   useTerminalStore,
 } from "@/features/terminal/stores/terminal-store";
 import type { Terminal } from "@/features/terminal/types/terminal";
+import {
+  getTerminalTabSidebarResizeSide,
+  getTerminalTabSidebarResizeWidth,
+} from "@/features/terminal/utils/terminal-tab-sidebar-resize";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
@@ -449,6 +453,7 @@ const TerminalTabBar = ({
     orientation === "vertical" ? verticalListSortingStrategy : horizontalListSortingStrategy;
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
   const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);
+  const resizeHandleSide = getTerminalTabSidebarResizeSide(tabSidebarPosition);
   const getDirectoryLabel = (directory?: string) => {
     if (!directory) return "";
     const normalized = directory.replace(/[\\/]+$/, "");
@@ -916,14 +921,24 @@ const TerminalTabBar = ({
           {/* Resize handle for vertical sidebar */}
           {orientation === "vertical" && (
             <div
-              className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60"
+              className={cn(
+                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60",
+                resizeHandleSide === "left" ? "left-0" : "right-0",
+              )}
               onMouseDown={(e) => {
                 e.preventDefault();
                 const startX = e.clientX;
                 const startWidth = tabSidebarWidth;
 
                 const onMouseMove = (ev: MouseEvent) => {
-                  setTabSidebarWidth(startWidth + (ev.clientX - startX));
+                  setTabSidebarWidth(
+                    getTerminalTabSidebarResizeWidth({
+                      position: tabSidebarPosition,
+                      startWidth,
+                      startX,
+                      currentX: ev.clientX,
+                    }),
+                  );
                 };
                 const onMouseUp = () => {
                   document.removeEventListener("mousemove", onMouseMove);
