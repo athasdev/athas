@@ -1,6 +1,6 @@
 {
   "name": "athas",
-  "version": "0.6.0",
+  "version": "0.7.0-preview.1",
   "private": true,
   "type": "module",
   "scripts": {
