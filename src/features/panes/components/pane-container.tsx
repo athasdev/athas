@@ -66,7 +66,7 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
-const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
+const PRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const ImageViewer = lazy(() =>
@@ -232,15 +232,14 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const activePaneId = usePaneStore.use.activePaneId();
   const {
     setActivePane,
-    setActivePaneBuffer,
+    activatePaneBuffer,
     addBufferToPane,
     moveBufferToPane,
     removeBufferFromPane,
     reorderPaneBuffers,
     splitPane,
   } = usePaneStore.use.actions();
-  const { closeBufferForce, openBuffer, openTerminalBuffer, showNewTabView } =
-    useBufferStore.use.actions();
+  const { closeBufferForce, openTerminalBuffer, showNewTabView } = useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
@@ -325,11 +324,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const handleTabClick = useCallback(
     (bufferId: string) => {
       setActivePane(pane.id);
-      setActivePaneBuffer(pane.id, bufferId);
+      activatePaneBuffer(pane.id, bufferId);
       // Sync buffer store's activeBufferId
       useBufferStore.getState().actions.setActiveBuffer(bufferId);
     },
-    [pane.id, setActivePane, setActivePaneBuffer],
+    [activatePaneBuffer, pane.id, setActivePane],
   );
 
   const openFileTreeDropInPane = useCallback(
@@ -361,7 +360,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         if (!openedBufferId) return;
 
         if (!isEdgeDropZone(effectiveZone)) {
-          setActivePaneBuffer(pane.id, openedBufferId);
+          activatePaneBuffer(pane.id, openedBufferId);
           useBufferStore.getState().actions.setActiveBuffer(openedBufferId);
           return;
         }
@@ -373,7 +372,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         removeBufferFromPane(pane.id, openedBufferId);
 
         setActivePane(newPaneId);
-        setActivePaneBuffer(newPaneId, openedBufferId);
+        activatePaneBuffer(newPaneId, openedBufferId);
         useBufferStore.getState().actions.setActiveBuffer(openedBufferId);
       } catch (error) {
         console.error("Failed to open file from file tree drop:", error);
@@ -381,7 +380,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         delete window.__fileDragData;
       }
     },
-    [handleFileOpen, pane.id, removeBufferFromPane, setActivePane, setActivePaneBuffer, splitPane],
+    [activatePaneBuffer, handleFileOpen, pane.id, removeBufferFromPane, setActivePane, splitPane],
   );
 
   const openSidebarResourceInPane = useCallback(
@@ -409,14 +408,14 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         if (!targetPane?.bufferIds.includes(bufferId)) {
           addBufferToPane(targetPaneId, bufferId, true);
         } else {
-          setActivePaneBuffer(targetPaneId, bufferId);
+          activatePaneBuffer(targetPaneId, bufferId);
         }
         useBufferStore.getState().actions.setActiveBuffer(bufferId);
       } catch (error) {
         console.error("Failed to open sidebar resource from drop:", error);
       }
     },
-    [addBufferToPane, pane.id, setActivePane, setActivePaneBuffer, splitPane],
+    [activatePaneBuffer, addBufferToPane, pane.id, setActivePane, splitPane],
   );
 
   const getCarouselWidthBounds = useCallback(() => {
@@ -731,18 +730,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         return;
       }
     },
-    [
-      pane.id,
-      pane.bufferIds,
-      buffers,
-      setActivePane,
-      addBufferToPane,
-      moveBufferToPane,
-      setActivePaneBuffer,
-      openBuffer,
-      handleFileOpen,
-      openSidebarResourceInPane,
-    ],
+    [addBufferToPane, handleFileOpen, openSidebarResourceInPane, pane.id, setActivePane],
   );
 
   const handleCarouselWheel = useCallback(

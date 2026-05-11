@@ -693,7 +693,7 @@ const TabBar = ({
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              size="icon-sm"
+              compact
               className="shrink-0 rounded-lg text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
@@ -707,7 +707,7 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              size="icon-sm"
+              compact
               className="shrink-0 rounded-lg text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
@@ -752,7 +752,7 @@ const TabBar = ({
                 type="button"
                 onClick={() => closePane(paneId)}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className="shrink-0 rounded-lg text-text-lighter"
                 tooltip="Close Split"
                 tooltipSide="bottom"
@@ -766,7 +766,7 @@ const TabBar = ({
                 type="button"
                 onClick={handleSplitActivePane}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className="shrink-0 rounded-lg text-text-lighter"
                 tooltip="Split Editor"
                 tooltipSide="bottom"
@@ -780,7 +780,7 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className="shrink-0 rounded-lg text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
