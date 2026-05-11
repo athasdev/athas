@@ -44,6 +44,7 @@ interface GitHubState {
   error: string | null;
   activeRepoPath: string | null;
   isAuthenticated: boolean;
+  isCheckingAuth: boolean;
   authStatus: GitHubAuthStatus;
   githubAccountStatus: GitHubAccountStatus;
   currentUser: string | null;
@@ -68,6 +69,7 @@ const initialState: GitHubState = {
   error: null,
   activeRepoPath: null,
   isAuthenticated: false,
+  isCheckingAuth: false,
   authStatus: "notAuthenticated" as GitHubAuthStatus,
   githubAccountStatus: "unknown" as GitHubAccountStatus,
   currentUser: null,
@@ -192,12 +194,15 @@ export const useGitHubStore = create(
           return;
         }
 
+        set({ isCheckingAuth: true });
+
         try {
           const status = await invoke<GitHubAuthStatus>("github_check_auth");
           if (status === "authenticated") {
             const user = await invoke<string>("github_get_current_user");
             set({
               isAuthenticated: true,
+              isCheckingAuth: false,
               authStatus: status,
               githubAccountStatus: "connected",
               currentUser: user,
@@ -218,6 +223,7 @@ export const useGitHubStore = create(
                     const user = await invoke<string>("github_get_current_user");
                     set({
                       isAuthenticated: true,
+                      isCheckingAuth: false,
                       authStatus: syncedStatus,
                       githubAccountStatus,
                       currentUser: user,
@@ -229,6 +235,7 @@ export const useGitHubStore = create(
 
                   set({
                     isAuthenticated: false,
+                    isCheckingAuth: false,
                     authStatus: syncedStatus,
                     githubAccountStatus,
                     currentUser: null,
@@ -243,6 +250,7 @@ export const useGitHubStore = create(
 
             set({
               isAuthenticated: false,
+              isCheckingAuth: false,
               authStatus: status,
               githubAccountStatus,
               currentUser: null,
@@ -252,6 +260,7 @@ export const useGitHubStore = create(
         } catch {
           set({
             isAuthenticated: false,
+            isCheckingAuth: false,
             authStatus: "notAuthenticated",
             githubAccountStatus: get().githubAccountStatus,
             currentUser: null,

@@ -13,6 +13,7 @@ import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -224,7 +225,7 @@ const GitWorktreeManager = ({
                 aria-label="Prune worktrees"
                 tooltip="Prune worktrees"
               >
-                <RefreshCw className={cn(isLoading && "animate-spin")} />
+                {isLoading ? <LoadingIndicator label="Pruning worktrees" compact /> : <RefreshCw />}
               </Button>
             </>
           }
@@ -290,7 +291,7 @@ const GitWorktreeManager = ({
       <div className="min-h-0 flex-1 overflow-y-auto px-1 py-1">
         {isLoading && worktrees.length === 0 ? (
           <div className="ui-text-sm flex h-full min-h-[160px] items-center justify-center px-4 text-center text-text-lighter">
-            Loading worktrees...
+            <LoadingIndicator label="Loading worktrees" showLabel compact />
           </div>
         ) : worktrees.length === 0 ? (
           <div className="ui-text-sm flex h-full min-h-[160px] items-center justify-center px-4 text-center text-text-lighter">

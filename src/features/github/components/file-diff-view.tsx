@@ -2,14 +2,14 @@ import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
   FileText,
-  ArrowClockwise as RefreshCw,
 } from "@phosphor-icons/react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
-import type { FileDiff } from "../types/pr-viewer";
+import type { FileDiff } from "../types/github-pr-viewer";
 import { DiffLineDisplay } from "./diff-line-display";
 
 interface FileDiffViewProps {
@@ -107,8 +107,7 @@ export const FileDiffView = memo(
             <div className="max-h-[540px] overflow-auto">
               {isLoadingPatch ? (
                 <div className="flex items-center justify-center py-6">
-                  <RefreshCw className="animate-spin text-text-lighter" />
-                  <span className="ml-2 ui-text-sm text-text-lighter">Loading file diff...</span>
+                  <LoadingIndicator label="Loading file diff" showLabel compact />
                 </div>
               ) : patchError ? (
                 <div className="ui-text-sm px-3 py-4 text-center text-error">{patchError}</div>

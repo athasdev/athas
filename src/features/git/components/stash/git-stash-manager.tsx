@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, createStash, dropStash, getStashes, popStash } from "../../api/git-stash-api";
@@ -173,7 +174,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
 
         <div className="flex-1 overflow-y-auto">
           {isLoading && stashes.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter ui-text-xs">Loading stashes...</div>
+            <div className="flex justify-center p-4 text-text-lighter ui-text-xs">
+              <LoadingIndicator label="Loading stashes" showLabel compact />
+            </div>
           ) : stashes.length === 0 ? (
             <div className="p-4 text-center text-text-lighter ui-text-xs">No stashes found</div>
           ) : (

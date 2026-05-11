@@ -16,7 +16,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
-import { PANE_GROUP_BASE } from "@/ui/pane";
+import { LoadingIndicator } from "@/ui/loading";
+import { PaneGroup } from "@/ui/pane";
 import { primitiveAlert } from "@/ui/primitive-dialog-service";
 import {
   SidebarEmptyActionState,
@@ -29,7 +30,6 @@ import {
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
 import { toast } from "@/ui/toast";
-import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
@@ -54,6 +54,7 @@ import GitProjectSelector from "./git-project-selector";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
 import GitWorktreeManager from "./git-worktree-manager";
+import GitWorktreeSwitcher from "./git-worktree-switcher";
 import GitStatusPanel from "./status/git-status-panel";
 
 interface GitViewProps {
@@ -926,7 +927,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
         <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
-          <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1 overflow-hidden")}>
+          <PaneGroup className="min-w-0 flex-1 overflow-hidden">
             <GitProjectSelector
               className="shrink"
               onRepositoryChange={() => setRepoSelectionError(null)}
@@ -937,7 +938,15 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               onBranchChange={refreshAfterAction}
               triggerClassName="shrink"
             />
-          </div>
+            <GitWorktreeSwitcher
+              repoPath={activeRepoPath}
+              triggerClassName="shrink"
+              triggerInputClassName="max-w-[120px]"
+              onWorktreeChange={(worktreePath) => {
+                selectRepository(worktreePath);
+              }}
+            />
+          </PaneGroup>
 
           <div className="flex shrink-0 items-center gap-1">
             <SidebarHeaderIconButton
@@ -947,7 +956,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               tooltip="Refresh"
               aria-label="Refresh git status"
             >
-              <RefreshCw className={isLoadingGitData || isRefreshing ? "animate-spin" : ""} />
+              {isLoadingGitData || isRefreshing ? (
+                <LoadingIndicator label="Refreshing git status" compact />
+              ) : (
+                <RefreshCw />
+              )}
             </SidebarHeaderIconButton>
             {renderActionsButton()}
           </div>

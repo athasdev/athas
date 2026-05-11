@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { createElement } from "react";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
-import { toast } from "@/ui/toast";
-import type { Commit, DiffSectionIndex, FileDiff, FilePatchData } from "../types/pr-viewer";
+import type { Commit, DiffSectionIndex, FileDiff, FilePatchData } from "../types/github-pr-viewer";
 import type { PullRequestFile } from "../types/github";
 
 export const EXPAND_ALL_EAGER_PATCH_LIMIT = 10;
@@ -33,7 +31,7 @@ export function buildDiffSectionIndex(diffText: string): DiffSectionIndex {
 
   const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm;
   const headers: Array<
-    Pick<import("../types/pr-viewer").DiffSectionRef, "start" | "oldPath" | "newPath">
+    Pick<import("../types/github-pr-viewer").DiffSectionRef, "start" | "oldPath" | "newPath">
   > = [];
   for (let match = headerRegex.exec(diffText); match !== null; match = headerRegex.exec(diffText)) {
     headers.push({
@@ -141,18 +139,6 @@ export function getCommentKey(comment: {
   return `${comment.author.login}:${comment.createdAt}:${comment.body.slice(0, 32)}`;
 }
 
-export function getTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  return `${Math.floor(seconds / 604800)}w ago`;
-}
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null) return null;
   return value as Record<string, unknown>;
@@ -220,23 +206,6 @@ export function normalizeCommit(raw: unknown, index: number): Commit | null {
     url: asNonEmptyString(record.url) ?? undefined,
     authors: normalizedAuthors,
   };
-}
-
-export async function copyToClipboard(value: string, successMessage: string) {
-  try {
-    await writeText(value);
-    toast.success(successMessage);
-  } catch {
-    try {
-      if (typeof navigator === "undefined" || !navigator.clipboard) {
-        throw new Error("Clipboard API is unavailable.");
-      }
-      await navigator.clipboard.writeText(value);
-      toast.success(successMessage);
-    } catch (error) {
-      toast.error(`Failed to copy: ${String(error)}`);
-    }
-  }
 }
 
 export function renderTokenizedContent(content: string, tokens: HighlightToken[]): ReactNode[] {

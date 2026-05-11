@@ -1,4 +1,3 @@
-import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -7,25 +6,29 @@ import type { GitDiff, GitDiffLine } from "@/features/git/types/git-types";
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
-import { cn } from "@/utils/cn";
-import type { Commit, FilePatchState, FileStatusFilter, TabType } from "../types/pr-viewer";
+import type { Commit, FilePatchState, FileStatusFilter, TabType } from "../types/github-pr-viewer";
 import {
   buildPRBufferPath,
   parseSelectedFilePathFromPRBufferPath,
 } from "../utils/github-link-utils";
 import {
   buildDiffSectionIndex,
-  copyToClipboard,
   extractFilePatch,
   getCommentKey,
   normalizeCommit,
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
-} from "../utils/pr-viewer-utils";
+} from "../utils/github-pr-viewer-utils";
+import { copyToClipboard } from "../utils/github-viewer-utils";
 import { useGitHubStore } from "../stores/github-store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
-import { PRViewerHeader } from "./pr-viewer-header";
+import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
+import {
+  GitHubViewerHeader,
+  GitHubViewerLoadingState,
+  GitHubViewerShell,
+} from "./github-viewer-shell";
 
 function parsePatchLinesToGitDiffLines(patchLines: string[]): GitDiffLine[] {
   const result: GitDiffLine[] = [];
@@ -70,11 +73,11 @@ function parsePatchLinesToGitDiffLines(patchLines: string[]): GitDiffLine[] {
   return result;
 }
 
-interface PRViewerProps {
+interface GitHubPRViewerProps {
   prNumber: number;
 }
 
-const PRViewer = memo(({ prNumber }: PRViewerProps) => {
+const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
@@ -476,40 +479,40 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
 
   if (!selectedPRDetails) {
     return (
-      <div className="flex h-full flex-col overflow-y-auto bg-primary-bg">
-        {isLoadingDetails && (
-          <div className="h-px w-full overflow-hidden bg-border">
-            <div className="h-full w-1/4 animate-pulse bg-accent/70" />
-          </div>
+      <GitHubViewerShell
+        header={
+          <GitHubViewerHeader
+            title={prBuffer?.name || `PR #${prNumber}`}
+            meta={detailsError && !isLoadingDetails ? detailsError : `Pull request #${prNumber}`}
+            leading={
+              prBuffer?.authorAvatarUrl ? (
+                <img
+                  src={prBuffer.authorAvatarUrl}
+                  alt=""
+                  className="size-6 rounded-full bg-secondary-bg"
+                  loading="lazy"
+                />
+              ) : null
+            }
+            actions={
+              detailsError && !isLoadingDetails ? (
+                <Button
+                  onClick={handleRefresh}
+                  variant="ghost"
+                  className="text-text-lighter"
+                  compact
+                >
+                  Retry
+                </Button>
+              ) : null
+            }
+          />
+        }
+      >
+        {detailsError && !isLoadingDetails ? null : (
+          <GitHubViewerLoadingState label={`Loading PR #${prNumber}`} />
         )}
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex items-start gap-3">
-            {prBuffer?.authorAvatarUrl ? (
-              <img
-                src={prBuffer.authorAvatarUrl}
-                alt=""
-                className="mt-0.5 size-6 rounded-full bg-secondary-bg"
-                loading="lazy"
-              />
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <div className="ui-font ui-text-lg truncate text-text">
-                {prBuffer?.name || `PR #${prNumber}`}
-              </div>
-              <div className="ui-text-sm mt-1 text-text-lighter">
-                {detailsError && !isLoadingDetails ? detailsError : `Loading PR #${prNumber}...`}
-              </div>
-            </div>
-            {detailsError && !isLoadingDetails ? (
-              <Button onClick={handleRefresh} variant="ghost" className="text-text-lighter" compact>
-                Retry
-              </Button>
-            ) : (
-              <RefreshCw className={cn("text-text-lighter", isLoadingDetails && "animate-spin")} />
-            )}
-          </div>
-        </div>
-      </div>
+      </GitHubViewerShell>
     );
   }
 
@@ -543,92 +546,84 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   ].filter((item): item is string => !!item);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-primary-bg">
-      {isRefreshingDetails && (
-        <div className="h-px w-full overflow-hidden bg-border">
-          <div className="h-full w-1/3 animate-pulse bg-accent/70" />
-        </div>
-      )}
-
-      <PRViewerHeader
-        pr={pr}
-        activeView={activeTab}
-        changedFilesCount={changedFilesCount}
-        additions={pr.additions}
-        deletions={pr.deletions}
-        checksSummary={checksSummary}
-        reviewerLogins={reviewerLogins}
-        reviewSummary={reviewSummary}
-        metaItems={metaItems}
-        isRefreshingDetails={isRefreshingDetails}
-        onRefresh={handleRefresh}
-        onCheckout={() => {
-          void handleCheckout();
-        }}
-        onOpenInBrowser={handleOpenInBrowser}
-        onCopyPRLink={handleCopyPRLink}
-        onCopyBranchName={handleCopyBranchName}
-        onToggleFilesView={handleToggleFilesView}
-      />
-
+    <GitHubViewerShell
+      header={
+        <GitHubPRViewerHeader
+          pr={pr}
+          activeView={activeTab}
+          changedFilesCount={changedFilesCount}
+          additions={pr.additions}
+          deletions={pr.deletions}
+          checksSummary={checksSummary}
+          reviewerLogins={reviewerLogins}
+          reviewSummary={reviewSummary}
+          metaItems={metaItems}
+          isRefreshingDetails={isRefreshingDetails}
+          onRefresh={handleRefresh}
+          onCheckout={() => {
+            void handleCheckout();
+          }}
+          onOpenInBrowser={handleOpenInBrowser}
+          onCopyPRLink={handleCopyPRLink}
+          onCopyBranchName={handleCopyBranchName}
+          onToggleFilesView={handleToggleFilesView}
+        />
+      }
+    >
       {detailsError && (
-        <div className="px-3 pb-3 sm:px-5">
-          <div className="flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
-            <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
-            <Button
-              onClick={handleRefresh}
-              variant="default"
-              className="shrink-0 border-error/40 text-error/90 hover:bg-error/10"
-              compact
-            >
-              Retry
-            </Button>
-          </div>
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
+          <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
+          <Button
+            onClick={handleRefresh}
+            variant="default"
+            className="shrink-0 border-error/40 text-error/90 hover:bg-error/10"
+            compact
+          >
+            Retry
+          </Button>
         </div>
       )}
 
-      <div className="min-w-0 px-3 pb-4 sm:px-5">
-        {activeTab === "activity" && (
-          <PRActivityPanel
-            body={pr.body}
-            issueBaseUrl={issueBaseUrl}
-            repoPath={repoPath ?? undefined}
-            activityItems={activityItems}
+      {activeTab === "activity" && (
+        <PRActivityPanel
+          body={pr.body}
+          issueBaseUrl={issueBaseUrl}
+          repoPath={repoPath ?? undefined}
+          activityItems={activityItems}
+          isLoadingContent={isLoadingContent}
+          contentError={contentError}
+          onRetry={handleRefresh}
+        />
+      )}
+
+      {activeTab === "files" && (
+        <div className="min-w-0 space-y-3 pt-1">
+          <PRFilesPanel
+            selectedPRDiff={selectedPRDiff}
             isLoadingContent={isLoadingContent}
             contentError={contentError}
+            diffFiles={diffFiles}
+            filteredDiff={filteredDiff}
+            selectedDiffFile={selectedDiffFile}
+            fileQuery={fileQuery}
+            fileStatusFilter={fileStatusFilter}
+            selectedFilePath={selectedFilePath}
+            isWideSplit={isWideSplit}
+            diffDebugSummary={diffDebugSummary}
+            patchError={selectedDiffFile ? filePatches[selectedDiffFile.path]?.error : undefined}
             onRetry={handleRefresh}
+            onToggleSplit={() => setIsWideSplit((current) => !current)}
+            onFileQueryChange={setFileQuery}
+            onFileStatusFilterChange={setFileStatusFilter}
+            onSelectFile={setSelectedFilePath}
+            onOpenChangedFile={handleOpenChangedFile}
           />
-        )}
-
-        {activeTab === "files" && (
-          <div className="min-w-0 space-y-3 pt-1">
-            <PRFilesPanel
-              selectedPRDiff={selectedPRDiff}
-              isLoadingContent={isLoadingContent}
-              contentError={contentError}
-              diffFiles={diffFiles}
-              filteredDiff={filteredDiff}
-              selectedDiffFile={selectedDiffFile}
-              fileQuery={fileQuery}
-              fileStatusFilter={fileStatusFilter}
-              selectedFilePath={selectedFilePath}
-              isWideSplit={isWideSplit}
-              diffDebugSummary={diffDebugSummary}
-              patchError={selectedDiffFile ? filePatches[selectedDiffFile.path]?.error : undefined}
-              onRetry={handleRefresh}
-              onToggleSplit={() => setIsWideSplit((current) => !current)}
-              onFileQueryChange={setFileQuery}
-              onFileStatusFilterChange={setFileStatusFilter}
-              onSelectFile={setSelectedFilePath}
-              onOpenChangedFile={handleOpenChangedFile}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </GitHubViewerShell>
   );
 });
 
-PRViewer.displayName = "PRViewer";
+GitHubPRViewer.displayName = "GitHubPRViewer";
 
-export default PRViewer;
+export default GitHubPRViewer;

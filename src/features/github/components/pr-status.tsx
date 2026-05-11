@@ -6,13 +6,13 @@ import {
   DotOutline as CircleDot,
   GitMerge,
   LinkSimple as Link2,
-  SpinnerGap as Loader2,
   User,
   XCircle,
 } from "@phosphor-icons/react";
 import { memo, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github";
 
@@ -46,7 +46,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (pendingCount > 0) {
       return {
-        icon: <Loader2 className="animate-spin text-warning" />,
+        icon: <LoadingIndicator label="Pending checks" compact />,
         label: `${pendingCount} pending`,
         tone: "text-warning",
         badgeClassName: "border-warning/20 bg-warning/10 text-warning",
@@ -101,7 +101,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
               ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
                 <XCircle className="text-error" />
               ) : (
-                <Loader2 className="animate-spin text-warning" />
+                <LoadingIndicator label="Pending check" compact />
               )}
               <div className="min-w-0 flex-1">
                 <p className="ui-font ui-text-sm truncate text-text">{check.name ?? "Check"}</p>

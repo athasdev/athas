@@ -56,7 +56,7 @@ const footerCountPill = cva(
   "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 ui-text-xs leading-3",
 );
 const footerGitTrigger = cva("h-6 w-fit rounded-md");
-const footerGitTriggerInput = cva("pl-7 ui-text-sm");
+const footerGitTriggerInput = cva("ui-text-sm");
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -213,7 +213,7 @@ const Footer = () => {
                 currentBranch={footerBranch}
                 repoPath={footerRepoPath}
                 paletteTarget
-                placement="up"
+                placement="down"
                 triggerIconSize={16}
                 triggerClassName={footerGitTrigger()}
                 triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[220px]")}
@@ -227,7 +227,7 @@ const Footer = () => {
               />
               <GitWorktreeSwitcher
                 repoPath={footerRepoPath}
-                placement="up"
+                placement="down"
                 triggerIconSize={16}
                 triggerClassName={footerGitTrigger()}
                 triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[118px]")}

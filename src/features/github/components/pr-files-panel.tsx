@@ -1,14 +1,11 @@
-import {
-  ArrowClockwise as RefreshCw,
-  MagnifyingGlass as Search,
-  SlidersHorizontal,
-} from "@phosphor-icons/react";
+import { MagnifyingGlass as Search, SlidersHorizontal } from "@phosphor-icons/react";
 import { memo, useCallback, useMemo } from "react";
 import { Button, buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import type { FileStatusFilter } from "../types/pr-viewer";
+import type { FileStatusFilter } from "../types/github-pr-viewer";
 import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(
@@ -133,8 +130,7 @@ export const PRFilesPanel = memo(
     if (isLoadingContent && !selectedPRDiff) {
       return (
         <div className="flex items-center justify-center p-8">
-          <RefreshCw className="animate-spin text-text-lighter" />
-          <span className="ml-2 ui-font ui-text-sm text-text-lighter">Loading diff...</span>
+          <LoadingIndicator label="Loading diff" showLabel />
         </div>
       );
     }

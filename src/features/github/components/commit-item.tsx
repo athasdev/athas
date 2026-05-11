@@ -3,8 +3,8 @@ import { Copy, ArrowSquareOut as ExternalLink } from "@phosphor-icons/react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import type { Commit } from "../types/pr-viewer";
-import { copyToClipboard, getTimeAgo } from "../utils/pr-viewer-utils";
+import type { Commit } from "../types/github-pr-viewer";
+import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import GitHubMarkdown from "./github-markdown";
 
 interface CommitItemProps {

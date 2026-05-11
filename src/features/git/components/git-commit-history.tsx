@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import type { GitCommit } from "../types/git-types";
@@ -208,8 +209,8 @@ const GitCommitHistory = ({
                 ))}
 
                 {isLoadingMoreCommits && (
-                  <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
-                    Loading...
+                  <div className="flex justify-center px-3 py-1.5 text-text-lighter">
+                    <LoadingIndicator label="Loading commits" showLabel compact />
                   </div>
                 )}
 

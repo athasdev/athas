@@ -18,10 +18,10 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
-import type { IssueListItem } from "../types/github";
+import type { IssueFilter, IssueListItem } from "../types/github";
 import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
+import { LoadingIndicator } from "@/ui/loading";
 import { SidebarListItem } from "@/ui/sidebar";
 
 interface IssueListItemProps {
@@ -74,169 +74,181 @@ IssueRow.displayName = "IssueRow";
 interface GitHubIssuesViewProps {
   refreshNonce?: number;
   searchQuery?: string;
+  filter?: IssueFilter;
 }
 
-const GitHubIssuesView = memo(({ refreshNonce = 0, searchQuery = "" }: GitHubIssuesViewProps) => {
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-  const { isAuthenticated } = useGitHubStore();
-  const { checkAuth } = useGitHubStore().actions;
-  const { openGitHubIssueBuffer } = useBufferStore.use.actions();
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeIssueNumber = useMemo(() => {
-    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
-    return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
-  }, [activeBufferId, buffers]);
-  const [issues, setIssues] = useState<IssueListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const deferredIssues = useDeferredValue(issues);
-  const deferredSearchQuery = useDeferredValue(searchQuery);
+const GitHubIssuesView = memo(
+  ({ refreshNonce = 0, searchQuery = "", filter = "open" }: GitHubIssuesViewProps) => {
+    const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+    const activeRepoPath = useRepositoryStore.use.activeRepoPath();
+    const repoPath = activeRepoPath ?? rootFolderPath ?? null;
+    const { isAuthenticated } = useGitHubStore();
+    const { checkAuth } = useGitHubStore().actions;
+    const { openGitHubIssueBuffer } = useBufferStore.use.actions();
+    const buffers = useBufferStore.use.buffers();
+    const activeBufferId = useBufferStore.use.activeBufferId();
+    const activeIssueNumber = useMemo(() => {
+      const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+      return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
+    }, [activeBufferId, buffers]);
+    const [issues, setIssues] = useState<IssueListItem[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const deferredIssues = useDeferredValue(issues);
+    const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  const fetchIssues = useCallback(
-    async (force = false) => {
-      if (!repoPath) {
-        setIssues([]);
-        setError("No repository selected.");
-        setIsLoading(false);
-        return;
-      }
+    const fetchIssues = useCallback(
+      async (force = false) => {
+        if (!repoPath) {
+          setIssues([]);
+          setError("No repository selected.");
+          setIsLoading(false);
+          return;
+        }
 
-      const cached = githubIssueListCache.getFreshValue(repoPath, GITHUB_ISSUE_LIST_TTL_MS);
-      if (cached && !force) {
-        startTransition(() => setIssues(cached));
+        const cacheKey = `${repoPath}::${filter}`;
+        const cached = githubIssueListCache.getFreshValue(cacheKey, GITHUB_ISSUE_LIST_TTL_MS);
+        if (cached && !force) {
+          startTransition(() => setIssues(cached));
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
+
+        const stale = githubIssueListCache.getSnapshot(cacheKey)?.value;
+        if (stale && !force) {
+          startTransition(() => setIssues(stale));
+        }
+
+        setIsLoading(true);
         setError(null);
-        setIsLoading(false);
-        return;
-      }
 
-      const stale = githubIssueListCache.getSnapshot(repoPath)?.value;
-      if (stale && !force) {
-        startTransition(() => setIssues(stale));
-      }
+        try {
+          const nextIssues = await githubIssueListCache.load(
+            cacheKey,
+            () => invoke<IssueListItem[]>("github_list_issues", { repoPath, state: filter }),
+            { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
+          );
+          startTransition(() => setIssues(nextIssues));
+        } catch (nextError) {
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      [filter, repoPath],
+    );
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const nextIssues = await githubIssueListCache.load(
-          repoPath,
-          () => invoke<IssueListItem[]>("github_list_issues", { repoPath }),
-          { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
-        );
-        startTransition(() => setIssues(nextIssues));
-      } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : String(nextError));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [repoPath],
-  );
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void checkAuth();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    let timeoutId: number | null = null;
-    const frameId = window.requestAnimationFrame(() => {
-      timeoutId = window.setTimeout(() => {
-        void fetchIssues();
+    useEffect(() => {
+      const timeoutId = window.setTimeout(() => {
+        void checkAuth();
       }, 0);
-    });
 
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
+      return () => window.clearTimeout(timeoutId);
+    }, [checkAuth]);
+
+    useEffect(() => {
+      if (!isAuthenticated) return;
+
+      let timeoutId: number | null = null;
+      const frameId = window.requestAnimationFrame(() => {
+        timeoutId = window.setTimeout(() => {
+          void fetchIssues();
+        }, 0);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frameId);
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+      };
+    }, [fetchIssues, isAuthenticated]);
+
+    useEffect(() => {
+      if (isAuthenticated && refreshNonce > 0) {
+        void fetchIssues(true);
       }
-    };
-  }, [fetchIssues, isAuthenticated]);
+    }, [fetchIssues, isAuthenticated, refreshNonce]);
 
-  useEffect(() => {
-    if (isAuthenticated && refreshNonce > 0) {
-      void fetchIssues(true);
+    const filteredIssues = useMemo(() => {
+      const query = deferredSearchQuery.trim().toLowerCase();
+      if (!query) return deferredIssues;
+
+      return deferredIssues.filter((issue) =>
+        [
+          issue.title,
+          `#${issue.number}`,
+          issue.author.login,
+          issue.state,
+          ...issue.labels.map((label) => label.name),
+        ].some((value) => value.toLowerCase().includes(query)),
+      );
+    }, [deferredIssues, deferredSearchQuery]);
+
+    if (!isAuthenticated) {
+      return (
+        <div className="flex h-full items-center justify-center p-4">
+          <GitHubAuthStatusMessage />
+        </div>
+      );
     }
-  }, [fetchIssues, isAuthenticated, refreshNonce]);
 
-  const filteredIssues = useMemo(() => {
-    const query = deferredSearchQuery.trim().toLowerCase();
-    if (!query) return deferredIssues;
-
-    return deferredIssues.filter((issue) =>
-      [
-        issue.title,
-        `#${issue.number}`,
-        issue.author.login,
-        issue.state,
-        ...issue.labels.map((label) => label.name),
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [deferredIssues, deferredSearchQuery]);
-
-  if (!isAuthenticated) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
-        <GitHubAuthStatusMessage />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
+          {error ? (
+            <GitHubSidebarState
+              icon={<AlertCircle className="size-4" />}
+              title={error}
+              tone="error"
+            />
+          ) : isLoading && deferredIssues.length === 0 ? (
+            <div className="flex items-center justify-center p-4">
+              <LoadingIndicator label="Loading issues" showLabel compact />
+            </div>
+          ) : deferredIssues.length === 0 ? (
+            <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No issues" />
+          ) : filteredIssues.length === 0 ? (
+            <GitHubSidebarState
+              icon={<MessageSquare className="size-4" />}
+              title="No matching issues"
+            />
+          ) : (
+            <div className="space-y-px overflow-x-hidden">
+              {isLoading ? (
+                <div className="flex items-center px-2 py-1.5">
+                  <LoadingIndicator label="Refreshing" compact />
+                </div>
+              ) : null}
+              {filteredIssues.map((issue) => (
+                <IssueRow
+                  key={issue.number}
+                  issue={issue}
+                  isActive={activeIssueNumber === issue.number}
+                  repoPath={repoPath}
+                  onSelect={() =>
+                    startTransition(() => {
+                      openGitHubIssueBuffer({
+                        issueNumber: issue.number,
+                        repoPath: repoPath ?? undefined,
+                        title: issue.title,
+                        authorAvatarUrl:
+                          issue.author.avatarUrl ||
+                          `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+                        url: issue.url,
+                      });
+                    })
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
-  }
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-1 mb-1 mt-1" />
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
-        {error ? (
-          <GitHubSidebarState
-            icon={<AlertCircle className="size-4" />}
-            title={error}
-            tone="error"
-          />
-        ) : deferredIssues.length === 0 && !isLoading ? (
-          <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No open issues" />
-        ) : filteredIssues.length === 0 ? (
-          <GitHubSidebarState
-            icon={<MessageSquare className="size-4" />}
-            title="No matching issues"
-          />
-        ) : (
-          <div className="space-y-px overflow-x-hidden">
-            {filteredIssues.map((issue) => (
-              <IssueRow
-                key={issue.number}
-                issue={issue}
-                isActive={activeIssueNumber === issue.number}
-                repoPath={repoPath}
-                onSelect={() =>
-                  startTransition(() => {
-                    openGitHubIssueBuffer({
-                      issueNumber: issue.number,
-                      repoPath: repoPath ?? undefined,
-                      title: issue.title,
-                      authorAvatarUrl:
-                        issue.author.avatarUrl ||
-                        `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
-                      url: issue.url,
-                    });
-                  })
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
+  },
+);
 
 GitHubIssuesView.displayName = "GitHubIssuesView";
 
