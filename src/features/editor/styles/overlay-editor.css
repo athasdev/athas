@@ -25,7 +25,7 @@
   height: 100%;
   overflow: hidden;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
   padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
     var(--editor-padding-left);
   white-space: pre;
@@ -39,7 +39,7 @@
   position: absolute;
   inset: 0;
   overflow: auto;
-  z-index: 2;
+  z-index: 3;
   padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
     var(--editor-padding-left);
   background: transparent;

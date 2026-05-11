@@ -112,7 +112,7 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
     return (
       <div
         ref={ref}
-        className="selection-layer pointer-events-none absolute inset-0 z-[3]"
+        className="selection-layer pointer-events-none absolute inset-0 z-[1]"
         style={{
           willChange: "transform",
         }}
