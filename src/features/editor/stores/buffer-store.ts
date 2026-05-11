@@ -1147,7 +1147,8 @@ export const useBufferStore = createSelectors(
             const updatedHistory = [
               closedBufferInfo,
               ...closedBuffersHistory.filter(
-                (entry) => getClosedBufferHistoryKey(entry) !== getClosedBufferHistoryKey(closedBufferInfo),
+                (entry) =>
+                  getClosedBufferHistoryKey(entry) !== getClosedBufferHistoryKey(closedBufferInfo),
               ),
             ].slice(0, EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY);
 
@@ -1662,9 +1663,8 @@ export const useBufferStore = createSelectors(
             } else {
               // Delegate file-backed types to handleFileSelect so reopen stays aligned
               // with the main file-open routing.
-              const { useFileSystemStore } = await import(
-                "@/features/file-system/controllers/store"
-              );
+              const { useFileSystemStore } =
+                await import("@/features/file-system/controllers/store");
               await useFileSystemStore.getState().handleFileSelect(closedBuffer.path, false);
             }
 
