@@ -22,7 +22,6 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame-store";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
-import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/git-diff-parser";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
@@ -499,7 +498,11 @@ export const useFileSystemStore = createSelectors(
         const hasOpenWorkspace =
           !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
 
-        if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+        if (
+          settings.openFoldersInNewWindow &&
+          settings.titleBarProjectMode === "window" &&
+          hasOpenWorkspace
+        ) {
           await createAppWindow({
             path: selected,
             isDirectory: true,
@@ -1224,30 +1227,22 @@ export const useFileSystemStore = createSelectors(
 
           if (isStaleRequest()) return;
 
-          // Check if this is a diff file
-          if (isDiffFile(path, content)) {
-            const parsedDiff = parseRawDiffContent(content, path);
-            const diffJson = JSON.stringify(parsedDiff);
-            openBuffer(path, fileName, diffJson, false, undefined, true, false);
-            fileOpenBenchmark.finish(path, "diff-content-opened");
-          } else {
-            openBuffer(
-              path,
-              fileName,
-              content,
-              false,
-              undefined,
-              false,
-              false,
-              undefined,
-              undefined,
-              false,
-              false,
-              undefined,
-              isPreview,
-            );
-            fileOpenBenchmark.mark(path, "buffer-opened");
-          }
+          openBuffer(
+            path,
+            fileName,
+            content,
+            false,
+            undefined,
+            false,
+            false,
+            undefined,
+            undefined,
+            false,
+            false,
+            undefined,
+            isPreview,
+          );
+          fileOpenBenchmark.mark(path, "buffer-opened");
 
           // Handle navigation to specific line/column
           if (line && column && codeEditorRef?.current?.textarea) {

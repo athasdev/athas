@@ -98,6 +98,12 @@ function resolvePackageSize(manifest: {
   return typeof size === "number" && size > 0 ? size : undefined;
 }
 
+function getErrorMessage(error: unknown, fallback = "Unknown error"): string {
+  if (error instanceof Error) return error.message || fallback;
+  if (typeof error === "string") return error || fallback;
+  return String(error || fallback);
+}
+
 const getCategoryLabel = (category: UnifiedExtension["category"]) => {
   switch (category) {
     case "language":
@@ -530,7 +536,7 @@ export const ExtensionsSettings = () => {
       } catch (error) {
         console.error(`Failed to update ${extension.name}:`, error);
         showToast({
-          message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
           type: "error",
           duration: 5000,
         });
@@ -548,7 +554,7 @@ export const ExtensionsSettings = () => {
     } catch (error) {
       console.error(`Failed to update ${extension.name}:`, error);
       showToast({
-        message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
         type: "error",
         duration: 5000,
       });
@@ -573,7 +579,7 @@ export const ExtensionsSettings = () => {
     } catch (error) {
       console.error(`Failed to reset ${extension.name}:`, error);
       showToast({
-        message: `Failed to reset ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to reset ${extension.name}: ${getErrorMessage(error)}`,
         type: "error",
         duration: 5000,
       });
@@ -624,9 +630,9 @@ export const ExtensionsSettings = () => {
           error,
         );
         showToast({
-          message: `Failed to ${extension.isInstalled ? "uninstall" : "install"} ${extension.name}: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+          message: `Failed to ${extension.isInstalled ? "uninstall" : "install"} ${extension.name}: ${getErrorMessage(
+            error,
+          )}`,
           type: "error",
           duration: 5000,
         });
@@ -674,7 +680,7 @@ export const ExtensionsSettings = () => {
       } catch (error) {
         console.error(`Failed to update ${extension.name}:`, error);
         showToast({
-          message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
           type: "error",
           duration: 5000,
         });
@@ -694,7 +700,7 @@ export const ExtensionsSettings = () => {
         } catch (error) {
           console.error(`Failed to uninstall ${extension.name}:`, error);
           showToast({
-            message: `Failed to uninstall ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            message: `Failed to uninstall ${extension.name}: ${getErrorMessage(error)}`,
             type: "error",
             duration: 5000,
           });
@@ -710,7 +716,7 @@ export const ExtensionsSettings = () => {
         } catch (error) {
           console.error(`Failed to install ${extension.name}:`, error);
           showToast({
-            message: `Failed to install ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            message: `Failed to install ${extension.name}: ${getErrorMessage(error)}`,
             type: "error",
             duration: 5000,
           });
