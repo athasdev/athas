@@ -7,7 +7,7 @@ import {
 import { normalizeSettings, normalizeSettingValue } from "../lib/settings-normalization";
 
 describe("settings normalization", () => {
-  it("migrates legacy Geist font settings to bundled defaults", () => {
+  it("preserves configured font settings that may exist on the system", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       fontFamily: '"Geist Mono"',
@@ -15,17 +15,20 @@ describe("settings normalization", () => {
       uiFontFamily: "Geist",
     });
 
-    expect(normalized.fontFamily).toBe(DEFAULT_MONO_FONT_FAMILY);
-    expect(normalized.terminalFontFamily).toBe(DEFAULT_MONO_FONT_FAMILY);
-    expect(normalized.uiFontFamily).toBe(DEFAULT_UI_FONT_FAMILY);
+    expect(normalized.fontFamily).toBe('"Geist Mono"');
+    expect(normalized.terminalFontFamily).toBe("Geist Mono, monospace");
+    expect(normalized.uiFontFamily).toBe("Geist");
   });
 
-  it("normalizes legacy Geist font updates before persisting", () => {
-    expect(normalizeSettingValue("fontFamily", "Geist Mono")).toBe(DEFAULT_MONO_FONT_FAMILY);
-    expect(normalizeSettingValue("terminalFontFamily", "Geist Mono")).toBe(
-      DEFAULT_MONO_FONT_FAMILY,
-    );
-    expect(normalizeSettingValue("uiFontFamily", "Geist Sans")).toBe(DEFAULT_UI_FONT_FAMILY);
+  it("preserves font updates before persisting", () => {
+    expect(normalizeSettingValue("fontFamily", "Geist Mono")).toBe("Geist Mono");
+    expect(normalizeSettingValue("terminalFontFamily", "Geist Mono")).toBe("Geist Mono");
+    expect(normalizeSettingValue("uiFontFamily", "Geist Sans")).toBe("Geist Sans");
+  });
+
+  it("falls back for empty font updates", () => {
+    expect(normalizeSettingValue("fontFamily", "   ")).toBe(DEFAULT_MONO_FONT_FAMILY);
+    expect(normalizeSettingValue("uiFontFamily", "   ")).toBe(DEFAULT_UI_FONT_FAMILY);
   });
 
   it("migrates the old terminal line-height default to preserve TUI block graphics", () => {

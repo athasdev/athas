@@ -81,11 +81,13 @@
   width: var(--app-scrollbar-size, 11px) !important;
   height: var(--app-scrollbar-size, 11px) !important;
   background-color: transparent !important;
+  cursor: default;
 }
 
 .input-layer::-webkit-scrollbar-track {
   -webkit-appearance: none !important;
   background-color: transparent !important;
+  cursor: default;
 }
 
 .input-layer::-webkit-scrollbar-thumb {
@@ -96,6 +98,7 @@
   border-radius: var(--app-scrollbar-radius, 999px) !important;
   background-clip: content-box !important;
   transition: background-color 0.18s ease;
+  cursor: default;
 }
 
 .input-layer:hover::-webkit-scrollbar-thumb,
@@ -116,6 +119,7 @@
 
 .input-layer::-webkit-scrollbar-corner {
   background-color: transparent !important;
+  cursor: default;
 }
 
 /* Native selection styling for wrapped mode */
