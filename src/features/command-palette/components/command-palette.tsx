@@ -39,6 +39,7 @@ import Command, {
 import Keybinding from "@/ui/keybinding";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { createAdvancedActions } from "../constants/advanced-actions";
+import { codesnapActions } from "../constants/codesnap-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";
@@ -147,6 +148,7 @@ const CommandPalette = () => {
 
   // Create all actions using factory functions
   const allActions: Action[] = [
+    ...codesnapActions,
     ...createMarkdownActions({
       isMarkdownFile: isMarkdownFile(),
       activeBuffer,

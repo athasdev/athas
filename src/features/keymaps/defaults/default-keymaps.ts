@@ -455,4 +455,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "alt+F10", command: "window.maximize", source: "default" },
   { key: "cmd+q", command: "window.quit", source: "default" },
   { key: "alt+m", command: "window.toggleMenuBar", source: "default" },
+
+  // CodeSnap
+  { key: "cmd+k cmd+p", command: "codesnap.fromSelection", when: "editorFocus", source: "default" },
 ];

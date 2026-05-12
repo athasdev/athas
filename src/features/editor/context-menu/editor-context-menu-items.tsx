@@ -1,6 +1,7 @@
 import {
   TextAlignLeft as AlignLeft,
   Bookmark,
+  Camera,
   TextAa as CaseSensitive,
   CaretDown as ChevronDown,
   CaretUp as ChevronUp,
@@ -40,6 +41,7 @@ export interface EditorContextMenuHandlers {
   onMoveLineUp?: () => void;
   onMoveLineDown?: () => void;
   onToggleBookmark?: () => void;
+  onCodeSnap?: () => void;
 }
 
 export interface EditorContextMenuItemOptions extends EditorContextMenuHandlers {
@@ -81,6 +83,7 @@ export function buildEditorContextMenuItems({
   onMoveLineUp,
   onMoveLineDown,
   onToggleBookmark,
+  onCodeSnap,
 }: EditorContextMenuItemOptions): ContextMenuItem[] {
   return [
     {
@@ -90,6 +93,13 @@ export function buildEditorContextMenuItems({
       keybinding: <Keybinding keys={[modifierKey, "C"]} className="opacity-60" />,
       disabled: isDisabled(onCopy, !hasSelection),
       onClick: onCopy ?? noop,
+    },
+    {
+      id: "codeSnap",
+      label: "CodeSnap Selection",
+      icon: <Camera size={14} weight="bold" />,
+      disabled: isDisabled(onCodeSnap, !hasSelection),
+      onClick: onCodeSnap ?? noop,
     },
     {
       id: "cut",

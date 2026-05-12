@@ -6,6 +6,7 @@ import type {
   HeaderTrailingItemId,
   SidebarActivityItemId,
 } from "@/features/layout/config/item-order";
+import type { CodesnapSettings } from "@/features/codesnap/types";
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
@@ -143,4 +144,6 @@ export interface Settings {
   enableGitGutter: boolean;
   // Telemetry
   telemetry: boolean;
+  // CodeSnap
+  codesnap: CodesnapSettings;
 }

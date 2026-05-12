@@ -213,5 +213,14 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         currentVersion: spec.context.currentVersion,
         previousVersion: spec.context.previousVersion,
       };
+    case "codeSnap":
+      return {
+        ...base,
+        type: "codeSnap",
+        path: `codesnap://${id}`,
+        name: "CodeSnap",
+        isPreview: false,
+        snapshot: spec.snapshot,
+      };
   }
 };

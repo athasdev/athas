@@ -99,6 +99,11 @@ const WebViewer = lazy(() =>
     default: m.WebViewer,
   })),
 );
+const CodesnapTab = lazy(() =>
+  import("@/features/codesnap/components/codesnap-tab").then((m) => ({
+    default: m.CodesnapTab,
+  })),
+);
 
 interface PaneContainerProps {
   pane: PaneGroup;
@@ -924,6 +929,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               onEditorExit={handleExternalEditorExit}
             />
           );
+
+        case "codeSnap":
+          return <CodesnapTab pane={buffer} />;
 
         default:
           return (

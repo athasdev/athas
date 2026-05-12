@@ -19,6 +19,7 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { codesnapFromSelection } from "@/features/codesnap/lib/triggers";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
@@ -1753,6 +1754,7 @@ export function Editor({
             onRenameSymbol={() => {
               void keymapRegistry.executeCommand("editor.renameSymbol");
             }}
+            onCodeSnap={codesnapFromSelection}
           />,
           document.body,
         )}

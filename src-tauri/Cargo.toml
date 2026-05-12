@@ -83,6 +83,7 @@ tauri = { version = "2", default-features = false, features = [
   "compression",
   "common-controls-v6",
   "dynamic-acl",
+  "image-png",
   "macos-private-api",
   "protocol-asset",
   "test",

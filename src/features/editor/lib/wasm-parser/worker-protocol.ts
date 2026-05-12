@@ -18,7 +18,8 @@ export type TokenizerWorkerRequest =
       highlightQueryUrl?: string;
       mode: "full" | "range";
       viewportRange?: ViewportRangePayload;
-    };
+    }
+  | { id: number; type: "tokenizeSnippet"; snippet: string; languageId: string };
 
 export type TokenizerWorkerResponse =
   | {

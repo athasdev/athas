@@ -150,6 +150,24 @@ export const defaultSettings: Settings = {
   enableGitGutter: true,
   // Telemetry
   telemetry: false,
+  // CodeSnap
+  codesnap: {
+    backgroundColor: "linear-gradient(135deg, #ff6b9d 0%, #c44eb8 100%)",
+    containerPadding: "32px",
+    boxShadow: "rgba(0, 0, 0, 0.55) 0px 20px 68px",
+    roundedCorners: true,
+    showWindowControls: true,
+    showWindowTitle: false,
+    showLineNumbers: true,
+    realLineNumbers: true,
+    transparentBackground: false,
+    target: "container",
+    shutterAction: "copy",
+    defaultWidth: 720,
+    pixelRatio: 2,
+    fontFamily: "JetBrains Mono Variable",
+    useEditorTheme: true,
+  },
 };
 
 export const getDefaultSetting = <K extends keyof Settings>(key: K): Settings[K] =>
@@ -168,5 +186,6 @@ export function getDefaultSettingsSnapshot(): Settings {
     footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
+    codesnap: { ...defaultSettings.codesnap },
   };
 }

@@ -4,6 +4,7 @@ import type {
   TokenizerWorkerResult,
   ViewportRangePayload,
 } from "./worker-protocol";
+import type { HighlightToken } from "./types";
 
 interface PendingRequest {
   resolve: (value: any) => void;
@@ -85,6 +86,17 @@ class TokenizerWorkerClient {
       tokens: response.tokens ?? [],
       normalizedText: response.normalizedText ?? params.content,
     };
+  }
+
+  async tokenizeSnippet(snippet: string, languageId: string): Promise<HighlightToken[]> {
+    const id = ++this.requestId;
+    const response = await this.post<Extract<TokenizerWorkerResponse, { ok: true }>>({
+      id,
+      type: "tokenizeSnippet",
+      snippet,
+      languageId,
+    });
+    return response.tokens ?? [];
   }
 }
 

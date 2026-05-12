@@ -314,6 +314,46 @@ async function handleTokenize(
   };
 }
 
+async function handleTokenizeSnippet(
+  snippet: string,
+  languageId: string,
+): Promise<HighlightToken[]> {
+  const normalizedSnippet = normalizeLineEndings(snippet);
+
+  let loadedParser: LoadedParser;
+  try {
+    loadedParser = await getLoadedParser(languageId);
+  } catch {
+    // Unsupported language: return a single default-class token spanning the whole snippet.
+    const fallbackLines = normalizedSnippet.split("\n");
+    const fallbackEndRow = fallbackLines.length - 1;
+    const fallbackEndCol = fallbackLines[fallbackEndRow].length;
+    return [
+      {
+        type: "token-text",
+        startIndex: 0,
+        endIndex: normalizedSnippet.length,
+        startPosition: { row: 0, column: 0 },
+        endPosition: { row: fallbackEndRow, column: fallbackEndCol },
+      },
+    ];
+  }
+
+  const tree = loadedParser.parser.parse(normalizedSnippet);
+  if (!tree) {
+    throw new Error(`Failed to parse snippet for ${languageId}`);
+  }
+
+  try {
+    const query = loadedParser.highlightQuery;
+    const tokens = query ? toHighlightTokens(query.captures(tree.rootNode)) : [];
+    tokens.push(...getLanguageOverlayTokens(languageId, normalizedSnippet));
+    return tokens;
+  } finally {
+    tree.delete();
+  }
+}
+
 function handleReset(
   message: Extract<TokenizerWorkerRequest, { type: "reset" }>,
 ): WorkerSuccessResponse {
@@ -348,6 +388,14 @@ self.onmessage = async (event: MessageEvent<TokenizerWorkerRequest>) => {
         (self as DedicatedWorkerGlobalScope).postMessage(
           (await handleTokenize(message)) satisfies TokenizerWorkerResponse,
         );
+        return;
+      case "tokenizeSnippet":
+        await wasmParserLoader.initialize();
+        (self as DedicatedWorkerGlobalScope).postMessage({
+          id: message.id,
+          ok: true,
+          tokens: await handleTokenizeSnippet(message.snippet, message.languageId),
+        } satisfies TokenizerWorkerResponse);
         return;
     }
   } catch (error) {

@@ -756,6 +756,22 @@ export const useBufferStore = createSelectors(
               return newBuffer.id;
             }
 
+            case "codeSnap": {
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+
+              const id = generateBufferId(`codesnap://${Date.now()}`);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
             case "diff":
             case "image":
             case "pdf":

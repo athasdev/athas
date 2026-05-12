@@ -1,0 +1,202 @@
+/* PreviewFrame styles for CodeSnap feature */
+
+/* Outermost background wrapper — width is driven by the `width` prop via inline style */
+.codesnap-frame {
+  display: inline-block;
+}
+
+/* Dark inner card — background and border-radius come from inline style */
+.codesnap-window {
+}
+
+/* Header strip with traffic-light controls and optional title */
+.codesnap-chrome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--codesnap-chrome-bg, #2a2a2a);
+}
+
+/* Traffic-light dot container */
+.codesnap-dots {
+  display: flex;
+  gap: 6px;
+}
+
+/* Individual traffic-light dot */
+.codesnap-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.codesnap-dot--red {
+  background: #ff5f56;
+}
+
+.codesnap-dot--yellow {
+  background: #ffbd2e;
+}
+
+.codesnap-dot--green {
+  background: #27c93f;
+}
+
+/* Window title */
+.codesnap-title {
+  color: var(--codesnap-title, #888);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Code block — font-family comes from inline style via settings */
+.codesnap-code {
+  padding: 18px 22px;
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+/* A single line of code */
+.codesnap-line {
+  display: block;
+  white-space: pre;
+}
+
+/* Line number gutter */
+.codesnap-ln {
+  display: inline-block;
+  width: 3ch;
+  text-align: right;
+  margin-right: 14px;
+  color: var(--codesnap-ln, #555);
+  user-select: none;
+}
+
+/* ── Tab / canvas layout ─────────────────────────────────────────── */
+
+.codesnap-tab {
+  height: 100%;
+  overflow: auto;
+  background: var(--codesnap-canvas-bg, #181818);
+}
+
+.codesnap-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  min-height: 100%;
+}
+
+/* Inline-block so the width handle can sit off the right edge */
+.codesnap-preview-wrap {
+  display: inline-block;
+}
+
+/* ── Width handle ────────────────────────────────────────────────── */
+
+.codesnap-width-handle {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 60px;
+  background: var(--codesnap-handle, #555);
+  border-radius: 3px;
+  cursor: ew-resize;
+  transition: background 0.15s;
+}
+
+.codesnap-width-handle:hover {
+  background: var(--codesnap-handle-hover, #888);
+}
+
+/* ── Shutter bar ─────────────────────────────────────────────────── */
+
+.codesnap-shutter-bar {
+  margin-top: 24px;
+  background: var(--codesnap-bar-bg, #252526);
+  border: 1px solid var(--codesnap-bar-border, #3a3a3a);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.codesnap-readout {
+  font-family: monospace;
+  color: var(--codesnap-muted, #888);
+  font-size: 12px;
+  min-width: 80px;
+}
+
+.codesnap-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--codesnap-bar-border, #3a3a3a);
+}
+
+.codesnap-toggle {
+  display: flex;
+  background: var(--codesnap-toggle-bg, #1a1a1a);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.codesnap-toggle button {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--codesnap-muted, #888);
+  border-radius: 3px;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+.codesnap-toggle button.active {
+  background: var(--codesnap-active, #3a3a3a);
+  color: #fff;
+}
+
+.codesnap-shutter {
+  background: var(--codesnap-accent, #0e639c);
+  color: white;
+  padding: 6px 18px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.codesnap-shutter:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.codesnap-icon-btn {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--codesnap-muted, #aaa);
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.codesnap-icon-btn:hover {
+  color: #fff;
+  background: var(--codesnap-active, #3a3a3a);
+}

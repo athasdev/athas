@@ -33,7 +33,8 @@ export type PaneContentType =
   | "externalEditor"
   | "globalSearch"
   | "diagnostics"
-  | "onboarding";
+  | "onboarding"
+  | "codeSnap";
 
 // ── Base fields shared by every content type ────────────────────────
 
@@ -172,6 +173,11 @@ export interface OnboardingContent extends PaneContentBase {
   previousVersion?: string;
 }
 
+export interface CodesnapContent extends PaneContentBase {
+  type: "codeSnap";
+  snapshot: import("@/features/codesnap/types").SourceSnapshot;
+}
+
 // ── Discriminated union ─────────────────────────────────────────────
 
 export type PaneContent =
@@ -194,7 +200,8 @@ export type PaneContent =
   | ExternalEditorContent
   | GlobalSearchContent
   | DiagnosticsContent
-  | OnboardingContent;
+  | OnboardingContent
+  | CodesnapContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
 
@@ -242,6 +249,10 @@ export function isExternalEditorContent(c: PaneContent): c is ExternalEditorCont
   return c.type === "externalEditor";
 }
 
+export function isCodesnapContent(c: PaneContent): c is CodesnapContent {
+  return c.type === "codeSnap";
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /** Content types that represent real files on disk and should be persisted to session. */
@@ -261,6 +272,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "globalSearch",
   "diagnostics",
   "onboarding",
+  "codeSnap",
 ]);
 
 export function isVirtualContent(c: PaneContent): boolean {
@@ -403,4 +415,8 @@ export type OpenContentSpec =
   | {
       type: "onboarding";
       context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext;
+    }
+  | {
+      type: "codeSnap";
+      snapshot: import("@/features/codesnap/types").SourceSnapshot;
     };
