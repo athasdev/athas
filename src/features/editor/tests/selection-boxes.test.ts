@@ -64,9 +64,9 @@ describe("calculateSelectionBoxes", () => {
       bottomLeft: false,
     });
     expect(boxes[1]?.corners).toEqual({
-      topLeft: true,
-      topRight: true,
-      bottomRight: true,
+      topLeft: false,
+      topRight: false,
+      bottomRight: false,
       bottomLeft: false,
     });
     expect(boxes[2]?.corners).toEqual({

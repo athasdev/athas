@@ -40,17 +40,17 @@ export function addSelectionBoxCorners(
   return boxes.map((box, index) => {
     const previous = boxes[index - 1];
     const next = boxes[index + 1];
-    const right = box.left + box.width;
-    const previousRight = previous ? previous.left + previous.width : 0;
-    const nextRight = next ? next.left + next.width : 0;
+    const isJoinedToPrevious =
+      !!previous && Math.abs(previous.top + previous.height - box.top) <= epsilon;
+    const isJoinedToNext = !!next && Math.abs(box.top + box.height - next.top) <= epsilon;
 
     return {
       ...box,
       corners: {
-        topLeft: !previous || box.left < previous.left - epsilon,
-        topRight: !previous || right > previousRight + epsilon,
-        bottomRight: !next || right > nextRight + epsilon,
-        bottomLeft: !next || box.left < next.left - epsilon,
+        topLeft: !isJoinedToPrevious,
+        topRight: !isJoinedToPrevious,
+        bottomRight: !isJoinedToNext,
+        bottomLeft: !isJoinedToNext,
       },
     };
   });
