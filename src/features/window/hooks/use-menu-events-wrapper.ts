@@ -206,6 +206,14 @@ export function useMenuEventsWrapper() {
 
       document.execCommand("redo");
     },
+    onSelectAll: () => {
+      if (shouldRouteEditMenuToEditor()) {
+        editorAPI.selectAll();
+        return;
+      }
+
+      document.execCommand("selectAll");
+    },
     onFind: () => {
       if (isFileTreeFocused()) {
         window.dispatchEvent(new CustomEvent("file-tree-open-search"));

@@ -231,7 +231,13 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .cut()
       .copy()
       .paste()
-      .select_all()
+      .item(&MenuItem::with_id(
+         app,
+         "select_all",
+         "Select All",
+         true,
+         Some("CmdOrCtrl+A"),
+      )?)
       .separator()
       .item(&MenuItem::with_id(
          app,

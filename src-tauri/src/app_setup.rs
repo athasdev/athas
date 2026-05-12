@@ -260,6 +260,9 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "redo" => {
                   let _ = window.emit("menu_redo", ());
                }
+               "select_all" => {
+                  let _ = window.emit("menu_select_all", ());
+               }
                "find" => {
                   let _ = window.emit("menu_find", ());
                }

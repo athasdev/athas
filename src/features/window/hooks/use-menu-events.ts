@@ -36,6 +36,7 @@ async function setupMenuListeners(handlers: any) {
     currentWindow.listen("menu_close_tab", () => currentHandlers.current.onCloseTab()),
     currentWindow.listen("menu_undo", () => currentHandlers.current.onUndo()),
     currentWindow.listen("menu_redo", () => currentHandlers.current.onRedo()),
+    currentWindow.listen("menu_select_all", () => currentHandlers.current.onSelectAll()),
     currentWindow.listen("menu_find", () => currentHandlers.current.onFind()),
     currentWindow.listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
     currentWindow.listen("menu_toggle_comment", () => currentHandlers.current.onToggleComment()),
@@ -81,6 +82,7 @@ interface UseMenuEventsProps {
   onCloseTab: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  onSelectAll: () => void;
   onFind: () => void;
   onFindReplace: () => void;
   onToggleComment: () => void;
