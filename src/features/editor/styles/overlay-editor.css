@@ -182,14 +182,15 @@ textarea.input-layer.selection-transparent::-moz-selection {
 .editor-bracket-match {
   position: absolute;
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--accent, #6a9bcc) 62%, transparent);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--accent, #6a9bcc) 12%, transparent);
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent, #6a9bcc) 72%, transparent);
+  border-radius: 0;
+  background: transparent;
 }
 
 .editor-bracket-match-unmatched {
-  border-color: color-mix(in srgb, var(--color-error, #ef4444) 72%, transparent);
-  background: color-mix(in srgb, var(--color-error, #ef4444) 14%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-error, #ef4444) 72%, transparent);
+  background: transparent;
 }
 
 .editor-word-highlight,
@@ -209,7 +210,7 @@ textarea.input-layer.selection-transparent::-moz-selection {
   right: 0;
   left: 0;
   box-sizing: border-box;
-  border-block: 1px solid color-mix(in srgb, var(--color-border, #8a8f98) 24%, transparent);
+  border: 0;
   background: color-mix(in srgb, var(--color-text, #d4d4d4) 5%, transparent);
 }
 
