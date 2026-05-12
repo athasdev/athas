@@ -209,7 +209,7 @@ textarea.input-layer.selection-transparent::-moz-selection {
   right: 0;
   left: 0;
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--color-border, #8a8f98) 24%, transparent);
+  border-block: 1px solid color-mix(in srgb, var(--color-border, #8a8f98) 24%, transparent);
   background: color-mix(in srgb, var(--color-text, #d4d4d4) 5%, transparent);
 }
 

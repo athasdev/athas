@@ -8,10 +8,12 @@ export function applyEditorScrollTransform(
   scrollTop: number,
 ) {
   const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+  const verticalTransform = `translateY(-${scrollTop}px)`;
 
   for (const ref of scrollLayerRefs) {
     if (ref.current) {
-      ref.current.style.transform = transform;
+      ref.current.style.transform =
+        ref.current.dataset.editorScrollAxis === "y" ? verticalTransform : transform;
     }
   }
 }

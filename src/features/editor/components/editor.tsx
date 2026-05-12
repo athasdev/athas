@@ -227,6 +227,7 @@ export function Editor({
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
+  const [contentScrollWidth, setContentScrollWidth] = useState(0);
 
   const bufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const rawBuffer = useBufferStore(
@@ -421,6 +422,45 @@ export function Editor({
     (text: string) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
     [fontSize, fontFamily, tabSize],
   );
+  useLayoutEffect(() => {
+    const scrollElement = largeContentMode ? largeEditorScrollRef.current : inputRef.current;
+    const container = contentContainerRef.current;
+    if (!container) return;
+
+    let rafId: number | null = null;
+    const updateContentScrollWidth = () => {
+      const viewportWidth = container.clientWidth || contentWidth;
+      const scrollWidth = scrollElement?.scrollWidth ?? viewportWidth;
+      const nextWidth = Math.max(viewportWidth, scrollWidth);
+      setContentScrollWidth((previousWidth) =>
+        Math.abs(previousWidth - nextWidth) < 1 ? previousWidth : nextWidth,
+      );
+    };
+
+    updateContentScrollWidth();
+    rafId = requestAnimationFrame(updateContentScrollWidth);
+
+    const resizeObserver = new ResizeObserver(updateContentScrollWidth);
+    resizeObserver.observe(container);
+    if (scrollElement) {
+      resizeObserver.observe(scrollElement);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [
+    content.length,
+    contentWidth,
+    fontFamily,
+    fontSize,
+    largeContentMode,
+    lineHeight,
+    tabSize,
+    textareaContent.length,
+    wordWrap,
+  ]);
   const isInlineEditToolbarVisible = useInlineEditToolbarStore.use.isVisible();
   const viewZones = useMemo(() => {
     const zones: EditorViewZone[] = [];
@@ -1512,7 +1552,7 @@ export function Editor({
             lineHeight={lineHeight}
             tabSize={tabSize}
             selectionOffsets={largeContentMode ? largeSelectionOffsets : undefined}
-            lineBreakFillWidth={contentWidth}
+            lineBreakFillWidth={Math.max(contentWidth, contentScrollWidth)}
             lineTextResolver={largeContentMode ? getLargeLineText : undefined}
             viewportRange={
               largeContentMode && shouldVirtualizeRendering ? viewportRange : undefined

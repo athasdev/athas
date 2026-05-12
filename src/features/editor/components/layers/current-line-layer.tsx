@@ -21,6 +21,7 @@ const CurrentLineLayerComponent = forwardRef<HTMLDivElement, CurrentLineLayerPro
     return (
       <div
         ref={ref}
+        data-editor-scroll-axis="y"
         className="current-line-layer pointer-events-none absolute inset-0 z-0"
         style={{ willChange: "transform" }}
       >
