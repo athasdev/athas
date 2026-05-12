@@ -1030,6 +1030,7 @@ export function Editor({
     foldTransform,
     multiCursorState,
     cursorPosition,
+    selection,
     getVisualLineOffset,
     getCursorPositionForVisualOffset,
     getColumnForInlayAdjustedX,

@@ -1,11 +1,15 @@
-import { useCallback, type MouseEvent, type RefObject } from "react";
+import { useCallback, useRef, type MouseEvent, type RefObject } from "react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { InlayHint } from "../lsp/use-inlay-hints";
 import type { FoldTransformResult } from "./use-fold-transform";
 import type { MultiCursorState, Position, Range } from "../types/editor";
 import { calculateActualOffset } from "../utils/fold-transformer";
-import { getTextareaSelectionFocusOffset } from "../utils/selection-ranges";
+import {
+  buildSelectionFromAnchor,
+  getSelectionAnchorForCursor,
+  getTextareaSelectionFocusOffset,
+} from "../utils/selection-ranges";
 import type { EditorViewLayout } from "../view-model/view-layout";
 
 interface UseEditorMouseInteractionsParams {
@@ -22,6 +26,7 @@ interface UseEditorMouseInteractionsParams {
   foldTransform: FoldTransformResult;
   multiCursorState: MultiCursorState | null;
   cursorPosition: Position;
+  selection?: Range;
   getVisualLineOffset: (lineIndex: number) => number;
   getCursorPositionForVisualOffset: (offset: number) => Position;
   getColumnForInlayAdjustedX: (lineText: string, lineHints: InlayHint[], x: number) => number;
@@ -48,6 +53,7 @@ export function useEditorMouseInteractions({
   foldTransform,
   multiCursorState,
   cursorPosition,
+  selection,
   getVisualLineOffset,
   getCursorPositionForVisualOffset,
   getColumnForInlayAdjustedX,
@@ -59,58 +65,62 @@ export function useEditorMouseInteractions({
   toggleFold,
   onReadonlySurfaceClick,
 }: UseEditorMouseInteractionsParams) {
-  const handleMouseDown = useCallback(
-    (event: MouseEvent<HTMLTextAreaElement>) => {
-      if (!useGlobalEditorState || readOnly || event.button !== 0) return;
-      if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey || event.detail > 1) {
-        return;
-      }
+  const selectionDragAnchorRef = useRef<{ actual: Position; virtualOffset: number } | null>(null);
 
+  const getVirtualOffsetForPosition = useCallback(
+    (position: Position): number => {
+      const visualLine = foldTransform.hasActiveFolds
+        ? (foldTransform.mapping.actualToVirtual.get(position.line) ?? position.line)
+        : position.line;
+
+      return Math.min(getVisualLineOffset(visualLine) + position.column, displayContentLength);
+    },
+    [displayContentLength, foldTransform, getVisualLineOffset],
+  );
+
+  const resolvePositionFromClientPoint = useCallback(
+    (clientX: number, clientY: number) => {
       const textarea = inputRef.current;
-      if (!textarea) return;
-      if (visualInlayHints.length === 0 && viewLayout.totalZoneHeight === 0) return;
+      if (!textarea) return null;
 
       const rect = textarea.getBoundingClientRect();
-      const editorX = event.clientX - rect.left + textarea.scrollLeft;
-      const editorY = event.clientY - rect.top + textarea.scrollTop;
+      const editorX = clientX - rect.left + textarea.scrollLeft;
+      const editorY = clientY - rect.top + textarea.scrollTop;
       const position = viewLayout.editorPointToModelPosition(editorX, editorY);
-      const visualLine = Math.max(0, Math.min(lines.length - 1, position.modelLine));
-      const lineHints = visualInlayHints.filter((hint) => hint.line === visualLine);
-
-      event.preventDefault();
-
+      const visualLine = Math.max(0, Math.min(Math.max(lines.length - 1, 0), position.modelLine));
       const lineText = lines[visualLine] || "";
+      const lineHints = visualInlayHints.filter((hint) => hint.line === visualLine);
       const localX = Math.max(0, editorX - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
       const column =
         lineHints.length > 0
           ? getColumnForInlayAdjustedX(lineText, lineHints, localX)
-          : position.column;
+          : Math.max(0, Math.min(position.column, lineText.length));
       const virtualOffset = Math.min(
         getVisualLineOffset(visualLine) + column,
         displayContentLength,
       );
+      const virtualPosition: Position = {
+        line: visualLine,
+        column,
+        offset: virtualOffset,
+      };
 
-      textarea.focus();
-      textarea.selectionStart = virtualOffset;
-      textarea.selectionEnd = virtualOffset;
-
-      if (foldTransform.hasActiveFolds) {
-        const actualLine = foldTransform.mapping.virtualToActual.get(visualLine) ?? visualLine;
-        const actualOffset = calculateActualOffset(actualLines, actualLine, column);
-        setCursorPosition({
-          line: actualLine,
-          column,
-          offset: actualOffset,
-        });
-      } else {
-        setCursorPosition({
-          line: visualLine,
-          column,
-          offset: virtualOffset,
-        });
+      if (!foldTransform.hasActiveFolds) {
+        return {
+          actual: virtualPosition,
+          virtualOffset,
+        };
       }
 
-      setSelection(undefined);
+      const actualLine = foldTransform.mapping.virtualToActual.get(visualLine) ?? visualLine;
+      return {
+        actual: {
+          line: actualLine,
+          column,
+          offset: calculateActualOffset(actualLines, actualLine, column),
+        },
+        virtualOffset,
+      };
     },
     [
       actualLines,
@@ -120,12 +130,86 @@ export function useEditorMouseInteractions({
       getVisualLineOffset,
       inputRef,
       lines,
-      readOnly,
-      setCursorPosition,
-      setSelection,
-      useGlobalEditorState,
       viewLayout,
       visualInlayHints,
+    ],
+  );
+
+  const applyResolvedSelection = useCallback(
+    (
+      textarea: HTMLTextAreaElement,
+      anchor: { actual: Position; virtualOffset: number },
+      focus: { actual: Position; virtualOffset: number },
+    ) => {
+      const selectionStart = Math.min(anchor.virtualOffset, focus.virtualOffset);
+      const selectionEnd = Math.max(anchor.virtualOffset, focus.virtualOffset);
+      const direction = anchor.virtualOffset > focus.virtualOffset ? "backward" : "forward";
+
+      textarea.setSelectionRange(selectionStart, selectionEnd, direction);
+      textarea.dispatchEvent(new Event("select", { bubbles: true }));
+      setCursorPosition(focus.actual);
+      setSelection(buildSelectionFromAnchor(anchor.actual, focus.actual));
+    },
+    [setCursorPosition, setSelection],
+  );
+
+  const handleMouseDown = useCallback(
+    (event: MouseEvent<HTMLTextAreaElement>) => {
+      if (!useGlobalEditorState || readOnly || event.button !== 0) return;
+      if (event.altKey || event.metaKey || event.ctrlKey || event.detail > 1) {
+        return;
+      }
+
+      const textarea = inputRef.current;
+      if (!textarea) return;
+      const focus = resolvePositionFromClientPoint(event.clientX, event.clientY);
+      if (!focus) return;
+
+      event.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      textarea.focus();
+
+      const anchorPosition = event.shiftKey
+        ? getSelectionAnchorForCursor(selection, cursorPosition)
+        : focus.actual;
+      const selectionAnchor = {
+        actual: anchorPosition,
+        virtualOffset: event.shiftKey
+          ? getVirtualOffsetForPosition(anchorPosition)
+          : focus.virtualOffset,
+      };
+
+      selectionDragAnchorRef.current = selectionAnchor;
+      applyResolvedSelection(textarea, selectionAnchor, focus);
+
+      const handleDocumentMouseMove = (moveEvent: globalThis.MouseEvent) => {
+        if (!selectionDragAnchorRef.current || (moveEvent.buttons & 1) !== 1) return;
+
+        const nextFocus = resolvePositionFromClientPoint(moveEvent.clientX, moveEvent.clientY);
+        if (!nextFocus) return;
+
+        moveEvent.preventDefault();
+        applyResolvedSelection(textarea, selectionDragAnchorRef.current, nextFocus);
+      };
+
+      const handleDocumentMouseUp = () => {
+        selectionDragAnchorRef.current = null;
+        window.removeEventListener("mousemove", handleDocumentMouseMove, true);
+        window.removeEventListener("mouseup", handleDocumentMouseUp, true);
+      };
+
+      window.addEventListener("mousemove", handleDocumentMouseMove, true);
+      window.addEventListener("mouseup", handleDocumentMouseUp, true);
+    },
+    [
+      applyResolvedSelection,
+      cursorPosition,
+      getVirtualOffsetForPosition,
+      inputRef,
+      readOnly,
+      resolvePositionFromClientPoint,
+      selection,
+      useGlobalEditorState,
     ],
   );
 
