@@ -1126,7 +1126,7 @@ export function Editor({
   });
 
   useDragScroll(inputRef);
-  useSelectionScope(contentContainerRef, isActiveSurface);
+  useSelectionScope(contentContainerRef, isActiveSurface && readOnly);
 
   useEffect(() => {
     const scrollElement = largeContentMode ? largeEditorScrollRef.current : inputRef.current;
@@ -1198,7 +1198,9 @@ export function Editor({
 
       if (largeContentMode) {
         const lineStart = getVisualLineOffset(lineIndex);
-        const lineEnd = lineStart + getLargeLineText(lineIndex).length;
+        const lineText = getLargeLineText(lineIndex);
+        const lineBreakLength = lineIndex < visualLineCount - 1 ? 1 : 0;
+        const lineEnd = Math.min(content.length, lineStart + lineText.length + lineBreakLength);
         const startPos = getLargePositionForOffset(lineStart);
         const endPos = getLargePositionForOffset(lineEnd);
 
@@ -1211,7 +1213,12 @@ export function Editor({
       if (!inputRef.current) return;
 
       const lineStart = getVisualLineOffset(lineIndex);
-      const lineEnd = lineStart + lines[lineIndex].length;
+      const lineText = lines[lineIndex] ?? "";
+      const lineBreakLength = lineIndex < lines.length - 1 ? 1 : 0;
+      const lineEnd = Math.min(
+        displayContent.length,
+        lineStart + lineText.length + lineBreakLength,
+      );
 
       inputRef.current.selectionStart = lineStart;
       inputRef.current.selectionEnd = lineEnd;
@@ -1497,6 +1504,7 @@ export function Editor({
             lineHeight={lineHeight}
             tabSize={tabSize}
             selectionOffsets={largeContentMode ? largeSelectionOffsets : undefined}
+            lineBreakFillWidth={contentWidth}
             lineTextResolver={largeContentMode ? getLargeLineText : undefined}
             viewportRange={
               largeContentMode && shouldVirtualizeRendering ? viewportRange : undefined

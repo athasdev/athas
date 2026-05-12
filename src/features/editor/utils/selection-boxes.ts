@@ -27,6 +27,7 @@ export interface CalculateSelectionBoxesOptions {
   contentLength: number;
   lineHeight: number;
   measureText: (text: string) => number;
+  lineBreakFillWidth?: number;
   lineTextResolver?: (lineIndex: number) => string;
   viewportRange?: { startLine: number; endLine: number };
   viewLayout?: EditorViewLayout;
@@ -63,6 +64,7 @@ export function calculateSelectionBoxes({
   contentLength,
   lineHeight,
   measureText,
+  lineBreakFillWidth,
   lineTextResolver,
   viewportRange,
   viewLayout,
@@ -167,11 +169,15 @@ export function calculateSelectionBoxes({
 
     const selectedText = lineText.substring(startCol, endCol);
     const width = selectedText.length > 0 ? measureText(selectedText) : minimumSelectionWidth;
+    const fillWidth =
+      hasSelectedLineBreak && lineBreakFillWidth
+        ? Math.max(0, lineBreakFillWidth - getLineLeft(line, startCol))
+        : 0;
 
     boxes.push({
       top: line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
       left: getLineLeft(line, startCol),
-      width: Math.max(width, minimumSelectionWidth),
+      width: Math.max(width, fillWidth, minimumSelectionWidth),
       height: lineHeight,
     });
   }

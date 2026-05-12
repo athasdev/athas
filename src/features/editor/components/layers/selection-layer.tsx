@@ -13,6 +13,7 @@ interface SelectionLayerProps {
   lineHeight: number;
   tabSize: number;
   selectionOffsets?: SelectionOffsets | null;
+  lineBreakFillWidth?: number;
   lineTextResolver?: (lineIndex: number) => string;
   viewportRange?: { startLine: number; endLine: number };
   wordWrap?: boolean;
@@ -31,6 +32,7 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
       lineHeight,
       tabSize,
       selectionOffsets: controlledSelectionOffsets,
+      lineBreakFillWidth,
       lineTextResolver,
       viewportRange,
       wordWrap = false,
@@ -109,6 +111,7 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         contentLength,
         lineHeight,
         measureText: getTextWidth,
+        lineBreakFillWidth,
         lineTextResolver,
         viewportRange,
         viewLayout: wordWrap ? viewLayout : undefined,
@@ -118,6 +121,7 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
       fontFamily,
       fontSize,
       lineHeight,
+      lineBreakFillWidth,
       lineOffsets,
       lineTextResolver,
       lines,
@@ -171,6 +175,7 @@ export const SelectionLayer = memo(SelectionLayerComponent, (prev, next) => {
     prev.tabSize === next.tabSize &&
     prev.selectionOffsets?.start === next.selectionOffsets?.start &&
     prev.selectionOffsets?.end === next.selectionOffsets?.end &&
+    prev.lineBreakFillWidth === next.lineBreakFillWidth &&
     prev.lineTextResolver === next.lineTextResolver &&
     prev.viewportRange?.startLine === next.viewportRange?.startLine &&
     prev.viewportRange?.endLine === next.viewportRange?.endLine &&

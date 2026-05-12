@@ -45,6 +45,25 @@ describe("calculateSelectionBoxes", () => {
     expect(boxes[0]?.width).toBe("first".length * 8);
   });
 
+  it("fills the rest of the row when a selected line break is visible", () => {
+    const content = "first\nsecond";
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: 0, end: "first\n".length },
+      lines: content.split("\n"),
+      lineOffsets: buildLineOffsetMap(content),
+      contentLength: content.length,
+      lineHeight: 20,
+      lineBreakFillWidth: 320,
+      measureText,
+    });
+
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0]).toMatchObject({
+      left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      width: 320 - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+    });
+  });
+
   it("only rounds the outside corners of a multiline selection", () => {
     const content = "first\nsecond\nthird";
     const boxes = calculateSelectionBoxes({
