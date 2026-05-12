@@ -18,9 +18,7 @@ describe("font family resolution", () => {
     expect(normalizeConfiguredFontFamily("Geist Mono", DEFAULT_MONO_FONT_FAMILY)).toBe(
       "Geist Mono",
     );
-    expect(normalizeConfiguredFontFamily("Geist Sans", DEFAULT_UI_FONT_FAMILY)).toBe(
-      "Geist Sans",
-    );
+    expect(normalizeConfiguredFontFamily("Geist Sans", DEFAULT_UI_FONT_FAMILY)).toBe("Geist Sans");
   });
 
   it("falls back when the configured font is empty", () => {
@@ -47,8 +45,8 @@ describe("font family resolution", () => {
   });
 
   it("keeps Geist Mono when it is available as a system font", () => {
-    expect(
-      resolveAvailableFontFamily("Geist Mono", DEFAULT_MONO_FONT_FAMILY, ["geist mono"]),
-    ).toBe("Geist Mono");
+    expect(resolveAvailableFontFamily("Geist Mono", DEFAULT_MONO_FONT_FAMILY, ["geist mono"])).toBe(
+      "Geist Mono",
+    );
   });
 });
