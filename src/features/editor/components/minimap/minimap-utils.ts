@@ -1,10 +1,5 @@
 import type { Token } from "../../utils/html";
 
-export interface MinimapLineMetrics {
-  lines: string[];
-  lineStarts: number[];
-}
-
 export interface MinimapRenderMetrics {
   renderScale: number;
   renderHeight: number;
@@ -20,19 +15,6 @@ export interface MinimapSearchMark {
 export interface MinimapHorizontalMetrics {
   charWidth: number;
   contentWidth: number;
-}
-
-export function buildMinimapLineMetrics(content: string): MinimapLineMetrics {
-  const lines = content.split("\n");
-  const lineStarts = Array.from({ length: lines.length }, () => 0);
-  let offset = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    lineStarts[i] = offset;
-    offset += lines[i].length + 1;
-  }
-
-  return { lines, lineStarts };
 }
 
 export function getLineIndexAtOffset(lineStarts: number[], offset: number): number {
@@ -98,7 +80,12 @@ export function getMinimapHorizontalMetrics({
   maxCharWidth?: number;
 }): MinimapHorizontalMetrics {
   const contentWidth = Math.max(1, width - horizontalPadding * 2);
-  const maxLineLength = Math.max(1, ...lines.map((line) => line.length));
+  let maxLineLength = 1;
+  for (const line of lines) {
+    if (line.length > maxLineLength) {
+      maxLineLength = line.length;
+    }
+  }
   const charWidth = Math.max(minCharWidth, Math.min(maxCharWidth, contentWidth / maxLineLength));
 
   return {

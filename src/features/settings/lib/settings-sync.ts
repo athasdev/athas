@@ -25,6 +25,9 @@ type SyncableSettingsKey =
   | "tabSize"
   | "wordWrap"
   | "lineNumbers"
+  | "renderWhitespace"
+  | "renderIndentGuides"
+  | "highlightOccurrences"
   | "showMinimap"
   | "terminalFontFamily"
   | "terminalFontSize"
@@ -112,6 +115,9 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "tabSize",
   "wordWrap",
   "lineNumbers",
+  "renderWhitespace",
+  "renderIndentGuides",
+  "highlightOccurrences",
   "showMinimap",
   "terminalFontFamily",
   "terminalFontSize",

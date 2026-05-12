@@ -96,7 +96,11 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
               return;
             }
 
-            if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+            if (
+              settings.openFoldersInNewWindow &&
+              settings.titleBarProjectMode === "window" &&
+              hasOpenWorkspace
+            ) {
               await createAppWindow({
                 path: folderPath,
                 isDirectory: true,

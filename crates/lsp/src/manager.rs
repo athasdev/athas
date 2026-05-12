@@ -1,5 +1,5 @@
 use super::{
-   client::LspClient,
+   client::{LspClient, LspServerEnv},
    config::{LspRegistry, LspSettings},
    manager_state::{LspInstance, WorkspaceClients},
    manager_support,
@@ -165,6 +165,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      server_env_override: Option<LspServerEnv>,
       initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for workspace: {:?}", workspace_path);
@@ -207,6 +208,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
+         Some(workspace_path.clone()),
+         server_env_override.unwrap_or_default(),
       )
       .await?;
 
@@ -253,6 +256,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      server_env_override: Option<LspServerEnv>,
       initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for file: {:?}", file_path);
@@ -303,6 +307,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
+         Some(workspace_path.clone()),
+         server_env_override.unwrap_or_default(),
       )
       .await?;
 
@@ -467,6 +473,76 @@ impl LspManager {
       }
    }
 
+   pub async fn get_implementation(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = GotoDefinitionParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_implementation(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/implementation") {
+               log::debug!("Implementation method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_type_definition(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = GotoDefinitionParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_type_definition(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/typeDefinition") {
+               log::debug!("TypeDefinition method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_semantic_tokens(
       &self,
       file_path: &str,
@@ -592,6 +668,54 @@ impl LspManager {
          Err(error) => {
             if manager_support::is_unsupported_method(&error, "textDocument/formatting") {
                log::debug!("Formatting method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn format_range(
+      &self,
+      file_path: &str,
+      start_line: u32,
+      start_character: u32,
+      end_line: u32,
+      end_character: u32,
+   ) -> Result<Option<Vec<TextEdit>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = DocumentRangeFormattingParams {
+         text_document,
+         range: Range {
+            start: Position {
+               line: start_line,
+               character: start_character,
+            },
+            end: Position {
+               line: end_line,
+               character: end_character,
+            },
+         },
+         options: FormattingOptions {
+            tab_size: 3,
+            insert_spaces: true,
+            ..Default::default()
+         },
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_range_formatting(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/rangeFormatting") {
+               log::debug!("Range formatting method is not supported by this language server");
                return Ok(None);
             }
             Err(error)

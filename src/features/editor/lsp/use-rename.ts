@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { getLineTextFromContent } from "@/features/editor/utils/position";
 import { LspClient } from "./lsp-client";
 import { applyWorkspaceEdit, isWorkspaceEdit, offsetFromPosition } from "./workspace-edit";
 import { logger } from "../utils/logger";
@@ -38,9 +39,8 @@ export const useRename = (filePath: string | undefined) => {
     if (!filePath) return;
 
     const cursorPosition = useEditorStateStore.getState().cursorPosition;
-    const lines = editorAPI.getLines();
-    const currentLine = lines[cursorPosition.line] || "";
     const content = editorAPI.getContent();
+    const currentLine = getLineTextFromContent(content, cursorPosition.line);
     const lspClient = LspClient.getInstance();
     const prepared = await lspClient.prepareRename(
       filePath,

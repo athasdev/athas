@@ -110,6 +110,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["line", "numbers", "gutter", "display"],
   },
   {
+    id: "editor-render-whitespace",
+    tab: "editor",
+    section: "Display",
+    label: "Render Whitespace",
+    description: "Show visible markers for spaces and tabs",
+    keywords: ["whitespace", "spaces", "tabs", "invisible", "render", "display"],
+  },
+  {
+    id: "editor-render-indent-guides",
+    tab: "editor",
+    section: "Display",
+    label: "Indent Guides",
+    description: "Show vertical guides for indentation levels",
+    keywords: ["indent", "guides", "indentation", "tabs", "spaces", "display"],
+  },
+  {
+    id: "editor-highlight-occurrences",
+    tab: "editor",
+    section: "Display",
+    label: "Highlight Occurrences",
+    description: "Highlight visible matches for the word under the cursor",
+    keywords: ["highlight", "occurrences", "matches", "word", "symbol", "cursor"],
+  },
+  {
     id: "editor-show-minimap",
     tab: "editor",
     section: "Display",
@@ -416,7 +440,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Layout",
     label: "Open Projects In New Window",
     description:
-      "When the current window already has a project, opening another folder uses a separate window",
+      "In window title mode, opening another folder uses a separate window when a project is already open",
     keywords: ["open", "folder", "project", "new", "window", "separate"],
   },
 

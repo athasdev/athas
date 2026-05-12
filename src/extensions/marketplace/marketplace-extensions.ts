@@ -45,9 +45,13 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
 function isContributionExtension(manifest: ExtensionManifest): boolean {
   return Boolean(
     manifest.databaseProviders?.length ||
+    manifest.contributes?.databaseProviders?.length ||
     manifest.agents?.length ||
+    manifest.contributes?.agents?.length ||
     manifest.themes?.length ||
-    manifest.iconThemes?.length,
+    manifest.contributes?.themes?.length ||
+    manifest.iconThemes?.length ||
+    manifest.contributes?.iconThemes?.length,
   );
 }
 

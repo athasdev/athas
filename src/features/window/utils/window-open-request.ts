@@ -1,3 +1,6 @@
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+
 export interface WindowOpenRequest {
   type?: "path" | "remote" | "web" | "terminal" | "settings";
   source?: "app" | "cli" | "deepLink";
@@ -119,8 +122,6 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
 }
 
 export async function handleWindowOpenRequest(request: WindowOpenRequest) {
-  const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-  const { useFileSystemStore } = await import("@/features/file-system/controllers/store");
   const { handleFileSelect, handleOpenFolderByPath, handleOpenRemoteProject } =
     useFileSystemStore.getState();
 

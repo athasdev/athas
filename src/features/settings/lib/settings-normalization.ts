@@ -53,6 +53,12 @@ const EDITOR_LINE_HEIGHT_MIN = 1;
 const EDITOR_LINE_HEIGHT_MAX = 2;
 const FILE_TREE_INDENT_SIZE_MIN = 8;
 const FILE_TREE_INDENT_SIZE_MAX = 32;
+const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
+  "none",
+  "boundary",
+  "trailing",
+  "all",
+]);
 
 function normalizeEditorLineHeight(value: number): number {
   if (!Number.isFinite(value)) {
@@ -74,6 +80,20 @@ function normalizeFileTreeIndentSize(value: number): number {
 
 function normalizeBaseUrl(value: string | undefined): string {
   return value?.trim().replace(/\/+$/, "") || "";
+}
+
+function isRenderWhitespaceMode(value: unknown): value is Settings["renderWhitespace"] {
+  return (
+    typeof value === "string" && RENDER_WHITESPACE_MODES.has(value as Settings["renderWhitespace"])
+  );
+}
+
+function normalizeRenderWhitespace(value: unknown): Settings["renderWhitespace"] {
+  if (isRenderWhitespaceMode(value)) {
+    return value;
+  }
+
+  return "none";
 }
 
 const MAX_SYNCED_AI_SKILLS = 200;
@@ -226,6 +246,9 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.editorLineHeight = normalizeEditorLineHeight(
     normalizedSettings.editorLineHeight,
   );
+  normalizedSettings.renderWhitespace = normalizeRenderWhitespace(
+    (normalizedSettings as { renderWhitespace?: unknown }).renderWhitespace,
+  );
   normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
     normalizedSettings.fileTreeIndentSize,
   );
@@ -288,6 +311,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "editorLineHeight") {
     return normalizeEditorLineHeight(value as number) as Settings[K];
+  }
+
+  if (key === "renderWhitespace") {
+    return normalizeRenderWhitespace(value) as Settings[K];
   }
 
   if (key === "fileTreeIndentSize") {

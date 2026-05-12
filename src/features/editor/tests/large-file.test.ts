@@ -1,24 +1,30 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   applyIncrementalLargeEditorModeInfo,
+  calculatePositionFromLineOffsets,
   countLines,
   createSparseLineArray,
+  getLargeContentColumnForX,
+  getLargeContentLineText,
+  getLargeContentOffsetAtPosition,
   getLargeEditorModeInfo,
   getLineOffset,
   getLineSlice,
   isTooLargeForEditorServices,
   shouldUseLargeEditorMode,
   sliceContentLines,
+  sliceContentLinesByOffsets,
 } from "../utils/large-file";
 import {
   calculateCursorPositionFromContent,
   calculateCursorPositionFromLineOffsets,
   calculateOffsetFromContentPosition,
+  getLineTextFromContent,
 } from "../utils/position";
 import { getUndoEditDelta } from "../history/undo-grouping";
 
 describe("large file editor mode", () => {
-  it("uses responsive mode before VS Code hard tokenization limits", () => {
+  it("uses responsive mode before hard tokenization limits", () => {
     expect(
       isTooLargeForEditorServices({
         contentLength: 2 * 1024 * 1024,
@@ -57,6 +63,51 @@ describe("large file editor mode", () => {
     );
   });
 
+  it("updates large-mode line offsets incrementally for small inserts", () => {
+    const previousContent = Array.from({ length: 80_000 }, (_, index) => `line-${index}`).join(
+      "\n",
+    );
+    const previousInfo = getLargeEditorModeInfo(previousContent);
+    const insertOffset = previousInfo.lineOffsets?.[42_000] ?? 0;
+    const nextContent = `${previousContent.slice(0, insertOffset)}inserted\n${previousContent.slice(insertOffset)}`;
+    const nextInfo = applyIncrementalLargeEditorModeInfo(
+      previousContent,
+      nextContent,
+      previousInfo,
+    );
+
+    expect(nextInfo).not.toBeNull();
+    expect(nextInfo?.largeContentMode).toBe(true);
+    expect(nextInfo?.lineCount).toBe(80_001);
+    expect(nextInfo?.lineOffsets).toHaveLength(80_001);
+    expect(
+      sliceContentLinesByOffsets(nextContent, nextInfo?.lineOffsets ?? [], 41_999, 42_003).lines,
+    ).toEqual(["line-41999", "inserted", "line-42000", "line-42001"]);
+  });
+
+  it("updates large-mode line offsets incrementally for small deletes", () => {
+    const previousContent = Array.from({ length: 80_000 }, (_, index) => `line-${index}`).join(
+      "\n",
+    );
+    const previousInfo = getLargeEditorModeInfo(previousContent);
+    const removeStart = previousInfo.lineOffsets?.[10] ?? 0;
+    const removeEnd = previousInfo.lineOffsets?.[12] ?? removeStart;
+    const nextContent = `${previousContent.slice(0, removeStart)}${previousContent.slice(removeEnd)}`;
+    const nextInfo = applyIncrementalLargeEditorModeInfo(
+      previousContent,
+      nextContent,
+      previousInfo,
+    );
+
+    expect(nextInfo).not.toBeNull();
+    expect(nextInfo?.largeContentMode).toBe(true);
+    expect(nextInfo?.lineCount).toBe(79_998);
+    expect(nextInfo?.lineOffsets).toHaveLength(79_998);
+    expect(
+      sliceContentLinesByOffsets(nextContent, nextInfo?.lineOffsets ?? [], 9, 12).lines,
+    ).toEqual(["line-9", "line-12", "line-13"]);
+  });
+
   it("falls back for large large-mode bookkeeping edits", () => {
     const previousContent = "one\ntwo";
     const previousInfo = getLargeEditorModeInfo(previousContent);
@@ -92,6 +143,52 @@ describe("large file editor mode", () => {
       lines: ["one", "two", "three"],
       offsets: [5, 9, 14],
     });
+  });
+
+  it("uses line offsets to slice large visible ranges without scanning from the start", () => {
+    const content = Array.from({ length: 80_000 }, (_, index) => `line-${index}`).join("\n");
+    const info = getLargeEditorModeInfo(content);
+
+    expect(info.largeContentMode).toBe(true);
+    expect(info.lineCount).toBe(80_000);
+    expect(info.lineOffsets).toHaveLength(80_000);
+    expect(sliceContentLinesByOffsets(content, info.lineOffsets ?? [], 79_998, 80_000)).toEqual({
+      lines: ["line-79998", "line-79999"],
+      offsets: [content.lastIndexOf("line-79998"), content.lastIndexOf("line-79999")],
+    });
+  });
+
+  it("calculates large paste cursor positions from line offsets", () => {
+    const content = Array.from({ length: 80_000 }, (_, index) => `line-${index}`).join("\n");
+    const info = getLargeEditorModeInfo(content);
+    const offset = content.lastIndexOf("line-79999") + "line-79999".length;
+
+    expect(calculatePositionFromLineOffsets(content, info.lineOffsets ?? [], offset)).toEqual({
+      line: 79_999,
+      column: "line-79999".length,
+      offset,
+    });
+  });
+
+  it("resolves large line text and offsets from line offsets", () => {
+    const content = "alpha\nbeta\r\ngamma";
+    const info = getLargeEditorModeInfo(content);
+    const offsets = info.lineOffsets ?? [0, 6, 12];
+
+    expect(getLargeContentLineText(content, offsets, 1)).toBe("beta");
+    expect(getLargeContentOffsetAtPosition(content, offsets, 2, 3)).toBe(
+      content.indexOf("gamma") + 3,
+    );
+    expect(getLargeContentOffsetAtPosition(content, offsets, 99, 99)).toBe(content.length);
+  });
+
+  it("resolves large columns from measured x coordinates", () => {
+    const measureText = (text: string) => text.length * 10;
+
+    expect(getLargeContentColumnForX("abcdef", 0, measureText)).toBe(0);
+    expect(getLargeContentColumnForX("abcdef", 24, measureText)).toBe(2);
+    expect(getLargeContentColumnForX("abcdef", 26, measureText)).toBe(3);
+    expect(getLargeContentColumnForX("abcdef", 99, measureText)).toBe(6);
   });
 
   it("calculates cursor position from large content without a line array", () => {
@@ -136,6 +233,13 @@ describe("large file editor mode", () => {
     });
     expect(calculateOffsetFromContentPosition(content, 1, 2)).toBe(8);
     expect(calculateOffsetFromContentPosition(content, 99, 2)).toBe(content.length);
+  });
+
+  it("reads a line from content without materializing every line", () => {
+    const content = "alpha\nbeta\ngamma";
+
+    expect(getLineTextFromContent(content, 1)).toBe("beta");
+    expect(getLineTextFromContent(content, 99)).toBe("");
   });
 
   it("keeps the large paste bookkeeping path allocation-light", () => {

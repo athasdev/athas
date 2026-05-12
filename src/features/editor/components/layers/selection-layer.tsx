@@ -1,13 +1,10 @@
-import { forwardRef, memo, useEffect, useRef, useState } from "react";
-import {
-  calculateSelectionBoxes,
-  type SelectionBox,
-  type SelectionOffsets,
-} from "../../utils/selection-boxes";
+import { forwardRef, memo, useEffect, useMemo, useState } from "react";
+import { calculateSelectionBoxes, type SelectionOffsets } from "../../utils/selection-boxes";
+import { measureTextWidth } from "../../utils/position";
 import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface SelectionLayerProps {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   lines: string[];
   lineOffsets: number[];
   contentLength: number;
@@ -15,6 +12,9 @@ interface SelectionLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize: number;
+  selectionOffsets?: SelectionOffsets | null;
+  lineTextResolver?: (lineIndex: number) => string;
+  viewportRange?: { startLine: number; endLine: number };
   wordWrap?: boolean;
   viewLayout?: EditorViewLayout;
 }
@@ -30,19 +30,31 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
       fontFamily,
       lineHeight,
       tabSize,
+      selectionOffsets: controlledSelectionOffsets,
+      lineTextResolver,
+      viewportRange,
       wordWrap = false,
       viewLayout,
     },
     ref,
   ) => {
-    const textarea = textareaRef.current;
-    const measureRef = useRef<HTMLSpanElement>(null);
-    const [selectionOffsets, setSelectionOffsets] = useState<SelectionOffsets | null>(null);
-    const [selectionBoxes, setSelectionBoxes] = useState<SelectionBox[]>([]);
+    const textarea = textareaRef?.current;
+    const [nativeSelectionOffsets, setNativeSelectionOffsets] = useState<SelectionOffsets | null>(
+      null,
+    );
+    const selectionOffsets =
+      controlledSelectionOffsets === undefined
+        ? nativeSelectionOffsets
+        : controlledSelectionOffsets;
 
     useEffect(() => {
+      if (controlledSelectionOffsets !== undefined) {
+        setNativeSelectionOffsets(null);
+        return;
+      }
+
       if (!textarea) {
-        setSelectionOffsets(null);
+        setNativeSelectionOffsets(null);
         return;
       }
 
@@ -55,11 +67,11 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         const hasSelection = start !== end;
 
         if (hasSelection && (isActive || isVisualMode)) {
-          setSelectionOffsets({ start, end });
+          setNativeSelectionOffsets({ start, end });
           return;
         }
 
-        setSelectionOffsets(null);
+        setNativeSelectionOffsets(null);
       };
 
       updateSelection();
@@ -81,33 +93,40 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         textarea.removeEventListener("blur", updateSelection);
         document.removeEventListener("selectionchange", updateSelection);
       };
-    }, [textarea]);
+    }, [controlledSelectionOffsets, textarea]);
 
-    useEffect(() => {
-      if (!measureRef.current || !selectionOffsets) {
-        setSelectionBoxes([]);
-        return;
-      }
-
-      const measure = measureRef.current;
+    const selectionBoxes = useMemo(() => {
+      if (!selectionOffsets) return [];
 
       const getTextWidth = (text: string): number => {
-        measure.textContent = text;
-        return measure.getBoundingClientRect().width;
+        return measureTextWidth(text, fontSize, fontFamily, tabSize);
       };
 
-      setSelectionBoxes(
-        calculateSelectionBoxes({
-          selectionOffsets,
-          lines,
-          lineOffsets,
-          contentLength,
-          lineHeight,
-          measureText: getTextWidth,
-          viewLayout: wordWrap ? viewLayout : undefined,
-        }),
-      );
-    }, [selectionOffsets, lines, lineOffsets, contentLength, lineHeight, wordWrap, viewLayout]);
+      return calculateSelectionBoxes({
+        selectionOffsets,
+        lines,
+        lineOffsets,
+        contentLength,
+        lineHeight,
+        measureText: getTextWidth,
+        lineTextResolver,
+        viewportRange,
+        viewLayout: wordWrap ? viewLayout : undefined,
+      });
+    }, [
+      contentLength,
+      fontFamily,
+      fontSize,
+      lineHeight,
+      lineOffsets,
+      lineTextResolver,
+      lines,
+      selectionOffsets,
+      tabSize,
+      viewportRange,
+      wordWrap,
+      viewLayout,
+    ]);
 
     return (
       <div
@@ -117,18 +136,6 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
           willChange: "transform",
         }}
       >
-        <span
-          ref={measureRef}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            visibility: "hidden",
-            whiteSpace: "pre",
-            fontSize: `${fontSize}px`,
-            fontFamily,
-            tabSize,
-          }}
-        />
         {selectionBoxes.map((box, index) => (
           <div
             key={index}
@@ -162,6 +169,11 @@ export const SelectionLayer = memo(SelectionLayerComponent, (prev, next) => {
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
+    prev.selectionOffsets?.start === next.selectionOffsets?.start &&
+    prev.selectionOffsets?.end === next.selectionOffsets?.end &&
+    prev.lineTextResolver === next.lineTextResolver &&
+    prev.viewportRange?.startLine === next.viewportRange?.startLine &&
+    prev.viewportRange?.endLine === next.viewportRange?.endLine &&
     prev.wordWrap === next.wordWrap &&
     prev.viewLayout === next.viewLayout
   );

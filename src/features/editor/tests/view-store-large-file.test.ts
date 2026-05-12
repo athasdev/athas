@@ -52,7 +52,6 @@ describe("editor view store large files", () => {
     useEditorViewStore.setState({
       lines: [""],
       lineCount: 1,
-      lineTokens: new Map(),
     });
     vi.unstubAllGlobals();
   });
@@ -74,8 +73,7 @@ describe("editor view store large files", () => {
 
     const viewState = useEditorViewStore.getState();
     expect(viewState.lineCount).toBe(50_000);
-    expect(viewState.lines).toHaveLength(50_000);
-    expect(Object.keys(viewState.lines)).toHaveLength(0);
+    expect(viewState.lines).toHaveLength(0);
     expect(useEditorViewStore.getState().actions.getLines()).toHaveLength(50_000);
   });
 

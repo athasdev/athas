@@ -25,7 +25,7 @@ export default function WindowTitleDisplay() {
       type="button"
       onClick={() => setIsProjectPickerVisible(true)}
       className={cn(
-        "flex h-6 min-w-[120px] max-w-[260px] items-center justify-center rounded-md px-2",
+        "athas-title-project-surface flex h-6 min-w-[120px] max-w-[260px] items-center justify-center rounded-md border border-transparent px-2",
         "ui-text-sm text-text-lighter transition-colors hover:bg-hover/60 hover:text-text",
       )}
       aria-label="Switch project"

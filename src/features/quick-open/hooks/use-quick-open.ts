@@ -5,6 +5,7 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
+import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { getBaseName } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFffSearch } from "./use-fff-search";
@@ -59,12 +60,11 @@ export const useQuickOpen = () => {
 
       // Navigate to symbol position
       setTimeout(() => {
-        const lines = editorAPI.getLines();
-        let offset = 0;
-        for (let i = 0; i < symbol.line; i++) {
-          offset += (lines[i]?.length || 0) + 1;
-        }
-        offset += symbol.character;
+        const offset = calculateOffsetFromContentPosition(
+          editorAPI.getContent(),
+          symbol.line,
+          symbol.character,
+        );
 
         editorAPI.setCursorPosition({
           line: symbol.line,

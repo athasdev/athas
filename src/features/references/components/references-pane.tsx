@@ -9,6 +9,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { LoadingIndicator } from "@/ui/loading";
 import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
@@ -71,12 +72,11 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
     }
 
     setTimeout(() => {
-      const lines = editorAPI.getLines();
-      let offset = 0;
-      for (let i = 0; i < ref.line; i++) {
-        offset += (lines[i]?.length || 0) + 1;
-      }
-      offset += ref.column;
+      const offset = calculateOffsetFromContentPosition(
+        editorAPI.getContent(),
+        ref.line,
+        ref.column,
+      );
 
       editorAPI.setCursorPosition({
         line: ref.line,

@@ -13,7 +13,7 @@ interface PrimaryCursorLayerProps {
   lineHeight: number;
   tabSize: number;
   lineText: string;
-  textareaRef: RefObject<HTMLTextAreaElement | null>;
+  textareaRef: RefObject<HTMLElement | null>;
   hidden?: boolean;
 }
 
@@ -37,29 +37,33 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
     const [hasSelection, setHasSelection] = useState(false);
 
     useEffect(() => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
+      const focusElement = textareaRef.current;
+      if (!focusElement) return;
 
       const syncState = () => {
-        setIsFocused(document.activeElement === textarea);
-        setHasSelection(textarea.selectionStart !== textarea.selectionEnd);
+        setIsFocused(document.activeElement === focusElement);
+        setHasSelection(
+          focusElement instanceof HTMLTextAreaElement
+            ? focusElement.selectionStart !== focusElement.selectionEnd
+            : false,
+        );
       };
 
       syncState();
-      textarea.addEventListener("focus", syncState);
-      textarea.addEventListener("blur", syncState);
-      textarea.addEventListener("select", syncState);
-      textarea.addEventListener("input", syncState);
-      textarea.addEventListener("keyup", syncState);
-      textarea.addEventListener("mouseup", syncState);
+      focusElement.addEventListener("focus", syncState);
+      focusElement.addEventListener("blur", syncState);
+      focusElement.addEventListener("select", syncState);
+      focusElement.addEventListener("input", syncState);
+      focusElement.addEventListener("keyup", syncState);
+      focusElement.addEventListener("mouseup", syncState);
 
       return () => {
-        textarea.removeEventListener("focus", syncState);
-        textarea.removeEventListener("blur", syncState);
-        textarea.removeEventListener("select", syncState);
-        textarea.removeEventListener("input", syncState);
-        textarea.removeEventListener("keyup", syncState);
-        textarea.removeEventListener("mouseup", syncState);
+        focusElement.removeEventListener("focus", syncState);
+        focusElement.removeEventListener("blur", syncState);
+        focusElement.removeEventListener("select", syncState);
+        focusElement.removeEventListener("input", syncState);
+        focusElement.removeEventListener("keyup", syncState);
+        focusElement.removeEventListener("mouseup", syncState);
       };
     }, [textareaRef]);
 
@@ -80,6 +84,7 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
       <div ref={ref} className="pointer-events-none absolute inset-0 z-10">
         <div
           key={cursorKey}
+          data-editor-primary-cursor
           className="absolute animate-blink"
           style={{
             top: `${top}px`,

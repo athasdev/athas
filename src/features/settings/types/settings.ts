@@ -8,6 +8,7 @@ import type {
 } from "@/features/layout/config/item-order";
 
 export type Theme = string;
+export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
 
 export interface Settings {
   // General
@@ -21,6 +22,9 @@ export interface Settings {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  renderWhitespace: RenderWhitespaceMode;
+  renderIndentGuides: boolean;
+  highlightOccurrences: boolean;
   showMinimap: boolean;
   // Terminal
   terminalFontFamily: string;

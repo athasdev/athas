@@ -1,6 +1,9 @@
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
-import { flushPendingBufferHistory, syncBufferHistoryContent } from "../stores/editor-app-store";
+import {
+  flushPendingBufferHistory,
+  syncBufferHistoryContent,
+} from "../stores/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
@@ -8,12 +11,33 @@ import { useEditorViewStore } from "../stores/view-store";
 import type { HistoryEntry } from "../history/types";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import type { Decoration, Position, Range } from "../types/editor";
+import {
+  findBracketJumpTarget,
+  findBracketSelectionRange,
+  removeBracketPairAtCursor,
+} from "../utils/bracket-matching";
 import { toggleLineComment, getLineCommentTokenForLanguage } from "../utils/comment-toggle";
 import { logger } from "../utils/logger";
 import {
   calculateCursorPositionFromContent,
   calculateOffsetFromContentPosition,
 } from "../utils/position";
+import {
+  resolveExpandSelection,
+  resolveShrinkSelection,
+  type OffsetRange,
+} from "../utils/selection-ranges";
+import {
+  copyLineDown as copyLineDownOperation,
+  copyLineUp as copyLineUpOperation,
+  deleteLine as deleteLineOperation,
+  duplicateLine as duplicateLineOperation,
+  type LineOperationResult,
+  moveLineDown as moveLineDownOperation,
+  moveLineUp as moveLineUpOperation,
+} from "../utils/line-operations";
+import { resolveCursorPositionsAtLineEndsForSelection } from "../utils/multi-cursor";
+import { getLineSlice } from "../utils/large-file";
 import type {
   EditorAPI,
   EditorEvent,
@@ -23,12 +47,28 @@ import type {
 } from "./types";
 import { calculateLineHeight } from "../utils/lines";
 
+function normalizeSelectionOffsets(selection?: Range | null): OffsetRange | null {
+  if (!selection || selection.start.offset === selection.end.offset) return null;
+  return selection.start.offset < selection.end.offset
+    ? { start: selection.start.offset, end: selection.end.offset }
+    : { start: selection.end.offset, end: selection.start.offset };
+}
+
+function offsetRangesEqual(left: OffsetRange, right: OffsetRange): boolean {
+  return left.start === right.start && left.end === right.end;
+}
+
+function containsOffsetRange(container: OffsetRange, candidate: OffsetRange): boolean {
+  return container.start <= candidate.start && container.end >= candidate.end;
+}
+
 class EditorAPIImpl implements EditorAPI {
   private eventHandlers: Map<EditorEvent, Set<EventHandler<EditorEvent>>> = new Map();
   private cursorPosition: Position = { line: 0, column: 0, offset: 0 };
   private selection: Range | null = null;
   private textareaRef: HTMLTextAreaElement | null = null;
   private viewportRef: HTMLDivElement | null = null;
+  private smartSelectionHistory: OffsetRange[] = [];
 
   constructor() {
     // Initialize event handler sets
@@ -62,65 +102,45 @@ class EditorAPIImpl implements EditorAPI {
 
   insertText(text: string, position?: Position): void {
     const content = this.getContent();
-    const pos = position || this.getCursorPosition();
+    const editorState = useEditorStateStore.getState();
+    const textareaOwnsFullContent = this.textareaRef?.value === content;
+    const pos =
+      position ||
+      (textareaOwnsFullContent && this.textareaRef
+        ? calculateCursorPositionFromContent(this.textareaRef.selectionStart, content)
+        : editorState.cursorPosition);
     const before = content.substring(0, pos.offset);
     const after = content.substring(pos.offset);
     const newContent = before + text + after;
 
-    // Calculate new cursor position first
     const newOffset = pos.offset + text.length;
-    const newPos = this.offsetToPosition(newOffset);
-
-    // Update textarea selection BEFORE setting content
-    if (this.textareaRef) {
-      // Set the value directly on the textarea
-      this.textareaRef.value = newContent;
-      // Set selection to new position
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      // Now trigger the change event so React updates
-      const event = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(event);
-    } else {
-      // Fallback if no textarea ref
-      this.setContent(newContent);
-      this.setCursorPosition(newPos);
-    }
+    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState);
   }
 
   deleteRange(range: Range): void {
     const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
     const before = content.substring(0, range.start.offset);
     const after = content.substring(range.end.offset);
     const newContent = before + after;
 
-    // Calculate new cursor position
     const newOffset = range.start.offset;
-
-    // Update textarea directly for better responsiveness
-    if (this.textareaRef) {
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      // Trigger change event
-      const event = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(event);
-    } else {
-      this.setContent(newContent);
-      this.setCursorPosition(this.offsetToPosition(newOffset));
-    }
+    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState);
   }
 
   replaceRange(range: Range, text: string): void {
     const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
     const before = content.substring(0, range.start.offset);
     const after = content.substring(range.end.offset);
-    this.setContent(before + text + after);
+    const newOffset = range.start.offset + text.length;
+
+    this.applyContentEdit(content, before + text + after, newOffset, newOffset, editorState);
   }
 
   // Selection operations
   getSelection(): Range | null {
-    return this.selection;
+    return useEditorStateStore.getState().selection ?? null;
   }
 
   setSelection(range?: Range | null): void {
@@ -130,7 +150,7 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   getCursorPosition(): Position {
-    return this.cursorPosition;
+    return useEditorStateStore.getState().cursorPosition;
   }
 
   setCursorPosition(position: Position): void {
@@ -140,9 +160,11 @@ class EditorAPIImpl implements EditorAPI {
     // Update cursor store to trigger UI updates
     useEditorStateStore.getState().actions.setCursorPosition(position);
 
-    // Sync with textarea if available
-    if (this.textareaRef) {
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = position.offset;
+    // Sync only when the textarea owns the full document. Large-file and folded
+    // views use model state plus a small/virtual input surface.
+    const textarea = this.getTextareaOwningContent(this.getContent());
+    if (textarea) {
+      textarea.selectionStart = textarea.selectionEnd = position.offset;
     }
 
     // Direct viewport scrolling for immediate response
@@ -164,11 +186,14 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   selectAll(): void {
-    if (!this.textareaRef) {
-      logger.warn("Editor", "Cannot select all: no textarea reference");
-      return;
+    const content = this.getContent();
+    const textareaOwnsFullContent = this.textareaRef?.value === content;
+
+    if (textareaOwnsFullContent && this.textareaRef) {
+      this.textareaRef.select();
     }
-    this.textareaRef.select();
+
+    this.syncSelectionFromOffsets(content, 0, content.length);
   }
 
   // Internal method to update cursor and selection from external changes
@@ -221,218 +246,226 @@ class EditorAPIImpl implements EditorAPI {
 
   // Line operations
   getLines(): string[] {
-    return useEditorViewStore.getState().lines;
+    return useEditorViewStore.getState().actions.getLines();
   }
 
   getLine(lineNumber: number): string | undefined {
-    return this.getLines()[lineNumber];
+    const lineIndex = Math.trunc(lineNumber);
+    if (!Number.isFinite(lineNumber) || lineIndex < 0) return undefined;
+
+    const { lines, lineCount } = useEditorViewStore.getState();
+    if (lineIndex >= lineCount) return undefined;
+
+    const line = lines[lineIndex];
+    if (line !== undefined) return line;
+
+    return getLineSlice(this.getContent(), lineIndex).line;
   }
 
   getLineCount(): number {
-    return useEditorViewStore.getState().actions.getLineCount();
+    return useEditorViewStore.getState().lineCount;
   }
 
   duplicateLine(): void {
-    if (!this.textareaRef) return;
-
-    const content = this.getContent();
-    const selection = useEditorStateStore.getState().selection;
-    const selectionStart = this.textareaRef.selectionStart;
-
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
-      const lineEnd = content.indexOf("\n", selectionStart);
-      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
-      const lineContent = content.slice(lineStart, actualLineEnd);
-
-      const newContent = `${content.slice(0, actualLineEnd)}\n${lineContent}${content.slice(actualLineEnd)}`;
-      const newOffset = selectionStart + lineContent.length + 1;
-
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
-    }
+    this.applyLineOperation(duplicateLineOperation);
   }
 
   deleteLine(): void {
-    if (!this.textareaRef) return;
-
-    const content = this.getContent();
-    const selection = useEditorStateStore.getState().selection;
-    const selectionStart = this.textareaRef.selectionStart;
-
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
-      const lineEnd = content.indexOf("\n", selectionStart);
-      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd + 1;
-
-      const newContent = content.slice(0, lineStart) + content.slice(actualLineEnd);
-
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = lineStart;
-
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
-    }
+    this.applyLineOperation(deleteLineOperation);
   }
 
   toggleComment(): void {
-    const textarea = this.textareaRef;
-    if (!textarea) return;
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const textareaOwnsFullContent = this.textareaRef?.value === content;
+    const selectionStart =
+      textareaOwnsFullContent && this.textareaRef
+        ? this.textareaRef.selectionStart
+        : (editorState.selection?.start.offset ?? editorState.cursorPosition.offset);
+    const selectionEnd =
+      textareaOwnsFullContent && this.textareaRef
+        ? this.textareaRef.selectionEnd
+        : (editorState.selection?.end.offset ?? editorState.cursorPosition.offset);
 
     const result = toggleLineComment({
-      content: textarea.value,
-      selectionStart: textarea.selectionStart,
-      selectionEnd: textarea.selectionEnd,
+      content,
+      selectionStart,
+      selectionEnd,
       token: this.getActiveLineCommentToken(),
     });
 
-    textarea.value = result.content;
-    textarea.selectionStart = result.selectionStart;
-    textarea.selectionEnd = result.selectionEnd;
+    this.applyContentEdit(
+      content,
+      result.content,
+      result.selectionStart,
+      result.selectionEnd,
+      editorState,
+    );
+  }
 
-    const inputEvent = new Event("input", { bubbles: true });
-    textarea.dispatchEvent(inputEvent);
+  goToMatchingBracket(): void {
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const target = findBracketJumpTarget(content, editorState.cursorPosition.offset);
+    if (!target) return;
 
-    this.syncSelectionFromOffsets(result.content, result.selectionStart, result.selectionEnd);
+    this.setSelection(undefined);
+    this.setCursorPosition(calculateCursorPositionFromContent(target.offset, content));
+  }
+
+  selectToBracket(selectBrackets = true): void {
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const range = findBracketSelectionRange(content, editorState.cursorPosition.offset, {
+      selectBrackets,
+    });
+    if (!range) return;
+
+    const start = calculateCursorPositionFromContent(range.startOffset, content);
+    const end = calculateCursorPositionFromContent(range.endOffset, content);
+    this.setSelection({ start, end });
+    this.setCursorPosition(end);
+  }
+
+  removeBrackets(): void {
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const result = removeBracketPairAtCursor(content, editorState.cursorPosition.offset);
+    if (!result) return;
+
+    this.applyContentEdit(
+      content,
+      result.content,
+      result.cursorOffset,
+      result.cursorOffset,
+      editorState,
+    );
+  }
+
+  expandSelection(): void {
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const currentRange = normalizeSelectionOffsets(editorState.selection);
+    const target = resolveExpandSelection({
+      content,
+      cursorOffset: editorState.cursorPosition.offset,
+      selectionStart: currentRange?.start,
+      selectionEnd: currentRange?.end,
+    });
+    if (!target) return;
+
+    if (currentRange && !offsetRangesEqual(currentRange, target)) {
+      this.smartSelectionHistory.push(currentRange);
+    }
+
+    const start = calculateCursorPositionFromContent(target.start, content);
+    const end = calculateCursorPositionFromContent(target.end, content);
+    this.setSelection({ start, end });
+    this.setCursorPosition(end);
+  }
+
+  shrinkSelection(): void {
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const currentRange = normalizeSelectionOffsets(editorState.selection);
+    if (!currentRange) return;
+
+    let target = this.smartSelectionHistory.pop() ?? null;
+    while (
+      target &&
+      (!containsOffsetRange(currentRange, target) || offsetRangesEqual(currentRange, target))
+    ) {
+      target = this.smartSelectionHistory.pop() ?? null;
+    }
+
+    target ??= resolveShrinkSelection({
+      content,
+      cursorOffset: editorState.cursorPosition.offset,
+      selectionStart: currentRange.start,
+      selectionEnd: currentRange.end,
+    });
+    if (!target) return;
+
+    const start = calculateCursorPositionFromContent(target.start, content);
+    const end = calculateCursorPositionFromContent(target.end, content);
+    this.setSelection({ start, end });
+    this.setCursorPosition(end);
+  }
+
+  insertCursorAbove(): void {
+    this.insertCursorVertical(-1);
+  }
+
+  insertCursorBelow(): void {
+    this.insertCursorVertical(1);
+  }
+
+  insertCursorsAtLineEnds(): void {
+    const content = this.getContent();
+    const editorState = useEditorStateStore.getState();
+    const positions = resolveCursorPositionsAtLineEndsForSelection({
+      content,
+      selection: editorState.selection,
+    });
+    const firstPosition = positions[0];
+
+    if (!firstPosition) return;
+
+    const actions = useEditorStateStore.getState().actions;
+    actions.disableMultiCursor();
+    this.setSelection(undefined);
+    this.setCursorPosition(firstPosition);
+    actions.enableMultiCursor();
+
+    for (const position of positions.slice(1)) {
+      actions.addCursor(position);
+    }
+
+    if (this.textareaRef?.value === content) {
+      this.textareaRef.focus();
+      this.textareaRef.selectionStart = firstPosition.offset;
+      this.textareaRef.selectionEnd = firstPosition.offset;
+    }
   }
 
   moveLineUp(): void {
-    if (!this.textareaRef) return;
-
-    const lines = this.getLines();
-    const selection = useEditorStateStore.getState().selection;
-    const currentPosition = useEditorStateStore.getState().cursorPosition;
-
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const currentLine = currentPosition.line;
-      const targetLine = currentLine - 1;
-
-      if (targetLine < 0) return;
-
-      const currentLineContent = lines[currentLine];
-      const targetLineContent = lines[targetLine];
-
-      const newLines = [...lines];
-      newLines[currentLine] = targetLineContent;
-      newLines[targetLine] = currentLineContent;
-
-      const newContent = newLines.join("\n");
-      const newCursorPosition = { ...currentPosition, line: targetLine };
-
-      let newOffset = 0;
-      for (let i = 0; i < newCursorPosition.line; i++) {
-        newOffset += newLines[i].length + 1;
-      }
-      newOffset += newCursorPosition.column;
-
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
-    }
+    this.applyLineOperation(moveLineUpOperation);
   }
 
   moveLineDown(): void {
-    if (!this.textareaRef) return;
-
-    const lines = this.getLines();
-    const selection = useEditorStateStore.getState().selection;
-    const currentPosition = useEditorStateStore.getState().cursorPosition;
-
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const currentLine = currentPosition.line;
-      const targetLine = currentLine + 1;
-
-      if (targetLine >= lines.length) return;
-
-      const currentLineContent = lines[currentLine];
-      const targetLineContent = lines[targetLine];
-
-      const newLines = [...lines];
-      newLines[currentLine] = targetLineContent;
-      newLines[targetLine] = currentLineContent;
-
-      const newContent = newLines.join("\n");
-      const newCursorPosition = { ...currentPosition, line: targetLine };
-
-      let newOffset = 0;
-      for (let i = 0; i < newCursorPosition.line; i++) {
-        newOffset += newLines[i].length + 1;
-      }
-      newOffset += newCursorPosition.column;
-
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
-    }
+    this.applyLineOperation(moveLineDownOperation);
   }
 
   copyLineUp(): void {
-    if (!this.textareaRef) return;
-
-    const content = this.getContent();
-    const selection = useEditorStateStore.getState().selection;
-    const currentPosition = useEditorStateStore.getState().cursorPosition;
-    const selectionStart = this.textareaRef.selectionStart;
-
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const currentLine = currentPosition.line;
-      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
-      const lineEnd = content.indexOf("\n", selectionStart);
-      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
-      const lineContent = content.slice(lineStart, actualLineEnd);
-
-      const newContent = `${content.slice(0, lineStart)}${lineContent}\n${lineContent}${content.slice(actualLineEnd)}`;
-      const newCursorLine = currentLine;
-      const newOffset = calculateOffsetFromContentPosition(
-        newContent,
-        newCursorLine,
-        currentPosition.column,
-      );
-
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
-    }
+    this.applyLineOperation(copyLineUpOperation);
   }
 
   copyLineDown(): void {
-    if (!this.textareaRef) return;
+    this.applyLineOperation(copyLineDownOperation);
+  }
 
+  private insertCursorVertical(direction: -1 | 1): void {
     const content = this.getContent();
-    const selection = useEditorStateStore.getState().selection;
-    const currentPosition = useEditorStateStore.getState().cursorPosition;
-    const selectionStart = this.textareaRef.selectionStart;
+    const editorState = useEditorStateStore.getState();
+    const targetLine = editorState.cursorPosition.line + direction;
 
-    if (!selection || selection.start.offset === selection.end.offset) {
-      const currentLine = currentPosition.line;
-      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
-      const lineEnd = content.indexOf("\n", selectionStart);
-      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
-      const lineContent = content.slice(lineStart, actualLineEnd);
+    if (targetLine < 0 || targetLine >= this.getLineCount()) return;
 
-      const newContent = `${content.slice(0, actualLineEnd)}\n${lineContent}${content.slice(actualLineEnd)}`;
-      const newCursorLine = currentLine + 1;
-      const newOffset = calculateOffsetFromContentPosition(
-        newContent,
-        newCursorLine,
-        currentPosition.column,
-      );
+    const targetLineText = this.getLine(targetLine) ?? "";
+    const targetColumn = Math.min(editorState.cursorPosition.column, targetLineText.length);
+    const position = {
+      line: targetLine,
+      column: targetColumn,
+      offset: calculateOffsetFromContentPosition(content, targetLine, targetColumn),
+    };
+    const actions = useEditorStateStore.getState().actions;
 
-      this.textareaRef.value = newContent;
-      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-
-      const inputEvent = new Event("input", { bubbles: true });
-      this.textareaRef.dispatchEvent(inputEvent);
+    if (!useEditorStateStore.getState().multiCursorState) {
+      actions.enableMultiCursor();
     }
+
+    actions.addCursor(position);
+    this.textareaRef?.focus();
   }
 
   // History operations
@@ -458,6 +491,7 @@ class EditorAPIImpl implements EditorAPI {
 
     const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+    const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
     flushPendingBufferHistory(activeBufferId, activeBuffer.content);
 
@@ -472,15 +506,16 @@ class EditorAPIImpl implements EditorAPI {
       bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
       syncBufferHistoryContent(activeBufferId, entry.content);
 
-      if (this.textareaRef) {
-        this.textareaRef.value = entry.content;
+      if (textareaOwningPreviousContent) {
+        textareaOwningPreviousContent.value = entry.content;
       }
 
       // Restore cursor position if available
       if (entry.cursorPosition) {
         this.setCursorPosition(entry.cursorPosition);
-      } else if (this.textareaRef) {
-        this.textareaRef.selectionStart = this.textareaRef.selectionEnd = 0;
+      } else if (textareaOwningPreviousContent) {
+        textareaOwningPreviousContent.selectionStart =
+          textareaOwningPreviousContent.selectionEnd = 0;
       }
 
       // Restore selection if it existed
@@ -506,6 +541,7 @@ class EditorAPIImpl implements EditorAPI {
 
     const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+    const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
     flushPendingBufferHistory(activeBufferId, activeBuffer.content);
 
@@ -520,15 +556,16 @@ class EditorAPIImpl implements EditorAPI {
       bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
       syncBufferHistoryContent(activeBufferId, entry.content);
 
-      if (this.textareaRef) {
-        this.textareaRef.value = entry.content;
+      if (textareaOwningPreviousContent) {
+        textareaOwningPreviousContent.value = entry.content;
       }
 
       // Restore cursor position if available
       if (entry.cursorPosition) {
         this.setCursorPosition(entry.cursorPosition);
-      } else if (this.textareaRef) {
-        this.textareaRef.selectionStart = this.textareaRef.selectionEnd = 0;
+      } else if (textareaOwningPreviousContent) {
+        textareaOwningPreviousContent.selectionStart =
+          textareaOwningPreviousContent.selectionEnd = 0;
       }
 
       // Restore selection if it existed
@@ -559,15 +596,25 @@ class EditorAPIImpl implements EditorAPI {
 
   // Settings
   getSettings(): EditorSettings {
-    const { fontSize, lineHeight, tabSize, lineNumbers, wordWrap } =
-      useEditorSettingsStore.getState();
+    const {
+      fontSize,
+      lineHeight,
+      tabSize,
+      lineNumbers,
+      wordWrap,
+      renderWhitespace,
+      renderIndentGuides,
+      theme,
+    } = useEditorSettingsStore.getState();
     return {
       fontSize,
       lineHeight,
       tabSize,
       lineNumbers,
       wordWrap,
-      theme: "default", // TODO: Implement theme support
+      renderWhitespace,
+      renderIndentGuides,
+      theme,
     };
   }
 
@@ -588,6 +635,12 @@ class EditorAPIImpl implements EditorAPI {
     }
     if (settings.wordWrap !== undefined) {
       store.actions.setWordWrap(settings.wordWrap);
+    }
+    if (settings.renderWhitespace !== undefined) {
+      store.actions.setRenderWhitespace(settings.renderWhitespace);
+    }
+    if (settings.renderIndentGuides !== undefined) {
+      store.actions.setRenderIndentGuides(settings.renderIndentGuides);
     }
 
     this.emit("settingsChange", settings);
@@ -670,9 +723,69 @@ class EditorAPIImpl implements EditorAPI {
     this.emit("selectionChange", selection ?? null);
   }
 
-  private offsetToPosition(offset: number): Position {
+  private applyContentEdit(
+    previousContent: string,
+    nextContent: string,
+    selectionStart: number,
+    selectionEnd: number,
+    editorState = useEditorStateStore.getState(),
+  ): void {
+    if (nextContent === previousContent) {
+      this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
+      return;
+    }
+
+    this.smartSelectionHistory = [];
+
+    const textarea = this.getTextareaOwningContent(previousContent);
+    if (textarea) {
+      textarea.value = nextContent;
+      textarea.selectionStart = selectionStart;
+      textarea.selectionEnd = selectionEnd;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      textarea.dispatchEvent(inputEvent);
+      this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
+      return;
+    }
+
+    void editorState.onChange(
+      nextContent,
+      previousContent,
+      editorState.cursorPosition,
+      editorState.selection,
+    );
+    this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
+  }
+
+  private applyLineOperation(
+    operation: (content: string, offset: number) => LineOperationResult | null,
+  ): void {
     const content = this.getContent();
-    return calculateCursorPositionFromContent(offset, content);
+    const editorState = useEditorStateStore.getState();
+    const selection = editorState.selection;
+    const textarea = this.getTextareaOwningContent(content);
+
+    if (selection && selection.start.offset !== selection.end.offset) return;
+    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+      return;
+    }
+
+    const sourceOffset = textarea ? textarea.selectionStart : editorState.cursorPosition.offset;
+    const result = operation(content, sourceOffset);
+    if (!result || result.content === content) return;
+
+    this.applyContentEdit(
+      content,
+      result.content,
+      result.selectionStart,
+      result.selectionEnd,
+      editorState,
+    );
+  }
+
+  private getTextareaOwningContent(content: string): HTMLTextAreaElement | null {
+    return this.textareaRef?.value === content ? this.textareaRef : null;
   }
 }
 

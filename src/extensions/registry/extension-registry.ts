@@ -13,6 +13,11 @@ import type {
   ExtensionState,
   Platform,
 } from "../types/extension-manifest";
+import {
+  getManifestInlineSnippets,
+  getManifestLanguageContributions,
+  matchesLanguageContribution,
+} from "../types/extension-contributions";
 
 class ExtensionRegistry {
   private extensions = new Map<string, BundledExtension>();
@@ -118,11 +123,9 @@ class ExtensionRegistry {
    */
   getExtensionByLanguageId(languageId: string): BundledExtension | undefined {
     for (const extension of this.extensions.values()) {
-      if (extension.manifest.languages) {
-        for (const lang of extension.manifest.languages) {
-          if (lang.id === languageId) {
-            return extension;
-          }
+      for (const lang of getManifestLanguageContributions(extension.manifest)) {
+        if (lang.id === languageId) {
+          return extension;
         }
       }
     }
@@ -137,11 +140,9 @@ class ExtensionRegistry {
     const ext = fileExtension.startsWith(".") ? fileExtension : `.${fileExtension}`;
 
     for (const extension of this.extensions.values()) {
-      if (extension.manifest.languages) {
-        for (const lang of extension.manifest.languages) {
-          if (lang.extensions.includes(ext)) {
-            return extension;
-          }
+      for (const lang of getManifestLanguageContributions(extension.manifest)) {
+        if (lang.extensions.includes(ext)) {
+          return extension;
         }
       }
     }
@@ -152,24 +153,15 @@ class ExtensionRegistry {
    * Get extension by a full file path (checks filename and extension).
    */
   getExtensionForFilePath(filePath: string): BundledExtension | undefined {
-    const fileName = filePath.split("/").pop() || filePath;
-
     for (const extension of this.extensions.values()) {
-      if (!extension.manifest.languages) continue;
-
-      for (const language of extension.manifest.languages) {
-        if (language.filenames?.includes(fileName)) {
+      for (const language of getManifestLanguageContributions(extension.manifest)) {
+        if (matchesLanguageContribution(filePath, language)) {
           return extension;
         }
       }
     }
 
-    const lastDotIndex = fileName.lastIndexOf(".");
-    if (lastDotIndex === -1) {
-      return undefined;
-    }
-
-    return this.getExtensionByFileExtension(fileName.substring(lastDotIndex));
+    return undefined;
   }
 
   /**
@@ -249,21 +241,13 @@ class ExtensionRegistry {
    */
   getLanguageId(filePath: string): string | null {
     const extension = this.getExtensionForFilePath(filePath);
-    const fileName = filePath.split("/").pop() || filePath;
-    const extIndex = fileName.lastIndexOf(".");
-    const ext = extIndex >= 0 ? fileName.substring(extIndex) : "";
-
-    if (!extension?.manifest.languages) {
+    if (!extension) {
       return null;
     }
 
     // Find the language that matches this extension
-    for (const lang of extension.manifest.languages) {
-      if (lang.extensions.includes(ext)) {
-        return lang.id;
-      }
-
-      if (lang.filenames?.includes(fileName)) {
+    for (const lang of getManifestLanguageContributions(extension.manifest)) {
+      if (matchesLanguageContribution(filePath, lang)) {
         return lang.id;
       }
     }
@@ -317,10 +301,8 @@ class ExtensionRegistry {
     const extensions = new Set<string>();
 
     for (const extension of this.extensions.values()) {
-      if (extension.manifest.languages) {
-        for (const lang of extension.manifest.languages) {
-          lang.extensions.forEach((ext) => extensions.add(ext));
-        }
+      for (const lang of getManifestLanguageContributions(extension.manifest)) {
+        lang.extensions.forEach((ext) => extensions.add(ext));
       }
     }
 
@@ -334,10 +316,8 @@ class ExtensionRegistry {
     const languageIds = new Set<string>();
 
     for (const extension of this.extensions.values()) {
-      if (extension.manifest.languages) {
-        for (const lang of extension.manifest.languages) {
-          languageIds.add(lang.id);
-        }
+      for (const lang of getManifestLanguageContributions(extension.manifest)) {
+        languageIds.add(lang.id);
       }
     }
 
@@ -525,13 +505,11 @@ class ExtensionRegistry {
     }> = [];
 
     for (const extension of this.extensions.values()) {
-      if (extension.manifest.snippets) {
-        for (const snippetContribution of extension.manifest.snippets) {
-          if (snippetContribution.language === languageId) {
-            snippets.push(...snippetContribution.snippets);
-          }
-        }
-      }
+      snippets.push(
+        ...getManifestInlineSnippets(extension.manifest)
+          .filter((snippet) => snippet.language === languageId)
+          .map(({ language: _language, ...snippet }) => snippet),
+      );
     }
 
     return snippets;
@@ -556,16 +534,7 @@ class ExtensionRegistry {
     }> = [];
 
     for (const extension of this.extensions.values()) {
-      if (extension.manifest.snippets) {
-        for (const snippetContribution of extension.manifest.snippets) {
-          for (const snippet of snippetContribution.snippets) {
-            snippets.push({
-              language: snippetContribution.language,
-              ...snippet,
-            });
-          }
-        }
-      }
+      snippets.push(...getManifestInlineSnippets(extension.manifest));
     }
 
     return snippets;

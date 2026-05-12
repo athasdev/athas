@@ -147,6 +147,11 @@ html.platform-macos {
   --athas-macos-glass-shell-bg: color-mix(in srgb, var(--color-secondary-bg) 12%, transparent);
   --athas-macos-glass-workbench-bg: color-mix(in srgb, var(--color-secondary-bg) 10%, transparent);
   --athas-macos-glass-chrome-bg: color-mix(in srgb, var(--color-secondary-bg) 18%, transparent);
+  --athas-macos-glass-control-bg: color-mix(in srgb, var(--color-secondary-bg) 20%, transparent);
+  --athas-macos-glass-control-active-bg: color-mix(in srgb, var(--color-hover) 70%, transparent);
+  --athas-macos-glass-control-border: color-mix(in srgb, var(--color-border) 26%, transparent);
+  --athas-macos-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 62%, transparent);
+  --athas-macos-glass-popover-border: color-mix(in srgb, var(--color-border) 50%, transparent);
   --athas-macos-glass-chrome-border: transparent;
   --athas-macos-glass-chrome-filter: saturate(1.2) blur(20px);
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text-light) 78%, transparent);
@@ -160,6 +165,15 @@ html.platform-macos[data-theme-type="light"] {
   --athas-macos-glass-shell-bg: color-mix(in srgb, var(--color-secondary-bg) 42%, transparent);
   --athas-macos-glass-workbench-bg: color-mix(in srgb, var(--color-secondary-bg) 30%, transparent);
   --athas-macos-glass-chrome-bg: color-mix(in srgb, var(--color-secondary-bg) 62%, transparent);
+  --athas-macos-glass-control-bg: color-mix(in srgb, var(--color-primary-bg) 42%, transparent);
+  --athas-macos-glass-control-active-bg: color-mix(
+    in srgb,
+    var(--color-primary-bg) 78%,
+    transparent
+  );
+  --athas-macos-glass-control-border: color-mix(in srgb, var(--color-border) 42%, transparent);
+  --athas-macos-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
+  --athas-macos-glass-popover-border: color-mix(in srgb, var(--color-border) 55%, transparent);
   --athas-macos-glass-chrome-border: color-mix(in srgb, var(--color-border) 45%, transparent);
   --athas-macos-glass-chrome-filter: saturate(1.08) blur(24px);
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text) 66%, transparent);
@@ -200,6 +214,47 @@ html.platform-macos .athas-footer-bar {
   border-color: var(--athas-macos-glass-chrome-border);
   -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
   backdrop-filter: var(--athas-macos-glass-chrome-filter);
+}
+
+html.platform-macos .athas-title-project-surface,
+html.platform-macos [data-title-bar-project-tabs="true"] [role="tab"],
+html.platform-macos .athas-title-project-add-button {
+  border-color: var(--athas-macos-glass-control-border) !important;
+  background: var(--athas-macos-glass-control-bg) !important;
+  color: var(--athas-chrome-icon-color) !important;
+  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+}
+
+html.platform-macos [data-title-bar-project-tabs="true"] [role="tab"][data-active="true"] {
+  background: var(--athas-macos-glass-control-active-bg) !important;
+  color: var(--athas-chrome-icon-active-color) !important;
+}
+
+html.platform-macos .athas-title-project-surface:hover,
+html.platform-macos [data-title-bar-project-tabs="true"] [role="tab"]:hover,
+html.platform-macos .athas-title-project-add-button:hover {
+  background: var(--athas-chrome-control-hover-bg) !important;
+  color: var(--athas-chrome-icon-hover-color) !important;
+}
+
+html.platform-macos .athas-title-project-tabs-list {
+  border-color: var(--athas-macos-glass-control-border) !important;
+  background: color-mix(in srgb, var(--athas-macos-glass-control-bg) 82%, transparent) !important;
+  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+}
+
+html.platform-macos .athas-project-picker-command {
+  border-color: var(--athas-macos-glass-popover-border) !important;
+  background: var(--athas-macos-glass-popover-bg) !important;
+  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+}
+
+html.platform-macos .athas-project-picker-command [data-command-header],
+html.platform-macos .athas-project-picker-command [data-command-footer] {
+  background: color-mix(in srgb, var(--athas-macos-glass-popover-bg) 72%, transparent) !important;
 }
 
 html.platform-macos .athas-chrome-control {

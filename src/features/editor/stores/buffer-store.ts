@@ -26,7 +26,7 @@ import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
-import { cleanupBufferHistoryTracking } from "@/features/editor/stores/editor-app-store";
+import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
   EditorContent,
   OpenContentSpec,
@@ -47,7 +47,8 @@ export type Buffer = PaneContent;
 
 interface PendingClose {
   bufferId: string;
-  type: "single" | "others" | "all" | "to-right";
+  type: "single" | "others" | "all" | "to-left" | "to-right";
+  anchorBufferId?: string;
   keepBufferId?: string;
 }
 
@@ -146,6 +147,8 @@ interface BufferActions {
   handleTabPin: (bufferId: string) => void;
   handleCloseOtherTabs: (keepBufferId: string) => void;
   handleCloseAllTabs: () => void;
+  handleCloseSavedTabs: () => void;
+  handleCloseTabsToLeft: (bufferId: string) => void;
   handleCloseTabsToRight: (bufferId: string) => void;
   reorderBuffers: (startIndex: number, endIndex: number) => void;
   switchToNextBuffer: () => void;
@@ -1349,6 +1352,37 @@ export const useBufferStore = createSelectors(
           buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
+        handleCloseSavedTabs: () => {
+          const { buffers } = get();
+          const buffersToClose = buffers.filter(
+            (buffer) => !buffer.isPinned && !(isEditorContent(buffer) && buffer.isDirty),
+          );
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+        },
+
+        handleCloseTabsToLeft: (bufferId: string) => {
+          const { buffers } = get();
+          const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+          if (bufferIndex === -1) return;
+
+          const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
+
+          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                anchorBufferId: bufferId,
+                type: "to-left",
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+        },
+
         handleCloseTabsToRight: (bufferId: string) => {
           const { buffers } = get();
           const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
@@ -1361,6 +1395,7 @@ export const useBufferStore = createSelectors(
             set((state) => {
               state.pendingClose = {
                 bufferId: dirtyBuffer.id,
+                anchorBufferId: bufferId,
                 type: "to-right",
               };
             });
@@ -1482,7 +1517,7 @@ export const useBufferStore = createSelectors(
           const { pendingClose } = get();
           if (!pendingClose) return;
 
-          const { bufferId, type, keepBufferId } = pendingClose;
+          const { anchorBufferId, bufferId, type, keepBufferId } = pendingClose;
 
           set((state) => {
             state.pendingClose = null;
@@ -1506,10 +1541,20 @@ export const useBufferStore = createSelectors(
                 buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
               }
               break;
+            case "to-left":
+              {
+                const { buffers } = get();
+                const bufferIndex = buffers.findIndex((b) => b.id === (anchorBufferId ?? bufferId));
+                if (bufferIndex !== -1) {
+                  const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
+                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                }
+              }
+              break;
             case "to-right":
               {
                 const { buffers } = get();
-                const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+                const bufferIndex = buffers.findIndex((b) => b.id === (anchorBufferId ?? bufferId));
                 if (bufferIndex !== -1) {
                   const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
                   buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));

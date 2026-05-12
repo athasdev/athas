@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import { buildLineOffsetMap } from "../utils/html";
 import {
+  buildTokenOverlapIndex,
   canApplySemanticTokenState,
+  findFirstTokenOverlappingOffset,
   mergeTokenLayers,
   semanticTokensToEditorTokens,
 } from "../utils/token-layers";
@@ -40,5 +42,19 @@ describe("token layers", () => {
         "/tmp/new.ts",
       ),
     ).toBe(false);
+  });
+
+  it("finds the first token that can overlap a viewport offset", () => {
+    const tokens = [
+      { start: 0, end: 8, class_name: "token-comment" },
+      { start: 12, end: 20, class_name: "token-keyword" },
+      { start: 24, end: 80, class_name: "token-string" },
+      { start: 36, end: 40, class_name: "token-text" },
+    ];
+    const overlapIndex = buildTokenOverlapIndex(tokens);
+
+    expect(findFirstTokenOverlappingOffset(overlapIndex, 10)).toBe(1);
+    expect(findFirstTokenOverlappingOffset(overlapIndex, 50)).toBe(2);
+    expect(findFirstTokenOverlappingOffset(overlapIndex, 80)).toBe(4);
   });
 });

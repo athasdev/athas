@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionManager } from "@/features/editor/extensions/manager";
+import type { EditorAPI } from "@/features/editor/extensions/types";
 import { themeLoader } from "./theme-loader";
 import { themeRegistry } from "./theme-registry";
 
@@ -38,7 +39,7 @@ export const initializeThemeSystem = async () => {
     }
 
     // Create a dummy editor API for theme extensions (they don't need editor functionality)
-    const dummyEditorAPI = {
+    const dummyEditorAPI: EditorAPI = {
       getContent: () => "",
       setContent: () => {},
       insertText: () => {},
@@ -59,6 +60,14 @@ export const initializeThemeSystem = async () => {
       duplicateLine: () => {},
       deleteLine: () => {},
       toggleComment: () => {},
+      goToMatchingBracket: () => {},
+      selectToBracket: () => {},
+      removeBrackets: () => {},
+      expandSelection: () => {},
+      shrinkSelection: () => {},
+      insertCursorAbove: () => {},
+      insertCursorBelow: () => {},
+      insertCursorsAtLineEnds: () => {},
       moveLineUp: () => {},
       moveLineDown: () => {},
       copyLineUp: () => {},
@@ -73,6 +82,8 @@ export const initializeThemeSystem = async () => {
         tabSize: 2,
         lineNumbers: true,
         wordWrap: false,
+        renderWhitespace: "none",
+        renderIndentGuides: true,
         theme: "athas-dark",
       }),
       updateSettings: () => {},

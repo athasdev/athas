@@ -1,4 +1,5 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
+import { calculateLineColumnFromOffsets } from "./position";
 import type { EditorViewLayout, ViewLineSegment } from "../view-model/view-layout";
 
 export interface SelectionOffsets {
@@ -26,42 +27,9 @@ export interface CalculateSelectionBoxesOptions {
   contentLength: number;
   lineHeight: number;
   measureText: (text: string) => number;
+  lineTextResolver?: (lineIndex: number) => string;
+  viewportRange?: { startLine: number; endLine: number };
   viewLayout?: EditorViewLayout;
-}
-
-function findLineForOffset(offset: number, lineOffsets: number[]): number {
-  if (lineOffsets.length === 0) return 0;
-
-  let low = 0;
-  let high = lineOffsets.length - 1;
-  let result = 0;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    if (lineOffsets[mid] <= offset) {
-      result = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  return result;
-}
-
-function offsetToLineColumn(
-  offset: number,
-  lineOffsets: number[],
-  contentLength: number,
-): { line: number; column: number } {
-  const clampedOffset = Math.max(0, Math.min(offset, contentLength));
-  const line = findLineForOffset(clampedOffset, lineOffsets);
-  const lineStartOffset = lineOffsets[line] ?? 0;
-
-  return {
-    line,
-    column: Math.max(0, clampedOffset - lineStartOffset),
-  };
 }
 
 export function addSelectionBoxCorners(
@@ -95,19 +63,33 @@ export function calculateSelectionBoxes({
   contentLength,
   lineHeight,
   measureText,
+  lineTextResolver,
+  viewportRange,
   viewLayout,
 }: CalculateSelectionBoxesOptions): SelectionBox[] {
   const boxes: Array<Omit<SelectionBox, "corners">> = [];
   const minimumSelectionWidth = Math.max(measureText(" "), 4);
+  const getLineText = (lineIndex: number) =>
+    lineTextResolver?.(lineIndex) ?? lines[lineIndex] ?? "";
 
   const getLineLeft = (lineIndex: number, column: number): number => {
-    const lineText = lines[lineIndex] || "";
+    const lineText = getLineText(lineIndex);
     const textBeforeColumn = lineText.substring(0, column);
     return measureText(textBeforeColumn) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
   };
 
-  const startPos = offsetToLineColumn(selectionOffsets.start, lineOffsets, contentLength);
-  const endPos = offsetToLineColumn(selectionOffsets.end, lineOffsets, contentLength);
+  const startPos = calculateLineColumnFromOffsets(
+    selectionOffsets.start,
+    lineOffsets,
+    contentLength,
+  );
+  const endPos = calculateLineColumnFromOffsets(selectionOffsets.end, lineOffsets, contentLength);
+  const firstRenderedLine = Math.max(startPos.line, viewportRange?.startLine ?? startPos.line);
+  const lastRenderedLine = Math.min(endPos.line, (viewportRange?.endLine ?? endPos.line + 1) - 1);
+
+  if (firstRenderedLine > lastRenderedLine) {
+    return [];
+  }
 
   const addWrappedLineBoxes = (
     line: number,
@@ -117,7 +99,7 @@ export function calculateSelectionBoxes({
   ) => {
     if (!viewLayout) return false;
 
-    const lineText = lines[line] || "";
+    const lineText = getLineText(line);
     const lineStartViewLine = viewLayout.modelLineStartViewLines[line] ?? line;
     const lineViewLineCount = viewLayout.modelLineViewLineCounts[line] ?? 1;
     const lineEndViewLine = lineStartViewLine + lineViewLineCount - 1;
@@ -157,8 +139,8 @@ export function calculateSelectionBoxes({
     return true;
   };
 
-  for (let line = startPos.line; line <= endPos.line; line++) {
-    const lineText = lines[line] || "";
+  for (let line = firstRenderedLine; line <= lastRenderedLine; line++) {
+    const lineText = getLineText(line);
     let startCol = 0;
     let endCol = lineText.length;
 

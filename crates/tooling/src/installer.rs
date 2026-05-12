@@ -117,17 +117,64 @@ impl ToolInstaller {
       }
    }
 
+   fn pinned_node_package_version(package: &str) -> Option<&'static str> {
+      match package {
+         "@vtsls/language-server" => Some("0.3.0"),
+         "typescript-language-server" => Some("5.2.0"),
+         "typescript" => Some("6.0.3"),
+         _ => None,
+      }
+   }
+
+   fn node_package_identity(package_spec: &str) -> String {
+      if let Some(scoped) = package_spec.strip_prefix('@')
+         && let Some((scope, scoped_name)) = scoped.split_once('/')
+      {
+         let package_name = scoped_name
+            .split_once('@')
+            .map(|(name, _)| name)
+            .unwrap_or(scoped_name);
+         return format!("@{}/{}", scope, package_name);
+      }
+
+      package_spec
+         .split_once('@')
+         .map(|(name, _)| name)
+         .unwrap_or(package_spec)
+         .to_string()
+   }
+
+   fn node_package_install_spec(package: &str) -> String {
+      Self::pinned_node_package_version(package)
+         .map(|version| format!("{}@{}", package, version))
+         .unwrap_or_else(|| package.to_string())
+   }
+
    fn node_packages_to_install(package: &str, companion_packages: &[String]) -> Vec<String> {
       let mut packages = Vec::with_capacity(
          1 + companion_packages.len() + Self::known_node_companion_packages(package).len(),
       );
-      packages.push(package.to_string());
-      packages.extend(companion_packages.iter().cloned());
+      let mut package_names: Vec<String> = Vec::with_capacity(packages.capacity());
+      let mut push_package = |package: &str| {
+         let package_name = Self::node_package_identity(package);
+         if package_names
+            .iter()
+            .any(|candidate| candidate == &package_name)
+         {
+            return;
+         }
+
+         package_names.push(package_name);
+         packages.push(Self::node_package_install_spec(package));
+      };
+
+      push_package(package);
+      for companion in companion_packages {
+         push_package(companion);
+      }
 
       for companion in Self::known_node_companion_packages(package) {
-         if !packages.iter().any(|candidate| candidate == companion) {
-            packages.push((*companion).to_string());
-         }
+         push_package(companion);
       }
 
       packages
@@ -1340,10 +1387,10 @@ mod tests {
    }
 
    #[test]
-   fn installs_typescript_with_typescript_language_server() {
+   fn installs_pinned_typescript_with_typescript_language_servers() {
       assert_eq!(
          ToolInstaller::node_packages_to_install("typescript-language-server", &[]),
-         vec!["typescript-language-server", "typescript"]
+         vec!["typescript-language-server@5.2.0", "typescript@6.0.3"]
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install("eslint", &[]),
@@ -1351,14 +1398,21 @@ mod tests {
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install("@vtsls/language-server", &[]),
-         vec!["@vtsls/language-server", "typescript"]
+         vec!["@vtsls/language-server@0.3.0", "typescript@6.0.3"]
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install(
             "@vtsls/language-server",
             &["typescript".to_string()]
          ),
-         vec!["@vtsls/language-server", "typescript"]
+         vec!["@vtsls/language-server@0.3.0", "typescript@6.0.3"]
+      );
+      assert_eq!(
+         ToolInstaller::node_packages_to_install(
+            "@vtsls/language-server",
+            &["typescript@5.9.3".to_string()]
+         ),
+         vec!["@vtsls/language-server@0.3.0", "typescript@5.9.3"]
       );
    }
 

@@ -16,6 +16,9 @@ use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::Page
 #[cfg(target_os = "macos")]
 use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy, clear_vibrancy};
 
+#[cfg(target_os = "macos")]
+const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Menu;
+
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -156,7 +159,7 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
 
-      if let Err(error) = apply_vibrancy(window, NSVisualEffectMaterial::Menu, None, None) {
+      if let Err(error) = apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
       }
    }
@@ -221,7 +224,7 @@ fn sync_macos_window_appearance(
    set_ns_appearance(ns_view, appearance_name)?;
 
    if let Ok(true) = clear_vibrancy(window) {
-      apply_vibrancy(window, NSVisualEffectMaterial::Menu, None, None)
+      apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None)
          .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
    }
 
@@ -742,6 +745,26 @@ pub async fn open_webview_devtools(
       }
    } else {
       Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[command]
+pub async fn reopen_current_webview_devtools(
+   window: tauri::WebviewWindow<AthasRuntime>,
+) -> Result<(), String> {
+   #[cfg(any(debug_assertions, feature = "devtools"))]
+   {
+      if window.is_devtools_open() {
+         window.close_devtools();
+      }
+      window.open_devtools();
+      Ok(())
+   }
+
+   #[cfg(not(any(debug_assertions, feature = "devtools")))]
+   {
+      let _ = window;
+      Err("Webview devtools are unavailable in release builds".to_string())
    }
 }
 

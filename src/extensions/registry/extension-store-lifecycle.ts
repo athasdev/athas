@@ -1,11 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
   activateExtensionContributions,
   deactivateExtensionContributions,
 } from "../runtime/extension-contribution-runtime";
+import {
+  getManifestLanguageContributions,
+  matchesLanguageContribution,
+} from "../types/extension-contributions";
 import type { PlatformPackage } from "../types/extension-manifest";
 import { extensionRegistry } from "./extension-registry";
 import {
@@ -17,11 +22,11 @@ import {
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 
 async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {
-  if (!extension.manifest.languages?.length) {
+  const languages = getManifestLanguageContributions(extension.manifest);
+  if (languages.length === 0) {
     return;
   }
 
-  const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
   const bufferState = useBufferStore.getState();
   const activeBuffer = bufferState.buffers.find((buffer) => buffer.isActive);
 
@@ -29,12 +34,8 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const fileName = activeBuffer.path.split("/").pop() || activeBuffer.path;
-  const lastDotIndex = fileName.lastIndexOf(".");
-  const fileExt = lastDotIndex >= 0 ? fileName.substring(lastDotIndex).toLowerCase() : "";
-  const matchesLanguage = extension.manifest.languages.some(
-    (language) =>
-      language.extensions.includes(fileExt) || Boolean(language.filenames?.includes(fileName)),
+  const matchesLanguage = languages.some((language) =>
+    matchesLanguageContribution(activeBuffer.path, language),
   );
 
   if (!matchesLanguage) {
@@ -152,9 +153,8 @@ export async function installExtensionLifecycle(params: {
     reloadInstalledExtensions,
   } = params;
 
-  if (extension.manifest.languages?.length) {
-    const languageConfigs = extension.manifest.languages;
-
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+  if (languageConfigs.length > 0) {
     await installLanguageExtensionManifest(extensionId, extension.manifest, onProgress);
 
     const primaryLanguageId = languageConfigs[0].id;
@@ -222,8 +222,9 @@ export async function uninstallExtensionLifecycle(params: {
     reloadInstalledExtensions,
   } = params;
 
-  if (extension.manifest.languages?.length) {
-    const languageIds = extension.manifest.languages.map((language) => language.id);
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+  if (languageConfigs.length > 0) {
+    const languageIds = languageConfigs.map((language) => language.id);
 
     await uninstallLanguageArtifacts(languageIds);
     await unloadLanguageProviders(extensionId, languageIds);
@@ -250,7 +251,9 @@ export async function updateExtensionLifecycle(params: {
 }) {
   const { extensionId, extension, clearInstalledStateForUpdate, reinstall } = params;
 
-  const languageIds = extension.manifest.languages?.map((language) => language.id) || [];
+  const languageIds = getManifestLanguageContributions(extension.manifest).map(
+    (language) => language.id,
+  );
 
   if (languageIds.length > 0) {
     await unloadLanguageProviders(extensionId, languageIds);

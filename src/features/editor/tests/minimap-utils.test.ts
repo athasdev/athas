@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   bucketTokensByLine,
-  buildMinimapLineMetrics,
   buildSearchMarks,
   getLineIndexAtOffset,
   getMinimapHorizontalMetrics,
@@ -10,18 +9,15 @@ import {
 } from "../components/minimap/minimap-utils";
 
 describe("minimap utils", () => {
-  it("builds reusable line offsets for minimap rendering", () => {
-    const metrics = buildMinimapLineMetrics("one\ntwo\nthree");
-
-    expect(metrics.lines).toEqual(["one", "two", "three"]);
-    expect(metrics.lineStarts).toEqual([0, 4, 8]);
-    expect(getLineIndexAtOffset(metrics.lineStarts, 5)).toBe(1);
+  it("finds the line index for a character offset", () => {
+    expect(getLineIndexAtOffset([0, 4, 8], 5)).toBe(1);
   });
 
   it("buckets tokens across the lines they touch", () => {
-    const metrics = buildMinimapLineMetrics("abc\ndef");
+    const lines = ["abc", "def"];
+    const lineStarts = [0, 4];
     const tokens = [{ start: 2, end: 6, class_name: "token-string" }];
-    const buckets = bucketTokensByLine(tokens, metrics.lineStarts, metrics.lines);
+    const buckets = bucketTokensByLine(tokens, lineStarts, lines);
 
     expect(buckets.get(0)).toEqual(tokens);
     expect(buckets.get(1)).toEqual(tokens);
@@ -47,6 +43,16 @@ describe("minimap utils", () => {
     });
 
     expect(metrics.charWidth).toBe(0.45);
+  });
+
+  it("handles many lines without spreading them into Math.max", () => {
+    const metrics = getMinimapHorizontalMetrics({
+      lines: Array.from({ length: 120_000 }, (_, index) => (index === 42 ? "x".repeat(80) : "x")),
+      width: 160,
+      horizontalPadding: 0,
+    });
+
+    expect(metrics.charWidth).toBe(1.35);
   });
 
   it("compresses long documents to the available minimap height", () => {
@@ -76,13 +82,11 @@ describe("minimap utils", () => {
   });
 
   it("projects search matches to minimap marks", () => {
-    const metrics = buildMinimapLineMetrics("alpha\nbeta\ngamma");
-
     expect(
       buildSearchMarks({
         matches: [{ start: 7, end: 9 }],
         currentMatchIndex: 0,
-        lineStarts: metrics.lineStarts,
+        lineStarts: [0, 6, 11],
         lineHeight: 20,
         renderScale: 0.2,
       }),

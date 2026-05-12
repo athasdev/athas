@@ -1,5 +1,4 @@
 import "../styles/overlay-editor.css";
-import { ArrowBendDownLeft as CornerDownLeft, X } from "@phosphor-icons/react";
 import {
   type ReactNode,
   type RefObject,
@@ -19,8 +18,6 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { Button } from "@/ui/button";
-import Input from "@/ui/input";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
@@ -29,16 +26,27 @@ import { SYNTAX_HIGHLIGHTING_REFRESH_EVENT } from "../extensions/builtin/syntax-
 import { useAutocomplete } from "../hooks/use-autocomplete";
 import { useBufferSwitch } from "../hooks/use-buffer-switch";
 import { useContextMenu } from "../hooks/use-context-menu";
-import { isDragScrolling, useDragScroll } from "../hooks/use-drag-scroll";
+import { useDragScroll } from "../hooks/use-drag-scroll";
+import { useEditorCursorSelection } from "../hooks/use-editor-cursor-selection";
 import { useEditorKeyDown } from "../hooks/use-editor-keydown";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useEditorScroll } from "../hooks/use-editor-scroll";
+import { useEditorSurfaceResolvers } from "../hooks/use-editor-surface-resolvers";
+import { useEditorTextareaInput } from "../hooks/use-editor-textarea-input";
+import { useEditorWheelForwarding } from "../hooks/use-editor-wheel-forwarding";
+import { useEnsureCursorVisible } from "../hooks/use-ensure-cursor-visible";
+import { useFoldRegionScheduler } from "../hooks/use-fold-region-scheduler";
 import { useFoldTransform } from "../hooks/use-fold-transform";
 import { useInlineDiff } from "../hooks/use-inline-diff";
+import { useEditorLineModel } from "../hooks/use-editor-line-model";
+import { useInlayHintSuppression } from "../hooks/use-inlay-hint-suppression";
+import { useLargeEditorInput } from "../hooks/use-large-editor-input";
 import { useInlineEdit } from "../hooks/use-inline-edit";
+import { useEditorMouseInteractions } from "../hooks/use-editor-mouse-interactions";
 import { usePerformanceMonitor } from "../hooks/use-performance";
 import { useResolvedEditorSettings } from "../hooks/use-resolved-settings";
 import { useSelectionScope } from "../hooks/use-selection-scope";
+import { useTokenizationScheduler } from "../hooks/use-tokenization-scheduler";
 import {
   getLanguageId,
   resolveSyntaxTokensForContent,
@@ -49,14 +57,12 @@ import {
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import type { InlayHint } from "../lsp/use-inlay-hints";
 import type { SemanticTokenState } from "../lsp/use-semantic-tokens";
-import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { useFoldStore } from "../stores/fold-store";
 import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
-import { applyIncrementalLineEdit } from "../stores/view-store";
 import { useInlineEditToolbarStore } from "../stores/inline-edit-toolbar-store";
 import type { Position, Range } from "../types/editor";
 import {
@@ -70,19 +76,19 @@ import {
   buildLineOffsetMap,
   normalizeLineEndings,
 } from "../utils/html";
+import { resolveInlineAutocompletePreview } from "../utils/inline-autocomplete-preview";
 import {
-  countLines,
-  createSparseLineArray,
-  getLargeEditorModeInfo,
+  calculatePositionFromLineOffsets,
+  getLargeContentColumnForX,
+  getLargeContentLineText,
+  getLargeContentOffsetAtPosition,
   getLineOffset,
-  isTooLargeForEditorServices,
 } from "../utils/large-file";
-import { calculateLineHeight, splitLines } from "../utils/lines";
+import { calculateLineHeight } from "../utils/lines";
 import {
   calculateCursorPosition,
   calculateCursorPositionFromContent,
   calculateCursorPositionFromLineOffsets,
-  calculateOffsetFromContentPosition,
   getAccurateCursorX,
 } from "../utils/position";
 import {
@@ -96,22 +102,29 @@ import {
   type EditorViewZone,
   type EditorModelPositionResolver,
 } from "../view-model/view-layout";
+import { applyEditorScrollTransform } from "../utils/scroll-layers";
 import {
   calculateInlineDiffHeight,
   getInlineDiffLinesToShow,
   InlineDiff,
 } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
-import { InlineEditModelSelector } from "./inline-edit-model-selector";
+import { InlineAutocompleteHint, InlineAutocompletePreview } from "./inline-autocomplete-preview";
+import { InlineEditPopover } from "./inline-edit-popover";
+import { LargeEditorSurface } from "./large-editor-surface";
+import { BracketMatchLayer } from "./layers/bracket-match-layer";
+import { CurrentLineLayer } from "./layers/current-line-layer";
 import { DefinitionLinkLayer } from "./layers/definition-link-layer";
 import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
+import { IndentGuideLayer } from "./layers/indent-guide-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 import { PrimaryCursorLayer } from "./layers/primary-cursor-layer";
 import { SearchHighlightLayer } from "./layers/search-highlight-layer";
 import { SelectionLayer } from "./layers/selection-layer";
 import { VimCursorLayer } from "./layers/vim-cursor-layer";
+import { WordHighlightLayer } from "./layers/word-highlight-layer";
 import { Minimap } from "./minimap/minimap";
 
 interface EditorProps {
@@ -142,14 +155,12 @@ interface EditorProps {
   semanticTokens?: SemanticTokenState;
   largeContentMode?: boolean;
   largeContentLineCount?: number;
+  largeContentLineOffsets?: number[];
   onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
 }
 
-const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
-const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
 const INCREMENTAL_TOKENIZATION_LINE_THRESHOLD = 1000;
-const TOKENIZE_AFTER_TYPING_DEBOUNCE_MS = 260;
 const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
 const FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS = 250;
 const INLINE_EDIT_VIEW_ZONE_HEIGHT = 96;
@@ -186,29 +197,28 @@ export function Editor({
   semanticTokens,
   largeContentMode: largeContentModeOverride,
   largeContentLineCount,
+  largeContentLineOffsets,
   onCoordinateResolverChange,
   onModelPositionResolverChange,
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const largeEditorScrollRef = useRef<HTMLDivElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
+  const currentLineRef = useRef<HTMLDivElement>(null);
+  const indentGuideRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const primaryCursorRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
+  const wordHighlightRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
   const selectionLayerRef = useRef<HTMLDivElement>(null);
+  const bracketMatchRef = useRef<HTMLDivElement>(null);
   const vimCursorRef = useRef<HTMLDivElement>(null);
   const autocompleteCompletionRef = useRef<HTMLDivElement>(null);
   const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
   const gitBlameRef = useRef<HTMLDivElement>(null);
   const inlineDiffRef = useRef<HTMLDivElement>(null);
-  const suppressedNativeHistoryInputRef = useRef<"historyUndo" | "historyRedo" | null>(null);
   const syntaxTokenSnapshotRef = useRef<SyntaxTokenSnapshot | null>(null);
-  const actualLinesCacheRef = useRef<{
-    content: string;
-    lineCount: number;
-    largeContentMode: boolean;
-    lines: string[];
-  } | null>(null);
   const displayLineOffsetsCacheRef = useRef<{
     content: string;
     offsets: number[];
@@ -228,6 +238,7 @@ export function Editor({
   const { updateBufferContent, updateBufferTokens } = useBufferStore.use.actions();
   const {
     setCursorPosition,
+    setDesiredColumn,
     setSelection,
     enableMultiCursor,
     addCursor,
@@ -235,6 +246,7 @@ export function Editor({
     updateCursor,
   } = useEditorStateStore.use.actions();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const desiredColumn = useEditorStateStore((state) => state.desiredColumn);
   const selection = useEditorStateStore.use.selection?.();
   const multiCursorState = useEditorStateStore.use.multiCursorState();
   const onChange = useEditorStateStore.use.onChange();
@@ -262,108 +274,31 @@ export function Editor({
   const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const wordWrapSetting = useEditorSettingsStore.use.wordWrap();
+  const renderWhitespace = useEditorSettingsStore.use.renderWhitespace();
+  const renderIndentGuides = useEditorSettingsStore.use.renderIndentGuides();
+  const highlightOccurrences = useEditorSettingsStore.use.highlightOccurrences();
 
   const buffer = rawBuffer && isEditorContent(rawBuffer) ? rawBuffer : undefined;
   const content = buffer?.content || "";
   const filePath = buffer?.path;
   const languageIdOverride = buffer?.languageOverride;
+  const currentLanguageId = languageIdOverride ?? (filePath ? getLanguageId(filePath) : null);
   const useGlobalEditorState = isActiveSurface;
 
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
-  const [suppressInlayHintsForTyping, setSuppressInlayHintsForTyping] = useState(false);
+  const suppressInlayHintsForTyping = useInlayHintSuppression({
+    durationMs: INLAY_HINT_TYPING_SUPPRESS_MS,
+  });
   const { startMeasure, endMeasure } = usePerformanceMonitor("Editor");
-
-  const actualLineCount = useMemo(() => {
-    if (largeContentLineCount != null) return largeContentLineCount;
-
-    const cached = actualLinesCacheRef.current;
-    if (cached?.content === content) {
-      return cached.lineCount;
-    }
-
-    const incrementallyUpdatedLines =
-      cached && !cached.largeContentMode
-        ? applyIncrementalLineEdit(cached.content, content, cached.lines)
-        : null;
-
-    if (incrementallyUpdatedLines) {
-      actualLinesCacheRef.current = {
-        content,
-        lineCount: incrementallyUpdatedLines.length,
-        largeContentMode: false,
-        lines: incrementallyUpdatedLines,
-      };
-      return incrementallyUpdatedLines.length;
-    }
-
-    return countLines(content);
-  }, [content, largeContentLineCount]);
-  const largeContentMode =
-    largeContentModeOverride ??
-    isTooLargeForEditorServices({
-      contentLength: content.length,
-      lineCount: actualLineCount,
-    });
-
-  const actualLines = useMemo(() => {
-    if (largeContentMode) {
-      const cached = actualLinesCacheRef.current;
-      if (
-        cached &&
-        cached.content === content &&
-        cached.lineCount === actualLineCount &&
-        cached.largeContentMode
-      ) {
-        return cached.lines;
-      }
-
-      const lines = createSparseLineArray(actualLineCount);
-      actualLinesCacheRef.current = {
-        content,
-        lineCount: actualLineCount,
-        largeContentMode,
-        lines,
-      };
-      return lines;
-    }
-
-    const cached = actualLinesCacheRef.current;
-    if (cached && cached.content === content && !cached.largeContentMode) {
-      return cached.lines;
-    }
-
-    const incrementallyUpdatedLines =
-      cached && !cached.largeContentMode
-        ? applyIncrementalLineEdit(cached.content, content, cached.lines)
-        : null;
-    if (incrementallyUpdatedLines) {
-      actualLinesCacheRef.current = {
-        content,
-        lineCount: incrementallyUpdatedLines.length,
-        largeContentMode,
-        lines: incrementallyUpdatedLines,
-      };
-      return incrementallyUpdatedLines;
-    }
-
-    if (filePath && fileOpenBenchmark.has(filePath)) {
-      fileOpenBenchmark.mark(filePath, "split-start");
-    }
-    startMeasure(`splitLines (len: ${content.length})`);
-    const res = splitLines(content);
-    endMeasure(`splitLines (len: ${content.length})`);
-    if (filePath && fileOpenBenchmark.has(filePath)) {
-      fileOpenBenchmark.mark(filePath, "split-done", `${res.length} lines`);
-    }
-    actualLinesCacheRef.current = {
-      content,
-      lineCount: res.length,
-      largeContentMode,
-      lines: res,
-    };
-    return res;
-  }, [actualLineCount, content, filePath, largeContentMode, startMeasure, endMeasure]);
+  const { actualLineCount, largeContentMode, actualLines } = useEditorLineModel({
+    content,
+    filePath,
+    largeContentModeOverride,
+    largeContentLineCount,
+    startMeasure,
+    endMeasure,
+  });
 
   useGitGutter({
     filePath: filePath || "",
@@ -386,58 +321,22 @@ export function Editor({
     fileOpenBenchmark.mark(filePath, "editor-mounted");
 
     const rafId = requestAnimationFrame(() => {
-      fileOpenBenchmark.finish(filePath, "editor-ready", `${content.length} chars`);
+      fileOpenBenchmark.finish(filePath, "editor-ready", `${content.length} chars`, {
+        contentLength: content.length,
+        lineCount: actualLineCount,
+        largeContentMode,
+      });
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [filePath, content.length]);
+  }, [actualLineCount, filePath, content.length, largeContentMode]);
 
-  useEffect(() => {
-    if (!isActiveSurface || isPreviewMode || largeContentMode) return;
-    if (filePath && content) {
-      let cancelled = false;
-      let idleId: number | null = null;
-      let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
-      const computeFolds = () => {
-        if (cancelled) return;
-        if (fileOpenBenchmark.has(filePath)) {
-          fileOpenBenchmark.mark(filePath, "fold-start");
-        }
-        foldActions.computeFoldRegions(filePath, content);
-        if (fileOpenBenchmark.has(filePath)) {
-          fileOpenBenchmark.mark(filePath, "fold-done");
-        }
-      };
-      const scheduleFoldCompute = () => {
-        if (cancelled) return;
-        if ("requestIdleCallback" in window) {
-          idleId = window.requestIdleCallback(computeFolds, { timeout: 500 });
-          return;
-        }
-        timeoutId = globalThis.setTimeout(computeFolds, 0);
-      };
-
-      const latestInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
-      const isTypingUpdate =
-        latestInputTimestamp > 0 &&
-        Date.now() - latestInputTimestamp < FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS;
-      if (isTypingUpdate) {
-        timeoutId = globalThis.setTimeout(scheduleFoldCompute, FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS);
-      } else {
-        scheduleFoldCompute();
-      }
-
-      return () => {
-        cancelled = true;
-        if (idleId !== null) {
-          window.cancelIdleCallback(idleId);
-        }
-        if (timeoutId !== null) {
-          globalThis.clearTimeout(timeoutId);
-        }
-      };
-    }
-  }, [filePath, content, foldActions, isActiveSurface, isPreviewMode, largeContentMode]);
+  useFoldRegionScheduler({
+    filePath,
+    content,
+    enabled: isActiveSurface && !isPreviewMode && !largeContentMode,
+    typingDebounceMs: FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS,
+  });
 
   const foldTransform = useFoldTransform(
     largeContentMode ? undefined : filePath,
@@ -510,6 +409,7 @@ export function Editor({
 
   const wordWrap = largeContentMode ? false : wordWrapSetting;
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
+  const visualLineCount = largeContentMode ? actualLineCount : lines.length;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
   const textareaContent = largeContentMode ? "" : displayContent;
 
@@ -578,6 +478,7 @@ export function Editor({
     () =>
       buildEditorViewLayout({
         lines,
+        lineCount: visualLineCount,
         lineHeight,
         wordWrap,
         contentWidth,
@@ -585,7 +486,16 @@ export function Editor({
         zones: viewZones,
         compact: largeContentMode || (!wordWrap && viewZones.length === 0),
       }),
-    [lines, lineHeight, wordWrap, contentWidth, measureEditorText, viewZones, largeContentMode],
+    [
+      lines,
+      visualLineCount,
+      lineHeight,
+      wordWrap,
+      contentWidth,
+      measureEditorText,
+      viewZones,
+      largeContentMode,
+    ],
   );
   const editorBottomSafePadding = useMemo(
     () =>
@@ -596,10 +506,10 @@ export function Editor({
     [lineHeight],
   );
   const shouldVirtualizeRendering =
-    !wordWrap && lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
+    !wordWrap && visualLineCount >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const tokenizationEnabled = hasSyntaxHighlighting && !largeContentMode;
   const useIncrementalTokenization =
-    tokenizationEnabled && lines.length >= INCREMENTAL_TOKENIZATION_LINE_THRESHOLD;
+    tokenizationEnabled && visualLineCount >= INCREMENTAL_TOKENIZATION_LINE_THRESHOLD;
 
   const {
     viewportRange,
@@ -625,7 +535,7 @@ export function Editor({
     [displayContent, foldTransform.hasActiveFolds, normalizedEditorContent],
   );
   const displayLineOffsets = useMemo(() => {
-    if (largeContentMode) return [];
+    if (largeContentMode) return largeContentLineOffsets ?? [];
 
     const cached = displayLineOffsetsCacheRef.current;
     if (cached?.content === normalizedDisplayContent) {
@@ -642,11 +552,13 @@ export function Editor({
       offsets,
     };
     return offsets;
-  }, [largeContentMode, normalizedDisplayContent]);
+  }, [largeContentLineOffsets, largeContentMode, normalizedDisplayContent]);
   const getVisualLineOffset = useCallback(
     (lineIndex: number) => {
       if (largeContentMode && !foldTransform.hasActiveFolds) {
-        return getLineOffset(normalizedEditorContent, lineIndex);
+        return (
+          largeContentLineOffsets?.[lineIndex] ?? getLineOffset(normalizedEditorContent, lineIndex)
+        );
       }
 
       const clampedLine = Math.max(
@@ -660,8 +572,39 @@ export function Editor({
       displayLineOffsets,
       foldTransform.hasActiveFolds,
       largeContentMode,
+      largeContentLineOffsets,
       normalizedEditorContent,
     ],
+  );
+  const getLargeLineText = useCallback(
+    (lineIndex: number, sourceContent = content, sourceLineOffsets = displayLineOffsets) =>
+      getLargeContentLineText(sourceContent, sourceLineOffsets, lineIndex),
+    [content, displayLineOffsets],
+  );
+  const getLargePositionForOffset = useCallback(
+    (offset: number, sourceContent = content, sourceLineOffsets = displayLineOffsets) =>
+      calculatePositionFromLineOffsets(sourceContent, sourceLineOffsets, offset),
+    [content, displayLineOffsets],
+  );
+  const getLargeOffsetForPosition = useCallback(
+    (
+      line: number,
+      column: number,
+      sourceContent = content,
+      sourceLineOffsets = displayLineOffsets,
+    ) => getLargeContentOffsetAtPosition(sourceContent, sourceLineOffsets, line, column),
+    [content, displayLineOffsets],
+  );
+  const getLargeColumnForX = useCallback(
+    (lineText: string, x: number) => getLargeContentColumnForX(lineText, x, measureEditorText),
+    [measureEditorText],
+  );
+  const mapLargeVirtualContentToActualContent = useCallback(
+    (newVirtualContent: string) =>
+      foldTransform.hasActiveFolds
+        ? applyVirtualEdit(content, newVirtualContent, foldTransform.mapping, actualLines)
+        : newVirtualContent,
+    [actualLines, content, foldTransform.hasActiveFolds, foldTransform.mapping],
   );
   const getCursorPositionForVisualOffset = useCallback(
     (offset: number) =>
@@ -726,7 +669,7 @@ export function Editor({
   const deferredMinimapLines = useDeferredValue(lines);
   const deferredMinimapLineOffsets = useDeferredValue(displayLineOffsets);
   const deferredMinimapTokens = useDeferredValue(effectiveTokens);
-  const useCustomInsertCaret = false;
+  const useCustomInsertCaret = largeContentMode;
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -748,7 +691,7 @@ export function Editor({
     content: textareaContent,
     textareaRef: inputRef,
     forceUpdateViewport,
-    totalLines: lines.length,
+    totalLines: visualLineCount,
     resetTokenizer: resetForBufferSwitch,
   });
 
@@ -781,111 +724,59 @@ export function Editor({
   }, [cursorPosition.line, foldTransform]);
   const cursorViewPosition = useMemo(() => {
     if (visualCursorLine < 0) return undefined;
-    const layoutLine = Math.min(visualCursorLine, Math.max(0, lines.length - 1));
-    return viewLayout.modelPositionToViewPosition(layoutLine, cursorPosition.column);
-  }, [viewLayout, visualCursorLine, cursorPosition.column, lines.length]);
-  const resolveEditorCoordinate = useCallback<EditorCoordinateResolver>(
-    (clientX, clientY) => {
-      const textarea = inputRef.current;
-      const container = contentContainerRef.current;
-      if (!textarea || !container) return null;
-
-      const rect = container.getBoundingClientRect();
-      const x = clientX - rect.left + textarea.scrollLeft;
-      const y = clientY - rect.top + textarea.scrollTop;
-      const position = viewLayout.editorPointToModelPosition(x, y);
-      const actualLine = foldTransform.hasActiveFolds
-        ? (foldTransform.mapping.virtualToActual.get(position.modelLine) ?? position.modelLine)
-        : position.modelLine;
+    if (largeContentMode) {
+      const layoutLine = Math.min(visualCursorLine, Math.max(0, visualLineCount - 1));
+      const lineText = getLargeLineText(layoutLine);
+      const column = Math.max(0, Math.min(cursorPosition.column, lineText.length));
+      const segment = {
+        viewLine: layoutLine,
+        modelLine: layoutLine,
+        startColumn: 0,
+        endColumn: lineText.length,
+        top: layoutLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+        height: lineHeight,
+      };
 
       return {
-        ...position,
-        line: actualLine,
-        modelLine: actualLine,
-        height: position.segment.height,
+        viewLine: layoutLine,
+        modelLine: layoutLine,
+        column,
+        top: segment.top,
+        left: measureEditorText(lineText.slice(0, column)) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        segment,
       };
-    },
-    [foldTransform, viewLayout],
-  );
-  const resolveModelPosition = useCallback<EditorModelPositionResolver>(
-    (line, column) => {
-      const virtualLine = foldTransform.hasActiveFolds
-        ? (foldTransform.mapping.actualToVirtual.get(line) ?? line)
-        : line;
-
-      if (virtualLine < 0 || virtualLine >= lines.length) return null;
-
-      const position = viewLayout.modelPositionToViewPosition(virtualLine, column);
-
-      return {
-        ...position,
-        line,
-        modelLine: line,
-        height: position.segment.height,
-      };
-    },
-    [foldTransform, lines.length, viewLayout],
-  );
-
-  useEffect(() => {
-    onCoordinateResolverChange?.(resolveEditorCoordinate);
-    return () => onCoordinateResolverChange?.(null);
-  }, [onCoordinateResolverChange, resolveEditorCoordinate]);
-
-  useEffect(() => {
-    onModelPositionResolverChange?.(resolveModelPosition);
-    return () => onModelPositionResolverChange?.(null);
-  }, [onModelPositionResolverChange, resolveModelPosition]);
-
-  useEffect(() => {
-    if (!useGlobalEditorState || !cursorViewPosition || isDragScrolling()) return;
-
-    const textarea = inputRef.current;
-    if (!textarea) return;
-
-    const targetTop = cursorViewPosition.top;
-    const targetBottom = targetTop + cursorViewPosition.segment.height;
-    const currentScrollTop = textarea.scrollTop;
-    const viewportHeight = textarea.clientHeight || 0;
-    if (viewportHeight <= 0) return;
-
-    const safeViewportHeight = Math.max(lineHeight * 2, viewportHeight - editorBottomSafePadding);
-
-    if (targetTop < currentScrollTop) {
-      textarea.scrollTop = targetTop;
-    } else if (targetBottom > currentScrollTop + safeViewportHeight) {
-      textarea.scrollTop = Math.max(0, targetBottom - safeViewportHeight);
     }
-  }, [cursorViewPosition, editorBottomSafePadding, lineHeight, useGlobalEditorState]);
 
-  useEffect(() => {
-    let lastHandledTimestamp = useEditorUIStore.getState().lastInputTimestamp;
-    let timeout: ReturnType<typeof globalThis.setTimeout> | null = null;
+    const layoutLine = Math.min(visualCursorLine, Math.max(0, visualLineCount - 1));
+    return viewLayout.modelPositionToViewPosition(layoutLine, cursorPosition.column);
+  }, [
+    cursorPosition.column,
+    getLargeLineText,
+    largeContentMode,
+    lineHeight,
+    measureEditorText,
+    viewLayout,
+    visualCursorLine,
+    visualLineCount,
+  ]);
+  const { resolveModelPosition } = useEditorSurfaceResolvers({
+    inputRef,
+    contentContainerRef,
+    viewLayout,
+    hasActiveFolds: foldTransform.hasActiveFolds,
+    foldMapping: foldTransform.mapping,
+    visualLineCount,
+    onCoordinateResolverChange,
+    onModelPositionResolverChange,
+  });
 
-    const unsubscribe = useEditorUIStore.subscribe((state) => {
-      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastHandledTimestamp) {
-        return;
-      }
-
-      lastHandledTimestamp = state.lastInputTimestamp;
-      setSuppressInlayHintsForTyping(true);
-
-      if (timeout !== null) {
-        globalThis.clearTimeout(timeout);
-      }
-      timeout = globalThis.setTimeout(() => {
-        setSuppressInlayHintsForTyping(false);
-        timeout = null;
-      }, INLAY_HINT_TYPING_SUPPRESS_MS);
-    });
-
-    return () => {
-      unsubscribe();
-      if (timeout !== null) {
-        globalThis.clearTimeout(timeout);
-      }
-    };
-  }, []);
+  useEnsureCursorVisible({
+    enabled: useGlobalEditorState,
+    inputRef,
+    cursorViewPosition,
+    lineHeight,
+    bottomSafePadding: editorBottomSafePadding,
+  });
 
   const visualInlayHints = useMemo(() => {
     if (suppressInlayHintsForTyping) return [];
@@ -932,299 +823,58 @@ export function Editor({
     ],
   );
 
-  useLayoutEffect(() => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
+  const { handleInput, handleBeforeInput } = useEditorTextareaInput({
+    inputRef,
+    bufferId,
+    readOnly,
+    largeContentMode,
+    useGlobalEditorState,
+    content,
+    displayContent,
+    textareaContent,
+    lines,
+    actualLines,
+    displayLineOffsets,
+    cursorPosition,
+    selection,
+    foldTransform,
+    getInputOffsetForPosition,
+    updateBufferContent,
+    onContentChange,
+    onChange,
+    setCursorPosition: setEditorCursorPosition,
+    setSelection,
+  });
 
-    const previousScrollTop = textarea.scrollTop;
-    const previousScrollLeft = textarea.scrollLeft;
-    const valueChanged = textarea.value !== textareaContent;
-
-    if (valueChanged) {
-      textarea.value = textareaContent;
-    }
-
-    if (largeContentMode) {
-      if (valueChanged) {
-        textarea.scrollTop = previousScrollTop;
-        textarea.scrollLeft = previousScrollLeft;
-      }
-      return;
-    }
-
-    const selectionStart = selection
-      ? getInputOffsetForPosition(selection.start)
-      : getInputOffsetForPosition(cursorPosition);
-    const selectionEnd = selection ? getInputOffsetForPosition(selection.end) : selectionStart;
-
-    if (textarea.selectionStart !== selectionStart || textarea.selectionEnd !== selectionEnd) {
-      textarea.selectionStart = selectionStart;
-      textarea.selectionEnd = selectionEnd;
-    }
-
-    if (valueChanged) {
-      textarea.scrollTop = previousScrollTop;
-      textarea.scrollLeft = previousScrollLeft;
-    }
-  }, [cursorPosition, getInputOffsetForPosition, largeContentMode, selection, textareaContent]);
-
-  const handleInput = useCallback(
-    (newVirtualContent: string, event?: React.ChangeEvent<HTMLTextAreaElement>) => {
-      if (readOnly) return;
-      if (!bufferId || !inputRef.current) return;
-
-      const inputType = event ? (event.nativeEvent as InputEvent).inputType : undefined;
-      if (inputType === "historyUndo" || inputType === "historyRedo") {
-        inputRef.current.value = displayContent;
-
-        if (suppressedNativeHistoryInputRef.current === inputType) {
-          suppressedNativeHistoryInputRef.current = null;
-          return;
-        }
-
-        if (inputType === "historyUndo") {
-          editorAPI.undo();
-        } else {
-          editorAPI.redo();
-        }
-        return;
-      }
-
-      const uiActions = useEditorUIStore.getState().actions;
-      uiActions.clearTypingTransientState();
-
-      let newActualContent: string;
-      if (foldTransform.hasActiveFolds) {
-        newActualContent = applyVirtualEdit(content, newVirtualContent, foldTransform.mapping);
-      } else {
-        newActualContent = newVirtualContent;
-      }
-
-      const previousActualContent = content;
-      const previousCursorPosition = cursorPosition;
-      const previousSelection = selection;
-
-      updateBufferContent(bufferId, newActualContent);
-      if (onContentChange) {
-        onContentChange(
-          newActualContent,
-          previousActualContent,
-          previousCursorPosition,
-          previousSelection,
-        );
-      } else {
-        onChange(
-          newActualContent,
-          previousActualContent,
-          previousCursorPosition,
-          previousSelection,
-          { contentAlreadyApplied: true },
-        );
-      }
-
-      if (!useGlobalEditorState) return;
-
-      const selectionStart = inputRef.current.selectionStart;
-      const selectionEnd = inputRef.current.selectionEnd;
-      const nextVirtualLineOffsets = applyIncrementalLineOffsetEdit(
-        displayContent,
-        newVirtualContent,
-        displayLineOffsets,
-      );
-      const nextVirtualLines = nextVirtualLineOffsets
-        ? applyIncrementalLineEdit(displayContent, newVirtualContent, lines)
-        : null;
-      const getNextVirtualPosition = (offset: number) =>
-        nextVirtualLineOffsets && nextVirtualLines
-          ? calculateCursorPositionFromLineOffsets(offset, nextVirtualLines, nextVirtualLineOffsets)
-          : calculateCursorPositionFromContent(offset, newVirtualContent);
-      const position = getNextVirtualPosition(selectionStart);
-
-      if (foldTransform.hasActiveFolds) {
-        const actualLine =
-          foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
-        setEditorCursorPosition({
-          line: actualLine,
-          column: position.column,
-          offset: calculateOffsetFromContentPosition(newActualContent, actualLine, position.column),
-        });
-      } else {
-        setEditorCursorPosition(position);
-      }
-
-      if (selectionStart !== selectionEnd) {
-        const startPos = getNextVirtualPosition(selectionStart);
-        const endPos = getNextVirtualPosition(selectionEnd);
-
-        if (foldTransform.hasActiveFolds) {
-          const actualStartLine =
-            foldTransform.mapping.virtualToActual.get(startPos.line) ?? startPos.line;
-          const actualEndLine =
-            foldTransform.mapping.virtualToActual.get(endPos.line) ?? endPos.line;
-
-          setSelection({
-            start: {
-              line: actualStartLine,
-              column: startPos.column,
-              offset: calculateOffsetFromContentPosition(
-                newActualContent,
-                actualStartLine,
-                startPos.column,
-              ),
-            },
-            end: {
-              line: actualEndLine,
-              column: endPos.column,
-              offset: calculateOffsetFromContentPosition(
-                newActualContent,
-                actualEndLine,
-                endPos.column,
-              ),
-            },
-          });
-        } else {
-          setSelection({ start: startPos, end: endPos });
-        }
-      } else {
-        setSelection(undefined);
-      }
-
-      const timestamp = Date.now();
-      useEditorUIStore.getState().actions.setLastInputTimestamp(timestamp);
-    },
-    [
-      bufferId,
-      updateBufferContent,
-      setEditorCursorPosition,
-      setSelection,
-      content,
-      cursorPosition,
-      displayContent,
-      displayLineOffsets,
-      foldTransform,
-      lines,
-      onContentChange,
-      onChange,
-      readOnly,
-      selection,
-      useGlobalEditorState,
-    ],
-  );
-
-  const handleBeforeInput = useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
-    const inputEvent = event.nativeEvent as InputEvent;
-
-    if (inputEvent.inputType !== "historyUndo" && inputEvent.inputType !== "historyRedo") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    suppressedNativeHistoryInputRef.current = inputEvent.inputType;
-
-    if (inputEvent.inputType === "historyUndo") {
-      editorAPI.undo();
-    } else {
-      editorAPI.redo();
-    }
-  }, []);
-
-  const handleLargeModeBeforeInput = useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
-    const inputEvent = event.nativeEvent as InputEvent;
-    if (inputEvent.inputType === "insertFromPaste") return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (inputEvent.inputType === "historyUndo") {
-      editorAPI.undo();
-    } else if (inputEvent.inputType === "historyRedo") {
-      editorAPI.redo();
-    }
-  }, []);
-
-  const handleLargeModeInput = useCallback(
-    (_content: string, event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      event.currentTarget.value = "";
-    },
-    [],
-  );
-
-  const handlePaste = useCallback(
-    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      if (readOnly) return;
-      if (!bufferId || !inputRef.current) return;
-
-      const pastedText = event.clipboardData.getData("text");
-      if (!pastedText) return;
-
-      const textarea = inputRef.current;
-      const selectionStart = largeContentMode
-        ? cursorPosition.offset
-        : Math.min(textarea.selectionStart, textarea.selectionEnd);
-      const selectionEnd = largeContentMode
-        ? cursorPosition.offset
-        : Math.max(textarea.selectionStart, textarea.selectionEnd);
-      const newVirtualContent =
-        displayContent.slice(0, selectionStart) + pastedText + displayContent.slice(selectionEnd);
-
-      if (!getLargeEditorModeInfo(newVirtualContent).largeContentMode) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const newActualContent = foldTransform.hasActiveFolds
-        ? applyVirtualEdit(content, newVirtualContent, foldTransform.mapping)
-        : newVirtualContent;
-      const previousActualContent = content;
-      const previousCursorPosition = cursorPosition;
-      const previousSelection = selection;
-      const nextOffset = selectionStart + pastedText.length;
-
-      textarea.value = "";
-      updateBufferContent(bufferId, newActualContent);
-      if (onContentChange) {
-        onContentChange(
-          newActualContent,
-          previousActualContent,
-          previousCursorPosition,
-          previousSelection,
-        );
-      } else {
-        onChange(
-          newActualContent,
-          previousActualContent,
-          previousCursorPosition,
-          previousSelection,
-          { contentAlreadyApplied: true },
-        );
-      }
-
-      if (!useGlobalEditorState) return;
-
-      setEditorCursorPosition(calculateCursorPositionFromContent(nextOffset, newActualContent));
-      setSelection(undefined);
-      useEditorUIStore.getState().actions.setLastInputTimestamp(Date.now());
-    },
-    [
-      bufferId,
-      content,
-      cursorPosition,
-      displayContent,
-      foldTransform,
-      largeContentMode,
-      onChange,
-      onContentChange,
-      readOnly,
-      selection,
-      setEditorCursorPosition,
-      setSelection,
-      updateBufferContent,
-      useGlobalEditorState,
-    ],
-  );
+  const largeEditorInput = useLargeEditorInput({
+    bufferId,
+    content,
+    displayContent,
+    displayLineOffsets,
+    visualLineCount,
+    languageId: currentLanguageId,
+    largeContentMode,
+    readOnly,
+    tabSize,
+    useGlobalEditorState,
+    cursorPosition,
+    desiredColumn,
+    selection,
+    lineHeight,
+    scrollRef: largeEditorScrollRef,
+    getLineText: getLargeLineText,
+    getPositionForOffset: getLargePositionForOffset,
+    getOffsetForPosition: getLargeOffsetForPosition,
+    getColumnForX: getLargeColumnForX,
+    mapVirtualContentToActualContent: mapLargeVirtualContentToActualContent,
+    updateBufferContent,
+    onContentChange,
+    onChange,
+    setCursorPosition: setEditorCursorPosition,
+    setDesiredColumn,
+    setSelection,
+  });
+  const largeSelectionOffsets = largeEditorInput.selectionOffsets;
 
   const editorOps = useEditorOperations({
     inputRef,
@@ -1272,90 +922,21 @@ export function Editor({
     inlineEditState.inlineEditToolbarActions.hide();
   });
 
-  const handleCursorChange = useCallback(() => {
-    if (!bufferId || !inputRef.current) return;
-
-    const selectionStart = inputRef.current.selectionStart;
-    const selectionEnd = inputRef.current.selectionEnd;
-    const isVisualModeActive = vimModeEnabled && vimMode === "visual";
-    const position =
-      isVisualModeActive && vimVisualSelection.end
-        ? {
-            ...vimVisualSelection.end,
-            offset:
-              getVisualLineOffset(vimVisualSelection.end.line) + vimVisualSelection.end.column,
-          }
-        : getCursorPositionForVisualOffset(selectionStart);
-
-    if (foldTransform.hasActiveFolds) {
-      const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
-      const actualOffset = calculateActualOffset(actualLines, actualLine, position.column);
-      setEditorCursorPosition({
-        line: actualLine,
-        column: position.column,
-        offset: actualOffset,
-      });
-    } else {
-      setEditorCursorPosition(position);
-    }
-
-    if (selectionStart !== selectionEnd) {
-      const startPos = getCursorPositionForVisualOffset(selectionStart);
-      const endPos = getCursorPositionForVisualOffset(selectionEnd);
-      const anchorOffset = Math.max(selectionStart, selectionEnd);
-      const anchorPos = getCursorPositionForVisualOffset(anchorOffset);
-      inlineEditState.setInlineEditSelectionAnchor({
-        line: anchorPos.line,
-        column: anchorPos.column,
-      });
-
-      if (foldTransform.hasActiveFolds) {
-        const actualStartLine =
-          foldTransform.mapping.virtualToActual.get(startPos.line) ?? startPos.line;
-        const actualEndLine = foldTransform.mapping.virtualToActual.get(endPos.line) ?? endPos.line;
-        setSelection({
-          start: {
-            line: actualStartLine,
-            column: startPos.column,
-            offset: calculateActualOffset(actualLines, actualStartLine, startPos.column),
-          },
-          end: {
-            line: actualEndLine,
-            column: endPos.column,
-            offset: calculateActualOffset(actualLines, actualEndLine, endPos.column),
-          },
-        });
-      } else {
-        setSelection({ start: startPos, end: endPos });
-      }
-    } else {
-      setSelection(undefined);
-      if (inlineEditState.inlineEditVisible) {
-        inlineEditState.setInlineEditSelectionAnchor({
-          line: position.line,
-          column: position.column,
-        });
-      } else {
-        inlineEditState.setInlineEditSelectionAnchor(null);
-      }
-    }
-
-    const uiActions = useEditorUIStore.getState().actions;
-    uiActions.setHoverInfo(null);
-    uiActions.setIsHovering(false);
-  }, [
+  const handleCursorChange = useEditorCursorSelection({
+    inputRef,
     bufferId,
     actualLines,
-    getCursorPositionForVisualOffset,
-    getVisualLineOffset,
-    setEditorCursorPosition,
-    setSelection,
     foldTransform,
-    inlineEditState,
     vimModeEnabled,
     vimMode,
     vimVisualSelection,
-  ]);
+    inlineEditVisible: inlineEditState.inlineEditVisible,
+    getCursorPositionForVisualOffset,
+    getVisualLineOffset,
+    setCursorPosition: setEditorCursorPosition,
+    setSelection,
+    setInlineEditSelectionAnchor: inlineEditState.setInlineEditSelectionAnchor,
+  });
 
   const getColumnForInlayAdjustedX = useCallback(
     (lineText: string, lineHints: InlayHint[], x: number) => {
@@ -1368,15 +949,18 @@ export function Editor({
 
       let bestColumn = 0;
       let bestDistance = Number.POSITIVE_INFINITY;
+      let hintIndex = 0;
+      let hintWidth = 0;
 
       for (let column = 0; column <= lineText.length; column++) {
-        const hintWidth = sortedHints
-          .filter((hint) => hint.character <= column)
-          .reduce(
-            (width, hint) =>
-              width + estimateInlayHintWidth(hint.label, fontSize, fontFamily, tabSize),
-            0,
-          );
+        while (hintIndex < sortedHints.length && sortedHints[hintIndex]?.character <= column) {
+          const hint = sortedHints[hintIndex];
+          if (hint) {
+            hintWidth += estimateInlayHintWidth(hint.label, fontSize, fontFamily, tabSize);
+          }
+          hintIndex++;
+        }
+
         const boundaryX =
           getAccurateCursorX(lineText, column, fontSize, fontFamily, tabSize) + hintWidth;
         const distance = Math.abs(boundaryX - x);
@@ -1392,161 +976,31 @@ export function Editor({
     [fontFamily, fontSize, tabSize],
   );
 
-  const handleMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLTextAreaElement>) => {
-      if (!useGlobalEditorState || readOnly || event.button !== 0) return;
-      if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey || event.detail > 1) {
-        return;
-      }
-
-      const textarea = inputRef.current;
-      if (!textarea) return;
-      if (visualInlayHints.length === 0 && viewLayout.totalZoneHeight === 0) return;
-
-      const rect = textarea.getBoundingClientRect();
-      const editorX = event.clientX - rect.left + textarea.scrollLeft;
-      const editorY = event.clientY - rect.top + textarea.scrollTop;
-      const position = viewLayout.editorPointToModelPosition(editorX, editorY);
-      const visualLine = Math.max(0, Math.min(lines.length - 1, position.modelLine));
-      const lineHints = visualInlayHints.filter((hint) => hint.line === visualLine);
-
-      event.preventDefault();
-
-      const lineText = lines[visualLine] || "";
-      const localX = Math.max(0, editorX - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
-      const column =
-        lineHints.length > 0
-          ? getColumnForInlayAdjustedX(lineText, lineHints, localX)
-          : position.column;
-      const virtualOffset = Math.min(
-        getVisualLineOffset(visualLine) + column,
-        displayContent.length,
-      );
-
-      textarea.focus();
-      textarea.selectionStart = virtualOffset;
-      textarea.selectionEnd = virtualOffset;
-
-      if (foldTransform.hasActiveFolds) {
-        const actualLine = foldTransform.mapping.virtualToActual.get(visualLine) ?? visualLine;
-        const actualOffset = calculateActualOffset(actualLines, actualLine, column);
-        setEditorCursorPosition({
-          line: actualLine,
-          column,
-          offset: actualOffset,
-        });
-      } else {
-        setEditorCursorPosition({
-          line: visualLine,
-          column,
-          offset: virtualOffset,
-        });
-      }
-
-      setSelection(undefined);
-    },
-    [
-      actualLines,
-      displayContent.length,
-      foldTransform,
-      getColumnForInlayAdjustedX,
-      getVisualLineOffset,
-      lines,
-      readOnly,
-      setEditorCursorPosition,
-      setSelection,
-      useGlobalEditorState,
-      visualInlayHints,
-      viewLayout,
-    ],
-  );
-
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLTextAreaElement>) => {
-      if (!bufferId || !inputRef.current) return;
-
-      if (e.altKey) {
-        e.preventDefault();
-
-        const selectionStart = inputRef.current.selectionStart;
-        const selectionEnd = inputRef.current.selectionEnd;
-
-        const clickedPosition = getCursorPositionForVisualOffset(selectionStart);
-
-        const clickSelection =
-          selectionStart !== selectionEnd
-            ? {
-                start: getCursorPositionForVisualOffset(selectionStart),
-                end: getCursorPositionForVisualOffset(selectionEnd),
-              }
-            : undefined;
-
-        if (!multiCursorState) {
-          enableMultiCursor();
-          const isDifferentPosition =
-            clickedPosition.line !== cursorPosition.line ||
-            clickedPosition.column !== cursorPosition.column;
-          if (isDifferentPosition) {
-            addCursor(clickedPosition, clickSelection);
-          }
-        } else {
-          addCursor(clickedPosition, clickSelection);
-        }
-        return;
-      }
-
-      if (multiCursorState && multiCursorState.cursors.length > 1) {
-        clearSecondaryCursors();
-      }
-
-      const selectionStart = inputRef.current.selectionStart;
-      const clickedPosition = getCursorPositionForVisualOffset(selectionStart);
-      const clickedLine = lines[clickedPosition.line] || "";
-      const accordionMeta = parseDiffAccordionLine(clickedLine);
-
-      if (accordionMeta && filePath) {
-        const actualLine = foldTransform.hasActiveFolds
-          ? (foldTransform.mapping.virtualToActual.get(clickedPosition.line) ??
-            clickedPosition.line)
-          : clickedPosition.line;
-        foldActions.toggleFold(filePath, actualLine);
-        inputRef.current.blur();
-        return;
-      }
-
-      if (filePath && foldTransform.foldMarkers.has(clickedPosition.line)) {
-        const actualLine =
-          foldTransform.mapping.virtualToActual.get(clickedPosition.line) ?? clickedPosition.line;
-        foldActions.toggleFold(filePath, actualLine);
-        inputRef.current.blur();
-        return;
-      }
-
-      if ((readOnly || (!useGlobalEditorState && e.detail >= 2)) && onReadonlySurfaceClick) {
-        onReadonlySurfaceClick({
-          line: clickedPosition.line,
-          column: clickedPosition.column,
-        });
-      }
-    },
-    [
-      bufferId,
-      content,
-      multiCursorState,
-      cursorPosition,
-      enableMultiCursor,
-      addCursor,
-      clearSecondaryCursors,
-      lines,
-      getCursorPositionForVisualOffset,
-      filePath,
-      foldTransform,
-      foldActions,
-      onReadonlySurfaceClick,
-      readOnly,
-      useGlobalEditorState,
-    ],
-  );
+  const { handleMouseDown, handleClick } = useEditorMouseInteractions({
+    inputRef,
+    bufferId,
+    filePath,
+    readOnly,
+    useGlobalEditorState,
+    visualInlayHints,
+    viewLayout,
+    lines,
+    actualLines,
+    displayContentLength: displayContent.length,
+    foldTransform,
+    multiCursorState,
+    cursorPosition,
+    getVisualLineOffset,
+    getCursorPositionForVisualOffset,
+    getColumnForInlayAdjustedX,
+    setCursorPosition: setEditorCursorPosition,
+    setSelection,
+    enableMultiCursor,
+    addCursor,
+    clearSecondaryCursors,
+    toggleFold: foldActions.toggleFold,
+    onReadonlySurfaceClick,
+  });
 
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
@@ -1578,7 +1032,7 @@ export function Editor({
       aiAutocompleteProvider === "custom" ? aiAutocompleteCustomModelId : aiAutocompleteModelId,
     customBaseUrl: aiAutocompleteCustomBaseUrl,
     filePath: filePath || null,
-    languageId: filePath ? getLanguageId(filePath) : null,
+    languageId: currentLanguageId,
     content,
     cursorOffset: cursorPosition.offset,
     hasActiveFolds: foldTransform.hasActiveFolds,
@@ -1593,11 +1047,11 @@ export function Editor({
     content,
     bufferId,
     filePath,
+    languageId: currentLanguageId,
     tabSize,
     lines,
     lineOffsets: displayLineOffsets,
     cursorPosition,
-    selection,
     multiCursorState,
     isLspCompletionVisible,
     filteredCompletions,
@@ -1609,9 +1063,6 @@ export function Editor({
     handleApplyInlineEdit: inlineEditState.handleApplyInlineEdit,
     updateBufferContent,
     setCursorPosition: setEditorCursorPosition,
-    setSelection,
-    enableMultiCursor,
-    addCursor,
     clearSecondaryCursors,
     updateCursor,
     setSelectedLspIndex,
@@ -1619,61 +1070,70 @@ export function Editor({
     setAutocompleteCompletion,
   });
 
-  // Extracted scroll handler with switchGuard
-  const { handleScroll, isScrollingRef } = useEditorScroll({
-    bufferId,
-    viewStateKey: viewStateKey ?? bufferId ?? null,
-    linesCount: lines.length,
-    minimapEnabled: minimapEnabled && !largeContentMode,
-    lockVerticalScroll: !scrollable,
-    switchGuardRef,
-    highlightRef,
-    primaryCursorRef,
-    multiCursorRef,
-    searchHighlightRef,
-    selectionLayerRef,
-    vimCursorRef,
-    autocompleteCompletionRef,
-    inlineEditOverlayRef,
-    gitBlameRef,
-    inlineDiffRef,
-    setEditorScrollTop,
-    handleViewportScroll,
-  });
-
-  useLayoutEffect(() => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
-
-    const transform = `translate(-${textarea.scrollLeft}px, -${textarea.scrollTop}px)`;
-    const overlayRefs = [
+  const scrollLayerRefs = useMemo(
+    () => [
+      currentLineRef,
+      indentGuideRef,
       highlightRef,
       primaryCursorRef,
       multiCursorRef,
+      wordHighlightRef,
       searchHighlightRef,
       selectionLayerRef,
+      bracketMatchRef,
       vimCursorRef,
       autocompleteCompletionRef,
       inlineEditOverlayRef,
       gitBlameRef,
       inlineDiffRef,
-    ];
+    ],
+    [
+      currentLineRef,
+      indentGuideRef,
+      highlightRef,
+      primaryCursorRef,
+      multiCursorRef,
+      wordHighlightRef,
+      searchHighlightRef,
+      selectionLayerRef,
+      bracketMatchRef,
+      vimCursorRef,
+      autocompleteCompletionRef,
+      inlineEditOverlayRef,
+      gitBlameRef,
+      inlineDiffRef,
+    ],
+  );
 
-    for (const overlayRef of overlayRefs) {
-      if (overlayRef.current) {
-        overlayRef.current.style.transform = transform;
-      }
-    }
+  // Extracted scroll handler with switchGuard
+  const { handleScroll, isScrollingRef } = useEditorScroll({
+    bufferId,
+    viewStateKey: viewStateKey ?? bufferId ?? null,
+    linesCount: visualLineCount,
+    minimapEnabled: minimapEnabled && !largeContentMode,
+    lockVerticalScroll: !scrollable,
+    switchGuardRef,
+    scrollLayerRefs,
+    setEditorScrollTop,
+    handleViewportScroll,
+  });
+
+  useLayoutEffect(() => {
+    const scrollElement = largeContentMode ? largeEditorScrollRef.current : inputRef.current;
+    if (!scrollElement) return;
+
+    applyEditorScrollTransform(scrollLayerRefs, scrollElement.scrollLeft, scrollElement.scrollTop);
   });
 
   useDragScroll(inputRef);
   useSelectionScope(contentContainerRef, isActiveSurface);
 
   useEffect(() => {
-    if (inputRef.current) {
-      initializeViewport(inputRef.current, lines.length);
+    const scrollElement = largeContentMode ? largeEditorScrollRef.current : inputRef.current;
+    if (scrollElement) {
+      initializeViewport(scrollElement, visualLineCount);
     }
-  }, [initializeViewport, lines.length]);
+  }, [initializeViewport, largeContentMode, visualLineCount]);
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -1683,87 +1143,19 @@ export function Editor({
     };
   }, [inputRef, isActiveSurface]);
 
-  // Wheel forwarding for embedded editors and non-macOS textarea scrolling.
-  useEffect(() => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
-
-    if (!scrollable) {
-      const scrollContainer =
-        textarea.closest("[data-editor-outer-scroll]") ??
-        textarea.closest("[data-diff-stack-scroll-container]");
-      if (!(scrollContainer instanceof HTMLElement)) return;
-
-      const handleWheel = (e: WheelEvent) => {
-        const isHorizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
-        const deltaTop = isHorizontalIntent ? 0 : e.deltaY;
-        const deltaLeft =
-          isHorizontalIntent && e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)
-            ? e.deltaY
-            : isHorizontalIntent
-              ? e.deltaX
-              : 0;
-        const canScrollY =
-          (deltaTop < 0 && scrollContainer.scrollTop > 0) ||
-          (deltaTop > 0 &&
-            scrollContainer.scrollTop + scrollContainer.clientHeight <
-              scrollContainer.scrollHeight);
-        const canScrollX =
-          (deltaLeft < 0 && scrollContainer.scrollLeft > 0) ||
-          (deltaLeft > 0 &&
-            scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth);
-
-        if (textarea.scrollTop !== 0) {
-          textarea.scrollTop = 0;
-        }
-
-        if (!canScrollY && !canScrollX) {
-          if (deltaTop !== 0 || deltaLeft !== 0) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          return;
-        }
-
-        if (canScrollY) {
-          scrollContainer.scrollTop += deltaTop;
-        }
-        if (canScrollX) {
-          scrollContainer.scrollLeft += deltaLeft;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-      };
-
-      textarea.addEventListener("wheel", handleWheel, { passive: false });
-      return () => textarea.removeEventListener("wheel", handleWheel);
-    }
-
-    if (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")) {
-      return;
-    }
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        textarea.scrollLeft += e.deltaX;
-      } else {
-        textarea.scrollTop += e.deltaY;
-      }
-    };
-
-    textarea.addEventListener("wheel", handleWheel, { passive: false });
-    return () => textarea.removeEventListener("wheel", handleWheel);
-  }, [scrollable]);
+  useEditorWheelForwarding({
+    textareaRef: inputRef,
+    largeContentMode,
+    scrollable,
+  });
 
   // Track viewport height
   useEffect(() => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
+    const scrollElement = largeContentMode ? largeEditorScrollRef.current : inputRef.current;
+    if (!scrollElement) return;
 
     const updateViewportHeight = () => {
-      const height = textarea.clientHeight;
+      const height = scrollElement.clientHeight;
       if (height > 0) {
         useEditorStateStore.getState().actions.setViewportHeight(height);
         setEditorViewportHeight(height);
@@ -1773,119 +1165,50 @@ export function Editor({
     updateViewportHeight();
 
     const resizeObserver = new ResizeObserver(updateViewportHeight);
-    resizeObserver.observe(textarea);
+    resizeObserver.observe(scrollElement);
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [largeContentMode]);
 
   // Tokenization is intentionally delayed while typing. Rendering uses the previous
   // token snapshot until the editor is idle enough to refresh syntax highlights.
-  const tokenizeRafRef = useRef<number | null>(null);
-  const tokenizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (!tokenizationEnabled || !buffer?.content || !buffer?.path) return;
-
-    if (tokenizeRafRef.current !== null) {
-      cancelAnimationFrame(tokenizeRafRef.current);
-    }
-    if (tokenizeTimeoutRef.current !== null) {
-      clearTimeout(tokenizeTimeoutRef.current);
-    }
-
-    const contentToTokenize = buffer.content;
-    const targetViewportRange = useIncrementalTokenization ? viewportRange : undefined;
-    const isLargeFile = lines.length >= LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD;
-    const latestInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
-    const msSinceInput = latestInputTimestamp > 0 ? Date.now() - latestInputTimestamp : Infinity;
-    const isTypingUpdate = msSinceInput < TOKENIZE_AFTER_TYPING_DEBOUNCE_MS;
-
-    if (
-      !useIncrementalTokenization &&
-      tokens.length > 0 &&
-      tokenizedContent === normalizeLineEndings(contentToTokenize)
-    ) {
-      return;
-    }
-
-    if (useIncrementalTokenization && isLargeFile && isScrollingRef.current) {
-      tokenizeTimeoutRef.current = setTimeout(() => {
-        tokenize(contentToTokenize, targetViewportRange);
-        tokenizeTimeoutRef.current = null;
-      }, LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS);
-
-      return () => {
-        if (tokenizeTimeoutRef.current !== null) {
-          clearTimeout(tokenizeTimeoutRef.current);
-        }
-      };
-    }
-
-    if (isTypingUpdate) {
-      tokenizeTimeoutRef.current = setTimeout(() => {
-        tokenize(contentToTokenize, targetViewportRange);
-        tokenizeTimeoutRef.current = null;
-      }, TOKENIZE_AFTER_TYPING_DEBOUNCE_MS);
-
-      return () => {
-        if (tokenizeTimeoutRef.current !== null) {
-          clearTimeout(tokenizeTimeoutRef.current);
-        }
-      };
-    }
-
-    if (!useGlobalEditorState) {
-      tokenizeTimeoutRef.current = setTimeout(() => {
-        tokenize(contentToTokenize, targetViewportRange);
-        tokenizeTimeoutRef.current = null;
-      }, 120);
-
-      return () => {
-        if (tokenizeTimeoutRef.current !== null) {
-          clearTimeout(tokenizeTimeoutRef.current);
-        }
-      };
-    }
-
-    tokenizeRafRef.current = requestAnimationFrame(() => {
-      tokenize(contentToTokenize, targetViewportRange);
-      tokenizeRafRef.current = null;
-    });
-
-    return () => {
-      if (tokenizeRafRef.current !== null) {
-        cancelAnimationFrame(tokenizeRafRef.current);
-      }
-      if (tokenizeTimeoutRef.current !== null) {
-        clearTimeout(tokenizeTimeoutRef.current);
-      }
-    };
-  }, [
+  useTokenizationScheduler({
     bufferId,
-    buffer?.path,
-    buffer?.content,
+    filePath: buffer?.path,
+    content: buffer?.content,
+    enabled: tokenizationEnabled,
     tokenizedContent,
-    tokens.length,
-    tokenize,
-    lines.length,
-    useIncrementalTokenization,
-    viewportRange?.startLine,
-    viewportRange?.endLine,
+    tokenCount: tokens.length,
+    visualLineCount,
+    incremental: useIncrementalTokenization,
+    viewportRange,
     isScrollingRef,
-    useGlobalEditorState,
-    tokenizationEnabled,
-  ]);
+    isActiveSurface: useGlobalEditorState,
+    tokenize,
+  });
 
   const handleLineClick = useCallback(
     (lineIndex: number) => {
-      if (!inputRef.current) return;
-
       if (!useGlobalEditorState && onReadonlySurfaceClick) {
         onReadonlySurfaceClick({ line: lineIndex, column: 0 });
         return;
       }
+
+      if (largeContentMode) {
+        const lineStart = getVisualLineOffset(lineIndex);
+        const lineEnd = lineStart + getLargeLineText(lineIndex).length;
+        const startPos = getLargePositionForOffset(lineStart);
+        const endPos = getLargePositionForOffset(lineEnd);
+
+        largeEditorScrollRef.current?.focus({ preventScroll: true });
+        setEditorCursorPosition(startPos);
+        setSelection({ start: startPos, end: endPos });
+        return;
+      }
+
+      if (!inputRef.current) return;
 
       const lineStart = getVisualLineOffset(lineIndex);
       const lineEnd = lineStart + lines[lineIndex].length;
@@ -1924,8 +1247,11 @@ export function Editor({
     [
       lines,
       getVisualLineOffset,
+      getLargeLineText,
+      getLargePositionForOffset,
       foldTransform,
       actualLines,
+      largeContentMode,
       setEditorCursorPosition,
       setSelection,
       useGlobalEditorState,
@@ -1948,40 +1274,20 @@ export function Editor({
   );
 
   const inlineAutocompletePreview = useMemo(() => {
-    if (!autocompleteCompletion || isLspCompletionVisible) return null;
-    if (autocompleteCompletion.cursorOffset !== cursorPosition.offset) return null;
-    if (visualCursorLine < 0 || visualCursorLine >= lines.length) return null;
-
-    const normalized = autocompleteCompletion.text.replace(/\r\n/g, "\n");
-    if (!normalized) return null;
-
-    const lineText = lines[visualCursorLine] || "";
-    const cursorColumn = Math.min(cursorPosition.column, lineText.length);
-    const textAfterCursorOnLine = lineText.slice(cursorColumn);
-    if (textAfterCursorOnLine.trim().length > 0) return null;
-
-    const previewLines: Array<{ text: string; index: number }> = [];
-
-    for (const [index, text] of normalized.split("\n").entries()) {
-      if (index > 0 && lines[visualCursorLine + index]?.trim()) {
-        break;
-      }
-      previewLines.push({ text, index });
-    }
-
-    if (previewLines.every((line) => line.text.length === 0)) return null;
-
-    return {
-      lines: previewLines,
-      top:
-        cursorViewPosition?.top ??
-        visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
-      firstLineLeft:
-        cursorViewPosition?.left ??
-        getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
-          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
-      continuationLeft: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
-    };
+    return resolveInlineAutocompletePreview({
+      completion: autocompleteCompletion,
+      isLspCompletionVisible,
+      cursorOffset: cursorPosition.offset,
+      cursorColumn: cursorPosition.column,
+      visualCursorLine,
+      lines,
+      cursorTop: cursorViewPosition?.top,
+      cursorLeft: cursorViewPosition?.left,
+      lineHeight,
+      editorPaddingTop: EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      editorPaddingLeft: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      measureText: measureEditorText,
+    });
   }, [
     autocompleteCompletion,
     isLspCompletionVisible,
@@ -1989,11 +1295,9 @@ export function Editor({
     cursorPosition.column,
     visualCursorLine,
     lines,
-    fontSize,
-    fontFamily,
-    tabSize,
     lineHeight,
     cursorViewPosition,
+    measureEditorText,
   ]);
 
   const inlineDiffTop = useMemo(() => {
@@ -2031,14 +1335,14 @@ export function Editor({
     <div className="absolute inset-0 flex">
       {showLineNumbers && (
         <Gutter
-          totalLines={lines.length}
+          totalLines={visualLineCount}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
-          textareaRef={inputRef}
+          textareaRef={largeContentMode ? largeEditorScrollRef : inputRef}
           virtualize={shouldVirtualizeRendering}
           filePath={largeContentMode ? undefined : filePath}
-          onLineClick={largeContentMode ? undefined : handleLineClick}
+          onLineClick={handleLineClick}
           onGitIndicatorClick={largeContentMode ? undefined : inlineDiff.toggle}
           foldMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
           wordWrap={wordWrap}
@@ -2061,12 +1365,36 @@ export function Editor({
         onClick={onClick}
       >
         {backgroundLayer}
+        {useGlobalEditorState && (
+          <CurrentLineLayer
+            ref={currentLineRef}
+            visualLine={visualCursorLine}
+            lineHeight={lineHeight}
+            cursorViewPosition={cursorViewPosition}
+            hidden={selection !== undefined && selection.start.offset !== selection.end.offset}
+          />
+        )}
+        <IndentGuideLayer
+          ref={indentGuideRef}
+          enabled={renderIndentGuides}
+          lines={lines}
+          lineCount={visualLineCount}
+          lineHeight={lineHeight}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          tabSize={tabSize}
+          activeLine={visualCursorLine}
+          activeColumn={cursorPosition.column}
+          lineTextResolver={largeContentMode ? getLargeLineText : undefined}
+          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+          viewLayout={viewLayout}
+        />
         <HighlightLayer
           ref={highlightRef}
           filePath={largeContentMode ? undefined : filePath}
           content={displayContent}
           lines={lines}
-          lineCount={lines.length}
+          lineCount={visualLineCount}
           lineOffsets={displayLineOffsets}
           lazyLineSlicing={largeContentMode}
           tokens={effectiveTokens}
@@ -2076,28 +1404,46 @@ export function Editor({
           lineHeight={lineHeight}
           tabSize={tabSize}
           wordWrap={wordWrap}
+          renderWhitespace={renderWhitespace}
           viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
           lineMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
           viewZones={viewLayout.zones}
           inlayHints={largeContentMode ? [] : visualInlayHints}
         />
+        {largeContentMode && (
+          <LargeEditorSurface
+            ref={largeEditorScrollRef}
+            scrollHeight={
+              viewLayout.totalHeight +
+              EDITOR_CONSTANTS.EDITOR_PADDING_TOP +
+              EDITOR_CONSTANTS.EDITOR_PADDING_BOTTOM
+            }
+            onKeyDown={largeEditorInput.handleKeyDown}
+            onPaste={useGlobalEditorState ? largeEditorInput.handleSurfacePaste : undefined}
+            onPointerDown={largeEditorInput.handlePointerDown}
+            onPointerMove={largeEditorInput.handlePointerMove}
+            onPointerUp={largeEditorInput.handlePointerUp}
+            onContextMenu={useGlobalEditorState ? contextMenu.open : undefined}
+            onScroll={handleScroll}
+          />
+        )}
         <InputLayer
           textareaRef={inputRef}
           content={textareaContent}
           filePath={filePath}
-          onInput={largeContentMode ? handleLargeModeInput : handleInput}
+          onInput={largeContentMode ? largeEditorInput.handleInput : handleInput}
           onBeforeInput={
             readOnly || !useGlobalEditorState
               ? undefined
               : largeContentMode
-                ? handleLargeModeBeforeInput
+                ? largeEditorInput.handleBeforeInput
                 : handleBeforeInput
           }
           onKeyDown={
             readOnly || !useGlobalEditorState || largeContentMode ? undefined : handleKeyDown
           }
-          onScroll={handleScroll}
-          onSelect={useGlobalEditorState ? handleCursorChange : undefined}
+          onScroll={largeContentMode ? undefined : handleScroll}
+          onSelect={useGlobalEditorState && !largeContentMode ? handleCursorChange : undefined}
           onClick={
             !largeContentMode && (useGlobalEditorState || readOnly || onReadonlySurfaceClick)
               ? handleClick
@@ -2105,20 +1451,18 @@ export function Editor({
           }
           onMouseDown={useGlobalEditorState && !largeContentMode ? handleMouseDown : undefined}
           onContextMenu={useGlobalEditorState && !largeContentMode ? contextMenu.open : undefined}
-          onPaste={useGlobalEditorState ? handlePaste : undefined}
+          onPaste={useGlobalEditorState ? largeEditorInput.handleTextareaPaste : undefined}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           tabSize={tabSize}
           wordWrap={wordWrap}
           readOnly={readOnly}
-          scrollable={scrollable}
+          scrollable={largeContentMode ? false : scrollable}
           customCaret={useCustomInsertCaret}
           nativeSelection={largeContentMode}
           scrollPaddingBottom={
-            largeContentMode
-              ? viewLayout.totalHeight
-              : viewLayout.totalZoneHeight + editorBottomSafePadding
+            largeContentMode ? 0 : viewLayout.totalZoneHeight + editorBottomSafePadding
           }
           bufferId={bufferId || undefined}
         />
@@ -2132,15 +1476,19 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            lineText={lines[visualCursorLine] ?? ""}
-            textareaRef={inputRef}
+            lineText={
+              largeContentMode
+                ? getLargeLineText(visualCursorLine)
+                : (lines[visualCursorLine] ?? "")
+            }
+            textareaRef={largeContentMode ? largeEditorScrollRef : inputRef}
             hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
         )}
-        {useGlobalEditorState && !largeContentMode && (
+        {useGlobalEditorState && (
           <SelectionLayer
             ref={selectionLayerRef}
-            textareaRef={inputRef}
+            textareaRef={largeContentMode ? undefined : inputRef}
             lines={lines}
             lineOffsets={displayLineOffsets}
             contentLength={displayContent.length}
@@ -2148,181 +1496,77 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            wordWrap={wordWrap}
-            viewLayout={viewLayout}
+            selectionOffsets={largeContentMode ? largeSelectionOffsets : undefined}
+            lineTextResolver={largeContentMode ? getLargeLineText : undefined}
+            viewportRange={
+              largeContentMode && shouldVirtualizeRendering ? viewportRange : undefined
+            }
+            wordWrap={!largeContentMode && wordWrap}
+            viewLayout={!largeContentMode ? viewLayout : undefined}
           />
         )}
-        {!largeContentMode &&
-          inlineEditState.inlineEditVisible &&
-          inlineEditState.popoverPosition && (
-            <div
-              ref={inlineEditOverlayRef}
-              className="pointer-events-none absolute inset-0 z-[200]"
-            >
-              <div
-                ref={inlineEditState.inlineEditPopoverRef}
-                role="dialog"
-                aria-modal="false"
-                aria-labelledby="inline-edit-title"
-                aria-describedby="inline-edit-description"
-                className="pointer-events-auto absolute right-4 max-w-[720px] overflow-hidden rounded-md border border-border/60 bg-primary-bg shadow-lg"
-                style={{
-                  top: `${inlineEditZoneTop ?? inlineEditState.popoverPosition.top}px`,
-                  left: `${EDITOR_CONSTANTS.EDITOR_PADDING_LEFT}px`,
-                }}
-              >
-                <div className="px-2 py-1.5">
-                  <div className="sr-only">
-                    <div id="inline-edit-title">Inline edit</div>
-                    <div id="inline-edit-description">
-                      Describe the code change, then press Enter to apply or Escape to close.
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      ref={inlineEditState.inlineEditInstructionRef}
-                      autoFocus
-                      value={inlineEditState.inlineEditInstruction}
-                      onChange={(e) => {
-                        inlineEditState.setInlineEditInstruction(e.target.value);
-                        if (inlineEditState.inlineEditError) {
-                          inlineEditState.setInlineEditError(null);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void inlineEditState.handleApplyInlineEdit();
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          if (!inlineEditState.isInlineEditRunning) {
-                            inlineEditState.inlineEditToolbarActions.hide();
-                          }
-                        }
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Inline edit instruction"
-                      aria-describedby={
-                        inlineEditState.inlineEditError
-                          ? "inline-edit-description inline-edit-error"
-                          : "inline-edit-description"
-                      }
-                      aria-invalid={inlineEditState.inlineEditError ? true : undefined}
-                      className="ui-font h-8 flex-1 bg-transparent px-0 ui-text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
-                      placeholder={
-                        selection && selection.start.offset !== selection.end.offset
-                          ? "Describe the edit for the selection..."
-                          : "Describe the edit for the current line..."
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
-                      className="text-text-lighter hover:text-text"
-                      tooltip="Close inline edit"
-                      shortcut="escape"
-                    >
-                      <X />
-                    </Button>
-                  </div>
-                  {inlineEditState.inlineEditError && (
-                    <div
-                      id="inline-edit-error"
-                      role="alert"
-                      aria-live="assertive"
-                      className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 ui-text-xs text-red-300"
-                    >
-                      {inlineEditState.inlineEditError}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between px-2 py-1">
-                  <div className="min-w-0 flex-1">
-                    <InlineEditModelSelector
-                      models={inlineEditState.inlineEditModels}
-                      value={inlineEditState.aiAutocompleteModelId}
-                      onChange={(modelId) =>
-                        inlineEditState.updateSetting("aiAutocompleteModelId", modelId)
-                      }
-                      disabled={inlineEditState.isInlineEditRunning}
-                      isLoading={inlineEditState.isInlineEditModelLoading}
-                    />
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => void inlineEditState.handleApplyInlineEdit()}
-                      disabled={inlineEditState.isInlineEditRunning}
-                      className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"
-                      aria-label={
-                        inlineEditState.isInlineEditRunning
-                          ? "Applying inline edit"
-                          : "Apply inline edit"
-                      }
-                      tooltip="Apply inline edit"
-                      shortcut="enter"
-                    >
-                      <CornerDownLeft />
-                      {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+        {useGlobalEditorState && highlightOccurrences && (
+          <WordHighlightLayer
+            ref={wordHighlightRef}
+            content={displayContent}
+            cursorOffset={
+              largeContentMode ? cursorPosition.offset : getInputOffsetForPosition(cursorPosition)
+            }
+            hasSelection={largeContentMode ? !!largeSelectionOffsets : !!selection}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            tabSize={tabSize}
+            lines={lines}
+            lineOffsets={displayLineOffsets}
+            contentLength={displayContent.length}
+            lineTextResolver={largeContentMode ? getLargeLineText : undefined}
+            viewportRange={
+              largeContentMode || shouldVirtualizeRendering ? viewportRange : undefined
+            }
+            viewLayout={!largeContentMode && wordWrap ? viewLayout : undefined}
+          />
+        )}
+        {useGlobalEditorState && (
+          <BracketMatchLayer
+            ref={bracketMatchRef}
+            content={displayContent}
+            cursorOffset={
+              largeContentMode ? cursorPosition.offset : getInputOffsetForPosition(cursorPosition)
+            }
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            tabSize={tabSize}
+            lines={lines}
+            lineOffsets={displayLineOffsets}
+            contentLength={displayContent.length}
+            lineTextResolver={largeContentMode ? getLargeLineText : undefined}
+            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            viewLayout={!largeContentMode && wordWrap ? viewLayout : undefined}
+          />
+        )}
+        {!largeContentMode && (
+          <InlineEditPopover
+            ref={inlineEditOverlayRef}
+            state={inlineEditState}
+            selection={selection}
+            zoneTop={inlineEditZoneTop}
+          />
+        )}
         {!largeContentMode && inlineAutocompletePreview && (
-          <div
+          <InlineAutocompletePreview
             ref={autocompleteCompletionRef}
-            className="pointer-events-none absolute inset-0 z-[3]"
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: `${inlineAutocompletePreview.top}px`,
-                left: 0,
-                fontSize: `${fontSize}px`,
-                fontFamily,
-                lineHeight: `${lineHeight}px`,
-                whiteSpace: "pre",
-                opacity: 0.42,
-                color: "var(--text-lighter, #94a3b8)",
-              }}
-            >
-              {inlineAutocompletePreview.lines.map((line) => {
-                if (line.text.length === 0) return null;
-                return (
-                  <div
-                    key={line.index}
-                    style={{
-                      position: "absolute",
-                      top: `${line.index * lineHeight}px`,
-                      left:
-                        line.index === 0
-                          ? `${inlineAutocompletePreview.firstLineLeft}px`
-                          : `${inlineAutocompletePreview.continuationLeft}px`,
-                    }}
-                  >
-                    {line.text}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            preview={inlineAutocompletePreview}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+          />
         )}
         {!largeContentMode &&
           autocompleteCompletion &&
           !isLspCompletionVisible &&
-          !inlineAutocompletePreview && (
-            <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 ui-text-xs text-text-lighter/80">
-              Tab to accept AI suggestion
-            </div>
-          )}
+          !inlineAutocompletePreview && <InlineAutocompleteHint />}
         {useGlobalEditorState && !largeContentMode && multiCursorState && (
           <MultiCursorLayer
             ref={multiCursorRef}
@@ -2355,7 +1599,7 @@ export function Editor({
             />
           )}
 
-        {!largeContentMode && (highlightMatches?.length || searchMatches.length > 0) && (
+        {(highlightMatches?.length || searchMatches.length > 0) && (
           <SearchHighlightLayer
             ref={searchHighlightRef}
             searchMatches={highlightMatches ?? searchMatches}
@@ -2367,8 +1611,10 @@ export function Editor({
             lines={lines}
             lineOffsets={displayLineOffsets}
             contentLength={displayContent.length}
+            lineCount={visualLineCount}
+            lineTextResolver={largeContentMode ? getLargeLineText : undefined}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
-            viewLayout={wordWrap ? viewLayout : undefined}
+            viewLayout={!largeContentMode && wordWrap ? viewLayout : undefined}
           />
         )}
 
@@ -2461,11 +1707,19 @@ export function Editor({
             isOpen={contextMenu.state.isOpen}
             position={contextMenu.state.position}
             onClose={contextMenu.close}
-            onCopy={editorOps.copy}
-            onCut={editorOps.cut}
-            onPaste={editorOps.paste}
-            onSelectAll={editorOps.selectAll}
-            onDelete={editorOps.deleteSelection}
+            onCopy={largeContentMode ? largeEditorInput.handleCopy : editorOps.copy}
+            onCut={largeContentMode ? largeEditorInput.handleCut : editorOps.cut}
+            onPaste={
+              largeContentMode
+                ? () => {
+                    void largeEditorInput.handlePasteFromClipboard();
+                  }
+                : editorOps.paste
+            }
+            onSelectAll={largeContentMode ? largeEditorInput.handleSelectAll : editorOps.selectAll}
+            onDelete={
+              largeContentMode ? largeEditorInput.handleDeleteSelection : editorOps.deleteSelection
+            }
             onFind={() => setIsFindVisible(true)}
             onGoToLine={() => {
               void keymapRegistry.executeCommand("editor.goToLine");
@@ -2473,15 +1727,17 @@ export function Editor({
             onDuplicate={() => {
               void keymapRegistry.executeCommand("editor.duplicateLine");
             }}
-            onIndent={editorOps.indent}
-            onOutdent={editorOps.outdent}
+            onIndent={largeContentMode ? largeEditorInput.handleIndent : editorOps.indent}
+            onOutdent={largeContentMode ? largeEditorInput.handleOutdent : editorOps.outdent}
             onToggleComment={() => {
               void keymapRegistry.executeCommand("editor.toggleComment");
             }}
             onFormat={() => {
               void keymapRegistry.executeCommand("editor.formatDocument");
             }}
-            onToggleCase={editorOps.toggleCase}
+            onToggleCase={
+              largeContentMode ? largeEditorInput.handleToggleCase : editorOps.toggleCase
+            }
             onMoveLineUp={() => {
               void keymapRegistry.executeCommand("editor.moveLineUp");
             }}

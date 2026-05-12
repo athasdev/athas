@@ -147,6 +147,73 @@ textarea.input-layer.selection-transparent::-moz-selection {
   color: transparent !important;
 }
 
+.editor-bracket-match {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--accent, #6a9bcc) 62%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent, #6a9bcc) 12%, transparent);
+}
+
+.editor-bracket-match-unmatched {
+  border-color: color-mix(in srgb, var(--color-error, #ef4444) 72%, transparent);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 14%, transparent);
+}
+
+.editor-word-highlight,
+.editor-word-highlight-current {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text, #d4d4d4) 10%, transparent);
+}
+
+.editor-word-highlight-current {
+  border: 1px solid color-mix(in srgb, var(--color-text, #d4d4d4) 18%, transparent);
+}
+
+.editor-current-line {
+  position: absolute;
+  right: 0;
+  left: 0;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--color-border, #8a8f98) 24%, transparent);
+  background: color-mix(in srgb, var(--color-text, #d4d4d4) 5%, transparent);
+}
+
+.editor-indent-guide {
+  position: absolute;
+  width: 1px;
+  background: color-mix(in srgb, var(--color-border, #8a8f98) 42%, transparent);
+}
+
+.editor-indent-guide-active {
+  background: color-mix(in srgb, var(--accent, #6a9bcc) 52%, transparent);
+}
+
+.editor-visible-whitespace {
+  position: relative;
+}
+
+.editor-visible-whitespace::after {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--color-text-lighter, #8a8f98) 56%, transparent);
+  pointer-events: none;
+}
+
+.editor-visible-whitespace-space::after {
+  justify-content: center;
+  content: "·";
+}
+
+.editor-visible-whitespace-tab::after {
+  justify-content: flex-start;
+  content: "→";
+}
+
 /* Line structure in highlight layer */
 .highlight-layer-line {
   display: block;

@@ -24,6 +24,66 @@ function getSelectedLineRange(content: string, selectionStart: number, selection
   return { lineStart, lineEnd };
 }
 
+function countLineBreaks(text: string): number {
+  let count = 0;
+  for (let index = 0; index < text.length; index++) {
+    if (text.charCodeAt(index) === 10) {
+      count++;
+    }
+  }
+  return count;
+}
+
+function indentBlock(block: string, indent: string): string {
+  if (block.length === 0) return indent;
+
+  let result = indent;
+  for (let index = 0; index < block.length; index++) {
+    const char = block[index];
+    result += char;
+    if (char === "\n" && index < block.length - 1) {
+      result += indent;
+    }
+  }
+  return result;
+}
+
+interface OutdentBlockResult {
+  text: string;
+  firstRemoval: number;
+  totalRemoved: number;
+}
+
+function outdentBlock(block: string, tabSize: number): OutdentBlockResult {
+  let result = "";
+  let firstRemoval = 0;
+  let totalRemoved = 0;
+  let lineStart = 0;
+  let lineIndex = 0;
+
+  const appendLine = (lineEnd: number) => {
+    const line = block.slice(lineStart, lineEnd);
+    const removal = getOutdentLength(line, tabSize);
+    if (lineIndex === 0) {
+      firstRemoval = removal;
+    }
+    totalRemoved += removal;
+    result += line.slice(removal);
+    lineIndex++;
+  };
+
+  for (let index = 0; index < block.length; index++) {
+    if (block.charCodeAt(index) !== 10) continue;
+    appendLine(index);
+    result += "\n";
+    lineStart = index + 1;
+  }
+
+  appendLine(block.length);
+
+  return { text: result, firstRemoval, totalRemoved };
+}
+
 export function indentText(
   content: string,
   selectionStart: number,
@@ -39,9 +99,9 @@ export function indentText(
   }
 
   const { lineStart, lineEnd } = getSelectedLineRange(content, selectionStart, selectionEnd);
-  const selectedLines = content.slice(lineStart, lineEnd).split("\n");
-  const indentedBlock = selectedLines.map((line) => indent + line).join("\n");
-  const lineCount = selectedLines.length;
+  const selectedBlock = content.slice(lineStart, lineEnd);
+  const indentedBlock = indentBlock(selectedBlock, indent);
+  const lineCount = countLineBreaks(selectedBlock) + 1;
   const nextContent = content.slice(0, lineStart) + indentedBlock + content.slice(lineEnd);
 
   return {
@@ -68,17 +128,18 @@ export function outdentText(
   tabSize: number,
 ): TextOperationResult {
   const { lineStart, lineEnd } = getSelectedLineRange(content, selectionStart, selectionEnd);
-  const selectedLines = content.slice(lineStart, lineEnd).split("\n");
-  const removals = selectedLines.map((line) => getOutdentLength(line, tabSize));
-  const outdentedBlock = selectedLines.map((line, index) => line.slice(removals[index])).join("\n");
+  const {
+    text: outdentedBlock,
+    firstRemoval,
+    totalRemoved,
+  } = outdentBlock(content.slice(lineStart, lineEnd), tabSize);
   const nextContent = content.slice(0, lineStart) + outdentedBlock + content.slice(lineEnd);
   const removedBeforeStart =
     selectionStart === selectionEnd
-      ? Math.min(removals[0] ?? 0, Math.max(0, selectionStart - lineStart))
+      ? Math.min(firstRemoval, Math.max(0, selectionStart - lineStart))
       : selectionStart === lineStart
-        ? (removals[0] ?? 0)
+        ? firstRemoval
         : 0;
-  const totalRemoved = removals.reduce((sum, value) => sum + value, 0);
 
   return {
     content: nextContent,

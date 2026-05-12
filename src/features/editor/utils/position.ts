@@ -50,6 +50,43 @@ export const calculateCursorPositionFromContent = (offset: number, content: stri
   };
 };
 
+export function findLineIndexForOffset(lineOffsets: readonly number[], offset: number): number {
+  if (lineOffsets.length === 0) return 0;
+
+  let low = 0;
+  let high = lineOffsets.length - 1;
+  let line = 0;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const lineOffset = lineOffsets[mid] ?? 0;
+
+    if (lineOffset <= offset) {
+      line = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return line;
+}
+
+export function calculateLineColumnFromOffsets(
+  offset: number,
+  lineOffsets: readonly number[],
+  contentLength: number,
+): { line: number; column: number } {
+  const clampedOffset = Math.max(0, Math.min(offset, contentLength));
+  const line = findLineIndexForOffset(lineOffsets, clampedOffset);
+  const lineStartOffset = lineOffsets[line] ?? 0;
+
+  return {
+    line,
+    column: Math.max(0, clampedOffset - lineStartOffset),
+  };
+}
+
 export const calculateCursorPositionFromLineOffsets = (
   offset: number,
   lines: string[],
@@ -61,21 +98,7 @@ export const calculateCursorPositionFromLineOffsets = (
       : 0;
   const clampedOffset = Math.max(0, Math.min(offset, maxOffset));
 
-  let low = 0;
-  let high = Math.max(0, lineOffsets.length - 1);
-  let line = 0;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const lineOffset = lineOffsets[mid] ?? 0;
-
-    if (lineOffset <= clampedOffset) {
-      line = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
+  const line = findLineIndexForOffset(lineOffsets, clampedOffset);
 
   const lineText = lines[line] ?? "";
   const lineStartOffset = lineOffsets[line] ?? 0;
@@ -138,6 +161,62 @@ export const calculateOffsetFromContentPosition = (
   return content.length;
 };
 
+export const getLineTextFromContent = (content: string, line: number): string => {
+  const lineStartOffset = calculateOffsetFromContentPosition(content, line, 0);
+  if (lineStartOffset >= content.length) return "";
+
+  const lineEndOffset = content.indexOf("\n", lineStartOffset);
+  const end = lineEndOffset === -1 ? content.length : lineEndOffset;
+  const normalizedEnd = end > lineStartOffset && content.charCodeAt(end - 1) === 13 ? end - 1 : end;
+  return content.slice(lineStartOffset, normalizedEnd);
+};
+
+export const getLineTextsFromContent = (
+  content: string,
+  lineNumbers: Iterable<number>,
+): Map<number, string> => {
+  const targetLines = Array.from(
+    new Set(
+      Array.from(lineNumbers)
+        .filter((line) => Number.isFinite(line))
+        .map((line) => Math.trunc(line))
+        .filter((line) => line >= 0),
+    ),
+  ).sort((a, b) => a - b);
+  const result = new Map<number, string>();
+  if (targetLines.length === 0) return result;
+
+  let targetIndex = 0;
+  let currentLine = 0;
+  let lineStart = 0;
+
+  const pushLine = (lineEnd: number) => {
+    if (currentLine !== targetLines[targetIndex]) return;
+
+    const normalizedEnd =
+      lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13 ? lineEnd - 1 : lineEnd;
+    result.set(currentLine, content.slice(lineStart, normalizedEnd));
+
+    while (targetLines[targetIndex] === currentLine) {
+      targetIndex++;
+    }
+  };
+
+  for (let index = 0; index < content.length && targetIndex < targetLines.length; index++) {
+    if (content.charCodeAt(index) !== 10) continue;
+
+    pushLine(index);
+    currentLine++;
+    lineStart = index + 1;
+  }
+
+  if (targetIndex < targetLines.length) {
+    pushLine(content.length);
+  }
+
+  return result;
+};
+
 /**
  * Get line height based on font size
  */
@@ -150,47 +229,14 @@ export const getLineHeight = (
 };
 
 /**
- * Get character width based on font size using actual DOM measurement
- * This ensures pixel-perfect alignment with the textarea
- */
-export const getCharWidth = (
-  fontSize: number,
-  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
-): number => {
-  // Create a temporary element to measure character width
-  const measureElement = document.createElement("span");
-  measureElement.style.position = "absolute";
-  measureElement.style.visibility = "hidden";
-  measureElement.style.whiteSpace = "pre";
-  measureElement.style.fontSize = `${fontSize}px`;
-  measureElement.style.fontFamily = fontFamily;
-  measureElement.style.lineHeight = "1";
-  measureElement.style.padding = "0";
-  measureElement.style.margin = "0";
-  measureElement.style.border = "none";
-
-  measureElement.textContent = "M";
-
-  document.body.appendChild(measureElement);
-  const width = measureElement.getBoundingClientRect().width;
-  document.body.removeChild(measureElement);
-
-  // Round to avoid subpixel issues
-  return (
-    Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
-    EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER
-  );
-};
-
-/**
  * Character width cache to avoid repeated measurements
  */
 const charWidthCache = new Map<string, number>();
+const prewarmedFontConfigs = new Set<string>();
 
 /**
  * Canvas context for measuring text (reused to avoid creating multiple contexts)
  */
-let measureCanvas: HTMLCanvasElement | null = null;
 let measureContext: CanvasRenderingContext2D | null = null;
 
 /**
@@ -198,7 +244,7 @@ let measureContext: CanvasRenderingContext2D | null = null;
  */
 const getMeasureContext = (): CanvasRenderingContext2D => {
   if (!measureContext) {
-    measureCanvas = document.createElement("canvas");
+    const measureCanvas = document.createElement("canvas");
     measureContext = measureCanvas.getContext("2d", {
       // Performance optimization: we don't need alpha channel for text measurement
       alpha: false,
@@ -236,7 +282,8 @@ export const getCharWidthCached = (
   fontSize: number,
   fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 ): number => {
-  const cacheKey = `${char}-${fontSize}-${fontFamily}`;
+  const fontKey = `${fontSize}-${fontFamily}`;
+  const cacheKey = `${char}-${fontKey}`;
 
   if (charWidthCache.has(cacheKey)) {
     return charWidthCache.get(cacheKey)!;
@@ -253,8 +300,9 @@ export const getCharWidthCached = (
 
   charWidthCache.set(cacheKey, roundedWidth);
 
-  // Prewarm cache on first use for this font configuration
-  if (charWidthCache.size < 100) {
+  // Prewarm cache once per font configuration.
+  if (!prewarmedFontConfigs.has(fontKey)) {
+    prewarmedFontConfigs.add(fontKey);
     // Use requestIdleCallback if available, otherwise setTimeout
     const scheduleIdle =
       typeof requestIdleCallback === "function"
@@ -294,9 +342,17 @@ export const getAccurateCursorX = (
   return x;
 };
 
+export const measureTextWidth = (
+  text: string,
+  fontSize: number,
+  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  tabSize: number = 2,
+): number => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize);
+
 /**
  * Clear character width cache (useful when font changes)
  */
 export const clearCharWidthCache = () => {
   charWidthCache.clear();
+  prewarmedFontConfigs.clear();
 };

@@ -28,6 +28,14 @@ export interface EditorAPI {
   duplicateLine: () => void;
   deleteLine: () => void;
   toggleComment: () => void;
+  goToMatchingBracket: () => void;
+  selectToBracket: (selectBrackets?: boolean) => void;
+  removeBrackets: () => void;
+  expandSelection: () => void;
+  shrinkSelection: () => void;
+  insertCursorAbove: () => void;
+  insertCursorBelow: () => void;
+  insertCursorsAtLineEnds: () => void;
   moveLineUp: () => void;
   moveLineDown: () => void;
   copyLineUp: () => void;
@@ -58,6 +66,8 @@ export interface EditorSettings {
   tabSize: number;
   lineNumbers: boolean;
   wordWrap: boolean;
+  renderWhitespace: "none" | "boundary" | "trailing" | "all";
+  renderIndentGuides: boolean;
   theme: string;
 }
 
@@ -142,6 +152,8 @@ export interface LanguageContribution {
   id: string;
   extensions: string[];
   aliases?: string[];
+  filenames?: string[];
+  filenamePatterns?: string[];
   configuration?: string;
 }
 

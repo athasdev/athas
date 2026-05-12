@@ -103,7 +103,7 @@ export const CommandHeader = ({
   const clearActionsStack = useActionsStore.use.clearStack();
 
   return (
-    <div className="border-border border-b">
+    <div data-command-header className="border-border border-b">
       <div className="flex items-center gap-3 px-4 py-3">
         {children}
         <Button
@@ -149,7 +149,10 @@ interface CommandFooterProps {
 }
 
 export const CommandFooter = ({ children }: CommandFooterProps) => (
-  <div className="sticky bottom-0 border-border border-t bg-primary-bg px-2 py-2">
+  <div
+    data-command-footer
+    className="sticky bottom-0 border-border border-t bg-primary-bg px-2 py-2"
+  >
     <div className="flex items-center gap-1">{children}</div>
   </div>
 );

@@ -20,6 +20,12 @@ export const EditorSettings = () => {
     ],
     [],
   );
+  const renderWhitespaceOptions = [
+    { value: "none", label: "None" },
+    { value: "boundary", label: "Boundary" },
+    { value: "trailing", label: "Trailing" },
+    { value: "all", label: "All" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -108,6 +114,54 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.lineNumbers}
             onChange={(checked) => updateSetting("lineNumbers", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Render Whitespace"
+          description="Show visible markers for spaces and tabs"
+          onReset={() => updateSetting("renderWhitespace", getDefaultSetting("renderWhitespace"))}
+          canReset={settings.renderWhitespace !== getDefaultSetting("renderWhitespace")}
+        >
+          <Select
+            value={settings.renderWhitespace}
+            options={renderWhitespaceOptions}
+            onChange={(value) =>
+              updateSetting("renderWhitespace", value as typeof settings.renderWhitespace)
+            }
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="xs"
+            variant="default"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Indent Guides"
+          description="Show vertical guides for indentation levels"
+          onReset={() =>
+            updateSetting("renderIndentGuides", getDefaultSetting("renderIndentGuides"))
+          }
+          canReset={settings.renderIndentGuides !== getDefaultSetting("renderIndentGuides")}
+        >
+          <Switch
+            checked={settings.renderIndentGuides}
+            onChange={(checked) => updateSetting("renderIndentGuides", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Highlight Occurrences"
+          description="Highlight visible matches for the word under the cursor"
+          onReset={() =>
+            updateSetting("highlightOccurrences", getDefaultSetting("highlightOccurrences"))
+          }
+          canReset={settings.highlightOccurrences !== getDefaultSetting("highlightOccurrences")}
+        >
+          <Switch
+            checked={settings.highlightOccurrences}
+            onChange={(checked) => updateSetting("highlightOccurrences", checked)}
             size="sm"
           />
         </SettingRow>

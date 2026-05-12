@@ -208,7 +208,7 @@ interface EditorState {
     previousValue?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
-    options?: { contentAlreadyApplied?: boolean },
+    options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
   ) => void;
   filePath: string;
   editorRef: RefObject<HTMLDivElement | null> | null;
@@ -255,7 +255,7 @@ interface EditorStateActions {
       previousValue?: string,
       previousCursorPosition?: Position,
       previousSelection?: Range,
-      options?: { contentAlreadyApplied?: boolean },
+      options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
     ) => void,
   ) => void;
   setFileInfo: (filePath: string) => void;
@@ -438,9 +438,7 @@ export const useEditorStateStore = createSelectors(
             if (!state.multiCursorState) return state;
 
             const cursors = state.multiCursorState.cursors.map((cursor) =>
-              cursor.id === cursorId
-                ? { ...cursor, position, selection: selection ?? cursor.selection }
-                : cursor,
+              cursor.id === cursorId ? { ...cursor, position, selection } : cursor,
             );
 
             return {

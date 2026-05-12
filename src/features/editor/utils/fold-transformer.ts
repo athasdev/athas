@@ -34,8 +34,9 @@ export function transformContentForFolding(
   actualContent: string,
   collapsedLines: Set<number>,
   foldRegions: FoldRegion[],
+  actualLinesOverride?: readonly string[],
 ): TransformResult {
-  const actualLines = actualContent.split("\n");
+  const actualLines = actualLinesOverride ?? actualContent.split("\n");
   const virtualLines: string[] = [];
   const actualToVirtual = new Map<number, number>();
   const virtualToActual = new Map<number, number>();
@@ -165,8 +166,9 @@ export function applyVirtualEdit(
   actualContent: string,
   newVirtualContent: string,
   mapping: LineMapping,
+  actualLinesOverride?: readonly string[],
 ): string {
-  const actualLines = actualContent.split("\n");
+  const actualLines = actualLinesOverride ?? actualContent.split("\n");
   const newVirtualLines = newVirtualContent.split("\n");
   const newActualLines: string[] = [];
 
@@ -212,6 +214,23 @@ export function calculateActualOffset(actualLines: string[], line: number, colum
   return offset;
 }
 
+function getLineLengthFromOffsets(
+  content: string,
+  lineOffsets: readonly number[],
+  line: number,
+): number {
+  const lineStart = lineOffsets[line];
+  if (lineStart === undefined) return 0;
+
+  const nextLineStart = lineOffsets[line + 1] ?? content.length;
+  let lineEnd = Math.max(lineStart, nextLineStart);
+
+  if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 10) lineEnd--;
+  if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13) lineEnd--;
+
+  return lineEnd - lineStart;
+}
+
 /**
  * Get the actual line numbers that should be displayed in the gutter
  * Returns an array of actual line numbers for each virtual line
@@ -242,7 +261,6 @@ export function transformTokensForFolding(
 ): Token[] {
   if (tokens.length === 0) return [];
 
-  const actualLines = actualContent.split("\n");
   const actualLineOffsets = buildLineOffsetMap(actualContent);
   const virtualContent = virtualLines.join("\n");
   const virtualLineOffsets = buildLineOffsetMap(virtualContent);
@@ -253,12 +271,12 @@ export function transformTokensForFolding(
     const actualLine = mapping.virtualToActual.get(virtualLine);
     if (actualLine === undefined) continue;
 
-    const actualLineContent = actualLines[actualLine] ?? "";
     const actualLineStart = actualLineOffsets[actualLine] ?? 0;
-    const actualLineEnd = actualLineStart + actualLineContent.length;
+    const actualLineLength = getLineLengthFromOffsets(actualContent, actualLineOffsets, actualLine);
+    const actualLineEnd = actualLineStart + actualLineLength;
     const virtualLineContent = virtualLines[virtualLine] ?? "";
     const virtualLineStart = virtualLineOffsets[virtualLine] ?? 0;
-    const maxVirtualContentLength = Math.min(virtualLineContent.length, actualLineContent.length);
+    const maxVirtualContentLength = Math.min(virtualLineContent.length, actualLineLength);
 
     while (tokenIndex < tokens.length && tokens[tokenIndex].end <= actualLineStart) {
       tokenIndex++;
@@ -270,7 +288,7 @@ export function transformTokensForFolding(
       if (token.start >= actualLineEnd) break;
 
       const startInLine = Math.max(0, token.start - actualLineStart);
-      const endInLine = Math.min(actualLineContent.length, token.end - actualLineStart);
+      const endInLine = Math.min(actualLineLength, token.end - actualLineStart);
       const clampedEndInVirtual = Math.min(endInLine, maxVirtualContentLength);
 
       if (startInLine >= clampedEndInVirtual) {

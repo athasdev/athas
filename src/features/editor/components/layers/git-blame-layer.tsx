@@ -1,5 +1,6 @@
-import { forwardRef, memo, useLayoutEffect, useRef, useState } from "react";
+import { forwardRef, memo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { measureTextWidth } from "@/features/editor/utils/position";
 import type { ViewPosition } from "@/features/editor/view-model/view-layout";
 import { InlineGitBlame } from "@/features/git/components/git-inline-blame";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
@@ -35,22 +36,9 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
   ) => {
     const { getBlameForLine } = useGitBlame(filePath);
     const blameLine = getBlameForLine(cursorLine);
-    const measureRef = useRef<HTMLSpanElement>(null);
-    const [lineContentWidth, setLineContentWidth] = useState(0);
 
     const currentLineContent = lines[visualCursorLine] || "";
-
-    // Reset width when file changes to prevent stale positioning during file switches
-    useLayoutEffect(() => {
-      setLineContentWidth(0);
-    }, [filePath]);
-
-    // Measure the actual rendered width using a hidden element
-    useLayoutEffect(() => {
-      if (measureRef.current) {
-        setLineContentWidth(measureRef.current.offsetWidth);
-      }
-    }, [currentLineContent, fontSize, fontFamily, tabSize, filePath]);
+    const lineContentWidth = measureTextWidth(currentLineContent, fontSize, fontFamily, tabSize);
 
     const shouldShowBlame = !!blameLine && (wordWrap || lineContentWidth > 0);
 
@@ -128,20 +116,6 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
           </div>
         ) : (
           <>
-            {/* Hidden element to measure actual text width - always rendered */}
-            <span
-              ref={measureRef}
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                visibility: "hidden",
-                whiteSpace: "pre",
-                tabSize,
-              }}
-            >
-              {currentLineContent}
-            </span>
-
             {shouldShowBlame && (
               <div
                 className="pointer-events-auto absolute flex items-center"

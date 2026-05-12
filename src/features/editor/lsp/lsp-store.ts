@@ -122,6 +122,7 @@ interface LspActions {
     cursorPos: number;
     value: string;
     editorRef: React.RefObject<HTMLDivElement | null>;
+    manual?: boolean;
   }) => Promise<void>;
 
   performCompletionRequest: (params: {
@@ -129,6 +130,7 @@ interface LspActions {
     cursorPos: number;
     value: string;
     editorRef: React.RefObject<HTMLDivElement | null>;
+    manual?: boolean;
   }) => Promise<void>;
 
   getCacheKey: (filePath: string, line: number, character: number) => string;
@@ -239,14 +241,20 @@ export const useLspStore = createSelectors(
         }
       },
 
-      requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
+      requestCompletion: async ({ filePath, cursorPos, value, editorRef, manual = false }) => {
         const { actions } = get();
         logger.debug("LSP", "requestCompletion called", { filePath, cursorPos });
         // Debouncing is handled by use-lsp-integration, execute immediately
-        await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
+        await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef, manual });
       },
 
-      performCompletionRequest: async ({ filePath, cursorPos, value, editorRef }) => {
+      performCompletionRequest: async ({
+        filePath,
+        cursorPos,
+        value,
+        editorRef,
+        manual = false,
+      }) => {
         const {
           getCompletions,
           isLanguageSupported,
@@ -277,7 +285,7 @@ export const useLspStore = createSelectors(
         const character = cursorPosition.column;
 
         // Hide immediately when cursor is at start of line (after deletion) or no prefix
-        if (character === 0 || (prefix.length === 0 && cursorPos === 0)) {
+        if (!manual && (character === 0 || (prefix.length === 0 && cursorPos === 0))) {
           completionActions.setIsLspCompletionVisible(false);
           return;
         }
@@ -291,7 +299,7 @@ export const useLspStore = createSelectors(
         const currentChar = cursorPos > 0 ? value[cursorPos - 1] : "";
 
         // Only skip if we just typed whitespace - use delayed hide to prevent flicker
-        if (/\s/.test(currentChar)) {
+        if (!manual && /\s/.test(currentChar)) {
           actions.scheduleHideCompletion();
           return;
         }
@@ -329,6 +337,13 @@ export const useLspStore = createSelectors(
               } else {
                 actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
+            } else if (manual) {
+              actions.cancelHideCompletion();
+              completionActions.setFilteredCompletions(
+                completions.map((item) => ({ item, score: 1, indices: [] })),
+              );
+              completionActions.setIsLspCompletionVisible(true);
+              completionActions.setSelectedLspIndex(0);
             } else {
               actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
             }
@@ -412,6 +427,13 @@ export const useLspStore = createSelectors(
                 logger.debug("LSP", "No filtered results, hiding");
                 actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
+            } else if (manual) {
+              actions.cancelHideCompletion();
+              completionActions.setFilteredCompletions(
+                completions.map((item) => ({ item, score: 1, indices: [] })),
+              );
+              completionActions.setIsLspCompletionVisible(true);
+              completionActions.setSelectedLspIndex(0);
             } else {
               logger.debug("LSP", "No prefix, hiding completions");
               actions.scheduleHideCompletion(); // Delayed hide to prevent flicker

@@ -20,7 +20,7 @@ interface GutterProps {
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  textareaRef: React.RefObject<HTMLElement | null>;
   virtualize?: boolean;
   filePath?: string;
   onLineClick?: (lineNumber: number) => void;

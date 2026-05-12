@@ -1,5 +1,5 @@
 /**
- * Parser for VS Code-style keyboard shortcuts
+ * Parser for keyboard shortcut strings
  * Examples: "cmd+s", "ctrl+shift+p", "cmd+k cmd+t"
  */
 

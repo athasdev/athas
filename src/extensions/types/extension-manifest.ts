@@ -13,6 +13,7 @@ export type PlatformArch =
   | "win32-x64";
 
 export type ToolRuntime = "bun" | "node" | "python" | "go" | "rust" | "binary";
+export type ExtensionKind = "ui" | "workspace" | "web";
 
 export interface ExtensionManifest {
   // Core metadata
@@ -25,6 +26,13 @@ export interface ExtensionManifest {
 
   // Categories
   categories: ExtensionCategory[];
+
+  // Engine compatibility metadata from declarative package manifests.
+  engines?: {
+    athas?: string;
+    vscode?: string;
+    [engine: string]: string | undefined;
+  };
 
   // Language support
   languages?: LanguageContribution[];
@@ -64,6 +72,9 @@ export interface ExtensionManifest {
 
   // Dependencies
   dependencies?: Record<string, string>;
+  extensionDependencies?: string[];
+  extensionPack?: string[];
+  extensionKind?: ExtensionKind | ExtensionKind[];
 
   // Activation events
   activationEvents?: string[];
@@ -73,6 +84,11 @@ export interface ExtensionManifest {
 
   // Entry point (for custom extension code)
   main?: string;
+  browser?: string;
+
+  // Runtime capability metadata used by Athas extension packages before they
+  // are normalized into concrete LSP/formatter/linter/grammar fields.
+  capabilities?: Record<string, unknown>;
 
   // Extension icon
   icon?: string;
@@ -108,6 +124,7 @@ export interface LanguageContribution {
   extensions: string[]; // File extensions (e.g., [".rs"])
   aliases?: string[]; // Language aliases
   filenames?: string[]; // Exact filenames (e.g., ["Dockerfile", ".bashrc"])
+  filenamePatterns?: string[]; // Filename globs (e.g., ["tsconfig.*.json"])
   configuration?: string; // Path to language configuration
   firstLine?: string; // First line regex match
 }
@@ -428,10 +445,18 @@ export interface PlatformPackage {
 }
 
 export interface UIContributions {
-  sidebarViews?: SidebarViewContribution[];
-  toolbarActions?: ToolbarActionContribution[];
+  languages?: LanguageContribution[];
+  databaseProviders?: DatabaseProviderContribution[];
+  agents?: AgentContribution[];
+  grammars?: GrammarConfiguration[];
+  snippets?: SnippetContribution[];
+  themes?: ThemeContribution[];
+  iconThemes?: IconThemeContribution[];
+  keybindings?: KeybindingContribution[];
   commands?: CommandContribution[];
   menus?: MenuContribution[];
+  sidebarViews?: SidebarViewContribution[];
+  toolbarActions?: ToolbarActionContribution[];
 }
 
 export interface SidebarViewContribution {

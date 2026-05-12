@@ -5,6 +5,7 @@ import {
   type TextOperationResult,
   toggleCaseText,
 } from "../utils/text-operations";
+import { readEditorClipboardText, writeEditorClipboardText } from "../utils/clipboard";
 
 interface UseEditorOperationsParams {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -38,18 +39,36 @@ export function useEditorOperations({
 
   const copy = useCallback(() => {
     if (!inputRef.current) return;
-    document.execCommand("copy");
+    const textarea = inputRef.current;
+    const start = Math.min(textarea.selectionStart, textarea.selectionEnd);
+    const end = Math.max(textarea.selectionStart, textarea.selectionEnd);
+    if (start === end) return;
+
+    void writeEditorClipboardText(textarea.value.slice(start, end));
   }, [inputRef]);
 
   const cut = useCallback(() => {
     if (!inputRef.current) return;
-    document.execCommand("cut");
-  }, [inputRef]);
+    const textarea = inputRef.current;
+    const start = Math.min(textarea.selectionStart, textarea.selectionEnd);
+    const end = Math.max(textarea.selectionStart, textarea.selectionEnd);
+    if (start === end) return;
+
+    void (async () => {
+      await writeEditorClipboardText(textarea.value.slice(start, end));
+      if (!bufferId) return;
+
+      const newContent = content.substring(0, start) + content.substring(end);
+      textarea.value = newContent;
+      textarea.selectionStart = textarea.selectionEnd = start;
+      handleInput(newContent);
+    })();
+  }, [bufferId, content, handleInput, inputRef]);
 
   const paste = useCallback(async () => {
     if (!inputRef.current) return;
     try {
-      const text = await navigator.clipboard.readText();
+      const text = await readEditorClipboardText();
       const textarea = inputRef.current;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;

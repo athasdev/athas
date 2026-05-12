@@ -78,29 +78,55 @@ export function filePathFromUri(uri: string): string {
   }
 }
 
-export function offsetFromPosition(content: string, position: LspPosition): number {
-  const lines = content.split("\n");
-  let offset = 0;
+function buildLineStartOffsets(content: string): number[] {
+  const offsets = [0];
 
-  for (let index = 0; index < Math.min(position.line, lines.length); index++) {
-    offset += lines[index].length + 1;
+  for (let index = 0; index < content.length; index++) {
+    if (content.charCodeAt(index) === 10) {
+      offsets.push(index + 1);
+    }
   }
 
-  const line = lines[position.line] ?? "";
-  return offset + Math.max(0, Math.min(position.character, line.length));
+  return offsets;
+}
+
+function offsetFromPositionWithLineStarts(
+  content: string,
+  position: LspPosition,
+  lineStarts: number[],
+): number {
+  const targetLine = Math.max(0, Math.trunc(position.line));
+  if (targetLine >= lineStarts.length) {
+    return content.length;
+  }
+
+  const lineStart = lineStarts[targetLine] ?? 0;
+  const nextLineStart = lineStarts[targetLine + 1];
+  const lineEnd =
+    nextLineStart === undefined ? content.length : Math.max(lineStart, nextLineStart - 1);
+  const character = Math.max(0, Math.trunc(position.character));
+
+  return Math.max(
+    0,
+    Math.min(content.length, lineStart + Math.min(character, lineEnd - lineStart)),
+  );
+}
+
+export function offsetFromPosition(content: string, position: LspPosition): number {
+  return offsetFromPositionWithLineStarts(content, position, buildLineStartOffsets(content));
 }
 
 export function applyTextEditsToContent(content: string, edits: LspTextEdit[]): string {
-  const sortedEdits = [...edits].sort((a, b) => {
-    const aOffset = offsetFromPosition(content, a.range.start);
-    const bOffset = offsetFromPosition(content, b.range.start);
-    return bOffset - aOffset;
-  });
+  const lineStarts = buildLineStartOffsets(content);
+  const sortedEdits = edits
+    .map((edit) => ({
+      edit,
+      startOffset: offsetFromPositionWithLineStarts(content, edit.range.start, lineStarts),
+      endOffset: offsetFromPositionWithLineStarts(content, edit.range.end, lineStarts),
+    }))
+    .sort((a, b) => b.startOffset - a.startOffset || b.endOffset - a.endOffset);
 
-  return sortedEdits.reduce((nextContent, edit) => {
-    const startOffset = offsetFromPosition(nextContent, edit.range.start);
-    const endOffset = offsetFromPosition(nextContent, edit.range.end);
-
+  return sortedEdits.reduce((nextContent, { edit, startOffset, endOffset }) => {
     return nextContent.slice(0, startOffset) + edit.newText + nextContent.slice(endOffset);
   }, content);
 }

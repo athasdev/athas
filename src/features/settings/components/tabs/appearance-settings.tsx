@@ -400,7 +400,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Open Projects In New Window"
-          description="When the current window already has a project, opening another folder uses a separate window"
+          description="In window title mode, opening another folder uses a separate window when a project is already open"
           onReset={() =>
             updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
           }

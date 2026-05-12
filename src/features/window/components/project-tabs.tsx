@@ -218,7 +218,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           ),
           label: <span className="max-w-32 truncate">{tab.name}</span>,
           className: cn(
-            "px-6",
+            "border border-transparent px-6",
             isRemote &&
               (tab.isActive ? "bg-sky-500/15 text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
             isSwitchingProject && "cursor-wait",
@@ -251,7 +251,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
 
   return (
     <>
-      <div className="group flex min-w-0 items-stretch">
+      <div className="group flex min-w-0 items-center">
         <Tabs
           items={projectTabItems}
           size="xs"
@@ -271,14 +271,14 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
               currentIds.splice(targetIndex, 0, tabId);
             });
           }}
-          className="scrollbar-hidden min-w-0 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
+          className="athas-title-project-tabs-list scrollbar-hidden min-w-0 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
         />
-        <div className="w-0 overflow-hidden transition-[width,opacity] duration-150 ease-out group-hover:w-6 focus-within:w-6">
+        <div className="ml-1 flex h-6 w-7 shrink-0 items-center">
           <Button
             type="button"
             variant="ghost"
             onClick={handleAddProject}
-            className="h-full w-6 rounded-none border-0 text-text-lighter opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 hover:bg-hover/60 hover:text-text"
+            className="athas-title-project-add-button h-6 w-7 rounded-md border border-transparent px-0 text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
             tooltip="Open folder"
             aria-label="Open folder"
             compact

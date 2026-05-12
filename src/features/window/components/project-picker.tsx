@@ -216,7 +216,12 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
 
   return (
     <>
-      <Command isVisible={isOpen} onClose={onClose} title="Open Project">
+      <Command
+        isVisible={isOpen}
+        onClose={onClose}
+        title="Open Project"
+        className="athas-project-picker-command"
+      >
         <CommandHeader onClose={onClose}>
           <CommandInput
             ref={inputRef}

@@ -264,6 +264,8 @@ export function SearchReplaceRow({
   onReplace,
   onReplaceAll,
   canReplace,
+  canReplaceAll = canReplace,
+  replaceAllTooltip,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -272,6 +274,8 @@ export function SearchReplaceRow({
   onReplace: () => void;
   onReplaceAll: () => void;
   canReplace: boolean;
+  canReplaceAll?: boolean;
+  replaceAllTooltip?: string;
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
@@ -302,9 +306,10 @@ export function SearchReplaceRow({
       <Button
         type="button"
         onClick={onReplaceAll}
-        disabled={!canReplace}
+        disabled={!canReplaceAll}
         variant="ghost"
-        className={searchActionButtonVariants({ disabled: !canReplace })}
+        className={searchActionButtonVariants({ disabled: !canReplaceAll })}
+        tooltip={replaceAllTooltip}
         compact
       >
         All
@@ -398,4 +403,5 @@ export const SEARCH_TOGGLE_ICONS = {
   caseSensitive: <CaseSensitive />,
   wholeWord: <WholeWord />,
   regex: <Regex />,
+  preserveCase: <span className="ui-font ui-text-[11px] font-semibold">Aa</span>,
 };

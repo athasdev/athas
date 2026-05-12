@@ -2,13 +2,19 @@
  * Search Highlight Layer - Renders search match highlights
  * Shows all matches with yellow background, current match with orange
  *
- * Uses the same single-div + manual padding + in-component measurement span
- * pattern as VimCursorLayer for consistent, accurate font metrics.
+ * Uses cached canvas text measurement to avoid forcing layout while search
+ * matches are mapped into overlay boxes.
  */
 
-import { forwardRef, memo, useEffect, useRef, useState } from "react";
+import { forwardRef, memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
+import {
+  calculateLineColumnFromOffsets,
+  findLineIndexForOffset,
+  measureTextWidth,
+} from "../../utils/position";
 import { calculateSelectionBoxes } from "../../utils/selection-boxes";
+import { getSearchMatchesInOffsetRange, getSearchViewportOffsetRange } from "../../utils/search";
 import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface SearchMatch {
@@ -26,6 +32,8 @@ interface SearchHighlightLayerProps {
   lines: string[];
   lineOffsets: number[];
   contentLength: number;
+  lineCount?: number;
+  lineTextResolver?: (lineIndex: number) => string;
   viewportRange?: { startLine: number; endLine: number };
   viewLayout?: EditorViewLayout;
 }
@@ -40,41 +48,6 @@ interface HighlightBox {
 
 const VIEWPORT_BUFFER_LINES = 20;
 
-function findLineForOffset(offset: number, lineOffsets: number[]): number {
-  if (lineOffsets.length === 0) return 0;
-
-  let low = 0;
-  let high = lineOffsets.length - 1;
-  let result = 0;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    if (lineOffsets[mid] <= offset) {
-      result = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  return result;
-}
-
-function offsetToLineColumn(
-  offset: number,
-  lineOffsets: number[],
-  contentLength: number,
-): { line: number; column: number } {
-  const clampedOffset = Math.max(0, Math.min(offset, contentLength));
-  const line = findLineForOffset(clampedOffset, lineOffsets);
-  const lineStartOffset = lineOffsets[line] ?? 0;
-
-  return {
-    line,
-    column: Math.max(0, clampedOffset - lineStartOffset),
-  };
-}
-
 const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlightLayerProps>(
   (
     {
@@ -87,36 +60,38 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
       lines,
       lineOffsets,
       contentLength,
+      lineCount,
+      lineTextResolver,
       viewportRange,
       viewLayout,
     },
     ref,
   ) => {
-    const measureRef = useRef<HTMLSpanElement>(null);
-    const [highlightBoxes, setHighlightBoxes] = useState<HighlightBox[]>([]);
-
-    // Compute highlight boxes in useEffect so measureRef is available
-    useEffect(() => {
-      if (!measureRef.current) return;
-
-      const measure = measureRef.current;
+    const highlightBoxes = useMemo<HighlightBox[]>(() => {
       const boxes: HighlightBox[] = [];
+      const totalLines = lineCount ?? lines.length;
       const viewportStartLine = Math.max(
         0,
         (viewportRange?.startLine ?? 0) - VIEWPORT_BUFFER_LINES,
       );
       const viewportEndLine = Math.min(
-        lines.length,
-        (viewportRange?.endLine ?? lines.length) + VIEWPORT_BUFFER_LINES,
+        totalLines,
+        (viewportRange?.endLine ?? totalLines) + VIEWPORT_BUFFER_LINES,
       );
+      const viewportOffsetRange = getSearchViewportOffsetRange(
+        lineOffsets,
+        contentLength,
+        viewportStartLine,
+        viewportEndLine,
+      );
+      const visibleMatches = getSearchMatchesInOffsetRange(searchMatches, viewportOffsetRange);
 
       const getTextWidth = (text: string): number => {
-        measure.textContent = text;
-        return measure.getBoundingClientRect().width;
+        return measureTextWidth(text, fontSize, fontFamily, tabSize);
       };
 
       if (viewLayout) {
-        searchMatches.forEach((match, matchIndex) => {
+        visibleMatches.forEach(({ match, index: matchIndex }) => {
           const isCurrent = matchIndex === currentMatchIndex;
           const matchBoxes = calculateSelectionBoxes({
             selectionOffsets: {
@@ -128,6 +103,10 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
             contentLength,
             lineHeight,
             measureText: getTextWidth,
+            viewportRange: {
+              startLine: viewportStartLine,
+              endLine: viewportEndLine,
+            },
             viewLayout,
           });
 
@@ -142,22 +121,24 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
           );
         });
 
-        setHighlightBoxes(boxes);
-        return;
+        return boxes;
       }
 
       const getPosition = (line: number, column: number): { top: number; left: number } => {
         const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
-        const lineText = lines[line] || "";
+        const lineText = lineTextResolver?.(line) ?? lines[line] ?? "";
         const textBeforeColumn = lineText.substring(0, column);
         const width = getTextWidth(textBeforeColumn);
         return { top, left: width + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
       };
 
-      searchMatches.forEach((match, matchIndex) => {
-        const startPos = offsetToLineColumn(match.start, lineOffsets, contentLength);
-        const endPos = offsetToLineColumn(match.end, lineOffsets, contentLength);
-        const overlapEndLine = findLineForOffset(Math.max(match.start, match.end - 1), lineOffsets);
+      visibleMatches.forEach(({ match, index: matchIndex }) => {
+        const startPos = calculateLineColumnFromOffsets(match.start, lineOffsets, contentLength);
+        const endPos = calculateLineColumnFromOffsets(match.end, lineOffsets, contentLength);
+        const overlapEndLine = findLineIndexForOffset(
+          lineOffsets,
+          Math.max(match.start, match.end - 1),
+        );
 
         if (
           startPos.line >= viewportEndLine ||
@@ -175,7 +156,7 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
           }
 
           const { top, left } = getPosition(startPos.line, startPos.column);
-          const lineText = lines[startPos.line] || "";
+          const lineText = lineTextResolver?.(startPos.line) ?? lines[startPos.line] ?? "";
           const matchText = lineText.substring(startPos.column, endPos.column);
           const width = getTextWidth(matchText);
 
@@ -191,7 +172,7 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
           const lastVisibleLine = Math.min(endPos.line, viewportEndLine - 1);
 
           for (let line = firstVisibleLine; line <= lastVisibleLine; line++) {
-            const lineText = lines[line] || "";
+            const lineText = lineTextResolver?.(line) ?? lines[line] ?? "";
             let startCol: number;
             let endCol: number;
 
@@ -223,16 +204,18 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
         }
       });
 
-      setHighlightBoxes(boxes);
+      return boxes;
     }, [
-      searchMatches,
-      currentMatchIndex,
       contentLength,
-      lineOffsets,
-      lines,
-      lineHeight,
-      fontSize,
+      currentMatchIndex,
       fontFamily,
+      fontSize,
+      lineCount,
+      lineHeight,
+      lineOffsets,
+      lineTextResolver,
+      lines,
+      searchMatches,
       tabSize,
       viewportRange,
       viewLayout,
@@ -246,19 +229,6 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
         className="search-highlight-layer pointer-events-none absolute inset-0 z-10"
         style={{ willChange: "transform" }}
       >
-        {/* Hidden measurement span — lives in the editor DOM for accurate font metrics */}
-        <span
-          ref={measureRef}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            visibility: "hidden",
-            whiteSpace: "pre",
-            fontSize: `${fontSize}px`,
-            fontFamily,
-            tabSize,
-          }}
-        />
         {highlightBoxes.map((box, index) => (
           <div
             key={index}
@@ -290,6 +260,8 @@ export const SearchHighlightLayer = memo(SearchHighlightLayerComponent, (prev, n
     prev.lines === next.lines &&
     prev.lineOffsets === next.lineOffsets &&
     prev.contentLength === next.contentLength &&
+    prev.lineCount === next.lineCount &&
+    prev.lineTextResolver === next.lineTextResolver &&
     prev.viewLayout === next.viewLayout &&
     prev.viewportRange?.startLine === next.viewportRange?.startLine &&
     prev.viewportRange?.endLine === next.viewportRange?.endLine

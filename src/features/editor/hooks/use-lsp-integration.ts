@@ -358,6 +358,38 @@ export const useLspIntegration = ({
     };
   }, [enabled, filePath, lspActions, isLspSupported, editorRef]);
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleTriggerSuggest = () => {
+      if (
+        !filePath ||
+        !editorRef.current ||
+        !isLspSupported ||
+        !openedDocumentsRef.current.has(filePath)
+      ) {
+        return;
+      }
+
+      const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
+      if (!buffer || !hasTextContent(buffer)) return;
+
+      const cursorOffset = cursorPositionRef.current.offset;
+      completionTriggerOffsetRef.current = cursorOffset;
+
+      void lspActions.requestCompletion({
+        filePath,
+        cursorPos: cursorOffset,
+        value: buffer.content,
+        editorRef: editorRef as RefObject<HTMLDivElement | null>,
+        manual: true,
+      });
+    };
+
+    window.addEventListener("editor-trigger-suggest", handleTriggerSuggest);
+    return () => window.removeEventListener("editor-trigger-suggest", handleTriggerSuggest);
+  }, [enabled, filePath, lspActions, isLspSupported, editorRef]);
+
   const prevInputTimestampRef = useRef<number>(0);
 
   return {

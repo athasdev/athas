@@ -5,6 +5,7 @@ import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
   getProviderApiToken,
@@ -365,20 +366,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.title = title;
             }
           });
-          void import("@/features/editor/stores/buffer-store")
-            .then(({ useBufferStore }) => {
-              const { buffers, actions } = useBufferStore.getState();
-              for (const buffer of buffers) {
-                if (
-                  buffer.type === "agent" &&
-                  buffer.sessionId === chatId &&
-                  buffer.name !== title
-                ) {
-                  actions.updateBuffer({ ...buffer, name: title });
-                }
+          try {
+            const { buffers, actions } = useBufferStore.getState();
+            for (const buffer of buffers) {
+              if (buffer.type === "agent" && buffer.sessionId === chatId && buffer.name !== title) {
+                actions.updateBuffer({ ...buffer, name: title });
               }
-            })
-            .catch((error) => console.error("Failed to sync agent tab title:", error));
+            }
+          } catch (error) {
+            console.error("Failed to sync agent tab title:", error);
+          }
           // Save to SQLite
           get().syncChatToDatabase(chatId);
         },

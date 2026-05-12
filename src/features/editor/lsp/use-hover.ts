@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { Hover, MarkedString, MarkupContent } from "vscode-languageserver-types";
+import type { Hover } from "vscode-languageserver-types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import {
@@ -9,6 +9,7 @@ import {
 import { useEditorUIStore } from "../stores/ui-store";
 import { logger } from "../utils/logger";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
+import { formatHoverContents } from "./hover-content";
 
 interface UseHoverProps {
   getHover?: (filePath: string, line: number, character: number) => Promise<Hover | null>;
@@ -145,38 +146,7 @@ export const useHover = ({
             if (!useEditorUIStore.getState().isHovering) return;
             logger.debug("Editor", `Hover result:`, hoverResult);
             if (hoverResult?.contents) {
-              let content = "";
-
-              const formatHoverItem = (item: string | MarkedString | MarkupContent): string => {
-                if (typeof item === "string") {
-                  return item;
-                }
-                if ("language" in item && item.language && item.value) {
-                  const singleLine = !item.value.includes("\n");
-                  // Keep single-line signatures compact in tooltip.
-                  if (singleLine && item.value.length <= 220) {
-                    return `\`${item.value}\``;
-                  }
-                  return `\`\`\`${item.language}\n${item.value}\n\`\`\``;
-                }
-                if ("kind" in item && item.value) {
-                  return item.value;
-                }
-                return "";
-              };
-
-              if (typeof hoverResult.contents === "string") {
-                content = hoverResult.contents;
-              } else if (Array.isArray(hoverResult.contents)) {
-                content = hoverResult.contents.map(formatHoverItem).filter(Boolean).join("\n");
-              } else {
-                content = formatHoverItem(hoverResult.contents);
-              }
-
-              content = content
-                .replace(/^\s*---+\s*$/gm, "")
-                .replace(/\n{3,}/g, "\n\n")
-                .trim();
+              const content = formatHoverContents(hoverResult.contents);
 
               if (content.trim()) {
                 const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;

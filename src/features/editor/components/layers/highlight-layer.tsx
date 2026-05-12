@@ -16,7 +16,13 @@ import {
   type DiagnosticDecoration,
 } from "../../decorations/diagnostic-decorations";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
-import { countLines, sliceContentLines } from "../../utils/large-file";
+import { countLines, sliceContentLines, sliceContentLinesByOffsets } from "../../utils/large-file";
+import { buildTokenOverlapIndex, findFirstTokenOverlappingOffset } from "../../utils/token-layers";
+import {
+  createVisibleWhitespaceMask,
+  splitVisibleWhitespaceSegments,
+} from "../../utils/visible-whitespace";
+import type { RenderWhitespaceMode } from "@/features/settings/types/settings";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;
@@ -37,6 +43,7 @@ interface HighlightLayerProps {
   lineHeight: number;
   tabSize?: number;
   wordWrap?: boolean;
+  renderWhitespace?: RenderWhitespaceMode;
   viewportRange?: { startLine: number; endLine: number };
   inlayHints?: InlayHint[];
   lineMapping?: LineMapping;
@@ -59,10 +66,19 @@ interface LineProps {
   lineIndex: number;
   inlayHints?: InlayHint[];
   diagnostics?: DiagnosticDecoration[];
+  renderWhitespace?: RenderWhitespaceMode;
 }
 
 const Line = memo<LineProps>(
-  ({ lineContent, tokens, foldedCount, lineIndex, inlayHints = [], diagnostics = [] }) => {
+  ({
+    lineContent,
+    tokens,
+    foldedCount,
+    lineIndex,
+    inlayHints = [],
+    diagnostics = [],
+    renderWhitespace = "none",
+  }) => {
     const accordionMeta = useMemo(() => parseDiffAccordionLine(lineContent), [lineContent]);
 
     const spans = useMemo((): ReactNode[] => {
@@ -71,6 +87,7 @@ const Line = memo<LineProps>(
       }
 
       const result: ReactNode[] = [];
+      const visibleWhitespaceMask = createVisibleWhitespaceMask(lineContent, renderWhitespace);
       let lastIndex = 0;
       let spanKey = 0;
       let lastTokenClass: string | undefined;
@@ -134,11 +151,34 @@ const Line = memo<LineProps>(
             ? `${className} ${getDiagnosticClassName(activeDiagnostic)}`
             : className;
 
-          result.push(
-            <span key={`${lineIndex}-${spanKey++}`} className={diagnosticClassName}>
-              {lineContent.substring(segmentStart, segmentEnd)}
-            </span>,
+          const segments = splitVisibleWhitespaceSegments(
+            lineContent,
+            segmentStart,
+            segmentEnd,
+            visibleWhitespaceMask,
           );
+
+          for (const segment of segments) {
+            if (segment.kind) {
+              result.push(
+                <span
+                  key={`${lineIndex}-${spanKey++}`}
+                  className={`${diagnosticClassName} editor-visible-whitespace editor-visible-whitespace-${segment.kind}`}
+                >
+                  {segment.text}
+                </span>,
+              );
+              continue;
+            }
+
+            if (segment.text.length > 0) {
+              result.push(
+                <span key={`${lineIndex}-${spanKey++}`} className={diagnosticClassName}>
+                  {segment.text}
+                </span>,
+              );
+            }
+          }
         }
       };
 
@@ -224,7 +264,7 @@ const Line = memo<LineProps>(
       appendHintsThrough(lineContent.length);
 
       return result;
-    }, [lineContent, tokens, lineIndex, inlayHints, diagnostics]);
+    }, [accordionMeta, lineContent, renderWhitespace, tokens, lineIndex, inlayHints, diagnostics]);
 
     if (accordionMeta) {
       const Icon = accordionMeta.name.endsWith(".json") ? FileJson2 : FileText;
@@ -266,7 +306,8 @@ const Line = memo<LineProps>(
       prev.tokens === next.tokens &&
       prev.inlayHints === next.inlayHints &&
       prev.diagnostics === next.diagnostics &&
-      prev.foldedCount === next.foldedCount
+      prev.foldedCount === next.foldedCount &&
+      prev.renderWhitespace === next.renderWhitespace
     );
   },
 );
@@ -288,6 +329,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       lineHeight,
       tabSize = 2,
       wordWrap = false,
+      renderWhitespace = "none",
       viewportRange,
       inlayHints = [],
       filePath,
@@ -318,6 +360,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       providedLineCount ?? (lazyLineSlicing ? countLines(normalizedContent) : lines.length);
 
     const sortedTokens = useMemo(() => [...tokens].sort((a, b) => a.start - b.start), [tokens]);
+    const tokenOverlapIndex = useMemo(() => buildTokenOverlapIndex(sortedTokens), [sortedTokens]);
     const lineTokensCacheRef = useRef<Map<number, LineTokensCacheEntry>>(new Map());
 
     // Calculate line offsets once when content changes, independent of viewport
@@ -337,6 +380,12 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       const endLine = viewportRange?.endLine ?? lineCount;
 
       if (lazyLineSlicing) return map;
+
+      const initialLineOffset = lineOffsets[startLine] ?? 0;
+      firstCandidateTokenIndex = findFirstTokenOverlappingOffset(
+        tokenOverlapIndex,
+        initialLineOffset,
+      );
 
       for (let lineIndex = startLine; lineIndex < Math.min(endLine, lineCount); lineIndex++) {
         const offset = lineOffsets[lineIndex];
@@ -388,7 +437,15 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 
       lineTokensCacheRef.current = nextCache;
       return map;
-    }, [lazyLineSlicing, lineCount, lines, sortedTokens, lineOffsets, viewportRange]);
+    }, [
+      lazyLineSlicing,
+      lineCount,
+      lines,
+      sortedTokens,
+      tokenOverlapIndex,
+      lineOffsets,
+      viewportRange,
+    ]);
 
     const lineHintsMap = useMemo(() => {
       const map = new Map<number, InlayHint[]>();
@@ -436,7 +493,14 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       const clampedStartLine = Math.max(0, Math.min(startLine, lineCount));
       const clampedEndLine = Math.min(endLine, lineCount);
       const visibleSlice = lazyLineSlicing
-        ? sliceContentLines(normalizedContent, clampedStartLine, clampedEndLine)
+        ? providedLineOffsets && providedLineOffsets.length > 0
+          ? sliceContentLinesByOffsets(
+              normalizedContent,
+              providedLineOffsets,
+              clampedStartLine,
+              clampedEndLine,
+            )
+          : sliceContentLines(normalizedContent, clampedStartLine, clampedEndLine)
         : null;
 
       const result: ReactNode[] = [];
@@ -479,6 +543,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
             diagnostics={lineDiagnostics}
             foldedCount={foldedCount}
             lineIndex={i}
+            renderWhitespace={renderWhitespace}
           />,
         );
 
@@ -515,9 +580,11 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       lineTokensMap,
       lineHintsMap,
       lineOffsets,
+      providedLineOffsets,
       viewportRange,
       lineHeight,
       foldMarkers,
+      renderWhitespace,
       viewZones,
       viewZonesByLine,
     ]);
@@ -565,7 +632,8 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
       prev.fontFamily === next.fontFamily &&
       prev.lineHeight === next.lineHeight &&
       prev.tabSize === next.tabSize &&
-      prev.wordWrap === next.wordWrap
+      prev.wordWrap === next.wordWrap &&
+      prev.renderWhitespace === next.renderWhitespace
     );
   }
 
@@ -585,7 +653,8 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
-    prev.wordWrap === next.wordWrap;
+    prev.wordWrap === next.wordWrap &&
+    prev.renderWhitespace === next.renderWhitespace;
 
   return shouldSkipRender;
 });

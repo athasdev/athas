@@ -144,6 +144,17 @@ export const SignatureHelpTooltip = ({
     };
   }, [fetchSignatureHelp]);
 
+  useEffect(() => {
+    const handleTriggerSignatureHelp = () => {
+      setTooltipCursorPosition(cursorPositionRef.current);
+      void fetchSignatureHelp();
+    };
+
+    window.addEventListener("editor-trigger-signature-help", handleTriggerSignatureHelp);
+    return () =>
+      window.removeEventListener("editor-trigger-signature-help", handleTriggerSignatureHelp);
+  }, [fetchSignatureHelp]);
+
   // Trigger on typing
   useEffect(() => {
     let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;

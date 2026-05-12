@@ -6,6 +6,14 @@ import { themeRegistry } from "../themes/theme-registry";
 import type { ThemeDefinition } from "../themes/types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
+function getThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
+  return [...(manifest.themes ?? []), ...(manifest.contributes?.themes ?? [])];
+}
+
+function getIconThemeContributions(manifest: ExtensionManifest): IconThemeContribution[] {
+  return [...(manifest.iconThemes ?? []), ...(manifest.contributes?.iconThemes ?? [])];
+}
+
 function toCssVariables(colors: Record<string, string>): Record<string, string> {
   const variables: Record<string, string> = {};
 
@@ -132,11 +140,11 @@ export async function activateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
-  for (const theme of manifest.themes ?? []) {
+  for (const theme of getThemeContributions(manifest)) {
     themeRegistry.registerTheme(toThemeDefinition(theme), { extensionId });
   }
 
-  for (const iconTheme of manifest.iconThemes ?? []) {
+  for (const iconTheme of getIconThemeContributions(manifest)) {
     iconThemeRegistry.registerTheme(toIconThemeDefinition(iconTheme), { extensionId });
   }
 }
@@ -145,8 +153,8 @@ export async function deactivateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
-  fallbackThemeIfNeeded(manifest.themes ?? []);
-  fallbackIconThemeIfNeeded(manifest.iconThemes ?? []);
+  fallbackThemeIfNeeded(getThemeContributions(manifest));
+  fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
   themeRegistry.unregisterThemesByExtension(extensionId);
   iconThemeRegistry.unregisterThemesByExtension(extensionId);
 }

@@ -6,6 +6,7 @@ import {
 } from "@/features/settings/config/typography-defaults";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useSettingsStore } from "@/features/settings/store";
+import type { RenderWhitespaceMode } from "@/features/settings/types/settings";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface EditorSettingsState {
@@ -15,6 +16,9 @@ interface EditorSettingsState {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  renderWhitespace: RenderWhitespaceMode;
+  renderIndentGuides: boolean;
+  highlightOccurrences: boolean;
   disabled: boolean;
   theme: string;
   actions: EditorSettingsActions;
@@ -27,6 +31,9 @@ interface EditorSettingsActions {
   setTabSize: (size: number) => void;
   setWordWrap: (wrap: boolean) => void;
   setLineNumbers: (show: boolean) => void;
+  setRenderWhitespace: (mode: RenderWhitespaceMode) => void;
+  setRenderIndentGuides: (show: boolean) => void;
+  setHighlightOccurrences: (show: boolean) => void;
   setDisabled: (disabled: boolean) => void;
   setTheme: (theme: string) => void;
 }
@@ -40,6 +47,9 @@ export const useEditorSettingsStore = createSelectors(
       tabSize: 2,
       wordWrap: false,
       lineNumbers: true,
+      renderWhitespace: "none",
+      renderIndentGuides: true,
+      highlightOccurrences: true,
       disabled: false,
       theme: "athas-dark",
       actions: {
@@ -49,6 +59,9 @@ export const useEditorSettingsStore = createSelectors(
         setTabSize: (size) => set({ tabSize: size }),
         setWordWrap: (wrap) => set({ wordWrap: wrap }),
         setLineNumbers: (show) => set({ lineNumbers: show }),
+        setRenderWhitespace: (mode) => set({ renderWhitespace: mode }),
+        setRenderIndentGuides: (show) => set({ renderIndentGuides: show }),
+        setHighlightOccurrences: (show) => set({ highlightOccurrences: show }),
         setDisabled: (disabled) => set({ disabled }),
         setTheme: (theme) => set({ theme }),
       },
@@ -65,7 +78,11 @@ useSettingsStore.subscribe((state) => {
     tabSize,
     wordWrap,
     lineNumbers,
+    renderWhitespace,
+    renderIndentGuides,
+    highlightOccurrences,
     horizontalTabScroll,
+    theme,
   } = state.settings;
   const actions = useEditorSettingsStore.getState().actions;
 
@@ -75,4 +92,8 @@ useSettingsStore.subscribe((state) => {
   actions.setTabSize(tabSize);
   actions.setWordWrap(wordWrap || horizontalTabScroll);
   actions.setLineNumbers(lineNumbers);
+  actions.setRenderWhitespace(renderWhitespace);
+  actions.setRenderIndentGuides(renderIndentGuides);
+  actions.setHighlightOccurrences(highlightOccurrences);
+  actions.setTheme(theme);
 });

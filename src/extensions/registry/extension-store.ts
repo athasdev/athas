@@ -34,7 +34,11 @@ import {
 } from "@/features/telemetry/services/telemetry";
 
 function isBuiltInDatabaseExtension(manifest: ExtensionManifest): boolean {
-  return manifest.databaseProviders?.some((provider) => provider.id === "sqlite") ?? false;
+  return (
+    manifest.databaseProviders?.some((provider) => provider.id === "sqlite") ||
+    manifest.contributes?.databaseProviders?.some((provider) => provider.id === "sqlite") ||
+    false
+  );
 }
 
 interface ExtensionStoreState {

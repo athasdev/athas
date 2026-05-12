@@ -150,4 +150,26 @@ describe("calculateSelectionBoxes", () => {
       height: 20,
     });
   });
+
+  it("renders only viewport selection boxes when line text is resolved lazily", () => {
+    const lineCount = 100_000;
+    const lineOffsets = Array.from({ length: lineCount }, (_, index) => index * 11);
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: 0, end: lineOffsets[lineCount - 1] + 10 },
+      lines: [],
+      lineOffsets,
+      contentLength: lineOffsets[lineCount - 1] + 10,
+      lineHeight: 20,
+      measureText,
+      lineTextResolver: (lineIndex) => `line-${String(lineIndex).padStart(5, "0")}`,
+      viewportRange: { startLine: 500, endLine: 503 },
+    });
+
+    expect(boxes).toHaveLength(3);
+    expect(boxes.map((box) => box.top)).toEqual([
+      500 * 20 + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      501 * 20 + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      502 * 20 + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+    ]);
+  });
 });

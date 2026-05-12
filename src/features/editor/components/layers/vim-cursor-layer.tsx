@@ -3,9 +3,10 @@
  * The native browser caret is hidden in these modes, so we render a custom cursor
  */
 
-import { forwardRef, memo, useEffect, useRef, useState } from "react";
+import { forwardRef, memo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Position } from "../../types/editor";
+import { measureTextWidth } from "../../utils/position";
 import type { ViewPosition } from "../../view-model/view-layout";
 
 interface VimCursorLayerProps {
@@ -35,15 +36,18 @@ const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
     },
     ref,
   ) => {
-    const measureRef = useRef<HTMLSpanElement>(null);
-    const [cursorStyle, setCursorStyle] = useState<{ left: number; width: number }>({
-      left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
-      width: fontSize * 0.6,
-    });
-
     const { column } = cursorPosition;
     const textBeforeCursor = lineText.substring(0, column);
     const charUnderCursor = lineText[column] || " ";
+    const leftWidth = textBeforeCursor
+      ? measureTextWidth(textBeforeCursor, fontSize, fontFamily, tabSize)
+      : 0;
+    const charWidth =
+      measureTextWidth(charUnderCursor, fontSize, fontFamily, tabSize) || fontSize * 0.6;
+    const cursorStyle = {
+      left: cursorViewPosition?.left ?? leftWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      width: charWidth,
+    };
     const top =
       cursorViewPosition?.top ?? visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
     const cursorKey = `${cursorPosition.line}:${cursorPosition.column}:${cursorPosition.offset}`;
@@ -51,46 +55,12 @@ const VimCursorLayerComponent = forwardRef<HTMLDivElement, VimCursorLayerProps>(
     // Determine if cursor should be visible
     const isVisible = vimMode === "normal" || vimMode === "visual";
 
-    // Measure using DOM for accurate browser-rendered width
-    // This effect must run even when cursor is hidden to keep cursorStyle updated
-    useEffect(() => {
-      if (!measureRef.current) return;
-
-      // Measure text before cursor
-      measureRef.current.textContent = textBeforeCursor || "";
-      const leftWidth = textBeforeCursor ? measureRef.current.getBoundingClientRect().width : 0;
-
-      // Measure character under cursor
-      measureRef.current.textContent = charUnderCursor;
-      const charWidth = measureRef.current.getBoundingClientRect().width || fontSize * 0.6;
-
-      setCursorStyle({
-        left: cursorViewPosition?.left ?? leftWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
-        width: charWidth,
-      });
-    }, [textBeforeCursor, charUnderCursor, cursorViewPosition, fontSize, fontFamily, tabSize]);
-
-    // Always render the container with measurement span, but only show cursor when visible
     return (
       <div
         ref={ref}
         className="pointer-events-none absolute inset-0 z-10"
         style={{ willChange: "transform" }}
       >
-        {/* Hidden measurement element - always rendered to ensure measurements work */}
-        <span
-          ref={measureRef}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            visibility: "hidden",
-            whiteSpace: "pre",
-            fontSize: `${fontSize}px`,
-            fontFamily,
-            tabSize,
-          }}
-        />
-        {/* Cursor - only visible in normal/visual mode */}
         {isVisible && (
           <div
             key={cursorKey}

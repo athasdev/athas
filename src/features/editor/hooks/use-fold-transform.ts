@@ -3,13 +3,13 @@ import { useFoldStore } from "../stores/fold-store";
 import { transformContentForFolding } from "../utils/fold-transformer";
 import { splitLines } from "../utils/lines";
 
-interface FoldMapping {
+export interface FoldMapping {
   actualToVirtual: Map<number, number>;
   virtualToActual: Map<number, number>;
   foldedRanges: Array<{ start: number; end: number; virtualLine: number }>;
 }
 
-interface FoldTransformResult {
+export interface FoldTransformResult {
   virtualContent: string;
   virtualLines: string[];
   mapping: FoldMapping;
@@ -56,7 +56,12 @@ export function useFoldTransform(
       };
     }
 
-    const result = transformContentForFolding(content, fileState.collapsedLines, fileState.regions);
+    const result = transformContentForFolding(
+      content,
+      fileState.collapsedLines,
+      fileState.regions,
+      baseLines,
+    );
     return {
       ...result,
       hasActiveFolds: true,

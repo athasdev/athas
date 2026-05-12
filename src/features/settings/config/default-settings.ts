@@ -32,6 +32,9 @@ export const defaultSettings: Settings = {
   tabSize: 2,
   wordWrap: false,
   lineNumbers: true,
+  renderWhitespace: "none",
+  renderIndentGuides: true,
+  highlightOccurrences: true,
   showMinimap: false,
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,

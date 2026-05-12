@@ -101,6 +101,37 @@ export function mergeTokenLayers(syntaxTokens: Token[], semanticTokens: Token[])
   );
 }
 
+export function buildTokenOverlapIndex(tokens: Token[]): number[] {
+  const maxEndBeforeOrAtIndex: number[] = [];
+  let maxEnd = 0;
+
+  for (let index = 0; index < tokens.length; index++) {
+    maxEnd = Math.max(maxEnd, tokens[index].end);
+    maxEndBeforeOrAtIndex.push(maxEnd);
+  }
+
+  return maxEndBeforeOrAtIndex;
+}
+
+export function findFirstTokenOverlappingOffset(
+  maxEndBeforeOrAtIndex: readonly number[],
+  offset: number,
+): number {
+  let low = 0;
+  let high = maxEndBeforeOrAtIndex.length;
+
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (maxEndBeforeOrAtIndex[mid] > offset) {
+      high = mid;
+    } else {
+      low = mid + 1;
+    }
+  }
+
+  return low;
+}
+
 export function canApplySemanticTokenState(
   semanticTokenState: SemanticTokenState | undefined,
   filePath: string | undefined,

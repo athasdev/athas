@@ -6,6 +6,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { replaceAllSearchMatches, replaceSearchMatch } from "../utils/search-replace";
 
 // Types
 type HoverInfo = {
@@ -33,6 +34,7 @@ type SearchOptions = {
   caseSensitive: boolean;
   wholeWord: boolean;
   useRegex: boolean;
+  preserveCase: boolean;
 };
 
 type DefinitionLinkRange = {
@@ -82,6 +84,7 @@ interface EditorUIState {
   // Search state
   searchQuery: string;
   searchMatches: SearchMatch[];
+  searchResultsLimited: boolean;
   currentMatchIndex: number;
   replaceQuery: string;
   isReplaceVisible: boolean;
@@ -113,7 +116,11 @@ interface EditorUIActions {
   // Search actions
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: SearchMatch[]) => void;
-  setSearchResults: (matches: SearchMatch[], preferredMatchIndex: number) => void;
+  setSearchResults: (
+    matches: SearchMatch[],
+    preferredMatchIndex: number,
+    limited?: boolean,
+  ) => void;
   setCurrentMatchIndex: (index: number) => void;
   setReplaceQuery: (query: string) => void;
   setIsReplaceVisible: (visible: boolean) => void;
@@ -150,6 +157,7 @@ export const useEditorUIStore = createSelectors(
     // Search state
     searchQuery: "",
     searchMatches: [],
+    searchResultsLimited: false,
     currentMatchIndex: -1,
     replaceQuery: "",
     isReplaceVisible: false,
@@ -157,6 +165,7 @@ export const useEditorUIStore = createSelectors(
       caseSensitive: false,
       wholeWord: false,
       useRegex: false,
+      preserveCase: false,
     },
 
     // Definition link state
@@ -259,12 +268,12 @@ export const useEditorUIStore = createSelectors(
       },
       setSearchMatches: (matches) => {
         const current = get().searchMatches;
-        if (areSearchMatchesEqual(current, matches)) {
+        if (areSearchMatchesEqual(current, matches) && !get().searchResultsLimited) {
           return;
         }
-        set({ searchMatches: matches });
+        set({ searchMatches: matches, searchResultsLimited: false });
       },
-      setSearchResults: (matches, preferredMatchIndex) => {
+      setSearchResults: (matches, preferredMatchIndex, limited = false) => {
         const state = get();
         const matchesAreEqual = areSearchMatchesEqual(state.searchMatches, matches);
         const nextMatchIndex =
@@ -276,12 +285,17 @@ export const useEditorUIStore = createSelectors(
               ? state.currentMatchIndex
               : Math.max(0, Math.min(preferredMatchIndex, matches.length - 1));
 
-        if (matchesAreEqual && state.currentMatchIndex === nextMatchIndex) {
+        if (
+          matchesAreEqual &&
+          state.currentMatchIndex === nextMatchIndex &&
+          state.searchResultsLimited === limited
+        ) {
           return;
         }
 
         set({
           searchMatches: matchesAreEqual ? state.searchMatches : matches,
+          searchResultsLimited: limited,
           currentMatchIndex: nextMatchIndex,
         });
       },
@@ -313,6 +327,7 @@ export const useEditorUIStore = createSelectors(
         set({
           searchQuery: "",
           searchMatches: [],
+          searchResultsLimited: false,
           currentMatchIndex: -1,
           replaceQuery: "",
         }),
@@ -335,64 +350,39 @@ export const useEditorUIStore = createSelectors(
         const { searchMatches, currentMatchIndex, replaceQuery } = get();
         if (searchMatches.length === 0 || currentMatchIndex < 0) return;
 
-        const match = searchMatches[currentMatchIndex];
-        if (!match) return;
-
-        // Get current content from editor state
-        const { onChange } = useEditorStateStore.getState();
+        const { cursorPosition, selection, onChange } = useEditorStateStore.getState();
         const value = getActiveTextContent();
         if (!value || !onChange) return;
 
-        // Replace the current match
-        const newContent =
-          value.substring(0, match.start) + replaceQuery + value.substring(match.end);
+        const result = replaceSearchMatch(value, searchMatches, currentMatchIndex, replaceQuery, {
+          preserveCase: get().searchOptions.preserveCase,
+        });
+        if (!result) return;
 
-        // Calculate offset adjustment
-        const lengthDiff = replaceQuery.length - (match.end - match.start);
-
-        // Update matches array, removing the replaced match and adjusting subsequent offsets
-        const updatedMatches = searchMatches
-          .filter((_, i) => i !== currentMatchIndex)
-          .map((m) => {
-            if (m.start > match.start) {
-              return {
-                start: m.start + lengthDiff,
-                end: m.end + lengthDiff,
-              };
-            }
-            return m;
-          });
-
-        // Update state and trigger content change
-        onChange(newContent);
+        onChange(result.content, value, cursorPosition, selection);
         set({
-          searchMatches: updatedMatches,
-          currentMatchIndex:
-            updatedMatches.length > 0 ? Math.min(currentMatchIndex, updatedMatches.length - 1) : -1,
+          searchMatches: result.matches,
+          currentMatchIndex: result.currentMatchIndex,
         });
       },
       replaceAll: () => {
-        const { searchMatches, replaceQuery } = get();
+        const { searchMatches, searchResultsLimited, replaceQuery } = get();
         if (searchMatches.length === 0) return;
+        if (searchResultsLimited) return;
 
         // Get current content from editor state
-        const { onChange } = useEditorStateStore.getState();
+        const { cursorPosition, selection, onChange } = useEditorStateStore.getState();
         const value = getActiveTextContent();
         if (!value || !onChange) return;
 
-        // Replace all matches in reverse order to maintain offset validity
-        let newContent = value;
-        const sortedMatches = [...searchMatches].sort((a, b) => b.start - a.start);
+        const newContent = replaceAllSearchMatches(value, searchMatches, replaceQuery, {
+          preserveCase: get().searchOptions.preserveCase,
+        });
 
-        for (const match of sortedMatches) {
-          newContent =
-            newContent.substring(0, match.start) + replaceQuery + newContent.substring(match.end);
-        }
-
-        // Update state and trigger content change
-        onChange(newContent);
+        onChange(newContent, value, cursorPosition, selection);
         set({
           searchMatches: [],
+          searchResultsLimited: false,
           currentMatchIndex: -1,
         });
       },
@@ -414,6 +404,7 @@ export const useEditorUIStore = createSelectors(
           isApplyingCompletion: false,
           autocompleteCompletion: null,
           searchMatches: [],
+          searchResultsLimited: false,
           currentMatchIndex: -1,
           definitionLinkRange: null,
         }),
