@@ -1204,8 +1204,9 @@ export function Editor({
         const startPos = getLargePositionForOffset(lineStart);
         const endPos = getLargePositionForOffset(lineEnd);
 
+        window.getSelection()?.removeAllRanges();
         largeEditorScrollRef.current?.focus({ preventScroll: true });
-        setEditorCursorPosition(startPos);
+        setEditorCursorPosition(endPos);
         setSelection({ start: startPos, end: endPos });
         return;
       }
@@ -1222,6 +1223,7 @@ export function Editor({
 
       inputRef.current.selectionStart = lineStart;
       inputRef.current.selectionEnd = lineEnd;
+      window.getSelection()?.removeAllRanges();
       inputRef.current.focus();
 
       const startPos = calculateCursorPosition(lineStart, lines);
@@ -1263,6 +1265,9 @@ export function Editor({
       setSelection,
       useGlobalEditorState,
       onReadonlySurfaceClick,
+      content.length,
+      visualLineCount,
+      displayContent.length,
     ],
   );
 
@@ -1489,7 +1494,10 @@ export function Editor({
                 : (lines[visualCursorLine] ?? "")
             }
             textareaRef={largeContentMode ? largeEditorScrollRef : inputRef}
-            hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
+            hidden={
+              !!largeSelectionOffsets ||
+              (vimModeEnabled && (vimMode === "normal" || vimMode === "visual"))
+            }
           />
         )}
         {useGlobalEditorState && (

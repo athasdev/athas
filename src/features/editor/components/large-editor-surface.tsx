@@ -47,6 +47,10 @@ const LargeEditorSurfaceComponent = forwardRef<HTMLDivElement, LargeEditorSurfac
         onContextMenu={onContextMenu}
         onScroll={onScroll}
         aria-label="Large file editor viewport"
+        style={{
+          userSelect: "none",
+          WebkitUserSelect: "none",
+        }}
       >
         <div
           aria-hidden="true"

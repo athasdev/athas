@@ -14,6 +14,9 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 /* Background layer - syntax highlighted, read-only */
@@ -31,7 +34,25 @@
   white-space: pre;
   word-wrap: break-word;
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
   color: var(--color-text, var(--text, #d4d4d4));
+  font-kerning: none;
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0,
+    "tnum" 1;
+  letter-spacing: 0;
+  text-rendering: optimizeSpeed;
+}
+
+.highlight-layer *,
+.selection-layer,
+.selection-layer * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 /* Foreground layer - transparent text, visible caret */
@@ -54,6 +75,17 @@
   font-size: inherit;
   line-height: inherit;
   tab-size: inherit;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0,
+    "tnum" 1;
+  letter-spacing: 0;
+  text-rendering: optimizeSpeed;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
 
   scroll-behavior: auto;
   scrollbar-gutter: stable;

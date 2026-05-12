@@ -553,12 +553,18 @@ export function useLargeEditorInput({
       const position = resolvePointerPosition(event);
 
       event.preventDefault();
+      window.getSelection()?.removeAllRanges();
       event.currentTarget.focus({ preventScroll: true });
       event.currentTarget.setPointerCapture(event.pointerId);
 
       if (event.detail >= 3) {
         const lineStartOffset = getOffsetForPosition(position.line, 0);
-        const lineEndOffset = lineStartOffset + getLineText(position.line).length;
+        const lineText = getLineText(position.line);
+        const lineBreakLength = position.line < visualLineCount - 1 ? 1 : 0;
+        const lineEndOffset = Math.min(
+          content.length,
+          lineStartOffset + lineText.length + lineBreakLength,
+        );
         const startPosition = getPositionForOffset(lineStartOffset);
         const endPosition = getPositionForOffset(lineEndOffset);
 
