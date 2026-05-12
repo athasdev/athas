@@ -88,13 +88,19 @@ class TokenizerWorkerClient {
     };
   }
 
-  async tokenizeSnippet(snippet: string, languageId: string): Promise<HighlightToken[]> {
+  async tokenizeSnippet(
+    snippet: string,
+    languageId: string,
+    assets?: { wasmPath?: string; highlightQueryUrl?: string },
+  ): Promise<HighlightToken[]> {
     const id = ++this.requestId;
     const response = await this.post<Extract<TokenizerWorkerResponse, { ok: true }>>({
       id,
       type: "tokenizeSnippet",
       snippet,
       languageId,
+      wasmPath: assets?.wasmPath,
+      highlightQueryUrl: assets?.highlightQueryUrl,
     });
     return response.tokens ?? [];
   }

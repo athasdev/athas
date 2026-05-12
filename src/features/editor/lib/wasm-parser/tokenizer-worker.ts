@@ -317,12 +317,13 @@ async function handleTokenize(
 async function handleTokenizeSnippet(
   snippet: string,
   languageId: string,
+  assets?: { wasmPath?: string; highlightQueryUrl?: string },
 ): Promise<HighlightToken[]> {
   const normalizedSnippet = normalizeLineEndings(snippet);
 
   let loadedParser: LoadedParser;
   try {
-    loadedParser = await getLoadedParser(languageId);
+    loadedParser = await getLoadedParser(languageId, assets);
   } catch {
     // Unsupported language: return a single default-class token spanning the whole snippet.
     const fallbackLines = normalizedSnippet.split("\n");
@@ -394,7 +395,10 @@ self.onmessage = async (event: MessageEvent<TokenizerWorkerRequest>) => {
         (self as DedicatedWorkerGlobalScope).postMessage({
           id: message.id,
           ok: true,
-          tokens: await handleTokenizeSnippet(message.snippet, message.languageId),
+          tokens: await handleTokenizeSnippet(message.snippet, message.languageId, {
+            wasmPath: message.wasmPath,
+            highlightQueryUrl: message.highlightQueryUrl,
+          }),
         } satisfies TokenizerWorkerResponse);
         return;
     }

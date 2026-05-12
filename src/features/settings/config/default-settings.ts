@@ -152,7 +152,7 @@ export const defaultSettings: Settings = {
   telemetry: false,
   // CodeSnap
   codesnap: {
-    backgroundColor: "linear-gradient(135deg, #ff6b9d 0%, #c44eb8 100%)",
+    backgroundColor: "linear-gradient(135deg, #d4d4d8 0%, #71717a 100%)",
     containerPadding: "32px",
     boxShadow: "rgba(0, 0, 0, 0.55) 0px 20px 68px",
     roundedCorners: true,

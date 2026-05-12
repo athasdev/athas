@@ -19,7 +19,14 @@ export type TokenizerWorkerRequest =
       mode: "full" | "range";
       viewportRange?: ViewportRangePayload;
     }
-  | { id: number; type: "tokenizeSnippet"; snippet: string; languageId: string };
+  | {
+      id: number;
+      type: "tokenizeSnippet";
+      snippet: string;
+      languageId: string;
+      wasmPath?: string;
+      highlightQueryUrl?: string;
+    };
 
 export type TokenizerWorkerResponse =
   | {

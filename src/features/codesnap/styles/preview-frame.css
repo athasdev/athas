@@ -60,7 +60,9 @@
   font-size: 13px;
 }
 
-/* A single line of code */
+/* A single line of code. `pre` preserves indentation and never wraps —
+ * matches editor / CodeSnap conventions where the visual structure of code
+ * shouldn't be broken. Long lines extend the window; the canvas scrolls. */
 .codesnap-line {
   display: block;
   white-space: pre;
@@ -91,6 +93,14 @@
   justify-content: center;
   padding: 32px;
   min-height: 100%;
+  gap: 20px;
+}
+
+/* Decorative aperture icon shown above the preview. */
+.codesnap-brand-icon {
+  color: var(--codesnap-brand, #9ca3af);
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 /* Inline-block so the width handle can sit off the right edge */
