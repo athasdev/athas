@@ -18,6 +18,7 @@ import {
   calculateCursorPositionFromLineOffsets,
   calculateOffsetFromContentPosition,
 } from "../utils/position";
+import { getTextareaSelectionFocusOffset } from "../utils/selection-ranges";
 
 type EditorContentChangeHandler = (
   value: string,
@@ -107,8 +108,7 @@ export function useEditorTextareaInput({
     const selectionEnd = selection ? getInputOffsetForPosition(selection.end) : selectionStart;
 
     if (textarea.selectionStart !== selectionStart || textarea.selectionEnd !== selectionEnd) {
-      textarea.selectionStart = selectionStart;
-      textarea.selectionEnd = selectionEnd;
+      textarea.setSelectionRange(selectionStart, selectionEnd, "forward");
     }
 
     if (valueChanged) {
@@ -179,6 +179,7 @@ export function useEditorTextareaInput({
 
       const selectionStart = inputRef.current.selectionStart;
       const selectionEnd = inputRef.current.selectionEnd;
+      const focusOffset = getTextareaSelectionFocusOffset(inputRef.current);
       const nextVirtualLineOffsets = applyIncrementalLineOffsetEdit(
         displayContent,
         newVirtualContent,
@@ -191,7 +192,7 @@ export function useEditorTextareaInput({
         nextVirtualLineOffsets && nextVirtualLines
           ? calculateCursorPositionFromLineOffsets(offset, nextVirtualLines, nextVirtualLineOffsets)
           : calculateCursorPositionFromContent(offset, newVirtualContent);
-      const position = getNextVirtualPosition(selectionStart);
+      const position = getNextVirtualPosition(focusOffset);
 
       if (foldTransform.hasActiveFolds) {
         const actualLine =

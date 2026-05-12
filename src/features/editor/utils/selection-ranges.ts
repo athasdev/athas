@@ -7,6 +7,11 @@ export interface OffsetRange {
   end: number;
 }
 
+type TextareaSelectionState = Pick<
+  HTMLTextAreaElement,
+  "selectionStart" | "selectionEnd" | "selectionDirection"
+>;
+
 export interface SmartSelectionOptions {
   content: string;
   cursorOffset: number;
@@ -18,6 +23,26 @@ export function getSelectionAnchorForCursor(selection: Range | undefined, cursor
   if (!selection) return cursor;
 
   return cursor.offset === selection.start.offset ? selection.end : selection.start;
+}
+
+export function getTextareaSelectionFocusOffset(textarea: TextareaSelectionState): number {
+  if (textarea.selectionStart === textarea.selectionEnd) {
+    return textarea.selectionStart;
+  }
+
+  return textarea.selectionDirection === "backward"
+    ? textarea.selectionStart
+    : textarea.selectionEnd;
+}
+
+export function getTextareaSelectionAnchorOffset(textarea: TextareaSelectionState): number {
+  if (textarea.selectionStart === textarea.selectionEnd) {
+    return textarea.selectionStart;
+  }
+
+  return textarea.selectionDirection === "backward"
+    ? textarea.selectionEnd
+    : textarea.selectionStart;
 }
 
 export function buildSelectionFromAnchor(anchor: Position, cursor: Position): Range | undefined {

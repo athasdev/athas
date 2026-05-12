@@ -5,6 +5,7 @@ import type { InlayHint } from "../lsp/use-inlay-hints";
 import type { FoldTransformResult } from "./use-fold-transform";
 import type { MultiCursorState, Position, Range } from "../types/editor";
 import { calculateActualOffset } from "../utils/fold-transformer";
+import { getTextareaSelectionFocusOffset } from "../utils/selection-ranges";
 import type { EditorViewLayout } from "../view-model/view-layout";
 
 interface UseEditorMouseInteractionsParams {
@@ -137,8 +138,9 @@ export function useEditorMouseInteractions({
 
         const selectionStart = inputRef.current.selectionStart;
         const selectionEnd = inputRef.current.selectionEnd;
+        const focusOffset = getTextareaSelectionFocusOffset(inputRef.current);
 
-        const clickedPosition = getCursorPositionForVisualOffset(selectionStart);
+        const clickedPosition = getCursorPositionForVisualOffset(focusOffset);
 
         const clickSelection =
           selectionStart !== selectionEnd
@@ -166,8 +168,8 @@ export function useEditorMouseInteractions({
         clearSecondaryCursors();
       }
 
-      const selectionStart = inputRef.current.selectionStart;
-      const clickedPosition = getCursorPositionForVisualOffset(selectionStart);
+      const focusOffset = getTextareaSelectionFocusOffset(inputRef.current);
+      const clickedPosition = getCursorPositionForVisualOffset(focusOffset);
       const clickedLine = lines[clickedPosition.line] || "";
       const accordionMeta = parseDiffAccordionLine(clickedLine);
 

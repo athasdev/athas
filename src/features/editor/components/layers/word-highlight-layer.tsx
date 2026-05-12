@@ -59,28 +59,30 @@ const WordHighlightLayerComponent = forwardRef<HTMLDivElement, WordHighlightLaye
         viewportRange,
       });
 
-      return ranges.flatMap((range) =>
-        calculateSelectionBoxes({
-          selectionOffsets: {
-            start: range.start,
-            end: range.end,
-          },
-          lines,
-          lineOffsets,
-          contentLength,
-          lineHeight,
-          measureText,
-          lineTextResolver,
-          viewportRange,
-          viewLayout,
-        }).map((box) => ({
-          top: box.top,
-          left: box.left,
-          width: box.width,
-          height: box.height,
-          isCurrent: range.isCurrent,
-        })),
-      );
+      return ranges
+        .filter((range) => !range.isCurrent)
+        .flatMap((range) =>
+          calculateSelectionBoxes({
+            selectionOffsets: {
+              start: range.start,
+              end: range.end,
+            },
+            lines,
+            lineOffsets,
+            contentLength,
+            lineHeight,
+            measureText,
+            lineTextResolver,
+            viewportRange,
+            viewLayout,
+          }).map((box) => ({
+            top: box.top,
+            left: box.left,
+            width: box.width,
+            height: box.height,
+            isCurrent: range.isCurrent,
+          })),
+        );
     }, [
       content,
       contentLength,

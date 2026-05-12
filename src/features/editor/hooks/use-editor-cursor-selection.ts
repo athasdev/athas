@@ -3,6 +3,10 @@ import type { FoldTransformResult } from "./use-fold-transform";
 import { useEditorUIStore } from "../stores/ui-store";
 import type { Position, Range } from "../types/editor";
 import { calculateActualOffset } from "../utils/fold-transformer";
+import {
+  getTextareaSelectionAnchorOffset,
+  getTextareaSelectionFocusOffset,
+} from "../utils/selection-ranges";
 
 type VimVisualSelection = {
   start: { line: number; column: number } | null;
@@ -45,6 +49,8 @@ export function useEditorCursorSelection({
 
     const selectionStart = inputRef.current.selectionStart;
     const selectionEnd = inputRef.current.selectionEnd;
+    const focusOffset = getTextareaSelectionFocusOffset(inputRef.current);
+    const anchorOffset = getTextareaSelectionAnchorOffset(inputRef.current);
     const isVisualModeActive = vimModeEnabled && vimMode === "visual";
     const position =
       isVisualModeActive && vimVisualSelection.end
@@ -53,7 +59,7 @@ export function useEditorCursorSelection({
             offset:
               getVisualLineOffset(vimVisualSelection.end.line) + vimVisualSelection.end.column,
           }
-        : getCursorPositionForVisualOffset(selectionStart);
+        : getCursorPositionForVisualOffset(focusOffset);
 
     if (foldTransform.hasActiveFolds) {
       const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
@@ -70,7 +76,6 @@ export function useEditorCursorSelection({
     if (selectionStart !== selectionEnd) {
       const startPos = getCursorPositionForVisualOffset(selectionStart);
       const endPos = getCursorPositionForVisualOffset(selectionEnd);
-      const anchorOffset = Math.max(selectionStart, selectionEnd);
       const anchorPos = getCursorPositionForVisualOffset(anchorOffset);
       setInlineEditSelectionAnchor({
         line: anchorPos.line,

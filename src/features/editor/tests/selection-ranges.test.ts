@@ -3,6 +3,8 @@ import type { Position, Range } from "../types/editor";
 import {
   buildSelectionFromAnchor,
   getSelectionAnchorForCursor,
+  getTextareaSelectionAnchorOffset,
+  getTextareaSelectionFocusOffset,
   getSmartSelectionRanges,
   resolveExpandSelection,
   resolveShrinkSelection,
@@ -27,6 +29,37 @@ describe("selection range helpers", () => {
       start: position(10),
       end: position(12),
     });
+  });
+
+  it("resolves textarea selection focus and anchor from direction", () => {
+    expect(
+      getTextareaSelectionFocusOffset({
+        selectionStart: 3,
+        selectionEnd: 9,
+        selectionDirection: "forward",
+      } as HTMLTextAreaElement),
+    ).toBe(9);
+    expect(
+      getTextareaSelectionAnchorOffset({
+        selectionStart: 3,
+        selectionEnd: 9,
+        selectionDirection: "forward",
+      } as HTMLTextAreaElement),
+    ).toBe(3);
+    expect(
+      getTextareaSelectionFocusOffset({
+        selectionStart: 3,
+        selectionEnd: 9,
+        selectionDirection: "backward",
+      } as HTMLTextAreaElement),
+    ).toBe(3);
+    expect(
+      getTextareaSelectionAnchorOffset({
+        selectionStart: 3,
+        selectionEnd: 9,
+        selectionDirection: "backward",
+      } as HTMLTextAreaElement),
+    ).toBe(9);
   });
 
   it("builds smart selection ranges from word to bracket, line, and document", () => {

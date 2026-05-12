@@ -1261,8 +1261,7 @@ export function Editor({
         lineStart + lineText.length + lineBreakLength,
       );
 
-      inputRef.current.selectionStart = lineStart;
-      inputRef.current.selectionEnd = lineEnd;
+      inputRef.current.setSelectionRange(lineStart, lineEnd, "forward");
       window.getSelection()?.removeAllRanges();
       inputRef.current.focus();
 
@@ -1285,12 +1284,12 @@ export function Editor({
           offset: calculateActualOffset(actualLines, actualEndLine, endPos.column),
         };
 
-        setEditorCursorPosition(actualStart);
+        setEditorCursorPosition(actualEnd);
         setSelection({ start: actualStart, end: actualEnd });
         return;
       }
 
-      setEditorCursorPosition(startPos);
+      setEditorCursorPosition(endPos);
       setSelection({ start: startPos, end: endPos });
     },
     [
