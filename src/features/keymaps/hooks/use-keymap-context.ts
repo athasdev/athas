@@ -27,7 +27,9 @@ export function useKeymapContext() {
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      const isEditorFocus = target.classList.contains("editor-textarea");
+      const isEditorFocus =
+        target.classList.contains("editor-textarea") ||
+        target.closest("[data-monaco-editor-scroll]") !== null;
       const isTerminalFocus = target.closest(".terminal-container") !== null;
 
       setContexts({
@@ -48,7 +50,9 @@ export function useKeymapContext() {
           return;
         }
 
-        const isEditorFocus = activeElement.classList.contains("editor-textarea");
+        const isEditorFocus =
+          activeElement.classList.contains("editor-textarea") ||
+          activeElement.closest("[data-monaco-editor-scroll]") !== null;
         const isTerminalFocus = activeElement.closest(".terminal-container") !== null;
 
         setContexts({

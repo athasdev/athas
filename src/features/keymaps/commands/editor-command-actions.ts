@@ -44,6 +44,7 @@ function shouldUseEditorModelCommand(): boolean {
 
   if (
     activeElement?.classList.contains("editor-textarea") ||
+    activeElement?.closest("[data-monaco-editor-scroll]") ||
     activeElement?.closest("[data-large-editor-scroll]")
   ) {
     return true;

@@ -126,7 +126,9 @@ export function useKeymaps() {
 
       // Skip if target is an input (except our editor textarea or terminal)
       const target = e.target as HTMLElement;
-      const isEditorTextarea = target.classList.contains("editor-textarea");
+      const isEditorTextarea =
+        target.classList.contains("editor-textarea") ||
+        target.closest("[data-monaco-editor-scroll]") !== null;
       const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
       if (
         target.tagName === "INPUT" ||

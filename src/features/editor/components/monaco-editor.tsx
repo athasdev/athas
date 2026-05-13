@@ -4,6 +4,7 @@ import "../styles/monaco-editor.css";
 
 import { editor as monacoEditor, KeyCode, KeyMod, Range as MonacoRange, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
+import { initVimMode, VimMode, type VimAdapterInstance } from "monaco-vim";
 import {
   useCallback,
   useEffect,
@@ -12,7 +13,11 @@ import {
   type MouseEventHandler,
   type ReactNode,
 } from "react";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
+import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
+import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
@@ -106,6 +111,154 @@ function getThemeId(theme: string): string {
   return theme.includes("light") ? "vs" : "vs-dark";
 }
 
+function colorValue(theme: ThemeDefinition, name: string, fallback: string): string {
+  return (
+    theme.cssVariables[`--color-${name}`] ??
+    theme.cssVariables[`--${name}`] ??
+    theme.syntaxTokens?.[`--color-${name}`] ??
+    theme.syntaxTokens?.[`--${name}`] ??
+    fallback
+  );
+}
+
+function stripHash(value: string): string {
+  return value.startsWith("#") ? value.slice(1) : value;
+}
+
+function toMonacoThemeName(themeId: string): string {
+  return `athas-${themeId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function syntaxTokenColor(theme: ThemeDefinition, token: string): string | undefined {
+  return (
+    theme.syntaxTokens?.[`--color-syntax-${token}`] ??
+    theme.syntaxTokens?.[`--syntax-${token}`] ??
+    theme.syntaxTokens?.[`--color-${token}`] ??
+    theme.syntaxTokens?.[`--${token}`]
+  );
+}
+
+function defineMonacoTheme(themeId: string): string {
+  const theme = themeRegistry.getTheme(themeId);
+  if (!theme) return getThemeId(themeId);
+
+  const tokenMap: Array<[string, string]> = [
+    ["comment", "comment"],
+    ["keyword", "keyword"],
+    ["string", "string"],
+    ["number", "number"],
+    ["regexp", "regex"],
+    ["function", "function"],
+    ["variable", "variable"],
+    ["constant", "constant"],
+    ["type", "type"],
+    ["class", "type"],
+    ["interface", "type"],
+    ["namespace", "type"],
+    ["tag", "tag"],
+    ["attribute.name", "attribute"],
+    ["delimiter", "punctuation"],
+    ["delimiter.bracket", "punctuation"],
+    ["operator", "operator"],
+    ["keyword.operator", "operator"],
+    ["keyword.json", "property"],
+    ["string.key.json", "property"],
+  ];
+
+  const rules: Monaco.editor.ITokenThemeRule[] = tokenMap.flatMap(([token, syntaxName]) => {
+    const foreground = syntaxTokenColor(theme, syntaxName);
+    return foreground ? [{ token, foreground: stripHash(foreground) }] : [];
+  });
+
+  const background = colorValue(theme, "primary-bg", theme.isDark ? "#141413" : "#fcfcfd");
+  const foreground = colorValue(theme, "text", theme.isDark ? "#faf9f5" : "#141413");
+  const subtleForeground = colorValue(theme, "text-lighter", theme.isDark ? "#b0aea5" : "#787d86");
+  const border = colorValue(theme, "border", theme.isDark ? "#2f2d29" : "#e4e7ec");
+  const selected = colorValue(theme, "selected", theme.isDark ? "#2c2925" : "#e7ebf0");
+  const selection = colorValue(theme, "selection-bg", "rgba(106, 155, 204, 0.30)");
+  const accent = colorValue(theme, "accent", "#4f8cff");
+  const cursor = colorValue(theme, "cursor", foreground);
+
+  const monacoThemeId = toMonacoThemeName(theme.id);
+  monacoEditor.defineTheme(monacoThemeId, {
+    base: theme.isDark ? "vs-dark" : "vs",
+    inherit: true,
+    rules,
+    colors: {
+      "editor.background": background,
+      "editor.foreground": foreground,
+      "editorCursor.foreground": cursor,
+      "editor.selectionBackground": selection,
+      "editor.inactiveSelectionBackground": selected,
+      "editor.lineHighlightBackground": selected,
+      "editorLineNumber.foreground": subtleForeground,
+      "editorLineNumber.activeForeground": foreground,
+      "editorIndentGuide.background1": border,
+      "editorIndentGuide.activeBackground1": accent,
+      "editorWhitespace.foreground": subtleForeground,
+      "editor.findMatchBackground": selection,
+      "editor.findMatchHighlightBackground": selected,
+      "editorWidget.background": background,
+      "editorWidget.foreground": foreground,
+      "editorWidget.border": border,
+      "editorSuggestWidget.background": background,
+      "editorSuggestWidget.foreground": foreground,
+      "editorSuggestWidget.border": border,
+      "editorSuggestWidget.selectedBackground": selected,
+      "input.background": background,
+      "input.foreground": foreground,
+      "input.border": border,
+      focusBorder: accent,
+    },
+  });
+
+  return monacoThemeId;
+}
+
+let athasVimCommandsRegistered = false;
+
+function registerAthasVimCommands(): void {
+  if (athasVimCommandsRegistered) return;
+  athasVimCommandsRegistered = true;
+
+  const vimApi = (
+    VimMode as unknown as {
+      Vim?: {
+        defineEx: (
+          name: string,
+          prefix: string,
+          callback: (_cm: unknown, params: unknown) => void,
+        ) => void;
+      };
+    }
+  ).Vim;
+  if (!vimApi) return;
+
+  const register = (name: string, prefix: string) => {
+    vimApi.defineEx(name, prefix, (_cm, params) => {
+      const argString =
+        typeof params === "object" && params && "argString" in params
+          ? String((params as { argString?: string }).argString ?? "")
+          : "";
+      const input = `${prefix}${argString ? ` ${argString.trim()}` : ""}`;
+      void parseAndExecuteVimCommand(input);
+    });
+  };
+
+  for (const command of vimCommands) {
+    register(command.name, command.name);
+    for (const alias of command.aliases ?? []) {
+      register(alias, alias);
+    }
+  }
+}
+
+function toAthasVimMode(mode: string): AthasVimMode {
+  if (mode === "insert") return "insert";
+  if (mode === "visual") return "visual";
+  return "normal";
+}
+
 export function MonacoBackedEditor({
   bufferId: propBufferId,
   viewStateKey,
@@ -133,6 +286,8 @@ export function MonacoBackedEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const modelRef = useRef<Monaco.editor.ITextModel | null>(null);
+  const vimAdapterRef = useRef<VimAdapterInstance | null>(null);
+  const vimStatusRef = useRef<HTMLDivElement | null>(null);
   const applyingExternalChangeRef = useRef(false);
   const previousContentRef = useRef("");
   const decorationsRef = useRef<string[]>([]);
@@ -163,6 +318,8 @@ export function MonacoBackedEditor({
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const settingsTheme = useSettingsStore((state) => state.settings.theme);
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
+  const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const vimCurrentMode = useVimStore.use.mode();
   const { setCursorPosition, setSelection, setScrollForBuffer, setViewportHeight } =
     useEditorStateStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
@@ -234,7 +391,9 @@ export function MonacoBackedEditor({
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
-      theme: getThemeId(settingsTheme || theme),
+      theme: defineMonacoTheme(settingsTheme || theme),
+      cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
+      cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
       contextmenu: false,
       overviewRulerLanes: 0,
       fixedOverflowWidgets: true,
@@ -378,7 +537,9 @@ export function MonacoBackedEditor({
     const editor = editorRef.current;
     if (!editor) return;
 
-    monacoEditor.setTheme(getThemeId(settingsTheme || theme));
+    const applyTheme = () => monacoEditor.setTheme(defineMonacoTheme(settingsTheme || theme));
+
+    applyTheme();
     editor.updateOptions({
       fontFamily,
       fontSize,
@@ -390,11 +551,25 @@ export function MonacoBackedEditor({
       minimap: { enabled: minimapEnabled },
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
+      cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
+      cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
       scrollbar: {
         vertical: scrollable ? "auto" : "hidden",
         horizontal: scrollable ? "auto" : "hidden",
       },
     });
+
+    const unsubscribeRegistry = themeRegistry.onRegistryChange(applyTheme);
+    const unsubscribeTheme = themeRegistry.onThemeChange((themeId) => {
+      if (themeId === (settingsTheme || theme)) applyTheme();
+    });
+    const unsubscribeReady = themeRegistry.onReady(applyTheme);
+
+    return () => {
+      unsubscribeRegistry();
+      unsubscribeTheme();
+      unsubscribeReady();
+    };
   }, [
     fontFamily,
     fontSize,
@@ -409,8 +584,51 @@ export function MonacoBackedEditor({
     settingsTheme,
     tabSize,
     theme,
+    vimCurrentMode,
+    vimModeEnabled,
     wordWrap,
   ]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const container = containerRef.current;
+    const { setMode } = useVimStore.getState().actions;
+
+    vimAdapterRef.current?.dispose();
+    vimAdapterRef.current = null;
+    vimStatusRef.current?.remove();
+    vimStatusRef.current = null;
+
+    if (!editor || !container || !vimModeEnabled || readOnly || isPreviewMode) {
+      return;
+    }
+
+    registerAthasVimCommands();
+
+    const statusNode = document.createElement("div");
+    statusNode.className = "monaco-vim-statusbar";
+    statusNode.setAttribute("aria-live", "polite");
+    container.appendChild(statusNode);
+
+    const adapter = initVimMode(editor, statusNode);
+    adapter.on("vim-mode-change", (event: { mode: string }) => {
+      setMode(toAthasVimMode(event.mode));
+    });
+    adapter.on("dispose", () => {
+      useVimStore.getState().actions.setMode("normal");
+    });
+
+    vimAdapterRef.current = adapter;
+    vimStatusRef.current = statusNode;
+    setMode("normal");
+
+    return () => {
+      adapter.dispose();
+      if (vimAdapterRef.current === adapter) vimAdapterRef.current = null;
+      statusNode.remove();
+      if (vimStatusRef.current === statusNode) vimStatusRef.current = null;
+    };
+  }, [isPreviewMode, readOnly, vimModeEnabled]);
 
   useEffect(() => {
     const editor = editorRef.current;

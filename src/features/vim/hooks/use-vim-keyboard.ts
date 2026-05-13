@@ -250,6 +250,10 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+      if (target.closest("[data-monaco-editor-scroll]")) {
+        return;
+      }
+
       const currentVimState = useVimStore.getState();
       const currentMode = currentVimState.mode;
       const currentCommandMode = currentVimState.isCommandMode;
