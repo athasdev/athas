@@ -20,6 +20,7 @@ type SyncableSettingsKey =
   | "sidebarPosition"
   | "quickOpenPreview"
   | "fontFamily"
+  | "editorEngine"
   | "fontSize"
   | "editorLineHeight"
   | "tabSize"
@@ -110,6 +111,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "sidebarPosition",
   "quickOpenPreview",
   "fontFamily",
+  "editorEngine",
   "fontSize",
   "editorLineHeight",
   "tabSize",

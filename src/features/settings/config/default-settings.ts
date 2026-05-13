@@ -27,6 +27,7 @@ export const defaultSettings: Settings = {
   quickOpenPreview: true,
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
+  editorEngine: "monaco",
   fontSize: DEFAULT_CODE_FONT_SIZE,
   editorLineHeight: 1.4,
   tabSize: 2,

@@ -134,6 +134,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["highlight", "occurrences", "matches", "word", "symbol", "cursor"],
   },
   {
+    id: "editor-engine",
+    tab: "editor",
+    section: "Editor",
+    label: "Editor Engine",
+    description: "Choose Monaco or the legacy Athas editor rendering engine",
+    keywords: ["engine", "monaco", "athas", "legacy", "editor", "rendering"],
+  },
+  {
     id: "editor-show-minimap",
     tab: "editor",
     section: "Display",

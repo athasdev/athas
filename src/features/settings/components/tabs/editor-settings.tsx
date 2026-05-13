@@ -45,6 +45,27 @@ export const EditorSettings = () => {
         </SettingRow>
 
         <SettingRow
+          label="Editor Engine"
+          description="Choose the editor rendering engine"
+          onReset={() => updateSetting("editorEngine", getDefaultSetting("editorEngine"))}
+          canReset={settings.editorEngine !== getDefaultSetting("editorEngine")}
+        >
+          <Select
+            value={settings.editorEngine}
+            options={[
+              { value: "monaco", label: "Monaco" },
+              { value: "athas", label: "Athas Editor" },
+            ]}
+            onChange={(value) =>
+              updateSetting("editorEngine", value as typeof settings.editorEngine)
+            }
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="xs"
+            variant="default"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Font Size"
           description="Editor font size in pixels"
           onReset={() => updateSetting("fontSize", getDefaultSetting("fontSize"))}

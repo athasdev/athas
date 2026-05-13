@@ -68,6 +68,7 @@ function getMatchingSettingsRecords(query: string) {
   if (trimmedQuery.length < 2) return [];
 
   return settingsSearchIndex
+    .filter((record) => record.id !== "editor-vim-mode")
     .map((record) => {
       const score = scoreSearchQuery(trimmedQuery, [
         { value: record.label, weight: 11 },
@@ -239,8 +240,8 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     },
     {
       id: "toggle-vim-mode",
-      label: settings.vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim keybindings",
-      description: settings.vimMode ? "Switch to normal editing mode" : "Enable Vim keybindings",
+      label: "Vim Mode: Toggle",
+      description: settings.vimMode ? "Currently enabled" : "Currently disabled",
       icon: <Terminal />,
       category: "Vim",
       action: () => {
@@ -285,7 +286,11 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       icon: <Hash />,
       category: "Editor",
       action: () => {
-        updateSetting("vimRelativeLineNumbers", !settings.vimRelativeLineNumbers);
+        const nextEnabled = !settings.vimRelativeLineNumbers;
+        if (nextEnabled && !settings.lineNumbers) {
+          updateSetting("lineNumbers", true);
+        }
+        updateSetting("vimRelativeLineNumbers", nextEnabled);
         onClose();
       },
     },

@@ -9,6 +9,7 @@ import type {
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
+export type EditorEngine = "monaco" | "athas";
 
 export interface Settings {
   // General
@@ -17,6 +18,7 @@ export interface Settings {
   quickOpenPreview: boolean;
   // Editor
   fontFamily: string;
+  editorEngine: EditorEngine;
   fontSize: number;
   editorLineHeight: number;
   tabSize: number;

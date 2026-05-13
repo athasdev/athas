@@ -125,6 +125,30 @@ function stripHash(value: string): string {
   return value.startsWith("#") ? value.slice(1) : value;
 }
 
+function toHexByte(value: number): string {
+  return Math.max(0, Math.min(255, Math.round(value)))
+    .toString(16)
+    .padStart(2, "0");
+}
+
+function toMonacoColor(value: string, fallback: string): string {
+  const normalized = value.trim();
+  if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(normalized)) return normalized;
+  if (/^#[0-9a-fA-F]{3}$/.test(normalized)) {
+    const [, r, g, b] = normalized;
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+
+  const rgbaMatch = normalized.match(
+    /^rgba?\(\s*([.\d]+)\s*,\s*([.\d]+)\s*,\s*([.\d]+)(?:\s*,\s*([.\d]+)\s*)?\)$/i,
+  );
+  if (!rgbaMatch) return fallback;
+
+  const [, red, green, blue, alpha = "1"] = rgbaMatch;
+  const alphaByte = toHexByte(Number(alpha) * 255);
+  return `#${toHexByte(Number(red))}${toHexByte(Number(green))}${toHexByte(Number(blue))}${alphaByte}`;
+}
+
 function toMonacoThemeName(themeId: string): string {
   return `athas-${themeId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
@@ -170,14 +194,32 @@ function defineMonacoTheme(themeId: string): string {
     return foreground ? [{ token, foreground: stripHash(foreground) }] : [];
   });
 
-  const background = colorValue(theme, "primary-bg", theme.isDark ? "#141413" : "#fcfcfd");
-  const foreground = colorValue(theme, "text", theme.isDark ? "#faf9f5" : "#141413");
-  const subtleForeground = colorValue(theme, "text-lighter", theme.isDark ? "#b0aea5" : "#787d86");
-  const border = colorValue(theme, "border", theme.isDark ? "#2f2d29" : "#e4e7ec");
-  const selected = colorValue(theme, "selected", theme.isDark ? "#2c2925" : "#e7ebf0");
-  const selection = colorValue(theme, "selection-bg", "rgba(106, 155, 204, 0.30)");
-  const accent = colorValue(theme, "accent", "#4f8cff");
-  const cursor = colorValue(theme, "cursor", foreground);
+  const background = toMonacoColor(
+    colorValue(theme, "primary-bg", theme.isDark ? "#141413" : "#fcfcfd"),
+    theme.isDark ? "#141413" : "#fcfcfd",
+  );
+  const foreground = toMonacoColor(
+    colorValue(theme, "text", theme.isDark ? "#faf9f5" : "#141413"),
+    theme.isDark ? "#faf9f5" : "#141413",
+  );
+  const subtleForeground = toMonacoColor(
+    colorValue(theme, "text-lighter", theme.isDark ? "#b0aea5" : "#787d86"),
+    theme.isDark ? "#b0aea5" : "#787d86",
+  );
+  const border = toMonacoColor(
+    colorValue(theme, "border", theme.isDark ? "#2f2d29" : "#e4e7ec"),
+    theme.isDark ? "#2f2d29" : "#e4e7ec",
+  );
+  const selected = toMonacoColor(
+    colorValue(theme, "selected", theme.isDark ? "#2c2925" : "#e7ebf0"),
+    theme.isDark ? "#2c2925" : "#e7ebf0",
+  );
+  const selection = toMonacoColor(
+    colorValue(theme, "selection-bg", "rgba(106, 155, 204, 0.30)"),
+    "#6a9bcc4d",
+  );
+  const accent = toMonacoColor(colorValue(theme, "accent", "#4f8cff"), "#4f8cff");
+  const cursor = toMonacoColor(colorValue(theme, "cursor", foreground), foreground);
 
   const monacoThemeId = toMonacoThemeName(theme.id);
   monacoEditor.defineTheme(monacoThemeId, {
@@ -319,7 +361,9 @@ export function MonacoBackedEditor({
   const settingsTheme = useSettingsStore((state) => state.settings.theme);
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
+  const cursorPosition = useEditorStateStore.use.cursorPosition();
   const { setCursorPosition, setSelection, setScrollForBuffer, setViewportHeight } =
     useEditorStateStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
@@ -338,9 +382,14 @@ export function MonacoBackedEditor({
     (lineNumber: number) => {
       const mappedLine = lineNumberMap?.[lineNumber - 1];
       if (typeof mappedLine === "number") return String(mappedLine);
+      if (vimModeEnabled && vimRelativeLineNumbers && !lineNumberMap) {
+        const cursorLine = cursorPosition.line + 1;
+        const distance = Math.abs(lineNumber - cursorLine);
+        if (distance > 0) return String(distance);
+      }
       return String((lineNumberStart ?? 1) + lineNumber - 1);
     },
-    [lineNumberMap, lineNumberStart],
+    [cursorPosition.line, lineNumberMap, lineNumberStart, vimModeEnabled, vimRelativeLineNumbers],
   );
 
   const updateVisibleLineRange = useCallback(

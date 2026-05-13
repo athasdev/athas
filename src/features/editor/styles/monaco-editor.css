@@ -32,14 +32,14 @@
     transparent
   );
   color: var(--color-text, var(--text, #faf9f5));
-  display: none;
+  display: none !important;
   font: 12px/1.45 var(--font-mono, "JetBrains Mono Variable", monospace);
   pointer-events: none;
 }
 
 .monaco-vim-statusbar:has(input),
 .monaco-vim-statusbar:has(.vim-notification:not(:empty)) {
-  display: block;
+  display: block !important;
 }
 
 .monaco-vim-statusbar input {
@@ -53,5 +53,5 @@
 }
 
 .monaco-vim-statusbar:empty {
-  display: none;
+  display: none !important;
 }

@@ -1,6 +1,16 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
+import { useLargeEditorModeInfo } from "@/features/editor/hooks/use-large-editor-mode-info";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -29,7 +39,9 @@ import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import { useCodeLens } from "../lsp/use-code-lens";
+import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
+import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import type { Position, Range } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
@@ -80,6 +92,11 @@ interface GoToLineEventDetail {
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 const LSP_VIEWPORT_LINE_BUFFER = 30;
 const MAX_FILE_SEARCH_MATCHES = 20_000;
+const AthasEditor = lazy(() =>
+  import("@/features/athas-editor/components/editor").then((module) => ({
+    default: module.Editor,
+  })),
+);
 
 const CodeEditor = ({
   className,
@@ -107,7 +124,7 @@ const CodeEditor = ({
   const lspScrollRafRef = useRef<number | null>(null);
   const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
   const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
-  const [, setLspVisibleLineRange] = useState({
+  const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
   });
@@ -149,8 +166,13 @@ const CodeEditor = ({
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const editorEngine = settings.editorEngine ?? "monaco";
+  const useAthasEditor = editorEngine === "athas";
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
-  const enableRichEditorServices = enableInteractiveServices;
+  const largeEditorModeInfo = useLargeEditorModeInfo(value);
+  const largeContentMode = useAthasEditor && largeEditorModeInfo.largeContentMode;
+  const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
+  const enableInlayHints = useAthasEditor && enableRichEditorServices && settings.parameterHints;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -174,10 +196,12 @@ const CodeEditor = ({
     if (!enableInteractiveServices) return;
     if (!activeBufferId || !editorRef.current) return;
 
-    const monacoHost = editorRef.current.querySelector<HTMLElement>("[data-monaco-editor-scroll]");
-    const focusTarget =
-      monacoHost?.querySelector<HTMLTextAreaElement>("textarea") ??
-      editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
+    const focusTarget = largeContentMode
+      ? editorRef.current.querySelector<HTMLElement>("[data-large-editor-scroll]")
+      : (editorRef.current
+          .querySelector<HTMLElement>("[data-monaco-editor-scroll]")
+          ?.querySelector<HTMLTextAreaElement>("textarea") ??
+        editorRef.current.querySelector<HTMLTextAreaElement>("textarea"));
 
     if (!focusTarget) return;
 
@@ -185,7 +209,7 @@ const CodeEditor = ({
     setTimeout(() => {
       focusTarget.focus();
     }, 0);
-  }, [activeBufferId, enableInteractiveServices]);
+  }, [activeBufferId, enableInteractiveServices, largeContentMode]);
 
   // Sync content and file info with editor instance store
   useEffect(() => {
@@ -238,6 +262,17 @@ const CodeEditor = ({
 
   // Rename symbol support
   const rename = useRename(enableRichEditorServices ? filePath : undefined);
+
+  const inlayHints = useInlayHints(
+    enableInlayHints ? filePath : undefined,
+    enableInlayHints,
+    lspVisibleLineRange,
+  );
+  const semanticTokens = useSemanticTokens(
+    useAthasEditor && enableRichEditorServices ? filePath : undefined,
+    useAthasEditor && enableRichEditorServices,
+    value,
+  );
 
   // Code lens
   const codeLenses = useCodeLens(
@@ -532,6 +567,39 @@ const CodeEditor = ({
               <HtmlPreview />
             ) : showCsvPreview ? (
               <CsvPreview />
+            ) : useAthasEditor ? (
+              <Suspense fallback={<div className="absolute inset-0 bg-primary-bg" />}>
+                <AthasEditor
+                  bufferId={activeBufferId ?? undefined}
+                  viewStateKey={editorViewKey ?? undefined}
+                  isActiveSurface={isActiveSurface}
+                  isPreviewMode={isPreviewBuffer}
+                  readOnly={readOnly}
+                  scrollable={scrollable}
+                  backgroundLayer={backgroundLayer}
+                  onReadonlySurfaceClick={onReadonlySurfaceClick}
+                  highlightMatches={highlightMatches}
+                  currentHighlightIndex={currentHighlightIndex}
+                  lineNumberStart={lineNumberStart}
+                  lineNumberMap={lineNumberMap}
+                  onContentChange={onChange}
+                  inlayHints={enableInlayHints ? inlayHints : []}
+                  semanticTokens={semanticTokens}
+                  largeContentMode={largeContentMode}
+                  largeContentLineCount={largeEditorModeInfo.lineCount}
+                  largeContentLineOffsets={largeEditorModeInfo.lineOffsets}
+                  onCoordinateResolverChange={handleCoordinateResolverChange}
+                  onModelPositionResolverChange={handleModelPositionResolverChange}
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
+                  onMouseEnter={
+                    enableRichEditorServices ? hoverHandlers.handleMouseEnter : undefined
+                  }
+                  onClick={
+                    enableRichEditorServices ? goToDefinitionHandlers.handleClick : undefined
+                  }
+                />
+              </Suspense>
             ) : (
               <MonacoBackedEditor
                 bufferId={activeBufferId ?? undefined}
