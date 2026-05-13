@@ -1,0 +1,17 @@
+.monaco-editor-shell {
+  --vscode-editor-background: var(--color-primary-bg, var(--primary-bg, #0f1117));
+}
+
+.monaco-editor-shell .monaco-editor,
+.monaco-editor-shell .monaco-editor-background,
+.monaco-editor-shell .monaco-editor .margin {
+  background-color: var(--color-primary-bg, var(--primary-bg, #0f1117));
+}
+
+.monaco-editor-shell .monaco-search-match {
+  background-color: color-mix(in srgb, var(--color-accent, #4f8cff) 26%, transparent);
+}
+
+.monaco-editor-shell .monaco-search-match-current {
+  outline: 1px solid color-mix(in srgb, var(--color-accent, #4f8cff) 72%, white 8%);
+}

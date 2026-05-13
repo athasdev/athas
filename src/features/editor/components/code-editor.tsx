@@ -24,20 +24,19 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
+import { editorAPI } from "../extensions/api";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import { useCodeLens } from "../lsp/use-code-lens";
-import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
-import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import type { Position, Range } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
-import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
+import { MonacoBackedEditor } from "./monaco-editor";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
@@ -110,7 +109,7 @@ const CodeEditor = ({
   const lspScrollRafRef = useRef<number | null>(null);
   const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
   const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
-  const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
+  const [, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
   });
@@ -156,7 +155,6 @@ const CodeEditor = ({
   const largeEditorModeInfo = useLargeEditorModeInfo(value);
   const largeContentMode = largeEditorModeInfo.largeContentMode;
   const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
-  const enableInlayHints = enableRichEditorServices && settings.parameterHints;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -180,9 +178,12 @@ const CodeEditor = ({
     if (!enableInteractiveServices) return;
     if (!activeBufferId || !editorRef.current) return;
 
-    const focusTarget = largeContentMode
-      ? editorRef.current.querySelector<HTMLElement>("[data-large-editor-scroll]")
-      : editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
+    const monacoHost = editorRef.current.querySelector<HTMLElement>("[data-monaco-editor-scroll]");
+    const focusTarget =
+      monacoHost?.querySelector<HTMLTextAreaElement>("textarea") ??
+      (largeContentMode
+        ? editorRef.current.querySelector<HTMLElement>("[data-large-editor-scroll]")
+        : editorRef.current.querySelector<HTMLTextAreaElement>("textarea"));
 
     if (!focusTarget) return;
 
@@ -243,18 +244,6 @@ const CodeEditor = ({
 
   // Rename symbol support
   const rename = useRename(enableRichEditorServices ? filePath : undefined);
-
-  // Inlay hints
-  const inlayHints = useInlayHints(
-    enableInlayHints ? filePath : undefined,
-    enableInlayHints,
-    lspVisibleLineRange,
-  );
-  const semanticTokens = useSemanticTokens(
-    enableRichEditorServices ? filePath : undefined,
-    enableRichEditorServices,
-    value,
-  );
 
   // Code lens
   const codeLenses = useCodeLens(
@@ -356,17 +345,9 @@ const CodeEditor = ({
     const goToLine = (lineNumber: number, columnNumber?: number) => {
       if (!editorRef.current) return false;
 
-      const textarea = editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
-      const scrollElement = largeContentMode
-        ? editorRef.current.querySelector<HTMLElement>("[data-large-editor-scroll]")
-        : textarea;
-      if (!scrollElement) return false;
-
-      const currentContent = largeContentMode ? valueRef.current : (textarea?.value ?? "");
+      const currentContent = valueRef.current;
       if (!currentContent) return false;
 
-      const { fontSize, lineHeight: editorLineHeight } = useEditorSettingsStore.getState();
-      const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
       const target = resolveGoToLineTarget({
         content: currentContent,
         lineNumber,
@@ -375,24 +356,8 @@ const CodeEditor = ({
         lineOffsets: largeContentMode ? largeEditorModeInfo.lineOffsets : undefined,
       });
 
-      if (largeContentMode) {
-        scrollElement.focus();
-      } else if (textarea) {
-        textarea.selectionStart = target.offset;
-        textarea.selectionEnd = target.offset;
-        textarea.focus();
-      }
-
-      // Calculate scroll position to CENTER the line in the viewport
-      const lineTop = target.line * lineHeight;
-      const viewportHeight = scrollElement.clientHeight;
-      const centeredScrollTop = Math.max(0, lineTop - viewportHeight / 2 + lineHeight / 2);
-
-      scrollElement.scrollTop = centeredScrollTop;
-
-      // Update cursor position in store
-      const { setCursorPosition } = useEditorStateStore.getState().actions;
-      setCursorPosition({
+      editorAPI.setSelection(undefined);
+      editorAPI.setCursorPosition({
         line: target.line,
         column: target.column,
         offset: target.offset,
@@ -484,54 +449,27 @@ const CodeEditor = ({
     if (!enableInteractiveServices) return;
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
-      if (match && editorRef.current) {
-        const textarea = editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
-        const scrollElement = largeContentMode
-          ? editorRef.current.querySelector<HTMLElement>("[data-large-editor-scroll]")
-          : textarea;
-        if (scrollElement) {
-          if (!largeContentMode && textarea) {
-            // Move cursor to select the match
-            textarea.selectionStart = match.start;
-            textarea.selectionEnd = match.end;
-          }
+      if (!match) return;
 
-          const lineOffsets = largeEditorModeInfo.lineOffsets;
-          const startPosition =
-            largeContentMode && lineOffsets
-              ? calculatePositionFromLineOffsets(valueRef.current, lineOffsets, match.start)
-              : calculateCursorPositionFromContent(match.start, valueRef.current);
-          const endPosition =
-            largeContentMode && lineOffsets
-              ? calculatePositionFromLineOffsets(valueRef.current, lineOffsets, match.end)
-              : calculateCursorPositionFromContent(match.end, valueRef.current);
+      const lineOffsets = largeEditorModeInfo.lineOffsets;
+      const startPosition =
+        largeContentMode && lineOffsets
+          ? calculatePositionFromLineOffsets(valueRef.current, lineOffsets, match.start)
+          : calculateCursorPositionFromContent(match.start, valueRef.current);
+      const endPosition =
+        largeContentMode && lineOffsets
+          ? calculatePositionFromLineOffsets(valueRef.current, lineOffsets, match.end)
+          : calculateCursorPositionFromContent(match.end, valueRef.current);
 
-          const { setCursorPosition, setSelection } = useEditorStateStore.getState().actions;
-          setCursorPosition(endPosition);
-          setSelection({ start: startPosition, end: endPosition });
-
-          // Calculate scroll position to center the match in viewport
-          const lineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
-          const targetScrollTop =
-            resolveModelPosition(startPosition.line, 0)?.top ?? startPosition.line * lineHeight;
-          const viewportHeight = scrollElement.clientHeight;
-          const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
-
-          if (scrollElement.scrollTop !== centeredScrollTop) {
-            scrollElement.scrollTop = centeredScrollTop;
-          }
-        }
-      }
+      editorAPI.setSelection({ start: startPosition, end: endPosition });
+      editorAPI.setCursorPosition(endPosition);
     }
   }, [
     currentMatchIndex,
     enableInteractiveServices,
     largeContentMode,
     largeEditorModeInfo.lineOffsets,
-    resolveModelPosition,
     searchMatches,
-    settings.editorLineHeight,
-    zoomedFontSize,
   ]);
 
   if (!activeBuffer) {
@@ -621,7 +559,7 @@ const CodeEditor = ({
             ) : showCsvPreview ? (
               <CsvPreview />
             ) : (
-              <Editor
+              <MonacoBackedEditor
                 bufferId={activeBufferId ?? undefined}
                 viewStateKey={editorViewKey ?? undefined}
                 isActiveSurface={isActiveSurface}
@@ -634,12 +572,9 @@ const CodeEditor = ({
                 currentHighlightIndex={currentHighlightIndex}
                 lineNumberStart={lineNumberStart}
                 lineNumberMap={lineNumberMap}
-                onContentChange={onContentChange}
-                inlayHints={enableInlayHints ? inlayHints : []}
-                semanticTokens={semanticTokens}
-                largeContentMode={largeContentMode}
-                largeContentLineCount={largeEditorModeInfo.lineCount}
-                largeContentLineOffsets={largeEditorModeInfo.lineOffsets}
+                onContentChange={onChange}
+                onVisibleLineRangeChange={setLspVisibleLineRange}
+                onScrollOffsetChange={syncLspOverlayTransform}
                 onCoordinateResolverChange={handleCoordinateResolverChange}
                 onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
