@@ -266,7 +266,7 @@ function quoteFontFamilyName(name: string): string {
   if (GENERIC_FONT_FAMILIES.has(trimmed.toLowerCase())) return trimmed;
   if (/^[a-zA-Z_][\w-]*$/.test(trimmed)) return trimmed;
 
-  return `"${trimmed.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+  return `"${trimmed.split("\\").join("\\\\").split('"').join('\\"')}"`;
 }
 
 function normalizeCanvasFontFamily(fontFamily: string): string {

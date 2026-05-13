@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { editorAPI } from "@/features/editor/extensions/api";
 import {
   expandSnippet,
   getCurrentTabStop,
@@ -116,6 +117,7 @@ export function useSnippetCompletion(filePath: string | undefined) {
           useEditorStateStore
             .getState()
             .actions.setCursorPosition(newPosition, { ensureVisible: false });
+          editorAPI.setCursorPosition(newPosition);
 
           // Select placeholder if it exists
           if (firstTabStop.placeholder && firstTabStop.length > 0) {
@@ -158,6 +160,7 @@ export function useSnippetCompletion(filePath: string | undefined) {
       useEditorStateStore
         .getState()
         .actions.setCursorPosition(newPosition, { ensureVisible: false });
+      editorAPI.setCursorPosition(newPosition);
 
       // Select placeholder if it exists
       if (tabStop.placeholder && tabStop.length > 0) {
@@ -232,10 +235,11 @@ function calculatePosition(content: string, offset: number): Position {
  * Select a range in the textarea
  */
 function selectRange(start: number, end: number) {
-  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.selectionStart = start;
-    textarea.selectionEnd = end;
-    textarea.focus();
-  }
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
+  if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+
+  editorAPI.setSelection({
+    start: calculatePosition(activeBuffer.content, start),
+    end: calculatePosition(activeBuffer.content, end),
+  });
 }

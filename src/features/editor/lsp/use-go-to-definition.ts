@@ -66,8 +66,7 @@ export const useGoToDefinition = ({
       const scrollTop = textarea?.scrollTop ?? 0;
       const scrollLeft = textarea?.scrollLeft ?? 0;
 
-      // Always use EDITOR_PADDING_LEFT since mouse events are captured on the
-      // overlay-editor-container which is positioned AFTER the gutter
+      // Keep the fallback coordinate path aligned with editor content padding.
       const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
       const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 

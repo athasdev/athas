@@ -153,10 +153,11 @@ const ensureCursorVisible = (position: Position) => {
 
   const editorElement = useEditorStateStore.getState().editorRef?.current;
   const scopedTextarea =
-    editorElement?.querySelector<HTMLTextAreaElement>("textarea.editor-textarea") ?? null;
+    editorElement?.querySelector<HTMLTextAreaElement>("[data-monaco-editor-scroll] textarea") ??
+    null;
   const focusedTextarea =
     document.activeElement instanceof HTMLTextAreaElement &&
-    document.activeElement.classList.contains("editor-textarea")
+    !!document.activeElement.closest("[data-monaco-editor-scroll]")
       ? document.activeElement
       : null;
   const textarea = scopedTextarea ?? focusedTextarea;

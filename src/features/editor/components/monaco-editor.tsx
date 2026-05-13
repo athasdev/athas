@@ -162,6 +162,7 @@ export function MonacoBackedEditor({
   const theme = useEditorSettingsStore.use.theme();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const settingsTheme = useSettingsStore((state) => state.settings.theme);
+  const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const { setCursorPosition, setSelection, setScrollForBuffer, setViewportHeight } =
     useEditorStateStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
@@ -228,7 +229,7 @@ export function MonacoBackedEditor({
       insertSpaces: true,
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
-      minimap: { enabled: false },
+      minimap: { enabled: minimapEnabled },
       scrollBeyondLastLine: false,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
@@ -334,6 +335,7 @@ export function MonacoBackedEditor({
     lineHeight,
     lineNumbers,
     lineNumberFormatter,
+    minimapEnabled,
     modelUri,
     monacoLanguageId,
     onScrollOffsetChange,
@@ -385,6 +387,7 @@ export function MonacoBackedEditor({
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
+      minimap: { enabled: minimapEnabled },
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
       scrollbar: {
@@ -399,6 +402,7 @@ export function MonacoBackedEditor({
     lineHeight,
     lineNumbers,
     lineNumberFormatter,
+    minimapEnabled,
     readOnly,
     renderWhitespace,
     scrollable,

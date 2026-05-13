@@ -1,16 +1,14 @@
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
-import { useLargeEditorModeInfo } from "@/features/editor/hooks/use-large-editor-mode-info";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import "@/features/editor/performance/editor-performance-harness";
+import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
-import { calculatePositionFromLineOffsets } from "@/features/editor/utils/large-file";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
 import { buildSearchRegex, findLimitedMatchesCooperative } from "@/features/editor/utils/search";
@@ -152,9 +150,7 @@ const CodeEditor = ({
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
-  const largeEditorModeInfo = useLargeEditorModeInfo(value);
-  const largeContentMode = largeEditorModeInfo.largeContentMode;
-  const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
+  const enableRichEditorServices = enableInteractiveServices;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -181,9 +177,7 @@ const CodeEditor = ({
     const monacoHost = editorRef.current.querySelector<HTMLElement>("[data-monaco-editor-scroll]");
     const focusTarget =
       monacoHost?.querySelector<HTMLTextAreaElement>("textarea") ??
-      (largeContentMode
-        ? editorRef.current.querySelector<HTMLElement>("[data-large-editor-scroll]")
-        : editorRef.current.querySelector<HTMLTextAreaElement>("textarea"));
+      editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
 
     if (!focusTarget) return;
 
@@ -191,7 +185,7 @@ const CodeEditor = ({
     setTimeout(() => {
       focusTarget.focus();
     }, 0);
-  }, [activeBufferId, enableInteractiveServices, largeContentMode]);
+  }, [activeBufferId, enableInteractiveServices]);
 
   // Sync content and file info with editor instance store
   useEffect(() => {
@@ -352,8 +346,7 @@ const CodeEditor = ({
         content: currentContent,
         lineNumber,
         columnNumber,
-        lineCount: largeEditorModeInfo.lineCount,
-        lineOffsets: largeContentMode ? largeEditorModeInfo.lineOffsets : undefined,
+        lineCount: useEditorViewStore.getState().actions.getLineCount(),
       });
 
       editorAPI.setSelection(undefined);
@@ -383,13 +376,7 @@ const CodeEditor = ({
     return () => {
       window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
     };
-  }, [
-    filePath,
-    isActiveSurface,
-    largeContentMode,
-    largeEditorModeInfo.lineCount,
-    largeEditorModeInfo.lineOffsets,
-  ]);
+  }, [filePath, isActiveSurface]);
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
@@ -451,26 +438,13 @@ const CodeEditor = ({
       const match = searchMatches[currentMatchIndex];
       if (!match) return;
 
-      const lineOffsets = largeEditorModeInfo.lineOffsets;
-      const startPosition =
-        largeContentMode && lineOffsets
-          ? calculatePositionFromLineOffsets(valueRef.current, lineOffsets, match.start)
-          : calculateCursorPositionFromContent(match.start, valueRef.current);
-      const endPosition =
-        largeContentMode && lineOffsets
-          ? calculatePositionFromLineOffsets(valueRef.current, lineOffsets, match.end)
-          : calculateCursorPositionFromContent(match.end, valueRef.current);
+      const startPosition = calculateCursorPositionFromContent(match.start, valueRef.current);
+      const endPosition = calculateCursorPositionFromContent(match.end, valueRef.current);
 
       editorAPI.setSelection({ start: startPosition, end: endPosition });
       editorAPI.setCursorPosition(endPosition);
     }
-  }, [
-    currentMatchIndex,
-    enableInteractiveServices,
-    largeContentMode,
-    largeEditorModeInfo.lineOffsets,
-    searchMatches,
-  ]);
+  }, [currentMatchIndex, enableInteractiveServices, searchMatches]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;

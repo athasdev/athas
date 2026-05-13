@@ -54,15 +54,7 @@ const FindBar = () => {
   const onClose = () => {
     setIsFindVisible(false);
     const { editorRef } = useEditorStateStore.getState();
-    const largeEditorSurface = editorRef?.current?.querySelector<HTMLElement>(
-      "[data-large-editor-scroll]",
-    );
-    if (largeEditorSurface) {
-      largeEditorSurface.focus();
-      return;
-    }
-
-    const textarea = editorRef?.current?.querySelector("textarea");
+    const textarea = editorRef?.current?.querySelector("[data-monaco-editor-scroll] textarea");
     if (textarea instanceof HTMLTextAreaElement) {
       textarea.focus();
     }

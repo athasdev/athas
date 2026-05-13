@@ -1,6 +1,6 @@
 /**
  * Syntax tokenization hook backed by a dedicated worker.
- * This keeps Tree-sitter parsing and query execution off the UI thread.
+ * This keeps Tree-sitter parsing and query execution off the UI thread for non-Monaco surfaces.
  */
 
 import { useCallback, useRef, useState } from "react";
@@ -13,7 +13,12 @@ import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/h
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { calculateEdit, isSimpleEdit } from "../utils/tree-sitter-edit";
 import { usePerformanceMonitor } from "./use-performance";
-import type { ViewportRange } from "./use-viewport-lines";
+
+export interface ViewportRange {
+  startLine: number;
+  endLine: number;
+  totalLines: number;
+}
 
 interface TokenizerOptions {
   filePath: string | undefined;

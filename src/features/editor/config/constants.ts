@@ -16,7 +16,7 @@ export const EDITOR_CONSTANTS = {
   SIGNIFICANT_LINE_DIFF: 10, // Lines - threshold for significant range change
   VIEWPORT_OVERLAP_THRESHOLD: 50, // Percentage - consider significant if overlap is more than 50%
 
-  // Editor padding (must match CSS variables in overlay-editor.css)
+  // Editor padding used by legacy coordinate helpers and LSP overlays.
   EDITOR_PADDING_TOP: 8,
   EDITOR_PADDING_LEFT: 16,
   EDITOR_PADDING_BOTTOM: 8,
