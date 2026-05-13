@@ -54,7 +54,7 @@ import {
   useTokenizer,
   type SyntaxTokenSnapshot,
 } from "../hooks/use-tokenizer";
-import { useViewportLines } from "../hooks/use-viewport-lines";
+import { expandViewportRange, useViewportLines } from "../hooks/use-viewport-lines";
 import type { InlayHint } from "../lsp/use-inlay-hints";
 import type { SemanticTokenState } from "../lsp/use-semantic-tokens";
 import { useBufferStore } from "../stores/buffer-store";
@@ -83,13 +83,16 @@ import {
   getLargeContentLineText,
   getLargeContentOffsetAtPosition,
   getLineOffset,
+  isTooLargeForSyntaxTokenization,
 } from "../utils/large-file";
 import { calculateLineHeight } from "../utils/lines";
 import {
+  EDITOR_FONT_METRICS_READY_EVENT,
   calculateCursorPosition,
   calculateCursorPositionFromContent,
   calculateCursorPositionFromLineOffsets,
   getAccurateCursorX,
+  measureRenderedTextWidth,
 } from "../utils/position";
 import {
   canApplySemanticTokenState,
@@ -164,6 +167,7 @@ const INCREMENTAL_TOKENIZATION_LINE_THRESHOLD = 1000;
 const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
 const FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS = 250;
 const INLINE_EDIT_VIEW_ZONE_HEIGHT = 96;
+const LARGE_FILE_RENDER_OVERSCAN_LINES = 80;
 
 function estimateInlayHintWidth(
   label: string,
@@ -228,6 +232,7 @@ export function Editor({
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
   const [contentScrollWidth, setContentScrollWidth] = useState(0);
+  const [fontMetricsRevision, setFontMetricsRevision] = useState(0);
 
   const bufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const rawBuffer = useBufferStore(
@@ -418,9 +423,16 @@ export function Editor({
     () => calculateLineHeight(fontSize, lineHeightMultiplier),
     [fontSize, lineHeightMultiplier],
   );
+  useEffect(() => {
+    const handleFontMetricsReady = () => setFontMetricsRevision((version) => version + 1);
+
+    window.addEventListener(EDITOR_FONT_METRICS_READY_EVENT, handleFontMetricsReady);
+    return () =>
+      window.removeEventListener(EDITOR_FONT_METRICS_READY_EVENT, handleFontMetricsReady);
+  }, []);
   const measureEditorText = useCallback(
     (text: string) => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize),
-    [fontSize, fontFamily, tabSize],
+    [fontSize, fontFamily, tabSize, fontMetricsRevision],
   );
   useLayoutEffect(() => {
     const scrollElement = largeContentMode ? largeEditorScrollRef.current : inputRef.current;
@@ -547,9 +559,16 @@ export function Editor({
   );
   const shouldVirtualizeRendering =
     !wordWrap && visualLineCount >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
-  const tokenizationEnabled = hasSyntaxHighlighting && !largeContentMode;
+  const tokenizationEnabled =
+    hasSyntaxHighlighting &&
+    (!largeContentMode ||
+      !isTooLargeForSyntaxTokenization({
+        contentLength: content.length,
+        lineCount: actualLineCount,
+      }));
   const useIncrementalTokenization =
-    tokenizationEnabled && visualLineCount >= INCREMENTAL_TOKENIZATION_LINE_THRESHOLD;
+    tokenizationEnabled &&
+    (largeContentMode || visualLineCount >= INCREMENTAL_TOKENIZATION_LINE_THRESHOLD);
 
   const {
     viewportRange,
@@ -558,7 +577,15 @@ export function Editor({
     forceUpdateViewport,
   } = useViewportLines({
     lineHeight,
+    bufferLines: largeContentMode ? 0 : EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES,
   });
+  const renderViewportRange = useMemo(
+    () =>
+      largeContentMode && shouldVirtualizeRendering
+        ? expandViewportRange(viewportRange, visualLineCount, LARGE_FILE_RENDER_OVERSCAN_LINES)
+        : viewportRange,
+    [largeContentMode, shouldVirtualizeRendering, viewportRange, visualLineCount],
+  );
 
   const { tokens, tokenizedContent, tokenize, forceFullTokenize, resetForBufferSwitch } =
     useTokenizer({
@@ -661,19 +688,17 @@ export function Editor({
       tokens,
     };
   }, [bufferId, tokenizedContent, tokens]);
-  const baseTokens = useMemo(
-    () =>
-      largeContentMode
-        ? []
-        : resolveSyntaxTokensForContent({
-            tokens,
-            tokenizedContent,
-            normalizedContent: normalizedEditorContent,
-            bufferId: bufferId || undefined,
-            snapshot: syntaxTokenSnapshotRef.current,
-          }),
-    [bufferId, largeContentMode, normalizedEditorContent, tokenizedContent, tokens],
-  );
+  const baseTokens = useMemo(() => {
+    if (!tokenizationEnabled) return [];
+
+    return resolveSyntaxTokensForContent({
+      tokens,
+      tokenizedContent,
+      normalizedContent: normalizedEditorContent,
+      bufferId: bufferId || undefined,
+      snapshot: syntaxTokenSnapshotRef.current,
+    });
+  }, [bufferId, normalizedEditorContent, tokenizationEnabled, tokenizedContent, tokens]);
   const semanticEditorTokens = useMemo(() => {
     if (largeContentMode) return [];
     if (!canApplySemanticTokenState(semanticTokens, filePath)) return [];
@@ -782,7 +807,9 @@ export function Editor({
         modelLine: layoutLine,
         column,
         top: segment.top,
-        left: measureEditorText(lineText.slice(0, column)) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        left:
+          measureRenderedTextWidth(lineText.slice(0, column), fontSize, fontFamily, tabSize) +
+          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
         segment,
       };
     }
@@ -791,10 +818,13 @@ export function Editor({
     return viewLayout.modelPositionToViewPosition(layoutLine, cursorPosition.column);
   }, [
     cursorPosition.column,
+    fontFamily,
+    fontSize,
     getLargeLineText,
     largeContentMode,
     lineHeight,
     measureEditorText,
+    tabSize,
     viewLayout,
     visualCursorLine,
     visualLineCount,
@@ -1200,6 +1230,7 @@ export function Editor({
       if (height > 0) {
         useEditorStateStore.getState().actions.setViewportHeight(height);
         setEditorViewportHeight(height);
+        initializeViewport(scrollElement, visualLineCount);
       }
     };
 
@@ -1211,7 +1242,7 @@ export function Editor({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [largeContentMode]);
+  }, [initializeViewport, largeContentMode, visualLineCount]);
 
   // Tokenization is intentionally delayed while typing. Rendering uses the previous
   // token snapshot until the editor is idle enough to refresh syntax highlights.
@@ -1224,7 +1255,7 @@ export function Editor({
     tokenCount: tokens.length,
     visualLineCount,
     incremental: useIncrementalTokenization,
-    viewportRange,
+    viewportRange: largeContentMode ? renderViewportRange : viewportRange,
     isScrollingRef,
     isActiveSurface: useGlobalEditorState,
     tokenize,
@@ -1438,7 +1469,7 @@ export function Editor({
           activeLine={visualCursorLine}
           activeColumn={cursorPosition.column}
           lineTextResolver={largeContentMode ? getLargeLineText : undefined}
-          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+          viewportRange={shouldVirtualizeRendering ? renderViewportRange : undefined}
           viewLayout={viewLayout}
         />
         <HighlightLayer
@@ -1457,7 +1488,7 @@ export function Editor({
           tabSize={tabSize}
           wordWrap={wordWrap}
           renderWhitespace={renderWhitespace}
-          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+          viewportRange={shouldVirtualizeRendering ? renderViewportRange : undefined}
           lineMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
           viewZones={viewLayout.zones}
           inlayHints={largeContentMode ? [] : visualInlayHints}
@@ -1555,7 +1586,7 @@ export function Editor({
             lineBreakFillWidth={Math.max(contentWidth, contentScrollWidth)}
             lineTextResolver={largeContentMode ? getLargeLineText : undefined}
             viewportRange={
-              largeContentMode && shouldVirtualizeRendering ? viewportRange : undefined
+              largeContentMode && shouldVirtualizeRendering ? renderViewportRange : undefined
             }
             wordWrap={!largeContentMode && wordWrap}
             viewLayout={!largeContentMode ? viewLayout : undefined}
@@ -1578,7 +1609,7 @@ export function Editor({
             contentLength={displayContent.length}
             lineTextResolver={largeContentMode ? getLargeLineText : undefined}
             viewportRange={
-              largeContentMode || shouldVirtualizeRendering ? viewportRange : undefined
+              largeContentMode || shouldVirtualizeRendering ? renderViewportRange : undefined
             }
             viewLayout={!largeContentMode && wordWrap ? viewLayout : undefined}
           />
@@ -1598,7 +1629,7 @@ export function Editor({
             lineOffsets={displayLineOffsets}
             contentLength={displayContent.length}
             lineTextResolver={largeContentMode ? getLargeLineText : undefined}
-            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            viewportRange={shouldVirtualizeRendering ? renderViewportRange : undefined}
             viewLayout={!largeContentMode && wordWrap ? viewLayout : undefined}
           />
         )}
@@ -1669,7 +1700,7 @@ export function Editor({
             contentLength={displayContent.length}
             lineCount={visualLineCount}
             lineTextResolver={largeContentMode ? getLargeLineText : undefined}
-            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+            viewportRange={shouldVirtualizeRendering ? renderViewportRange : undefined}
             viewLayout={!largeContentMode && wordWrap ? viewLayout : undefined}
           />
         )}

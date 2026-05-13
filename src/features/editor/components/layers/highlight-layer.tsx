@@ -59,6 +59,21 @@ interface LineTokensCacheEntry {
   tokens: Token[];
 }
 
+function getLineLengthFromOffsets(
+  content: string,
+  lineOffsets: readonly number[],
+  lineIndex: number,
+): number {
+  const lineStart = lineOffsets[lineIndex] ?? content.length;
+  const nextLineStart = lineOffsets[lineIndex + 1] ?? content.length;
+  let lineEnd = nextLineStart;
+
+  if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 10) lineEnd--;
+  if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13) lineEnd--;
+
+  return Math.max(0, lineEnd - lineStart);
+}
+
 interface LineProps {
   lineContent: string;
   tokens: Token[];
@@ -364,10 +379,11 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
     const lineTokensCacheRef = useRef<Map<number, LineTokensCacheEntry>>(new Map());
 
     // Calculate line offsets once when content changes, independent of viewport
-    const lineOffsets = useMemo(
-      () => (lazyLineSlicing ? [] : (providedLineOffsets ?? buildLineOffsetMap(normalizedContent))),
-      [lazyLineSlicing, normalizedContent, providedLineOffsets],
-    );
+    const lineOffsets = useMemo(() => {
+      if (providedLineOffsets && providedLineOffsets.length > 0) return providedLineOffsets;
+      if (lazyLineSlicing) return [];
+      return buildLineOffsetMap(normalizedContent);
+    }, [lazyLineSlicing, normalizedContent, providedLineOffsets]);
 
     const lineTokensMap = useMemo(() => {
       const map = new Map<number, Token[]>();
@@ -379,7 +395,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       const startLine = viewportRange?.startLine ?? 0;
       const endLine = viewportRange?.endLine ?? lineCount;
 
-      if (lazyLineSlicing) return map;
+      if (lazyLineSlicing && lineOffsets.length === 0) return map;
 
       const initialLineOffset = lineOffsets[startLine] ?? 0;
       firstCandidateTokenIndex = findFirstTokenOverlappingOffset(
@@ -388,8 +404,10 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       );
 
       for (let lineIndex = startLine; lineIndex < Math.min(endLine, lineCount); lineIndex++) {
-        const offset = lineOffsets[lineIndex];
-        const lineLength = lines[lineIndex].length;
+        const offset = lineOffsets[lineIndex] ?? normalizedContent.length;
+        const lineLength = lazyLineSlicing
+          ? getLineLengthFromOffsets(normalizedContent, lineOffsets, lineIndex)
+          : lines[lineIndex].length;
         const lineEnd = offset + lineLength;
         const lineTokens: Token[] = [];
 

@@ -79,6 +79,8 @@ export function calculateSelectionBoxes({
     const textBeforeColumn = lineText.substring(0, column);
     return measureText(textBeforeColumn) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
   };
+  const getLineRangeWidth = (lineIndex: number, startColumn: number, endColumn: number): number =>
+    Math.max(0, getLineLeft(lineIndex, endColumn) - getLineLeft(lineIndex, startColumn));
 
   const startPos = calculateLineColumnFromOffsets(
     selectionOffsets.start,
@@ -101,20 +103,23 @@ export function calculateSelectionBoxes({
   ) => {
     if (!viewLayout) return false;
 
-    const lineText = getLineText(line);
     const lineStartViewLine = viewLayout.modelLineStartViewLines[line] ?? line;
     const lineViewLineCount = viewLayout.modelLineViewLineCounts[line] ?? 1;
     const lineEndViewLine = lineStartViewLine + lineViewLineCount - 1;
     let addedBox = false;
 
+    const getColumnLeft = (column: number) => getLineLeft(line, column);
+
     const addSegmentBox = (segment: ViewLineSegment, boxStartCol: number, boxEndCol: number) => {
-      const textBeforeStart = lineText.substring(segment.startColumn, boxStartCol);
-      const selectedText = lineText.substring(boxStartCol, boxEndCol);
-      const width = selectedText.length > 0 ? measureText(selectedText) : minimumSelectionWidth;
+      const segmentLeft = getColumnLeft(segment.startColumn);
+      const startLeft = getColumnLeft(boxStartCol);
+      const endLeft = getColumnLeft(boxEndCol);
+      const width =
+        boxEndCol > boxStartCol ? Math.max(0, endLeft - startLeft) : minimumSelectionWidth;
 
       boxes.push({
         top: segment.top,
-        left: measureText(textBeforeStart) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        left: startLeft - segmentLeft + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
         width: Math.max(width, minimumSelectionWidth),
         height: segment.height,
       });
@@ -167,8 +172,8 @@ export function calculateSelectionBoxes({
       continue;
     }
 
-    const selectedText = lineText.substring(startCol, endCol);
-    const width = selectedText.length > 0 ? measureText(selectedText) : minimumSelectionWidth;
+    const width =
+      endCol > startCol ? getLineRangeWidth(line, startCol, endCol) : minimumSelectionWidth;
     const fillWidth =
       hasSelectedLineBreak && lineBreakFillWidth
         ? Math.max(0, lineBreakFillWidth - getLineLeft(line, startCol))

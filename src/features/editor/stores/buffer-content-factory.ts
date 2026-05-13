@@ -202,6 +202,14 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         name: "Diagnostics",
         isPreview: false,
       };
+    case "references":
+      return {
+        ...base,
+        type: "references",
+        path: "references://results",
+        name: "References",
+        isPreview: false,
+      };
     case "onboarding":
       return {
         ...base,

@@ -55,6 +55,18 @@
   -moz-user-select: none;
 }
 
+/* Syntax colors must not change glyph metrics; selection/caret geometry is measured per font. */
+.highlight-layer [class*="token-"] {
+  font-style: inherit !important;
+  font-weight: inherit !important;
+}
+
+.highlight-layer .token-markdown-code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 /* Foreground layer - transparent text, visible caret */
 .input-layer {
   position: absolute;

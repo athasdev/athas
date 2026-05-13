@@ -181,10 +181,7 @@ export async function goToReferences(): Promise<void> {
 
   const referencesActions = useReferencesStore.getState().actions;
   referencesActions.setIsLoading(true);
-
-  const uiState = useUIState.getState();
-  uiState.setBottomPaneActiveTab("references");
-  uiState.setIsBottomPaneVisible(true);
+  bufferStore.actions.openReferencesBuffer();
 
   const references = await lspClient.getReferences(
     activeBuffer.path,

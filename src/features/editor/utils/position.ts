@@ -1,6 +1,8 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position } from "../types/editor";
 
+export const EDITOR_FONT_METRICS_READY_EVENT = "athas:editor-font-metrics-ready";
+
 /**
  * Calculate cursor position from character offset
  */
@@ -233,11 +235,65 @@ export const getLineHeight = (
  */
 const charWidthCache = new Map<string, number>();
 const prewarmedFontConfigs = new Set<string>();
+let pendingFontReadyCacheClear = false;
 
 /**
  * Canvas context for measuring text (reused to avoid creating multiple contexts)
  */
 let measureContext: CanvasRenderingContext2D | null = null;
+let renderedMeasureElement: HTMLSpanElement | null = null;
+
+const GENERIC_FONT_FAMILIES = new Set([
+  "serif",
+  "sans-serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+  "emoji",
+  "math",
+  "fangsong",
+]);
+
+function quoteFontFamilyName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith('"') || trimmed.startsWith("'")) return trimmed;
+  if (GENERIC_FONT_FAMILIES.has(trimmed.toLowerCase())) return trimmed;
+  if (/^[a-zA-Z_][\w-]*$/.test(trimmed)) return trimmed;
+
+  return `"${trimmed.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+}
+
+function normalizeCanvasFontFamily(fontFamily: string): string {
+  return fontFamily.split(",").map(quoteFontFamilyName).filter(Boolean).join(", ");
+}
+
+function buildCanvasFont(fontSize: number, fontFamily: string): string {
+  return `${fontSize}px ${normalizeCanvasFontFamily(fontFamily)}`;
+}
+
+function isCanvasFontReady(font: string): boolean {
+  if (typeof document === "undefined" || !("fonts" in document)) return true;
+
+  return document.fonts.check(font);
+}
+
+function clearCacheWhenFontsReady() {
+  if (pendingFontReadyCacheClear) return;
+  if (typeof document === "undefined" || !("fonts" in document)) return;
+
+  pendingFontReadyCacheClear = true;
+  void document.fonts.ready.then(() => {
+    pendingFontReadyCacheClear = false;
+    clearCharWidthCache();
+    window.dispatchEvent(new Event(EDITOR_FONT_METRICS_READY_EVENT));
+  });
+}
 
 /**
  * Get or create the measurement canvas context
@@ -260,10 +316,15 @@ const prewarmCharCache = (fontSize: number, fontFamily: string) => {
   const commonChars =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$%^&*()_+-=[]{}|;:',.<>?/`~";
   const ctx = getMeasureContext();
-  ctx.font = `${fontSize}px ${fontFamily}`;
+  const font = buildCanvasFont(fontSize, fontFamily);
+  if (!isCanvasFontReady(font)) {
+    clearCacheWhenFontsReady();
+    return;
+  }
+  ctx.font = font;
 
   for (const char of commonChars) {
-    const cacheKey = `${char}-${fontSize}-${fontFamily}`;
+    const cacheKey = `${char}-${font}`;
     if (!charWidthCache.has(cacheKey)) {
       const width = ctx.measureText(char).width;
       const roundedWidth =
@@ -282,26 +343,38 @@ export const getCharWidthCached = (
   fontSize: number,
   fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 ): number => {
-  const fontKey = `${fontSize}-${fontFamily}`;
+  const font = buildCanvasFont(fontSize, fontFamily);
+  const fontReady = isCanvasFontReady(font);
+  if (!fontReady) {
+    clearCacheWhenFontsReady();
+  }
+
+  const fontKey = font;
   const cacheKey = `${char}-${fontKey}`;
 
-  if (charWidthCache.has(cacheKey)) {
+  if (fontReady && charWidthCache.has(cacheKey)) {
     return charWidthCache.get(cacheKey)!;
+  }
+
+  if (typeof document === "undefined") {
+    return Math.round(fontSize * EDITOR_CONSTANTS.CHAR_WIDTH_MULTIPLIER * 100) / 100;
   }
 
   // Use canvas measureText for fast, non-blocking measurement
   const ctx = getMeasureContext();
-  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.font = font;
 
   const width = ctx.measureText(char).width;
   const roundedWidth =
     Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
     EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER;
 
-  charWidthCache.set(cacheKey, roundedWidth);
+  if (fontReady) {
+    charWidthCache.set(cacheKey, roundedWidth);
+  }
 
   // Prewarm cache once per font configuration.
-  if (!prewarmedFontConfigs.has(fontKey)) {
+  if (fontReady && !prewarmedFontConfigs.has(fontKey)) {
     prewarmedFontConfigs.add(fontKey);
     // Use requestIdleCallback if available, otherwise setTimeout
     const scheduleIdle =
@@ -326,16 +399,20 @@ export const getAccurateCursorX = (
   tabSize: number = 2,
 ): number => {
   let x = 0;
+  let visualColumn = 0;
+  const safeTabSize = Math.max(1, Math.trunc(tabSize));
   const limitedColumn = Math.min(column, line.length);
 
   for (let i = 0; i < limitedColumn; i++) {
     const char = line[i];
     if (char === "\t") {
-      // Calculate tab width based on current position and tab size
-      const spacesUntilNextTab = tabSize - (i % tabSize);
+      const tabRemainder = visualColumn % safeTabSize;
+      const spacesUntilNextTab = tabRemainder === 0 ? safeTabSize : safeTabSize - tabRemainder;
       x += getCharWidthCached(" ", fontSize, fontFamily) * spacesUntilNextTab;
+      visualColumn += spacesUntilNextTab;
     } else {
       x += getCharWidthCached(char, fontSize, fontFamily);
+      visualColumn++;
     }
   }
 
@@ -348,6 +425,52 @@ export const measureTextWidth = (
   fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   tabSize: number = 2,
 ): number => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize);
+
+function getRenderedMeasureElement(): HTMLSpanElement | null {
+  if (typeof document === "undefined") return null;
+
+  if (renderedMeasureElement?.isConnected) {
+    return renderedMeasureElement;
+  }
+
+  const element = document.createElement("span");
+  element.setAttribute("aria-hidden", "true");
+  element.style.position = "absolute";
+  element.style.visibility = "hidden";
+  element.style.pointerEvents = "none";
+  element.style.whiteSpace = "pre";
+  element.style.left = "-10000px";
+  element.style.top = "-10000px";
+  element.style.fontKerning = "none";
+  element.style.fontVariantLigatures = "none";
+  element.style.fontFeatureSettings = '"liga" 0, "calt" 0, "tnum" 1';
+  element.style.letterSpacing = "0";
+  element.style.textRendering = "optimizeSpeed";
+  document.body.appendChild(element);
+  renderedMeasureElement = element;
+  return element;
+}
+
+export const measureRenderedTextWidth = (
+  text: string,
+  fontSize: number,
+  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  tabSize: number = 2,
+): number => {
+  const element = getRenderedMeasureElement();
+  if (!element) return measureTextWidth(text, fontSize, fontFamily, tabSize);
+
+  element.style.fontSize = `${fontSize}px`;
+  element.style.fontFamily = fontFamily;
+  element.style.tabSize = `${Math.max(1, Math.trunc(tabSize))}`;
+  element.textContent = text;
+
+  const width = element.getBoundingClientRect().width;
+  return (
+    Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
+    EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER
+  );
+};
 
 /**
  * Clear character width cache (useful when font changes)

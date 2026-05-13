@@ -7,10 +7,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
-import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { LoadingIndicator } from "@/ui/loading";
 import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { useReferencesStore } from "../stores/references-store";
@@ -36,6 +33,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
   const references = useReferencesStore.use.references();
   const query = useReferencesStore.use.query();
   const isLoading = useReferencesStore.use.isLoading();
+  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const grouped = useMemo<ReferenceGroup[]>(() => {
@@ -58,33 +56,12 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
     setCollapsedGroups((prev) => ({ ...prev, [filePath]: !prev[filePath] }));
   }, []);
 
-  const handleReferenceClick = useCallback(async (ref: Reference) => {
-    const bufferStore = useBufferStore.getState();
-    const existingBuffer = bufferStore.buffers.find((b) => b.path === ref.filePath);
-
-    if (existingBuffer) {
-      bufferStore.actions.setActiveBuffer(existingBuffer.id);
-    } else {
-      const content = await readFileContent(ref.filePath);
-      const fileName = getFileName(ref.filePath);
-      const bufferId = bufferStore.actions.openBuffer(ref.filePath, fileName, content);
-      bufferStore.actions.setActiveBuffer(bufferId);
-    }
-
-    setTimeout(() => {
-      const offset = calculateOffsetFromContentPosition(
-        editorAPI.getContent(),
-        ref.line,
-        ref.column,
-      );
-
-      editorAPI.setCursorPosition({
-        line: ref.line,
-        column: ref.column,
-        offset,
-      });
-    }, 100);
-  }, []);
+  const handleReferenceClick = useCallback(
+    (ref: Reference) => {
+      void handleFileSelect?.(ref.filePath, false, ref.line + 1, ref.column + 1, undefined, false);
+    },
+    [handleFileSelect],
+  );
 
   return (
     <div className="flex h-full flex-col">

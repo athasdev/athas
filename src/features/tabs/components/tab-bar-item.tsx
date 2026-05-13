@@ -185,6 +185,8 @@ const TabBarItem = memo(function TabBarItem({
             <Search className="text-text-lighter" />
           ) : buffer.type === "diagnostics" ? (
             <WarningCircle className="text-text-lighter" />
+          ) : buffer.type === "references" ? (
+            <Search className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={getDiffIconName() ?? buffer.name}

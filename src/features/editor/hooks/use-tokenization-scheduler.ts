@@ -4,7 +4,7 @@ import { normalizeLineEndings } from "../utils/html";
 import type { ViewportRange } from "./use-viewport-lines";
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20_000;
-const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
+const LARGE_FILE_SCROLL_TOKENIZE_THROTTLE_MS = 48;
 const TOKENIZE_AFTER_TYPING_DEBOUNCE_MS = 260;
 const INACTIVE_SURFACE_TOKENIZE_DELAY_MS = 120;
 
@@ -39,6 +39,7 @@ export function useTokenizationScheduler({
 }: UseTokenizationSchedulerOptions) {
   const tokenizeRafRef = useRef<number | null>(null);
   const tokenizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLargeFileScrollTokenizeAtRef = useRef(0);
 
   useEffect(() => {
     if (!enabled || !content || !filePath) return;
@@ -60,8 +61,9 @@ export function useTokenizationScheduler({
       return;
     }
 
-    const scheduleTimeout = (delayMs: number) => {
+    const scheduleTimeout = (delayMs: number, onBeforeTokenize?: () => void) => {
       tokenizeTimeoutRef.current = setTimeout(() => {
+        onBeforeTokenize?.();
         void tokenize(content, targetViewportRange);
         tokenizeTimeoutRef.current = null;
       }, delayMs);
@@ -74,7 +76,21 @@ export function useTokenizationScheduler({
     };
 
     if (incremental && isLargeFile && isScrollingRef.current) {
-      return scheduleTimeout(LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS);
+      const now = Date.now();
+      const elapsedSinceScrollTokenize = now - lastLargeFileScrollTokenizeAtRef.current;
+
+      if (elapsedSinceScrollTokenize >= LARGE_FILE_SCROLL_TOKENIZE_THROTTLE_MS) {
+        lastLargeFileScrollTokenizeAtRef.current = now;
+        void tokenize(content, targetViewportRange);
+        return;
+      }
+
+      return scheduleTimeout(
+        LARGE_FILE_SCROLL_TOKENIZE_THROTTLE_MS - elapsedSinceScrollTokenize,
+        () => {
+          lastLargeFileScrollTokenizeAtRef.current = Date.now();
+        },
+      );
     }
 
     if (isTypingUpdate) {

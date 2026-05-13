@@ -91,6 +91,7 @@ export function useEditorScroll({
       scrollTimeoutRef.current = setTimeout(() => {
         isScrollingRef.current = false;
         const { top, left } = lastScrollRef.current;
+        handleViewportScroll(top, linesCount);
         useEditorStateStore
           .getState()
           .actions.setScrollForBuffer(viewStateKey ?? currentBufferId, top, left);

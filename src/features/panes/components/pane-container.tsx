@@ -70,6 +70,7 @@ const GlobalSearchBuffer = lazy(
 const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
+const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
 const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
@@ -140,7 +141,13 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
                         ? `${buffer.databaseType} viewer`
                         : buffer.type === "externalEditor"
                           ? "External editor session"
-                          : previewText || "No preview available";
+                          : buffer.type === "globalSearch"
+                            ? "Search results"
+                            : buffer.type === "diagnostics"
+                              ? "Diagnostics"
+                              : buffer.type === "references"
+                                ? "References"
+                                : previewText || "No preview available";
 
   const previewLines = summary.split("\n").slice(0, 12);
 
@@ -867,6 +874,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "diagnostics":
           return <DiagnosticsBuffer />;
+
+        case "references":
+          return <ReferencesBuffer />;
 
         case "onboarding":
           return (

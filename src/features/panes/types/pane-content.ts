@@ -33,6 +33,7 @@ export type PaneContentType =
   | "externalEditor"
   | "globalSearch"
   | "diagnostics"
+  | "references"
   | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
@@ -165,6 +166,10 @@ export interface DiagnosticsContent extends PaneContentBase {
   type: "diagnostics";
 }
 
+export interface ReferencesContent extends PaneContentBase {
+  type: "references";
+}
+
 export interface OnboardingContent extends PaneContentBase {
   type: "onboarding";
   mode: import("@/features/onboarding/lib/onboarding-state").OnboardingMode;
@@ -194,6 +199,7 @@ export type PaneContent =
   | ExternalEditorContent
   | GlobalSearchContent
   | DiagnosticsContent
+  | ReferencesContent
   | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
@@ -260,6 +266,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubAction",
   "globalSearch",
   "diagnostics",
+  "references",
   "onboarding",
 ]);
 
@@ -399,6 +406,9 @@ export type OpenContentSpec =
     }
   | {
       type: "diagnostics";
+    }
+  | {
+      type: "references";
     }
   | {
       type: "onboarding";

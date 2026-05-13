@@ -127,6 +127,16 @@ export function isTooLargeForEditorServices({ contentLength, lineCount }: LargeF
   return false;
 }
 
+export function isTooLargeForSyntaxTokenization({
+  contentLength,
+  lineCount,
+}: LargeFileCheck): boolean {
+  if (contentLength > LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD) return true;
+  if (lineCount != null && lineCount > LARGE_FILE_TOKENIZATION_LINE_THRESHOLD) return true;
+
+  return false;
+}
+
 export function shouldUseLargeEditorMode(content: string): boolean {
   if (content.length >= RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD) return true;
 

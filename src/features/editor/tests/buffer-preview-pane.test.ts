@@ -144,4 +144,31 @@ describe("buffer preview pane integration", () => {
     expect(pane?.previewBufferId).toBeNull();
     expect(pane?.pinnedBufferIds).toEqual([previewId]);
   });
+
+  it("opens references as a singleton buffer like diagnostics", async () => {
+    const { useBufferStore } = await import("../stores/buffer-store");
+    const bufferActions = useBufferStore.getState().actions;
+
+    const firstReferencesId = bufferActions.openReferencesBuffer();
+    const secondReferencesId = bufferActions.openReferencesBuffer();
+    const diagnosticsId = bufferActions.openDiagnosticsBuffer();
+
+    expect(secondReferencesId).toBe(firstReferencesId);
+    expect(useBufferStore.getState().buffers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: firstReferencesId,
+          type: "references",
+          path: "references://results",
+          name: "References",
+        }),
+        expect.objectContaining({
+          id: diagnosticsId,
+          type: "diagnostics",
+          path: "diagnostics://problems",
+          name: "Diagnostics",
+        }),
+      ]),
+    );
+  });
 });

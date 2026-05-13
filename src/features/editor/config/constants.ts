@@ -87,5 +87,5 @@ export const EDITOR_CONSTANTS = {
   MAX_CLOSED_BUFFERS_HISTORY: 10,
 
   // Precision
-  WIDTH_PRECISION_MULTIPLIER: 100, // For rounding width calculations
+  WIDTH_PRECISION_MULTIPLIER: 1000, // For rounding width calculations
 } as const;

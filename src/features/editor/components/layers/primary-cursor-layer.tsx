@@ -1,7 +1,7 @@
 import { forwardRef, memo, useEffect, useState, type RefObject } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Position } from "../../types/editor";
-import { getAccurateCursorX } from "../../utils/position";
+import { measureRenderedTextWidth } from "../../utils/position";
 import type { ViewPosition } from "../../view-model/view-layout";
 
 interface PrimaryCursorLayerProps {
@@ -74,7 +74,7 @@ const PrimaryCursorLayerComponent = forwardRef<HTMLDivElement, PrimaryCursorLaye
     const cursorColumn = Math.min(cursorPosition.column, lineText.length);
     const left =
       cursorViewPosition?.left ??
-      getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize) +
+      measureRenderedTextWidth(lineText.slice(0, cursorColumn), fontSize, fontFamily, tabSize) +
         EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
     const top =
       cursorViewPosition?.top ?? visualLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;

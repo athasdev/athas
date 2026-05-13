@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   calculateLineColumnFromOffsets,
   findLineIndexForOffset,
+  getAccurateCursorX,
   getLineTextFromContent,
   getLineTextsFromContent,
 } from "../utils/position";
@@ -40,5 +41,14 @@ describe("position utilities", () => {
       line: 1,
       column: 2,
     });
+  });
+
+  it("expands repeated tabs from the current visual column", () => {
+    const width = (text: string, column = text.length) =>
+      getAccurateCursorX(text, column, 10, "monospace", 4);
+
+    expect(width("\t")).toBe(width("    "));
+    expect(width("\t\t")).toBe(width("        "));
+    expect(width("ab\t")).toBe(width("abcd"));
   });
 });

@@ -1,6 +1,6 @@
 import { forwardRef, memo, useEffect, useMemo, useState } from "react";
 import { calculateSelectionBoxes, type SelectionOffsets } from "../../utils/selection-boxes";
-import { measureTextWidth } from "../../utils/position";
+import { measureRenderedTextWidth } from "../../utils/position";
 import type { EditorViewLayout } from "../../view-model/view-layout";
 
 interface SelectionLayerProps {
@@ -101,7 +101,7 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
       if (!selectionOffsets) return [];
 
       const getTextWidth = (text: string): number => {
-        return measureTextWidth(text, fontSize, fontFamily, tabSize);
+        return measureRenderedTextWidth(text, fontSize, fontFamily, tabSize);
       };
 
       return calculateSelectionBoxes({

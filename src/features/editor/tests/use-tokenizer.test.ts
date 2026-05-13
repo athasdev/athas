@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  expandTokenizationViewportRange,
+  mergeTokenizedRange,
   resolveSyntaxTokensForContent,
   retargetTokensForContentEdit,
 } from "../hooks/use-tokenizer";
@@ -73,5 +75,54 @@ describe("retargetTokensForContentEdit", () => {
         },
       }),
     ).toEqual([]);
+  });
+
+  it("expands large-file range tokenization beyond the visible viewport", () => {
+    expect(
+      expandTokenizationViewportRange(
+        {
+          startLine: 10_000,
+          endLine: 10_080,
+          totalLines: 150_000,
+        },
+        150_000,
+      ),
+    ).toEqual({
+      startLine: 9840,
+      endLine: 10_240,
+      totalLines: 150_000,
+    });
+  });
+
+  it("anchors large-file range tokenization around the actual viewport", () => {
+    expect(
+      expandTokenizationViewportRange(
+        {
+          startLine: 500,
+          endLine: 600,
+          totalLines: 150_000,
+        },
+        150_000,
+      ),
+    ).toEqual({
+      startLine: 340,
+      endLine: 760,
+      totalLines: 150_000,
+    });
+  });
+
+  it("does not retain previous offscreen tokens for virtualized large files", () => {
+    expect(
+      mergeTokenizedRange({
+        cachedTokens: [
+          { start: 0, end: 10, class_name: "token-keyword" },
+          { start: 100, end: 110, class_name: "token-string" },
+        ],
+        rangeTokens: [{ start: 500, end: 510, class_name: "token-function" }],
+        rangeStartOffset: 500,
+        rangeEndOffset: 600,
+        retainOutsideRange: false,
+      }),
+    ).toEqual([{ start: 500, end: 510, class_name: "token-function" }]);
   });
 });

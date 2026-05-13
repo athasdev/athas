@@ -170,6 +170,107 @@ describe("calculateSelectionBoxes", () => {
     });
   });
 
+  it("measures selected tabs from their line column instead of substring column zero", () => {
+    const content = "ab\tcd";
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: 2, end: 3 },
+      lines: [content],
+      lineOffsets: buildLineOffsetMap(content),
+      contentLength: content.length,
+      lineHeight: 20,
+      measureText: (text) => {
+        let width = 0;
+        let column = 0;
+        for (const char of text) {
+          if (char === "\t") {
+            const spaces = 4 - (column % 4 || 4);
+            const tabWidth = spaces === 0 ? 4 : spaces;
+            width += tabWidth * 10;
+            column += tabWidth;
+          } else {
+            width += 10;
+            column++;
+          }
+        }
+        return width;
+      },
+    });
+
+    expect(boxes[0]).toMatchObject({
+      left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 20,
+      width: 20,
+    });
+  });
+
+  it("measures wrapped tab selections from their full-line column", () => {
+    const content = "ab\tcd";
+    const lines = [content];
+    const tabAwareMeasure = (text: string) => {
+      let width = 0;
+      let column = 0;
+      for (const char of text) {
+        if (char === "\t") {
+          const remainder = column % 4;
+          const spaces = remainder === 0 ? 4 : 4 - remainder;
+          width += spaces * 10;
+          column += spaces;
+        } else {
+          width += 10;
+          column++;
+        }
+      }
+      return width;
+    };
+    const segment = {
+      viewLine: 0,
+      modelLine: 0,
+      startColumn: 2,
+      endColumn: 5,
+      top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      height: 20,
+    };
+    const viewLayout = {
+      segments: [segment],
+      zones: [],
+      modelLineStartViewLines: [0],
+      modelLineViewLineCounts: [1],
+      totalViewLines: 1,
+      totalHeight: 20,
+      totalZoneHeight: 0,
+      getModelLineViewLineCount: () => 1,
+      getSegmentForModelPosition: () => segment,
+      modelPositionToViewPosition: () => ({
+        ...segment,
+        column: 2,
+        left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        segment,
+      }),
+      editorPointToModelPosition: () => ({
+        ...segment,
+        column: 2,
+        left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        segment,
+      }),
+      viewLineToSegment: () => segment,
+    };
+
+    const boxes = calculateSelectionBoxes({
+      selectionOffsets: { start: 2, end: 3 },
+      lines,
+      lineOffsets: buildLineOffsetMap(content),
+      contentLength: content.length,
+      lineHeight: 20,
+      measureText: tabAwareMeasure,
+      viewLayout,
+    });
+
+    expect(boxes[0]).toMatchObject({
+      top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      width: 20,
+    });
+  });
+
   it("renders only viewport selection boxes when line text is resolved lazily", () => {
     const lineCount = 100_000;
     const lineOffsets = Array.from({ length: lineCount }, (_, index) => index * 11);

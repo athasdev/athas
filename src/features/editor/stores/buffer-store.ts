@@ -123,6 +123,7 @@ interface BufferActions {
   openAgentBuffer: (sessionId?: string) => string;
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
+  openReferencesBuffer: () => string;
   openOnboardingBuffer: (
     context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
   ) => string;
@@ -695,7 +696,8 @@ export const useBufferStore = createSelectors(
             }
 
             case "globalSearch":
-            case "diagnostics": {
+            case "diagnostics":
+            case "references": {
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
@@ -713,7 +715,11 @@ export const useBufferStore = createSelectors(
               newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const path =
-                spec.type === "globalSearch" ? "search://global" : "diagnostics://problems";
+                spec.type === "globalSearch"
+                  ? "search://global"
+                  : spec.type === "diagnostics"
+                    ? "diagnostics://problems"
+                    : "references://results";
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
 
@@ -985,6 +991,10 @@ export const useBufferStore = createSelectors(
 
         openDiagnosticsBuffer: (): string => {
           return get().actions.openContent({ type: "diagnostics" });
+        },
+
+        openReferencesBuffer: (): string => {
+          return get().actions.openContent({ type: "references" });
         },
 
         openOnboardingBuffer: (context): string => {

@@ -17,7 +17,6 @@ import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import ReferencesPane from "../../../references/components/references-pane";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {
@@ -43,7 +42,10 @@ const BottomPane = () => {
   }, []);
 
   useEffect(() => {
-    if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
+    if (
+      isBottomPaneVisible &&
+      (bottomPaneActiveTab === "diagnostics" || bottomPaneActiveTab === "references")
+    ) {
       useUIState.getState().setIsBottomPaneVisible(false);
     }
   }, [bottomPaneActiveTab, isBottomPaneVisible]);
@@ -220,16 +222,6 @@ const BottomPane = () => {
         {settings.coreFeatures.debugger && bottomPaneActiveTab === "debugger" && (
           <div className="h-full">
             <DebuggerView />
-          </div>
-        )}
-
-        {/* References Pane */}
-        {bottomPaneActiveTab === "references" && (
-          <div className="h-full">
-            <ReferencesPane
-              onFullScreen={() => setIsFullScreen(!isFullScreen)}
-              isFullScreen={isFullScreen}
-            />
           </div>
         )}
 

@@ -11,6 +11,7 @@ import {
   getLineOffset,
   getLineSlice,
   isTooLargeForEditorServices,
+  isTooLargeForSyntaxTokenization,
   shouldUseLargeEditorMode,
   sliceContentLines,
   sliceContentLinesByOffsets,
@@ -32,6 +33,21 @@ describe("large file editor mode", () => {
       }),
     ).toBe(true);
     expect(isTooLargeForEditorServices({ contentLength: 1024, lineCount: 50_000 })).toBe(true);
+  });
+
+  it("keeps syntax tokenization available for responsive large files below hard limits", () => {
+    expect(
+      isTooLargeForSyntaxTokenization({
+        contentLength: 9 * 1024 * 1024,
+        lineCount: 150_000,
+      }),
+    ).toBe(false);
+    expect(
+      isTooLargeForSyntaxTokenization({
+        contentLength: 21 * 1024 * 1024,
+        lineCount: 150_000,
+      }),
+    ).toBe(true);
   });
 
   it("keeps normal editor services for ordinary files", () => {

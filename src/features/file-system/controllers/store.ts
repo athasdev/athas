@@ -997,7 +997,7 @@ export const useFileSystemStore = createSelectors(
             setTimeout(() => {
               window.dispatchEvent(
                 new CustomEvent("menu-go-to-line", {
-                  detail: { line, path },
+                  detail: { line, column, path },
                 }),
               );
             }, 0);
@@ -1283,7 +1283,7 @@ export const useFileSystemStore = createSelectors(
           setTimeout(() => {
             window.dispatchEvent(
               new CustomEvent("menu-go-to-line", {
-                detail: { line, path },
+                detail: { line, column, path },
               }),
             );
           }, 100);

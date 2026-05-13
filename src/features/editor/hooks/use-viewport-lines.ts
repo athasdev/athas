@@ -15,10 +15,96 @@ export interface ViewportRange {
 interface UseViewportLinesOptions {
   lineHeight: number;
   bufferLines?: number;
+  significantLineDiff?: number;
 }
 
 const LARGE_FILE_VIEWPORT_THRESHOLD = 20000;
 const LARGE_FILE_SIGNIFICANT_LINE_DIFF = 40;
+
+interface CalculateViewportRangeOptions {
+  scrollTop: number;
+  containerHeight: number;
+  totalLines: number;
+  lineHeight: number;
+  bufferLines: number;
+}
+
+export function calculateViewportRangeForScroll({
+  scrollTop,
+  containerHeight,
+  totalLines,
+  lineHeight,
+  bufferLines,
+}: CalculateViewportRangeOptions): ViewportRange {
+  const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
+  const visibleLineCount = Math.ceil(containerHeight / lineHeight);
+  const endLine = Math.min(
+    totalLines,
+    Math.floor(scrollTop / lineHeight) + visibleLineCount + bufferLines,
+  );
+
+  return {
+    startLine,
+    endLine,
+    totalLines,
+  };
+}
+
+function getViewportDiffThreshold({
+  totalLines,
+  bufferLines,
+  significantLineDiff,
+}: {
+  totalLines: number;
+  bufferLines: number;
+  significantLineDiff?: number;
+}) {
+  if (significantLineDiff !== undefined) return significantLineDiff;
+  if (bufferLines === 0) return 0;
+  return totalLines >= LARGE_FILE_VIEWPORT_THRESHOLD
+    ? LARGE_FILE_SIGNIFICANT_LINE_DIFF
+    : EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF;
+}
+
+export function shouldUpdateViewportRange({
+  previousRange,
+  nextRange,
+  bufferLines,
+  significantLineDiff,
+}: {
+  previousRange: ViewportRange;
+  nextRange: ViewportRange;
+  bufferLines: number;
+  significantLineDiff?: number;
+}) {
+  const startLineDiff = Math.abs(nextRange.startLine - previousRange.startLine);
+  const endLineDiff = Math.abs(nextRange.endLine - previousRange.endLine);
+  const significantDiffThreshold = getViewportDiffThreshold({
+    totalLines: nextRange.totalLines,
+    bufferLines,
+    significantLineDiff,
+  });
+
+  return (
+    startLineDiff > significantDiffThreshold ||
+    endLineDiff > significantDiffThreshold ||
+    nextRange.totalLines !== previousRange.totalLines
+  );
+}
+
+export function expandViewportRange(
+  range: ViewportRange,
+  totalLines: number,
+  overscanLines: number,
+): ViewportRange {
+  const safeOverscanLines = Math.max(0, overscanLines);
+
+  return {
+    startLine: Math.max(0, range.startLine - safeOverscanLines),
+    endLine: Math.min(totalLines, range.endLine + safeOverscanLines),
+    totalLines,
+  };
+}
 
 function areViewportRangesEqual(left: ViewportRange, right: ViewportRange): boolean {
   return (
@@ -29,7 +115,11 @@ function areViewportRangesEqual(left: ViewportRange, right: ViewportRange): bool
 }
 
 export function useViewportLines(options: UseViewportLinesOptions) {
-  const { lineHeight, bufferLines = EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES } = options;
+  const {
+    lineHeight,
+    bufferLines = EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES,
+    significantLineDiff,
+  } = options;
 
   const [viewportRange, setViewportRange] = useState<ViewportRange>({
     startLine: 0,
@@ -44,19 +134,13 @@ export function useViewportLines(options: UseViewportLinesOptions) {
    */
   const calculateViewportRange = useCallback(
     (scrollTop: number, containerHeight: number, totalLines: number): ViewportRange => {
-      // Calculate visible lines
-      const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
-      const visibleLineCount = Math.ceil(containerHeight / lineHeight);
-      const endLine = Math.min(
+      return calculateViewportRangeForScroll({
+        scrollTop,
+        containerHeight,
         totalLines,
-        Math.floor(scrollTop / lineHeight) + visibleLineCount + bufferLines,
-      );
-
-      return {
-        startLine,
-        endLine,
-        totalLines,
-      };
+        lineHeight,
+        bufferLines,
+      });
     },
     [lineHeight, bufferLines],
   );
@@ -71,17 +155,13 @@ export function useViewportLines(options: UseViewportLinesOptions) {
 
       // Only update if range has changed significantly
       setViewportRange((prev) => {
-        const startLineDiff = Math.abs(newRange.startLine - prev.startLine);
-        const endLineDiff = Math.abs(newRange.endLine - prev.endLine);
-        const significantDiffThreshold =
-          totalLines >= LARGE_FILE_VIEWPORT_THRESHOLD
-            ? LARGE_FILE_SIGNIFICANT_LINE_DIFF
-            : EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF;
-
         if (
-          startLineDiff > significantDiffThreshold ||
-          endLineDiff > significantDiffThreshold ||
-          newRange.totalLines !== prev.totalLines
+          shouldUpdateViewportRange({
+            previousRange: prev,
+            nextRange: newRange,
+            bufferLines,
+            significantLineDiff,
+          })
         ) {
           return newRange;
         }
@@ -89,7 +169,7 @@ export function useViewportLines(options: UseViewportLinesOptions) {
         return prev;
       });
     },
-    [calculateViewportRange],
+    [bufferLines, calculateViewportRange, significantLineDiff],
   );
 
   /**
