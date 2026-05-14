@@ -206,7 +206,19 @@ export function useEditorTextareaInput({
         setCursorPosition(position);
       }
 
-      if (selectionStart !== selectionEnd) {
+      const isDeletion =
+        inputType === "deleteContentBackward" ||
+        inputType === "deleteContentForward" ||
+        inputType === "deleteWordBackward" ||
+        inputType === "deleteWordForward" ||
+        inputType === "deleteSoftLineBackward" ||
+        inputType === "deleteSoftLineForward" ||
+        inputType === "deleteHardLineBackward" ||
+        inputType === "deleteHardLineForward" ||
+        inputType === "deleteByDrag" ||
+        inputType === "deleteByCut";
+
+      if (selectionStart !== selectionEnd && !isDeletion) {
         const startPos = getNextVirtualPosition(selectionStart);
         const endPos = getNextVirtualPosition(selectionEnd);
 
