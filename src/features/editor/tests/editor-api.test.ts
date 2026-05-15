@@ -94,6 +94,7 @@ describe("editor API model operations", () => {
 
     onChange.mockReset();
     editorAPI.setTextareaRef?.(null);
+    editorAPI.setActiveEditorAdapter(null);
     editorAPI.updateCursorAndSelection({ line: 0, column: 0, offset: 0 }, null);
 
     useBufferStore.setState({
@@ -122,6 +123,7 @@ describe("editor API model operations", () => {
     });
     useHistoryStore?.getState().actions.clearAllHistories();
     useEditorSettingsStore?.setState({ theme: "athas-dark" });
+    editorAPI?.setActiveEditorAdapter(null);
     vi.unstubAllGlobals();
   });
 
@@ -136,6 +138,81 @@ describe("editor API model operations", () => {
     );
     expect(useEditorStateStore.getState().cursorPosition).toEqual(
       calculateCursorPositionFromContent("alpha\nbeX".length, "alpha\nbeXta"),
+    );
+  });
+
+  it("delegates text edits to the active editor adapter", () => {
+    const insertText = vi.fn();
+    const deleteRange = vi.fn();
+    const replaceRange = vi.fn();
+    const selectAll = vi.fn();
+    const undo = vi.fn();
+    const redo = vi.fn();
+    const range = {
+      start: calculateCursorPositionFromContent(0, "alpha\nbeta"),
+      end: calculateCursorPositionFromContent(5, "alpha\nbeta"),
+    };
+
+    editorAPI.setActiveEditorAdapter({
+      ownerId: "monaco-test",
+      insertText,
+      deleteRange,
+      replaceRange,
+      selectAll,
+      undo,
+      redo,
+    });
+
+    editorAPI.insertText("X");
+    editorAPI.deleteRange(range);
+    editorAPI.replaceRange(range, "Y");
+    editorAPI.selectAll();
+    editorAPI.undo();
+    editorAPI.redo();
+
+    expect(insertText).toHaveBeenCalledWith("X", undefined);
+    expect(deleteRange).toHaveBeenCalledWith(range);
+    expect(replaceRange).toHaveBeenCalledWith(range, "Y");
+    expect(selectAll).toHaveBeenCalledTimes(1);
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(redo).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("clears only the matching active editor adapter", () => {
+    const firstInsert = vi.fn();
+    const secondInsert = vi.fn();
+    const noopAdapter = {
+      deleteRange: vi.fn(),
+      replaceRange: vi.fn(),
+      selectAll: vi.fn(),
+      undo: vi.fn(),
+      redo: vi.fn(),
+    };
+
+    editorAPI.setActiveEditorAdapter({
+      ownerId: "first",
+      insertText: firstInsert,
+      ...noopAdapter,
+    });
+    editorAPI.setActiveEditorAdapter({
+      ownerId: "second",
+      insertText: secondInsert,
+      ...noopAdapter,
+    });
+
+    editorAPI.clearActiveEditorAdapter("first");
+    editorAPI.insertText("X");
+    expect(firstInsert).not.toHaveBeenCalled();
+    expect(secondInsert).toHaveBeenCalledTimes(1);
+
+    editorAPI.clearActiveEditorAdapter("second");
+    editorAPI.insertText("Y");
+    expect(onChange).toHaveBeenCalledWith(
+      "alpha\nbeYta",
+      "alpha\nbeta",
+      { line: 1, column: 2, offset: "alpha\nbe".length },
+      undefined,
     );
   });
 

@@ -47,6 +47,16 @@ import type {
 } from "./types";
 import { calculateLineHeight } from "../utils/lines";
 
+interface ActiveEditorAdapter {
+  ownerId: string;
+  insertText: (text: string, position?: Position) => void;
+  deleteRange: (range: Range) => void;
+  replaceRange: (range: Range, text: string) => void;
+  selectAll: () => void;
+  undo: () => void;
+  redo: () => void;
+}
+
 function normalizeSelectionOffsets(selection?: Range | null): OffsetRange | null {
   if (!selection || selection.start.offset === selection.end.offset) return null;
   return selection.start.offset < selection.end.offset
@@ -68,6 +78,7 @@ class EditorAPIImpl implements EditorAPI {
   private selection: Range | null = null;
   private textareaRef: HTMLTextAreaElement | null = null;
   private viewportRef: HTMLDivElement | null = null;
+  private activeEditorAdapter: ActiveEditorAdapter | null = null;
   private smartSelectionHistory: OffsetRange[] = [];
 
   constructor() {
@@ -101,6 +112,11 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   insertText(text: string, position?: Position): void {
+    if (this.activeEditorAdapter) {
+      this.activeEditorAdapter.insertText(text, position);
+      return;
+    }
+
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
     const textareaOwnsFullContent = this.textareaRef?.value === content;
@@ -118,6 +134,11 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   deleteRange(range: Range): void {
+    if (this.activeEditorAdapter) {
+      this.activeEditorAdapter.deleteRange(range);
+      return;
+    }
+
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
     const before = content.substring(0, range.start.offset);
@@ -129,6 +150,11 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   replaceRange(range: Range, text: string): void {
+    if (this.activeEditorAdapter) {
+      this.activeEditorAdapter.replaceRange(range, text);
+      return;
+    }
+
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
     const before = content.substring(0, range.start.offset);
@@ -186,6 +212,11 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   selectAll(): void {
+    if (this.activeEditorAdapter) {
+      this.activeEditorAdapter.selectAll();
+      return;
+    }
+
     const content = this.getContent();
     const textareaOwnsFullContent = this.textareaRef?.value === content;
 
@@ -481,6 +512,11 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   undo(): void {
+    if (this.activeEditorAdapter) {
+      this.activeEditorAdapter.undo();
+      return;
+    }
+
     const bufferStore = useBufferStore.getState();
     const activeBufferId = bufferStore.activeBufferId;
 
@@ -531,6 +567,11 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   redo(): void {
+    if (this.activeEditorAdapter) {
+      this.activeEditorAdapter.redo();
+      return;
+    }
+
     const bufferStore = useBufferStore.getState();
     const activeBufferId = bufferStore.activeBufferId;
 
@@ -692,6 +733,21 @@ class EditorAPIImpl implements EditorAPI {
 
   getViewportRef(): HTMLDivElement | null {
     return this.viewportRef;
+  }
+
+  setActiveEditorAdapter(adapter: ActiveEditorAdapter | null): void {
+    if (adapter) {
+      this.activeEditorAdapter = adapter;
+      return;
+    }
+
+    this.activeEditorAdapter = null;
+  }
+
+  clearActiveEditorAdapter(ownerId: string): void {
+    if (this.activeEditorAdapter?.ownerId === ownerId) {
+      this.activeEditorAdapter = null;
+    }
   }
 
   private getActiveLineCommentToken(): string {

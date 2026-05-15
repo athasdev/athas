@@ -458,6 +458,77 @@ export function MonacoBackedEditor({
     editorAPI.setTextareaRef(null);
     editorAPI.setViewportRef(container);
 
+    const adapterOwnerId = viewStateKey ?? activeBufferId ?? modelUri.toString();
+    if (isActiveSurface && !readOnly && !isPreviewMode) {
+      const executeTextEdit = (range: Monaco.Range, text: string) => {
+        const startOffset = model.getOffsetAt(range.getStartPosition());
+        editor.pushUndoStop();
+        editor.executeEdits("athas-api", [{ range, text, forceMoveMarkers: true }]);
+        const nextPosition = model.getPositionAt(startOffset + text.length);
+        editor.setSelection(
+          new MonacoRange(
+            nextPosition.lineNumber,
+            nextPosition.column,
+            nextPosition.lineNumber,
+            nextPosition.column,
+          ),
+        );
+        editor.setPosition(nextPosition);
+        editor.pushUndoStop();
+        syncCursorAndSelection();
+      };
+
+      editorAPI.setActiveEditorAdapter({
+        ownerId: adapterOwnerId,
+        insertText: (text, position) => {
+          if (position) {
+            const monacoPosition = toMonacoPosition(position);
+            executeTextEdit(
+              new MonacoRange(
+                monacoPosition.lineNumber,
+                monacoPosition.column,
+                monacoPosition.lineNumber,
+                monacoPosition.column,
+              ),
+              text,
+            );
+            return;
+          }
+
+          const selection = editor.getSelection();
+          if (selection && !selection.isEmpty()) {
+            executeTextEdit(selection, text);
+            return;
+          }
+
+          const currentPosition = editor.getPosition() ?? { lineNumber: 1, column: 1 };
+          executeTextEdit(
+            new MonacoRange(
+              currentPosition.lineNumber,
+              currentPosition.column,
+              currentPosition.lineNumber,
+              currentPosition.column,
+            ),
+            text,
+          );
+        },
+        deleteRange: (range) => executeTextEdit(toMonacoRange(range), ""),
+        replaceRange: (range, text) => executeTextEdit(toMonacoRange(range), text),
+        selectAll: () => {
+          editor.setSelection(model.getFullModelRange());
+          syncCursorAndSelection();
+        },
+        undo: () => {
+          editor.trigger("athas-api", "undo", null);
+          syncCursorAndSelection();
+        },
+        redo: () => {
+          editor.trigger("athas-api", "redo", null);
+          syncCursorAndSelection();
+        },
+      });
+    }
+
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyA, () => {
       editor.setSelection(model.getFullModelRange());
       syncCursorAndSelection();
@@ -532,6 +603,7 @@ export function MonacoBackedEditor({
       editor.dispose();
       model.dispose();
       editorAPI.setViewportRef(null);
+      editorAPI.clearActiveEditorAdapter(adapterOwnerId);
     };
   }, [
     activeBufferId,
