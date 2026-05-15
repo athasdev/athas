@@ -356,10 +356,14 @@ export function MonacoBackedEditor({
   const wordWrap = useEditorSettingsStore.use.wordWrap();
   const lineNumbers = useEditorSettingsStore.use.lineNumbers();
   const renderWhitespace = useEditorSettingsStore.use.renderWhitespace();
+  const renderIndentGuides = useEditorSettingsStore.use.renderIndentGuides();
+  const highlightOccurrences = useEditorSettingsStore.use.highlightOccurrences();
   const theme = useEditorSettingsStore.use.theme();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const settingsTheme = useSettingsStore((state) => state.settings.theme);
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
+  const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
+  const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
@@ -440,6 +444,15 @@ export function MonacoBackedEditor({
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
+      guides: {
+        indentation: renderIndentGuides,
+        highlightActiveIndentation: renderIndentGuides,
+      },
+      occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
+      selectionHighlight: highlightOccurrences,
+      quickSuggestions: autoCompletion,
+      suggestOnTriggerCharacters: autoCompletion,
+      parameterHints: { enabled: parameterHints },
       theme: defineMonacoTheme(settingsTheme || theme),
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
       cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
@@ -607,9 +620,11 @@ export function MonacoBackedEditor({
     };
   }, [
     activeBufferId,
+    autoCompletion,
     filePath,
     fontFamily,
     fontSize,
+    highlightOccurrences,
     isActiveSurface,
     isPreviewMode,
     lineHeight,
@@ -619,7 +634,9 @@ export function MonacoBackedEditor({
     modelUri,
     monacoLanguageId,
     onScrollOffsetChange,
+    parameterHints,
     readOnly,
+    renderIndentGuides,
     renderWhitespace,
     scrollable,
     setScrollForBuffer,
@@ -672,6 +689,15 @@ export function MonacoBackedEditor({
       minimap: { enabled: minimapEnabled },
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
+      guides: {
+        indentation: renderIndentGuides,
+        highlightActiveIndentation: renderIndentGuides,
+      },
+      occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
+      selectionHighlight: highlightOccurrences,
+      quickSuggestions: autoCompletion,
+      suggestOnTriggerCharacters: autoCompletion,
+      parameterHints: { enabled: parameterHints },
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
       cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
       scrollbar: {
@@ -692,14 +718,18 @@ export function MonacoBackedEditor({
       unsubscribeReady();
     };
   }, [
+    autoCompletion,
     fontFamily,
     fontSize,
+    highlightOccurrences,
     isPreviewMode,
     lineHeight,
     lineNumbers,
     lineNumberFormatter,
     minimapEnabled,
+    parameterHints,
     readOnly,
+    renderIndentGuides,
     renderWhitespace,
     scrollable,
     settingsTheme,
