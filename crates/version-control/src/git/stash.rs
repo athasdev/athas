@@ -305,6 +305,9 @@ fn _git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDiff>
          old_blob_base64,
          new_blob_base64,
          lines,
+         raw_patch: None,
+         additions: None,
+         deletions: None,
       });
    }
 

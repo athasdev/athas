@@ -30,8 +30,13 @@ import type { MultiFileDiff } from "../../types/git-diff-types";
 import type { GitDiff } from "../../types/git-types";
 import { gitDiffCache } from "../../utils/git-diff-cache";
 import { getFileStatus } from "../../utils/git-diff-helpers";
+import {
+  getInitialExpandedDiffFileKeys,
+  shouldUseScrollableDiffEditor,
+} from "../../utils/diff-viewer-scale";
 import { buildWorkingTreeMultiDiff } from "../../utils/working-tree-multi-diff";
 import {
+  serializeGitDiffForEditor,
   serializeGitDiffSourceForEditor,
   serializeGitDiffSourceForSplitEditor,
 } from "../../utils/diff-editor-content";
@@ -41,6 +46,13 @@ import TextDiffViewer from "./git-diff-text";
 import Badge from "@/ui/badge";
 
 function countStats(diff: GitDiff) {
+  if (typeof diff.additions === "number" || typeof diff.deletions === "number") {
+    return {
+      additions: diff.additions ?? 0,
+      deletions: diff.deletions ?? 0,
+    };
+  }
+
   let additions = 0;
   let deletions = 0;
 
@@ -100,7 +112,33 @@ function buildGitHubReferenceUrl(remoteUrl: string, gitRef: string): string | nu
   return `https://github.com/${slug.owner}/${slug.repo}/commit/${encodeURIComponent(gitRef)}`;
 }
 
-function DiffSectionEditor({
+function LargeDiffSectionEditor({ diff, cacheKey }: { diff: GitDiff; cacheKey: string }) {
+  const sourcePath = diff.new_path || diff.old_path || diff.file_path;
+  const editorContent = useMemo(() => serializeGitDiffForEditor(diff), [diff]);
+  const bufferId = useDiffEditorBuffer({
+    cacheKey: `${cacheKey}_large`,
+    content: editorContent,
+    sourcePath,
+    name: `${sourcePath.split("/").pop() || "Diff"}.diff`,
+  });
+
+  return (
+    <div
+      className="relative overflow-hidden border-border border-t bg-primary-bg"
+      style={{ height: "min(72vh, 760px)", minHeight: "420px" }}
+    >
+      <CodeEditor
+        bufferId={bufferId}
+        isActiveSurface={false}
+        showToolbar={false}
+        readOnly={true}
+        scrollable={true}
+      />
+    </div>
+  );
+}
+
+function EmbeddedDiffSectionEditor({
   diff,
   cacheKey,
   viewMode,
@@ -250,6 +288,22 @@ function DiffSectionEditor({
       />
     </div>
   );
+}
+
+function DiffSectionEditor({
+  diff,
+  cacheKey,
+  viewMode,
+}: {
+  diff: GitDiff;
+  cacheKey: string;
+  viewMode: "unified" | "split";
+}) {
+  if (shouldUseScrollableDiffEditor(diff)) {
+    return <LargeDiffSectionEditor diff={diff} cacheKey={cacheKey} />;
+  }
+
+  return <EmbeddedDiffSectionEditor diff={diff} cacheKey={cacheKey} viewMode={viewMode} />;
 }
 
 const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
@@ -434,15 +488,7 @@ const DiffFileSection = memo(function DiffFileSection({
 });
 
 function getInitialExpandedFiles(multiDiff: MultiFileDiff): Set<string> {
-  if (multiDiff.initiallyExpandedFileKey) {
-    return new Set([multiDiff.initiallyExpandedFileKey]);
-  }
-
-  return new Set(
-    multiDiff.files.map(
-      (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
-    ),
-  );
+  return new Set(getInitialExpandedDiffFileKeys(multiDiff));
 }
 
 const GitDiffEditorStack = memo(function GitDiffEditorStack({

@@ -4,6 +4,64 @@ use base64::{Engine as _, engine::general_purpose};
 use git2::{Diff, DiffFormat, Oid, Repository, Tree};
 use std::{collections::HashMap, path::Path};
 
+const LARGE_DIFF_LINE_THRESHOLD: usize = 20_000;
+
+#[derive(Default)]
+struct ParsedDiffFile {
+   lines: Vec<GitDiffLine>,
+   raw_patch: Option<String>,
+   additions: usize,
+   deletions: usize,
+   line_count: usize,
+}
+
+impl ParsedDiffFile {
+   fn push_raw_line(&mut self, origin: char, content: &[u8]) {
+      let raw_patch = self.raw_patch.get_or_insert_with(String::new);
+      match origin {
+         '+' | '-' | ' ' => raw_patch.push(origin),
+         _ => {}
+      }
+      raw_patch.push_str(&String::from_utf8_lossy(content));
+   }
+
+   fn push_line(&mut self, origin: char, line: GitDiffLine, content: &[u8]) {
+      self.line_count += 1;
+      if matches!(origin, '+') {
+         self.additions += 1;
+      } else if matches!(origin, '-') {
+         self.deletions += 1;
+      }
+
+      if self.raw_patch.is_some() {
+         self.push_raw_line(origin, content);
+         return;
+      }
+
+      if self.line_count > LARGE_DIFF_LINE_THRESHOLD {
+         let mut raw_patch = String::new();
+         for existing_line in &self.lines {
+            match &existing_line.line_type {
+               DiffLineType::Added => raw_patch.push('+'),
+               DiffLineType::Removed => raw_patch.push('-'),
+               DiffLineType::Context => raw_patch.push(' '),
+               DiffLineType::Header => {}
+            }
+            raw_patch.push_str(&existing_line.content);
+            if !existing_line.content.ends_with('\n') {
+               raw_patch.push('\n');
+            }
+         }
+         self.lines.clear();
+         self.raw_patch = Some(raw_patch);
+         self.push_raw_line(origin, content);
+         return;
+      }
+
+      self.lines.push(line);
+   }
+}
+
 pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> {
    let mut lines: Vec<GitDiffLine> = Vec::new();
 
@@ -76,53 +134,70 @@ fn diff_delta_file_path(delta: &git2::DiffDelta<'_>) -> String {
    }
 }
 
-fn parse_diff_to_file_lines(diff: &mut Diff) -> Result<HashMap<String, Vec<GitDiffLine>>, String> {
-   let mut file_lines: HashMap<String, Vec<GitDiffLine>> = HashMap::new();
+fn parse_diff_to_file_entries(diff: &mut Diff) -> Result<HashMap<String, ParsedDiffFile>, String> {
+   let mut file_entries: HashMap<String, ParsedDiffFile> = HashMap::new();
 
    diff
       .print(DiffFormat::Patch, |delta, _hunk, line| {
          let file_path = diff_delta_file_path(&delta);
-         let entry = file_lines.entry(file_path).or_default();
+         let entry = file_entries.entry(file_path).or_default();
          let origin = line.origin();
+         let content = line.content();
 
          match origin {
             'F' | 'H' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Header,
-                  content: String::from_utf8_lossy(line.content()).to_string(),
-                  old_line_number: None,
-                  new_line_number: None,
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Header,
+                     content: String::from_utf8_lossy(content).to_string(),
+                     old_line_number: None,
+                     new_line_number: None,
+                  },
+                  content,
+               );
             }
             '+' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Added,
-                  content: String::from_utf8_lossy(line.content())
-                     .trim_end_matches('\n')
-                     .to_string(),
-                  old_line_number: None,
-                  new_line_number: line.new_lineno(),
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Added,
+                     content: String::from_utf8_lossy(content)
+                        .trim_end_matches('\n')
+                        .to_string(),
+                     old_line_number: None,
+                     new_line_number: line.new_lineno(),
+                  },
+                  content,
+               );
             }
             '-' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Removed,
-                  content: String::from_utf8_lossy(line.content())
-                     .trim_end_matches('\n')
-                     .to_string(),
-                  old_line_number: line.old_lineno(),
-                  new_line_number: None,
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Removed,
+                     content: String::from_utf8_lossy(content)
+                        .trim_end_matches('\n')
+                        .to_string(),
+                     old_line_number: line.old_lineno(),
+                     new_line_number: None,
+                  },
+                  content,
+               );
             }
             ' ' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Context,
-                  content: String::from_utf8_lossy(line.content())
-                     .trim_end_matches('\n')
-                     .to_string(),
-                  old_line_number: line.old_lineno(),
-                  new_line_number: line.new_lineno(),
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Context,
+                     content: String::from_utf8_lossy(content)
+                        .trim_end_matches('\n')
+                        .to_string(),
+                     old_line_number: line.old_lineno(),
+                     new_line_number: line.new_lineno(),
+                  },
+                  content,
+               );
             }
             _ => {}
          }
@@ -131,7 +206,22 @@ fn parse_diff_to_file_lines(diff: &mut Diff) -> Result<HashMap<String, Vec<GitDi
       })
       .map_err(|e| e.to_string())?;
 
-   Ok(file_lines)
+   Ok(file_entries)
+}
+
+fn count_line_stats(lines: &[GitDiffLine]) -> (usize, usize) {
+   let mut additions = 0;
+   let mut deletions = 0;
+
+   for line in lines {
+      match line.line_type {
+         DiffLineType::Added => additions += 1,
+         DiffLineType::Removed => deletions += 1,
+         _ => {}
+      }
+   }
+
+   (additions, deletions)
 }
 
 pub fn git_diff_file(
@@ -283,6 +373,8 @@ pub fn git_diff_file(
                   }
                }
 
+               let (additions, deletions) = count_line_stats(&lines);
+
                return Ok(GitDiff {
                   file_path: file_path.clone(),
                   old_path,
@@ -295,6 +387,9 @@ pub fn git_diff_file(
                   old_blob_base64,
                   new_blob_base64,
                   lines,
+                  raw_patch: None,
+                  additions: Some(additions),
+                  deletions: Some(deletions),
                });
             }
          }
@@ -374,6 +469,8 @@ pub fn git_diff_file(
       lines = parse_diff_to_lines(&mut diff)?;
    }
 
+   let (additions, deletions) = count_line_stats(&lines);
+
    Ok(GitDiff {
       file_path: file_path.clone(),
       old_path,
@@ -386,6 +483,9 @@ pub fn git_diff_file(
       old_blob_base64,
       new_blob_base64,
       lines,
+      raw_patch: None,
+      additions: Some(additions),
+      deletions: Some(deletions),
    })
 }
 
@@ -593,6 +693,8 @@ pub fn git_diff_file_with_content(
       }
    }
 
+   let (additions, deletions) = count_line_stats(&lines);
+
    Ok(GitDiff {
       file_path: file_path.clone(),
       old_path: Some(file_path.clone()),
@@ -605,6 +707,9 @@ pub fn git_diff_file_with_content(
       old_blob_base64,
       new_blob_base64,
       lines,
+      raw_patch: None,
+      additions: Some(additions),
+      deletions: Some(deletions),
    })
 }
 
@@ -651,7 +756,7 @@ pub fn git_commit_diff(
       )
       .map_err(|e| format!("Failed to create commit diff: {e}"))?;
    let mut diff = diff;
-   let mut diff_lines_by_file = parse_diff_to_file_lines(&mut diff).unwrap_or_default();
+   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff).unwrap_or_default();
    let mut results: Vec<GitDiff> = Vec::new();
    for delta in diff.deltas() {
       let old_path = delta
@@ -676,6 +781,9 @@ pub fn git_commit_diff(
       let is_new = delta.status() == git2::Delta::Added;
       let is_deleted = delta.status() == git2::Delta::Deleted;
       let is_renamed = delta.status() == git2::Delta::Renamed;
+      let mut raw_patch = None;
+      let mut additions = 0;
+      let mut deletions = 0;
       let lines = if is_image {
          is_binary = true;
          let old_oid = delta.old_file().id();
@@ -723,7 +831,11 @@ pub fn git_commit_diff(
          }
          Vec::new()
       } else {
-         diff_lines_by_file.remove(&file_path).unwrap_or_default()
+         let parsed = diff_entries_by_file.remove(&file_path).unwrap_or_default();
+         raw_patch = parsed.raw_patch;
+         additions = parsed.additions;
+         deletions = parsed.deletions;
+         parsed.lines
       };
       results.push(GitDiff {
          file_path: file_path.clone(),
@@ -737,6 +849,9 @@ pub fn git_commit_diff(
          old_blob_base64,
          new_blob_base64,
          lines,
+         raw_patch,
+         additions: Some(additions),
+         deletions: Some(deletions),
       });
    }
    Ok(results)
@@ -777,7 +892,7 @@ fn git_diff_between_trees(
    let mut diff = repo
       .diff_tree_to_tree(base_tree, target_tree, None)
       .map_err(|e| format!("Failed to create ref diff: {e}"))?;
-   let mut diff_lines_by_file = parse_diff_to_file_lines(&mut diff).unwrap_or_default();
+   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff).unwrap_or_default();
    let mut results: Vec<GitDiff> = Vec::new();
 
    for delta in diff.deltas() {
@@ -803,6 +918,9 @@ fn git_diff_between_trees(
       let is_new = delta.status() == git2::Delta::Added;
       let is_deleted = delta.status() == git2::Delta::Deleted;
       let is_renamed = delta.status() == git2::Delta::Renamed;
+      let mut raw_patch = None;
+      let mut additions = 0;
+      let mut deletions = 0;
       let lines = if is_image {
          is_binary = true;
          let old_oid = delta.old_file().id();
@@ -850,7 +968,11 @@ fn git_diff_between_trees(
          }
          Vec::new()
       } else {
-         diff_lines_by_file.remove(&file_path).unwrap_or_default()
+         let parsed = diff_entries_by_file.remove(&file_path).unwrap_or_default();
+         raw_patch = parsed.raw_patch;
+         additions = parsed.additions;
+         deletions = parsed.deletions;
+         parsed.lines
       };
 
       results.push(GitDiff {
@@ -865,6 +987,9 @@ fn git_diff_between_trees(
          old_blob_base64,
          new_blob_base64,
          lines,
+         raw_patch,
+         additions: Some(additions),
+         deletions: Some(deletions),
       });
    }
 

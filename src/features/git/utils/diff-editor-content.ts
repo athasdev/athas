@@ -74,6 +74,10 @@ function serializeFileHeader(diff: GitDiff): string[] {
 }
 
 export function serializeGitDiffForEditor(diff: GitDiff): string {
+  if (diff.raw_patch) {
+    return diff.raw_patch;
+  }
+
   const serializedLines = diff.lines.map(toDiffLineText);
   const hasPatchHeader = serializedLines.some(
     (line) =>

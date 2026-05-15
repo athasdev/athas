@@ -97,6 +97,12 @@ export function countDiffStats(diffs: GitDiff[]): { additions: number; deletions
   let additions = 0;
   let deletions = 0;
   for (const diff of diffs) {
+    if (typeof diff.additions === "number" || typeof diff.deletions === "number") {
+      additions += diff.additions ?? 0;
+      deletions += diff.deletions ?? 0;
+      continue;
+    }
+
     for (const line of diff.lines) {
       if (line.line_type === "added") additions++;
       else if (line.line_type === "removed") deletions++;
