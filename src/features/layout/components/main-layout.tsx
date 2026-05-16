@@ -23,6 +23,10 @@ import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import QuickOpen from "@/features/quick-open/components/quick-open";
 import { useSettingsStore } from "@/features/settings/store";
+import {
+  attachDragKeyHandlers,
+  getInternalTabDragData,
+} from "@/features/tabs/utils/internal-tab-drag";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
@@ -34,7 +38,6 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
-import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import { TerminalHost } from "@/features/terminal/components/terminal-host";
@@ -119,6 +122,10 @@ export function MainLayout() {
 
   useEffect(() => {
     void initializeDebuggerEventBridge();
+  }, []);
+
+  useEffect(() => {
+    attachDragKeyHandlers();
   }, []);
 
   useEffect(() => {
