@@ -9,6 +9,7 @@ use super::{
       LspDiagnosticContext,
    },
 };
+use crate::app_runtime::AppHandle;
 use athas_lsp::{LspError, LspManager, LspResult};
 use athas_tooling::{LanguageToolConfigSet, ToolInstaller, ToolRegistry, ToolType};
 use lsp_types::{
@@ -17,7 +18,7 @@ use lsp_types::{
 };
 use serde_json::Value;
 use std::{collections::HashMap, path::PathBuf};
-use tauri::{AppHandle, State};
+use tauri::State;
 
 fn resolve_lsp_launch_request(
    app_handle: &AppHandle,
