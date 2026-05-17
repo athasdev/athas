@@ -105,6 +105,11 @@ function isBenignHoverError(error: unknown): boolean {
   );
 }
 
+function isCanceledLspRequest(error: unknown): boolean {
+  const message = stringifyLspError(error).toLowerCase();
+  return message === "canceled" || message.includes("canceled: canceled");
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -923,6 +928,7 @@ export class LspClient {
     try {
       return await invoke("lsp_get_semantic_tokens", { filePath });
     } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP semantic tokens error:", error);
       return [];
     }
@@ -939,6 +945,7 @@ export class LspClient {
     try {
       return await invoke("lsp_get_code_lens", { filePath });
     } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP code lens error:", error);
       return [];
     }
@@ -965,6 +972,7 @@ export class LspClient {
         endLine,
       });
     } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP inlay hints error:", error);
       return [];
     }
