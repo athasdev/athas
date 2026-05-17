@@ -1,4 +1,4 @@
-import { FileText, FolderOpen } from "@phosphor-icons/react";
+import { FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
@@ -176,7 +176,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
             {viewModel.secondaryLabel}
           </Button>
           <Button variant="accent" onClick={() => void handlePrimaryAction()}>
-            {viewModel.primaryAction === "open-whats-new" ? <FileText /> : <FolderOpen />}
+            {viewModel.primaryAction !== "open-whats-new" && <FolderOpen />}
             {viewModel.primaryLabel}
           </Button>
         </div>
