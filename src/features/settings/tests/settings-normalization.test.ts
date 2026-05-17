@@ -58,6 +58,18 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
   });
 
+  it("disables blank custom external editor settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "monaco",
+      externalEditor: "custom",
+      customEditorCommand: "",
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+    expect(normalized.externalEditor).toBe("none");
+  });
+
   it("preserves custom AI provider settings and mirrors the custom model into chat model", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

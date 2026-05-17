@@ -59,6 +59,15 @@ const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
   "trailing",
   "all",
 ]);
+const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
+  "none",
+  "nvim",
+  "helix",
+  "vim",
+  "nano",
+  "emacs",
+  "custom",
+]);
 
 function normalizeEditorLineHeight(value: number): number {
   if (!Number.isFinite(value)) {
@@ -94,6 +103,21 @@ function normalizeRenderWhitespace(value: unknown): Settings["renderWhitespace"]
   }
 
   return "none";
+}
+
+function normalizeExternalEditor(
+  value: unknown,
+  customEditorCommand: string | undefined,
+): Settings["externalEditor"] {
+  if (!EXTERNAL_EDITOR_MODES.has(value as Settings["externalEditor"])) {
+    return "none";
+  }
+
+  if (value === "custom" && !customEditorCommand?.trim()) {
+    return "none";
+  }
+
+  return value as Settings["externalEditor"];
 }
 
 const MAX_SYNCED_AI_SKILLS = 200;
@@ -248,6 +272,10 @@ export function normalizeSettings(settings: Settings): Settings {
   );
   normalizedSettings.renderWhitespace = normalizeRenderWhitespace(
     (normalizedSettings as { renderWhitespace?: unknown }).renderWhitespace,
+  );
+  normalizedSettings.externalEditor = normalizeExternalEditor(
+    (normalizedSettings as { externalEditor?: unknown }).externalEditor,
+    normalizedSettings.customEditorCommand,
   );
   normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
     normalizedSettings.fileTreeIndentSize,

@@ -1175,7 +1175,10 @@ export const useFileSystemStore = createSelectors(
           const { settings } = useSettingsStore.getState();
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;
 
-          if (settings.externalEditor !== "none") {
+          const hasExternalEditorCommand =
+            settings.externalEditor !== "custom" || settings.customEditorCommand.trim().length > 0;
+
+          if (settings.externalEditor !== "none" && hasExternalEditorCommand) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
