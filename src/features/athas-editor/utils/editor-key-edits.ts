@@ -53,6 +53,18 @@ export function resolvePreCompletionKeyEdit({
   const { key, content, selectionStart: start, selectionEnd: end } = keyState;
 
   if (!hasBlockedModifier) {
+    if ((key === "Backspace" || key === "Delete") && start !== end) {
+      const selectionStart = Math.min(start, end);
+      const selectionEnd = Math.max(start, end);
+
+      return {
+        type: "edit",
+        content: content.substring(0, selectionStart) + content.substring(selectionEnd),
+        selectionStart,
+        selectionEnd: selectionStart,
+      };
+    }
+
     const prevChar = start > 0 ? content[start - 1] : "";
     const blockCommentExpansion =
       start === end ? getBlockCommentExpansion(keyState.languageId ?? null, prevChar) : null;
