@@ -52,21 +52,18 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
-import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
-  onNewTabClose?: () => void;
   disablePaneActions?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
-  onNewTabClose,
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
@@ -84,8 +81,14 @@ const TabBar = ({
       ? findPaneGroup(bottomRoot, BOTTOM_PANE_ID)
       : findPaneGroup(paneRoot, paneId)
     : null;
-  const buffers = pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers;
-  const activeBufferId = pane ? pane.activeBufferId : globalActiveBufferId;
+  const buffers = (
+    pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers
+  ).filter((buffer) => buffer.type !== "newTab");
+  const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
+  const activeBufferId =
+    activeBufferCandidate && buffers.some((buffer) => buffer.id === activeBufferCandidate)
+      ? activeBufferCandidate
+      : null;
   const {
     handleTabClick,
     handleTabClose,
@@ -434,14 +437,10 @@ const TabBar = ({
 
   const closeTab = useCallback(
     (bufferId: string) => {
-      const buffer = buffers.find((item) => item.id === bufferId);
-      if (buffer?.type === "newTab") {
-        onNewTabClose?.();
-      }
       handleTabClose(bufferId);
       clearPositionCache(bufferId);
     },
-    [buffers, clearPositionCache, handleTabClose, onNewTabClose],
+    [clearPositionCache, handleTabClose],
   );
 
   const handleTabSelect = useCallback(
@@ -811,9 +810,6 @@ const TabBar = ({
                 {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
               </Button>
             )}
-            <div className="flex shrink-0 items-center">
-              <NewTabMenu />
-            </div>
           </div>
         </div>
 

@@ -76,6 +76,6 @@ export const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] =
     return buffers;
   }
 
-  removeBufferFromPanes(newTabBuffer.id);
+  removeBufferFromPanes(newTabBuffer.id, true);
   return buffers.filter((buffer) => buffer.id !== newTabBuffer.id);
 };

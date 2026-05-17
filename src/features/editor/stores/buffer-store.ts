@@ -487,39 +487,20 @@ export const useBufferStore = createSelectors(
             }
 
             case "newTab": {
-              const paneStore = usePaneStore.getState();
-              const activePane = paneStore.actions.getActivePane();
-              const paneBufferIds = activePane?.bufferIds ?? [];
-              const existingNewTab = buffers.find(
-                (b) => b.type === "newTab" && paneBufferIds.includes(b.id),
-              );
-
-              if (existingNewTab) {
+              const cleanedBuffers = closeNewTabInActivePane([...buffers]);
+              if (cleanedBuffers.length !== buffers.length) {
                 set((state) => {
-                  state.activeBufferId = existingNewTab.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existingNewTab.id,
-                  }));
+                  state.buffers = cleanedBuffers;
+                  if (
+                    state.activeBufferId &&
+                    !cleanedBuffers.some((b) => b.id === state.activeBufferId)
+                  ) {
+                    state.activeBufferId = null;
+                  }
                 });
-                if (activePane) {
-                  ensureBufferInPane(activePane.id, existingNewTab.id, true);
-                }
-                return existingNewTab.id;
               }
-
-              const newTabId = `buffer_new_tab_${Date.now()}`;
-              const newBuffer = createPaneContent(newTabId, spec);
-
-              set((state) => {
-                state.buffers = state.buffers
-                  .map((b) => ({ ...b, isActive: false }))
-                  .concat(newBuffer);
-                state.activeBufferId = newTabId;
-              });
-
-              syncBufferToPane(newTabId);
-              return newTabId;
+              saveSessionToStore(get().buffers, get().activeBufferId);
+              return get().activeBufferId ?? "";
             }
 
             case "pullRequest": {
