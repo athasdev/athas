@@ -387,13 +387,13 @@ export function MonacoBackedEditor({
       const mappedLine = lineNumberMap?.[lineNumber - 1];
       if (typeof mappedLine === "number") return String(mappedLine);
       if (vimModeEnabled && vimRelativeLineNumbers && !lineNumberMap) {
-        const cursorLine = cursorPosition.line + 1;
+        const cursorLine = useEditorStateStore.getState().cursorPosition.line + 1;
         const distance = Math.abs(lineNumber - cursorLine);
         if (distance > 0) return String(distance);
       }
       return String((lineNumberStart ?? 1) + lineNumber - 1);
     },
-    [cursorPosition.line, lineNumberMap, lineNumberStart, vimModeEnabled, vimRelativeLineNumbers],
+    [lineNumberMap, lineNumberStart, vimModeEnabled, vimRelativeLineNumbers],
   );
 
   const updateVisibleLineRange = useCallback(
@@ -670,6 +670,24 @@ export function MonacoBackedEditor({
     previousContentRef.current = content;
     applyingExternalChangeRef.current = false;
   }, [content]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    if (!vimModeEnabled || !vimRelativeLineNumbers || lineNumberMap) return;
+
+    editor.updateOptions({
+      lineNumbers: lineNumbers ? lineNumberFormatter : "off",
+    });
+  }, [
+    cursorPosition.line,
+    lineNumberFormatter,
+    lineNumberMap,
+    lineNumbers,
+    vimModeEnabled,
+    vimRelativeLineNumbers,
+  ]);
 
   useEffect(() => {
     const editor = editorRef.current;
