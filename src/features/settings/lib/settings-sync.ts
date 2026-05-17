@@ -81,7 +81,7 @@ type SyncableSettingsKey =
   | "lintOnSave"
   | "autoCompletion"
   | "parameterHints"
-  | "externalEditor"
+  | "customEditorCommand"
   | "coreFeatures"
   | "extensionsActiveTab"
   | "maxOpenTabs"
@@ -172,7 +172,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "lintOnSave",
   "autoCompletion",
   "parameterHints",
-  "externalEditor",
+  "customEditorCommand",
   "coreFeatures",
   "extensionsActiveTab",
   "maxOpenTabs",

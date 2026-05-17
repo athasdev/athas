@@ -1170,11 +1170,13 @@ export const useFileSystemStore = createSelectors(
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;
+          const externalEditorEngines = new Set(["nvim", "helix", "vim", "emacs", "custom"]);
+          const usesExternalEditor = externalEditorEngines.has(settings.editorEngine);
 
           const hasExternalEditorCommand =
-            settings.externalEditor !== "custom" || settings.customEditorCommand.trim().length > 0;
+            settings.editorEngine !== "custom" || settings.customEditorCommand.trim().length > 0;
 
-          if (settings.externalEditor !== "none" && hasExternalEditorCommand) {
+          if (usesExternalEditor && hasExternalEditorCommand) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();

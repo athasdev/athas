@@ -26,6 +26,15 @@ export const EditorSettings = () => {
     { value: "trailing", label: "Trailing" },
     { value: "all", label: "All" },
   ];
+  const editorEngineOptions = [
+    { value: "monaco", label: "Monaco" },
+    { value: "athas", label: "Athas Editor" },
+    { value: "nvim", label: "Neovim" },
+    { value: "helix", label: "Helix" },
+    { value: "vim", label: "Vim" },
+    { value: "emacs", label: "Emacs" },
+    { value: "custom", label: "Custom Command" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -52,16 +61,15 @@ export const EditorSettings = () => {
         >
           <Select
             value={settings.editorEngine}
-            options={[
-              { value: "monaco", label: "Monaco" },
-              { value: "athas", label: "Athas Editor" },
-            ]}
+            options={editorEngineOptions}
             onChange={(value) =>
               updateSetting("editorEngine", value as typeof settings.editorEngine)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
+            className={SETTINGS_CONTROL_WIDTHS.text}
             size="xs"
             variant="default"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
@@ -342,38 +350,7 @@ export const EditorSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Default Editor"
-          description="Open files in an external terminal editor instead of the built-in editor"
-          onReset={() => updateSetting("externalEditor", getDefaultSetting("externalEditor"))}
-          canReset={settings.externalEditor !== getDefaultSetting("externalEditor")}
-        >
-          <Select
-            value={settings.externalEditor}
-            options={[
-              { value: "none", label: "None (Use Built-in)" },
-              { value: "nvim", label: "Neovim" },
-              { value: "helix", label: "Helix" },
-              { value: "vim", label: "Vim" },
-              { value: "nano", label: "Nano" },
-              { value: "emacs", label: "Emacs" },
-              { value: "custom", label: "Custom Command" },
-            ]}
-            onChange={(value) =>
-              updateSetting(
-                "externalEditor",
-                value as "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom",
-              )
-            }
-            className={SETTINGS_CONTROL_WIDTHS.text}
-            size="xs"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
-        {settings.externalEditor === "custom" && (
+        {settings.editorEngine === "custom" && (
           <SettingRow
             label="Custom Command"
             description="Command to run (use $FILE for the file path, e.g., 'micro $FILE')"

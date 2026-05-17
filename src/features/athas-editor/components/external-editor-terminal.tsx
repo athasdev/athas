@@ -83,15 +83,13 @@ export const ExternalEditorTerminal = ({
     (path: string): string => {
       const relativePath = rootFolderPath ? path.replace(rootFolderPath, ".") : path;
 
-      switch (settings.externalEditor) {
+      switch (settings.editorEngine) {
         case "nvim":
           return `nvim "${relativePath}"`;
         case "helix":
           return `hx "${relativePath}"`;
         case "vim":
           return `vim "${relativePath}"`;
-        case "nano":
-          return `nano "${relativePath}"`;
         case "emacs":
           return `emacs -nw "${relativePath}"`;
         case "custom":
@@ -100,7 +98,7 @@ export const ExternalEditorTerminal = ({
           return `nvim "${relativePath}"`;
       }
     },
-    [settings.externalEditor, settings.customEditorCommand, rootFolderPath],
+    [settings.editorEngine, settings.customEditorCommand, rootFolderPath],
   );
 
   const initializeTerminal = useCallback(() => {
