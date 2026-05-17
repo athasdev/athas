@@ -394,7 +394,6 @@ async function installLanguageTools(
       const failureMessage = extractFailedToolMessage(toolStatus);
       if (failureMessage) {
         issues[tool as ToolType] = failureMessage;
-        console.warn(`Tool installation failed for ${languageId}/${tool}: ${failureMessage}`);
       }
     }
   } catch (error) {
@@ -459,17 +458,14 @@ export async function resolveToolPaths(
     if (toolConfig.lsp && !toolPaths.lsp) {
       issues.lsp =
         issues.lsp || "Language server binary could not be resolved. Reinstall the language tools.";
-      console.warn(`LSP configured for ${languageId} but binary path could not be resolved`);
     }
     if (toolConfig.formatter && !toolPaths.formatter) {
       issues.formatter =
         issues.formatter || "Formatter binary could not be resolved. Reinstall the language tools.";
-      console.warn(`Formatter configured for ${languageId} but binary path could not be resolved`);
     }
     if (toolConfig.linter && !toolPaths.linter) {
       issues.linter =
         issues.linter || "Linter binary could not be resolved. Reinstall the language tools.";
-      console.warn(`Linter configured for ${languageId} but binary path could not be resolved`);
     }
   }
 

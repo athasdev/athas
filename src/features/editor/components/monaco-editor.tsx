@@ -606,6 +606,8 @@ export function MonacoBackedEditor({
     }
 
     return () => {
+      onCoordinateResolverChange?.(null);
+      onModelPositionResolverChange?.(null);
       unsubscribeCursor();
       unsubscribeSelection();
       for (const disposable of disposables) {
@@ -834,6 +836,7 @@ export function MonacoBackedEditor({
     }
 
     onCoordinateResolverChange?.((clientX, clientY) => {
+      if (model.isDisposed()) return null;
       const target = editor.getTargetAtClientPoint(clientX, clientY);
       const position = target?.position;
       if (!position) return null;
@@ -859,12 +862,25 @@ export function MonacoBackedEditor({
     });
 
     onModelPositionResolverChange?.((line, column) => {
+      if (model.isDisposed()) return null;
       const lineNumber = Math.max(1, line + 1);
       const monacoColumn = Math.max(1, column + 1);
       const position = { lineNumber, column: monacoColumn };
-      const editorPosition = toEditorPosition(model, position);
-      const top = editor.getTopForLineNumber(lineNumber);
-      const left = editor.getOffsetForColumn(lineNumber, monacoColumn);
+      let editorPosition: Position;
+      let top: number;
+      let left: number;
+      let lineLength: number;
+
+      try {
+        editorPosition = toEditorPosition(model, position);
+        top = editor.getTopForLineNumber(lineNumber);
+        left = editor.getOffsetForColumn(lineNumber, monacoColumn);
+        lineLength = model.getLineLength(lineNumber);
+      } catch (error) {
+        if (model.isDisposed()) return null;
+        throw error;
+      }
+
       return {
         ...editorPosition,
         viewLine: line,
@@ -876,7 +892,7 @@ export function MonacoBackedEditor({
           viewLine: line,
           modelLine: line,
           startColumn: 0,
-          endColumn: model.getLineLength(lineNumber),
+          endColumn: lineLength,
           top,
           height: lineHeight,
         },

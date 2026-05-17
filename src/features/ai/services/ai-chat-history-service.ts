@@ -199,7 +199,9 @@ export const loadChatFromDb = async (chatId: string): Promise<Chat> => {
     const data = (await invoke("load_chat", { chatId })) as ChatWithMessages;
     return dataToChat(data);
   } catch (error) {
-    console.error(`Error loading chat ${chatId} from database:`, error);
+    if (!String(error).includes("Query returned no rows")) {
+      console.error(`Error loading chat ${chatId} from database:`, error);
+    }
     throw error;
   }
 };

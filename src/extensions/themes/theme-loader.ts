@@ -42,8 +42,6 @@ export class ThemeLoader extends BaseThemeExtension {
 
   async onInitialize(_editor: EditorAPI): Promise<void> {
     try {
-      console.log("ThemeLoader: Loading themes from JSON files");
-
       // Combine all theme files
       const allThemeFiles: ThemeFile[] = [
         ayuThemes as ThemeFile,
@@ -63,11 +61,6 @@ export class ThemeLoader extends BaseThemeExtension {
       // Flatten all themes from all files
       const allThemes: JsonTheme[] = allThemeFiles.flatMap((file) => file.themes);
 
-      console.log(
-        `ThemeLoader: Loaded ${allThemes.length} themes from JSON files:`,
-        allThemes.map((t) => t.name),
-      );
-
       // Convert to ThemeDefinition format
       this.themes = allThemes.map((jsonTheme) => this.convertJsonToThemeDefinition(jsonTheme));
 
@@ -76,8 +69,6 @@ export class ThemeLoader extends BaseThemeExtension {
       this.themes.forEach((theme) => {
         themeRegistry.registerTheme(theme);
       });
-
-      console.log(`ThemeLoader: Registered ${this.themes.length} themes`);
     } catch (error) {
       console.error("ThemeLoader: Failed to load JSON themes:", error);
       // Fall back to empty themes array

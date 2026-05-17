@@ -866,7 +866,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         initializeDatabase: async () => {
           try {
             await initChatDatabase();
-            console.log("Chat database initialized");
           } catch (error) {
             console.error("Failed to initialize chat database:", error);
           }
@@ -878,7 +877,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             set((state) => {
               state.chats = chatsMetadata as Chat[];
             });
-            console.log(`Loaded ${chatsMetadata.length} chats from database`);
           } catch (error) {
             console.error("Failed to load chats from database:", error);
           }
@@ -894,6 +892,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             });
           } catch (error) {
+            if (String(error).includes("Query returned no rows")) {
+              set((state) => {
+                state.chats = state.chats.filter((chat) => chat.id !== chatId);
+                if (state.currentChatId === chatId) {
+                  state.currentChatId = null;
+                }
+              });
+              return;
+            }
             console.error(`Failed to load messages for chat ${chatId}:`, error);
           }
         },

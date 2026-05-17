@@ -34,7 +34,13 @@ class KeymapRegistry {
   }
 
   registerKeybinding(keybinding: Keybinding): void {
-    const existing = this.keybindings.find((kb) => kb.command === keybinding.command);
+    const existing = this.keybindings.find(
+      (kb) =>
+        kb.command === keybinding.command &&
+        kb.key === keybinding.key &&
+        kb.when === keybinding.when &&
+        kb.source === keybinding.source,
+    );
     if (existing && existing.source === keybinding.source) {
       logger.warn("Keymaps", `Keybinding already exists for command: ${keybinding.command}`);
       return;

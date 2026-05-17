@@ -102,9 +102,7 @@ const logWorkspaceOpenStep = (
   path: string,
   startedAt?: number,
 ) => {
-  const prefix = "[workspace-open]";
   if (phase === "start") {
-    console.info(`${prefix} ${label}:start`, { path });
     frontendTrace("info", "workspace-open", `${label}:start`, { path });
     return;
   }
@@ -114,12 +112,10 @@ const logWorkspaceOpenStep = (
   const payload = { path, durationMs };
 
   if (phase === "end") {
-    console.info(`${prefix} ${label}:end`, payload);
     frontendTrace("info", "workspace-open", `${label}:end`, payload);
     return;
   }
 
-  console.error(`${prefix} ${label}:error`, payload);
   frontendTrace("error", "workspace-open", `${label}:error`, payload);
 };
 
