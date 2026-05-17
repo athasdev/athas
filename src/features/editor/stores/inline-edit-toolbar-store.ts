@@ -3,19 +3,25 @@ import { createSelectors } from "@/utils/zustand-selectors";
 
 interface InlineEditToolbarState {
   isVisible: boolean;
+  targetViewKey: string | null;
   actions: {
-    show: () => void;
+    show: (targetViewKey?: string | null) => void;
     hide: () => void;
-    toggle: () => void;
+    toggle: (targetViewKey?: string | null) => void;
   };
 }
 
 const useInlineEditToolbarStoreBase = create<InlineEditToolbarState>((set) => ({
   isVisible: false,
+  targetViewKey: null,
   actions: {
-    show: () => set({ isVisible: true }),
-    hide: () => set({ isVisible: false }),
-    toggle: () => set((state) => ({ isVisible: !state.isVisible })),
+    show: (targetViewKey = null) => set({ isVisible: true, targetViewKey }),
+    hide: () => set({ isVisible: false, targetViewKey: null }),
+    toggle: (targetViewKey = null) =>
+      set((state) => ({
+        isVisible: !state.isVisible,
+        targetViewKey: state.isVisible ? null : targetViewKey,
+      })),
   },
 }));
 

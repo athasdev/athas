@@ -169,7 +169,7 @@ interface EditorProps {
 const INCREMENTAL_TOKENIZATION_LINE_THRESHOLD = 1000;
 const INLAY_HINT_TYPING_SUPPRESS_MS = 650;
 const FOLD_RECOMPUTE_TYPING_DEBOUNCE_MS = 250;
-const INLINE_EDIT_VIEW_ZONE_HEIGHT = 96;
+const INLINE_EDIT_VIEW_ZONE_HEIGHT = 42;
 const LARGE_FILE_RENDER_OVERSCAN_LINES = 80;
 
 function estimateInlayHintWidth(
@@ -962,6 +962,7 @@ export function Editor({
   // Inline edit hook
   const inlineEditState = useInlineEdit({
     enabled: !largeContentMode,
+    viewKey: viewStateKey ?? bufferId ?? null,
     inputRef,
     buffer: buffer
       ? {
@@ -991,7 +992,10 @@ export function Editor({
   useOnClickOutside(inlineEditState.inlineEditPopoverRef as RefObject<HTMLElement>, (event) => {
     if (!inlineEditState.inlineEditVisible) return;
     const target = event.target as HTMLElement | null;
-    if (target?.closest(".inline-edit-model-selector-menu")) {
+    if (
+      target?.closest(".inline-edit-model-selector-menu") ||
+      target?.closest(".inline-edit-model-command")
+    ) {
       return;
     }
     inlineEditState.inlineEditToolbarActions.hide();

@@ -64,7 +64,7 @@ export default function Breadcrumb({
   };
 
   const handleInlineEditClick = () => {
-    inlineEditActions.show();
+    inlineEditActions.show(editorViewKey ?? resolvedBufferId ?? null);
   };
 
   const isMarkdownFile = () => {

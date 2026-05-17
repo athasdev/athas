@@ -365,7 +365,11 @@ export function triggerActiveEditorParameterHints(): void {
 }
 
 export function showInlineEditToolbar(): void {
-  useInlineEditToolbarStore.getState().actions.show();
+  const editorState = useEditorStateStore.getState();
+  const activeBufferId = useBufferStore.getState().activeBufferId;
+  useInlineEditToolbarStore
+    .getState()
+    .actions.show(editorState.activeEditorViewKey ?? activeBufferId ?? null);
 }
 
 export function goToActiveEditorMatchingBracket(): void {

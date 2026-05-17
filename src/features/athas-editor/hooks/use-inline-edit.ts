@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  canUseHostedProvider,
+  canUseProviderWithoutApiKey,
+} from "@/features/ai/lib/provider-access";
 import { useAIChatStore } from "@/features/ai/store/store";
+import { getProviderById } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { toast } from "@/ui/toast";
-import {
-  type AutocompleteModel,
-  fetchAutocompleteModels,
-} from "@/features/editor/services/editor-autocomplete-service";
 import {
   InlineEditError,
   requestInlineEdit,
@@ -23,16 +24,17 @@ import {
 } from "@/features/athas-editor/utils/position";
 
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
-const INLINE_EDIT_POPOVER_WIDTH = 320;
-const INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT = 170;
+const INLINE_EDIT_POPOVER_WIDTH = 380;
+const INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT = 58;
 const INLINE_EDIT_POPOVER_MARGIN = 8;
-const INLINE_EDIT_POPOVER_X_OFFSET = 10;
-const INLINE_EDIT_POPOVER_Y_OFFSET = 10;
+const INLINE_EDIT_POPOVER_X_OFFSET = 0;
+const INLINE_EDIT_POPOVER_Y_OFFSET = 6;
 const INLINE_EDIT_TOP_THRESHOLD = 64;
 
 interface UseInlineEditOptions {
   enabled?: boolean;
-  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  viewKey?: string | null;
+  inputRef?: React.RefObject<HTMLTextAreaElement | null>;
   buffer: { id: string; content: string; path: string; language: string } | undefined;
   selection: Range | undefined;
   lines: string[];
@@ -43,13 +45,29 @@ interface UseInlineEditOptions {
   tabSize: number;
   lastScrollRef: React.RefObject<{ top: number; left: number }>;
   resolveModelPosition?: EditorModelPositionResolver;
+  getCursorOffset?: () => number | null;
+  getSelectionAnchor?: () => { line: number; column: number } | null;
+  getViewportMetrics?: () => {
+    scrollTop: number;
+    scrollLeft: number;
+    viewportWidth: number;
+    viewportHeight: number;
+  } | null;
+  applyInlineEdit?: (edit: {
+    range: Range;
+    editedText: string;
+    newContent: string;
+    newCursorOffset: number;
+    newPosition: Position;
+  }) => void;
   setCursorPosition: (position: Position) => void;
   setSelection: (selection?: Range) => void;
-  updateBufferContent: (bufferId: string, content: string, snapshot?: boolean) => void;
+  updateBufferContent?: (bufferId: string, content: string, snapshot?: boolean) => void;
 }
 
 export function useInlineEdit({
   enabled = true,
+  viewKey,
   inputRef,
   buffer,
   selection,
@@ -61,11 +79,20 @@ export function useInlineEdit({
   tabSize,
   lastScrollRef,
   resolveModelPosition,
+  getCursorOffset,
+  getSelectionAnchor,
+  getViewportMetrics,
+  applyInlineEdit,
   setCursorPosition,
   setSelection,
   updateBufferContent,
 }: UseInlineEditOptions) {
-  const inlineEditVisible = useInlineEditToolbarStore.use.isVisible();
+  const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
+  const inlineEditTargetViewKey = useInlineEditToolbarStore.use.targetViewKey();
+  const inlineEditVisible =
+    enabled &&
+    inlineEditRequested &&
+    (!inlineEditTargetViewKey || !viewKey || inlineEditTargetViewKey === viewKey);
   const inlineEditToolbarActions = useInlineEditToolbarStore.use.actions();
   const inlineEditPopoverRef = useRef<HTMLDivElement>(null);
   const inlineEditInstructionRef = useRef<HTMLInputElement>(null);
@@ -73,22 +100,37 @@ export function useInlineEdit({
 
   const [inlineEditInstruction, setInlineEditInstruction] = useState("");
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
-  const [isInlineEditModelLoading, setIsInlineEditModelLoading] = useState(false);
   const [inlineEditError, setInlineEditError] = useState<string | null>(null);
-  const [inlineEditModels, setInlineEditModels] = useState<AutocompleteModel[]>([]);
   const [inlineEditSelectionAnchor, setInlineEditSelectionAnchor] = useState<{
     line: number;
     column: number;
   } | null>(null);
 
-  const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
-  const hasOpenRouterKey = useAIChatStore(
-    (state) => state.providerApiKeys.get("openrouter") || false,
-  );
   const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
+
+  const getSelectionAnchorPosition = useCallback((): { line: number; column: number } | null => {
+    if (!selection || selection.start.offset === selection.end.offset) return null;
+
+    const start = selection.start.offset <= selection.end.offset ? selection.start : selection.end;
+    const end = selection.start.offset <= selection.end.offset ? selection.end : selection.start;
+
+    if (start.line === end.line) {
+      return {
+        line: start.line,
+        column: Math.round((start.column + end.column) / 2),
+      };
+    }
+
+    return {
+      line: end.line,
+      column: end.column,
+    };
+  }, [selection]);
 
   useEffect(() => {
     if (!enabled) {
@@ -145,29 +187,8 @@ export function useInlineEdit({
   useEffect(() => {
     if (!enabled) return;
     if (!inlineEditVisible) return;
-
-    const loadModels = async () => {
-      setIsInlineEditModelLoading(true);
-      try {
-        const models = await fetchAutocompleteModels();
-        if (models.length > 0) {
-          setInlineEditModels(models);
-          if (!models.some((model) => model.id === aiAutocompleteModelId)) {
-            await updateSetting("aiAutocompleteModelId", models[0].id);
-          }
-        } else {
-          setInlineEditModels([]);
-        }
-      } catch {
-        setInlineEditModels([]);
-      } finally {
-        setIsInlineEditModelLoading(false);
-      }
-    };
-
     void checkAllProviderApiKeys();
-    void loadModels();
-  }, [enabled, inlineEditVisible, aiAutocompleteModelId, updateSetting, checkAllProviderApiKeys]);
+  }, [enabled, inlineEditVisible, checkAllProviderApiKeys]);
 
   useEffect(() => {
     if (!enabled) {
@@ -178,16 +199,30 @@ export function useInlineEdit({
       setInlineEditSelectionAnchor(null);
       return;
     }
-    if (inlineEditSelectionAnchor || !inputRef.current) return;
-    const start = inputRef.current.selectionStart;
-    const end = inputRef.current.selectionEnd;
-    const anchorPos = calculateCursorPositionFromLineOffsets(
-      Math.max(start, end),
-      lines,
-      lineOffsets,
-    );
+    if (inlineEditSelectionAnchor) return;
+    const providedAnchor = getSelectionAnchorPosition() ?? getSelectionAnchor?.();
+    if (providedAnchor) {
+      setInlineEditSelectionAnchor(providedAnchor);
+      return;
+    }
+
+    const cursorOffset =
+      getCursorOffset?.() ?? (inputRef?.current ? inputRef.current.selectionStart : null);
+    if (cursorOffset === null || cursorOffset === undefined) return;
+
+    const anchorPos = calculateCursorPositionFromLineOffsets(cursorOffset, lines, lineOffsets);
     setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
-  }, [enabled, inlineEditVisible, inlineEditSelectionAnchor, lineOffsets, lines, inputRef]);
+  }, [
+    enabled,
+    inlineEditVisible,
+    inlineEditSelectionAnchor,
+    lineOffsets,
+    lines,
+    inputRef,
+    getCursorOffset,
+    getSelectionAnchor,
+    getSelectionAnchorPosition,
+  ]);
 
   const resolveInlineEditRange = useCallback((): Range | null => {
     if (!enabled) return null;
@@ -199,12 +234,14 @@ export function useInlineEdit({
       return { start, end };
     }
 
-    const textarea = inputRef.current;
-    if (!textarea || lines.length === 0) {
+    if (lines.length === 0) {
       return null;
     }
 
-    const cursorOffset = textarea.selectionStart;
+    const cursorOffset =
+      getCursorOffset?.() ?? (inputRef?.current ? inputRef.current.selectionStart : null);
+    if (cursorOffset === null || cursorOffset === undefined) return null;
+
     const cursorPosition = calculateCursorPositionFromLineOffsets(cursorOffset, lines, lineOffsets);
     const lineText = lines[cursorPosition.line] ?? "";
     const lineStartOffset =
@@ -224,7 +261,7 @@ export function useInlineEdit({
         offset: lineEndOffset,
       },
     };
-  }, [enabled, inputRef, lineOffsets, lines, selection]);
+  }, [enabled, getCursorOffset, inputRef, lineOffsets, lines, selection]);
 
   const handleApplyInlineEdit = useCallback(async () => {
     if (!enabled) {
@@ -249,40 +286,51 @@ export function useInlineEdit({
     const endOffset = targetRange.end.offset;
     const selectedText = buffer.content.slice(startOffset, endOffset);
 
-    if (!aiAutocompleteModelId.trim()) {
+    const provider = getProviderById(aiProviderId);
+
+    if (!aiModelId.trim()) {
       toast.error("Please select an inline edit model.");
       return;
     }
 
-    if (!isAuthenticated) {
-      toast.error("Please sign in to use inline edit.");
+    const enterprisePolicy = subscription?.enterprise?.policy;
+    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+
+    const hasStoredProviderKey =
+      useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+    const canUseProvider = canUseProviderWithoutApiKey({
+      providerId: aiProviderId,
+      subscription,
+      hasStoredKey: hasStoredProviderKey,
+      requiresApiKey: provider?.requiresApiKey ?? true,
+    });
+
+    if (!canUseProvider) {
+      await checkAllProviderApiKeys();
+      const hasProviderKeyAfterRefresh =
+        useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+      if (!hasProviderKeyAfterRefresh) {
+        toast.error(`${provider?.name ?? aiProviderId} API key is required for inline edit.`);
+        return;
+      }
+    }
+
+    const hasProviderKey = useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+    const useHosted = !hasProviderKey && canUseHostedProvider(aiProviderId, subscription);
+
+    if (useHosted && !isAuthenticated) {
+      toast.error("Please sign in to use hosted inline edit.");
       return;
     }
 
-    const subscriptionStatus = subscription?.status ?? "free";
-    const enterprisePolicy = subscription?.enterprise?.policy;
-    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = subscriptionStatus === "pro";
-
-    if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
+    if (useHosted && managedPolicy && !managedPolicy.aiCompletionEnabled) {
       toast.error("Inline edit is disabled by your organization policy.");
       return;
     }
 
-    const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
-    if (managedPolicy && useByok && !managedPolicy.allowByok) {
+    if (!useHosted && managedPolicy && !managedPolicy.allowByok) {
       toast.error("BYOK is disabled by your organization policy.");
       return;
-    }
-
-    if (useByok && !hasOpenRouterKey) {
-      await checkAllProviderApiKeys();
-      const hasOpenRouterKeyAfterRefresh =
-        useAIChatStore.getState().providerApiKeys.get("openrouter") || false;
-      if (!hasOpenRouterKeyAfterRefresh) {
-        toast.error("Free plan requires OpenRouter BYOK key for inline edit.");
-        return;
-      }
     }
 
     const beforeSelection = buffer.content.slice(Math.max(0, startOffset - 12000), startOffset);
@@ -294,7 +342,8 @@ export function useInlineEdit({
     try {
       const { editedText } = await requestInlineEdit(
         {
-          model: aiAutocompleteModelId,
+          provider: aiProviderId,
+          model: aiModelId,
           beforeSelection,
           selectedText,
           afterSelection,
@@ -302,7 +351,7 @@ export function useInlineEdit({
           filePath: buffer.path,
           languageId: buffer.language,
         },
-        { useByok },
+        { useHosted },
       );
 
       if (!editedText.trim()) {
@@ -310,16 +359,29 @@ export function useInlineEdit({
         return;
       }
 
-      const newContent = `${beforeSelection}${editedText}${afterSelection}`;
-      updateBufferContent(buffer.id, newContent, true);
-
+      const newContent = `${buffer.content.slice(0, startOffset)}${editedText}${buffer.content.slice(
+        endOffset,
+      )}`;
       const newCursorOffset = startOffset + editedText.length;
       const newPosition = calculateCursorPositionFromContent(newCursorOffset, newContent);
+
+      if (applyInlineEdit) {
+        applyInlineEdit({
+          range: targetRange,
+          editedText,
+          newContent,
+          newCursorOffset,
+          newPosition,
+        });
+      } else {
+        updateBufferContent?.(buffer.id, newContent, true);
+      }
+
       setCursorPosition(newPosition);
       setSelection(undefined);
       setInlineEditSelectionAnchor(null);
       inlineEditToolbarActions.hide();
-      if (inputRef.current) {
+      if (inputRef?.current) {
         inputRef.current.selectionStart = newCursorOffset;
         inputRef.current.selectionEnd = newCursorOffset;
       }
@@ -342,11 +404,12 @@ export function useInlineEdit({
     resolveInlineEditRange,
     isAuthenticated,
     subscription,
-    hasOpenRouterKey,
     checkAllProviderApiKeys,
-    aiAutocompleteModelId,
+    aiProviderId,
+    aiModelId,
     inlineEditInstruction,
     inlineEditError,
+    applyInlineEdit,
     updateBufferContent,
     setCursorPosition,
     setSelection,
@@ -372,12 +435,18 @@ export function useInlineEdit({
     const anchorTop =
       resolvedAnchor?.top ??
       inlineEditSelectionAnchor.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
-    const textarea = inputRef.current;
-    const scrollLeft = textarea?.scrollLeft ?? lastScrollRef.current.left;
-    const scrollTop = textarea?.scrollTop ?? lastScrollRef.current.top;
+    const viewportMetrics = getViewportMetrics?.();
+    const textarea = inputRef?.current;
+    const scrollLeft =
+      viewportMetrics?.scrollLeft ?? textarea?.scrollLeft ?? lastScrollRef.current.left;
+    const scrollTop =
+      viewportMetrics?.scrollTop ?? textarea?.scrollTop ?? lastScrollRef.current.top;
     const viewportWidth =
-      textarea?.clientWidth ?? INLINE_EDIT_POPOVER_WIDTH + INLINE_EDIT_POPOVER_MARGIN * 2;
+      viewportMetrics?.viewportWidth ??
+      textarea?.clientWidth ??
+      INLINE_EDIT_POPOVER_WIDTH + INLINE_EDIT_POPOVER_MARGIN * 2;
     const viewportHeight =
+      viewportMetrics?.viewportHeight ??
       textarea?.clientHeight ??
       INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT + INLINE_EDIT_POPOVER_MARGIN * 2;
 
@@ -420,14 +489,15 @@ export function useInlineEdit({
     inlineEditError,
     setInlineEditError,
     isInlineEditRunning,
-    isInlineEditModelLoading,
-    inlineEditModels,
+    isInlineEditModelLoading: false,
+    inlineEditModels: [],
     inlineEditSelectionAnchor,
     setInlineEditSelectionAnchor,
     inlineEditPopoverRef,
     inlineEditInstructionRef,
     inlineEditToolbarActions,
-    aiAutocompleteModelId,
+    aiProviderId,
+    aiModelId,
     updateSetting,
     handleApplyInlineEdit,
     popoverPosition,
