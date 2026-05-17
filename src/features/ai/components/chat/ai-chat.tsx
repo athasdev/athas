@@ -318,8 +318,7 @@ const AIChat = memo(function AIChat({
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
 
-  // Agent availability is now handled dynamically by the model-provider-selector component
-  // No need to check Claude Code status on mount
+  // Agent availability is handled dynamically by the agent selector.
 
   const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -496,7 +495,7 @@ const AIChat = memo(function AIChat({
       : null;
     const currentAgentId = targetChat?.agentId ?? store.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
-    // For ACP agents (Claude Code, etc.), we don't need an API key
+    // For ACP agents, we don't need an API key.
     // For Custom API, we need an API key to be set
     if (!messageContent.trim() || (!isAcp && !store.hasApiKey)) return;
 
@@ -1053,7 +1052,7 @@ details: ${errorDetails || mainError}
     async (messageContent: string) => {
       const currentAgentId = chatActions.getCurrentAgentId();
       const isAcp = isAcpAgent(currentAgentId);
-      // For ACP agents (Claude Code, etc.), we don't need an API key
+      // For ACP agents, we don't need an API key.
       if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
       chatActions.setInput("");

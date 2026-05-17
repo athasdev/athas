@@ -4,6 +4,8 @@ import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AgentSelector } from "@/features/ai/components/selectors/agent-selector";
 import ChatHistoryDropdown from "@/features/ai/components/history/sidebar";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpSessionInfo } from "@/features/ai/types/acp";
@@ -267,6 +269,11 @@ export function MultiAgentsSidebarView() {
 
   const createAgentChat = useCallback(
     (agentId: AgentType) => {
+      if (agentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
+        openClaudeCodeTerminal();
+        return;
+      }
+
       setSelectedAgentId(agentId);
       const chatId = createNewChat(agentId);
       registerActiveAgentChat(chatId);

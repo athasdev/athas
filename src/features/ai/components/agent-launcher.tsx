@@ -10,6 +10,8 @@ import Command from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { isMac } from "@/utils/platform";
+import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 
 export function AgentLauncher() {
   const launcherRef = useRef<HTMLDivElement>(null);
@@ -129,6 +131,12 @@ export function AgentLauncher() {
 
   const submit = useCallback(() => {
     const nextPrompt = prompt.trim();
+    if (selectedAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
+      openClaudeCodeTerminal();
+      close();
+      return;
+    }
+
     if (!nextPrompt) return;
 
     const chatId = createNewChat(selectedAgentId);
@@ -262,7 +270,7 @@ export function AgentLauncher() {
           <Button
             type="button"
             onClick={submit}
-            disabled={!prompt.trim()}
+            disabled={selectedAgentId !== CLAUDE_CODE_TERMINAL_AGENT_ID && !prompt.trim()}
             variant="default"
             className="rounded-full px-2.5"
             tooltip="Launch agent"

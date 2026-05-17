@@ -18,6 +18,11 @@ import Input from "@/ui/input";
 import { PaneIconButton } from "@/ui/pane";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
+import {
+  CLAUDE_CODE_TERMINAL_AGENT_ID,
+  CLAUDE_CODE_TERMINAL_OPTION,
+} from "@/features/ai/lib/claude-code";
+import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 
 const ATHAS_AGENT_OPTION = {
   id: "custom",
@@ -63,7 +68,10 @@ export function AgentSelector({
   const previousOpenSignalRef = useRef(openSignal);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
-  const currentAgent = agentConfigs.get(currentAgentId) ?? ATHAS_AGENT_OPTION;
+  const currentAgent =
+    currentAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID
+      ? CLAUDE_CODE_TERMINAL_OPTION
+      : (agentConfigs.get(currentAgentId) ?? ATHAS_AGENT_OPTION);
 
   const loadInstalledAgents = useCallback(async () => {
     try {
@@ -103,7 +111,7 @@ export function AgentSelector({
     const registryAgents = Array.from(agentConfigs.values()).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-    const availableAgents = [ATHAS_AGENT_OPTION, ...registryAgents];
+    const availableAgents = [ATHAS_AGENT_OPTION, CLAUDE_CODE_TERMINAL_OPTION, ...registryAgents];
     const matchingAgents = availableAgents.filter(
       (agent) =>
         !search ||
@@ -114,15 +122,17 @@ export function AgentSelector({
     for (const agent of matchingAgents) {
       const isInstalled = installedAgents.has(agent.id);
       const agentConfig = agentConfigs.get(agent.id);
+      const isClaudeCodeTerminal = agent.id === CLAUDE_CODE_TERMINAL_AGENT_ID;
 
       items.push({
         type: "agent",
         id: agent.id,
         name: agent.name,
         description: agentConfig?.description ?? agent.description ?? "ACP-compatible coding agent",
-        isInstalled,
+        isInstalled: isClaudeCodeTerminal || isInstalled,
         isCurrent: agent.id === currentAgentId,
-        canInstall: agent.id === "custom" ? false : (agentConfig?.canInstall ?? true),
+        canInstall:
+          agent.id === "custom" || isClaudeCodeTerminal ? false : (agentConfig?.canInstall ?? true),
         isInstalling: installingAgentId === agent.id,
       });
     }
@@ -161,6 +171,12 @@ export function AgentSelector({
       if (onSelectAgent) {
         setIsOpen(false);
         onSelectAgent(agentId);
+        return;
+      }
+
+      if (agentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
+        setIsOpen(false);
+        openClaudeCodeTerminal();
         return;
       }
 
