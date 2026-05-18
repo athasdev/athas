@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { Warning } from "@phosphor-icons/react";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -7,7 +8,9 @@ import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { Button } from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
+import Dialog from "@/ui/dialog";
 import {
   createTerminalAddons,
   injectLinkStyles,
@@ -38,6 +41,11 @@ interface XtermTerminalProps {
   remoteConnectionId?: string;
 }
 
+interface PendingTerminalPaste {
+  text: string;
+  lineCount: number;
+}
+
 export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   sessionId,
   isActive,
@@ -55,6 +63,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
+  const [pendingPaste, setPendingPaste] = useState<PendingTerminalPaste | null>(null);
+  const [skipPasteWarning, setSkipPasteWarning] = useState(false);
   const isInitializingRef = useRef(false);
 
   const { updateSession, getSession } = useTerminalStore();
@@ -72,13 +82,18 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminalCursorStyle,
     terminalCursorBlink,
     terminalCursorWidth,
+    confirmTerminalMultilinePaste,
   } = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const { rootFolderPath } = useProjectStore();
   const { getTerminalTheme } = useTerminalTheme();
+  const confirmTerminalMultilinePasteRef = useRef(confirmTerminalMultilinePaste);
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
+
+  confirmTerminalMultilinePasteRef.current = confirmTerminalMultilinePaste;
 
   const fitTerminal = useCallback((attempts = 1) => {
     let attempt = 0;
@@ -208,15 +223,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
               lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
               normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
 
-            if (requiresConfirmation) {
+            if (requiresConfirmation && confirmTerminalMultilinePasteRef.current) {
               event.preventDefault();
               event.stopImmediatePropagation();
-              void primitiveConfirm(
-                `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
-                { title: "Paste Into Terminal", confirmLabel: "Paste" },
-              ).then((confirmed) => {
-                if (confirmed) writeBuffered(normalizedText);
-              });
+              setSkipPasteWarning(false);
+              setPendingPaste({ text: normalizedText, lineCount });
               return;
             }
 
@@ -731,6 +742,61 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
           }}
         />
       </div>
+      {pendingPaste ? (
+        <Dialog
+          title="Paste Into Terminal"
+          icon={Warning}
+          onClose={() => {
+            setPendingPaste(null);
+            setSkipPasteWarning(false);
+          }}
+          size="sm"
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                compact
+                onClick={() => {
+                  setPendingPaste(null);
+                  setSkipPasteWarning(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="accent"
+                compact
+                onClick={() => {
+                  const nextPaste = pendingPaste;
+                  setPendingPaste(null);
+                  if (skipPasteWarning) {
+                    void updateSetting("confirmTerminalMultilinePaste", false);
+                  }
+                  writeBuffered(nextPaste.text);
+                  setSkipPasteWarning(false);
+                }}
+              >
+                Paste
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <p className="whitespace-pre-wrap text-text text-xs">
+              Paste {pendingPaste.lineCount} lines into the terminal? This may execute multiple
+              commands.
+            </p>
+            <label className="flex items-center gap-2 text-text text-xs">
+              <Checkbox
+                checked={skipPasteWarning}
+                onChange={setSkipPasteWarning}
+                ariaLabel="Do not show terminal paste warning again"
+              />
+              <span>Do not show again</span>
+            </label>
+          </div>
+        </Dialog>
+      ) : null}
     </div>
   );
 };

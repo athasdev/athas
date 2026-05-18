@@ -39,6 +39,7 @@ export interface Settings {
   terminalCursorWidth: number;
   terminalDefaultShellId: string;
   terminalDefaultProfileId: string;
+  confirmTerminalMultilinePaste: boolean;
   // UI
   uiFontFamily: string;
   uiFontSize: number;
