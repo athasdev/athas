@@ -20,6 +20,7 @@ import {
 } from "@/features/editor/utils/select-next-occurrence";
 import { primitiveChoice } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
+import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 
 type EditorSelection = NonNullable<ReturnType<typeof editorAPI.getSelection>>;
 
@@ -42,11 +43,7 @@ function getNormalizedEditorSelection(): EditorSelection | null {
 function shouldUseEditorModelCommand(): boolean {
   const activeElement = document.activeElement as HTMLElement | null;
 
-  if (
-    activeElement?.classList.contains("editor-textarea") ||
-    activeElement?.closest("[data-monaco-editor-scroll]") ||
-    activeElement?.closest("[data-large-editor-scroll]")
-  ) {
+  if (isEditorKeyboardTarget(activeElement)) {
     return true;
   }
 
