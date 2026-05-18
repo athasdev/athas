@@ -318,7 +318,7 @@ export async function initializeLanguagePackager(): Promise<void> {
       const manifests: Record<string, ExternalLanguageManifest> = await response.json();
       processManifests(manifests);
     } catch (error) {
-      console.error("Failed to load extension manifests from CDN:", error);
+      console.warn("Failed to load extension manifests from CDN:", error);
       // Initialize with empty state so the editor can still function
       initialized = true;
     }

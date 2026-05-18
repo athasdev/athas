@@ -1,4 +1,5 @@
 import "../monaco/monaco-environment";
+import "../monaco/language-contributions";
 import "monaco-editor/min/vs/editor/editor.main.css";
 import "../styles/monaco-editor.css";
 
@@ -82,6 +83,23 @@ function toMonacoPosition(position: Position): Monaco.IPosition {
   };
 }
 
+function clampMonacoPosition(
+  model: Monaco.editor.ITextModel,
+  position: Monaco.IPosition,
+): Monaco.IPosition {
+  const lineNumber = Math.max(1, Math.min(model.getLineCount(), position.lineNumber));
+  const maxColumn = model.getLineMaxColumn(lineNumber);
+  const column = Math.max(1, Math.min(maxColumn, position.column));
+  return { lineNumber, column };
+}
+
+function toClampedMonacoPosition(
+  model: Monaco.editor.ITextModel,
+  position: Position,
+): Monaco.IPosition {
+  return clampMonacoPosition(model, toMonacoPosition(position));
+}
+
 function toEditorRange(
   model: Monaco.editor.ITextModel,
   selection: Monaco.Selection,
@@ -96,13 +114,17 @@ function toEditorRange(
   };
 }
 
-function toMonacoRange(range: Range): Monaco.Range {
-  return new MonacoRange(
-    range.start.line + 1,
-    range.start.column + 1,
-    range.end.line + 1,
-    range.end.column + 1,
-  );
+function toMonacoRange(model: Monaco.editor.ITextModel, range: Range): Monaco.Range {
+  let start = toClampedMonacoPosition(model, range.start);
+  let end = toClampedMonacoPosition(model, range.end);
+  if (
+    start.lineNumber > end.lineNumber ||
+    (start.lineNumber === end.lineNumber && start.column > end.column)
+  ) {
+    [start, end] = [end, start];
+  }
+
+  return new MonacoRange(start.lineNumber, start.column, end.lineNumber, end.column);
 }
 
 function createModelUri(bufferId: string | undefined, filePath: string): Monaco.Uri {
@@ -480,7 +502,7 @@ export function MonacoBackedEditor({
       editor.pushUndoStop();
       editor.executeEdits("inline-edit", [
         {
-          range: toMonacoRange(edit.range),
+          range: toMonacoRange(model, edit.range),
           text: edit.editedText,
           forceMoveMarkers: true,
         },
@@ -528,23 +550,27 @@ export function MonacoBackedEditor({
       const editor = editorRef.current;
       const model = modelRef.current;
       if (!editor || !model || model.isDisposed()) return null;
-      const lineNumber = Math.max(1, line + 1);
-      const monacoColumn = Math.max(1, column + 1);
-      const position = { lineNumber, column: monacoColumn };
-      const top = editor.getTopForLineNumber(lineNumber) - editor.getScrollTop();
-      const left = editor.getOffsetForColumn(lineNumber, monacoColumn) - editor.getScrollLeft();
+      const position = clampMonacoPosition(model, {
+        lineNumber: line + 1,
+        column: column + 1,
+      });
+      const top = editor.getTopForLineNumber(position.lineNumber) - editor.getScrollTop();
+      const left =
+        editor.getOffsetForColumn(position.lineNumber, position.column) - editor.getScrollLeft();
+      const lineLength = model.getLineLength(position.lineNumber);
+      const modelLine = position.lineNumber - 1;
       return {
         ...toEditorPosition(model, position),
-        viewLine: line,
-        modelLine: line,
+        viewLine: modelLine,
+        modelLine,
         top,
         left,
         height: lineHeight,
         segment: {
-          viewLine: line,
-          modelLine: line,
+          viewLine: modelLine,
+          modelLine,
           startColumn: 0,
-          endColumn: model.getLineLength(lineNumber),
+          endColumn: lineLength,
           top,
           height: lineHeight,
         },
@@ -641,7 +667,7 @@ export function MonacoBackedEditor({
         ownerId: adapterOwnerId,
         insertText: (text, position) => {
           if (position) {
-            const monacoPosition = toMonacoPosition(position);
+            const monacoPosition = toClampedMonacoPosition(model, position);
             executeTextEdit(
               new MonacoRange(
                 monacoPosition.lineNumber,
@@ -671,8 +697,8 @@ export function MonacoBackedEditor({
             text,
           );
         },
-        deleteRange: (range) => executeTextEdit(toMonacoRange(range), ""),
-        replaceRange: (range, text) => executeTextEdit(toMonacoRange(range), text),
+        deleteRange: (range) => executeTextEdit(toMonacoRange(model, range), ""),
+        replaceRange: (range, text) => executeTextEdit(toMonacoRange(model, range), text),
         selectAll: () => {
           editor.setSelection(model.getFullModelRange());
           syncCursorAndSelection();
@@ -723,14 +749,14 @@ export function MonacoBackedEditor({
 
     const unsubscribeCursor = editorAPI.on("cursorChange", (position) => {
       if (!modelRef.current || editorRef.current !== editor) return;
-      const monacoPosition = toMonacoPosition(position);
+      const monacoPosition = toClampedMonacoPosition(model, position);
       editor.setPosition(monacoPosition);
       editor.revealPositionInCenterIfOutsideViewport(monacoPosition);
     });
     const unsubscribeSelection = editorAPI.on("selectionChange", (selection) => {
       if (!modelRef.current || editorRef.current !== editor) return;
       if (selection) {
-        editor.setSelection(toMonacoRange(selection));
+        editor.setSelection(toMonacoRange(model, selection));
       } else {
         const position = editor.getPosition();
         if (position) {
@@ -1009,9 +1035,10 @@ export function MonacoBackedEditor({
 
     onModelPositionResolverChange?.((line, column) => {
       if (model.isDisposed()) return null;
-      const lineNumber = Math.max(1, line + 1);
-      const monacoColumn = Math.max(1, column + 1);
-      const position = { lineNumber, column: monacoColumn };
+      const position = clampMonacoPosition(model, {
+        lineNumber: line + 1,
+        column: column + 1,
+      });
       let editorPosition: Position;
       let top: number;
       let left: number;
@@ -1019,24 +1046,25 @@ export function MonacoBackedEditor({
 
       try {
         editorPosition = toEditorPosition(model, position);
-        top = editor.getTopForLineNumber(lineNumber);
-        left = editor.getOffsetForColumn(lineNumber, monacoColumn);
-        lineLength = model.getLineLength(lineNumber);
+        top = editor.getTopForLineNumber(position.lineNumber);
+        left = editor.getOffsetForColumn(position.lineNumber, position.column);
+        lineLength = model.getLineLength(position.lineNumber);
       } catch (error) {
         if (model.isDisposed()) return null;
         throw error;
       }
+      const modelLine = position.lineNumber - 1;
 
       return {
         ...editorPosition,
-        viewLine: line,
-        modelLine: line,
+        viewLine: modelLine,
+        modelLine,
         top,
         left,
         height: lineHeight,
         segment: {
-          viewLine: line,
-          modelLine: line,
+          viewLine: modelLine,
+          modelLine,
           startColumn: 0,
           endColumn: lineLength,
           top,
@@ -1060,8 +1088,11 @@ export function MonacoBackedEditor({
       .actions.getCachedViewState(viewStateKey ?? activeBufferId ?? "");
     if (cached) {
       editor.setScrollPosition({ scrollTop: cached.scrollTop, scrollLeft: cached.scrollLeft });
-      editor.setPosition(toMonacoPosition(cached.cursor));
-      if (cached.selection) editor.setSelection(toMonacoRange(cached.selection));
+      const model = editor.getModel();
+      if (!model) return;
+
+      editor.setPosition(toClampedMonacoPosition(model, cached.cursor));
+      if (cached.selection) editor.setSelection(toMonacoRange(model, cached.selection));
     }
   }, [activeBufferId, isActiveSurface, viewStateKey]);
 

@@ -92,6 +92,19 @@ function serializeError(error: unknown): { message: string; stack?: string } {
   }
 }
 
+function isExpectedCancellation(error: unknown): boolean {
+  if (error instanceof Error) {
+    return (
+      error.name === "Canceled" ||
+      error.name === "CancellationError" ||
+      error.message === "Canceled" ||
+      error.message === "Canceled: Canceled"
+    );
+  }
+
+  return error === "Canceled" || error === "Canceled: Canceled";
+}
+
 function sanitizePayload(value: unknown): unknown {
   if (
     value === null ||
@@ -430,6 +443,11 @@ function registerCrashListeners() {
   });
 
   window.addEventListener("unhandledrejection", (event) => {
+    if (isExpectedCancellation(event.reason)) {
+      event.preventDefault();
+      return;
+    }
+
     const details = serializeError(event.reason);
     void recordCrashReport({
       kind: "unhandled_rejection",
