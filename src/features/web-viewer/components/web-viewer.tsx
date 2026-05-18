@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { isWebViewerContent, type WebViewerContent } from "@/features/panes/types/pane-content";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { LoadingIndicator } from "@/ui/loading";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
@@ -113,7 +114,7 @@ export function WebViewer({
   const profileKey = initialProfileKey ?? getWebViewerProfileKey(rootFolderPath);
   const userAgent = getEmbeddedWebViewerUserAgent();
   const webViewerBuffer = buffers.find(
-    (buffer) => buffer.id === bufferId && buffer.type === "webViewer",
+    (buffer): buffer is WebViewerContent => buffer.id === bufferId && isWebViewerContent(buffer),
   );
   const {
     error: webviewError,
@@ -825,6 +826,7 @@ export function WebViewer({
             ? "Open Developer Tools"
             : "Developer Tools are only available in development builds"
         }
+        favicon={webViewerBuffer?.favicon ?? null}
         hasUrlError={Boolean(urlError)}
         inputUrl={inputUrl}
         isLoading={isLoading}

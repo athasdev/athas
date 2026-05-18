@@ -13,7 +13,7 @@ import {
   X,
   MagnifyingGlassPlus as ZoomIn,
 } from "@phosphor-icons/react";
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -25,6 +25,7 @@ interface WebViewerToolbarProps {
   canClearBrowsingData: boolean;
   copied: boolean;
   devToolsTooltip: string;
+  favicon?: string | null;
   hasUrlError: boolean;
   inputUrl: string;
   isLoading: boolean;
@@ -54,6 +55,7 @@ export function WebViewerToolbar({
   canClearBrowsingData,
   copied,
   devToolsTooltip,
+  favicon,
   hasUrlError,
   inputUrl,
   isLoading,
@@ -76,24 +78,97 @@ export function WebViewerToolbar({
   onZoomOut,
 }: WebViewerToolbarProps) {
   const SecurityIcon = isLocalhost ? Shield : isSecure ? Lock : ShieldAlert;
+  const [faviconFailed, setFaviconFailed] = useState(false);
   const [showZoomPopover, setShowZoomPopover] = useState(false);
   const zoomButtonRef = useRef<HTMLButtonElement>(null);
+  const showFavicon = Boolean(favicon) && !faviconFailed;
+
+  useEffect(() => {
+    setFaviconFailed(false);
+  }, [favicon]);
+
+  const restoreSelection = (input: HTMLInputElement, start: number, end = start) => {
+    requestAnimationFrame(() => {
+      input.setSelectionRange(start, end);
+    });
+  };
+
+  const handleUrlInputKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const isMod = event.metaKey || event.ctrlKey;
+    if (!isMod || event.altKey) return;
+
+    const input = event.currentTarget;
+    const key = event.key.toLowerCase();
+    const selectionStart = input.selectionStart ?? 0;
+    const selectionEnd = input.selectionEnd ?? selectionStart;
+    const selectedText = input.value.slice(selectionStart, selectionEnd);
+
+    if (key === "a") {
+      event.preventDefault();
+      event.stopPropagation();
+      input.select();
+      return;
+    }
+
+    if (key === "c" && selectedText) {
+      event.preventDefault();
+      event.stopPropagation();
+      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+      await writeText(selectedText);
+      return;
+    }
+
+    if (key === "x" && selectedText) {
+      event.preventDefault();
+      event.stopPropagation();
+      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+      await writeText(selectedText);
+      const nextValue = `${input.value.slice(0, selectionStart)}${input.value.slice(selectionEnd)}`;
+      onInputUrlChange(nextValue);
+      restoreSelection(input, selectionStart);
+      return;
+    }
+
+    if (key === "v") {
+      event.preventDefault();
+      event.stopPropagation();
+      const { readText } = await import("@tauri-apps/plugin-clipboard-manager");
+      const pastedText = await readText();
+      const nextValue = `${input.value.slice(0, selectionStart)}${pastedText}${input.value.slice(
+        selectionEnd,
+      )}`;
+      onInputUrlChange(nextValue);
+      restoreSelection(input, selectionStart + pastedText.length);
+    }
+  };
 
   return (
-    <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
+    <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-primary-bg px-2">
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <div className="relative flex flex-1 items-center">
           <div
-            className={`absolute left-2.5 flex items-center ${securityToneClass}`}
+            className={`absolute left-2.5 flex size-4 items-center justify-center ${
+              showFavicon ? "" : securityToneClass
+            }`}
             title={securityTooltip}
           >
-            <SecurityIcon />
+            {showFavicon ? (
+              <img
+                src={favicon ?? undefined}
+                alt=""
+                className="size-4 rounded-sm object-contain"
+                onError={() => setFaviconFailed(true)}
+              />
+            ) : (
+              <SecurityIcon className="size-4" />
+            )}
           </div>
           <Input
             ref={urlInputRef}
             type="text"
             value={inputUrl}
             onChange={(e) => onInputUrlChange(e.target.value)}
+            onKeyDown={handleUrlInputKeyDown}
             placeholder="Enter URL..."
             className={`ui-text-sm h-7 w-full rounded-md pr-20 pl-8 focus:ring-accent/30 ${
               hasUrlError
