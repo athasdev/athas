@@ -1,4 +1,13 @@
-import { Archive, Check, FileText, Minus, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  Archive,
+  CaretDown,
+  CaretRight,
+  Check,
+  FileText,
+  Minus,
+  Plus,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
@@ -48,6 +57,7 @@ interface ContextMenuState {
 }
 
 type StatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";
+type StatusSection = "tracked" | "untracked";
 
 const STATUS_ORDER: StatusGroup[] = ["added", "modified", "deleted", "renamed", "untracked"];
 const SECTION_LABELS = {
@@ -158,6 +168,7 @@ const GitStatusPanel = ({
   const contextMenu = useContextMenu<ContextMenuState>();
   const [isLoading, setIsLoading] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<StatusSection>>(new Set());
   const [optimisticStageMap, setOptimisticStageMap] = useState<Record<string, boolean>>({});
 
   const [stashModal, setStashModal] = useState<{
@@ -343,6 +354,18 @@ const GitStatusPanel = ({
     });
   };
 
+  const toggleSectionCollapsed = (section: StatusSection) => {
+    setCollapsedSections((previous) => {
+      const next = new Set(previous);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
+
   const renderFlatFileList = (groupedFiles: Record<StatusGroup, GitFile[]>) => {
     return STATUS_ORDER.map((status) => {
       const statusFiles = groupedFiles[status];
@@ -369,13 +392,25 @@ const GitStatusPanel = ({
     });
   };
 
-  const renderSectionHeader = (title: string, count: number) => (
-    <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center justify-between gap-2 px-2.5 py-1 text-text-lighter">
-      <span>{title}</span>
-      <span className="rounded bg-hover px-1.5 py-0.5 ui-text-xs uppercase tracking-[0.08em] text-text-lighter/80">
-        {count}
+  const renderSectionHeader = (section: StatusSection, title: string, count: number) => (
+    <button
+      type="button"
+      className="ui-text-sm mt-2 flex w-full min-w-0 items-center justify-between gap-2 rounded-none px-2.5 py-1 text-left text-text-lighter transition-colors hover:bg-hover"
+      onClick={() => toggleSectionCollapsed(section)}
+      aria-expanded={!collapsedSections.has(section)}
+    >
+      <span className="min-w-0 truncate">{title}</span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <span className="rounded bg-hover px-1.5 py-0.5 ui-text-xs uppercase tracking-[0.08em] text-text-lighter/80">
+          {count}
+        </span>
+        {collapsedSections.has(section) ? (
+          <CaretRight className="size-3 text-text-lighter" />
+        ) : (
+          <CaretDown className="size-3 text-text-lighter" />
+        )}
       </span>
-    </div>
+    </button>
   );
 
   const renderFolderTree = (fileList: GitFile[], section: "changes") => {
@@ -394,7 +429,7 @@ const GitStatusPanel = ({
             <SidebarTreeRow
               depth={depth}
               onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
-              className="leading-[1.35]"
+              className="min-w-0 leading-[1.35]"
               draggable={!!repoPath}
               onDragStart={(event) => {
                 if (!repoPath) return;
@@ -556,18 +591,20 @@ const GitStatusPanel = ({
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
           {trackedFiles.length > 0 && (
             <>
-              {renderSectionHeader(SECTION_LABELS.tracked, trackedFiles.length)}
-              {gitChangesFolderView
-                ? renderFolderTree(trackedFiles, "changes")
-                : renderFlatFileList(groupedTrackedFiles)}
+              {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
+              {!collapsedSections.has("tracked") &&
+                (gitChangesFolderView
+                  ? renderFolderTree(trackedFiles, "changes")
+                  : renderFlatFileList(groupedTrackedFiles))}
             </>
           )}
           {untrackedFiles.length > 0 && (
             <>
-              {renderSectionHeader(SECTION_LABELS.untracked, untrackedFiles.length)}
-              {gitChangesFolderView
-                ? renderFolderTree(untrackedFiles, "changes")
-                : renderFlatFileList(groupedUntrackedFiles)}
+              {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
+              {!collapsedSections.has("untracked") &&
+                (gitChangesFolderView
+                  ? renderFolderTree(untrackedFiles, "changes")
+                  : renderFlatFileList(groupedUntrackedFiles))}
             </>
           )}
         </div>

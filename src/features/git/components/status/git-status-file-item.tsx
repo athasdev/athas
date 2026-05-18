@@ -48,7 +48,7 @@ export const GitFileItem = ({
   return (
     <SidebarTreeRow
       depth={indentLevel}
-      className={cn("group leading-[1.35]", className)}
+      className={cn("group min-w-0 leading-[1.35]", className)}
       onClick={onClick}
       onContextMenu={onContextMenu}
       draggable={!!repoPath}
@@ -79,7 +79,7 @@ export const GitFileItem = ({
         <span
           className={cn(
             "min-w-0 truncate leading-[1.35]",
-            showDirectory ? "max-w-[55%]" : "flex-1",
+            showDirectory ? "shrink-0 basis-auto max-w-[45%]" : "flex-1",
             "text-text",
           )}
         >
