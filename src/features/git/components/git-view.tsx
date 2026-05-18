@@ -827,11 +827,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     );
   }, [stashSearchQuery, stashes]);
 
+  const gitTabOrder: GitSidebarTab[] = ["changes", "history", "worktrees"];
   const gitTabs: Array<{
     id: GitSidebarTab;
     label: string;
     icon: ReactNode;
-  }> = settings.gitSidebarTabOrder
+  }> = [...settings.gitSidebarTabOrder]
+    .sort((a, b) => gitTabOrder.indexOf(a) - gitTabOrder.indexOf(b))
     .map((id) => {
       const tabMap: Record<GitSidebarTab, { id: GitSidebarTab; label: string; icon: ReactNode }> = {
         changes: {

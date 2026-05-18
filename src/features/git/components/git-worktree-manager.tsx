@@ -15,6 +15,7 @@ import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import {
@@ -306,7 +307,7 @@ const GitWorktreeManager = ({
               worktree.branch || (worktree.is_detached ? "Detached HEAD" : "No branch");
 
             return (
-              <div
+              <SidebarListItem
                 key={worktree.path}
                 onClick={() => onSelectWorktree?.(worktree.path)}
                 onContextMenu={(e) =>
@@ -322,22 +323,18 @@ const GitWorktreeManager = ({
                   });
                 }}
                 className={cn(
-                  "mb-1 cursor-grab rounded-xl border border-transparent px-2.5 py-2.5 transition-[transform,background-color,border-color,opacity] active:cursor-grabbing",
-                  worktree.is_current
-                    ? "border-border/60 bg-primary-bg/55"
-                    : "bg-primary-bg/20 hover:bg-hover/70",
+                  "mb-px items-start rounded-md border border-transparent px-2 py-2 transition-[transform,background-color,border-color,opacity]",
+                  worktree.is_current && "border-border/60",
                 )}
+                active={worktree.is_current}
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className="truncate ui-text-sm font-medium text-text"
-                      title={worktree.path}
-                    >
+                    <span className="truncate ui-text-sm text-text leading-4" title={worktree.path}>
                       {worktreeName}
                     </span>
                     {worktree.is_current && (
-                      <span className="ui-text-sm shrink-0 rounded-md border border-border/60 bg-primary-bg/80 px-1.5 py-0.5 text-text-lighter">
+                      <span className="ui-text-xs shrink-0 rounded-md bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter">
                         Current
                       </span>
                     )}
@@ -349,24 +346,28 @@ const GitWorktreeManager = ({
                     {relativePath === worktree.path ? worktree.path : relativePath}
                   </div>
 
-                  <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-1.5 text-text-lighter">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary-bg/45 px-1.5 py-0.5">
+                  <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span className="ui-text-xs inline-flex min-w-0 items-center gap-1 rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
                       <GitBranch className="size-3.5" />
-                      <span>{branchLabel}</span>
+                      <span className="min-w-0 truncate">{branchLabel}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary-bg/45 px-1.5 py-0.5">
+                    <span className="ui-text-xs inline-flex items-center gap-1 rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
                       <GitCommit className="size-3.5" />
                       <span>{worktree.head.slice(0, 7)}</span>
                     </span>
                     {worktree.prunable_reason && (
-                      <span className="rounded-md bg-secondary-bg/45 px-1.5 py-0.5">Prunable</span>
+                      <span className="ui-text-xs rounded-md bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter">
+                        Prunable
+                      </span>
                     )}
                     {worktree.locked_reason && (
-                      <span className="rounded-md bg-secondary-bg/45 px-1.5 py-0.5">Locked</span>
+                      <span className="ui-text-xs rounded-md bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter">
+                        Locked
+                      </span>
                     )}
                   </div>
                 </div>
-              </div>
+              </SidebarListItem>
             );
           })
         )}
