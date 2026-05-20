@@ -446,6 +446,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
       ]
     : []),
   {
+    id: "appearance-window-transparency",
+    tab: "appearance",
+    section: "Layout",
+    label: "Window Transparency",
+    description: "Use translucent app chrome and transparent native windows where supported",
+    keywords: ["window", "transparency", "transparent", "translucent", "glass", "chrome"],
+  },
+  {
     id: "appearance-title-bar-project-mode",
     tab: "appearance",
     section: "Layout",

@@ -379,6 +379,21 @@ export const AppearanceSettings = () => {
         )}
 
         <SettingRow
+          label="Window Transparency"
+          description="Use translucent app chrome and transparent native windows where supported"
+          onReset={() =>
+            updateSetting("windowTransparency", getDefaultSetting("windowTransparency"))
+          }
+          canReset={settings.windowTransparency !== getDefaultSetting("windowTransparency")}
+        >
+          <Switch
+            checked={settings.windowTransparency}
+            onChange={(checked) => updateSetting("windowTransparency", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Title Bar Project Mode"
           description="Show project tabs or a single window-style title in the custom title bar"
           onReset={() =>

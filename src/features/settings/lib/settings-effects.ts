@@ -28,6 +28,19 @@ interface LegacyMediaQueryList extends MediaQueryList {
 let currentThemeSyncQuery: MediaQueryList | null = null;
 let removeThemeSyncListener: (() => void) | null = null;
 
+function applyWindowTransparency(enabled: boolean) {
+  if (typeof document === "undefined") return;
+
+  document.documentElement.setAttribute(
+    "data-window-transparency",
+    enabled ? "enabled" : "disabled",
+  );
+
+  void invoke("set_window_transparency_enabled", { enabled }).catch((error) => {
+    console.warn("Failed to sync window transparency", error);
+  });
+}
+
 function getSystemThemePreference(): SystemThemePreference {
   if (typeof window !== "undefined" && window.matchMedia) {
     try {
@@ -115,7 +128,12 @@ export async function applyTheme(theme: Theme) {
 }
 
 function syncMacOSWindowAppearance(themeType: "light" | "dark") {
-  void invoke("set_macos_window_appearance", { themeType }).catch((error) => {
+  const transparencyEnabled =
+    typeof document === "undefined"
+      ? true
+      : document.documentElement.getAttribute("data-window-transparency") !== "disabled";
+
+  void invoke("set_macos_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
     console.warn("Failed to sync macOS window appearance", error);
   });
 }
@@ -162,6 +180,7 @@ export async function syncOllamaApiKey() {
 
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
+  applyWindowTransparency(settings.windowTransparency);
   void applyTheme(getEffectiveTheme(settings));
   if (settings.syncSystemTheme) {
     syncThemeWithSystem(settings);
@@ -203,5 +222,9 @@ export function applySettingSideEffect<K extends keyof Settings>(
 
   if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
     cacheFontSettings(getSettings());
+  }
+
+  if (key === "windowTransparency") {
+    applyWindowTransparency(value as boolean);
   }
 }

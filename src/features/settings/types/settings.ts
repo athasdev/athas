@@ -50,6 +50,7 @@ export interface Settings {
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
+  windowTransparency: boolean;
   sidebarTabsPosition: "top" | "left";
   titleBarProjectMode: "tabs" | "window";
   headerTrailingItemsOrder: HeaderTrailingItemId[];

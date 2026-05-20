@@ -155,10 +155,10 @@ fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, St
 }
 
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
+   let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+
    #[cfg(target_os = "macos")]
    {
-      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-
       if let Err(error) = apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
       }
@@ -206,6 +206,7 @@ fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Re
 fn sync_macos_window_appearance(
    window: &tauri::WebviewWindow<AthasRuntime>,
    theme_type: &str,
+   transparency_enabled: bool,
 ) -> Result<(), String> {
    let appearance_name = match theme_type {
       "light" => "NSAppearanceNameAqua",
@@ -223,9 +224,14 @@ fn sync_macos_window_appearance(
       .map_err(|e| format!("Failed to access macOS webview: {e}"))?;
    set_ns_appearance(ns_view, appearance_name)?;
 
-   if let Ok(true) = clear_vibrancy(window) {
+   if transparency_enabled {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+      let _ = clear_vibrancy(window);
       apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None)
          .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
+   } else {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+      let _ = clear_vibrancy(window);
    }
 
    Ok(())
@@ -240,16 +246,46 @@ pub fn uses_native_window_chrome() -> bool {
 pub fn set_macos_window_appearance(
    window: tauri::WebviewWindow<AthasRuntime>,
    theme_type: String,
+   transparency_enabled: Option<bool>,
 ) -> Result<(), String> {
    #[cfg(target_os = "macos")]
    {
-      sync_macos_window_appearance(&window, &theme_type)?;
+      sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(true))?;
    }
 
    #[cfg(not(target_os = "macos"))]
    {
       let _ = window;
       let _ = theme_type;
+      let _ = transparency_enabled;
+   }
+
+   Ok(())
+}
+
+#[command]
+pub fn set_window_transparency_enabled(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   enabled: bool,
+) -> Result<(), String> {
+   #[cfg(target_os = "macos")]
+   {
+      if enabled {
+         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+         let _ = clear_vibrancy(&window);
+         if let Err(error) = apply_vibrancy(&window, ATHAS_WINDOW_MATERIAL, None, None) {
+            log::warn!("Failed to apply macOS window vibrancy: {error}");
+         }
+      } else {
+         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+         let _ = clear_vibrancy(&window);
+      }
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = window;
+      let _ = enabled;
    }
 
    Ok(())
@@ -268,6 +304,7 @@ fn create_labeled_app_window_internal(
       .min_inner_size(400.0, 400.0)
       .center()
       .decorations(true)
+      .transparent(true)
       .resizable(true)
       .shadow(true);
 
@@ -280,8 +317,7 @@ fn create_labeled_app_window_internal(
    #[cfg(target_os = "macos")]
    let builder = builder
       .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay)
-      .transparent(true);
+      .title_bar_style(TitleBarStyle::Overlay);
 
    let window = builder
       .build()

@@ -46,6 +46,7 @@ type SyncableSettingsKey =
   | "autoThemeLight"
   | "autoThemeDark"
   | "compactMenuBar"
+  | "windowTransparency"
   | "sidebarTabsPosition"
   | "titleBarProjectMode"
   | "headerTrailingItemsOrder"
@@ -137,6 +138,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeLight",
   "autoThemeDark",
   "compactMenuBar",
+  "windowTransparency",
   "sidebarTabsPosition",
   "titleBarProjectMode",
   "headerTrailingItemsOrder",

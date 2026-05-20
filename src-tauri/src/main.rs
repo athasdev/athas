@@ -154,6 +154,7 @@ fn main() {
          create_app_window,
          uses_native_window_chrome,
          set_macos_window_appearance,
+         set_window_transparency_enabled,
          create_embedded_webview,
          close_embedded_webview,
          close_all_embedded_webviews,
