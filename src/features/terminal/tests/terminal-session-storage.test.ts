@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   buildTerminalRestorePayload,
   dedupePersistedTerminals,
@@ -17,34 +17,9 @@ const persistedTerminal = (id: string, name = id) => ({
   isPinned: false,
 });
 
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
-
 describe("terminal session storage", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it("stores terminals per workspace key", () => {

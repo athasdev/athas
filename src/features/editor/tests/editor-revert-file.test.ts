@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer-store";
+import { useBufferStore } from "../stores/buffer-store";
+import { revertActiveFile } from "@/features/keymaps/commands/file-command-actions";
 
 const mocks = vi.hoisted(() => ({
   readFileContent: vi.fn(),
@@ -14,27 +15,6 @@ vi.mock("@/features/file-system/controllers/file-operations", async (importOrigi
     readFileContent: mocks.readFileContent,
   };
 });
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
 
 function makeDirtyEditorBuffer(): EditorContent {
   return {
@@ -55,28 +35,9 @@ function makeDirtyEditorBuffer(): EditorContent {
 }
 
 describe("editor revert file command", () => {
-  let useBufferStore: typeof useBufferStoreHook;
-  let revertActiveFile: () => Promise<void>;
-
-  beforeEach(async () => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
-
+  beforeEach(() => {
+    localStorage.clear();
     mocks.readFileContent.mockResolvedValue("disk");
-
-    ({ useBufferStore } = await import("../stores/buffer-store"));
-    ({ revertActiveFile } = await import("@/features/keymaps/commands/file-command-actions"));
 
     useBufferStore.setState({
       activeBufferId: "revert-buffer",
@@ -87,13 +48,12 @@ describe("editor revert file command", () => {
   });
 
   afterEach(() => {
-    useBufferStore?.setState({
+    useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 

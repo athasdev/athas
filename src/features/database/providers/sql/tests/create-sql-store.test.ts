@@ -10,21 +10,6 @@ vi.mock("@/features/database/services/database-provider-sidecar", () => ({
 
 const mockInvokeDatabaseProvider = vi.mocked(invokeDatabaseProvider);
 
-function createMemoryStorage(): Storage {
-  const items = new Map<string, string>();
-
-  return {
-    get length() {
-      return items.size;
-    },
-    clear: () => items.clear(),
-    getItem: (key: string) => items.get(key) ?? null,
-    key: (index: number) => Array.from(items.keys())[index] ?? null,
-    removeItem: (key: string) => items.delete(key),
-    setItem: (key: string, value: string) => items.set(key, value),
-  };
-}
-
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -112,10 +97,10 @@ function createNoPrimaryKeyStore() {
 describe("createSqlStore reliability", () => {
   beforeEach(() => {
     mockInvokeDatabaseProvider.mockReset();
+    localStorage.clear();
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -567,9 +552,7 @@ describe("createSqlStore reliability", () => {
   });
 
   it("loads saved SQL history for the initialized connection", async () => {
-    const storage = createMemoryStorage();
-    vi.stubGlobal("localStorage", storage);
-    storage.setItem(
+    localStorage.setItem(
       getSqlHistoryStorageKey("mysql", "connection", "mysql-local"),
       JSON.stringify(["select 1", "select 2"]),
     );
@@ -629,8 +612,6 @@ describe("createSqlStore reliability", () => {
   });
 
   it("saves SQL history changes for the active connection", async () => {
-    const storage = createMemoryStorage();
-    vi.stubGlobal("localStorage", storage);
     mockInvokeDatabaseProvider.mockResolvedValueOnce({ columns: ["value"], rows: [[1]] });
 
     const store = createReadyMySqlStore();
@@ -638,11 +619,11 @@ describe("createSqlStore reliability", () => {
     await store.getState().actions.executeCustomQuery("select 1");
 
     const storageKey = getSqlHistoryStorageKey("mysql", "connection", "mysql-local");
-    expect(JSON.parse(storage.getItem(storageKey) ?? "[]")).toEqual(["select 1"]);
+    expect(JSON.parse(localStorage.getItem(storageKey) ?? "[]")).toEqual(["select 1"]);
 
     store.getState().actions.removeSqlHistoryEntry("select 1");
 
-    expect(storage.getItem(storageKey)).toBeNull();
+    expect(localStorage.getItem(storageKey)).toBeNull();
   });
 
   it("clears stale custom query errors when leaving query mode", () => {

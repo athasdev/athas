@@ -3,7 +3,8 @@ import { formatDatabaseClipboardValue, writeDatabaseClipboardText } from "../uti
 
 describe("database clipboard helpers", () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
+    // @ts-ignore
+    delete globalThis.navigator;
   });
 
   it("formats nullish and object values for clipboard copy", () => {
@@ -21,20 +22,23 @@ describe("database clipboard helpers", () => {
 
   it("writes clipboard text when the clipboard API is available", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // @ts-ignore
+    globalThis.navigator = { clipboard: { writeText } };
 
     await expect(writeDatabaseClipboardText("select 1")).resolves.toBe(true);
     expect(writeText).toHaveBeenCalledWith("select 1");
   });
 
   it("returns false instead of throwing when clipboard writes fail", async () => {
-    vi.stubGlobal("navigator", {
+    // @ts-ignore
+    globalThis.navigator = {
       clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
-    });
+    } as any;
 
     await expect(writeDatabaseClipboardText("select 1")).resolves.toBe(false);
 
-    vi.stubGlobal("navigator", {});
+    // @ts-ignore
+    globalThis.navigator = {} as any;
     await expect(writeDatabaseClipboardText("select 1")).resolves.toBe(false);
   });
 });

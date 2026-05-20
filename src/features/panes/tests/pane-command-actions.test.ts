@@ -2,60 +2,42 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
 import { getAllPaneGroups } from "../utils/pane-tree";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import {
+  closeActiveEditorGroup,
+  closeOtherEditorGroups,
+  moveActiveEditorToAdjacentGroup,
+  resetEditorGroupSizes,
+  splitActiveEditorGroup,
+  toggleActiveEditorGroupLock,
+} from "../utils/pane-command-actions";
 
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn().mockResolvedValue([]),
+}));
 
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+vi.mock("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: vi.fn().mockReturnValue({ label: "main" }),
+  getAllWebviewWindows: vi.fn().mockResolvedValue([{ label: "main" }]),
+}));
 
 describe("pane command actions", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+    localStorage.clear();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
-  it("splits the active editor group with an editor buffer", async () => {
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-    const { splitActiveEditorGroup } = await import("../utils/pane-command-actions");
+  it("splits the active editor group with an editor buffer", () => {
     const paneActions = usePaneStore.getState().actions;
 
     useBufferStore.setState((state) => ({
@@ -87,9 +69,7 @@ describe("pane command actions", () => {
     expect(groups.every((pane) => pane.bufferIds.includes("buffer-a"))).toBe(true);
   });
 
-  it("splits stateful buffers into an empty editor group", async () => {
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-    const { splitActiveEditorGroup } = await import("../utils/pane-command-actions");
+  it("splits stateful buffers into an empty editor group", () => {
     const paneActions = usePaneStore.getState().actions;
 
     useBufferStore.setState((state) => ({
@@ -118,8 +98,7 @@ describe("pane command actions", () => {
     expect(groups.find((pane) => pane.id !== ROOT_PANE_ID)?.bufferIds).toEqual([]);
   });
 
-  it("closes only when another editor group can receive the buffers", async () => {
-    const { closeActiveEditorGroup } = await import("../utils/pane-command-actions");
+  it("closes only when another editor group can receive the buffers", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -135,8 +114,7 @@ describe("pane command actions", () => {
     expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual(["buffer-a"]);
   });
 
-  it("closes other editor groups into the active editor group", async () => {
-    const { closeOtherEditorGroups } = await import("../utils/pane-command-actions");
+  it("closes other editor groups into the active editor group", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -153,8 +131,7 @@ describe("pane command actions", () => {
     expect(usePaneStore.getState().activePaneId).toBe(ROOT_PANE_ID);
   });
 
-  it("resets nested editor group sizes", async () => {
-    const { resetEditorGroupSizes } = await import("../utils/pane-command-actions");
+  it("resets nested editor group sizes", () => {
     const paneActions = usePaneStore.getState().actions;
 
     const rightPaneId = paneActions.splitPane(ROOT_PANE_ID, "horizontal");
@@ -185,8 +162,7 @@ describe("pane command actions", () => {
     expect(nextRoot.children[1].sizes).toEqual([50, 50]);
   });
 
-  it("moves the active editor into the next and previous editor group", async () => {
-    const { moveActiveEditorToAdjacentGroup } = await import("../utils/pane-command-actions");
+  it("moves the active editor into the next and previous editor group", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -209,13 +185,7 @@ describe("pane command actions", () => {
     expect(usePaneStore.getState().activePaneId).toBe(ROOT_PANE_ID);
   });
 
-  it("does not run editor group commands against bottom pane splits", async () => {
-    const {
-      closeActiveEditorGroup,
-      moveActiveEditorToAdjacentGroup,
-      splitActiveEditorGroup,
-      toggleActiveEditorGroupLock,
-    } = await import("../utils/pane-command-actions");
+  it("does not run editor group commands against bottom pane splits", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(BOTTOM_PANE_ID, "terminal-a");

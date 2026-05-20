@@ -1,48 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { CompletionItem } from "vscode-languageserver-protocol";
-import type { useLspStore as useLspStoreHook } from "../lsp/lsp-store";
-import type { useEditorUIStore as useEditorUIStoreHook } from "../stores/ui-store";
-
-type LspStoreHook = typeof useLspStoreHook;
-type EditorUIStoreHook = typeof useEditorUIStoreHook;
+import { useLspStore } from "../lsp/lsp-store";
+import { useEditorUIStore } from "../stores/ui-store";
 
 describe("lsp store completions", () => {
-  let useLspStore: LspStoreHook;
-  let useEditorUIStore: EditorUIStoreHook;
-
-  beforeEach(async () => {
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
-
-    ({ useLspStore } = await import("../lsp/lsp-store"));
-    ({ useEditorUIStore } = await import("../stores/ui-store"));
+  beforeEach(() => {
+    localStorage.clear();
   });
 
   afterEach(() => {
-    useEditorUIStore?.setState({
+    useEditorUIStore.setState({
       filteredCompletions: [],
       isLspCompletionVisible: false,
       selectedLspIndex: 0,
       currentPrefix: "",
       isApplyingCompletion: false,
     });
-    useLspStore?.setState({
+    useLspStore.setState({
       getCompletions: undefined,
       isLanguageSupported: undefined,
       currentCompletionRequest: null,
       completionCache: {},
     });
-    vi.unstubAllGlobals();
   });
 
   it("shows unfiltered completions for a manual empty-prefix request", async () => {

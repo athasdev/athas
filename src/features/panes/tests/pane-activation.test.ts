@@ -1,60 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { activateBufferInPaneAndSync } from "../utils/pane-activation";
 
 describe("pane activation", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+    localStorage.clear();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    vi.unstubAllGlobals();
   });
 
-  it("activates pane and buffer stores together", async () => {
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-    const { activateBufferInPaneAndSync } = await import("../utils/pane-activation");
+  it("activates pane and buffer stores together", () => {
     const paneActions = usePaneStore.getState().actions;
 
     useBufferStore.setState((state) => ({

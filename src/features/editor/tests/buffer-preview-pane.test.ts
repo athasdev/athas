@@ -1,59 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import { useBufferStore } from "../stores/buffer-store";
 
 describe("buffer preview pane integration", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+    localStorage.clear();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("../stores/buffer-store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
-  it("replaces preview buffers only within the target pane", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+  it("replaces preview buffers only within the target pane", () => {
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -99,8 +65,7 @@ describe("buffer preview pane integration", () => {
     expect(paneActions.getPaneById(rightPaneId)?.previewBufferId).toBe(thirdPreviewId);
   });
 
-  it("clears pane preview metadata when a preview becomes definite", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+  it("clears pane preview metadata when a preview becomes definite", () => {
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -122,8 +87,7 @@ describe("buffer preview pane integration", () => {
     expect(paneActions.getPaneById(ROOT_PANE_ID)?.previewBufferId).toBeNull();
   });
 
-  it("pins preview buffers as definite pane metadata", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+  it("pins preview buffers as definite pane metadata", () => {
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -145,8 +109,7 @@ describe("buffer preview pane integration", () => {
     expect(pane?.pinnedBufferIds).toEqual([previewId]);
   });
 
-  it("opens references as a singleton buffer like diagnostics", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+  it("opens references as a singleton buffer like diagnostics", () => {
     const bufferActions = useBufferStore.getState().actions;
 
     const firstReferencesId = bufferActions.openReferencesBuffer();

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer-store";
-import type { useEditorAppStore as useEditorAppStoreHook } from "../stores/editor-app-store";
+import { useBufferStore } from "../stores/buffer-store";
+import { useEditorAppStore } from "../stores/editor-app-store";
 
 const mocks = vi.hoisted(() => ({
   notifyDocumentSave: vi.fn(),
@@ -30,27 +30,6 @@ vi.mock("@/features/local-history/api/local-history-api", () => ({
   recordLocalHistoryFile: mocks.recordLocalHistoryFile,
 }));
 
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
-
 function makeEditorBuffer(
   id: string,
   path: string,
@@ -75,29 +54,11 @@ function makeEditorBuffer(
 }
 
 describe("editor save all", () => {
-  let useBufferStore: typeof useBufferStoreHook;
-  let useEditorAppStore: typeof useEditorAppStoreHook;
-
-  beforeEach(async () => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+  beforeEach(() => {
+    localStorage.clear();
     mocks.writeFile.mockResolvedValue(undefined);
     mocks.recordLocalHistoryFile.mockResolvedValue(undefined);
     mocks.notifyDocumentSave.mockResolvedValue(undefined);
-
-    ({ useBufferStore } = await import("../stores/buffer-store"));
-    ({ useEditorAppStore } = await import("../stores/editor-app-store"));
 
     useBufferStore.setState({
       activeBufferId: "a",
@@ -112,13 +73,12 @@ describe("editor save all", () => {
   });
 
   afterEach(() => {
-    useBufferStore?.setState({
+    useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 

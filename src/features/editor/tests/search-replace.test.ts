@@ -4,27 +4,9 @@ import {
   replaceAllSearchMatches,
   replaceSearchMatch,
 } from "../utils/search-replace";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import { useBufferStore } from "../stores/buffer-store";
+import { useEditorStateStore } from "../stores/state-store";
+import { useEditorUIStore } from "../stores/ui-store";
 
 describe("search replace utilities", () => {
   it("preserves common match casing when requested", () => {
@@ -82,26 +64,10 @@ describe("search replace utilities", () => {
 
 describe("search replace store actions", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+    localStorage.clear();
   });
 
-  afterEach(async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
-
+  afterEach(() => {
     useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
@@ -120,12 +86,10 @@ describe("search replace store actions", () => {
     useEditorStateStore.setState({
       onChange: () => {},
     });
-    vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
-  it("does not replace all when the match list is limited", async () => {
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+  it("does not replace all when the match list is limited", () => {
     const onChange = vi.fn();
     const limitedMatches = [{ start: 0, end: 4 }];
 
@@ -144,9 +108,7 @@ describe("search replace store actions", () => {
     expect(useEditorUIStore.getState().searchResultsLimited).toBe(true);
   });
 
-  it("preserves replacement case through store replace all", async () => {
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+  it("preserves replacement case through store replace all", () => {
     const onChange = vi.fn();
 
     useEditorStateStore.setState({ onChange });
@@ -167,7 +129,6 @@ describe("search replace store actions", () => {
       },
     });
 
-    const { useBufferStore } = await import("../stores/buffer-store");
     useBufferStore.setState({
       activeBufferId: "active",
       buffers: [

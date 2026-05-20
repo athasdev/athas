@@ -1,42 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
 import { getAllPaneGroups } from "../utils/pane-tree";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import {
+  getOrCreatePaneDropTarget,
+  moveBufferToPaneDropTarget,
+  ensureBufferInPaneDropTarget,
+} from "../utils/pane-drop-actions";
 
 describe("pane drop actions", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
+    localStorage.clear();
   });
 
   afterEach(() => {
     usePaneStore.getState().actions.reset();
-    vi.unstubAllGlobals();
   });
 
-  it("creates a split drop target from an edge zone", async () => {
-    const { getOrCreatePaneDropTarget } = await import("../utils/pane-drop-actions");
-
+  it("creates a split drop target from an edge zone", () => {
     const targetPaneId = getOrCreatePaneDropTarget({ paneId: ROOT_PANE_ID, zone: "right" });
 
     expect(targetPaneId).not.toBeNull();
@@ -44,8 +25,7 @@ describe("pane drop actions", () => {
     expect(getAllPaneGroups(usePaneStore.getState().root)).toHaveLength(2);
   });
 
-  it("moves buffers through a pane drop target", async () => {
-    const { moveBufferToPaneDropTarget } = await import("../utils/pane-drop-actions");
+  it("moves buffers through a pane drop target", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -63,8 +43,7 @@ describe("pane drop actions", () => {
     expect(usePaneStore.getState().activePaneId).toBe(targetPaneId);
   });
 
-  it("adds buffers without duplicating existing target entries", async () => {
-    const { ensureBufferInPaneDropTarget } = await import("../utils/pane-drop-actions");
+  it("adds buffers without duplicating existing target entries", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");

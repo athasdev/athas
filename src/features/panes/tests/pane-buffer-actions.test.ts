@@ -1,41 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import { ensureBufferInPane } from "../utils/pane-buffer-actions";
 
 describe("pane buffer actions", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
+    localStorage.clear();
   });
 
   afterEach(() => {
     usePaneStore.getState().actions.reset();
-    vi.unstubAllGlobals();
   });
 
-  it("adds missing buffers to an existing pane", async () => {
-    const { ensureBufferInPane } = await import("../utils/pane-buffer-actions");
-
+  it("adds missing buffers to an existing pane", () => {
     expect(ensureBufferInPane(ROOT_PANE_ID, "buffer-a")).toBe(ROOT_PANE_ID);
     expect(usePaneStore.getState().actions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([
       "buffer-a",
@@ -43,8 +20,7 @@ describe("pane buffer actions", () => {
     expect(usePaneStore.getState().activePaneId).toBe(ROOT_PANE_ID);
   });
 
-  it("activates existing buffers without duplicating them", async () => {
-    const { ensureBufferInPane } = await import("../utils/pane-buffer-actions");
+  it("activates existing buffers without duplicating them", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -55,9 +31,7 @@ describe("pane buffer actions", () => {
     expect(paneActions.getPaneById(ROOT_PANE_ID)?.activeBufferId).toBe("buffer-a");
   });
 
-  it("returns null for missing panes", async () => {
-    const { ensureBufferInPane } = await import("../utils/pane-buffer-actions");
-
+  it("returns null for missing panes", () => {
     expect(ensureBufferInPane("missing-pane", "buffer-a")).toBeNull();
   });
 });

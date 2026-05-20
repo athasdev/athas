@@ -1,38 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { editorAPI as editorAPIInstance } from "../extensions/api";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer-store";
-import type { useEditorStateStore as useEditorStateStoreHook } from "../stores/state-store";
-import type { useHistoryStore as useHistoryStoreHook } from "../stores/history-store";
-import type { useEditorSettingsStore as useEditorSettingsStoreHook } from "../stores/settings-store";
+import { editorAPI } from "../extensions/api";
+import { useBufferStore } from "../stores/buffer-store";
+import { useEditorStateStore } from "../stores/state-store";
+import { useHistoryStore } from "../stores/history-store";
+import { useEditorSettingsStore } from "../stores/settings-store";
 import { calculateCursorPositionFromContent } from "../utils/position";
 import type { EditorContent } from "@/features/panes/types/pane-content";
-
-type EditorAPIInstance = typeof editorAPIInstance;
-type BufferStoreHook = typeof useBufferStoreHook;
-type EditorStateStoreHook = typeof useEditorStateStoreHook;
-type HistoryStoreHook = typeof useHistoryStoreHook;
-type EditorSettingsStoreHook = typeof useEditorSettingsStoreHook;
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
 
 const makeBuffer = (content: string, language = "typescript"): EditorContent => ({
   id: "buffer_editor_api_test",
@@ -52,45 +25,12 @@ const makeBuffer = (content: string, language = "typescript"): EditorContent => 
 
 describe("editor API model operations", () => {
   const onChange = vi.fn();
-  let editorAPI: EditorAPIInstance;
-  let useBufferStore: BufferStoreHook;
-  let useEditorStateStore: EditorStateStoreHook;
-  let useHistoryStore: HistoryStoreHook;
-  let useEditorSettingsStore: EditorSettingsStoreHook;
 
-  beforeEach(async () => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    const styleHost = { appendChild: vi.fn() };
-    const documentStub = {
-      activeElement: null,
-      createElement: vi.fn(() => ({
-        setAttribute: vi.fn(),
-        appendChild: vi.fn(),
-      })),
-      createTextNode: vi.fn((text: string) => ({ textContent: text })),
-      getElementsByTagName: vi.fn((tagName: string) => (tagName === "head" ? [styleHost] : [])),
-    };
-
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
-    vi.stubGlobal("HTMLTextAreaElement", class MockTextAreaElement {});
-    vi.stubGlobal("document", documentStub);
-
-    ({ editorAPI } = await import("../extensions/api"));
-    ({ useBufferStore } = await import("../stores/buffer-store"));
-    ({ useEditorStateStore } = await import("../stores/state-store"));
-    ({ useHistoryStore } = await import("../stores/history-store"));
-    ({ useEditorSettingsStore } = await import("../stores/settings-store"));
+  beforeEach(() => {
+    localStorage.clear();
+    if (typeof (globalThis as any).HTMLTextAreaElement === "undefined") {
+      (globalThis as any).HTMLTextAreaElement = class MockTextAreaElement {};
+    }
 
     onChange.mockReset();
     editorAPI.setTextareaRef?.(null);
@@ -108,21 +48,21 @@ describe("editor API model operations", () => {
   });
 
   afterEach(() => {
-    useBufferStore?.setState({
+    useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    useEditorStateStore?.setState({
+    useEditorStateStore.setState({
       cursorPosition: { line: 0, column: 0, offset: 0 },
       selection: undefined,
       multiCursorState: null,
       onChange: () => {},
     });
-    useHistoryStore?.getState().actions.clearAllHistories();
-    useEditorSettingsStore?.setState({ theme: "athas-dark" });
-    vi.unstubAllGlobals();
+    useHistoryStore.getState().actions.clearAllHistories();
+    useEditorSettingsStore.setState({ theme: "athas-dark" });
+    vi.clearAllMocks();
   });
 
   it("inserts text through the editor model when no textarea owns the content", () => {

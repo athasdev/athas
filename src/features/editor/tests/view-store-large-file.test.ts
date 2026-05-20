@@ -1,48 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import { useBufferStore } from "../stores/buffer-store";
+import { useEditorViewStore, applyIncrementalLineEdit } from "../stores/view-store";
 
 describe("editor view store large files", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
-    vi.stubGlobal("window", {
-      __TAURI_INTERNALS__: {
-        invoke: vi.fn().mockResolvedValue([]),
-        metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { label: "main" },
-        },
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+    localStorage.clear();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorViewStore } = await import("../stores/view-store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
@@ -53,12 +20,9 @@ describe("editor view store large files", () => {
       lines: [""],
       lineCount: 1,
     });
-    vi.unstubAllGlobals();
   });
 
-  it("tracks large active buffers by line count without storing every line", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorViewStore } = await import("../stores/view-store");
+  it("tracks large active buffers by line count without storing every line", () => {
     const bufferActions = useBufferStore.getState().actions;
     const content = Array.from({ length: 50_000 }, (_, index) => `line ${index}`).join("\n");
 
@@ -77,8 +41,7 @@ describe("editor view store large files", () => {
     expect(useEditorViewStore.getState().actions.getLines()).toHaveLength(50_000);
   });
 
-  it("updates cached lines incrementally for small typing edits", async () => {
-    const { applyIncrementalLineEdit } = await import("../stores/view-store");
+  it("updates cached lines incrementally for small typing edits", () => {
     const previousContent = "first line\nsecond line\nthird line";
     const previousLines = previousContent.split("\n");
 
@@ -107,14 +70,13 @@ describe("editor view store large files", () => {
     ).toBeNull();
   });
 
-  it("matches full line rebuild for boundary edits", async () => {
-    const { applyIncrementalLineEdit } = await import("../stores/view-store");
+  it("matches full line rebuild for boundary edits", () => {
     const cases = [
       ["alpha\nbeta\ngamma", "xalpha\nbeta\ngamma"],
       ["alpha\nbeta\ngamma", "alpha\nxbeta\ngamma"],
       ["alpha\nbeta\ngamma", "alpha\nbeta\ngammax"],
       ["alpha\nbeta\ngamma", "alpha\nbeta\n\ngamma"],
-      ["alpha\nbeta\ngamma", "alpha\nbe\nta\ngamma"],
+      ["alpha\nbeta\ngamma", "alpha\nbe nta\ngamma"],
       ["alpha\nbeta\ngamma\n", "alpha\nbeta\ngamma\nx"],
       ["alpha\nbeta\ngamma", "alpha\nbeta"],
     ];

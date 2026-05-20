@@ -1,42 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane-store";
 import { getAllPaneGroups } from "../utils/pane-tree";
-
-const createMockStorage = () => {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size;
-    },
-  };
-};
+import { createPaneBeside } from "../utils/pane-split-actions";
 
 describe("pane split actions", () => {
   beforeEach(() => {
-    vi.stubGlobal("localStorage", createMockStorage());
+    localStorage.clear();
   });
 
   afterEach(() => {
     usePaneStore.getState().actions.reset();
-    vi.unstubAllGlobals();
   });
 
-  it("creates an adjacent pane and activates it", async () => {
-    const { createPaneBeside } = await import("../utils/pane-split-actions");
-
+  it("creates an adjacent pane and activates it", () => {
     const paneId = createPaneBeside(ROOT_PANE_ID, "horizontal");
 
     expect(paneId).not.toBeNull();
@@ -44,8 +21,7 @@ describe("pane split actions", () => {
     expect(usePaneStore.getState().activePaneId).toBe(paneId);
   });
 
-  it("can seed the adjacent pane with a shared buffer", async () => {
-    const { createPaneBeside } = await import("../utils/pane-split-actions");
+  it("can seed the adjacent pane with a shared buffer", () => {
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");

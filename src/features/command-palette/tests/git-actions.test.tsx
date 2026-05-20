@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { createGitActions } from "../constants/git-actions";
 
 function createActions() {
@@ -25,17 +25,12 @@ function createActions() {
 }
 
 describe("createGitActions", () => {
+  beforeEach(() => {
+    vi.mocked(window.dispatchEvent).mockClear();
+  });
+
   it("opens the stash surface without switching the sidebar to git", () => {
     const params = createActions();
-    const dispatchEvent = vi.fn();
-    vi.stubGlobal("window", {
-      CustomEvent,
-      dispatchEvent,
-      setTimeout: (callback: () => void) => {
-        callback();
-        return 0;
-      },
-    });
 
     const actions = createGitActions({
       rootFolderPath: "/repo",
@@ -48,12 +43,10 @@ describe("createGitActions", () => {
     expect(params.onClose).toHaveBeenCalledOnce();
     expect(params.setIsSidebarVisible).not.toHaveBeenCalled();
     expect(params.setActiveView).not.toHaveBeenCalled();
-    expect(dispatchEvent).toHaveBeenCalledWith(
+    expect(window.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: { type: "view-stashes" },
       }),
     );
-
-    vi.unstubAllGlobals();
   });
 });
