@@ -1255,7 +1255,7 @@ function FileExplorerTreeComponent({
                             data-depth={stickyAncestor.depth}
                             title={stickyAncestor.file.path}
                             className={cn(
-                              "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+                              "file-tree-row ui-font ui-text-sm flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
                               densityConfig.rowClassName,
                             )}
                             style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}

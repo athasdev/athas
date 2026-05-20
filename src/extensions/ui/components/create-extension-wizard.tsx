@@ -362,7 +362,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   alignItems: "center",
                   borderRadius: "999px",
                   padding: "4px 8px",
-                  fontSize: "12px",
+                  fontSize: "var(--ui-text-xs)",
                   fontWeight: 500,
                   ...palette,
                   ...style,
@@ -438,7 +438,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               createElement(
                 "div",
                 {
-                  style: { color: "var(--color-text-lighter)", fontSize: "12px", lineHeight: 1.4 },
+                  style: {
+                    color: "var(--color-text-lighter)",
+                    fontSize: "var(--ui-text-xs)",
+                    lineHeight: 1.4,
+                  },
                 },
                 label,
               ),
@@ -447,7 +451,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 {
                   style: {
                     color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
-                    fontSize: "18px",
+                    fontSize: "var(--ui-text-base)",
                     fontWeight: 600,
                     lineHeight: 1.2,
                   },
@@ -480,7 +484,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 { style: { minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" } },
                 createElement(
                   "div",
-                  { style: { color: "var(--color-text)", fontSize: "14px", fontWeight: 600 } },
+                  {
+                    style: {
+                      color: "var(--color-text)",
+                      fontSize: "var(--ui-text-base)",
+                      fontWeight: 600,
+                    },
+                  },
                   title,
                 ),
                 subtitle
@@ -489,7 +499,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       {
                         style: {
                           color: "var(--color-text-lighter)",
-                          fontSize: "12px",
+                          fontSize: "var(--ui-text-xs)",
                           lineHeight: 1.45,
                         },
                       },
@@ -532,7 +542,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 { style: { minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" } },
                 createElement(
                   "div",
-                  { style: { color: "var(--color-text)", fontSize: "13px", fontWeight: 500 } },
+                  {
+                    style: {
+                      color: "var(--color-text)",
+                      fontSize: "var(--ui-text-sm)",
+                      fontWeight: 500,
+                    },
+                  },
                   title,
                 ),
                 subtitle
@@ -541,7 +557,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       {
                         style: {
                           color: "var(--color-text-lighter)",
-                          fontSize: "12px",
+                          fontSize: "var(--ui-text-xs)",
                           lineHeight: 1.4,
                         },
                       },
@@ -577,7 +593,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               },
               createElement(
                 "div",
-                { style: { color: "var(--color-text)", fontSize: "13px", fontWeight: 600 } },
+                {
+                  style: {
+                    color: "var(--color-text)",
+                    fontSize: "var(--ui-text-sm)",
+                    fontWeight: 600,
+                  },
+                },
                 title,
               ),
               description
@@ -586,7 +608,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                     {
                       style: {
                         color: "var(--color-text-lighter)",
-                        fontSize: "12px",
+                        fontSize: "var(--ui-text-xs)",
                         lineHeight: 1.45,
                       },
                     },

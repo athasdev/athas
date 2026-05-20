@@ -160,7 +160,7 @@ export function EmojiPicker({
       <button
         type="button"
         className={cn(
-          "flex size-8 items-center justify-center rounded-md border border-transparent text-base hover:bg-hover",
+          "flex size-8 items-center justify-center rounded-md border border-transparent ui-text-base hover:bg-hover",
           "focus-visible:border-accent focus-visible:outline-none",
           selected === emoji && "border-accent/50 bg-hover",
         )}
@@ -186,7 +186,7 @@ export function EmojiPicker({
 
       {visibleRecentEmojis.length > 0 ? (
         <div className="mt-2">
-          <div className="mb-1 px-1 text-text-lighter text-[10px] uppercase">Recent</div>
+          <div className="mb-1 px-1 ui-text-xs text-text-lighter uppercase">Recent</div>
           <div
             className="grid gap-1"
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
@@ -204,7 +204,7 @@ export function EmojiPicker({
       </div>
 
       {filteredOptions.length === 0 ? (
-        <div className="mt-2 rounded-md border border-border/60 px-2 py-3 text-center text-text-lighter text-xs">
+        <div className="mt-2 rounded-md border border-border/60 px-2 py-3 text-center ui-text-xs text-text-lighter">
           No matching emoji
         </div>
       ) : null}
@@ -212,7 +212,7 @@ export function EmojiPicker({
       {onClear ? (
         <button
           type="button"
-          className="mt-2 h-7 w-full rounded-md text-center text-text-lighter text-xs hover:bg-hover hover:text-text"
+          className="mt-2 h-7 w-full rounded-md text-center ui-text-xs text-text-lighter hover:bg-hover hover:text-text"
           onClick={onClear}
         >
           {clearLabel}

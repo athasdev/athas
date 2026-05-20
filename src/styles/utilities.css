@@ -90,12 +90,8 @@ html[data-window-resize-dragging] * {
   font-size: var(--ui-text-xs);
 }
 
-.ui-text-md {
-  font-size: var(--ui-text-md);
-}
-
-.ui-text-lg {
-  font-size: var(--ui-text-lg);
+.ui-text-base {
+  font-size: var(--ui-text-base);
 }
 
 @keyframes dropIndicatorPulse {
@@ -243,7 +239,7 @@ html[data-window-resize-dragging] * {
   margin-bottom: 0.25rem;
   font-weight: 400;
   color: rgb(239 68 68);
-  font-size: 0.75rem;
+  font-size: var(--ui-text-xs);
 }
 
 .error-title {
@@ -253,6 +249,6 @@ html[data-window-resize-dragging] * {
 
 .error-message {
   color: rgb(220 38 38);
-  font-size: 0.75rem;
+  font-size: var(--ui-text-xs);
   line-height: 1.3;
 }

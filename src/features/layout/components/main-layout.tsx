@@ -258,7 +258,7 @@ export function MainLayout() {
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
           <div className="rounded-lg border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
-            <p className="font-medium ui-text-lg text-text">
+            <p className="ui-text-base font-semibold text-text">
               Drop folder to open project, or file to open buffer
             </p>
           </div>

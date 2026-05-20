@@ -310,7 +310,7 @@ export const KeyboardSettings = () => {
                   </TableHeader>
 
                   {filteredCommands.length === 0 ? (
-                    <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
+                    <div className="ui-font ui-text-base flex items-center justify-center py-12 text-text-lighter">
                       No keybindings found
                     </div>
                   ) : (

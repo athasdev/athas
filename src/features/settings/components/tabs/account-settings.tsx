@@ -107,7 +107,7 @@ export const AccountSettings = () => {
           description="Sign in to access account and subscription features."
         >
           {isAuthenticated ? (
-            <span className="ui-font ui-text-md text-text-lighter">{user?.email}</span>
+            <span className="ui-font ui-text-base text-text-lighter">{user?.email}</span>
           ) : (
             <Button
               variant="default"

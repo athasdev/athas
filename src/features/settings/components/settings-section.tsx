@@ -28,7 +28,7 @@ export default function Section({ title, description, children, className }: Sec
       data-settings-section={title}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
-        <h4 className="ui-font ui-text-md text-text">{title}</h4>
+        <h4 className="ui-font ui-text-base text-text">{title}</h4>
         {description && <p className="ui-font ui-text-sm text-text-lighter">{description}</p>}
       </div>
       <div className="space-y-2">{children}</div>

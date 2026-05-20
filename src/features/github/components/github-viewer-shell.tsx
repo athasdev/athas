@@ -47,7 +47,7 @@ export function GitHubViewerHeader({
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
             <div className="min-w-0 flex-1">
-              <h1 className="ui-font ui-text-lg min-w-0 leading-tight font-medium text-text">
+              <h1 className="ui-font ui-text-base min-w-0 leading-tight font-semibold text-text">
                 {title}
               </h1>
               {meta ? (

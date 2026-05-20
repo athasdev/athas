@@ -284,8 +284,8 @@ export const ToastContainer = () => {
           toast:
             "group ui-font rounded-xl border border-border bg-primary-bg text-text font-normal shadow-xl backdrop-blur-sm",
           content: "pr-8",
-          title: "ui-font text-sm font-normal leading-5 text-text",
-          description: "ui-font text-sm font-normal leading-5 text-text-light",
+          title: "ui-font ui-text-sm font-normal leading-5 text-text",
+          description: "ui-font ui-text-sm font-normal leading-5 text-text-light",
           icon: "mt-0.5",
           success: "border-border",
           info: "border-border",

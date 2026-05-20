@@ -29,7 +29,7 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const itemVariants = cva(
-  "group/item flex w-full flex-wrap items-center rounded-lg border text-sm transition-colors duration-100 outline-none focus-visible:border-accent/45 focus-visible:ring-[3px] focus-visible:ring-accent/20 [a]:transition-colors [a]:hover:bg-hover",
+  "group/item flex w-full flex-wrap items-center rounded-lg border ui-text-sm transition-colors duration-100 outline-none focus-visible:border-accent/45 focus-visible:ring-[3px] focus-visible:ring-accent/20 [a]:transition-colors [a]:hover:bg-hover",
   {
     variants: {
       variant: {
@@ -122,7 +122,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-title"
       className={cn(
-        "line-clamp-1 flex w-fit items-center gap-2 text-sm leading-snug font-medium underline-offset-4",
+        "line-clamp-1 flex w-fit items-center gap-2 ui-text-sm leading-snug font-medium underline-offset-4",
         className,
       )}
       {...props}
@@ -135,7 +135,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="item-description"
       className={cn(
-        "line-clamp-2 text-left text-sm leading-normal font-normal text-text-lighter group-data-[size=xs]/item:text-xs [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-text",
+        "line-clamp-2 text-left ui-text-sm leading-normal font-normal text-text-lighter group-data-[size=xs]/item:text-[length:var(--ui-text-xs)] [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-text",
         className,
       )}
       {...props}

@@ -155,7 +155,7 @@ const ExtensionRow = ({
     <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="ui-font ui-text-md text-text">{extension.name}</span>
+          <span className="ui-font ui-text-base text-text">{extension.name}</span>
           <Badge variant="default" size="compact">
             {getCategoryLabel(extension.category)}
           </Badge>
@@ -772,7 +772,7 @@ export const ExtensionsSettings = () => {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3">
-        <p className="ui-font ui-text-md font-medium text-text">Extensions</p>
+        <p className="ui-font ui-text-base font-medium text-text">Extensions</p>
         <p className="mt-1 ui-font ui-text-sm text-text-lighter">
           Install built-in tools, manage marketplace extensions, skills, and agents.
         </p>
