@@ -28,10 +28,17 @@
 .file-tree-item {
   width: 100% !important;
   min-width: 100% !important;
+  position: relative;
+  overflow: hidden;
+  max-height: var(--file-tree-row-height);
+  transform-origin: top;
+  --file-tree-hover-bg: color-mix(in srgb, var(--color-hover) 68%, transparent);
+  --file-tree-guide-icon-offset: 7px;
+  --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
 }
 
-/* All file tree items have same background behavior - ensure full width coverage */
-.file-tree-container .file-tree-item button {
+/* All file tree rows have same background behavior - ensure full width coverage */
+.file-tree-container .file-tree-item .file-tree-row {
   box-sizing: border-box !important;
   border: 1px solid transparent !important;
   border-radius: 2px !important;
@@ -42,25 +49,18 @@
   justify-content: flex-start !important;
 }
 
-.file-tree-container .file-tree-item button:hover {
+.file-tree-container .file-tree-item .file-tree-row:hover {
   background-color: transparent !important;
 }
 
-.file-tree-container .file-tree-item button.bg-selected,
-.file-tree-container .file-tree-item button.bg-selected:hover {
+.file-tree-container .file-tree-item .file-tree-row.bg-selected,
+.file-tree-container .file-tree-item .file-tree-row.bg-selected:hover {
   border-color: color-mix(in srgb, var(--color-border) 78%, transparent) !important;
   background-color: transparent !important;
 }
 
-.file-tree-container .file-tree-item button:focus-visible {
+.file-tree-container .file-tree-item .file-tree-row:focus-visible {
   border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-border)) !important;
-}
-
-.file-tree-item {
-  position: relative;
-  --file-tree-hover-bg: color-mix(in srgb, var(--color-hover) 68%, transparent);
-  --file-tree-guide-icon-offset: 7px;
-  --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
 }
 
 .file-tree-item::before {
@@ -84,6 +84,113 @@
 .file-tree-row {
   position: relative;
   z-index: 2;
+  isolation: isolate;
+}
+
+.file-tree-item[data-row-animation="opening-block"] {
+  animation: file-tree-row-open-block var(--file-tree-row-animation-duration, 240ms)
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--file-tree-row-animation-delay, 0ms);
+  pointer-events: none;
+}
+
+.file-tree-item[data-row-animation="closing-block"] {
+  animation: file-tree-row-close-block var(--file-tree-row-animation-duration, 240ms)
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--file-tree-row-animation-delay, 0ms);
+  pointer-events: none;
+}
+
+.file-tree-item[data-row-animation="closing"] {
+  animation: file-tree-row-close var(--file-tree-row-animation-duration, 240ms)
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--file-tree-row-animation-delay, 0ms);
+  pointer-events: none;
+}
+
+@keyframes file-tree-row-open-block {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes file-tree-row-close-block {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes file-tree-row-close {
+  from {
+    max-height: var(--file-tree-row-height);
+    opacity: 1;
+  }
+
+  to {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+
+.file-tree-row-action {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  height: 16px;
+  width: 16px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: color-mix(in srgb, var(--color-text-lighter) 70%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(2px);
+  transition:
+    opacity 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.file-tree-row-action svg {
+  height: 10px;
+  width: 10px;
+}
+
+.file-tree-row-action:hover {
+  background-color: color-mix(in srgb, var(--color-hover) 62%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, var(--color-text-lighter));
+}
+
+.file-tree-item[data-is-dir="true"][data-expanded="true"][data-active="true"] .file-tree-row-action,
+.file-tree-item:focus-within .file-tree-row-action {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .file-tree-item:hover .file-tree-row-action {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(-50%) translateX(0);
+  }
 }
 
 .file-tree-context-menu [role="menuitem"],
@@ -168,4 +275,24 @@
 
 .file-tree-sticky-ancestor-stack .file-tree-row {
   height: var(--file-tree-sticky-row-height, 24px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-tree-item[data-row-animation="opening-block"],
+  .file-tree-item[data-row-animation="closing-block"],
+  .file-tree-item[data-row-animation="closing"] {
+    animation: none;
+  }
+
+  .file-tree-row-action {
+    transition: none;
+    transform: translateY(-50%);
+  }
+
+  .file-tree-item[data-is-dir="true"][data-expanded="true"][data-active="true"]
+    .file-tree-row-action,
+  .file-tree-item:focus-within .file-tree-row-action,
+  .file-tree-item:hover .file-tree-row-action {
+    transform: translateY(-50%);
+  }
 }

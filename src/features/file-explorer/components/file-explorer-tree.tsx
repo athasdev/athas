@@ -1,9 +1,12 @@
 import ignore from "ignore";
 import {
+  CaretDoubleUp,
   Check,
   Eye,
   Funnel,
+  FolderOpen,
   GitBranch,
+  Minus,
   MagnifyingGlass as Search,
   Warning as AlertTriangle,
 } from "@phosphor-icons/react";
@@ -61,7 +64,7 @@ import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
 import { FILE_TREE_BASE_INDENT, FileExplorerTreeItem } from "./file-explorer-tree-item";
-import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
+import type { FileTreeGuideTarget, FileTreeRowAnimation } from "./file-explorer-tree-item";
 import { FileExplorerIcon } from "./file-explorer-icon";
 import "../styles/file-explorer-tree.css";
 
@@ -113,7 +116,25 @@ interface OpenAllFilesDialogState {
 
 const FILE_TREE_CONTAINER_INSET = 4;
 const FILE_TREE_HEADER_HEIGHT = 32;
+const FOLDER_COLLAPSE_TOTAL_DURATION_MS = 500;
+const FOLDER_ROW_ANIMATION_DURATION_MS = 240;
 const getFileTreeRowId = (path: string) => `file-tree-row-${path.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
+function getPathDepth(path: string): number {
+  return stripTrailingPathSeparators(path).split(/[/\\]/).filter(Boolean).length;
+}
+
+function getCollapseStackDelay(index: number, total: number): number {
+  if (total <= 1) return 0;
+
+  const progress = index / (total - 1);
+  const maxDelay = Math.max(
+    0,
+    FOLDER_COLLAPSE_TOTAL_DURATION_MS - FOLDER_ROW_ANIMATION_DURATION_MS,
+  );
+
+  return Math.round(progress ** 3 * maxDelay);
+}
 
 function FileExplorerTreeComponent({
   files,
@@ -142,6 +163,7 @@ function FileExplorerTreeComponent({
   const [openAllFilesDialog, setOpenAllFilesDialog] = useState<OpenAllFilesDialogState | null>(
     null,
   );
+  const [rowAnimations, setRowAnimations] = useState<Record<string, FileTreeRowAnimation>>({});
   const [isDeletingPath, setIsDeletingPath] = useState(false);
   const [isOpeningAllFiles, setIsOpeningAllFiles] = useState(false);
   const [editingValue, setEditingValue] = useState("");
@@ -154,6 +176,8 @@ function FileExplorerTreeComponent({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const documentRef = useRef<Document>(document);
+  const collapseAnimationTimeoutsRef = useRef<number[]>([]);
+  const pendingOpenAnimationPathRef = useRef<string | null>(null);
 
   const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
@@ -429,6 +453,10 @@ function FileExplorerTreeComponent({
     containerRef,
     expandedPathsOverride: displayedExpandedPaths,
   });
+  const rootRowPaths = useMemo(
+    () => new Set(visibleRows.filter((row) => row.depth === 0).map((row) => row.file.path)),
+    [visibleRows],
+  );
   const keyboardPath = focusedPath || activePath;
   const highlightedPath = hasTreeFocus ? keyboardPath : activePath;
 
@@ -763,41 +791,6 @@ function FileExplorerTreeComponent({
     }
   }, [openAllFilesDialog, openFilePathsInTabs]);
 
-  const { setContextMenu, handleContextMenu, contextMenuElement } = useFileExplorerContextMenu({
-    rootFolderPath,
-    onFileSelect,
-    onCreateNewFileInDirectory,
-    onCreateNewFolderInDirectory,
-    onGenerateImage,
-    onRefreshDirectory,
-    onRenamePath,
-    onRevealInFinder,
-    onUploadFile,
-    onDuplicatePath,
-    onAddFolderToWorkspace: () => {
-      void addFolderToWorkspace();
-    },
-    onRemoveFolderFromWorkspace: (path) => {
-      void removeFolderFromWorkspace(path);
-    },
-    isWorkspaceRootPath: (path) => workspaceRootPaths.includes(path),
-    canRemoveWorkspaceRootPath: (path) =>
-      path !== rootFolderPath && workspaceRootPaths.includes(path),
-    onDeleteRequested: setDeleteCandidate,
-    onStartInlineEditing: startInlineEditing,
-    onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
-  });
-
-  useEventListener(
-    "keydown",
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") setContextMenu(null);
-    },
-    documentRef,
-  );
-
-  useEventListener("dragover", (e: DragEvent) => e.preventDefault(), documentRef);
-
   // Fast path->file lookup for delegation
   const pathToFile = useMemo(() => {
     const m = new Map<string, FileEntry>();
@@ -819,10 +812,215 @@ function FileExplorerTreeComponent({
 
   const toggleDirectory = useCallback(
     async (path: string) => {
+      if (!useFileTreeStore.getState().isExpanded(path)) {
+        pendingOpenAnimationPathRef.current = path;
+      }
+
       await Promise.resolve(onFileSelect(path, true));
     },
     [onFileSelect],
   );
+
+  const clearCollapseAnimation = useCallback(() => {
+    collapseAnimationTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    collapseAnimationTimeoutsRef.current = [];
+    pendingOpenAnimationPathRef.current = null;
+    setRowAnimations({});
+  }, []);
+
+  const closeDirectory = useCallback(
+    (path: string) => {
+      const descendantVisiblePaths = visibleRows
+        .filter((row) => row.file.path !== path && pathStartsWithRoot(row.file.path, path))
+        .map((row) => row.file.path);
+
+      if (descendantVisiblePaths.length === 0) {
+        useFileTreeStore.getState().toggleFolder(path);
+        return;
+      }
+
+      clearCollapseAnimation();
+
+      setRowAnimations(
+        Object.fromEntries(
+          descendantVisiblePaths.map((targetPath) => [
+            targetPath,
+            {
+              delay: 0,
+              duration: FOLDER_ROW_ANIMATION_DURATION_MS,
+              phase: "closing-block" as const,
+            },
+          ]),
+        ),
+      );
+
+      const timeoutId = window.setTimeout(() => {
+        useFileTreeStore.getState().toggleFolder(path);
+        setRowAnimations({});
+        collapseAnimationTimeoutsRef.current = collapseAnimationTimeoutsRef.current.filter(
+          (currentTimeoutId) => currentTimeoutId !== timeoutId,
+        );
+      }, FOLDER_ROW_ANIMATION_DURATION_MS);
+
+      collapseAnimationTimeoutsRef.current.push(timeoutId);
+    },
+    [clearCollapseAnimation, visibleRows],
+  );
+
+  const collapseDirectory = useCallback(
+    (path: string, isWorkspaceRoot: boolean) => {
+      const treeState = useFileTreeStore.getState();
+      const expandedPaths = Array.from(treeState.getExpandedPaths()).filter(
+        (expandedPath) =>
+          pathStartsWithRoot(expandedPath, path) && (!isWorkspaceRoot || expandedPath !== path),
+      );
+      const descendantVisibleRows = visibleRows.filter(
+        (row) => row.file.path !== path && pathStartsWithRoot(row.file.path, path),
+      );
+      const descendantVisiblePaths = descendantVisibleRows.map((row) => row.file.path);
+
+      if (expandedPaths.length === 0 && descendantVisiblePaths.length === 0) return;
+
+      clearCollapseAnimation();
+
+      const folderCollapseOrder = descendantVisibleRows
+        .filter((row) => row.file.isDir)
+        .map((row) => row.file.path)
+        .sort((left, right) => {
+          const depthDifference = getPathDepth(right) - getPathDepth(left);
+          if (depthDifference !== 0) return depthDifference;
+          return right.length - left.length;
+        });
+
+      const closeAnimationByPath = Object.fromEntries(
+        descendantVisiblePaths.map((targetPath) => [
+          targetPath,
+          {
+            delay: 0,
+            duration: FOLDER_ROW_ANIMATION_DURATION_MS,
+            phase: "closing" as const,
+          },
+        ]),
+      );
+
+      folderCollapseOrder.forEach((targetPath, index) => {
+        closeAnimationByPath[targetPath] = {
+          delay: getCollapseStackDelay(index, folderCollapseOrder.length),
+          duration: FOLDER_ROW_ANIMATION_DURATION_MS,
+          phase: "closing",
+        };
+      });
+
+      const totalCloseDuration =
+        folderCollapseOrder.length > 0
+          ? getCollapseStackDelay(folderCollapseOrder.length - 1, folderCollapseOrder.length) +
+            FOLDER_ROW_ANIMATION_DURATION_MS
+          : descendantVisiblePaths.length > 0
+            ? FOLDER_ROW_ANIMATION_DURATION_MS
+            : 0;
+
+      if (descendantVisiblePaths.length > 0) {
+        setRowAnimations(closeAnimationByPath);
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        if (isWorkspaceRoot) {
+          const nextExpandedPaths = new Set(
+            Array.from(useFileTreeStore.getState().getExpandedPaths()).filter(
+              (expandedPath) => !pathStartsWithRoot(expandedPath, path) || expandedPath === path,
+            ),
+          );
+          nextExpandedPaths.add(path);
+          useFileTreeStore.getState().setExpandedPaths(nextExpandedPaths);
+        } else {
+          useFileTreeStore.getState().collapsePath(path);
+        }
+
+        setRowAnimations({});
+        collapseAnimationTimeoutsRef.current = collapseAnimationTimeoutsRef.current.filter(
+          (currentTimeoutId) => currentTimeoutId !== timeoutId,
+        );
+      }, totalCloseDuration);
+
+      collapseAnimationTimeoutsRef.current.push(timeoutId);
+    },
+    [clearCollapseAnimation, visibleRows],
+  );
+
+  useEffect(() => () => clearCollapseAnimation(), [clearCollapseAnimation]);
+
+  useEffect(() => {
+    const openingPath = pendingOpenAnimationPathRef.current;
+    if (!openingPath) return;
+
+    const descendantVisiblePaths = visibleRows
+      .filter(
+        (row) => row.file.path !== openingPath && pathStartsWithRoot(row.file.path, openingPath),
+      )
+      .map((row) => row.file.path);
+
+    pendingOpenAnimationPathRef.current = null;
+
+    if (descendantVisiblePaths.length === 0) return;
+
+    setRowAnimations(
+      Object.fromEntries(
+        descendantVisiblePaths.map((targetPath) => [
+          targetPath,
+          {
+            delay: 0,
+            duration: FOLDER_ROW_ANIMATION_DURATION_MS,
+            phase: "opening-block" as const,
+          },
+        ]),
+      ),
+    );
+
+    const timeoutId = window.setTimeout(() => {
+      setRowAnimations({});
+      collapseAnimationTimeoutsRef.current = collapseAnimationTimeoutsRef.current.filter(
+        (currentTimeoutId) => currentTimeoutId !== timeoutId,
+      );
+    }, FOLDER_ROW_ANIMATION_DURATION_MS);
+
+    collapseAnimationTimeoutsRef.current.push(timeoutId);
+  }, [visibleRows]);
+
+  const { setContextMenu, handleContextMenu, contextMenuElement } = useFileExplorerContextMenu({
+    rootFolderPath,
+    onFileSelect,
+    onCreateNewFileInDirectory,
+    onCreateNewFolderInDirectory,
+    onGenerateImage,
+    onRefreshDirectory,
+    onRenamePath,
+    onRevealInFinder,
+    onUploadFile,
+    onDuplicatePath,
+    onAddFolderToWorkspace: () => {
+      void addFolderToWorkspace();
+    },
+    onRemoveFolderFromWorkspace: (path) => {
+      void removeFolderFromWorkspace(path);
+    },
+    isWorkspaceRootPath: (path) => workspaceRootPaths.includes(path),
+    canRemoveWorkspaceRootPath: (path) =>
+      path !== rootFolderPath && workspaceRootPaths.includes(path),
+    onCollapseDirectory: collapseDirectory,
+    onDeleteRequested: setDeleteCandidate,
+    onStartInlineEditing: startInlineEditing,
+    onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
+  });
+
+  useEventListener(
+    "keydown",
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") setContextMenu(null);
+    },
+    documentRef,
+  );
+
+  useEventListener("dragover", (e: DragEvent) => e.preventDefault(), documentRef);
 
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
@@ -841,7 +1039,14 @@ function FileExplorerTreeComponent({
         fileOpenBenchmark.mark(t.path, "explorer-click");
       }
       if (t.isDir) {
-        void toggleDirectory(t.path);
+        const isWorkspaceRoot = rootRowPaths.has(t.path);
+        const isExpanded = useFileTreeStore.getState().isExpanded(t.path);
+
+        if (isExpanded && !isWorkspaceRoot) {
+          closeDirectory(t.path);
+        } else if (!isExpanded || !isWorkspaceRoot) {
+          void toggleDirectory(t.path);
+        }
         setFocusedPath(t.path);
         updateActivePath?.(t.path);
       } else {
@@ -849,7 +1054,7 @@ function FileExplorerTreeComponent({
         void Promise.resolve(onFileSelect(t.path, false));
       }
     },
-    [onFileSelect, toggleDirectory, updateActivePath, pathToFile],
+    [closeDirectory, onFileSelect, rootRowPaths, toggleDirectory, updateActivePath],
   );
 
   const handleContainerDoubleClick = useCallback(
@@ -1105,8 +1310,12 @@ function FileExplorerTreeComponent({
           case "ArrowLeft": {
             if (!current) break;
             e.preventDefault();
-            if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
-              void toggleDirectory(current.path);
+            if (
+              isDir &&
+              useFileTreeStore.getState().isExpanded(current.path) &&
+              !rootRowPaths.has(current.path)
+            ) {
+              closeDirectory(current.path);
             } else {
               const sep = current.path.includes("\\") ? "\\" : "/";
               const parentPath = current.path.split(sep).slice(0, -1).join(sep);
@@ -1122,7 +1331,14 @@ function FileExplorerTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir) {
-              void toggleDirectory(current.path);
+              const isWorkspaceRoot = rootRowPaths.has(current.path);
+              const isExpanded = useFileTreeStore.getState().isExpanded(current.path);
+
+              if (isExpanded && !isWorkspaceRoot) {
+                closeDirectory(current.path);
+              } else if (!isWorkspaceRoot || !isExpanded) {
+                void toggleDirectory(current.path);
+              }
             } else {
               void Promise.resolve(onFileOpen?.(current.path, false));
             }
@@ -1240,42 +1456,106 @@ function FileExplorerTreeComponent({
                         const stickyAncestorLabel =
                           stickyAncestor.displayName ?? stickyAncestor.file.name;
                         const stickyAncestorGitStatus = getGitStatusDecoration(stickyAncestor.file);
+                        const isStickyWorkspaceRoot = stickyAncestor.depth === 0;
                         const stickyAncestorPaddingLeft =
                           FILE_TREE_BASE_INDENT +
                           FILE_TREE_CONTAINER_INSET +
                           stickyAncestor.depth * settings.fileTreeIndentSize;
 
                         return (
-                          <button
+                          <div
                             key={stickyAncestor.file.path}
-                            type="button"
-                            data-file-path={stickyAncestor.file.path}
-                            data-is-dir={stickyAncestor.file.isDir}
-                            data-path={stickyAncestor.file.path}
-                            data-depth={stickyAncestor.depth}
-                            title={stickyAncestor.file.path}
-                            className={cn(
-                              "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
-                              densityConfig.rowClassName,
-                            )}
-                            style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
+                            className="file-tree-item w-full"
+                            data-active={
+                              highlightedPath === stickyAncestor.file.path ? "true" : undefined
+                            }
+                            data-expanded={stickyAncestor.isExpanded ? "true" : undefined}
+                            data-is-dir={stickyAncestor.file.isDir ? "true" : undefined}
+                            style={
+                              {
+                                "--file-tree-row-height": `${densityConfig.rowHeight}px`,
+                              } as React.CSSProperties
+                            }
                           >
-                            <FileExplorerIcon
-                              fileName={stickyAncestor.file.name}
-                              isDir={stickyAncestor.file.isDir}
-                              isExpanded={stickyAncestor.isExpanded}
-                              isSymlink={stickyAncestor.file.isSymlink}
-                              className="relative z-1 shrink-0 text-text-lighter"
-                            />
-                            <span
+                            <button
+                              type="button"
+                              id={getFileTreeRowId(stickyAncestor.file.path)}
+                              role="treeitem"
+                              aria-level={stickyAncestor.depth + 1}
+                              aria-selected={highlightedPath === stickyAncestor.file.path}
+                              aria-expanded={
+                                stickyAncestor.file.isDir ? stickyAncestor.isExpanded : undefined
+                              }
+                              data-file-path={stickyAncestor.file.path}
+                              data-is-dir={stickyAncestor.file.isDir}
+                              data-path={stickyAncestor.file.path}
+                              data-depth={stickyAncestor.depth}
+                              title={stickyAncestor.file.path}
                               className={cn(
-                                "relative z-1 select-none whitespace-nowrap",
-                                stickyAncestorGitStatus?.colorClassName,
+                                "file-tree-row ui-font ui-text-xs flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none focus:outline-none",
+                                stickyAncestor.file.isDir && stickyAncestor.isExpanded && "pr-7",
+                                densityConfig.rowClassName,
                               )}
+                              style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
                             >
-                              {stickyAncestorLabel}
-                            </span>
-                          </button>
+                              {isStickyWorkspaceRoot ? (
+                                <FolderOpen
+                                  size={14}
+                                  weight="duotone"
+                                  className="relative z-1 shrink-0 text-text-lighter"
+                                />
+                              ) : (
+                                <FileExplorerIcon
+                                  fileName={stickyAncestor.file.name}
+                                  isDir={stickyAncestor.file.isDir}
+                                  isExpanded={stickyAncestor.isExpanded}
+                                  isSymlink={stickyAncestor.file.isSymlink}
+                                  className="relative z-1 shrink-0 text-text-lighter"
+                                />
+                              )}
+                              <span
+                                className={cn(
+                                  "relative z-1 select-none whitespace-nowrap",
+                                  stickyAncestorGitStatus?.colorClassName,
+                                )}
+                              >
+                                {stickyAncestorLabel}
+                              </span>
+                            </button>
+                            {stickyAncestor.file.isDir && stickyAncestor.isExpanded ? (
+                              <button
+                                type="button"
+                                className="file-tree-row-action"
+                                aria-label={
+                                  isStickyWorkspaceRoot
+                                    ? `Collapse everything under ${stickyAncestorLabel}`
+                                    : `Collapse ${stickyAncestorLabel}`
+                                }
+                                title={
+                                  isStickyWorkspaceRoot ? "Collapse descendants" : "Collapse folder"
+                                }
+                                tabIndex={-1}
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                }}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  collapseDirectory(
+                                    stickyAncestor.file.path,
+                                    isStickyWorkspaceRoot,
+                                  );
+                                }}
+                              >
+                                {isStickyWorkspaceRoot ? (
+                                  <Minus weight="bold" />
+                                ) : (
+                                  <CaretDoubleUp weight="bold" />
+                                )}
+                              </button>
+                            ) : null}
+                          </div>
                         );
                       })}
                     </div>
@@ -1316,12 +1596,15 @@ function FileExplorerTreeComponent({
                       density={fileTreeDensity}
                       isExpanded={row.isExpanded}
                       isActive={highlightedPath === row.file.path}
+                      isWorkspaceRoot={rootRowPaths.has(row.file.path)}
+                      rowAnimation={rowAnimations[row.file.path]}
                       dragOverPath={dragState.dragOverPath}
                       isDragging={dragState.isDragging}
                       editingValue={editingValue}
                       onEditingValueChange={setEditingValue}
                       onKeyDown={handleKeyDown}
                       onBlur={handleBlur}
+                      onCollapseDirectory={collapseDirectory}
                       getGitStatusDecoration={getGitStatusDecoration}
                       rowId={getFileTreeRowId(row.file.path)}
                       searchQuery={isTreeSearchActive ? treeSearchQuery : undefined}

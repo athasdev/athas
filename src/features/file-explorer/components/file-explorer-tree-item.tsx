@@ -1,5 +1,6 @@
 import type React from "react";
 import { memo } from "react";
+import { CaretDoubleUp, FolderOpen, Minus } from "@phosphor-icons/react";
 import {
   FILE_TREE_DENSITY_CONFIG,
   type FileTreeDensity,
@@ -19,6 +20,12 @@ export interface FileTreeGuideTarget {
   name: string;
   isDir: boolean;
   isActive: boolean;
+}
+
+export interface FileTreeRowAnimation {
+  delay: number;
+  duration: number;
+  phase: "opening-block" | "closing-block" | "closing";
 }
 
 function areGuideTargetsEqual(
@@ -52,12 +59,15 @@ interface FileExplorerTreeItemProps {
   density: FileTreeDensity;
   isExpanded: boolean;
   isActive: boolean;
+  isWorkspaceRoot: boolean;
+  rowAnimation?: FileTreeRowAnimation | null;
   dragOverPath: string | null;
   isDragging: boolean;
   editingValue: string;
   onEditingValueChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
+  onCollapseDirectory: (path: string, isWorkspaceRoot: boolean) => void;
   getGitStatusDecoration: (file: FileEntry) => FileTreeGitStatusDecoration | null;
   searchQuery?: string;
   isSearchMatch?: boolean;
@@ -96,12 +106,15 @@ function FileExplorerTreeItemComponent({
   density,
   isExpanded,
   isActive,
+  isWorkspaceRoot,
+  rowAnimation,
   dragOverPath,
   isDragging,
   editingValue,
   onEditingValueChange,
   onKeyDown,
   onBlur,
+  onCollapseDirectory,
   getGitStatusDecoration,
   searchQuery,
   isSearchMatch = false,
@@ -145,7 +158,15 @@ function FileExplorerTreeItemComponent({
 
   if (file.isEditing || file.isRenaming) {
     return (
-      <div className="file-tree-item w-full" data-depth={depth}>
+      <div
+        className="file-tree-item w-full"
+        data-depth={depth}
+        style={
+          {
+            "--file-tree-row-height": `${densityConfig.rowHeight}px`,
+          } as React.CSSProperties
+        }
+      >
         {renderTreeGuides()}
         <div
           className={cn(
@@ -201,6 +222,20 @@ function FileExplorerTreeItemComponent({
       className="file-tree-item w-full"
       data-active={isActive ? "true" : undefined}
       data-depth={depth}
+      data-row-animation={rowAnimation?.phase}
+      data-expanded={isExpanded ? "true" : undefined}
+      data-is-dir={file.isDir ? "true" : undefined}
+      style={
+        {
+          "--file-tree-row-height": `${densityConfig.rowHeight}px`,
+          ...(rowAnimation
+            ? {
+                "--file-tree-row-animation-delay": `${rowAnimation.delay}ms`,
+                "--file-tree-row-animation-duration": `${rowAnimation.duration}ms`,
+              }
+            : {}),
+        } as React.CSSProperties
+      }
     >
       {renderTreeGuides()}
       <TreeRow
@@ -218,6 +253,7 @@ function FileExplorerTreeItemComponent({
         }
         className={cn(
           densityConfig.rowClassName,
+          file.isDir && isExpanded && "pr-7",
           dragOverPath === file.path &&
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
@@ -230,13 +266,21 @@ function FileExplorerTreeItemComponent({
         depth={depth}
         indentSize={indentSize}
       >
-        <FileExplorerIcon
-          fileName={file.name}
-          isDir={file.isDir}
-          isExpanded={isExpanded}
-          isSymlink={file.isSymlink}
-          className="relative z-1 shrink-0 text-text-lighter"
-        />
+        {isWorkspaceRoot ? (
+          <FolderOpen
+            size={14}
+            weight="duotone"
+            className="relative z-1 shrink-0 text-text-lighter"
+          />
+        ) : (
+          <FileExplorerIcon
+            fileName={file.name}
+            isDir={file.isDir}
+            isExpanded={isExpanded}
+            isSymlink={file.isSymlink}
+            className="relative z-1 shrink-0 text-text-lighter"
+          />
+        )}
         <span
           className={cn(
             "relative z-1 select-none whitespace-nowrap",
@@ -246,6 +290,30 @@ function FileExplorerTreeItemComponent({
           {renderHighlightedLabel(displayName ?? file.name, searchQuery)}
         </span>
       </TreeRow>
+      {file.isDir && isExpanded ? (
+        <button
+          type="button"
+          className="file-tree-row-action"
+          aria-label={
+            isWorkspaceRoot
+              ? `Collapse everything under ${displayName ?? file.name}`
+              : `Collapse ${displayName ?? file.name}`
+          }
+          title={isWorkspaceRoot ? "Collapse descendants" : "Collapse folder"}
+          tabIndex={-1}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onCollapseDirectory(file.path, isWorkspaceRoot);
+          }}
+        >
+          {isWorkspaceRoot ? <Minus weight="bold" /> : <CaretDoubleUp weight="bold" />}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -263,12 +331,17 @@ export const FileExplorerTreeItem = memo(
     prev.density === next.density &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
+    prev.isWorkspaceRoot === next.isWorkspaceRoot &&
+    prev.rowAnimation?.delay === next.rowAnimation?.delay &&
+    prev.rowAnimation?.duration === next.rowAnimation?.duration &&
+    prev.rowAnimation?.phase === next.rowAnimation?.phase &&
     prev.dragOverPath === next.dragOverPath &&
     prev.isDragging === next.isDragging &&
     prev.editingValue === next.editingValue &&
     prev.onEditingValueChange === next.onEditingValueChange &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onBlur === next.onBlur &&
+    prev.onCollapseDirectory === next.onCollapseDirectory &&
     prev.getGitStatusDecoration === next.getGitStatusDecoration &&
     prev.searchQuery === next.searchQuery &&
     prev.isSearchMatch === next.isSearchMatch &&
