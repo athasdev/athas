@@ -165,7 +165,7 @@
     "tree-sitter-toml": "^0.5.0",
     "tree-sitter-typescript": "^0.23.0",
     "typescript": "^5.9.3",
-    "typescript-language-server": "^4.4.1",
+    "typescript-language-server": "^5.2.0",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.1.11",
     "vite-plus": "^0.1.11"
   },

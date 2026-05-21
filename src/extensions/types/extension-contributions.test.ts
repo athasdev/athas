@@ -60,4 +60,20 @@ describe("extension contribution normalization", () => {
       ),
     ).toEqual(["onCommand:test.run"]);
   });
+
+  it("matches compound filenames by their final extension", () => {
+    expect(
+      matchesLanguageContribution("/repo/src/routes/+page.svelte.ts", {
+        id: "typescript",
+        extensions: [".ts", ".mts", ".cts"],
+      }),
+    ).toBe(true);
+
+    expect(
+      matchesLanguageContribution("/repo/src/routes/+page.svelte.ts", {
+        id: "svelte",
+        extensions: [".svelte"],
+      }),
+    ).toBe(false);
+  });
 });

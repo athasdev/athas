@@ -119,7 +119,7 @@
         "tree-sitter-toml": "^0.5.0",
         "tree-sitter-typescript": "^0.23.0",
         "typescript": "^5.9.3",
-        "typescript-language-server": "^4.4.1",
+        "typescript-language-server": "^5.2.0",
         "vite": "npm:@voidzero-dev/vite-plus-core@0.1.11",
         "vite-plus": "^0.1.11",
       },
@@ -1636,7 +1636,7 @@
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
-    "typescript-language-server": ["typescript-language-server@4.4.1", "", { "bin": { "typescript-language-server": "lib/cli.mjs" } }, "sha512-vEvDw+cjY75afMN2rhx0z8sQtFDAUHoBniksBmB6NUZlDt0rEIwQq01VMiqyXFm9uZwcED2475cmDeXxoDHleg=="],
+    "typescript-language-server": ["typescript-language-server@5.2.0", "", { "bin": { "typescript-language-server": "lib/cli.mjs" } }, "sha512-K+Fu46SgN+bzh0sbKk04hFHq0kWCljvBN9iHx6ej6pXHigrV6H9W/LENIliEkiUVoymiLmEotEBE2XHYnQCo1w=="],
 
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
