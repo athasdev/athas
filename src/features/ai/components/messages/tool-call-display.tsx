@@ -1,17 +1,10 @@
-import {
-  WarningCircle as AlertCircle,
-  CheckCircle,
-  Clock,
-  FileText,
-  GitDiff,
-  TerminalWindow as TerminalSquare,
-  Wrench,
-} from "@phosphor-icons/react";
+import { FileText, GitDiff, TerminalWindow as TerminalSquare } from "@phosphor-icons/react";
 import { getAcpDiffOutputs, openAcpDiffOutput } from "@/features/ai/lib/acp-diff-output";
 import {
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
+import type { ToolCall } from "@/features/ai/types/ai-chat";
 import type { AcpToolCallLocation, AcpToolCallStatus, AcpToolKind } from "@/features/ai/types/acp";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -210,6 +203,65 @@ function getOutputText(output: unknown): string {
     .join("\n\n");
 }
 
+function getToolCallDetail(
+  toolName: string,
+  input: unknown,
+  output: unknown,
+  state: ReturnType<typeof getStatus>,
+  protocolStatus?: AcpToolCallStatus,
+) {
+  const statusLabel = getStatusLabel(state, protocolStatus);
+  const inputSummary = getInputSummary(toolName, input);
+  const outputSummary = getOutputSummary(output);
+  const summary = outputSummary ?? inputSummary;
+  return summary ? `${statusLabel} - ${summary}` : statusLabel;
+}
+
+function getLatestToolSummary(toolCall: ToolCall, isStreaming?: boolean) {
+  const state = getStatus(isStreaming && !toolCall.isComplete, toolCall.error, toolCall.status);
+  return `${toolCall.name}: ${getToolCallDetail(
+    toolCall.name,
+    toolCall.input,
+    toolCall.output,
+    state,
+    toolCall.status,
+  )}`;
+}
+
+export function ToolCallGroupDisplay({
+  toolCalls,
+  isStreaming,
+}: {
+  toolCalls: ToolCall[];
+  isStreaming?: boolean;
+}) {
+  if (toolCalls.length === 0) return null;
+
+  const latestToolCall = toolCalls[toolCalls.length - 1];
+  const title = toolCalls.length === 1 ? "Tool call" : `${toolCalls.length} tool calls`;
+  const detail = getLatestToolSummary(latestToolCall, isStreaming);
+
+  return (
+    <ChatActivityLine title={title} detail={detail}>
+      <div className="space-y-1">
+        {toolCalls.map((toolCall, toolIndex) => (
+          <ToolCallDisplay
+            key={`${toolCall.id || toolCall.name}-${toolIndex}`}
+            toolName={toolCall.name}
+            input={toolCall.input}
+            output={toolCall.output}
+            error={toolCall.error}
+            kind={toolCall.kind}
+            status={toolCall.status}
+            locations={toolCall.locations}
+            isStreaming={!toolCall.isComplete && isStreaming}
+          />
+        ))}
+      </div>
+    </ChatActivityLine>
+  );
+}
+
 export default function ToolCallDisplay({
   toolName,
   input,
@@ -221,19 +273,7 @@ export default function ToolCallDisplay({
   locations,
 }: ToolCallDisplayProps) {
   const state = getStatus(isStreaming, error, protocolStatus);
-  const statusLabel = getStatusLabel(state, protocolStatus);
-  const inputSummary = getInputSummary(toolName, input);
-  const outputSummary = getOutputSummary(output);
-  const summary = outputSummary ?? inputSummary;
-  const detail = summary ? `${statusLabel} · ${summary}` : statusLabel;
-  const Icon =
-    state === "error"
-      ? AlertCircle
-      : state === "success"
-        ? CheckCircle
-        : state === "running"
-          ? Clock
-          : Wrench;
+  const detail = getToolCallDetail(toolName, input, output, state, protocolStatus);
   const hasDetails =
     Boolean(input) ||
     Boolean(output) ||
@@ -245,15 +285,6 @@ export default function ToolCallDisplay({
   const terminalItems = getTerminalItems(output);
   const hasTerminalOutput = terminalItems.length > 0;
   const toolPath = resolveToolPath(locations, input);
-  const isQuietCompletedTool =
-    state === "success" &&
-    !hasDiffOutput &&
-    !hasTerminalOutput &&
-    !error &&
-    (kind === "read" || kind === "execute" || kind === "search" || kind === "think");
-
-  if (isQuietCompletedTool) return null;
-
   const actionButtons = (
     <span className="flex items-center gap-1">
       {toolPath && (kind === "edit" || kind === "delete" || kind === "move" || hasDiffOutput) ? (
@@ -299,13 +330,7 @@ export default function ToolCallDisplay({
   );
 
   return (
-    <ChatActivityLine
-      icon={<Icon size={13} weight="duotone" />}
-      title={toolName}
-      detail={detail}
-      state={state}
-      actions={actionButtons}
-    >
+    <ChatActivityLine title={toolName} detail={detail} state={state} actions={actionButtons}>
       {hasDetails ? (
         <>
           {kind && kind !== "other" ? `kind: ${kind}\n` : ""}

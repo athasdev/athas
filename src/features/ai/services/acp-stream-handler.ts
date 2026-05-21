@@ -12,6 +12,7 @@ import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 import { buildContextPrompt } from "../utils/ai-context-builder";
 
 interface AcpHandlers {
@@ -182,7 +183,9 @@ export class AcpStreamHandler {
       return [{ type: "text", text: userMessage }];
     }
 
-    const contextPrompt = buildContextPrompt(context);
+    const contextPrompt = [buildContextPrompt(context), getFollowUpActionsInstruction()]
+      .filter(Boolean)
+      .join("\n\n");
     const blocks: AcpPromptContentBlock[] = [
       { type: "text", text: contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage },
     ];
@@ -239,7 +242,6 @@ export class AcpStreamHandler {
 
   private handleAcpEvent(event: AcpEvent): void {
     if (this.cancelled) return;
-    console.log("ACP event:", event.type);
     if (this.handlers.onEvent) {
       this.handlers.onEvent(event);
     }

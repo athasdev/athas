@@ -10,6 +10,7 @@ interface AcpConfigSelectorProps {
   onChange: (value: string) => void;
   className?: string;
   menuClassName?: string;
+  menuMinWidth?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -19,6 +20,7 @@ export function AcpConfigSelector({
   onChange,
   className,
   menuClassName,
+  menuMinWidth = 180,
   open,
   onOpenChange,
 }: AcpConfigSelectorProps) {
@@ -49,6 +51,8 @@ export function AcpConfigSelector({
       triggerClassName={chatComposerControlClassName("w-fit max-w-[160px]")}
       hideChevron
       menuClassName={menuClassName}
+      menuMinWidth={menuMinWidth}
+      menuAnimated={false}
       tooltip={`Select ${option.name}`}
       aria-label={option.name}
       title={option.description || option.name}

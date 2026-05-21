@@ -279,6 +279,41 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           );
           return newChat.id;
         },
+        ensureChatSession: (chatId, agentId) => {
+          const state = get();
+          const existingChat = state.chats.find((chat) => chat.id === chatId);
+          if (existingChat) {
+            return existingChat.id;
+          }
+
+          const chatAgentId = agentId || state.selectedAgentId;
+          const newChat: Chat = {
+            id: chatId,
+            title: "New Chat",
+            messages: [],
+            createdAt: new Date(),
+            lastMessageAt: new Date(),
+            agentId: chatAgentId,
+            acpSessionId: null,
+            workspacePath: getCurrentWorkspacePath(),
+          };
+
+          set((state) => {
+            state.chats.unshift(newChat);
+            state.currentChatId = newChat.id;
+            state.activeAgentChatIds = [
+              newChat.id,
+              ...state.activeAgentChatIds.filter((item) => item !== newChat.id),
+            ];
+            state.isChatHistoryVisible = false;
+          });
+
+          saveChatToDb(newChat).catch((err) =>
+            console.error("Failed to save new agent chat to database:", err),
+          );
+
+          return newChat.id;
+        },
         ensureChatForAgent: (agentId: AgentType) => {
           const state = get();
           const workspacePath = getCurrentWorkspacePath();

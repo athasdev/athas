@@ -31,6 +31,8 @@ export interface SelectProps {
   className?: string;
   triggerClassName?: string;
   menuClassName?: string;
+  menuMinWidth?: number;
+  menuAnimated?: boolean;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
@@ -226,6 +228,8 @@ export default function Select({
   className = "",
   triggerClassName = "",
   menuClassName = "",
+  menuMinWidth = 0,
+  menuAnimated = true,
   disabled = false,
   size = "sm",
   variant = "ghost",
@@ -409,7 +413,8 @@ export default function Select({
           onClose={() => handleOpenChange(false)}
           className={cn("min-w-0 overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
-          style={{ width: getAnchorWidth(searchInputRef.current) }}
+          style={{ width: getAnchorWidth(searchInputRef.current, menuMinWidth) }}
+          animated={menuAnimated}
         >
           <div
             ref={listboxRef}
@@ -545,7 +550,8 @@ export default function Select({
         onClose={() => handleOpenChange(false)}
         className={cn(selectContentVariants(), menuClassName)}
         menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
-        style={{ width: getAnchorWidth(triggerRef.current) }}
+        style={{ width: getAnchorWidth(triggerRef.current, menuMinWidth) }}
+        animated={menuAnimated}
       >
         {searchable && (
           <SelectSearchField

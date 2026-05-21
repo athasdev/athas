@@ -7,11 +7,11 @@ import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
   truncateDetail,
-  updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import {
   createToolCall,
   markToolCallComplete,
@@ -21,7 +21,7 @@ import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpEvent, AcpPermissionOption, AcpToolKind } from "@/features/ai/types/acp";
+import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -119,66 +119,6 @@ function getPermissionOptionClassName(option: AcpPermissionOption) {
       return "";
     default:
       return "";
-  }
-}
-
-function getAcpToolTarget(event: Extract<AcpEvent, { type: "tool_start" | "tool_update" }>) {
-  const locations = "locations" in event ? event.locations : null;
-  const location = locations?.[0]?.path;
-  if (location) return location.split("/").pop() || location;
-
-  const input = event.input;
-  if (typeof input === "string") return input;
-  if (input && typeof input === "object") {
-    const record = input as Record<string, unknown>;
-    const path =
-      typeof record.file_path === "string"
-        ? record.file_path
-        : typeof record.path === "string"
-          ? record.path
-          : typeof record.filename === "string"
-            ? record.filename
-            : undefined;
-
-    if (path) return path.split("/").pop() || path;
-    if (typeof record.command === "string") return truncateDetail(record.command, 120);
-    if (typeof record.query === "string") return truncateDetail(record.query, 120);
-  }
-
-  const output = "output" in event ? event.output : null;
-  if (Array.isArray(output)) {
-    const diffItems = output.filter(
-      (item) => item && typeof item === "object" && item.type === "diff",
-    );
-    if (diffItems.length > 0) {
-      const firstPath = (diffItems[0] as Record<string, unknown>).path;
-      const firstFile =
-        typeof firstPath === "string" ? firstPath.split("/").pop() || firstPath : "file";
-      return diffItems.length === 1 ? firstFile : `${diffItems.length} files`;
-    }
-  }
-
-  return undefined;
-}
-
-function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false) {
-  switch (kind) {
-    case "edit":
-      return completed ? "Edited file" : "Editing file";
-    case "read":
-      return completed ? "Read file" : "Reading file";
-    case "delete":
-      return completed ? "Deleted file" : "Deleting file";
-    case "move":
-      return completed ? "Moved file" : "Moving file";
-    case "search":
-      return completed ? "Searched" : "Searching";
-    case "execute":
-      return completed ? "Ran command" : "Running command";
-    case "fetch":
-      return completed ? "Fetched" : "Fetching";
-    default:
-      return completed ? "Tool completed" : "Using tool";
   }
 }
 
@@ -504,6 +444,8 @@ const AIChat = memo(function AIChat({
     let targetChatId = effectiveChatId ?? store.currentChatId;
     if (!targetChatId) {
       targetChatId = chatActions.createNewChat(currentAgentId);
+    } else {
+      targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId);
     }
 
     const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
@@ -545,6 +487,7 @@ const AIChat = memo(function AIChat({
 
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
+    let currentAssistantRawContent = "";
     let acpProducedStateOnlyUpdate = false;
     let acpCommandResultLabel: string | null = null;
 
@@ -600,13 +543,12 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              content: (currentMessage?.content || "") + chunk,
-            }),
-          );
+          currentAssistantRawContent += chunk;
+          const extracted = extractFollowUpActions(currentAssistantRawContent);
+          updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+            content: extracted.content,
+            followUpActions: extracted.actions,
+          }));
           requestAnimationFrame(() => scrollToBottom());
         },
         () => {
@@ -771,6 +713,7 @@ details: ${errorDetails || mainError}
         conversationContext,
         () => {
           const newMessageId = Date.now().toString();
+          currentAssistantRawContent = "";
           const newAssistantMessage: Message = {
             id: newMessageId,
             content: "",
@@ -785,13 +728,6 @@ details: ${errorDetails || mainError}
           requestAnimationFrame(() => scrollToBottom(true));
         },
         (event) => {
-          appendAcpEvent({
-            id: `tool-${event.toolId}`,
-            kind: "tool",
-            label: getAcpToolLabel(event.kind),
-            detail: getAcpToolTarget(event),
-            state: event.status === "pending" ? "info" : "running",
-          });
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -813,48 +749,6 @@ details: ${errorDetails || mainError}
           );
         },
         (event) => {
-          if (
-            event.kind ||
-            event.input ||
-            event.output ||
-            event.locations?.length ||
-            event.status
-          ) {
-            setAcpEvents((prev) => {
-              const activityId = `tool-${event.toolId}`;
-              const nextState =
-                event.status === "failed"
-                  ? "error"
-                  : event.status === "completed"
-                    ? "success"
-                    : event.status === "pending"
-                      ? "info"
-                      : "running";
-              const detail = getAcpToolTarget(event);
-
-              if (!prev.some((activity) => activity.id === activityId)) {
-                return appendChatAcpEvent(prev, {
-                  id: activityId,
-                  kind: "tool",
-                  label: getAcpToolLabel(event.kind),
-                  detail,
-                  state: nextState,
-                });
-              }
-
-              return prev.map((activity) =>
-                activity.id === activityId
-                  ? {
-                      ...activity,
-                      label: event.kind ? getAcpToolLabel(event.kind) : activity.label,
-                      detail: detail ?? activity.detail,
-                      state: nextState,
-                      timestamp: new Date(),
-                    }
-                  : activity,
-              );
-            });
-          }
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -873,9 +767,6 @@ details: ${errorDetails || mainError}
           );
         },
         (toolName: string, toolId?: string, output?: unknown, error?: string) => {
-          if (toolId) {
-            setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, `tool-${toolId}`, !error));
-          }
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -925,9 +816,6 @@ details: ${errorDetails || mainError}
             case "tool_update":
               break;
             case "tool_complete":
-              setAcpEvents((prev) =>
-                updateToolCompletionAcpEvent(prev, `tool-${event.toolId}`, event.success),
-              );
               break;
             case "permission_request":
               break; // Handled separately with permission UI
@@ -1156,6 +1044,7 @@ details: ${errorDetails || mainError}
               ref={messagesEndRef}
               chatId={effectiveChatId}
               onApplyCode={onApplyCode}
+              onSendFollowUp={handleSendMessage}
               acpEvents={acpEvents}
             />
           </div>

@@ -95,6 +95,7 @@ export const ModeSelector = memo(function ModeSelector({
           : chatComposerControlClassName("w-fit max-w-[108px]")
       }
       menuClassName="!min-w-0 w-max max-w-[160px]"
+      menuAnimated={false}
       hideChevron
       iconOnly={iconOnly}
       tooltip="Select chat mode"

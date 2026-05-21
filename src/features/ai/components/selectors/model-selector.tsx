@@ -322,6 +322,7 @@ export function ModelSelector({
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
         style={{ maxHeight: "280px", minWidth: 0, width: dropdownWidth }}
+        animated={!isComposer}
       >
         <div
           className="custom-scrollbar-thin max-h-72 overflow-y-auto overscroll-contain p-1"

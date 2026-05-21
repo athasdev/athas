@@ -109,6 +109,7 @@ interface MenuPopoverProps {
   className?: string;
   portalContainer?: Element | DocumentFragment | null;
   style?: CSSProperties;
+  animated?: boolean;
   initial?: { opacity: number; scale: number; y?: number };
   animate?: { opacity: number; scale: number; y?: number };
   exit?: { opacity: number; scale: number; y?: number };
@@ -122,6 +123,7 @@ export function MenuPopover({
   className,
   portalContainer,
   style,
+  animated = true,
   initial = { opacity: 0, scale: 0.95 },
   animate = { opacity: 1, scale: 1 },
   exit = { opacity: 0, scale: 0.95 },
@@ -136,10 +138,10 @@ export function MenuPopover({
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       onWheelCapture={containScrollChain}
-      initial={initial}
-      animate={animate}
-      exit={exit}
-      transition={transition}
+      initial={animated ? initial : false}
+      animate={animated ? animate : { opacity: 1, scale: 1, y: 0 }}
+      exit={animated ? exit : { opacity: 1, scale: 1, y: 0 }}
+      transition={animated ? transition : { duration: 0 }}
       className={cn(dropdownRootVariants(), className)}
       style={style}
     >
@@ -241,6 +243,7 @@ interface DropdownBaseProps {
   style?: CSSProperties;
   portalContainer?: Element | DocumentFragment | null;
   closeOnSelect?: boolean;
+  animated?: boolean;
 }
 
 interface AnchorPositioning {
@@ -327,6 +330,7 @@ export function Dropdown(props: DropdownProps) {
     searchPlaceholder,
     portalContainer,
     closeOnSelect = true,
+    animated = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -627,6 +631,7 @@ export function Dropdown(props: DropdownProps) {
       portalContainer={portalContainer}
       className={className}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
+      animated={animated}
       initial={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}

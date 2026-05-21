@@ -194,8 +194,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const removePastedImage = useAIChatStore((state) => state.removePastedImage);
   const clearPastedImages = useAIChatStore((state) => state.clearPastedImages);
 
-  const closeInlineMenus = useCallback(() => {
-    setActiveInlineControl(null);
+  const closeComposerPopovers = useCallback(() => {
     if (slashCommandState.active) {
       hideSlashCommands();
     }
@@ -213,6 +212,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
     mentionState.active,
     hideMention,
   ]);
+
+  const closeInlineMenus = useCallback(() => {
+    setActiveInlineControl(null);
+    closeComposerPopovers();
+  }, [closeComposerPopovers]);
 
   const addBufferToContext = useCallback(
     (bufferId: string) => {
@@ -1427,14 +1431,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     open={activeInlineControl === controlId}
                     onOpenChange={(open) => {
                       if (open) {
-                        closeInlineMenus();
+                        closeComposerPopovers();
                         setActiveInlineControl(controlId);
                         return;
                       }
                       setActiveInlineControl((current) => (current === controlId ? null : current));
                     }}
-                    className={category === "model" ? "max-w-[180px]" : "max-w-[132px]"}
-                    menuClassName="!min-w-0 w-max max-w-[240px]"
+                    className={category === "model" ? "max-w-[220px]" : "max-w-[168px]"}
+                    menuClassName="max-w-[260px]"
+                    menuMinWidth={category === "model" ? 220 : 180}
                   />
                 );
               })}
@@ -1448,7 +1453,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     open={activeInlineControl === "provider"}
                     onOpenChange={(open) => {
                       if (open) {
-                        closeInlineMenus();
+                        closeComposerPopovers();
                         setActiveInlineControl("provider");
                         return;
                       }
@@ -1467,7 +1472,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     open={activeInlineControl === "model"}
                     onOpenChange={(open) => {
                       if (open) {
-                        closeInlineMenus();
+                        closeComposerPopovers();
                         setActiveInlineControl("model");
                         return;
                       }
@@ -1497,7 +1502,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   open={activeInlineControl === "mode"}
                   onOpenChange={(open) => {
                     if (open) {
-                      closeInlineMenus();
+                      closeComposerPopovers();
                       setActiveInlineControl("mode");
                       return;
                     }

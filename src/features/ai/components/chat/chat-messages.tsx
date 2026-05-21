@@ -1,5 +1,6 @@
 import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { getFollowUpActionsForMessage } from "@/features/ai/lib/follow-up-actions";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -8,10 +9,12 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { useAIChatStore } from "../../store/store";
 import { AcpInlineEvent } from "./acp-inline-event";
+import { ChatFollowUpActions } from "./chat-follow-up-actions";
 import { ChatMessage } from "./chat-message";
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
+  onSendFollowUp?: (message: string) => void | Promise<void>;
   acpEvents?: ChatAcpEvent[];
   chatId?: string | null;
 }
@@ -24,7 +27,7 @@ const getTimestampMs = (value: Date | string): number => {
 
 export const ChatMessages = memo(
   forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
-    { onApplyCode, acpEvents, chatId },
+    { onApplyCode, onSendFollowUp, acpEvents, chatId },
     ref,
   ) {
     const { currentChatId, chats } = useAIChatStore(
@@ -108,6 +111,7 @@ export const ChatMessages = memo(
 
           const message = item.message;
           const index = item.messageIndex;
+          const isLastMessage = index === messages.length - 1;
           const prevMessage = index > 0 ? messages[index - 1] : null;
           const isToolOnlyMessage =
             message.role === "assistant" &&
@@ -137,9 +141,15 @@ export const ChatMessages = memo(
             <div key={item.id} className={messageClassName}>
               <ChatMessage
                 message={message}
-                isLastMessage={index === messages.length - 1}
+                isLastMessage={isLastMessage}
                 onApplyCode={onApplyCode}
               />
+              {isLastMessage && message.role === "assistant" && onSendFollowUp ? (
+                <ChatFollowUpActions
+                  actions={getFollowUpActionsForMessage(message)}
+                  onSelect={(prompt) => void onSendFollowUp(prompt)}
+                />
+              ) : null}
             </div>
           );
         })}

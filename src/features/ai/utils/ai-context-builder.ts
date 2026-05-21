@@ -2,6 +2,7 @@ import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 
 function formatContextPath(path: string, projectRoot?: string) {
   return projectRoot && path.startsWith(projectRoot) ? path.slice(projectRoot.length + 1) : path;
@@ -278,7 +279,9 @@ Guidelines:
 - Reference the user's actual code when relevant
 - Offer multiple solutions when appropriate
 - Use proper formatting for code snippets
-- Ask clarifying questions if needed`;
+- Ask clarifying questions if needed
+
+${getFollowUpActionsInstruction()}`;
 
   if (hasAcpExtensions) {
     basePrompt += `

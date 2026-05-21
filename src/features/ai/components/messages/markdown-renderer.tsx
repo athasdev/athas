@@ -587,6 +587,11 @@ type MarkdownTable = {
   rows: string[][];
 };
 
+const INLINE_CODE_CLASS_NAME =
+  "editor-font inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
+const INLINE_LINK_CLASS_NAME =
+  "inline cursor-pointer break-words font-[inherit] leading-[inherit] text-accent hover:underline";
+
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
   if (value.startsWith("|")) value = value.slice(1);
@@ -730,15 +735,22 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
       elements.push(
-        <code
-          key={key++}
-          className="editor-font rounded border border-border bg-secondary-bg px-1 ui-text-xs"
-        >
+        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
           {codeMatch[1]}
         </code>,
       );
       remaining = remaining.slice(codeMatch[0].length);
       continue;
+    }
+
+    const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
+    if (pendingCodeMatch) {
+      elements.push(
+        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+          {pendingCodeMatch[1]}
+        </code>,
+      );
+      break;
     }
 
     // Strikethrough
@@ -789,7 +801,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
             e.preventDefault();
             import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
           }}
-          className="cursor-pointer text-accent hover:underline"
+          className={INLINE_LINK_CLASS_NAME}
         >
           {linkMatch[1]}
         </a>,
@@ -810,7 +822,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
             e.preventDefault();
             import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
           }}
-          className="cursor-pointer text-accent hover:underline"
+          className={INLINE_LINK_CLASS_NAME}
         >
           {url.length > 60 ? `${url.slice(0, 60)}...` : url}
         </a>,
@@ -900,7 +912,7 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="my-1.5 leading-relaxed">
+          <p key={key++} className="my-1.5 leading-[1.6]">
             {renderInlineFormatting(paragraphText)}
           </p>,
         );

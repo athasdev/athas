@@ -219,6 +219,7 @@ export function ProviderSelector({
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
         style={{ maxHeight: "260px", minWidth: 0, width: dropdownWidth }}
+        animated={!isComposer}
       >
         <div
           ref={listRef}
