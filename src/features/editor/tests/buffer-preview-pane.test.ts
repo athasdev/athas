@@ -145,6 +145,26 @@ describe("buffer preview pane integration", () => {
     expect(pane?.pinnedBufferIds).toEqual([previewId]);
   });
 
+  it("opens a new tab placeholder in the active pane", async () => {
+    const { useBufferStore } = await import("../stores/buffer-store");
+    const bufferActions = useBufferStore.getState().actions;
+    const paneActions = usePaneStore.getState().actions;
+
+    const editorId = bufferActions.openContent({
+      type: "editor",
+      path: "/workspace/a.ts",
+      name: "a.ts",
+      content: "",
+    });
+    const newTabId = bufferActions.openContent({ type: "newTab" });
+
+    const newTabBuffer = useBufferStore.getState().buffers.find((buffer) => buffer.id === newTabId);
+    expect(newTabBuffer?.type).toBe("newTab");
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([editorId, newTabId]);
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.activeBufferId).toBe(newTabId);
+    expect(useBufferStore.getState().activeBufferId).toBe(newTabId);
+  });
+
   it("opens references as a singleton buffer like diagnostics", async () => {
     const { useBufferStore } = await import("../stores/buffer-store");
     const bufferActions = useBufferStore.getState().actions;

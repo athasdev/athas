@@ -488,19 +488,19 @@ export const useBufferStore = createSelectors(
 
             case "newTab": {
               const cleanedBuffers = closeNewTabInActivePane([...buffers]);
-              if (cleanedBuffers.length !== buffers.length) {
-                set((state) => {
-                  state.buffers = cleanedBuffers;
-                  if (
-                    state.activeBufferId &&
-                    !cleanedBuffers.some((b) => b.id === state.activeBufferId)
-                  ) {
-                    state.activeBufferId = null;
-                  }
-                });
-              }
+              const id = generateBufferId(`newtab://${Date.now()}`);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [
+                  ...cleanedBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+              syncBufferToPane(newBuffer.id);
               saveSessionToStore(get().buffers, get().activeBufferId);
-              return get().activeBufferId ?? "";
+              return newBuffer.id;
             }
 
             case "pullRequest": {

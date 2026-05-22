@@ -18,6 +18,7 @@ import {
   ArrowsIn as Minimize2,
   Lock,
   LockOpen,
+  Plus,
   SidebarSimple as PanelLeftClose,
 } from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -72,7 +73,8 @@ const TabBar = ({
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
+  const { closePane, setActivePane, togglePaneFullscreen, setPaneLocked } =
+    usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
   const pane = paneId
@@ -99,6 +101,7 @@ const TabBar = ({
     confirmCloseWithoutSaving,
     cancelPendingClose,
     convertPreviewToDefinite,
+    showNewTabView,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
   const { settings } = useSettingsStore();
@@ -220,6 +223,12 @@ const TabBar = ({
       await navigateToJumpEntry(entry);
     }
   }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
+
+  const handleShowNewTab = useCallback(() => {
+    if (!paneId) return;
+    setActivePane(paneId);
+    showNewTabView();
+  }, [paneId, setActivePane, showNewTabView]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -744,6 +753,20 @@ const TabBar = ({
           </SortableContext>
 
           <div className="flex shrink-0 items-center gap-1 pl-0.5">
+            {paneId && !isBottomPane && (
+              <Button
+                type="button"
+                onClick={handleShowNewTab}
+                variant="ghost"
+                compact
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                tooltip="New Tab"
+                tooltipSide="bottom"
+                aria-label="New tab"
+              >
+                <Plus weight="bold" />
+              </Button>
+            )}
             {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
               <Button
                 type="button"
