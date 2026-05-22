@@ -163,6 +163,9 @@ impl TerminalConnection {
          cmd.env(key, value);
       }
 
+      let no_color_requested =
+         Self::has_env_key(&user_env, "NO_COLOR") || Self::custom_env_has_key(config, "NO_COLOR");
+
       // Then override with terminal-specific environment variables
       cmd.env("TERM", "xterm-256color");
       cmd.env("COLORTERM", "truecolor");
@@ -171,9 +174,14 @@ impl TerminalConnection {
       if let Some(shell_path) = shell_path {
          cmd.env("SHELL", shell_path);
       }
-      cmd.env("FORCE_COLOR", "1");
       cmd.env("CLICOLOR", "1");
-      cmd.env("CLICOLOR_FORCE", "1");
+      if no_color_requested {
+         cmd.env_remove("FORCE_COLOR");
+         cmd.env_remove("CLICOLOR_FORCE");
+      } else {
+         cmd.env("FORCE_COLOR", "1");
+         cmd.env("CLICOLOR_FORCE", "1");
+      }
 
       // Copy over custom environment variables (highest priority)
       if let Some(env_vars) = &config.environment {
@@ -183,6 +191,17 @@ impl TerminalConnection {
       }
 
       Ok(cmd)
+   }
+
+   fn custom_env_has_key(config: &TerminalConfig, key: &str) -> bool {
+      config
+         .environment
+         .as_ref()
+         .is_some_and(|env| Self::has_env_key(env, key))
+   }
+
+   fn has_env_key(env: &HashMap<String, String>, key: &str) -> bool {
+      env.keys().any(|env_key| env_key.eq_ignore_ascii_case(key))
    }
 
    fn ensure_working_directory_access(working_dir: &str) -> Result<()> {
@@ -388,5 +407,36 @@ impl TerminalConnection {
          child.kill()?;
       }
       Ok(())
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use std::ffi::OsStr;
+
+   fn config_with_env(environment: HashMap<String, String>) -> TerminalConfig {
+      TerminalConfig {
+         working_directory: None,
+         shell: None,
+         environment: Some(environment),
+         command: Some("node".to_string()),
+         args: None,
+         rows: 24,
+         cols: 80,
+      }
+   }
+
+   #[test]
+   fn removes_forced_color_when_custom_no_color_is_set() {
+      let mut environment = HashMap::new();
+      environment.insert("NO_COLOR".to_string(), "1".to_string());
+
+      let cmd = TerminalConnection::build_command(&config_with_env(environment)).unwrap();
+
+      assert_eq!(cmd.get_env("NO_COLOR"), Some(OsStr::new("1")));
+      assert_eq!(cmd.get_env("CLICOLOR"), Some(OsStr::new("1")));
+      assert!(cmd.get_env("FORCE_COLOR").is_none());
+      assert!(cmd.get_env("CLICOLOR_FORCE").is_none());
    }
 }
