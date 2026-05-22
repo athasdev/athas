@@ -19,7 +19,6 @@ import {
   Lock,
   LockOpen,
   SidebarSimple as PanelLeftClose,
-  SplitHorizontal as SplitSquareHorizontal,
 } from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -221,11 +220,6 @@ const TabBar = ({
       await navigateToJumpEntry(entry);
     }
   }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
-
-  const handleSplitActivePane = useCallback(() => {
-    if (!paneId) return;
-    splitEditorGroup(paneId, "horizontal", activeBufferId);
-  }, [activeBufferId, paneId]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -762,20 +756,6 @@ const TabBar = ({
                 aria-label="Close split pane"
               >
                 <PanelLeftClose />
-              </Button>
-            )}
-            {paneId && !disablePaneActions && !isBottomPane && activeBufferId && (
-              <Button
-                type="button"
-                onClick={handleSplitActivePane}
-                variant="ghost"
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
-                tooltip="Split Editor"
-                tooltipSide="bottom"
-                aria-label="Split editor"
-                compact
-              >
-                <SplitSquareHorizontal />
               </Button>
             )}
             {paneId && !disablePaneActions && !isBottomPane && (
