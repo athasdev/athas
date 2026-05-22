@@ -39,7 +39,7 @@ export default function Section({ title, description, children, className }: Sec
 interface SettingRowProps {
   label: string;
   labelAccessory?: React.ReactNode;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   onReset?: () => void;

@@ -12,8 +12,8 @@ import { markOnboardingCompleted } from "@/features/onboarding/lib/onboarding-st
 import type { OnboardingContext } from "@/features/onboarding/lib/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
 import {
-  REQUIRED_UPDATE_TELEMETRY_NOTICE,
-  USAGE_TELEMETRY_DESCRIPTION,
+  TELEMETRY_DESCRIPTION,
+  TELEMETRY_LEARN_MORE_URL,
 } from "@/features/settings/lib/telemetry-copy";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
@@ -32,7 +32,7 @@ function SettingRow({
   children,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -137,7 +137,19 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
 
             <SettingRow
               title="Share anonymous telemetry"
-              description={`${USAGE_TELEMETRY_DESCRIPTION} ${REQUIRED_UPDATE_TELEMETRY_NOTICE}`}
+              description={
+                <>
+                  {TELEMETRY_DESCRIPTION}{" "}
+                  <a
+                    href={TELEMETRY_LEARN_MORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-link hover:underline"
+                  >
+                    Learn more
+                  </a>
+                </>
+              }
             >
               <Switch checked={telemetry} onChange={setTelemetry} />
             </SettingRow>
