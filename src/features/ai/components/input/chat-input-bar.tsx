@@ -107,6 +107,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiCustomModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
+  const aiAutocompleteCustomModelId = useSettingsStore(
+    (state) => state.settings.aiAutocompleteCustomModelId,
+  );
   const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
@@ -168,14 +171,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
       const provider = getProviderById(nextProviderId);
       void updateSetting("aiProviderId", nextProviderId);
       if (nextProviderId === "custom") {
-        void updateSetting("aiModelId", aiCustomModelId);
+        void updateSetting("aiModelId", aiCustomModelId || aiAutocompleteCustomModelId);
         return;
       }
       if (provider && provider.models.length > 0) {
         void updateSetting("aiModelId", provider.models[0].id);
       }
     },
-    [aiCustomModelId, updateSetting],
+    [aiAutocompleteCustomModelId, aiCustomModelId, updateSetting],
   );
 
   const handleAthasModelChange = useCallback(

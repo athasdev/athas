@@ -84,7 +84,6 @@ export const AISettings = () => {
   const [customAutocompleteApiKeyInput, setCustomAutocompleteApiKeyInput] = useState("");
   const [hasCustomAutocompleteApiKey, setHasCustomAutocompleteApiKey] = useState(false);
   const [isSavingCustomAutocompleteApiKey, setIsSavingCustomAutocompleteApiKey] = useState(false);
-  const [customChatModelInput, setCustomChatModelInput] = useState(settings.aiCustomModelId);
   const [customChatBaseUrlInput, setCustomChatBaseUrlInput] = useState(settings.aiCustomBaseUrl);
   const [customChatApiKeyInput, setCustomChatApiKeyInput] = useState("");
   const [hasCustomChatApiKey, setHasCustomChatApiKey] = useState(false);
@@ -213,7 +212,7 @@ export const AISettings = () => {
     const provider = providers.find((p) => p.id === newProviderId);
     updateSetting("aiProviderId", newProviderId);
     if (newProviderId === CUSTOM_CHAT_PROVIDER_ID) {
-      updateSetting("aiModelId", settings.aiCustomModelId);
+      updateSetting("aiModelId", settings.aiCustomModelId || settings.aiAutocompleteCustomModelId);
       return;
     }
     if (provider && provider.models.length > 0) {
@@ -255,10 +254,6 @@ export const AISettings = () => {
   useEffect(() => {
     setCustomAutocompleteBaseUrlInput(settings.aiAutocompleteCustomBaseUrl);
   }, [settings.aiAutocompleteCustomBaseUrl]);
-
-  useEffect(() => {
-    setCustomChatModelInput(settings.aiCustomModelId);
-  }, [settings.aiCustomModelId]);
 
   useEffect(() => {
     setCustomChatBaseUrlInput(settings.aiCustomBaseUrl);
@@ -335,13 +330,6 @@ export const AISettings = () => {
     }
   };
 
-  const commitCustomChatModel = () => {
-    updateSetting("aiCustomModelId", customChatModelInput);
-    if (settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID) {
-      updateSetting("aiModelId", customChatModelInput);
-    }
-  };
-
   const commitCustomChatBaseUrl = () => {
     updateSetting("aiCustomBaseUrl", customChatBaseUrlInput);
     setCustomProviderBaseUrl(customChatBaseUrlInput);
@@ -408,19 +396,13 @@ export const AISettings = () => {
           }
         >
           {isCustomProviderSelected ? (
-            <Input
-              value={customChatModelInput}
-              onChange={(event) => setCustomChatModelInput(event.currentTarget.value)}
-              onBlur={commitCustomChatModel}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur();
-                }
+            <ModelSelector
+              providerId={settings.aiProviderId}
+              modelId={settings.aiModelId || settings.aiCustomModelId}
+              onChange={(id) => {
+                updateSetting("aiCustomModelId", id);
+                updateSetting("aiModelId", id);
               }}
-              placeholder="qwen2.5-coder:7b"
-              size="xs"
-              className={SETTINGS_CONTROL_WIDTHS.xwide}
-              spellCheck={false}
             />
           ) : (
             <ModelSelector
