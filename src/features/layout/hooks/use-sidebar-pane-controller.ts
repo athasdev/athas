@@ -18,18 +18,14 @@ export function useSidebarPaneController() {
   const {
     isSidebarVisible,
     isRightSidebarVisible,
-    isAgentSidebarVisible,
     isGitViewActive,
     isGitHubPRsViewActive,
     activeSidebarView,
     activeRightSidebarView,
-    activeAgentSidebarView,
     setActiveView,
     setActiveRightSidebarView,
-    setActiveAgentSidebarView,
     setIsSidebarVisible,
     setIsRightSidebarVisible,
-    setIsAgentSidebarVisible,
   } = useUIState();
   const { settings, updateSetting } = useSettingsStore();
 
@@ -40,18 +36,6 @@ export function useSidebarPaneController() {
       if (paneLevel === "edge") {
         setActiveRightSidebarView(view);
         setIsRightSidebarVisible(!(isRightSidebarVisible && activeRightSidebarView === view));
-        if (activeAgentSidebarView === view) {
-          setIsAgentSidebarVisible(false);
-        }
-        return;
-      }
-
-      if (paneLevel === "agent") {
-        setActiveAgentSidebarView(view);
-        setIsAgentSidebarVisible(!(isAgentSidebarVisible && activeAgentSidebarView === view));
-        if (activeRightSidebarView === view) {
-          setIsRightSidebarVisible(false);
-        }
         return;
       }
 
@@ -79,16 +63,12 @@ export function useSidebarPaneController() {
     [
       activeSidebarView,
       activeRightSidebarView,
-      activeAgentSidebarView,
       isGitHubPRsViewActive,
       isGitViewActive,
-      isAgentSidebarVisible,
       isRightSidebarVisible,
       isSidebarVisible,
-      setActiveAgentSidebarView,
       setActiveView,
       setActiveRightSidebarView,
-      setIsAgentSidebarVisible,
       setIsSidebarVisible,
       setIsRightSidebarVisible,
       settings.sidebarPosition,

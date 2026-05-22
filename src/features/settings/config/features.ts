@@ -9,7 +9,6 @@ import {
   NavigationArrow as Navigation,
   MagnifyingGlass as Search,
   HardDrives as Server,
-  Sparkle,
   TerminalWindow as TerminalIcon,
   UsersThree,
 } from "@phosphor-icons/react";
@@ -86,14 +85,6 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Team workspace invites, roles, projects, and channels",
     icon: UsersThree,
     enabled: coreFeatures.teamCollaboration,
-    status: "experimental",
-  },
-  {
-    id: "multiAgents",
-    name: "Multi Agents",
-    description: "Multi-agent session sidebar",
-    icon: Sparkle,
-    enabled: coreFeatures.multiAgents,
     status: "experimental",
   },
   {

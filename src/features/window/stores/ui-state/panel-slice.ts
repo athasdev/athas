@@ -7,7 +7,6 @@ import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-
 export interface PanelState {
   isSidebarVisible: boolean;
   isRightSidebarVisible: boolean;
-  isAgentSidebarVisible: boolean;
   isFindVisible: boolean;
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: BottomPaneTab;
@@ -16,7 +15,6 @@ export interface PanelState {
 export interface PanelActions {
   setIsSidebarVisible: (v: boolean) => void;
   setIsRightSidebarVisible: (v: boolean) => void;
-  setIsAgentSidebarVisible: (v: boolean) => void;
   setIsFindVisible: (v: boolean) => void;
   setIsBottomPaneVisible: (v: boolean) => void;
   setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
@@ -28,7 +26,6 @@ export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (s
   // State
   isSidebarVisible: true,
   isRightSidebarVisible: false,
-  isAgentSidebarVisible: false,
   isFindVisible: false,
   isBottomPaneVisible: false,
   bottomPaneActiveTab: "terminal",
@@ -48,7 +45,6 @@ export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (s
     }
   },
   setIsRightSidebarVisible: (v: boolean) => set({ isRightSidebarVisible: v }),
-  setIsAgentSidebarVisible: (v: boolean) => set({ isAgentSidebarVisible: v }),
   setIsFindVisible: (v: boolean) => set({ isFindVisible: v }),
   setIsBottomPaneVisible: (v: boolean) => {
     set({ isBottomPaneVisible: v });

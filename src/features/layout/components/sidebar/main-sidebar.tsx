@@ -1,5 +1,4 @@
 import { memo, type ReactNode } from "react";
-import { MultiAgentsSidebarView } from "@/features/ai/components/multi-agents-sidebar-view";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DatabaseSidebar } from "@/features/database/components/database-sidebar";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
@@ -24,7 +23,7 @@ import { cn } from "@/utils/cn";
 
 interface MainSidebarProps {
   showActivityRail?: boolean;
-  paneLevel?: "primary" | "agent" | "edge";
+  paneLevel?: "primary" | "edge";
   activeView?: SidebarView;
   isGitActive?: boolean;
   isGitHubPRsActive?: boolean;
@@ -104,8 +103,6 @@ export const MainSidebar = memo(
     );
     const isCollaborationFeatureEnabled =
       hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
-    const isMultiAgentsFeatureEnabled =
-      settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
     const isOutlineFeatureEnabled = settings.coreFeatures.outline;
     const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
     const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
@@ -192,14 +189,6 @@ export const MainSidebar = memo(
             {
               id: "collaboration" as const,
               content: <CollaborationSidebarView />,
-            },
-          ]
-        : []),
-      ...(isMultiAgentsFeatureEnabled
-        ? [
-            {
-              id: "multi-agents" as const,
-              content: <MultiAgentsSidebarView />,
             },
           ]
         : []),

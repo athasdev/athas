@@ -543,24 +543,6 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
-      id: "toggle-multi-agents-feature",
-      label: settings.coreFeatures.multiAgents
-        ? "Features: Disable Multi Agents"
-        : "Features: Enable Multi Agents",
-      description: settings.coreFeatures.multiAgents
-        ? "Disable multi-agent sidebar"
-        : "Enable multi-agent sidebar",
-      icon: <Sparkles />,
-      category: "Features",
-      action: () => {
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          multiAgents: !settings.coreFeatures.multiAgents,
-        });
-        onClose();
-      },
-    },
-    {
       id: "toggle-remote-feature",
       label: settings.coreFeatures.remote ? "Features: Disable Remote" : "Features: Enable Remote",
       description: settings.coreFeatures.remote

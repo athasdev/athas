@@ -39,9 +39,9 @@ describe("getActiveSidebarView", () => {
       getActiveSidebarView({
         isGitViewActive: false,
         isGitHubPRsViewActive: false,
-        activeSidebarView: "multi-agents",
+        activeSidebarView: "notifications",
       }),
-    ).toBe("multi-agents");
+    ).toBe("notifications");
   });
 
   test("returns collaboration when the collaboration pane is active", () => {
@@ -127,13 +127,13 @@ describe("resolveSidebarPaneClick", () => {
           isSidebarVisible: true,
           isGitViewActive: false,
           isGitHubPRsViewActive: false,
-          activeSidebarView: "multi-agents",
+          activeSidebarView: "notifications",
         },
-        "multi-agents",
+        "notifications",
       ),
     ).toEqual({
       nextIsSidebarVisible: false,
-      nextView: "multi-agents",
+      nextView: "notifications",
     });
   });
 

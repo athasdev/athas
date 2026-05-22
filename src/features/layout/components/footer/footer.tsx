@@ -4,7 +4,6 @@ import {
   Database,
   DownloadSimple,
   ListBullets,
-  Network,
   PuzzlePiece,
   TerminalWindow,
   UsersThree,
@@ -121,8 +120,6 @@ const Footer = () => {
   );
   const isCollaborationFeatureEnabled =
     hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
-  const isMultiAgentsFeatureEnabled =
-    settings.coreFeatures.aiChat && settings.coreFeatures.multiAgents;
   const { openSidebarView } = useSidebarPaneController();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -426,40 +423,14 @@ const Footer = () => {
     uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "databases";
   const isCollaborationActive =
     uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "collaboration";
-  const isMultiAgentsActive =
-    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "multi-agents";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
-    const normalizedOrder = normalizeItemOrder(
+    return normalizeItemOrder(
       settings.footerTrailingItemsOrder,
       FOOTER_TRAILING_ITEM_IDS,
     ) as FooterTrailingItemId[];
-
-    if (!normalizedOrder.includes("multi-agents")) return normalizedOrder;
-
-    return ["multi-agents", ...normalizedOrder.filter((itemId) => itemId !== "multi-agents")];
   }, [settings.footerTrailingItemsOrder]);
 
   const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [
-    ...(isMultiAgentsFeatureEnabled
-      ? [
-          {
-            id: "multi-agents" as const,
-            label: "Multi Agents",
-            content: (
-              <FooterTabControl
-                tooltip="Multi Agents"
-                active={isMultiAgentsActive}
-                className={chromeControl()}
-                onClick={() => {
-                  openSidebarView("multi-agents", { paneLevel: "edge", triggerSide: "right" });
-                }}
-              >
-                <Network className={chromeIcon()} weight="duotone" />
-              </FooterTabControl>
-            ),
-          },
-        ]
-      : []),
     ...(shouldShowOutline
       ? [
           {

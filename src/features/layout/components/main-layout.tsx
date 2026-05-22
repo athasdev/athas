@@ -53,12 +53,9 @@ export function MainLayout() {
   const {
     isSidebarVisible,
     isRightSidebarVisible,
-    isAgentSidebarVisible,
     activeRightSidebarView,
-    activeAgentSidebarView,
     setIsSidebarVisible,
     setIsRightSidebarVisible,
-    setIsAgentSidebarVisible,
     isDatabaseConnectionVisible,
     setIsDatabaseConnectionVisible,
   } = useUIState();
@@ -306,23 +303,6 @@ export function MainLayout() {
               <AIChat mode="chat" />
             </ResizablePane>
           ) : null}
-
-          <ResizablePane
-            position="right"
-            widthKey="aiChatWidth"
-            hidden={!isAgentSidebarVisible}
-            collapsible
-            collapseThreshold={0}
-            onCollapse={() => setIsAgentSidebarVisible(false)}
-          >
-            <MainSidebar
-              showActivityRail={false}
-              paneLevel="agent"
-              activeView={activeAgentSidebarView}
-              isGitActive={false}
-              isGitHubPRsActive={false}
-            />
-          </ResizablePane>
 
           {sidebarPosition === "right" ? (
             <>

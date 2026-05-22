@@ -10,7 +10,6 @@ export const FOOTER_LEADING_ITEM_IDS = [
   "updates",
 ] as const;
 export const FOOTER_TRAILING_ITEM_IDS = [
-  "multi-agents",
   "outline",
   "databases",
   "collaboration",

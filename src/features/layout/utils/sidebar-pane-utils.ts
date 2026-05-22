@@ -6,7 +6,6 @@ export type SidebarView =
   | "databases"
   | "collaboration"
   | "notifications"
-  | "multi-agents"
   | (string & {});
 
 interface SidebarPaneState {
@@ -23,7 +22,7 @@ interface SidebarPaneClickResult {
 
 export type SidebarPosition = "left" | "right";
 export type SidebarTriggerSide = SidebarPosition | "current";
-export type SidebarPaneLevel = "primary" | "agent" | "edge";
+export type SidebarPaneLevel = "primary" | "edge";
 
 interface SidebarPaneTriggerOptions {
   currentPosition: SidebarPosition;
@@ -41,11 +40,8 @@ const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>([
   "notifications",
 ]);
 
-const AGENT_SIDEBAR_VIEWS = new Set<SidebarView>(["multi-agents"]);
-
 export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
   if (EDGE_SIDEBAR_VIEWS.has(view)) return "edge";
-  if (AGENT_SIDEBAR_VIEWS.has(view)) return "agent";
   return "primary";
 }
 

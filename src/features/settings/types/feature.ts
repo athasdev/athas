@@ -20,7 +20,6 @@ export interface CoreFeaturesState {
   outline: boolean;
   aiChat: boolean;
   teamCollaboration: boolean;
-  multiAgents: boolean;
   breadcrumbs: boolean;
   persistentCommands: boolean;
 }

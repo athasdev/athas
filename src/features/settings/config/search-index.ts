@@ -803,14 +803,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "assistant", "chat"],
   },
   {
-    id: "features-multi-agents",
-    tab: "features",
-    section: "Features",
-    label: "Multi Agents",
-    description: "Multi-agent session sidebar",
-    keywords: ["ai", "agents", "multi", "sidebar", "experimental"],
-  },
-  {
     id: "features-breadcrumbs",
     tab: "features",
     section: "Features",
