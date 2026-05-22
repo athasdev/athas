@@ -4,6 +4,7 @@ use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
 use std::{
    collections::HashMap,
    io::{Read, Write},
+   path::Path,
    sync::{Arc, Mutex},
    thread,
 };
@@ -151,6 +152,7 @@ impl TerminalConnection {
          };
 
       if let Some(working_dir) = &config.working_directory {
+         Self::ensure_working_directory_access(working_dir)?;
          cmd.cwd(working_dir);
       }
 
@@ -181,6 +183,42 @@ impl TerminalConnection {
       }
 
       Ok(cmd)
+   }
+
+   fn ensure_working_directory_access(working_dir: &str) -> Result<()> {
+      let path = Path::new(working_dir);
+      let metadata = path.metadata().map_err(|err| {
+         Self::working_directory_error(working_dir, err, "inspect the terminal working directory")
+      })?;
+
+      if !metadata.is_dir() {
+         return Err(anyhow!(
+            "Terminal working directory is not a directory: {}",
+            working_dir
+         ));
+      }
+
+      path.read_dir().map_err(|err| {
+         Self::working_directory_error(working_dir, err, "read the terminal working directory")
+      })?;
+
+      Ok(())
+   }
+
+   fn working_directory_error(
+      working_dir: &str,
+      err: std::io::Error,
+      operation: &str,
+   ) -> anyhow::Error {
+      if err.kind() == std::io::ErrorKind::PermissionDenied {
+         return anyhow!(
+            "Athas does not have permission to {operation}: {working_dir}. On macOS, allow Athas \
+             in System Settings > Privacy & Security > Files and Folders, or grant Full Disk \
+             Access for developer tools that need broad project access."
+         );
+      }
+
+      anyhow!("Failed to {operation}: {working_dir}: {err}")
    }
 
    pub fn start_reader_thread(&self) {
