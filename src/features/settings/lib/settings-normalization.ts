@@ -65,7 +65,6 @@ const EDITOR_ENGINES = new Set<Settings["editorEngine"]>([
   "nvim",
   "helix",
   "vim",
-  "emacs",
   "custom",
 ]);
 const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
@@ -73,7 +72,6 @@ const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "nvim",
   "helix",
   "vim",
-  "emacs",
   "custom",
 ]);
 

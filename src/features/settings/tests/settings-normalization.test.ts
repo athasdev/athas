@@ -68,6 +68,15 @@ describe("settings normalization", () => {
     expect(normalized.editorEngine).toBe("monaco");
   });
 
+  it("normalizes unsupported editor engines", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "emacs" as never,
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+  });
+
   it("migrates legacy external editor settings into editor engine", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

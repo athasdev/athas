@@ -148,7 +148,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
       "neovim",
       "vim",
       "helix",
-      "emacs",
       "terminal",
     ],
   },

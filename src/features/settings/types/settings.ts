@@ -9,7 +9,7 @@ import type {
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
-export type EditorEngine = "monaco" | "athas" | "nvim" | "helix" | "vim" | "emacs" | "custom";
+export type EditorEngine = "monaco" | "athas" | "nvim" | "helix" | "vim" | "custom";
 
 export interface Settings {
   // General
@@ -99,7 +99,7 @@ export interface Settings {
   autoCompletion: boolean;
   parameterHints: boolean;
   // External Editor
-  externalEditor: "none" | "nvim" | "helix" | "vim" | "emacs" | "custom";
+  externalEditor: "none" | "nvim" | "helix" | "vim" | "custom";
   customEditorCommand: string;
   // Features
   coreFeatures: CoreFeaturesState;

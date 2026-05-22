@@ -32,7 +32,6 @@ export const EditorSettings = () => {
     { value: "nvim", label: "Neovim" },
     { value: "helix", label: "Helix" },
     { value: "vim", label: "Vim" },
-    { value: "emacs", label: "Emacs" },
     { value: "custom", label: "Custom Command" },
   ];
 

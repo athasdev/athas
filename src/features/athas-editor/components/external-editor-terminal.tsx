@@ -90,8 +90,6 @@ export const ExternalEditorTerminal = ({
           return `hx "${relativePath}"`;
         case "vim":
           return `vim "${relativePath}"`;
-        case "emacs":
-          return `emacs -nw "${relativePath}"`;
         case "custom":
           return settings.customEditorCommand.replace("$FILE", `"${relativePath}"`);
         default:

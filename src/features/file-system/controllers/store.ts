@@ -1170,7 +1170,7 @@ export const useFileSystemStore = createSelectors(
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;
-          const externalEditorEngines = new Set(["nvim", "helix", "vim", "emacs", "custom"]);
+          const externalEditorEngines = new Set(["nvim", "helix", "vim", "custom"]);
           const usesExternalEditor = externalEditorEngines.has(settings.editorEngine);
 
           const hasExternalEditorCommand =
