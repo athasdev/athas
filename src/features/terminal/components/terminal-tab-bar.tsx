@@ -29,7 +29,6 @@ import {
   PushPin as Pin,
   Plus,
   MagnifyingGlass as Search,
-  SplitHorizontal as SplitSquareHorizontal,
   TerminalWindow as TerminalIcon,
   SidebarSimple as PanelLeft,
   SidebarSimple as PanelRight,
@@ -78,7 +77,6 @@ interface ToolbarContextMenuProps {
   onSidebarPositionChange: (position: TerminalTabSidebarPosition) => void;
   onNewTerminal?: () => void;
   onSearchTerminal?: () => void;
-  onSplitView?: () => void;
   onNextTerminal?: () => void;
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
@@ -97,7 +95,6 @@ const ToolbarContextMenu = ({
   onSidebarPositionChange,
   onNewTerminal,
   onSearchTerminal,
-  onSplitView,
   onNextTerminal,
   onPrevTerminal,
   onFullScreen,
@@ -177,16 +174,6 @@ const ToolbarContextMenu = ({
           },
         ]
       : []),
-    ...(onSplitView
-      ? [
-          {
-            id: "toggle-split-view",
-            label: "Toggle Split View",
-            icon: <SplitSquareHorizontal />,
-            onClick: onSplitView,
-          },
-        ]
-      : []),
     ...(onNextTerminal
       ? [
           {
@@ -257,13 +244,11 @@ interface TerminalTabBarProps {
   onCloseOtherTabs?: (terminalId: string) => void;
   onCloseAllTabs?: () => void;
   onCloseTabsToRight?: (terminalId: string) => void;
-  onSplitView?: () => void;
   onSearchTerminal?: () => void;
   onNextTerminal?: () => void;
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
-  isSplitView?: boolean;
   orientation?: TerminalTabLayout;
 }
 
@@ -281,13 +266,11 @@ const TerminalTabBar = ({
   onCloseOtherTabs,
   onCloseAllTabs,
   onCloseTabsToRight,
-  onSplitView,
   onSearchTerminal,
   onNextTerminal,
   onPrevTerminal,
   onFullScreen,
   isFullScreen = false,
-  isSplitView = false,
   orientation = "horizontal",
 }: TerminalTabBarProps) => {
   const renameStartedAtRef = useRef<number>(0);
@@ -863,24 +846,6 @@ const TerminalTabBar = ({
                   </Tooltip>
                 )}
               </div>
-              {onSplitView && (
-                <Tooltip
-                  content={isSplitView ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
-                  side="bottom"
-                >
-                  <Button
-                    onClick={onSplitView}
-                    variant={isSplitView ? "default" : "ghost"}
-                    className={cn(
-                      "shrink-0 rounded-lg",
-                      isSplitView ? "text-text" : "text-text-lighter",
-                    )}
-                    compact
-                  >
-                    <SplitSquareHorizontal />
-                  </Button>
-                </Tooltip>
-              )}
               {onFullScreen && (
                 <Tooltip
                   content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
@@ -1024,7 +989,6 @@ const TerminalTabBar = ({
             onSidebarPositionChange={setTabSidebarPosition}
             onNewTerminal={onNewTerminal}
             onSearchTerminal={onSearchTerminal}
-            onSplitView={onSplitView}
             onNextTerminal={onNextTerminal}
             onPrevTerminal={onPrevTerminal}
             onFullScreen={onFullScreen}
