@@ -14,7 +14,6 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { BottomBufferPane } from "./bottom-buffer-pane";
@@ -101,8 +100,6 @@ const BottomPane = () => {
     [height],
   );
 
-  const titleBarHeight = IS_MAC ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
-  const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.types.includes("application/tab-data") && !getInternalTabDragData()) {
       return;
@@ -173,14 +170,14 @@ const BottomPane = () => {
       className={cn(
         "athas-glass-island relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
-        isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
+        isFullScreen && "fixed inset-0 z-[10040] rounded-none border-0 shadow-none ring-0",
         !isBottomPaneVisible && "hidden",
       )}
       style={
         isFullScreen
           ? {
-              top: `${titleBarHeight + 8}px`,
-              bottom: `${footerHeight + 8}px`,
+              height: "100vh",
+              width: "100vw",
             }
           : {
               height: `${height}px`,
@@ -191,21 +188,23 @@ const BottomPane = () => {
       onDrop={handleDrop}
     >
       {/* Resize Handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          "group absolute top-0 right-0 left-0 z-10 h-1",
-          "cursor-ns-resize transition-colors duration-150 hover:bg-blue-500/30",
-          isResizing && "bg-blue-500/50",
-        )}
-      >
+      {!isFullScreen && (
         <div
+          onMouseDown={handleMouseDown}
           className={cn(
-            "-translate-y-[1px] absolute top-0 right-0 left-0 h-[3px]",
-            "bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+            "group absolute top-0 right-0 left-0 z-10 h-1",
+            "cursor-ns-resize transition-colors duration-150 hover:bg-blue-500/30",
+            isResizing && "bg-blue-500/50",
           )}
-        />
-      </div>
+        >
+          <div
+            className={cn(
+              "-translate-y-[1px] absolute top-0 right-0 left-0 h-[3px]",
+              "bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+            )}
+          />
+        </div>
+      )}
 
       {/* Content Area */}
       <div className="h-full overflow-hidden">
