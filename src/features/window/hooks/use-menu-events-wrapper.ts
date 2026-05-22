@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
@@ -80,7 +81,7 @@ export function useMenuEventsWrapper() {
   const shouldRouteEditMenuToEditor = () => {
     const activeElement = document.activeElement as HTMLElement | null;
 
-    if (activeElement?.classList.contains("editor-textarea")) {
+    if (isEditorKeyboardTarget(activeElement)) {
       return true;
     }
 

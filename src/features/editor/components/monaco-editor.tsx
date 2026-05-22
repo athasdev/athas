@@ -644,6 +644,12 @@ export function MonacoBackedEditor({
     editorAPI.setViewportRef(container);
 
     const adapterOwnerId = viewStateKey ?? activeBufferId ?? modelUri.toString();
+    const selectEntireModel = () => {
+      editor.setSelection(model.getFullModelRange());
+      editor.focus();
+      syncCursorAndSelection();
+    };
+
     if (isActiveSurface && !readOnly && !isPreviewMode) {
       const executeTextEdit = (range: Monaco.Range, text: string) => {
         const startOffset = model.getOffsetAt(range.getStartPosition());
@@ -699,10 +705,7 @@ export function MonacoBackedEditor({
         },
         deleteRange: (range) => executeTextEdit(toMonacoRange(model, range), ""),
         replaceRange: (range, text) => executeTextEdit(toMonacoRange(model, range), text),
-        selectAll: () => {
-          editor.setSelection(model.getFullModelRange());
-          syncCursorAndSelection();
-        },
+        selectAll: selectEntireModel,
         undo: () => {
           editor.trigger("athas-api", "undo", null);
           syncCursorAndSelection();
@@ -714,12 +717,23 @@ export function MonacoBackedEditor({
       });
     }
 
-    editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyA, () => {
-      editor.setSelection(model.getFullModelRange());
-      syncCursorAndSelection();
-    });
+    editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyA, selectEntireModel);
 
     const disposables = [
+      editor.onKeyDown((event) => {
+        const browserEvent = event.browserEvent;
+        const isSelectAllShortcut =
+          (browserEvent.metaKey || browserEvent.ctrlKey) &&
+          !browserEvent.altKey &&
+          !browserEvent.shiftKey &&
+          browserEvent.key.toLowerCase() === "a";
+
+        if (!isSelectAllShortcut) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        selectEntireModel();
+      }),
       editor.onDidChangeModelContent(() => {
         if (applyingExternalChangeRef.current) return;
         const nextContent = model.getValue();

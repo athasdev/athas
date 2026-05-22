@@ -15,6 +15,7 @@ import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
 import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
@@ -83,6 +84,13 @@ export function useKeymaps() {
       const isEditorTarget =
         isEditorKeyboardTarget(target) ||
         isEditorKeyboardTarget(document.activeElement as HTMLElement | null);
+      const isTerminalTarget =
+        target?.closest(".terminal-container") !== null ||
+        (document.activeElement as HTMLElement | null)?.closest(".terminal-container") !== null;
+      const effectiveContexts = resolveEffectiveKeymapContexts(contexts, {
+        isEditorTarget,
+        isTerminalTarget,
+      });
 
       // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
       if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
@@ -93,7 +101,9 @@ export function useKeymaps() {
         lastCloseTabShortcutAtRef.current = Date.now();
         e.preventDefault();
         e.stopPropagation();
-        keymapRegistry.executeCommand(contexts.terminalFocus ? "terminal.close" : "file.close");
+        keymapRegistry.executeCommand(
+          effectiveContexts.terminalFocus ? "terminal.close" : "file.close",
+        );
         return;
       }
 
@@ -165,7 +175,7 @@ export function useKeymaps() {
         }
 
         // Evaluate when clause
-        if (keybinding.when && !evaluateWhenClause(keybinding.when, contexts)) {
+        if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) {
           continue;
         }
 
