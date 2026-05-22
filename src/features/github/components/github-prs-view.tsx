@@ -548,6 +548,7 @@ const GitHubPRsView = memo(() => {
                 onChange={setSearchQuery}
                 leftIcon={Search}
                 placeholder="Search"
+                containerClassName="pl-4"
               />
               <SidebarHeaderIconButton
                 className="shrink-0"
