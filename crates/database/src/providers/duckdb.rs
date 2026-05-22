@@ -30,11 +30,16 @@ fn execute_query_duckdb(
          let value: serde_json::Value = match row.get_ref(i) {
             Ok(value_ref) => match value_ref {
                duckdb::types::ValueRef::Null => serde_json::Value::Null,
+               duckdb::types::ValueRef::Boolean(b) => serde_json::json!(b),
                duckdb::types::ValueRef::Int(i) => serde_json::json!(i),
                duckdb::types::ValueRef::BigInt(i) => serde_json::json!(i),
                duckdb::types::ValueRef::TinyInt(i) => serde_json::json!(i),
                duckdb::types::ValueRef::SmallInt(i) => serde_json::json!(i),
                duckdb::types::ValueRef::HugeInt(i) => serde_json::json!(i.to_string()),
+               duckdb::types::ValueRef::UTinyInt(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::USmallInt(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::UInt(i) => serde_json::json!(i),
+               duckdb::types::ValueRef::UBigInt(i) => serde_json::json!(i),
                duckdb::types::ValueRef::Float(f) => serde_json::Number::from_f64(f as f64)
                   .map(serde_json::Value::Number)
                   .unwrap_or(serde_json::Value::String(f.to_string())),
@@ -387,6 +392,32 @@ mod tests {
 
       assert_eq!(result.columns, vec!["id".to_string(), "name".to_string()]);
       assert!(result.rows.is_empty());
+   }
+
+   #[test]
+   fn execute_query_reads_duckdb_pragma_boolean_metadata() {
+      let conn = Connection::open_in_memory().unwrap();
+      conn
+         .execute_batch("CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT NOT NULL);")
+         .unwrap();
+
+      let result = execute_query_duckdb(&conn, r#"PRAGMA table_info("users")"#, &[]).unwrap();
+
+      assert_eq!(
+         result.columns,
+         vec![
+            "cid".to_string(),
+            "name".to_string(),
+            "type".to_string(),
+            "notnull".to_string(),
+            "dflt_value".to_string(),
+            "pk".to_string(),
+         ]
+      );
+      assert_eq!(result.rows[0][3], serde_json::json!(true));
+      assert_eq!(result.rows[0][5], serde_json::json!(true));
+      assert_eq!(result.rows[1][3], serde_json::json!(true));
+      assert_eq!(result.rows[1][5], serde_json::json!(false));
    }
 
    #[tokio::test]

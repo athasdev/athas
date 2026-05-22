@@ -14,6 +14,7 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
+import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { BottomBufferPane } from "./bottom-buffer-pane";
@@ -100,6 +101,8 @@ const BottomPane = () => {
     [height],
   );
 
+  const titleBarHeight = IS_MAC ? 44 : 28;
+  const footerHeight = 32;
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.types.includes("application/tab-data") && !getInternalTabDragData()) {
       return;
@@ -170,14 +173,14 @@ const BottomPane = () => {
       className={cn(
         "athas-glass-island relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
-        isFullScreen && "fixed inset-0 z-[10040] rounded-none border-0 shadow-none ring-0",
+        isFullScreen && "fixed inset-x-0 z-[10040] rounded-none border-0 shadow-none ring-0",
         !isBottomPaneVisible && "hidden",
       )}
       style={
         isFullScreen
           ? {
-              height: "100vh",
-              width: "100vw",
+              top: `${titleBarHeight}px`,
+              bottom: `${footerHeight}px`,
             }
           : {
               height: `${height}px`,
