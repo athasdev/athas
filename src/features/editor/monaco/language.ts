@@ -10,6 +10,10 @@ export const MONACO_LANGUAGE_BY_ATHAS_ID: Record<string, string> = {
   dockerfile: "dockerfile",
   dotenv: "plaintext",
   elixir: "elixir",
+  elisp: "elisp",
+  elm: "elm",
+  gitattributes: "gitattributes",
+  gitignore: "gitignore",
   go: "go",
   graphql: "graphql",
   html: "html",
@@ -20,6 +24,7 @@ export const MONACO_LANGUAGE_BY_ATHAS_ID: Record<string, string> = {
   kotlin: "kotlin",
   less: "less",
   lua: "lua",
+  lockfile: "lockfile",
   markdown: "markdown",
   nix: "plaintext",
   objc: "objective-c",
@@ -43,12 +48,12 @@ export const MONACO_LANGUAGE_BY_ATHAS_ID: Record<string, string> = {
   terraform: "hcl",
   tla: "plaintext",
   toml: "toml",
-  tsx: "typescript",
+  typescriptreact: "typescript",
   typescript: "typescript",
   vue: "html",
   xml: "xml",
   yaml: "yaml",
-  zig: "plaintext",
+  zig: "zig",
 };
 
 export const MONACO_HIGHLIGHT_LANGUAGE_IDS = new Set(

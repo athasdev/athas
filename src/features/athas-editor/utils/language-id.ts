@@ -48,7 +48,11 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   sass: "sass",
   less: "less",
   dockerfile: "dockerfile",
+  dockerignore: "gitignore",
   diff: "diff",
+  gitattributes: "gitattributes",
+  gitignore: "gitignore",
+  ignore: "gitignore",
   json: "json",
   jsonc: "json",
   yaml: "yaml",
@@ -69,6 +73,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   nix: "nix",
   scm: "scheme",
   dart: "dart",
+  el: "elisp",
   elm: "elm",
   graphql: "graphql",
   gql: "graphql",
@@ -87,6 +92,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   vue: "vue",
   svelte: "svelte",
   erb: "embedded_template",
+  lock: "lockfile",
 };
 
 const FILENAME_TO_LANGUAGE: Record<string, string> = {
@@ -94,6 +100,17 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   ".zshrc": "bash",
   ".bash_profile": "bash",
   ".profile": "bash",
+  ".dockerignore": "gitignore",
+  ".eslintignore": "gitignore",
+  ".fdignore": "gitignore",
+  ".gitattributes": "gitattributes",
+  ".gitignore": "gitignore",
+  ".ignore": "gitignore",
+  ".npmignore": "gitignore",
+  ".prettierignore": "gitignore",
+  ".rgignore": "gitignore",
+  ".stylelintignore": "gitignore",
+  ".vscodeignore": "gitignore",
   containerfile: "dockerfile",
   dockerfile: "dockerfile",
   "go.mod": "go",
@@ -163,6 +180,7 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   embedded_template: "ERB",
   text: "Plain Text",
   dockerfile: "Dockerfile",
+  gitattributes: "Git Attributes",
   graphql: "GraphQL",
   makefile: "Makefile",
   cmake: "CMake",
@@ -189,6 +207,8 @@ export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   terraform: "Terraform",
   vim: "Vim",
   elm: "Elm",
+  elisp: "Emacs Lisp",
+  lockfile: "Lockfile",
 };
 
 export function getLanguageDisplayName(languageId: string): string {
@@ -212,6 +232,14 @@ export function getLanguageIdFromPath(filePath: string): string | null {
   }
 
   const fileName = filePath.split("/").pop()?.toLowerCase() || "";
+  const normalizedPath = filePath.replace(/\\/g, "/").toLowerCase();
+  if (normalizedPath.endsWith("/.git/info/exclude")) {
+    return "gitignore";
+  }
+  if (normalizedPath.endsWith("/.git/info/attributes")) {
+    return "gitattributes";
+  }
+
   if (isEnvFileName(fileName)) {
     return "dotenv";
   }

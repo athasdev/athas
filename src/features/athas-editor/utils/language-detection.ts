@@ -29,6 +29,14 @@ export function detectLanguageFromPath(filePath: string): string {
   // Fallback to static map for unsupported languages
   const languageMap: Record<string, string> = {
     // Unsupported languages that might be added in the future
+    tsx: "typescriptreact",
+    dockerignore: "gitignore",
+    gitattributes: "gitattributes",
+    gitignore: "gitignore",
+    ignore: "gitignore",
+    lock: "lockfile",
+    zig: "zig",
+    el: "elisp",
     scss: "scss",
     sass: "sass",
     less: "less",
@@ -67,6 +75,7 @@ export function detectLanguageFromPath(filePath: string): string {
  */
 export function detectLanguageFromFileName(fileName: string): string {
   const lowercaseName = fileName.toLowerCase();
+  const normalizedPath = lowercaseName.replace(/\\/g, "/");
 
   if (lowercaseName === ".env" || lowercaseName.startsWith(".env.")) {
     return "dotenv";
@@ -85,8 +94,31 @@ export function detectLanguageFromFileName(fileName: string): string {
     return "cmake";
   }
 
-  if (lowercaseName === ".gitignore" || lowercaseName === ".dockerignore") {
+  if (normalizedPath.endsWith("/.git/info/exclude")) {
     return "gitignore";
+  }
+
+  if (normalizedPath.endsWith("/.git/info/attributes")) {
+    return "gitattributes";
+  }
+
+  if (
+    lowercaseName === ".gitignore" ||
+    lowercaseName === ".dockerignore" ||
+    lowercaseName === ".ignore" ||
+    lowercaseName === ".npmignore" ||
+    lowercaseName === ".eslintignore" ||
+    lowercaseName === ".prettierignore" ||
+    lowercaseName === ".stylelintignore" ||
+    lowercaseName === ".vscodeignore" ||
+    lowercaseName === ".rgignore" ||
+    lowercaseName === ".fdignore"
+  ) {
+    return "gitignore";
+  }
+
+  if (lowercaseName === ".gitattributes") {
+    return "gitattributes";
   }
 
   return detectLanguageFromPath(fileName);

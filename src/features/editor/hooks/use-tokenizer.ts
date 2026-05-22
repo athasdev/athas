@@ -11,6 +11,7 @@ import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-clien
 import type { HighlightToken } from "../lib/wasm-parser/types";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import { getLanguageIdFromPath } from "../utils/language-id";
+import { hasLineBasedSyntaxHighlighter, tokenizeLineBasedSyntax } from "../utils/line-based-syntax";
 import { calculateEdit, isSimpleEdit } from "../utils/tree-sitter-edit";
 import { usePerformanceMonitor } from "./use-performance";
 
@@ -290,10 +291,22 @@ export function useTokenizer({
         setTokenState({ bufferId, tokens: [] });
         return;
       }
-      const languageAssets = getLanguageAssetConfig(languageId);
 
       const requestVersion = ++requestVersionRef.current;
       const normalizedText = normalizeLineEndings(text);
+
+      if (hasLineBasedSyntaxHighlighter(languageId)) {
+        const newTokens = tokenizeLineBasedSyntax(normalizedText, languageId);
+        setTokenState({ bufferId, tokens: newTokens });
+        setTokenizedContent(normalizedText);
+        cacheRef.current = {
+          fullTokens: newTokens,
+          previousContent: normalizedText,
+        };
+        return;
+      }
+
+      const languageAssets = getLanguageAssetConfig(languageId);
 
       retargetCachedTokens(normalizedText);
       setLoading(true);
@@ -347,7 +360,6 @@ export function useTokenizer({
 
       const languageId = languageIdOverride || getLanguageId(filePath);
       if (!languageId) return;
-      const languageAssets = getLanguageAssetConfig(languageId);
 
       const requestVersion = ++requestVersionRef.current;
       const { normalizedText, lineOffsets, lineCount } = getTextMetrics(text);
@@ -361,6 +373,31 @@ export function useTokenizer({
 
       try {
         const tokenizationRange = expandTokenizationViewportRange(viewportRange, lineCount);
+
+        if (hasLineBasedSyntaxHighlighter(languageId)) {
+          const rangeTokens = tokenizeLineBasedSyntax(normalizedText, languageId, {
+            startLine: tokenizationRange.startLine,
+            endLine: tokenizationRange.endLine,
+          });
+          const rangeStartOffset = lineOffsets[tokenizationRange.startLine] ?? 0;
+          const rangeEndOffset =
+            lineOffsets[tokenizationRange.endLine + 1] ?? normalizedText.length;
+          const mergedTokens = mergeTokenizedRange({
+            cachedTokens: cacheRef.current.fullTokens,
+            rangeTokens,
+            rangeStartOffset,
+            rangeEndOffset,
+            retainOutsideRange: lineCount < LARGE_FILE_LINE_THRESHOLD,
+          });
+
+          setTokenState({ bufferId, tokens: mergedTokens });
+          setTokenizedContent(normalizedText);
+          cacheRef.current.fullTokens = mergedTokens;
+          cacheRef.current.previousContent = normalizedText;
+          return;
+        }
+
+        const languageAssets = getLanguageAssetConfig(languageId);
 
         const result = await tokenizerWorkerClient.tokenize({
           bufferId,
