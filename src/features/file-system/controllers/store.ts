@@ -689,37 +689,6 @@ export const useFileSystemStore = createSelectors(
             }
           };
 
-          if (deferredBuffers.length > 0) {
-            toast.show({
-              type: "warning",
-              message: `Restored ${buffersToRestore.length} of ${candidateBuffersToRestore.length} saved tabs for this workspace.`,
-              action: {
-                label: "Restore Rest",
-                onClick: () => {
-                  void (async () => {
-                    if (get().rootFolderPath !== projectPath) {
-                      toast.warning("Switch back to this workspace before restoring its tabs.");
-                      return;
-                    }
-
-                    await restoreBuffers(deferredBuffers);
-                    restoreProjectPaneState(projectPath);
-                  })();
-                },
-              },
-            });
-            console.warn("[workspace-open] restoreSession:truncated", {
-              projectPath,
-              totalBuffers: candidateBuffersToRestore.length,
-              restoredBuffers: buffersToRestore.length,
-            });
-            frontendTrace("warn", "workspace-open", "restoreSession:truncated", {
-              projectPath,
-              totalBuffers: candidateBuffersToRestore.length,
-              restoredBuffers: buffersToRestore.length,
-            });
-          }
-
           await restoreBuffers(buffersToRestore);
 
           // Restore active buffer
@@ -729,6 +698,42 @@ export const useFileSystemStore = createSelectors(
             if (activeBuffer) {
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
+          }
+
+          if (deferredBuffers.length > 0) {
+            console.info("[workspace-open] restoreSession:deferred", {
+              projectPath,
+              totalBuffers: candidateBuffersToRestore.length,
+              restoredBuffers: buffersToRestore.length,
+              deferredBuffers: deferredBuffers.length,
+            });
+            frontendTrace("info", "workspace-open", "restoreSession:deferred", {
+              projectPath,
+              totalBuffers: candidateBuffersToRestore.length,
+              restoredBuffers: buffersToRestore.length,
+              deferredBuffers: deferredBuffers.length,
+            });
+
+            window.setTimeout(() => {
+              void (async () => {
+                if (get().rootFolderPath !== projectPath) {
+                  return;
+                }
+
+                await restoreBuffers(deferredBuffers);
+                restoreProjectPaneState(projectPath);
+                frontendTrace("info", "workspace-open", "restoreSession:deferred:end", {
+                  projectPath,
+                  restoredBuffers: deferredBuffers.length,
+                });
+              })().catch((error) => {
+                console.warn("[workspace-open] failed to restore deferred saved tabs", error);
+                frontendTrace("warn", "workspace-open", "restoreSession:deferred:error", {
+                  projectPath,
+                  error: getErrorMessage(error),
+                });
+              });
+            }, 250);
           }
         }
 
