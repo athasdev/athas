@@ -1,4 +1,3 @@
-import { $ } from "bun";
 import { readdir } from "node:fs/promises";
 import { writeFile } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
@@ -117,10 +116,23 @@ export function getGeneratedCdnPath(relativePath = ""): string {
   return join(GENERATED_CDN_DIR, relativePath);
 }
 
+function stringifyManifest(manifest: ExtensionManifestRecord): string {
+  return JSON.stringify(manifest, null, 2).replace(
+    /\[\n((?: {4}"[^"\n]*",?\n)+) {2}\]/g,
+    (match, contents: string) => {
+      const values = contents
+        .trim()
+        .split("\n")
+        .map((line) => line.trim().replace(/,$/, ""));
+
+      return values.every((value) => /^"[^"\n]*"$/.test(value)) ? `[${values.join(", ")}]` : match;
+    },
+  );
+}
+
 export async function writeExtensionManifest(
   manifestPath: string,
   manifest: ExtensionManifestRecord,
 ) {
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-  await $`bunx vp check --fix ${manifestPath}`.cwd(ATHAS_ROOT);
+  await writeFile(manifestPath, `${stringifyManifest(manifest)}\n`);
 }
