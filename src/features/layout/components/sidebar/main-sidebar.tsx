@@ -214,7 +214,7 @@ export const MainSidebar = memo(
       return paneEntries[0] ?? null;
     })();
     return (
-      <div className="flex h-full min-h-0">
+      <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
         {shouldRenderActivityRail ? <SidebarActivityRail /> : null}
 
         <SidebarPanel

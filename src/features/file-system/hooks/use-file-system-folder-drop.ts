@@ -12,6 +12,7 @@ import {
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import {
   handleExternalFileDropPayload,
+  getExternalFileDropRoute,
   isExternalFileDragTypeList,
 } from "../utils/file-system-drop-controller";
 
@@ -88,6 +89,17 @@ function isExternalFileDrag(event: DragEvent): boolean {
   return isExternalFileDragTypeList(event.dataTransfer?.types);
 }
 
+function getExternalFileDropRouteAtPosition(position?: { x: number; y: number }) {
+  if (!position) return "global";
+  return getExternalFileDropRoute(resolveClientPoint(position).element);
+}
+
+function isGlobalExternalFileDropEventTarget(event: DragEvent): boolean {
+  return (
+    getExternalFileDropRoute(event.target instanceof Element ? event.target : null) === "global"
+  );
+}
+
 /**
  * Hook to handle drag-and-drop from OS into the application
  * @param onDrop - Callback when files/folders are dropped (array of paths)
@@ -128,6 +140,11 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           }
           return;
         }
+        const position = "position" in event.payload ? event.payload.position : undefined;
+        if (getExternalFileDropRouteAtPosition(position) !== "global") {
+          setIsDraggingOver(false);
+          return;
+        }
         await handleExternalPayload(event.payload);
       });
 
@@ -147,12 +164,21 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           }
           return;
         }
+        const position = "position" in event.payload ? event.payload.position : undefined;
+        if (getExternalFileDropRouteAtPosition(position) !== "global") {
+          setIsDraggingOver(false);
+          return;
+        }
         await handleExternalPayload(event.payload);
       });
 
       const onDomDragOver = (event: DragEvent) => {
         if (getInternalTabDragData()) return;
         if (!isExternalFileDrag(event)) return;
+        if (!isGlobalExternalFileDropEventTarget(event)) {
+          setIsDraggingOver(false);
+          return;
+        }
         event.preventDefault();
       };
       const onDomDrop = (event: DragEvent) => {
@@ -161,12 +187,20 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           return;
         }
         if (!isExternalFileDrag(event)) return;
+        if (!isGlobalExternalFileDropEventTarget(event)) {
+          setIsDraggingOver(false);
+          return;
+        }
         event.preventDefault();
         setIsDraggingOver(false);
       };
       const onDomEnter = (event: DragEvent) => {
         if (getInternalTabDragData()) return;
         if (!isExternalFileDrag(event)) return;
+        if (!isGlobalExternalFileDropEventTarget(event)) {
+          setIsDraggingOver(false);
+          return;
+        }
         event.preventDefault();
         setIsDraggingOver(true);
       };
