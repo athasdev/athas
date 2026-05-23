@@ -30,6 +30,7 @@ import GitBranchManager from "@/features/git/components/git-branch-manager";
 import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
@@ -126,7 +127,6 @@ const Footer = () => {
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
   const { rootFolderPath } = useFileSystemStore();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const selectRepository = useRepositoryStore.use.actions().selectRepository;
   const gitStatus = useGitStore((state) => state.gitStatus);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentRepoPath = useGitStore((state) => state.currentRepoPath);
@@ -231,7 +231,9 @@ const Footer = () => {
                 triggerClassName={footerGitTrigger()}
                 triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[118px]")}
                 onWorktreeChange={async (worktreePath) => {
-                  selectRepository(worktreePath);
+                  const opened = await openGitWorktreeWorkspace(worktreePath);
+                  if (!opened) return;
+
                   const status = await getGitStatus(worktreePath);
                   actions.setWorkspaceGitStatus(status, worktreePath);
                   if (currentRepoPath === footerRepoPath) {

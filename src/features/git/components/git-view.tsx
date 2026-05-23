@@ -44,6 +44,7 @@ import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitFile } from "../types/git-types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
+import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
 import GitActionsMenu from "./git-actions-menu";
 import GitBranchManager from "./git-branch-manager";
@@ -83,12 +84,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const stashes = useGitStore((state) => state.stashes);
   const { setIsLoadingGitData, setIsRefreshing } = actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const {
-    syncWorkspaceRepositories,
-    selectRepository,
-    setManualRepository,
-    refreshWorkspaceRepositories,
-  } = useRepositoryStore.use.actions();
+  const { syncWorkspaceRepositories, setManualRepository, refreshWorkspaceRepositories } =
+    useRepositoryStore.use.actions();
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
   const [showStashList, setShowStashList] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
@@ -242,6 +239,20 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setIsRefreshing(false);
     }
   }, [refreshGitData, refreshWorkspaceRepositories, setIsRefreshing]);
+
+  const handleOpenWorktree = useCallback(
+    async (worktreePath: string) => {
+      const opened = await openGitWorktreeWorkspace(worktreePath);
+      if (opened) {
+        await refreshWorkspaceRepositories();
+      }
+    },
+    [refreshWorkspaceRepositories],
+  );
+
+  const handleOpenWorktreeInNewWindow = useCallback(async (worktreePath: string) => {
+    await openGitWorktreeWorkspace(worktreePath, { target: "new-window" });
+  }, []);
 
   useEffect(() => {
     void syncWorkspaceRepositories(repoPath ?? null);
@@ -944,9 +955,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               repoPath={activeRepoPath}
               triggerClassName="shrink"
               triggerInputClassName="max-w-[120px]"
-              onWorktreeChange={(worktreePath) => {
-                selectRepository(worktreePath);
-              }}
+              onWorktreeChange={(worktreePath) => void handleOpenWorktree(worktreePath)}
             />
           </PaneGroup>
 
@@ -1010,9 +1019,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     embedded
                     repoPath={activeRepoPath}
                     onRefresh={refreshAfterAction}
-                    onSelectWorktree={(worktreePath) => {
-                      selectRepository(worktreePath);
-                    }}
+                    onSelectWorktree={handleOpenWorktree}
+                    onOpenWorktreeInNewWindow={handleOpenWorktreeInNewWindow}
                   />
                 ),
               },

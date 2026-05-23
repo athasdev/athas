@@ -3,7 +3,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getCommitDiff, getFileDiff } from "@/features/git/api/git-diff-api";
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
 import { getFolderName } from "@/utils/path-helpers";
 import type { SidebarDragResource } from "./sidebar-resource-drag";
 
@@ -115,7 +115,7 @@ export const openSidebarResourceBuffer = async (
       return openCommitDiffBuffer(resource);
 
     case "git-worktree":
-      useRepositoryStore.getState().actions.selectRepository(resource.path);
+      await openGitWorktreeWorkspace(resource.path);
       return null;
 
     case "github-pr":
