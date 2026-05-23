@@ -9,11 +9,12 @@ import {
 } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDebounce } from "use-debounce";
 import { useEventListener } from "usehooks-ts";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import {
-  filterFileTreeForSearch,
+  filterFileTreeForFffHits,
   getGuideAncestorRows,
   getStickyAncestorRows,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
@@ -36,6 +37,7 @@ import { findFileInTree } from "@/features/file-system/controllers/file-tree-uti
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
@@ -113,6 +115,8 @@ interface OpenAllFilesDialogState {
 
 const FILE_TREE_CONTAINER_INSET = 4;
 const FILE_TREE_HEADER_HEIGHT = 32;
+const FILE_TREE_SEARCH_DEBOUNCE_DELAY = 80;
+const FILE_TREE_SEARCH_RESULT_LIMIT = 500;
 const getFileTreeRowId = (path: string) => `file-tree-row-${path.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 
 function FileExplorerTreeComponent({
@@ -149,6 +153,7 @@ function FileExplorerTreeComponent({
   const [hasTreeFocus, setHasTreeFocus] = useState(false);
   const [treeSearchOpen, setTreeSearchOpen] = useState(false);
   const [treeSearchQuery, setTreeSearchQuery] = useState("");
+  const [debouncedTreeSearchQuery] = useDebounce(treeSearchQuery, FILE_TREE_SEARCH_DEBOUNCE_DELAY);
   const [isFileTreeFilterMenuOpen, setIsFileTreeFilterMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -367,13 +372,30 @@ function FileExplorerTreeComponent({
     revealPathInTree,
   });
 
-  const treeSearchResult = useMemo(
-    () => filterFileTreeForSearch(filteredFiles, treeSearchQuery),
-    [filteredFiles, treeSearchQuery],
-  );
   const isTreeSearchActive = treeSearchQuery.trim().length > 0;
-  const displayedFiles = isTreeSearchActive ? treeSearchResult.files : filteredFiles;
-  const displayedExpandedPaths = isTreeSearchActive ? treeSearchResult.expandedPaths : undefined;
+  const isDebouncedTreeSearchActive = debouncedTreeSearchQuery.trim().length > 0;
+  const { hits: treeSearchHits, isSearching: isFffTreeSearchSearching } = useFffSearch(
+    debouncedTreeSearchQuery,
+    isDebouncedTreeSearchActive,
+    rootFolderPath,
+    FILE_TREE_SEARCH_RESULT_LIMIT,
+  );
+  const isTreeSearchSettling =
+    isTreeSearchActive && treeSearchQuery.trim() !== debouncedTreeSearchQuery.trim();
+  const isTreeSearchSearching =
+    isTreeSearchActive && (isTreeSearchSettling || isFffTreeSearchSearching);
+  const treeSearchResult = useMemo(
+    () => filterFileTreeForFffHits(filteredFiles, treeSearchHits),
+    [filteredFiles, treeSearchHits],
+  );
+  const displayedFiles =
+    isTreeSearchActive && !isTreeSearchSearching
+      ? treeSearchResult.files
+      : isTreeSearchActive
+        ? []
+        : filteredFiles;
+  const displayedExpandedPaths =
+    isTreeSearchActive && !isTreeSearchSearching ? treeSearchResult.expandedPaths : undefined;
   const hasActiveFileTreeFilters =
     !settings.showHiddenFilesInFileTree ||
     !settings.showGitignoredFilesInFileTree ||
@@ -458,8 +480,8 @@ function FileExplorerTreeComponent({
     (direction: 1 | -1) => {
       if (!isTreeSearchActive || treeSearchResult.matchedPaths.size === 0) return;
 
-      const matchIndexes = visibleRows
-        .map((row, index) => (treeSearchResult.matchedPaths.has(row.file.path) ? index : -1))
+      const matchIndexes = treeSearchResult.orderedMatchedPaths
+        .map((path) => visibleRows.findIndex((row) => row.file.path === path))
         .filter((index) => index >= 0);
 
       if (matchIndexes.length === 0) return;
@@ -477,16 +499,24 @@ function FileExplorerTreeComponent({
         rowVirtualizer.scrollToIndex(nextIndex, { align: "auto" });
       }
     },
-    [isTreeSearchActive, keyboardPath, rowVirtualizer, treeSearchResult.matchedPaths, visibleRows],
+    [
+      isTreeSearchActive,
+      keyboardPath,
+      rowVirtualizer,
+      treeSearchResult.matchedPaths,
+      treeSearchResult.orderedMatchedPaths,
+      visibleRows,
+    ],
   );
 
   useEffect(() => {
     if (!isTreeSearchActive || treeSearchResult.matchedPaths.size === 0) return;
     if (keyboardPath && treeSearchResult.matchedPaths.has(keyboardPath)) return;
 
-    const firstMatchIndex = visibleRows.findIndex((row) =>
-      treeSearchResult.matchedPaths.has(row.file.path),
-    );
+    const firstMatchIndex =
+      treeSearchResult.orderedMatchedPaths
+        .map((path) => visibleRows.findIndex((row) => row.file.path === path))
+        .find((index) => index >= 0) ?? -1;
     const firstMatchPath = visibleRows[firstMatchIndex]?.file.path;
 
     if (!firstMatchPath) return;
@@ -498,6 +528,7 @@ function FileExplorerTreeComponent({
     keyboardPath,
     rowVirtualizer,
     treeSearchResult.matchedPaths,
+    treeSearchResult.orderedMatchedPaths,
     visibleRows,
   ]);
 
@@ -1199,7 +1230,13 @@ function FileExplorerTreeComponent({
       ) : displayedFiles.length === 0 ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <SidebarEmptyActionState
-            message={isTreeSearchActive ? "No matching files" : "Folder is empty"}
+            message={
+              isTreeSearchSearching
+                ? "Searching files"
+                : isTreeSearchActive
+                  ? "No matching files"
+                  : "Folder is empty"
+            }
           />
         </div>
       ) : (

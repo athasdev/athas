@@ -1,5 +1,4 @@
 import type { FileEntry } from "@/features/file-system/types/app";
-import { matchesSearchQuery } from "@/utils/search-match";
 
 export interface VisibleFileTreeRow {
   file: FileEntry;
@@ -16,7 +15,12 @@ export interface FilterFileTreeForSearchResult {
   files: FileEntry[];
   expandedPaths: Set<string>;
   matchedPaths: Set<string>;
+  orderedMatchedPaths: string[];
   matchCount: number;
+}
+
+export interface FileTreeSearchHit {
+  path: string;
 }
 
 function getCompactFolderChild(item: FileEntry): FileEntry | null {
@@ -77,19 +81,28 @@ export function buildVisibleFileTreeRows(
   return rows;
 }
 
-export function filterFileTreeForSearch(
+function normalizeSearchPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  if (normalized === "/") return normalized;
+  return normalized.replace(/\/+$/g, "");
+}
+
+export function filterFileTreeForFffHits(
   files: FileEntry[],
-  query: string,
+  hits: readonly FileTreeSearchHit[],
 ): FilterFileTreeForSearchResult {
-  const trimmedQuery = query.trim();
   const expandedPaths = new Set<string>();
   const matchedPaths = new Set<string>();
+  const hitPaths = hits.map((hit) => normalizeSearchPath(hit.path));
+  const hitPathSet = new Set(hitPaths);
+  const matchedTreePathByHitPath = new Map<string, string>();
 
-  if (!trimmedQuery) {
+  if (hitPathSet.size === 0) {
     return {
-      files,
+      files: [],
       expandedPaths,
       matchedPaths,
+      orderedMatchedPaths: [],
       matchCount: 0,
     };
   }
@@ -97,7 +110,8 @@ export function filterFileTreeForSearch(
   const walk = (items: FileEntry[]): FileEntry[] =>
     items.flatMap((item) => {
       const matchingChildren = item.children ? walk(item.children) : [];
-      const isMatch = matchesSearchQuery(trimmedQuery, [item.name]);
+      const normalizedPath = normalizeSearchPath(item.path);
+      const isMatch = hitPathSet.has(normalizedPath);
 
       if (!isMatch && matchingChildren.length === 0) {
         return [];
@@ -105,6 +119,7 @@ export function filterFileTreeForSearch(
 
       if (isMatch) {
         matchedPaths.add(item.path);
+        matchedTreePathByHitPath.set(normalizedPath, item.path);
       }
 
       if (item.isDir && matchingChildren.length > 0) {
@@ -120,11 +135,21 @@ export function filterFileTreeForSearch(
     });
 
   const filteredFiles = walk(files);
+  const orderedMatchedPaths: string[] = [];
+  const seenOrderedPaths = new Set<string>();
+
+  for (const hitPath of hitPaths) {
+    const treePath = matchedTreePathByHitPath.get(hitPath);
+    if (!treePath || seenOrderedPaths.has(treePath)) continue;
+    seenOrderedPaths.add(treePath);
+    orderedMatchedPaths.push(treePath);
+  }
 
   return {
     files: filteredFiles,
     expandedPaths,
     matchedPaths,
+    orderedMatchedPaths,
     matchCount: matchedPaths.size,
   };
 }
