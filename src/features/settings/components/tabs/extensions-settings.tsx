@@ -15,6 +15,10 @@ import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry"
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import {
+  getManifestDatabaseContributions,
+  getManifestIconContributions,
+} from "@/extensions/types/extension-contributions";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import {
   createSkillFromMarketplace,
@@ -340,8 +344,9 @@ export const ExtensionsSettings = () => {
         });
       }
 
-      if (ext.manifest.databaseProviders && ext.manifest.databaseProviders.length > 0) {
-        const provider = ext.manifest.databaseProviders[0];
+      const databaseContributions = getManifestDatabaseContributions(ext.manifest);
+      if (databaseContributions.length > 0) {
+        const provider = databaseContributions[0];
         const isBuiltInDatabase = isBuiltInDatabaseProvider(provider.id);
         allExtensions.push({
           id: ext.manifest.id,
@@ -377,7 +382,8 @@ export const ExtensionsSettings = () => {
         });
       }
 
-      if (ext.manifest.iconThemes && ext.manifest.iconThemes.length > 0) {
+      const iconContributions = getManifestIconContributions(ext.manifest);
+      if (iconContributions.length > 0) {
         allExtensions.push({
           id: ext.manifest.id,
           name: ext.manifest.displayName,
@@ -390,7 +396,7 @@ export const ExtensionsSettings = () => {
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
-          contributionSummary: ext.manifest.iconThemes.map((theme) => `icon-theme:${theme.id}`),
+          contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
         });
       }
     }

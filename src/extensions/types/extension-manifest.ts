@@ -38,6 +38,7 @@ export interface ExtensionManifest {
   languages?: LanguageContribution[];
 
   // Database provider sidecars
+  databases?: DatabaseProviderContribution[];
   databaseProviders?: DatabaseProviderContribution[];
 
   // ACP agent contributions
@@ -47,6 +48,7 @@ export interface ExtensionManifest {
   themes?: ThemeContribution[];
 
   // File icon theme contributions
+  icons?: IconThemeContribution[];
   iconThemes?: IconThemeContribution[];
 
   // LSP configuration
@@ -446,11 +448,13 @@ export interface PlatformPackage {
 
 export interface UIContributions {
   languages?: LanguageContribution[];
+  databases?: DatabaseProviderContribution[];
   databaseProviders?: DatabaseProviderContribution[];
   agents?: AgentContribution[];
   grammars?: GrammarConfiguration[];
   snippets?: SnippetContribution[];
   themes?: ThemeContribution[];
+  icons?: IconThemeContribution[];
   iconThemes?: IconThemeContribution[];
   keybindings?: KeybindingContribution[];
   commands?: CommandContribution[];

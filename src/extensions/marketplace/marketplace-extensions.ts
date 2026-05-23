@@ -1,4 +1,8 @@
 import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
+import {
+  getManifestDatabaseContributions,
+  getManifestIconContributions,
+} from "../types/extension-contributions";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
 const ATHAS_EXTENSIONS_CDN_PREFIX = "https://athas.dev/extensions";
@@ -45,14 +49,12 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
 
 function isContributionExtension(manifest: ExtensionManifest): boolean {
   return Boolean(
-    manifest.databaseProviders?.length ||
-    manifest.contributes?.databaseProviders?.length ||
+    getManifestDatabaseContributions(manifest).length ||
     manifest.agents?.length ||
     manifest.contributes?.agents?.length ||
     manifest.themes?.length ||
     manifest.contributes?.themes?.length ||
-    manifest.iconThemes?.length ||
-    manifest.contributes?.iconThemes?.length,
+    getManifestIconContributions(manifest).length,
   );
 }
 

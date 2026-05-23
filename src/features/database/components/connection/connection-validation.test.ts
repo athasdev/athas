@@ -8,21 +8,21 @@ describe("database connection validation", () => {
         "athas.database.redis",
         {
           isInstalled: true,
-          manifest: { databaseProviders: [{ id: "redis", protocolVersion: 1 }] },
+          manifest: { databases: [{ id: "redis", protocolVersion: 1 }] },
         },
       ],
       [
         "athas.database.postgres",
         {
           isInstalled: true,
-          manifest: { databaseProviders: [{ id: " postgres ", protocolVersion: 1 }] },
+          manifest: { databases: [{ id: " postgres ", protocolVersion: 1 }] },
         },
       ],
       [
         "athas.database.mysql",
         {
           isInstalled: false,
-          manifest: { databaseProviders: [{ id: "mysql", protocolVersion: 1 }] },
+          manifest: { databases: [{ id: "mysql", protocolVersion: 1 }] },
         },
       ],
     ]);
@@ -43,21 +43,21 @@ describe("database connection validation", () => {
         "athas.database.sqlite",
         {
           isInstalled: true,
-          manifest: { databaseProviders: [{ id: "sqlite" }] },
+          manifest: { databases: [{ id: "sqlite" }] },
         },
       ],
       [
         "athas.database.postgres",
         {
           isInstalled: true,
-          manifest: { databaseProviders: [{ id: "postgres", protocolVersion: 2 }] },
+          manifest: { databases: [{ id: "postgres", protocolVersion: 2 }] },
         },
       ],
       [
         "athas.database.redis",
         {
           isInstalled: true,
-          manifest: { databaseProviders: [{ id: "redis", protocolVersion: 1 }] },
+          manifest: { databases: [{ id: "redis", protocolVersion: 1 }] },
         },
       ],
     ]);

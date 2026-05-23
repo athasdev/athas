@@ -1,6 +1,8 @@
 import type {
   CommandContribution,
+  DatabaseProviderContribution,
   ExtensionManifest,
+  IconThemeContribution,
   KeybindingContribution,
   LanguageContribution,
   Snippet,
@@ -71,6 +73,26 @@ export function getManifestSnippetContributions(
   manifest: ExtensionManifest,
 ): SnippetContribution[] {
   return [...(manifest.snippets || []), ...(manifest.contributes?.snippets || [])];
+}
+
+export function getManifestDatabaseContributions(
+  manifest: ExtensionManifest,
+): DatabaseProviderContribution[] {
+  return [
+    ...(manifest.databases || []),
+    ...(manifest.databaseProviders || []),
+    ...(manifest.contributes?.databases || []),
+    ...(manifest.contributes?.databaseProviders || []),
+  ];
+}
+
+export function getManifestIconContributions(manifest: ExtensionManifest): IconThemeContribution[] {
+  return [
+    ...(manifest.icons || []),
+    ...(manifest.iconThemes || []),
+    ...(manifest.contributes?.icons || []),
+    ...(manifest.contributes?.iconThemes || []),
+  ];
 }
 
 export function getManifestInlineSnippets(manifest: ExtensionManifest): Array<{

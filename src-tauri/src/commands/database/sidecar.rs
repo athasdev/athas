@@ -16,7 +16,7 @@ const DATABASE_SIDECAR_PROTOCOL_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize)]
 struct ExtensionManifest {
-   #[serde(rename = "databaseProviders", default)]
+   #[serde(rename = "databases", alias = "databaseProviders", default)]
    database_providers: Vec<DatabaseProviderContribution>,
 }
 

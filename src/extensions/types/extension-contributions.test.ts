@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ExtensionManifest } from "./extension-manifest";
 import {
+  getManifestDatabaseContributions,
+  getManifestIconContributions,
   getManifestActivationEvents,
   getManifestLanguageContributions,
   matchesLanguageContribution,
@@ -75,5 +77,41 @@ describe("extension contribution normalization", () => {
         extensions: [".svelte"],
       }),
     ).toBe(false);
+  });
+
+  it("reads database contributions from the new databases field", () => {
+    const manifest = createManifest({
+      categories: ["Database"],
+      databases: [
+        {
+          id: "duckdb",
+          label: "DuckDB",
+          isFileBased: true,
+          protocolVersion: 1,
+          sidecar: { "darwin-arm64": "bin/athas-db-duckdb" },
+        },
+      ],
+    });
+
+    expect(getManifestDatabaseContributions(manifest).map((database) => database.id)).toEqual([
+      "duckdb",
+    ]);
+  });
+
+  it("reads icon contributions from the new icons field", () => {
+    const manifest = createManifest({
+      categories: ["Icon Theme"],
+      contributes: {
+        icons: [
+          {
+            id: "market",
+            name: "Market",
+            iconDefinitions: {},
+          },
+        ],
+      },
+    });
+
+    expect(getManifestIconContributions(manifest).map((icon) => icon.id)).toEqual(["market"]);
   });
 });

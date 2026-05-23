@@ -11,7 +11,10 @@ const CONNECTION_DB_TYPES: DatabaseType[] = [
 
 export interface DatabaseExtensionAvailability {
   isInstalled?: boolean;
-  manifest: { databaseProviders?: Array<{ id: string; protocolVersion?: number }> };
+  manifest: {
+    databases?: Array<{ id: string; protocolVersion?: number }>;
+    databaseProviders?: Array<{ id: string; protocolVersion?: number }>;
+  };
 }
 
 export interface ConnectionValidationInput {

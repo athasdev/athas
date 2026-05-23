@@ -5,13 +5,14 @@ import type { IconThemeDefinition } from "../icon-themes/types";
 import { themeRegistry } from "../themes/theme-registry";
 import type { ThemeDefinition } from "../themes/types";
 import type { ExtensionManifest } from "../types/extension-manifest";
+import { getManifestIconContributions } from "../types/extension-contributions";
 
 function getThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
   return [...(manifest.themes ?? []), ...(manifest.contributes?.themes ?? [])];
 }
 
 function getIconThemeContributions(manifest: ExtensionManifest): IconThemeContribution[] {
-  return [...(manifest.iconThemes ?? []), ...(manifest.contributes?.iconThemes ?? [])];
+  return getManifestIconContributions(manifest);
 }
 
 function toCssVariables(colors: Record<string, string>): Record<string, string> {
