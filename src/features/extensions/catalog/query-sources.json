@@ -1,0 +1,15 @@
+{
+  "rust": {
+    "repository": "tree-sitter/tree-sitter-rust",
+    "revision": "v0.20.4",
+    "queryPath": "queries/highlights.scm",
+    "targetPath": "official/rust/highlights.scm",
+    "overridePath": "official/rust/highlights.override.scm",
+    "replacements": [
+      {
+        "find": "(#match? @constant \"^[A-Z][A-Z\\\\d_]+$'\"))",
+        "replace": "(#match? @constant \"^[A-Z][A-Z\\\\d_]+$\"))"
+      }
+    ]
+  }
+}

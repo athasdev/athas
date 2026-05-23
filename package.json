@@ -44,7 +44,16 @@
     "release:major": "bun scripts/release.ts stable major",
     "release:preview:patch": "bun scripts/release.ts preview patch",
     "release:preview:minor": "bun scripts/release.ts preview minor",
-    "release:preview:major": "bun scripts/release.ts preview major"
+    "release:preview:major": "bun scripts/release.ts preview major",
+    "extensions:stage": "bun src/features/extensions/scripts/stage-cdn-assets.ts",
+    "extensions:package": "bun src/features/extensions/scripts/package-extensions.ts",
+    "extensions:package:databases": "bun src/features/extensions/scripts/package-database-sidecars.ts",
+    "extensions:catalog": "bun src/features/extensions/scripts/build-extensions-index.ts && bun src/features/extensions/scripts/generate-manifests.ts",
+    "extensions:prepare": "bun run extensions:package && bun run extensions:stage && bun run extensions:catalog",
+    "extensions:validate": "bun src/features/extensions/scripts/validate.ts",
+    "extensions:index:check": "bun src/features/extensions/scripts/build-extensions-index.ts --check",
+    "extensions:verify-cdn": "bun src/features/extensions/scripts/verify-installable-packages.ts",
+    "extensions:deploy": "bun src/features/extensions/scripts/deploy-extensions-cdn.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
