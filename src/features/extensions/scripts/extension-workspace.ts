@@ -1,9 +1,6 @@
-import { createGzip } from "node:zlib";
-import { createWriteStream } from "node:fs";
+import { gzipSync } from "node:zlib";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
 
 export type ExtensionManifestRecord = Record<string, unknown>;
 
@@ -212,7 +209,7 @@ export async function writeStableTarGz(root: string, packagePath: string) {
   }
 
   chunks.push(Buffer.alloc(1024, 0));
-  const output = createWriteStream(packagePath);
-  const gzip = createGzip({ level: 9 });
-  await pipeline(Readable.from(chunks), gzip, output);
+  const gzipped = gzipSync(Buffer.concat(chunks), { level: 9 });
+  gzipped[9] = 255;
+  await writeFile(packagePath, gzipped);
 }
