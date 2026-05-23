@@ -1,0 +1,46 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.css",
+  "name": "CSS",
+  "displayName": "CSS",
+  "version": "1.0.0",
+  "description": "CSS, SCSS, SASS, and Less language support with LSP and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "css",
+      "extensions": [".css"],
+      "aliases": ["CSS"]
+    },
+    {
+      "id": "scss",
+      "extensions": [".scss"],
+      "aliases": ["SCSS"]
+    },
+    {
+      "id": "sass",
+      "extensions": [".sass"],
+      "aliases": ["Sass"]
+    },
+    {
+      "id": "less",
+      "extensions": [".less"],
+      "aliases": ["Less"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "vscode-css-language-server",
+      "runtime": "bun",
+      "package": "vscode-langservers-extracted",
+      "args": ["--stdio"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": ["--stdin-filepath", "${file}"]
+    }
+  }
+}

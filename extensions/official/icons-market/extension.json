@@ -1,0 +1,63 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.icon-theme.market",
+  "name": "Athas File Icons",
+  "displayName": "Athas File Icons",
+  "version": "1.0.0",
+  "description": "Official file and folder icons for Athas.",
+  "publisher": "Athas",
+  "categories": ["Icon Theme"],
+  "activationEvents": ["onIconTheme:market-icons"],
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/market/athas.icon-theme.market.tar.gz",
+    "size": 1325,
+    "checksum": "c60ac2bfa9d89b60ceff84dcd0fe6021e08c6c562094571b66e3d7286a52fdd5"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/icons-market"
+  },
+  "icon": "icon.svg",
+  "icons": [
+    {
+      "id": "market-icons",
+      "name": "Athas File Icons",
+      "description": "Colorful file and folder icons for Athas.",
+      "iconDefinitions": {
+        "file": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#64748b\" d=\"M6 2h8l4 4v16H6z\"/><path fill=\"#cbd5e1\" d=\"M14 2v5h4z\"/></svg>",
+        "folder": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#f59e0b\" d=\"M3 6h7l2 2h9v11H3z\"/></svg>",
+        "folderOpen": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#fbbf24\" d=\"M3 7h7l2 2h9l-2 10H4z\"/></svg>",
+        "typescript": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><rect width=\"20\" height=\"20\" x=\"2\" y=\"2\" rx=\"3\" fill=\"#3178c6\"/><path fill=\"#fff\" d=\"M6 8h10v2h-4v8h-2v-8H6z\"/></svg>",
+        "react": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"2\" fill=\"#61dafb\"/><g fill=\"none\" stroke=\"#61dafb\"><ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"3.5\"/><ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"3.5\" transform=\"rotate(60 12 12)\"/><ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"3.5\" transform=\"rotate(120 12 12)\"/></g></svg>",
+        "json": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><rect width=\"20\" height=\"20\" x=\"2\" y=\"2\" rx=\"3\" fill=\"#f59e0b\"/><path fill=\"#fff\" d=\"M8 8h2v8H8zm6 0h2v8h-2z\"/></svg>",
+        "markdown": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" fill=\"#475569\"/><path fill=\"#fff\" d=\"M5 8h2l2 3 2-3h2v8h-2v-5l-2 3-2-3v5H5zm11 0h2v5h2l-3 3-3-3h2z\"/></svg>"
+      },
+      "fileExtensions": {
+        ".ts": "typescript",
+        ".tsx": "react",
+        ".jsx": "react",
+        ".json": "json",
+        ".md": "markdown",
+        ".mdx": "markdown"
+      },
+      "filenames": {
+        "package.json": "json",
+        "tsconfig.json": "json"
+      },
+      "folders": {
+        "src": "folder",
+        "components": "folder",
+        "features": "folder"
+      },
+      "expandedFolders": {
+        "src": "folderOpen",
+        "components": "folderOpen",
+        "features": "folderOpen"
+      },
+      "defaultFile": "file",
+      "defaultFolder": "folder",
+      "defaultFolderOpen": "folderOpen"
+    }
+  ]
+}

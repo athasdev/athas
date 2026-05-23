@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.agent.gemini-cli",
+  "name": "Gemini CLI",
+  "displayName": "Gemini CLI",
+  "description": "Google's Gemini command-line agent with native ACP support.",
+  "version": "1.0.0",
+  "publisher": "Google",
+  "categories": ["Agent"],
+  "agents": [
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "binaryName": "gemini",
+      "description": "Google's Gemini command-line agent with native ACP support.",
+      "args": ["--experimental-acp"],
+      "install": {
+        "runtime": "node",
+        "package": "@google/gemini-cli",
+        "command": "gemini"
+      }
+    }
+  ]
+}

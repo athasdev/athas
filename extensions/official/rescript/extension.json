@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.rescript",
+  "name": "ReScript",
+  "displayName": "ReScript",
+  "version": "1.0.0",
+  "description": "ReScript language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "rescript",
+      "extensions": [".res", ".resi"],
+      "aliases": ["ReScript", "rescript"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "rescript-language-server",
+      "runtime": "binary",
+      "args": ["--stdio"]
+    }
+  }
+}

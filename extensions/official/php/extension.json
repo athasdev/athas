@@ -1,0 +1,35 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.php",
+  "name": "PHP",
+  "displayName": "PHP",
+  "version": "1.0.0",
+  "description": "PHP language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "php",
+      "extensions": [
+        ".php",
+        ".phtml",
+        ".php3",
+        ".php4",
+        ".php5",
+        ".php7",
+        ".php8",
+        ".phar",
+        ".phps"
+      ],
+      "aliases": ["PHP", "php"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "intelephense",
+      "runtime": "bun",
+      "package": "intelephense",
+      "args": ["--stdio"]
+    }
+  }
+}

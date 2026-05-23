@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SQLite">
+  <rect width="64" height="64" rx="12" fill="#2563eb"/>
+  <path d="M18 18h28v28H18z" fill="none" stroke="#fff" stroke-width="4"/>
+  <path d="M24 28h16M24 36h16" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>

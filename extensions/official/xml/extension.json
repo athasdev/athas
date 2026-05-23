@@ -1,0 +1,32 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.xml",
+  "name": "XML",
+  "displayName": "XML",
+  "version": "1.0.0",
+  "description": "XML and SVG language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "xml",
+      "extensions": [
+        ".xml",
+        ".xsl",
+        ".xslt",
+        ".xsd",
+        ".dtd",
+        ".wsdl",
+        ".plist",
+        ".svg",
+        ".csproj",
+        ".vbproj",
+        ".fsproj",
+        ".props",
+        ".targets"
+      ],
+      "aliases": ["XML", "xml"],
+      "filenames": [".xml"]
+    }
+  ]
+}

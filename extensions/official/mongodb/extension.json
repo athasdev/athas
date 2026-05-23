@@ -1,0 +1,45 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.database.mongodb",
+  "name": "MongoDB",
+  "displayName": "MongoDB Provider",
+  "version": "1.0.0",
+  "description": "MongoDB connection, collection, and document provider.",
+  "publisher": "Athas",
+  "categories": ["Database"],
+  "activationEvents": ["onDatabase:mongodb"],
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/database/mongodb/darwin-arm64.tar.gz",
+    "size": 3501533,
+    "checksum": "be8850f287cc83fd4da733e551019e5ffbd1b646d23d16198383451f3a888432",
+    "platformArch": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/database/mongodb/darwin-arm64.tar.gz",
+        "size": 3501533,
+        "checksum": "be8850f287cc83fd4da733e551019e5ffbd1b646d23d16198383451f3a888432"
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mongodb"
+  },
+  "icon": "icon.svg",
+  "databases": [
+    {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 27017,
+      "sidecar": {
+        "darwin-arm64": "bin/athas-db-mongodb",
+        "darwin-x64": "bin/athas-db-mongodb",
+        "linux-arm64": "bin/athas-db-mongodb",
+        "linux-x64": "bin/athas-db-mongodb",
+        "win32-x64": "bin/athas-db-mongodb.exe"
+      }
+    }
+  ]
+}

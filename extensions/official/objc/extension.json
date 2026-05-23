@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.objc",
+  "name": "ObjectiveC",
+  "displayName": "Objective-C",
+  "version": "1.0.0",
+  "description": "Objective-C language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "objc",
+      "extensions": [".m", ".mm", ".h"],
+      "aliases": ["Objective-C", "ObjC", "objc"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "clangd",
+      "runtime": "binary",
+      "args": ["--background-index"]
+    }
+  }
+}

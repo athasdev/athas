@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.graphql",
+  "name": "GraphQL",
+  "displayName": "GraphQL",
+  "version": "1.0.0",
+  "description": "GraphQL language support with LSP and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "graphql",
+      "extensions": [".graphql", ".gql"],
+      "aliases": ["GraphQL", "gql"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "graphql-lsp",
+      "runtime": "bun",
+      "package": "graphql-language-service-cli",
+      "args": ["server", "-m", "stream"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": ["--parser", "graphql", "--stdin-filepath", "${file}"]
+    }
+  }
+}

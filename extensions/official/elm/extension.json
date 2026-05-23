@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.elm",
+  "name": "Elm",
+  "displayName": "Elm",
+  "version": "1.0.0",
+  "description": "Elm language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "elm",
+      "extensions": [".elm"],
+      "aliases": ["Elm"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "elm-language-server",
+      "runtime": "binary",
+      "args": ["--stdio"]
+    }
+  }
+}

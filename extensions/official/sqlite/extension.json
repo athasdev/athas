@@ -1,0 +1,45 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.database.sqlite",
+  "name": "SQLite",
+  "displayName": "SQLite Provider",
+  "version": "1.0.0",
+  "description": "SQLite database browser and query provider.",
+  "publisher": "Athas",
+  "categories": ["Database"],
+  "activationEvents": ["onDatabase:sqlite"],
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/database/sqlite/darwin-arm64.tar.gz",
+    "size": 1238311,
+    "checksum": "16b0b2618818afc091471e97ee9ba7dc25eee69f2e663155f2127fb54e4177b0",
+    "platformArch": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/database/sqlite/darwin-arm64.tar.gz",
+        "size": 1238311,
+        "checksum": "16b0b2618818afc091471e97ee9ba7dc25eee69f2e663155f2127fb54e4177b0"
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/sqlite"
+  },
+  "icon": "icon.svg",
+  "databases": [
+    {
+      "id": "sqlite",
+      "label": "SQLite",
+      "isFileBased": true,
+      "protocolVersion": 1,
+      "fileExtensions": [".sqlite", ".db", ".sqlite3"],
+      "sidecar": {
+        "darwin-arm64": "bin/athas-db-sqlite",
+        "darwin-x64": "bin/athas-db-sqlite",
+        "linux-arm64": "bin/athas-db-sqlite",
+        "linux-x64": "bin/athas-db-sqlite",
+        "win32-x64": "bin/athas-db-sqlite.exe"
+      }
+    }
+  ]
+}

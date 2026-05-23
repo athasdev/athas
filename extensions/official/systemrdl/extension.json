@@ -1,0 +1,17 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.systemrdl",
+  "name": "SystemRDL",
+  "displayName": "SystemRDL",
+  "version": "1.0.0",
+  "description": "SystemRDL language support",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "systemrdl",
+      "extensions": [".rdl"],
+      "aliases": ["SystemRDL", "systemrdl"]
+    }
+  ]
+}
