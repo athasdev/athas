@@ -12,6 +12,7 @@ import {
   getGeneratedCdnPath,
   listExtensionFolders,
   writeExtensionManifest,
+  writeStableTarGz,
 } from "./extension-workspace";
 
 const cdnBaseUrl = process.env.EXTENSIONS_CDN_BASE_URL || "https://athas.dev/extensions";
@@ -48,10 +49,7 @@ async function createStablePackage(
       `${JSON.stringify(packagedManifest, null, 2)}\n`,
     );
 
-    await $`find ${tempDir} -exec touch -t 202001010000 {} +`;
-    await $`find . -type f -print | LC_ALL=C sort | tar --no-xattrs --owner=0 --group=0 --numeric-owner -cf - -C ${tempDir} -T - | gzip -n > ${packagePath}`.cwd(
-      tempDir,
-    );
+    await writeStableTarGz(tempDir, packagePath);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

@@ -10,8 +10,8 @@
   "activationEvents": ["onIconTheme:market-icons"],
   "installation": {
     "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/market/athas.icon-theme.market.tar.gz",
-    "size": 1325,
-    "checksum": "c60ac2bfa9d89b60ceff84dcd0fe6021e08c6c562094571b66e3d7286a52fdd5"
+    "size": 1161,
+    "checksum": "063f10fe0faeb317c15f386c5440360f2803057070f9d3a4cda3b4c145a64d5e"
   },
   "license": "MIT",
   "repository": {

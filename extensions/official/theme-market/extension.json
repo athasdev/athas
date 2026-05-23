@@ -146,8 +146,8 @@
   ],
   "installation": {
     "downloadUrl": "https://athas.dev/extensions/packages/theme/market/athas.theme.market.tar.gz",
-    "size": 1756,
-    "checksum": "eef547f490c83628a8fa1bd0e45d521e4bcb0c782ecbc807bb5ed2651ea90f5d"
+    "size": 1567,
+    "checksum": "c82ff12c6bfaa3fb54a1fe3540ca9e454b8024828a71bebefba3624df4167a38"
   },
   "license": "MIT",
   "repository": {
