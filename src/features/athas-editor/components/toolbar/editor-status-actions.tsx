@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
@@ -81,6 +82,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const { rootFolderPath } = useFileSystemStore();
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
   const { settings, updateSetting } = useSettingsStore();
+  const minimapShortcut = useCommandShortcut("workbench.toggleMinimap");
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
@@ -277,7 +279,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       id: "minimap",
       label: "Minimap",
       checked: settings.showMinimap,
-      shortcut: ["Cmd", "Shift", "M"],
+      shortcut: minimapShortcut,
       onToggle: () => updateSetting("showMinimap", !settings.showMinimap),
     },
     {
@@ -584,7 +586,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 <span>{option.label}</span>
                 <span className="flex items-center gap-2">
                   {option.shortcut ? (
-                    <Keybinding keys={option.shortcut} className="shrink-0" />
+                    <Keybinding binding={option.shortcut} className="shrink-0" />
                   ) : null}
                   <span className="flex size-4 items-center justify-center">
                     {option.checked ? <Check className="text-accent" /> : null}
