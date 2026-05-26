@@ -40,15 +40,22 @@ const jsxCompilerOptions = {
   jsx: typescript.JsxEmit.Preserve,
 } satisfies typescript.CompilerOptions;
 
+const lspOwnedDiagnosticsOptions = {
+  noSemanticValidation: true,
+  noSuggestionDiagnostics: true,
+} satisfies typescript.DiagnosticsOptions;
+
 typescript.typescriptDefaults.setCompilerOptions({
   ...typescript.typescriptDefaults.getCompilerOptions(),
   ...jsxCompilerOptions,
 });
+typescript.typescriptDefaults.setDiagnosticsOptions(lspOwnedDiagnosticsOptions);
 
 typescript.javascriptDefaults.setCompilerOptions({
   ...typescript.javascriptDefaults.getCompilerOptions(),
   ...jsxCompilerOptions,
 });
+typescript.javascriptDefaults.setDiagnosticsOptions(lspOwnedDiagnosticsOptions);
 
 function ensureLanguage(id: string, extensions: string[], aliases: string[], filenames?: string[]) {
   if (languages.getLanguages().some((language) => language.id === id)) return;

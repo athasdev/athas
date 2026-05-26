@@ -463,10 +463,10 @@ function gh(args, options = {}) {
 }
 
 function getRemoteReleases(repo, tag) {
-  const output = gh(["api", `/repos/${repo}/releases?per_page=100`, "--paginate", "--slurp"]);
+  const output = gh(["release", "list", "--repo", repo, "--limit", "1000", "--json", "tagName"]);
   return JSON.parse(output)
-    .flat()
-    .filter((release) => release.tag_name === tag);
+    .filter((release) => release.tagName === tag)
+    .map((release) => ({ tag_name: release.tagName }));
 }
 
 function getRemoteRelease(repo, tag) {
