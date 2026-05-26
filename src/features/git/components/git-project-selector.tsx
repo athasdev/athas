@@ -1,14 +1,14 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   CaretDown,
-  CaretRight,
   Check,
   FolderOpen,
   Plus,
   ArrowClockwise as RefreshCw,
 } from "@phosphor-icons/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
+import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
@@ -53,7 +53,8 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
     clearManualRepository,
     refreshWorkspaceRepositories,
   } = useRepositoryStore.use.actions();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
@@ -62,10 +63,18 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
     () => getFilteredRepositoryPaths(availableRepoPaths, activeRepoPath, query),
     [activeRepoPath, availableRepoPaths, query],
   );
+  const activeRelativePath =
+    activeRepoPath && workspaceRootPath ? getRelativePath(activeRepoPath, workspaceRootPath) : null;
+  const activeRepoLabel = activeRepoPath ? getFolderName(activeRepoPath) : "Select Repository";
+  const activeRepoTitle =
+    activeRepoPath && activeRelativePath && activeRelativePath !== "."
+      ? activeRelativePath
+      : activeRepoPath;
 
   const handleSelectRepositoryPath = (repoPath: string) => {
     selectRepository(repoPath);
     setSelectionError(null);
+    setIsOpen(false);
     onRepositoryChange?.(repoPath);
   };
 
@@ -84,7 +93,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
       }
 
       setManualRepository(resolvedRepoPath);
-      setIsExpanded(true);
+      setIsOpen(false);
       onRepositoryChange?.(resolvedRepoPath);
     } catch (error) {
       console.error("Failed to select repository:", error);
@@ -103,46 +112,54 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
   return (
     <div className={cn("min-w-0 shrink-0", className)}>
       <button
+        ref={triggerRef}
         type="button"
-        className="ui-font flex h-7 w-full items-center gap-1.5 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
-        aria-expanded={isExpanded}
-        onClick={() => setIsExpanded((expanded) => !expanded)}
+        className="ui-font flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-secondary-bg/45 px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        title={activeRepoTitle ?? undefined}
+        onClick={() => setIsOpen((open) => !open)}
       >
-        {isExpanded ? (
-          <CaretDown className="size-3.5 shrink-0" />
-        ) : (
-          <CaretRight className="size-3.5 shrink-0" />
-        )}
         <FolderOpen className="size-3.5 shrink-0" />
-        <span className="ui-text-sm min-w-0 flex-1 truncate text-text">Repositories</span>
+        <span className="ui-text-sm min-w-0 flex-1 truncate text-text">{activeRepoLabel}</span>
         <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
           {availableRepoPaths.length}
         </span>
+        <CaretDown
+          className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-180")}
+        />
       </button>
 
-      {isExpanded ? (
-        <div className="mt-1 flex min-w-0 flex-col gap-1">
-          {availableRepoPaths.length > 6 ? (
+      <Dropdown
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        anchorRef={triggerRef}
+        anchorAlign="start"
+        className="w-[min(360px,calc(100vw-16px))]"
+        closeOnSelect={false}
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="px-1 pb-1">
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               variant="ghost"
               size="xs"
               placeholder="Filter repositories"
-              className="h-6 rounded-md border-transparent bg-transparent"
+              className="h-7 rounded-md border-transparent bg-transparent"
             />
-          ) : null}
+          </div>
 
-          <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="scrollbar-none flex max-h-60 min-w-0 flex-col gap-0.5 overflow-y-auto">
             {isDiscovering && availableRepoPaths.length === 0 ? (
-              <div className="ui-text-xs flex h-7 items-center gap-2 px-2 text-text-lighter">
+              <div className="ui-text-xs flex h-8 items-center gap-2 px-2 text-text-lighter">
                 <LoadingIndicator label="Detecting repositories" compact />
                 Detecting repositories
               </div>
             ) : null}
 
             {!isDiscovering && filteredRepoPaths.length === 0 ? (
-              <div className="ui-text-xs px-2 py-1.5 text-text-lighter">
+              <div className="ui-text-xs px-2 py-2 text-text-lighter">
                 {query.trim() ? "No matching repositories" : "No repositories found"}
               </div>
             ) : null}
@@ -159,7 +176,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             ))}
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-center gap-1 px-1 pt-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1 border-border/60 border-t px-1 pt-1">
             <Button
               type="button"
               variant="ghost"
@@ -201,7 +218,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             </div>
           ) : null}
         </div>
-      ) : null}
+      </Dropdown>
     </div>
   );
 };

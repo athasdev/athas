@@ -367,8 +367,8 @@ export function SidebarSectionSwitcher({
             className={cn(
               "ui-font ui-text-xs flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
               selected
-                ? "max-w-28 bg-hover px-2 text-text"
-                : "w-7 px-0 text-text-lighter hover:bg-hover/70 hover:text-text",
+                ? "max-w-32 bg-hover px-2 text-text"
+                : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
               item.disabled && "cursor-not-allowed opacity-50",
               itemClassName,
             )}
@@ -377,9 +377,7 @@ export function SidebarSectionSwitcher({
             {item.icon ? (
               <span className="flex size-4 shrink-0 items-center justify-center">{item.icon}</span>
             ) : null}
-            {selected ? (
-              <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
-            ) : null}
+            <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
           </button>
         );
 

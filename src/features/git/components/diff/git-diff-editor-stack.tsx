@@ -7,7 +7,16 @@ import {
   Rows as Rows3,
   Trash as Trash2,
 } from "@phosphor-icons/react";
-import { type MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  type WheelEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
 import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
@@ -537,6 +546,21 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       return next;
     });
   }, []);
+  const handleStackWheelCapture = useCallback((event: WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+    const scrollContainer = event.currentTarget;
+    const canScroll =
+      (event.deltaY < 0 && scrollContainer.scrollTop > 0) ||
+      (event.deltaY > 0 &&
+        scrollContainer.scrollTop + scrollContainer.clientHeight < scrollContainer.scrollHeight);
+
+    if (!canScroll) return;
+
+    scrollContainer.scrollTop += event.deltaY;
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
 
   useEffect(() => {
     const nextKeys = new Set(
@@ -745,6 +769,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         className="min-h-0 flex-1 overflow-auto px-2 pb-2"
         style={{ overflowAnchor: "none" }}
         data-diff-stack-scroll-container
+        onWheelCapture={handleStackWheelCapture}
       >
         <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
           {multiDiff.files.map((diff, index) => {

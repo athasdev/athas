@@ -919,7 +919,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
         <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
-          <div className="min-w-0 flex-1" />
+          <GitProjectSelector
+            className="min-w-0 flex-1"
+            onRepositoryChange={() => setRepoSelectionError(null)}
+          />
 
           <div className="flex shrink-0 items-center gap-1">
             <SidebarHeaderIconButton
@@ -940,8 +943,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </SidebarHeader>
 
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          <GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />
-
           <SidebarSectionSwitcher
             items={gitTabs}
             value={activeTab}
