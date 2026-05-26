@@ -7,7 +7,6 @@ import {
   GitCommit,
   HardDrives as Server,
   Tag,
-  TreeStructure,
   ArrowClockwise as RefreshCw,
 } from "@phosphor-icons/react";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
@@ -106,14 +105,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       icon: <ClockCounterClockwise />,
       category: "Git",
       action: () => openGitAction({ type: "show-tab", tab: "history" }),
-    },
-    {
-      id: "git-show-worktrees",
-      label: "Git: Show Worktrees",
-      description: "Open worktree manager",
-      icon: <TreeStructure />,
-      category: "Git",
-      action: () => openGitAction({ type: "show-tab", tab: "worktrees" }),
     },
     {
       id: "git-manage-remotes",

@@ -7,7 +7,7 @@ import {
   Rows as Rows3,
   Trash as Trash2,
 } from "@phosphor-icons/react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
 import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
@@ -370,7 +370,6 @@ const DiffFileSection = memo(function DiffFileSection({
   onToggle,
   viewMode,
   showWhitespace,
-  enableHunkActions,
   onOpenFile,
 }: {
   diff: GitDiff;
@@ -380,7 +379,6 @@ const DiffFileSection = memo(function DiffFileSection({
   onOpenFile: (filePath: string) => void | Promise<void>;
   viewMode: "unified" | "split";
   showWhitespace: boolean;
-  enableHunkActions: boolean;
 }) {
   const filePath = diff.new_path || diff.old_path || diff.file_path;
   const fileName = filePath.split("/").pop() || filePath;
@@ -392,11 +390,15 @@ const DiffFileSection = memo(function DiffFileSection({
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
   }, [onToggle, sectionKey]);
-  const handleOpenFile = useCallback(() => {
-    void onOpenFile(filePath);
-  }, [filePath, onOpenFile]);
+  const handleOpenFile = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      void onOpenFile(filePath);
+    },
+    [filePath, onOpenFile],
+  );
   const shouldUseInlineTextDiff =
-    enableHunkActions && viewMode === "unified" && diff.lines.length <= MAX_HUNK_ACTION_DIFF_LINES;
+    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= MAX_HUNK_ACTION_DIFF_LINES;
 
   return (
     <section className="relative isolate min-w-0 max-w-full rounded-md bg-primary-bg">
@@ -756,7 +758,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 expanded={expandedFiles.has(sectionKey)}
                 viewMode={viewMode}
                 showWhitespace={showWhitespace}
-                enableHunkActions={isWorkingTree}
                 onToggle={handleToggleSection}
                 onOpenFile={handleOpenFile}
               />

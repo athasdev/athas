@@ -16,7 +16,13 @@ import { extractDroppedFilePaths } from "@/features/file-system/utils/file-syste
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { CommandFooter, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandFooter,
+  CommandFooterAction,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import {
@@ -613,17 +619,16 @@ export function DatabaseSidebar() {
 
       {mode === "network-provider" ? (
         <CommandFooter>
-          <Button
+          <CommandFooterAction
             type="button"
             variant="default"
-            compact
-            className="w-full gap-1.5"
+            className="w-full justify-center gap-1.5"
             disabled={busyConnectionId !== null}
             onClick={() => void saveNetworkConnection()}
           >
             <FilePlus />
             Add Database
-          </Button>
+          </CommandFooterAction>
         </CommandFooter>
       ) : null}
 

@@ -15,13 +15,15 @@ import {
 } from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
-import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandFooter,
+  CommandFooterAction,
   CommandHeader,
   CommandInput,
   CommandItem,
+  CommandItemMeta,
+  CommandItemTitle,
   CommandList,
 } from "@/ui/command";
 import { toast } from "@/ui/toast";
@@ -262,13 +264,9 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                     ) : (
                       <Folder className="shrink-0 text-text-lighter" />
                     )}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-xs">
-                        <span className="text-text">{folder.name}</span>
-                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
-                          {folder.path}
-                        </span>
-                      </div>
+                    <div className="flex min-w-0 flex-1 items-baseline">
+                      <CommandItemTitle>{folder.name}</CommandItemTitle>
+                      <CommandItemMeta>{folder.path}</CommandItemMeta>
                     </div>
                     {folder.pinned ? (
                       <PushPin className="shrink-0 fill-current text-accent" />
@@ -302,20 +300,16 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                     disabled={!!connectingMap[connection.id]}
                   >
                     <Server className="shrink-0 text-text-lighter" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-xs">
-                        <span className="text-text">{connection.name}</span>
-                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
-                          {connection.type.toUpperCase()}
-                        </span>
-                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
-                          {connectingMap[connection.id]
-                            ? "Connecting..."
-                            : statusMap[connection.id] === "error"
-                              ? "Connection failed"
-                              : `${connection.username}@${connection.host}`}
-                        </span>
-                      </div>
+                    <div className="flex min-w-0 flex-1 items-baseline">
+                      <CommandItemTitle>{connection.name}</CommandItemTitle>
+                      <CommandItemMeta>{connection.type.toUpperCase()}</CommandItemMeta>
+                      <CommandItemMeta>
+                        {connectingMap[connection.id]
+                          ? "Connecting..."
+                          : statusMap[connection.id] === "error"
+                            ? "Connection failed"
+                            : `${connection.username}@${connection.host}`}
+                      </CommandItemMeta>
                     </div>
                     <span
                       className={cn(
@@ -339,15 +333,15 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
           ) : null}
         </CommandList>
         <CommandFooter>
-          <Button variant="ghost" compact onClick={() => void handleOpenFolderClick()}>
+          <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
             Open Folder
-          </Button>
-          <Button variant="ghost" compact onClick={handleImportSettingsClick}>
+          </CommandFooterAction>
+          <CommandFooterAction onClick={handleImportSettingsClick}>
             Import Settings
-          </Button>
-          <Button variant="ghost" compact onClick={handleAddRemoteConnectionClick}>
+          </CommandFooterAction>
+          <CommandFooterAction onClick={handleAddRemoteConnectionClick}>
             Add Remote
-          </Button>
+          </CommandFooterAction>
         </CommandFooter>
       </Command>
 

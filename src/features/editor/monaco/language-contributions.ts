@@ -1,4 +1,4 @@
-import { languages } from "monaco-editor";
+import { languages, typescript } from "monaco-editor";
 
 import "monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution";
 import "monaco-editor/esm/vs/basic-languages/css/css.contribution";
@@ -35,6 +35,20 @@ import "monaco-editor/esm/vs/language/css/monaco.contribution";
 import "monaco-editor/esm/vs/language/html/monaco.contribution";
 import "monaco-editor/esm/vs/language/json/monaco.contribution";
 import "monaco-editor/esm/vs/language/typescript/monaco.contribution";
+
+const jsxCompilerOptions = {
+  jsx: typescript.JsxEmit.Preserve,
+} satisfies typescript.CompilerOptions;
+
+typescript.typescriptDefaults.setCompilerOptions({
+  ...typescript.typescriptDefaults.getCompilerOptions(),
+  ...jsxCompilerOptions,
+});
+
+typescript.javascriptDefaults.setCompilerOptions({
+  ...typescript.javascriptDefaults.getCompilerOptions(),
+  ...jsxCompilerOptions,
+});
 
 function ensureLanguage(id: string, extensions: string[], aliases: string[], filenames?: string[]) {
   if (languages.getLanguages().some((language) => language.id === id)) return;

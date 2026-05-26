@@ -1248,15 +1248,14 @@ function FileExplorerTreeComponent({
               ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
               : 0;
             const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
+            const stickyViewportStart =
+              (rowVirtualizer.scrollOffset ?? 0) +
+              FILE_TREE_HEADER_HEIGHT -
+              FILE_TREE_CONTAINER_INSET;
+            const stickyMarkerItem = items.find((item) => item.end > stickyViewportStart);
             const stickyMarkerIndex =
-              items.length && visibleRows.length
-                ? Math.min(
-                    visibleRows.length - 1,
-                    Math.max(
-                      0,
-                      Math.floor((rowVirtualizer.scrollOffset ?? 0) / densityConfig.rowHeight),
-                    ),
-                  )
+              stickyMarkerItem && visibleRows.length
+                ? Math.min(visibleRows.length - 1, Math.max(0, stickyMarkerItem.index))
                 : -1;
             const stickyAncestors =
               stickyMarkerIndex >= 0 ? getStickyAncestorRows(visibleRows, stickyMarkerIndex) : [];
@@ -1283,16 +1282,13 @@ function FileExplorerTreeComponent({
                           stickyAncestor.depth * settings.fileTreeIndentSize;
 
                         return (
-                          <button
+                          <div
                             key={stickyAncestor.file.path}
-                            type="button"
-                            data-file-path={stickyAncestor.file.path}
-                            data-is-dir={stickyAncestor.file.isDir}
                             data-path={stickyAncestor.file.path}
                             data-depth={stickyAncestor.depth}
                             title={stickyAncestor.file.path}
                             className={cn(
-                              "file-tree-row ui-font ui-text-sm flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+                              "file-tree-row ui-font ui-text-sm flex w-full min-w-max select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none",
                               densityConfig.rowClassName,
                             )}
                             style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
@@ -1312,7 +1308,7 @@ function FileExplorerTreeComponent({
                             >
                               {stickyAncestorLabel}
                             </span>
-                          </button>
+                          </div>
                         );
                       })}
                     </div>

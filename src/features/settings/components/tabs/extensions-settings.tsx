@@ -811,7 +811,7 @@ export const ExtensionsSettings = () => {
         />
       </div>
 
-      {(settings.extensionsActiveTab === "skill" || settings.extensionsActiveTab === "all") && (
+      {settings.extensionsActiveTab === "skill" && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Button type="button" variant="default" onClick={() => setIsSkillsCommandOpen(true)}>
             <Plus />
@@ -821,8 +821,7 @@ export const ExtensionsSettings = () => {
         </div>
       )}
 
-      {(settings.extensionsActiveTab === "agent" || settings.extensionsActiveTab === "all") &&
-      isLoadingAgents ? (
+      {settings.extensionsActiveTab === "agent" && isLoadingAgents ? (
         <LoadingIndicator label="Loading agents" showLabel compact className="mb-3" />
       ) : null}
 

@@ -7,10 +7,10 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandFooter,
+  CommandFooterAction,
   CommandHeader,
   CommandInput,
   CommandItem,
@@ -558,29 +558,33 @@ ${statusSummary}`;
 
       <CommandFooter>
         {mode === "labels" ? (
-          <Button type="button" compact className="ml-auto" onClick={closePicker}>
+          <CommandFooterAction
+            type="button"
+            variant="default"
+            className="ml-auto"
+            onClick={closePicker}
+          >
             Done
-          </Button>
+          </CommandFooterAction>
         ) : (
           <>
             <span className="min-w-0 flex-1 truncate px-1 ui-text-xs text-text-lighter">
               {mode === "form" ? (repoPath ?? "") : titleByKind[kind ?? "issue"]}
             </span>
             {kind !== "action" ? (
-              <Button
+              <CommandFooterAction
                 type="button"
-                compact
                 variant="ghost"
                 disabled={mode !== "form" || isGenerating || isSubmitting}
                 onClick={handleGenerateDraft}
               >
                 {isGenerating ? <LoadingIndicator label="Generating" compact /> : <Sparkle />}
                 Generate
-              </Button>
+              </CommandFooterAction>
             ) : null}
-            <Button
+            <CommandFooterAction
               type="button"
-              compact
+              variant="default"
               disabled={mode !== "form" || !canSubmit || isSubmitting}
               onClick={handleSubmit}
             >
@@ -590,7 +594,7 @@ ${statusSummary}`;
                 <Plus />
               )}
               {kind === "action" ? "Run" : "Create"}
-            </Button>
+            </CommandFooterAction>
           </>
         )}
       </CommandFooter>

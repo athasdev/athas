@@ -86,6 +86,7 @@ describe("working-tree multi diff helpers", () => {
     });
 
     expect(result.commitHash).toBe("working-tree");
+    expect(result.repoPath).toBe("/repo");
     expect(result.fileKeys).toEqual(["staged:src/a.ts", "unstaged:src/b.ts"]);
     expect(result.totalFiles).toBe(2);
     expect(result.totalAdditions).toBe(1);

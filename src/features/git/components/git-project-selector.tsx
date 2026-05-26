@@ -1,23 +1,24 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { Check, FolderOpen, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  CaretDown,
+  CaretRight,
+  Check,
+  FolderOpen,
+  Plus,
+  ArrowClockwise as RefreshCw,
+} from "@phosphor-icons/react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandFooter, CommandItem, CommandList } from "@/ui/command";
+import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { resolveRepositoryPath } from "../api/git-repo-api";
 import { useRepositoryStore } from "../stores/git-repository-store";
-import GitCommandSurface from "./git-command-surface";
 
 interface GitProjectSelectorProps {
-  placement?: "up" | "down";
   className?: string;
-  inputClassName?: string;
   onRepositoryChange?: (repoPath: string | null) => void;
-}
-
-function getRepositoryLabel(repoPath: string | null) {
-  return repoPath ? getFolderName(repoPath) : "Select repo";
 }
 
 function getFilteredRepositoryPaths(
@@ -40,16 +41,11 @@ function getFilteredRepositoryPaths(
   });
 }
 
-const GitProjectSelector = ({
-  placement = "down",
-  className,
-  inputClassName,
-  onRepositoryChange,
-}: GitProjectSelectorProps) => {
+const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelectorProps) => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
-  const manualRepoPath = useRepositoryStore.use.manualRepoPath();
+  const manualRepoPaths = useRepositoryStore.use.manualRepoPaths();
   const isDiscovering = useRepositoryStore.use.isDiscovering();
   const {
     selectRepository,
@@ -57,41 +53,19 @@ const GitProjectSelector = ({
     clearManualRepository,
     refreshWorkspaceRepositories,
   } = useRepositoryStore.use.actions();
+  const [isExpanded, setIsExpanded] = useState(true);
   const [query, setQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
 
-  const triggerText = getRepositoryLabel(activeRepoPath);
-  const triggerTextWidthCh = Math.min(Math.max(triggerText.length + 1, 8), 38);
   const filteredRepoPaths = useMemo(
     () => getFilteredRepositoryPaths(availableRepoPaths, activeRepoPath, query),
     [activeRepoPath, availableRepoPaths, query],
   );
 
-  useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      setSelectedIndex(0);
-      setSelectionError(null);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
-  const handleOpenDropdown = async () => {
-    if (isOpen) return;
-    setIsOpen(true);
-    await refreshWorkspaceRepositories();
-  };
-
   const handleSelectRepositoryPath = (repoPath: string) => {
     selectRepository(repoPath);
     setSelectionError(null);
-    setIsOpen(false);
     onRepositoryChange?.(repoPath);
   };
 
@@ -110,7 +84,7 @@ const GitProjectSelector = ({
       }
 
       setManualRepository(resolvedRepoPath);
-      setIsOpen(false);
+      setIsExpanded(true);
       onRepositoryChange?.(resolvedRepoPath);
     } catch (error) {
       console.error("Failed to select repository:", error);
@@ -120,122 +94,115 @@ const GitProjectSelector = ({
     }
   }, [onRepositoryChange, setManualRepository]);
 
-  const handleUseWorkspaceRepositories = () => {
+  const handleClearAddedRepositories = () => {
     clearManualRepository();
     setSelectionError(null);
-    setIsOpen(false);
     onRepositoryChange?.(useRepositoryStore.getState().activeRepoPath);
   };
 
-  const handleCommandKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setSelectedIndex((index) => Math.min(index + 1, Math.max(filteredRepoPaths.length - 1, 0)));
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setSelectedIndex((index) => Math.max(index - 1, 0));
-      return;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const selectedRepoPath = filteredRepoPaths[selectedIndex];
-      if (selectedRepoPath) {
-        handleSelectRepositoryPath(selectedRepoPath);
-      }
-    }
-  };
-
   return (
-    <>
-      <Button
-        onClick={() => void handleOpenDropdown()}
-        disabled={isSelectingRepo}
-        variant="ghost"
-        className={cn(
-          "inline-flex max-w-full shrink overflow-hidden px-2 text-text-lighter hover:bg-hover/80 sm:max-w-[360px]",
-          isOpen ? "bg-hover/80" : "cursor-pointer",
-          className,
+    <div className={cn("min-w-0 shrink-0", className)}>
+      <button
+        type="button"
+        className="ui-font flex h-7 w-full items-center gap-1.5 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+      >
+        {isExpanded ? (
+          <CaretDown className="size-3.5 shrink-0" />
+        ) : (
+          <CaretRight className="size-3.5 shrink-0" />
         )}
-        aria-label="Search repositories"
-      >
-        <FolderOpen className="shrink-0" />
-        <span
-          className={cn("ui-text-sm min-w-0 truncate font-normal", inputClassName)}
-          style={{ maxWidth: `${triggerTextWidthCh}ch` }}
-        >
-          {triggerText}
+        <FolderOpen className="size-3.5 shrink-0" />
+        <span className="ui-text-sm min-w-0 flex-1 truncate text-text">Repositories</span>
+        <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
+          {availableRepoPaths.length}
         </span>
-      </Button>
+      </button>
 
-      <GitCommandSurface
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        query={query}
-        onQueryChange={setQuery}
-        onInputKeyDown={handleCommandKeyDown}
-        placeholder="Search repositories..."
-        meta={`${availableRepoPaths.length} repo${availableRepoPaths.length === 1 ? "" : "s"}`}
-        placement={placement === "up" ? "bottom" : "top"}
-      >
-        <CommandList>
-          {filteredRepoPaths.length === 0 ? (
-            <CommandEmpty>
-              {isDiscovering ? "Detecting repositories..." : "No repositories found"}
-            </CommandEmpty>
+      {isExpanded ? (
+        <div className="mt-1 flex min-w-0 flex-col gap-1">
+          {availableRepoPaths.length > 6 ? (
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              variant="ghost"
+              size="xs"
+              placeholder="Filter repositories"
+              className="h-6 rounded-md border-transparent bg-transparent"
+            />
           ) : null}
-          {filteredRepoPaths.length > 0 ? (
-            <div className="space-y-1">
-              {filteredRepoPaths.map((repoPath, index) => (
-                <RepositoryRow
-                  key={repoPath}
-                  repoPath={repoPath}
-                  workspaceRootPath={workspaceRootPath}
-                  isCurrent={repoPath === activeRepoPath}
-                  isSelected={selectedIndex === index}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  onSelect={() => handleSelectRepositoryPath(repoPath)}
-                />
-              ))}
-            </div>
-          ) : null}
-        </CommandList>
 
-        <CommandFooter>
-          <Button
-            type="button"
-            onClick={() => void handleBrowseRepository()}
-            disabled={isSelectingRepo}
-            variant="ghost"
-            compact
-            className="h-7 justify-start px-2 text-text-lighter"
-          >
-            <FolderOpen />
-            {isSelectingRepo ? "Selecting..." : "Browse"}
-          </Button>
-          {manualRepoPath ? (
+          <div className="flex min-w-0 flex-col gap-0.5">
+            {isDiscovering && availableRepoPaths.length === 0 ? (
+              <div className="ui-text-xs flex h-7 items-center gap-2 px-2 text-text-lighter">
+                <LoadingIndicator label="Detecting repositories" compact />
+                Detecting repositories
+              </div>
+            ) : null}
+
+            {!isDiscovering && filteredRepoPaths.length === 0 ? (
+              <div className="ui-text-xs px-2 py-1.5 text-text-lighter">
+                {query.trim() ? "No matching repositories" : "No repositories found"}
+              </div>
+            ) : null}
+
+            {filteredRepoPaths.map((repoPath) => (
+              <RepositoryRow
+                key={repoPath}
+                repoPath={repoPath}
+                workspaceRootPath={workspaceRootPath}
+                isCurrent={repoPath === activeRepoPath}
+                isAdded={manualRepoPaths.includes(repoPath)}
+                onSelect={() => handleSelectRepositoryPath(repoPath)}
+              />
+            ))}
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center gap-1 px-1 pt-1">
             <Button
               type="button"
-              onClick={handleUseWorkspaceRepositories}
               variant="ghost"
-              className="h-7 justify-start px-2 text-text-lighter"
               compact
+              className="h-6 px-1.5 ui-text-xs text-text-lighter"
+              onClick={() => void handleBrowseRepository()}
+              disabled={isSelectingRepo}
+            >
+              <Plus />
+              {isSelectingRepo ? "Adding..." : "Add"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              compact
+              className="h-6 px-1.5 ui-text-xs text-text-lighter"
+              onClick={() => void refreshWorkspaceRepositories()}
+              disabled={isDiscovering}
             >
               <RefreshCw />
-              Use workspace repositories
+              Refresh
             </Button>
-          ) : null}
+            {manualRepoPaths.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                compact
+                className="h-6 px-1.5 ui-text-xs text-text-lighter"
+                onClick={handleClearAddedRepositories}
+              >
+                Clear Added
+              </Button>
+            ) : null}
+          </div>
+
           {selectionError ? (
-            <div className="ui-text-sm min-w-0 truncate rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
+            <div className="ui-text-xs mx-1 rounded-md border border-error/30 bg-error/5 px-2 py-1 text-error/90">
               {selectionError}
             </div>
           ) : null}
-        </CommandFooter>
-      </GitCommandSurface>
-    </>
+        </div>
+      ) : null}
+    </div>
   );
 };
 
@@ -243,39 +210,43 @@ function RepositoryRow({
   repoPath,
   workspaceRootPath,
   isCurrent,
-  isSelected,
-  onMouseEnter,
+  isAdded,
   onSelect,
 }: {
   repoPath: string;
   workspaceRootPath: string | null;
   isCurrent: boolean;
-  isSelected: boolean;
-  onMouseEnter: () => void;
+  isAdded: boolean;
   onSelect: () => void;
 }) {
   const relativePath = workspaceRootPath ? getRelativePath(repoPath, workspaceRootPath) : repoPath;
 
   return (
-    <CommandItem
-      isSelected={isSelected}
-      onMouseEnter={onMouseEnter}
+    <button
+      type="button"
       onClick={onSelect}
-      className={cn("group ui-font", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left transition-colors",
+        isCurrent ? "bg-hover/70 text-text" : "text-text-lighter hover:bg-hover/50 hover:text-text",
+      )}
     >
       {isCurrent ? (
-        <Check size={14} className="shrink-0 text-success" />
+        <Check className="size-3.5 shrink-0 text-success" />
       ) : (
-        <FolderOpen size={14} className="shrink-0 text-text-lighter" />
+        <FolderOpen className="size-3.5 shrink-0" />
       )}
-      <span className="min-w-0 flex-1 truncate">
-        <span className="ui-text-xs text-text">{getFolderName(repoPath)}</span>
-        <span className="ui-text-xs ml-2 text-text-lighter/80">
+      <span className="min-w-0 flex-1">
+        <span className="ui-text-sm block truncate">{getFolderName(repoPath)}</span>
+        <span className="ui-text-xs block truncate text-text-lighter/80">
           {relativePath === "." ? repoPath : relativePath}
         </span>
       </span>
-      {isCurrent ? <span className="ui-text-xs ml-auto shrink-0 text-success">current</span> : null}
-    </CommandItem>
+      {isAdded ? (
+        <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 text-text-lighter">
+          added
+        </span>
+      ) : null}
+    </button>
   );
 }
 

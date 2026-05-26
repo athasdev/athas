@@ -58,7 +58,7 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
   });
 
-  it("disables blank custom editor engine settings", () => {
+  it("normalizes legacy custom editor engine settings", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       editorEngine: "custom",
@@ -77,14 +77,25 @@ describe("settings normalization", () => {
     expect(normalized.editorEngine).toBe("monaco");
   });
 
-  it("migrates legacy external editor settings into editor engine", () => {
+  it("does not migrate legacy external editor settings into editor engine", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       editorEngine: "monaco",
       externalEditor: "helix",
     });
 
-    expect(normalized.editorEngine).toBe("helix");
+    expect(normalized.editorEngine).toBe("monaco");
+  });
+
+  it("removes legacy worktrees from git sidebar settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      gitLastPanelMode: "worktrees" as never,
+      gitSidebarTabOrder: ["changes", "worktrees", "history"] as never,
+    });
+
+    expect(normalized.gitLastPanelMode).toBe("changes");
+    expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history"]);
   });
 
   it("preserves custom AI provider settings and mirrors the custom model into chat model", () => {

@@ -145,7 +145,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 variant="ghost"
                 onClick={() => actions.selectKey(keyInfo.key)}
                 className={cn(
-                  "h-auto w-full justify-start gap-1.5 px-2 py-1",
+                  "h-auto w-full justify-start gap-1.5 px-2 py-1 leading-[1.35]",
                   store.selectedKey === keyInfo.key && "bg-selected",
                 )}
                 aria-label={`Select key ${keyInfo.key}`}
@@ -158,7 +158,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 >
                   {keyInfo.type.substring(0, 3)}
                 </Badge>
-                <span className="flex-1 truncate">{keyInfo.key}</span>
+                <span className="flex-1 truncate leading-[1.35]">{keyInfo.key}</span>
                 {keyInfo.ttl > 0 && (
                   <span className="flex items-center gap-0.5 text-text-lighter">
                     <Clock />

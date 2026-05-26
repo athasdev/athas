@@ -121,6 +121,7 @@ export const buildWorkingTreeMultiDiff = async ({
 
   return {
     title: WORKING_TREE_TITLE,
+    repoPath,
     commitHash: "working-tree",
     files: resolvedDiffs.map((entry) => entry.diff),
     totalFiles: resolvedDiffs.length,

@@ -139,8 +139,8 @@ export interface Settings {
   compactGitStatusBadges: boolean;
   collapseEmptyGitSections: boolean;
   rememberLastGitPanelMode: boolean;
-  gitLastPanelMode: "changes" | "history" | "worktrees";
-  gitSidebarTabOrder: Array<"changes" | "history" | "worktrees">;
+  gitLastPanelMode: "changes" | "history";
+  gitSidebarTabOrder: Array<"changes" | "history">;
   githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
   enableInlineGitBlame: boolean;
   enableGitGutter: boolean;

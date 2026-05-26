@@ -59,14 +59,7 @@ const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
   "trailing",
   "all",
 ]);
-const EDITOR_ENGINES = new Set<Settings["editorEngine"]>([
-  "monaco",
-  "athas",
-  "nvim",
-  "helix",
-  "vim",
-  "custom",
-]);
+const EDITOR_ENGINES = new Set<Settings["editorEngine"]>(["monaco", "athas"]);
 const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "none",
   "nvim",
@@ -111,10 +104,7 @@ function normalizeRenderWhitespace(value: unknown): Settings["renderWhitespace"]
   return "none";
 }
 
-function normalizeEditorEngine(
-  value: unknown,
-  _customEditorCommand: string | undefined,
-): Settings["editorEngine"] {
+function normalizeEditorEngine(value: unknown): Settings["editorEngine"] {
   if (!EDITOR_ENGINES.has(value as Settings["editorEngine"])) {
     return "monaco";
   }
@@ -263,9 +253,15 @@ export function normalizeSettings(settings: Settings): Settings {
 
   if (
     persistedGitPanelMode === "none" ||
-    (persistedGitPanelMode && !["changes", "history", "worktrees"].includes(persistedGitPanelMode))
+    (persistedGitPanelMode && !["changes", "history"].includes(persistedGitPanelMode))
   ) {
     normalizedSettings.gitLastPanelMode = "changes";
+  }
+  normalizedSettings.gitSidebarTabOrder = normalizedSettings.gitSidebarTabOrder.filter(
+    (item): item is "changes" | "history" => item === "changes" || item === "history",
+  );
+  if (normalizedSettings.gitSidebarTabOrder.length === 0) {
+    normalizedSettings.gitSidebarTabOrder = ["changes", "history"];
   }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
@@ -296,17 +292,7 @@ export function normalizeSettings(settings: Settings): Settings {
   );
   normalizedSettings.editorEngine = normalizeEditorEngine(
     (normalizedSettings as { editorEngine?: unknown }).editorEngine,
-    normalizedSettings.customEditorCommand,
   );
-  if (
-    normalizedSettings.editorEngine === "custom" &&
-    !normalizedSettings.customEditorCommand.trim()
-  ) {
-    normalizedSettings.editorEngine = "monaco";
-  }
-  if (normalizedSettings.externalEditor !== "none") {
-    normalizedSettings.editorEngine = normalizedSettings.externalEditor;
-  }
   normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
     normalizedSettings.fileTreeIndentSize,
   );
@@ -376,7 +362,7 @@ export function normalizeSettingValue<K extends keyof Settings>(
   }
 
   if (key === "editorEngine") {
-    return normalizeEditorEngine(value, undefined) as Settings[K];
+    return normalizeEditorEngine(value) as Settings[K];
   }
 
   if (key === "fileTreeIndentSize") {

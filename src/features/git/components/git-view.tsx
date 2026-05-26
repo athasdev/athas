@@ -8,7 +8,6 @@ import {
   GitBranch,
   ArrowClockwise as RefreshCw,
   Trash as Trash2,
-  TreeStructure,
   Upload,
 } from "@phosphor-icons/react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +16,6 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
-import { PaneGroup } from "@/ui/pane";
 import { primitiveAlert } from "@/ui/primitive-dialog-service";
 import {
   SidebarEmptyActionState,
@@ -44,18 +42,14 @@ import type { MultiFileDiff } from "../types/git-diff-types";
 import type { GitFile } from "../types/git-types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
-import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
 import GitActionsMenu from "./git-actions-menu";
-import GitBranchManager from "./git-branch-manager";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
 import GitCommandSurface from "./git-command-surface";
 import GitProjectSelector from "./git-project-selector";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
-import GitWorktreeManager from "./git-worktree-manager";
-import GitWorktreeSwitcher from "./git-worktree-switcher";
 import GitStatusPanel from "./status/git-status-panel";
 
 interface GitViewProps {
@@ -69,7 +63,7 @@ interface GitFileDiffStats {
   deletions: number;
 }
 
-type GitSidebarTab = "changes" | "history" | "worktrees";
+type GitSidebarTab = "changes" | "history";
 type GitPaletteAction =
   | { type: "select-repository" }
   | { type: "show-tab"; tab: GitSidebarTab }
@@ -239,20 +233,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setIsRefreshing(false);
     }
   }, [refreshGitData, refreshWorkspaceRepositories, setIsRefreshing]);
-
-  const handleOpenWorktree = useCallback(
-    async (worktreePath: string) => {
-      const opened = await openGitWorktreeWorkspace(worktreePath);
-      if (opened) {
-        await refreshWorkspaceRepositories();
-      }
-    },
-    [refreshWorkspaceRepositories],
-  );
-
-  const handleOpenWorktreeInNewWindow = useCallback(async (worktreePath: string) => {
-    await openGitWorktreeWorkspace(worktreePath, { target: "new-window" });
-  }, []);
 
   useEffect(() => {
     void syncWorkspaceRepositories(repoPath ?? null);
@@ -478,6 +458,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         // Open buffer immediately with the clicked file's diff
         const initialMultiDiff: MultiFileDiff = {
           title: "Uncommitted Changes",
+          repoPath: activeRepoPath,
           commitHash: "working-tree",
           files: [diff],
           totalFiles: 1,
@@ -534,6 +515,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               const stats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
               useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
                 title: "Uncommitted Changes",
+                repoPath,
                 commitHash: "working-tree",
                 files: accumulatedDiffs.map((item) => item.diff),
                 totalFiles: accumulatedDiffs.length,
@@ -549,6 +531,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             const allStats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
             useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
               title: "Uncommitted Changes",
+              repoPath,
               commitHash: "working-tree",
               files: accumulatedDiffs.map((item) => item.diff),
               totalFiles: accumulatedDiffs.length,
@@ -838,12 +821,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     );
   }, [stashSearchQuery, stashes]);
 
-  const gitTabOrder: GitSidebarTab[] = ["changes", "history", "worktrees"];
+  const gitTabOrder: GitSidebarTab[] = ["changes", "history"];
   const gitTabs: Array<{
     id: GitSidebarTab;
     label: string;
     icon: ReactNode;
   }> = [...settings.gitSidebarTabOrder]
+    .filter((id): id is GitSidebarTab => id === "changes" || id === "history")
     .sort((a, b) => gitTabOrder.indexOf(a) - gitTabOrder.indexOf(b))
     .map((id) => {
       const tabMap: Record<GitSidebarTab, { id: GitSidebarTab; label: string; icon: ReactNode }> = {
@@ -856,11 +840,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           id: "history",
           label: "History",
           icon: <ClockCounterClockwise size={16} weight="duotone" />,
-        },
-        worktrees: {
-          id: "worktrees",
-          label: "Worktrees",
-          icon: <TreeStructure size={16} weight="duotone" />,
         },
       };
 
@@ -940,24 +919,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
         <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
-          <PaneGroup className="min-w-0 flex-1 overflow-hidden">
-            <GitProjectSelector
-              className="shrink"
-              onRepositoryChange={() => setRepoSelectionError(null)}
-            />
-            <GitBranchManager
-              currentBranch={gitStatus.branch}
-              repoPath={activeRepoPath}
-              onBranchChange={refreshAfterAction}
-              triggerClassName="shrink"
-            />
-            <GitWorktreeSwitcher
-              repoPath={activeRepoPath}
-              triggerClassName="shrink"
-              triggerInputClassName="max-w-[120px]"
-              onWorktreeChange={(worktreePath) => void handleOpenWorktree(worktreePath)}
-            />
-          </PaneGroup>
+          <div className="min-w-0 flex-1" />
 
           <div className="flex shrink-0 items-center gap-1">
             <SidebarHeaderIconButton
@@ -978,6 +940,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </SidebarHeader>
 
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />
+
           <SidebarSectionSwitcher
             items={gitTabs}
             value={activeTab}
@@ -1009,18 +973,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     onViewCommitDiff={handleViewCommitDiff}
                     repoPath={activeRepoPath}
                     showHeader={false}
-                  />
-                ),
-              },
-              {
-                id: "worktrees",
-                content: (
-                  <GitWorktreeManager
-                    embedded
-                    repoPath={activeRepoPath}
-                    onRefresh={refreshAfterAction}
-                    onSelectWorktree={handleOpenWorktree}
-                    onOpenWorktreeInNewWindow={handleOpenWorktreeInNewWindow}
                   />
                 ),
               },

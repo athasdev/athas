@@ -12,6 +12,7 @@ import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandFooter,
+  CommandFooterAction,
   CommandHeader,
   CommandInput,
   CommandItem,
@@ -243,14 +244,13 @@ export const InlineEditModelSelector = ({
             </CommandList>
             {providerNeedsApiKey && (
               <CommandFooter>
-                <Button
+                <CommandFooterAction
                   type="button"
-                  variant="ghost"
                   onClick={() => setIsApiKeyOpen(true)}
                   className="px-1.5 text-text-lighter hover:text-text"
                 >
                   Add API key
-                </Button>
+                </CommandFooterAction>
               </CommandFooter>
             )}
           </>

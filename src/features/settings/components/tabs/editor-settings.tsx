@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
@@ -28,11 +27,7 @@ export const EditorSettings = () => {
   ];
   const editorEngineOptions = [
     { value: "monaco", label: "Monaco" },
-    { value: "athas", label: "Athas Editor" },
-    { value: "nvim", label: "Neovim" },
-    { value: "helix", label: "Helix" },
-    { value: "vim", label: "Vim" },
-    { value: "custom", label: "Custom Command" },
+    { value: "athas", label: "Athas" },
   ];
 
   return (
@@ -348,26 +343,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-
-        {settings.editorEngine === "custom" && (
-          <SettingRow
-            label="Custom Command"
-            description="Command to run (use $FILE for the file path, e.g., 'micro $FILE')"
-            onReset={() =>
-              updateSetting("customEditorCommand", getDefaultSetting("customEditorCommand"))
-            }
-            canReset={settings.customEditorCommand !== getDefaultSetting("customEditorCommand")}
-          >
-            <Input
-              type="text"
-              value={settings.customEditorCommand}
-              onChange={(e) => updateSetting("customEditorCommand", e.target.value)}
-              placeholder="micro $FILE"
-              className={SETTINGS_CONTROL_WIDTHS.text}
-              size="xs"
-            />
-          </SettingRow>
-        )}
       </Section>
     </div>
   );

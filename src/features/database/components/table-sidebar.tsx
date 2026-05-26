@@ -81,13 +81,13 @@ export default function TableSidebar({
                     variant="ghost"
                     compact
                     className={cn(
-                      "flex h-auto w-full items-start justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left ui-text-xs hover:bg-hover",
+                      "flex h-auto w-full items-start justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left ui-text-xs leading-[1.35] hover:bg-hover",
                       selectedTable === t.name && "bg-selected text-text",
                     )}
                     aria-label={`Select ${group.kind} ${t.name}`}
                   >
                     <Icon className="mt-0.5 shrink-0" />
-                    <span className="flex min-w-0 flex-col items-start">
+                    <span className="flex min-w-0 flex-col items-start leading-[1.35]">
                       <span className="max-w-full truncate">{t.name}</span>
                       {owner && (
                         <span className="max-w-full truncate text-text-lighter">on {owner}</span>

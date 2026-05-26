@@ -145,7 +145,7 @@ export const defaultSettings: Settings = {
   collapseEmptyGitSections: false,
   rememberLastGitPanelMode: false,
   gitLastPanelMode: "changes",
-  gitSidebarTabOrder: ["changes", "history", "worktrees"],
+  gitSidebarTabOrder: ["changes", "history"],
   githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
   enableInlineGitBlame: true,
   enableGitGutter: true,

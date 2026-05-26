@@ -138,18 +138,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "editor",
     section: "Editor",
     label: "Editor Engine",
-    description: "Choose Monaco, Athas Editor, or a terminal editor",
-    keywords: [
-      "engine",
-      "monaco",
-      "athas",
-      "external",
-      "editor",
-      "neovim",
-      "vim",
-      "helix",
-      "terminal",
-    ],
+    description: "Choose Monaco or Athas",
+    keywords: ["engine", "monaco", "athas", "editor"],
   },
   {
     id: "editor-show-minimap",
@@ -917,15 +907,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show open buffers as a horizontally scrollable carousel in the main view",
     keywords: ["tabs", "buffers", "carousel", "scroll", "horizontal", "trackpad", "main view"],
   },
-  {
-    id: "editor-custom-editor-command",
-    tab: "editor",
-    section: "Editor",
-    label: "Custom Command",
-    description: "Command to run for custom external editor",
-    keywords: ["custom", "command", "editor", "external"],
-  },
-
   // Extensions Settings
   {
     id: "extensions-browse",

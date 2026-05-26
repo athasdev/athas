@@ -21,14 +21,14 @@ export function useDesktopSignIn(options: UseDesktopSignInOptions = {}) {
     setIsSigningIn(true);
 
     try {
-      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession({
+      const { sessionId, pollSecret, loginUrl, apiBase } = await beginDesktopAuthSession({
         apiBase: options.apiBase,
       });
       await openUrl(loginUrl);
       toast.info("Complete sign-in in your browser. Waiting for confirmation...");
 
       const token = await waitForDesktopAuthToken(sessionId, pollSecret, undefined, {
-        apiBase: options.apiBase,
+        apiBase,
       });
       await handleAuthCallback(token);
       toast.success("Signed in successfully!");
@@ -36,7 +36,7 @@ export function useDesktopSignIn(options: UseDesktopSignInOptions = {}) {
     } catch (error) {
       if (error instanceof DesktopAuthError && error.code === "endpoint_unavailable") {
         toast.error(
-          "Desktop sign-in endpoint is unavailable on this server. Please use the local dev www server.",
+          "Desktop sign-in endpoint is unavailable. Check the auth server and try again.",
         );
       } else {
         const message = error instanceof Error ? error.message : "Authentication failed.";
