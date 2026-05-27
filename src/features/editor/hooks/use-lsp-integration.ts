@@ -25,6 +25,7 @@ import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface UseLspIntegrationOptions {
   enabled?: boolean;
+  enableCompletions?: boolean;
   filePath: string | undefined;
   value: string;
   editorRef: RefObject<HTMLDivElement | null> | RefObject<HTMLTextAreaElement>;
@@ -47,6 +48,7 @@ const DOCUMENT_CHANGE_DEBOUNCE_MS = 75;
  */
 export const useLspIntegration = ({
   enabled = true,
+  enableCompletions = enabled,
   filePath,
   value,
   editorRef,
@@ -132,11 +134,11 @@ export const useLspIntegration = ({
 
   // Set up LSP completion handlers
   useEffect(() => {
-    if (!enabled) return;
+    if (!enableCompletions) return;
     lspActions.setCompletionHandlers(lspClient.getCompletions.bind(lspClient), (fp: string) =>
       isFileSupported(fp),
     );
-  }, [enabled, lspClient, lspActions]);
+  }, [enableCompletions, lspClient, lspActions]);
 
   // Set up hover functionality
   const hoverHandlers = useHover({
@@ -291,7 +293,7 @@ export const useLspIntegration = ({
 
   // Handle completion triggers - only when user types (not on cursor movement)
   useEffect(() => {
-    if (!enabled) return;
+    if (!enableCompletions) return;
 
     const unsubscribe = useEditorUIStore.subscribe((state) => {
       const lastInputTimestamp = state.lastInputTimestamp;
@@ -356,10 +358,10 @@ export const useLspIntegration = ({
         completionTimerRef.current = undefined;
       }
     };
-  }, [enabled, filePath, lspActions, isLspSupported, editorRef]);
+  }, [enableCompletions, filePath, lspActions, isLspSupported, editorRef]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enableCompletions) return;
 
     const handleTriggerSuggest = () => {
       if (
@@ -388,7 +390,7 @@ export const useLspIntegration = ({
 
     window.addEventListener("editor-trigger-suggest", handleTriggerSuggest);
     return () => window.removeEventListener("editor-trigger-suggest", handleTriggerSuggest);
-  }, [enabled, filePath, lspActions, isLspSupported, editorRef]);
+  }, [enableCompletions, filePath, lspActions, isLspSupported, editorRef]);
 
   const prevInputTimestampRef = useRef<number>(0);
 

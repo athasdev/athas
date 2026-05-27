@@ -254,6 +254,7 @@ const CodeEditor = ({
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
     enabled: enableRichEditorServices,
+    enableCompletions: enableRichEditorServices && useAthasEditor,
     filePath,
     value,
     editorRef,
@@ -517,7 +518,7 @@ const CodeEditor = ({
           {enableRichEditorServices && <HoverTooltip />}
 
           {/* Completion Dropdown */}
-          {enableRichEditorServices && <CompletionDropdown />}
+          {enableRichEditorServices && useAthasEditor && <CompletionDropdown />}
 
           {/* Code Lens */}
           {enableRichEditorServices && codeLenses.length > 0 && (

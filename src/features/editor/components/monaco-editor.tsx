@@ -36,6 +36,7 @@ import type {
   EditorCoordinateResolver,
   EditorModelPositionResolver,
 } from "../view-model/view-layout";
+import { consumeLocalContentSnapshot, rememberLocalContentSnapshot } from "../monaco/content-sync";
 import { toMonacoLanguageId } from "../monaco/language";
 
 interface MonacoBackedEditorProps {
@@ -385,6 +386,7 @@ export function MonacoBackedEditor({
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
   const applyingExternalChangeRef = useRef(false);
   const previousContentRef = useRef("");
+  const pendingLocalContentSnapshotsRef = useRef<string[]>([]);
   const decorationsRef = useRef<string[]>([]);
   const latestContentChangeRef = useRef(onContentChange);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
@@ -658,6 +660,7 @@ export function MonacoBackedEditor({
     editorRef.current = editor;
     modelRef.current = model;
     previousContentRef.current = content;
+    pendingLocalContentSnapshotsRef.current = [];
     editorAPI.setTextareaRef(null);
     editorAPI.setViewportRef(container);
 
@@ -758,6 +761,7 @@ export function MonacoBackedEditor({
         const previousContent = previousContentRef.current;
         const editorState = useEditorStateStore.getState();
         previousContentRef.current = nextContent;
+        rememberLocalContentSnapshot(pendingLocalContentSnapshotsRef.current, nextContent);
         latestContentChangeRef.current?.(
           nextContent,
           previousContent,
@@ -867,7 +871,19 @@ export function MonacoBackedEditor({
   useEffect(() => {
     const editor = editorRef.current;
     const model = modelRef.current;
-    if (!editor || !model || model.getValue() === content) return;
+    if (!editor || !model) return;
+
+    const modelValue = model.getValue();
+    if (modelValue === content) {
+      consumeLocalContentSnapshot(pendingLocalContentSnapshotsRef.current, content);
+      previousContentRef.current = content;
+      return;
+    }
+
+    // React can deliver older store echoes after Monaco has already accepted more typing.
+    if (consumeLocalContentSnapshot(pendingLocalContentSnapshotsRef.current, content)) {
+      return;
+    }
 
     applyingExternalChangeRef.current = true;
     const selection = editor.getSelection();
@@ -876,6 +892,21 @@ export function MonacoBackedEditor({
     previousContentRef.current = content;
     applyingExternalChangeRef.current = false;
   }, [content]);
+
+  useEffect(() => {
+    if (!isActiveSurface || readOnly || isPreviewMode) return;
+
+    const handleTriggerSuggest = () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      editor.focus();
+      editor.trigger("athas", "editor.action.triggerSuggest", {});
+    };
+
+    window.addEventListener("editor-trigger-suggest", handleTriggerSuggest);
+    return () => window.removeEventListener("editor-trigger-suggest", handleTriggerSuggest);
+  }, [isActiveSurface, isPreviewMode, readOnly]);
 
   useEffect(() => {
     const editor = editorRef.current;
