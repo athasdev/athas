@@ -143,7 +143,7 @@ export function WebViewerToolbar({
   };
 
   return (
-    <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-primary-bg px-2">
+    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-primary-bg px-2">
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <div className="relative flex flex-1 items-center">
           <div
@@ -170,7 +170,7 @@ export function WebViewerToolbar({
             onChange={(e) => onInputUrlChange(e.target.value)}
             onKeyDown={handleUrlInputKeyDown}
             placeholder="Enter URL..."
-            className={`ui-text-sm h-7 w-full rounded-md pr-20 pl-8 focus:ring-accent/30 ${
+            className={`ui-text-xs h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
               hasUrlError
                 ? "border-error/60 bg-error/5 focus:border-error"
                 : "border-border bg-primary-bg focus:border-accent"
@@ -206,7 +206,7 @@ export function WebViewerToolbar({
         </div>
       </form>
 
-      <div className="mx-1.5 h-5 w-px bg-border" />
+      <div className="mx-1.5 h-4 w-px bg-border" />
 
       <div className="flex items-center gap-0.5">
         <Button
@@ -214,6 +214,7 @@ export function WebViewerToolbar({
           variant="ghost"
           onClick={() => setShowZoomPopover((open) => !open)}
           tooltip="Zoom controls"
+          compact
         >
           <ZoomIn />
         </Button>
