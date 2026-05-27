@@ -110,9 +110,9 @@ export function useEmbeddedWebview({
 
   const syncWebviewVisibility = useCallback(
     async (label: string) => {
-      await setWebviewVisible(label, isVisible && isActive && !overlayHiddenRef.current);
+      await setWebviewVisible(label, isVisible && !overlayHiddenRef.current);
     },
-    [isActive, isVisible, setWebviewVisible],
+    [isVisible, setWebviewVisible],
   );
 
   useEffect(() => {
@@ -338,13 +338,13 @@ export function useEmbeddedWebview({
     };
 
     const handleContextMenu = () => {
-      // Context menu açıldığında hemen gizle
-      if (isVisible && isActive) {
+      // Hide immediately when the context menu opens.
+      if (isVisible) {
         overlayHiddenRef.current = true;
         void syncWebviewVisibility(webviewLabel);
         lastOverlayState = true;
       }
-      // Sonra tekrar kontrol et (menu kapanmış olabilir)
+      // Check again after the menu may have closed.
       window.setTimeout(() => {
         updateVisibility(hasOverlayCoveringWebview(containerRef.current));
       }, 100);
@@ -371,7 +371,7 @@ export function useEmbeddedWebview({
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("click", handleOverlayChange);
     };
-  }, [isActive, isVisible, syncWebviewVisibility, webviewLabel]);
+  }, [isVisible, syncWebviewVisibility, webviewLabel]);
 
   return { error, resetWebview, webviewLabel };
 }
