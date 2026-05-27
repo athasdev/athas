@@ -21,6 +21,15 @@ export function useKeybindingRecorder(commandId: string) {
 
   const isRecording = recordingCommandId === commandId;
 
+  useEffect(() => {
+    return () => {
+      const { recordingCommandId: activeRecordingCommandId, actions } = useKeymapStore.getState();
+      if (activeRecordingCommandId === commandId) {
+        actions.stopRecording();
+      }
+    };
+  }, [commandId]);
+
   const startRecording = useCallback(() => {
     storeStartRecording(commandId);
     setState({ keys: [], keybindingString: "" });
