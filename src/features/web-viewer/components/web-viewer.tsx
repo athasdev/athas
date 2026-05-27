@@ -856,21 +856,25 @@ export function WebViewer({
         </div>
       )}
 
-      <div ref={containerRef} className="relative flex-1 overflow-hidden">
-        {!currentUrl && !isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-primary-bg px-6 text-center">
-            <div className="ui-font ui-text-sm text-text">Open a page</div>
-            <div className="ui-text-xs max-w-[320px] text-text-lighter">
-              Enter a URL to load a website, local development server, or app-bound page.
-            </div>
-          </div>
-        )}
+      <div className="min-h-0 flex-1 bg-primary-bg p-1.5">
+        <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-primary-bg shadow-sm">
+          <div ref={containerRef} className="absolute inset-px overflow-hidden rounded-[7px]">
+            {!currentUrl && !isLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-primary-bg px-6 text-center">
+                <div className="ui-font ui-text-sm text-text">Open a page</div>
+                <div className="ui-text-xs max-w-[320px] text-text-lighter">
+                  Enter a URL to load a website, local development server, or app-bound page.
+                </div>
+              </div>
+            )}
 
-        {isLoading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
-            <LoadingIndicator label="Loading page" showLabel />
+            {isLoading && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
+                <LoadingIndicator label="Loading page" showLabel />
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
