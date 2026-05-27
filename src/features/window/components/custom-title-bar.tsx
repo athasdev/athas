@@ -213,6 +213,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     }
   }, [closeProject]);
 
+  const handleCompactMenuToggle = useCallback(() => {
+    setMenuBarActiveMenu((activeMenu) => (activeMenu ? null : "File"));
+  }, []);
+
   const titleBarContextMenuItems: ContextMenuItem[] = [
     {
       id: "new-window",
@@ -306,13 +310,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <TabsList variant="segmented" className={chromeControlGroup()}>
               <Button
                 ref={menuButtonRef}
-                onClick={() => {
-                  setMenuBarActiveMenu("File");
-                }}
+                onClick={handleCompactMenuToggle}
                 variant="ghost"
                 compact
                 className={cn(chromeControl(), menuBarActiveMenu && "bg-hover/70 text-text")}
                 aria-label="Menu"
+                aria-expanded={Boolean(menuBarActiveMenu)}
               >
                 <List className={chromeIcon()} weight="duotone" />
               </Button>
