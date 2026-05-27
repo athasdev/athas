@@ -12,13 +12,21 @@ interface PaneNodeRendererProps {
 
 interface FlatResizeHandleProps {
   direction: "horizontal" | "vertical";
+  handleCount: number;
   index: number;
   entries: FlatPaneEntry[];
   onReset: (index: number) => void;
   onResize: (index: number, sizes: [number, number]) => void;
 }
 
-function FlatResizeHandle({ direction, index, entries, onReset, onResize }: FlatResizeHandleProps) {
+function FlatResizeHandle({
+  direction,
+  handleCount,
+  index,
+  entries,
+  onReset,
+  onResize,
+}: FlatResizeHandleProps) {
   const handleResize = useCallback(
     (sizes: [number, number]) => {
       onResize(index, sizes);
@@ -38,6 +46,7 @@ function FlatResizeHandle({ direction, index, entries, onReset, onResize }: Flat
       onResize={handleResize}
       onReset={handleReset}
       initialSizes={initialSizes}
+      resizeHandleCount={handleCount}
     />
   );
 }
@@ -79,7 +88,10 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
   const handleCount = flatEntries.length - 1;
 
   return (
-    <div className={`flex h-full w-full ${isHorizontal ? "flex-row" : "flex-col"}`}>
+    <div
+      className={`flex h-full w-full ${isHorizontal ? "flex-row" : "flex-col"}`}
+      data-pane-split-container="true"
+    >
       {flatEntries.map((entry, index) => {
         const pct = (entry.size / totalSize) * 100;
         const handleDeduction = `${(handleWidth * handleCount) / flatEntries.length}px`;
@@ -107,6 +119,7 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
             {index < flatEntries.length - 1 && (
               <FlatResizeHandle
                 direction={node.direction}
+                handleCount={handleCount}
                 index={index}
                 entries={flatEntries}
                 onReset={handleFlatReset}

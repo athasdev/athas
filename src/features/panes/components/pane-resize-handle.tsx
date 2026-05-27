@@ -6,6 +6,7 @@ interface PaneResizeHandleProps {
   onResize: (sizes: [number, number]) => void;
   onReset?: () => void;
   initialSizes: [number, number];
+  resizeHandleCount: number;
 }
 
 export function PaneResizeHandle({
@@ -13,6 +14,7 @@ export function PaneResizeHandle({
   onResize,
   onReset,
   initialSizes,
+  resizeHandleCount,
 }: PaneResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,21 +37,22 @@ export function PaneResizeHandle({
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const container = containerRef.current?.parentElement;
       const handle = containerRef.current;
-      if (!container || !handle) return;
+      if (!handle) return;
 
-      const containerRect = container.getBoundingClientRect();
       const handleSize = isHorizontal ? handle.offsetWidth : handle.offsetHeight;
-      const containerSize =
-        (isHorizontal ? containerRect.width : containerRect.height) - handleSize;
+      const splitContainer = handle.closest<HTMLElement>("[data-pane-split-container='true']");
+      const containerRect = splitContainer?.getBoundingClientRect();
+      const containerSize = isHorizontal ? containerRect?.width : containerRect?.height;
 
       const currentPosition = isHorizontal ? e.clientX : e.clientY;
       const delta = currentPosition - startPositionRef.current;
+      const availableSize =
+        typeof containerSize === "number" ? containerSize - handleSize * resizeHandleCount : 0;
+      if (availableSize <= 0) return;
 
       const pairTotal = startSizesRef.current[0] + startSizesRef.current[1];
-      // Scale delta to pair's proportion of the container
-      const scaledDelta = (delta / containerSize) * pairTotal;
+      const scaledDelta = (delta / availableSize) * pairTotal;
 
       let newFirstSize = startSizesRef.current[0] + scaledDelta;
       let newSecondSize = startSizesRef.current[1] - scaledDelta;
@@ -77,7 +80,7 @@ export function PaneResizeHandle({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, isHorizontal, onResize]);
+  }, [isDragging, isHorizontal, onResize, resizeHandleCount]);
 
   return (
     <div
