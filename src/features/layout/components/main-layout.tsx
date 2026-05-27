@@ -43,8 +43,6 @@ import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
 
-const SIDEBAR_COLLAPSE_THRESHOLD = 48;
-
 export function MainLayout() {
   useChatInitialization();
   usePaneKeyboard();
@@ -54,12 +52,10 @@ export function MainLayout() {
     isSidebarVisible,
     isRightSidebarVisible,
     activeRightSidebarView,
-    setIsSidebarVisible,
-    setIsRightSidebarVisible,
     isDatabaseConnectionVisible,
     setIsDatabaseConnectionVisible,
   } = useUIState();
-  const { settings, updateSetting } = useSettingsStore();
+  const { settings } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
@@ -273,10 +269,7 @@ export function MainLayout() {
                 position="left"
                 widthKey="sidebarWidth"
                 hidden={!isSidebarVisible}
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 edgePadding={!showLeftSidebarTabs}
-                onCollapse={() => setIsSidebarVisible(false)}
               >
                 <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
@@ -293,13 +286,7 @@ export function MainLayout() {
 
           {/* Right side panes are ordered from inner to edge. */}
           {showInlineAiChat ? (
-            <ResizablePane
-              position="right"
-              widthKey="aiChatWidth"
-              collapsible
-              collapseThreshold={0}
-              onCollapse={() => updateSetting("isAIChatVisible", false)}
-            >
+            <ResizablePane position="right" widthKey="aiChatWidth">
               <AIChat mode="chat" />
             </ResizablePane>
           ) : null}
@@ -311,24 +298,14 @@ export function MainLayout() {
                 position="right"
                 widthKey="sidebarWidth"
                 hidden={!isSidebarVisible}
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 edgePadding={!showLeftSidebarTabs}
-                onCollapse={() => setIsSidebarVisible(false)}
               >
                 <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
             </>
           ) : null}
 
-          <ResizablePane
-            position="right"
-            widthKey="sidebarWidth"
-            hidden={!isRightSidebarVisible}
-            collapsible
-            collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-            onCollapse={() => setIsRightSidebarVisible(false)}
-          >
+          <ResizablePane position="right" widthKey="sidebarWidth" hidden={!isRightSidebarVisible}>
             <MainSidebar
               showActivityRail={false}
               paneLevel="edge"
