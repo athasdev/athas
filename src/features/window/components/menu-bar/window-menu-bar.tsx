@@ -442,28 +442,27 @@ const CustomMenuBar = ({
         )}
       >
         {Object.keys(menus).map((menuName) => (
-          <Button
-            key={menuName}
-            variant="ghost"
-            className={cn(
-              "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
-              activeMenu === menuName
-                ? "bg-hover/80 text-text"
-                : "hover:bg-hover/50 hover:text-text",
+          <div key={menuName} className="relative flex h-full items-center">
+            <Button
+              variant="ghost"
+              className={cn(
+                "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
+                activeMenu === menuName
+                  ? "bg-hover/80 text-text"
+                  : "hover:bg-hover/50 hover:text-text",
+              )}
+              onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
+            >
+              {menuName}
+            </Button>
+            {activeMenu === menuName && (
+              <div className="absolute top-full left-0 z-[10031] mt-1 w-max min-w-[180px]">
+                {menus[menuName as keyof typeof menus]}
+              </div>
             )}
-            onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
-          >
-            {menuName}
-          </Button>
+          </div>
         ))}
       </div>
-
-      {/* Dropdown — rendered below the tab bar, not overlapping it */}
-      {activeMenu && (
-        <div className="z-[10031] mt-1 w-max min-w-[180px]">
-          {menus[activeMenu as keyof typeof menus]}
-        </div>
-      )}
     </div>
   );
 };
