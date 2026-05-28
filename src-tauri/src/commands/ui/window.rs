@@ -791,6 +791,9 @@ pub async fn set_webview_visible(
          webview
             .hide()
             .map_err(|e| format!("Failed to hide webview: {e}"))?;
+         if let Some(main_webview) = app.get_webview_window("main") {
+            let _ = main_webview.set_focus();
+         }
       }
    } else {
       return Err(format!("Webview not found: {webview_label}"));

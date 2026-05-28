@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
+import { shouldShowEmbeddedWebview } from "../utils/embedded-webview-visibility";
 
 interface UseEmbeddedWebviewOptions {
   bufferId: string;
@@ -110,9 +111,16 @@ export function useEmbeddedWebview({
 
   const syncWebviewVisibility = useCallback(
     async (label: string) => {
-      await setWebviewVisible(label, isVisible && !overlayHiddenRef.current);
+      await setWebviewVisible(
+        label,
+        shouldShowEmbeddedWebview({
+          isActive,
+          isVisible,
+          overlayHidden: overlayHiddenRef.current,
+        }),
+      );
     },
-    [isVisible, setWebviewVisible],
+    [isActive, isVisible, setWebviewVisible],
   );
 
   useEffect(() => {

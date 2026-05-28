@@ -1041,12 +1041,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                             isVisible={true}
                           />
                         </div>
-                      ) : buffer.type === "webViewer" ? (
-                        <div
-                          className={
-                            isActiveBuffer ? "h-full w-full" : "pointer-events-none h-full w-full"
-                          }
-                        >
+                      ) : buffer.type === "webViewer" && isActiveBuffer ? (
+                        <div className="h-full w-full">
                           <WebViewer
                             url={buffer.url}
                             bufferId={buffer.id}
