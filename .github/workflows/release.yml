@@ -175,26 +175,6 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-
-      - name: Cache CEF binaries (Linux only)
-        if: matrix.os == 'linux'
-        uses: actions/cache@v4
-        with:
-          path: .cache/tauri-cef
-          key: ${{ runner.os }}-${{ runner.arch }}-cef-v146.4.1
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
       - name: Install dependencies (Linux only)
         if: matrix.os == 'linux'
         run: |
