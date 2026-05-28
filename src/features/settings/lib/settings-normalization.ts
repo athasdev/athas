@@ -19,7 +19,7 @@ import {
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings, SettingsSection } from "@/features/settings/types/settings";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
   anthropic: {
@@ -66,6 +66,23 @@ const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "helix",
   "vim",
   "custom",
+]);
+const SETTINGS_SECTIONS = new Set<SettingsSection>([
+  "account",
+  "general",
+  "editor",
+  "git",
+  "appearance",
+  "databases",
+  "extensions",
+  "ai",
+  "keyboard",
+  "features",
+  "collaboration",
+  "enterprise",
+  "advanced",
+  "terminal",
+  "file-explorer",
 ]);
 
 function normalizeEditorLineHeight(value: number): number {
@@ -125,6 +142,14 @@ function normalizeExternalEditor(
   }
 
   return value as Settings["externalEditor"];
+}
+
+function normalizeSettingsSection(value: unknown): SettingsSection {
+  if (typeof value === "string" && SETTINGS_SECTIONS.has(value as SettingsSection)) {
+    return value as SettingsSection;
+  }
+
+  return "general";
 }
 
 const MAX_SYNCED_AI_SKILLS = 200;
@@ -297,6 +322,9 @@ export function normalizeSettings(settings: Settings): Settings {
     normalizedSettings.fileTreeIndentSize,
   );
   normalizedSettings.fileTreeDensity = normalizeFileTreeDensity(normalizedSettings.fileTreeDensity);
+  normalizedSettings.lastSettingsTab = normalizeSettingsSection(
+    (normalizedSettings as { lastSettingsTab?: unknown }).lastSettingsTab,
+  );
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -371,6 +399,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "fileTreeDensity") {
     return normalizeFileTreeDensity(value as string) as Settings[K];
+  }
+
+  if (key === "lastSettingsTab") {
+    return normalizeSettingsSection(value) as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {

@@ -2,6 +2,7 @@ import { CaretDown, MagnifyingGlass as Search } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
+import type { SettingsSection } from "@/features/settings/types/settings";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state-store";
 import Dialog from "@/ui/dialog";
@@ -33,6 +34,8 @@ interface SettingsDialogProps {
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const { settingsInitialTab, setSettingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
   const hasTeamsAccess = Boolean(subscription?.collaboration?.enabled);
@@ -55,26 +58,43 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     SETTINGS_TAB_ITEMS.find((tab) => tab.id === activeTab) ??
     SETTINGS_TAB_ITEMS[0];
   const ActiveTabIcon = activeTabItem.icon;
-  // Sync active tab with settingsInitialTab whenever it changes (enables deep linking when dialog is already open)
+  const resolveVisibleTab = (tab: SettingsTab): SettingsSection => {
+    if (tab === "language") {
+      return "editor";
+    }
+
+    if (
+      (!hasEnterpriseAccess && tab === "enterprise") ||
+      (!hasTeamsAccess && tab === "collaboration")
+    ) {
+      return "general";
+    }
+
+    return tab;
+  };
+
+  // Sync active tab with explicit requests, or fall back to the persisted last section.
   useEffect(() => {
     if (isOpen) {
-      if (settingsInitialTab === "language") {
-        setActiveTab("editor");
-      } else if (
-        (!hasEnterpriseAccess && settingsInitialTab === "enterprise") ||
-        (!hasTeamsAccess && settingsInitialTab === "collaboration")
-      ) {
-        setActiveTab("general");
-      } else {
-        setActiveTab(settingsInitialTab);
-      }
+      const requestedTab = settingsInitialTab ?? lastSettingsTab;
+      const nextTab = resolveVisibleTab(requestedTab);
+      setActiveTab(nextTab);
+      void updateSetting("lastSettingsTab", nextTab);
     }
-  }, [settingsInitialTab, isOpen, hasEnterpriseAccess, hasTeamsAccess]);
+  }, [
+    settingsInitialTab,
+    lastSettingsTab,
+    isOpen,
+    hasEnterpriseAccess,
+    hasTeamsAccess,
+    updateSetting,
+  ]);
 
-  // Remember the last active tab so it persists across open/close
   const handleTabChange = (tab: SettingsTab) => {
-    setActiveTab(tab);
-    setSettingsInitialTab(tab);
+    const nextTab = resolveVisibleTab(tab);
+    setActiveTab(nextTab);
+    setSettingsInitialTab(nextTab);
+    void updateSetting("lastSettingsTab", nextTab);
   };
   const tabMenuItems: MenuItem[] = visibleTabs.map((tab) => {
     const Icon = tab.icon;

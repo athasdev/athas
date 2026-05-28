@@ -10,6 +10,22 @@ import type {
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
 export type EditorEngine = "monaco" | "athas" | "nvim" | "helix" | "vim" | "custom";
+export type SettingsSection =
+  | "account"
+  | "general"
+  | "editor"
+  | "git"
+  | "appearance"
+  | "databases"
+  | "extensions"
+  | "ai"
+  | "keyboard"
+  | "features"
+  | "collaboration"
+  | "enterprise"
+  | "advanced"
+  | "terminal"
+  | "file-explorer";
 
 export interface Settings {
   // General
@@ -108,6 +124,7 @@ export interface Settings {
   enterpriseRequireExtensionAllowlist: boolean;
   enterpriseAllowedExtensionIds: string[];
   // Other
+  lastSettingsTab: SettingsSection;
   extensionsActiveTab:
     | "all"
     | "core"

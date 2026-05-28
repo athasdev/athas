@@ -122,6 +122,7 @@ export const defaultSettings: Settings = {
   enterpriseRequireExtensionAllowlist: false,
   enterpriseAllowedExtensionIds: [],
   // Other
+  lastSettingsTab: "general",
   extensionsActiveTab: "all",
   maxOpenTabs: 100,
   horizontalTabScroll: false,

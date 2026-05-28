@@ -77,6 +77,27 @@ describe("settings normalization", () => {
     expect(normalized.editorEngine).toBe("monaco");
   });
 
+  it("normalizes unsupported remembered settings tabs", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      lastSettingsTab: "missing" as never,
+    });
+
+    expect(normalized.lastSettingsTab).toBe("general");
+    expect(normalizeSettingValue("lastSettingsTab", "appearance")).toBe("appearance");
+  });
+
+  it("migrates legacy icon theme aliases to Material", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      iconTheme: "colorful-material",
+    });
+
+    expect(normalized.iconTheme).toBe("material");
+    expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("material");
+    expect(normalizeSettingValue("iconTheme", "seti")).toBe("material");
+  });
+
   it("does not migrate legacy external editor settings into editor engine", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
