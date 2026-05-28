@@ -1,19 +1,16 @@
-import {
-  ArrowClockwise as RefreshCw,
-  MagnifyingGlass as Search,
-  SlidersHorizontal,
-} from "@phosphor-icons/react";
+import { MagnifyingGlass as Search, SlidersHorizontal } from "@phosphor-icons/react";
 import { memo, useCallback, useMemo } from "react";
 import { Button, buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import type { FileStatusFilter } from "../types/pr-viewer";
+import type { FileStatusFilter } from "../types/github-pr-viewer";
 import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(
-  buttonVariants({ variant: "ghost", size: "xs" }),
-  "h-5 rounded px-1.5 text-[10px] text-text-lighter hover:bg-hover hover:text-text",
+  buttonVariants({ variant: "ghost", compact: true }),
+  "h-5 rounded px-1.5 ui-text-xs text-text-lighter hover:bg-hover hover:text-text",
 );
 
 interface DiffFileItem {
@@ -133,8 +130,7 @@ export const PRFilesPanel = memo(
     if (isLoadingContent && !selectedPRDiff) {
       return (
         <div className="flex items-center justify-center p-8">
-          <RefreshCw className="animate-spin text-text-lighter" />
-          <span className="ml-2 ui-font ui-text-sm text-text-lighter">Loading diff...</span>
+          <LoadingIndicator label="Loading diff" showLabel />
         </div>
       );
     }
@@ -146,9 +142,9 @@ export const PRFilesPanel = memo(
             <p className="ui-font ui-text-sm text-error">{contentError}</p>
             <Button
               onClick={onRetry}
-              variant="outline"
-              size="xs"
+              variant="default"
               className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              compact
             >
               Retry
             </Button>
@@ -193,7 +189,6 @@ export const PRFilesPanel = memo(
                   data-pr-file-path={file.path}
                   type="button"
                   variant="ghost"
-                  size="sm"
                   active={isSelected}
                   tabIndex={isSelected ? 0 : -1}
                   onClick={() => onSelectFile(file.path)}
@@ -201,7 +196,7 @@ export const PRFilesPanel = memo(
                 >
                   <div className="min-w-0 flex-1">
                     <div className="ui-text-sm truncate leading-4 text-current">{file.path}</div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-text-lighter">
+                    <div className="mt-0.5 flex items-center gap-1.5 ui-text-xs text-text-lighter">
                       <span className="capitalize">{file.status}</span>
                       <span className="text-git-added">+{file.additions}</span>
                       <span className="text-git-deleted">-{file.deletions}</span>
@@ -220,10 +215,10 @@ export const PRFilesPanel = memo(
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   onClick={onToggleSplit}
                   className={compactToolbarButtonClass}
                   aria-label="Toggle files split width"
+                  compact
                 >
                   {isWideSplit ? "Narrow Split" : "Wide Split"}
                 </Button>

@@ -1,5 +1,4 @@
 import {
-  Database,
   FileText,
   FolderOpen,
   GlobeHemisphereWest as Globe,
@@ -16,7 +15,6 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Input from "@/ui/input";
@@ -34,7 +32,6 @@ const newTabRowClassName =
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
-  const { setIsDatabaseConnectionVisible } = useUIState();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
 
@@ -64,10 +61,6 @@ export function EmptyEditorState() {
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
   }, [openWebViewerBuffer]);
-
-  const handleOpenDatabaseConnection = useCallback(() => {
-    setIsDatabaseConnectionVisible(true);
-  }, [setIsDatabaseConnectionVisible]);
 
   const handleNewFile = useCallback(() => {
     const id = `untitled-${Date.now()}`;
@@ -179,12 +172,6 @@ export function EmptyEditorState() {
         icon: <Globe />,
         onClick: handleOpenWebViewer,
       },
-      {
-        id: "connect-database",
-        label: "Connect Database",
-        icon: <Database />,
-        onClick: handleOpenDatabaseConnection,
-      },
     ];
   }, [
     handleNewFile,
@@ -193,7 +180,6 @@ export function EmptyEditorState() {
     handleOpenTerminal,
     handleOpenAgent,
     handleOpenWebViewer,
-    handleOpenDatabaseConnection,
   ]);
 
   const actions: ActionItem[] = [
@@ -233,12 +219,6 @@ export function EmptyEditorState() {
       icon: <Globe className="text-text-light" />,
       action: handleOpenWebViewer,
     },
-    {
-      id: "database",
-      label: "Connect Database",
-      icon: <Database className="text-text-light" />,
-      action: handleOpenDatabaseConnection,
-    },
   ];
 
   return (
@@ -250,11 +230,11 @@ export function EmptyEditorState() {
             type="button"
             onClick={item.action}
             variant="ghost"
-            size="sm"
             className={newTabRowClassName}
+            compact
           >
             <span className="shrink-0">{item.icon}</span>
-            <span className="text-text text-xs">{item.label}</span>
+            <span className="text-text ui-text-xs">{item.label}</span>
           </Button>
         ))}
 
@@ -286,17 +266,17 @@ export function EmptyEditorState() {
                       openTerminalBuffer({ name: action.name, command: action.command })
                     }
                     variant="ghost"
-                    size="sm"
+                    compact
                     className="h-auto min-w-0 flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
                   >
                     <Terminal className="shrink-0 text-text-light" />
-                    <span className="truncate text-text text-xs">{action.name}</span>
+                    <span className="truncate text-text ui-text-xs">{action.name}</span>
                   </Button>
                   <Button
                     type="button"
                     onClick={() => handleStartEdit(action.id, action.command)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="shrink-0 opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
                   >
                     <Pencil />
@@ -305,7 +285,7 @@ export function EmptyEditorState() {
                     type="button"
                     onClick={(e) => handleDelete(action.id, e)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="shrink-0 opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
                   >
                     <Trash2 />
@@ -336,11 +316,11 @@ export function EmptyEditorState() {
             type="button"
             onClick={handleStartAdd}
             variant="ghost"
-            size="sm"
             className={newTabRowClassName}
+            compact
           >
             <Plus className="shrink-0 text-text-lighter" />
-            <span className="text-text-light text-xs">Add custom action...</span>
+            <span className="text-text-light ui-text-xs">Add custom action...</span>
           </Button>
         )}
       </div>

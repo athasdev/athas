@@ -4,8 +4,15 @@ use redis::AsyncCommands;
 #[derive(Debug, serde::Serialize)]
 pub struct RedisKeyInfo {
    pub key: String,
+   #[serde(rename = "type")]
    pub key_type: String,
    pub ttl: i64,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct RedisScanResult {
+   pub keys: Vec<RedisKeyInfo>,
+   pub cursor: String,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -20,9 +27,10 @@ pub struct RedisServerInfo {
 pub async fn redis_scan_keys(
    connection_id: String,
    pattern: Option<String>,
+   cursor: Option<String>,
    count: Option<usize>,
    manager: &ConnectionManager,
-) -> Result<Vec<RedisKeyInfo>, String> {
+) -> Result<RedisScanResult, String> {
    let pool_arc = manager
       .get_pool(&connection_id)
       .await
@@ -33,10 +41,11 @@ pub async fn redis_scan_keys(
    };
 
    let pattern = pattern.unwrap_or_else(|| "*".to_string());
+   let cursor = cursor.unwrap_or_else(|| "0".to_string());
    let count = count.unwrap_or(100);
 
-   let keys: Vec<String> = redis::cmd("SCAN")
-      .arg(0)
+   let scan_result: (String, Vec<String>) = redis::cmd("SCAN")
+      .arg(&cursor)
       .arg("MATCH")
       .arg(&pattern)
       .arg("COUNT")
@@ -44,29 +53,10 @@ pub async fn redis_scan_keys(
       .query_async::<Vec<redis::Value>>(&mut conn)
       .await
       .map_err(|e| format!("Failed to scan keys: {}", e))
-      .map(|result| {
-         if result.len() >= 2 {
-            if let redis::Value::Array(ref keys) = result[1] {
-               keys
-                  .iter()
-                  .filter_map(|k| {
-                     if let redis::Value::BulkString(s) = k {
-                        String::from_utf8(s.clone()).ok()
-                     } else {
-                        None
-                     }
-                  })
-                  .collect()
-            } else {
-               Vec::new()
-            }
-         } else {
-            Vec::new()
-         }
-      })?;
+      .map(decode_scan_response)?;
 
    let mut key_infos = Vec::new();
-   for key in keys.into_iter().take(count) {
+   for key in scan_result.1.into_iter().take(count) {
       let key_type: String = redis::cmd("TYPE")
          .arg(&key)
          .query_async(&mut conn)
@@ -78,7 +68,39 @@ pub async fn redis_scan_keys(
       key_infos.push(RedisKeyInfo { key, key_type, ttl });
    }
 
-   Ok(key_infos)
+   Ok(RedisScanResult {
+      keys: key_infos,
+      cursor: scan_result.0,
+   })
+}
+
+fn decode_scan_response(result: Vec<redis::Value>) -> (String, Vec<String>) {
+   let cursor = result
+      .first()
+      .and_then(redis_value_to_string)
+      .unwrap_or_else(|| "0".to_string());
+   let keys = result
+      .get(1)
+      .and_then(|value| match value {
+         redis::Value::Array(values) => Some(
+            values
+               .iter()
+               .filter_map(redis_value_to_string)
+               .collect::<Vec<_>>(),
+         ),
+         _ => None,
+      })
+      .unwrap_or_default();
+
+   (cursor, keys)
+}
+
+fn redis_value_to_string(value: &redis::Value) -> Option<String> {
+   match value {
+      redis::Value::BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
+      redis::Value::SimpleString(text) => Some(text.clone()),
+      _ => None,
+   }
 }
 
 pub async fn redis_get_value(
@@ -243,4 +265,44 @@ pub async fn redis_get_info(
       total_keys,
       uptime_seconds: get_field("uptime_in_seconds"),
    })
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn decodes_redis_scan_cursor_and_keys() {
+      let (cursor, keys) = decode_scan_response(vec![
+         redis::Value::BulkString(b"42".to_vec()),
+         redis::Value::Array(vec![
+            redis::Value::BulkString(b"user:1".to_vec()),
+            redis::Value::SimpleString("session:1".to_string()),
+         ]),
+      ]);
+
+      assert_eq!(cursor, "42");
+      assert_eq!(keys, vec!["user:1".to_string(), "session:1".to_string()]);
+   }
+
+   #[test]
+   fn serializes_redis_key_type_for_frontend_contract() {
+      let value = serde_json::to_value(RedisScanResult {
+         cursor: "0".to_string(),
+         keys: vec![RedisKeyInfo {
+            key: "user:1".to_string(),
+            key_type: "string".to_string(),
+            ttl: 30,
+         }],
+      })
+      .expect("redis scan json");
+
+      assert_eq!(
+         value,
+         serde_json::json!({
+            "cursor": "0",
+            "keys": [{ "key": "user:1", "type": "string", "ttl": 30 }]
+         })
+      );
+   }
 }

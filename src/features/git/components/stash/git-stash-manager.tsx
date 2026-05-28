@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, createStash, dropStash, getStashes, popStash } from "../../api/git-stash-api";
@@ -118,9 +119,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
         <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
             <Archive className="text-text-lighter" />
-            <h2 className="font-medium text-sm text-text">Stash Manager</h2>
+            <h2 className="font-medium ui-text-sm text-text">Stash Manager</h2>
           </div>
-          <Button onClick={onClose} variant="ghost" size="icon-sm" className="text-text-lighter">
+          <Button onClick={onClose} variant="ghost" className="text-text-lighter" compact>
             <X />
           </Button>
         </div>
@@ -129,7 +130,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
           <div className="space-y-2">
             <div className="mb-2 flex items-center gap-2">
               <Plus className="text-text-lighter" />
-              <span className="font-medium text-text text-xs">Create New Stash</span>
+              <span className="font-medium text-text ui-text-xs">Create New Stash</span>
             </div>
 
             <Input
@@ -148,7 +149,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             <div className="flex items-center gap-2">
               <label
                 htmlFor="include-untracked-stash"
-                className="flex cursor-pointer items-center gap-1 text-text text-xs"
+                className="flex cursor-pointer items-center gap-1 text-text ui-text-xs"
               >
                 <Checkbox
                   id="include-untracked-stash"
@@ -162,9 +163,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             <Button
               onClick={handleCreateStash}
               disabled={isLoading}
-              variant="outline"
-              size="sm"
+              variant="default"
               className="w-full"
+              compact
             >
               {isLoading ? "Creating..." : "Create Stash"}
             </Button>
@@ -173,9 +174,11 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
 
         <div className="flex-1 overflow-y-auto">
           {isLoading && stashes.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">Loading stashes...</div>
+            <div className="flex justify-center p-4 text-text-lighter ui-text-xs">
+              <LoadingIndicator label="Loading stashes" showLabel compact />
+            </div>
           ) : stashes.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">No stashes found</div>
+            <div className="p-4 text-center text-text-lighter ui-text-xs">No stashes found</div>
           ) : (
             <div className="space-y-0">
               {stashes.map((stash) => {
@@ -189,16 +192,16 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                     <div className="mb-2 flex items-start justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-center gap-2">
-                          <span className="ui-font text-text-lighter text-xs">
+                          <span className="ui-font text-text-lighter ui-text-xs">
                             {`stash@{${stash.index}}`}
                           </span>
                         </div>
 
-                        <div className="mb-1 text-text text-xs">
+                        <div className="mb-1 text-text ui-text-xs">
                           {stash.message || "Stashed changes"}
                         </div>
 
-                        <div className="flex items-center gap-1 text-[9px] text-text-lighter">
+                        <div className="flex items-center gap-1 ui-text-xs text-text-lighter">
                           <Clock />
                           {formatRelativeDate(stash.date)}
                         </div>
@@ -209,9 +212,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <Button
                         onClick={() => handleApplyStash(stash.index)}
                         disabled={isActionLoading}
-                        variant="outline"
-                        size="xs"
-                        className="gap-1 px-2 py-1 text-[9px]"
+                        variant="default"
+                        compact
+                        className="gap-1 px-2 py-1 ui-text-xs"
                         tooltip="Apply stash (keep in stash list)"
                       >
                         <Download />
@@ -221,9 +224,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <Button
                         onClick={() => handlePopStash(stash.index)}
                         disabled={isActionLoading}
-                        variant="outline"
-                        size="xs"
-                        className="gap-1 px-2 py-1 text-[9px]"
+                        variant="default"
+                        compact
+                        className="gap-1 px-2 py-1 ui-text-xs"
                         tooltip="Pop stash (apply and remove from stash list)"
                       >
                         <Upload />
@@ -234,8 +237,8 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         onClick={() => handleDropStash(stash.index)}
                         disabled={isActionLoading}
                         variant="danger"
-                        size="xs"
-                        className="gap-1 px-2 py-1 text-[9px]"
+                        compact
+                        className="gap-1 px-2 py-1 ui-text-xs"
                         tooltip="Drop stash (delete permanently)"
                       >
                         <Trash2 />
@@ -250,7 +253,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
         </div>
 
         <div
-          className={cn("border-border border-t bg-primary-bg p-3", "text-[9px] text-text-lighter")}
+          className={cn("border-border border-t bg-primary-bg p-3", "ui-text-xs text-text-lighter")}
         >
           {stashes.length} stash{stashes.length !== 1 ? "es" : ""} total
         </div>

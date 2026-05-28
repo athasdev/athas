@@ -10,15 +10,12 @@ class ThemeRegistry implements ThemeRegistryAPI {
   private readyCallbacks = new Set<() => void>();
 
   registerTheme(theme: ThemeDefinition, source?: ThemeSource): void {
-    console.log("Theme registry: Registering theme", theme.id, theme.name);
     this.themes.set(theme.id, theme);
     if (source) {
       this.themeSources.set(theme.id, source);
     } else {
       this.themeSources.delete(theme.id);
     }
-    console.log("Theme registry: Total themes after registration:", this.themes.size);
-    console.log("Theme registry: All themes:", Array.from(this.themes.keys()));
     this.notifyRegistryChange();
   }
 
@@ -136,7 +133,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
   markAsReady(): void {
     if (!this.isReady) {
       this.isReady = true;
-      console.log("Theme registry: Marked as ready");
       this.notifyReady();
     }
   }

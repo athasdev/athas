@@ -9,6 +9,7 @@ import {
 } from "@/features/settings/lib/font-family-resolution";
 import { useFontStore } from "@/features/settings/stores/font-store";
 import type { FontInfo } from "@/features/settings/stores/types/font";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
@@ -140,9 +141,7 @@ export const FontSelector = ({
   };
 
   if (isLoading) {
-    return (
-      <div className={cn("ui-font ui-text-sm text-text-lighter", className)}>Loading fonts...</div>
-    );
+    return <LoadingIndicator label="Loading fonts" showLabel compact className={className} />;
   }
 
   if (error) {
@@ -161,7 +160,7 @@ export const FontSelector = ({
       placeholder="Select font"
       className={className}
       size="xs"
-      variant="secondary"
+      variant="default"
       searchable
       searchableTrigger="input"
     />

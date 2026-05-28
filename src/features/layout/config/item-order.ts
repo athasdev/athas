@@ -1,29 +1,20 @@
 export const HEADER_LEADING_ITEM_IDS = ["menu", "sidebar"] as const;
-export const HEADER_TRAILING_ITEM_IDS = [
-  "run-actions",
-  "notifications",
-  "ai-chat",
-  "account",
-] as const;
-export const SIDEBAR_ACTIVITY_ITEM_IDS = [
-  "files",
-  "search",
-  "collaboration",
-  "multi-agents",
-  "sidebar-builder",
-  "git",
-  "debugger",
-  "github-prs",
-] as const;
+export const HEADER_TRAILING_ITEM_IDS = ["run-actions", "ai-chat", "account"] as const;
+export const SIDEBAR_ACTIVITY_ITEM_IDS = ["files", "search", "git", "github-prs"] as const;
 export const FOOTER_LEADING_ITEM_IDS = [
   "branch",
-  "collaboration",
   "terminal",
+  "debugger",
   "diagnostics",
   "extensions",
   "updates",
 ] as const;
-export const FOOTER_TRAILING_ITEM_IDS = [] as const;
+export const FOOTER_TRAILING_ITEM_IDS = [
+  "outline",
+  "databases",
+  "collaboration",
+  "notifications",
+] as const;
 
 export type HeaderLeadingItemId = (typeof HEADER_LEADING_ITEM_IDS)[number];
 export type HeaderTrailingItemId = (typeof HEADER_TRAILING_ITEM_IDS)[number];

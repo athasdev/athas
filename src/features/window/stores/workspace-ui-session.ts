@@ -41,11 +41,14 @@ export const restoreProjectUiState = (projectPath: string | undefined) => {
   const uiState = useSessionStore.getState().getUiState(projectPath || "");
   const nextUiState = uiState ?? DEFAULT_PROJECT_UI_STATE;
   const state = useUIState.getState();
+  const legacyDebuggerSidebar = nextUiState.activeSidebarView === "debugger";
 
   state.setIsSidebarVisible(nextUiState.isSidebarVisible);
-  state.setIsBottomPaneVisible(nextUiState.isBottomPaneVisible);
-  state.setBottomPaneActiveTab(nextUiState.bottomPaneActiveTab);
-  state.setActiveView(nextUiState.activeSidebarView);
+  state.setIsBottomPaneVisible(legacyDebuggerSidebar ? true : nextUiState.isBottomPaneVisible);
+  state.setBottomPaneActiveTab(
+    legacyDebuggerSidebar ? "debugger" : nextUiState.bottomPaneActiveTab,
+  );
+  state.setActiveView(legacyDebuggerSidebar ? "files" : nextUiState.activeSidebarView);
 };
 
 export const restoreProjectPaneState = (projectPath: string | undefined) => {

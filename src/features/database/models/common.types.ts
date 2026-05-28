@@ -1,13 +1,19 @@
-export type DatabaseObjectKind = "table" | "subscription";
+export type DatabaseObjectKind = "table" | "view" | "materialized_view" | "index" | "subscription";
+
+export type DatabaseCellValue = unknown;
+
+export type DatabaseRow = Record<string, DatabaseCellValue>;
 
 export interface TableInfo {
   name: string;
   kind?: DatabaseObjectKind;
+  table_name?: string | null;
+  tableName?: string | null;
 }
 
 export interface QueryResult {
   columns: string[];
-  rows: any[][];
+  rows: DatabaseCellValue[][];
 }
 
 export interface ColumnInfo {

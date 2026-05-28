@@ -2,19 +2,29 @@ use crate::app_runtime::AppHandle;
 use athas_extensions::ExtensionInstaller;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use std::{path::PathBuf, process::Stdio};
+use std::{
+   future::Future,
+   path::{Component, Path, PathBuf},
+   process::Stdio,
+   time::Duration,
+};
 use tauri::command;
-use tokio::{io::AsyncWriteExt, process::Command};
+use tokio::{io::AsyncWriteExt, process::Command, time::timeout};
+
+const DATABASE_SIDECAR_TIMEOUT: Duration = Duration::from_secs(60);
+const DATABASE_SIDECAR_PROTOCOL_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize)]
 struct ExtensionManifest {
-   #[serde(rename = "databaseProviders", default)]
+   #[serde(rename = "databases", alias = "databaseProviders", default)]
    database_providers: Vec<DatabaseProviderContribution>,
 }
 
 #[derive(Debug, Deserialize)]
 struct DatabaseProviderContribution {
    id: String,
+   #[serde(rename = "protocolVersion")]
+   protocol_version: Option<u32>,
    sidecar: PlatformArchExecutable,
 }
 
@@ -30,6 +40,20 @@ struct PlatformArchExecutable {
    linux_x64: Option<String>,
    #[serde(rename = "win32-x64")]
    win32_x64: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DatabaseSidecarEnvelope {
+   #[serde(rename = "protocolVersion")]
+   protocol_version: Option<u32>,
+   ok: bool,
+   result: Option<Value>,
+   error: Option<DatabaseSidecarError>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DatabaseSidecarError {
+   message: String,
 }
 
 fn database_extension_id(provider_id: &str) -> Result<String, String> {
@@ -66,6 +90,40 @@ fn sidecar_for_platform(sidecar: &PlatformArchExecutable) -> Option<&str> {
    }
 }
 
+fn validate_database_provider_protocol(
+   provider: &DatabaseProviderContribution,
+) -> Result<(), String> {
+   match provider.protocol_version {
+      Some(DATABASE_SIDECAR_PROTOCOL_VERSION) => Ok(()),
+      Some(version) => Err(format!(
+         "Unsupported database sidecar protocol version for provider {}: {}",
+         provider.id, version
+      )),
+      // Older installed database provider packages did not declare
+      // protocolVersion. Their sidecars already speak v1, so keep those
+      // installs working while catalog validation enforces the explicit field.
+      None => Ok(()),
+   }
+}
+
+fn validate_relative_sidecar_path(relative_sidecar: &str) -> Result<(), String> {
+   let path = Path::new(relative_sidecar);
+   if relative_sidecar.trim().is_empty() || path.is_absolute() {
+      return Err("Invalid database sidecar path".to_string());
+   }
+
+   for component in path.components() {
+      match component {
+         Component::Normal(_) => {}
+         Component::CurDir | Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+            return Err("Invalid database sidecar path".to_string());
+         }
+      }
+   }
+
+   Ok(())
+}
+
 fn is_builtin_database_provider(provider_id: &str) -> bool {
    provider_id == "sqlite"
 }
@@ -93,8 +151,10 @@ fn resolve_sidecar_path(app_handle: AppHandle, provider_id: &str) -> Result<Path
       .iter()
       .find(|candidate| candidate.id == provider_id)
       .ok_or_else(|| format!("Manifest does not contribute provider {}", provider_id))?;
+   validate_database_provider_protocol(provider)?;
    let relative_sidecar = sidecar_for_platform(&provider.sidecar)
       .ok_or_else(|| format!("No database sidecar for {}", platform_arch()))?;
+   validate_relative_sidecar_path(relative_sidecar)?;
    let sidecar_path = extension_dir.join(relative_sidecar);
 
    if !sidecar_path.exists() {
@@ -146,6 +206,70 @@ fn hydrate_connection_payload(app_handle: &AppHandle, payload: Value) -> Result<
    Ok(Value::Object(object))
 }
 
+fn decode_sidecar_response(stdout: &[u8]) -> Result<Value, String> {
+   let value: Value = serde_json::from_slice(stdout)
+      .map_err(|e| format!("Invalid database sidecar response: {}", e))?;
+
+   if value.get("ok").is_none() && value.get("protocolVersion").is_none() {
+      return Ok(value);
+   }
+
+   let envelope: DatabaseSidecarEnvelope = serde_json::from_value(value)
+      .map_err(|e| format!("Invalid database sidecar envelope: {}", e))?;
+
+   match envelope.protocol_version {
+      Some(DATABASE_SIDECAR_PROTOCOL_VERSION) => {}
+      Some(version) => {
+         return Err(format!(
+            "Unsupported database sidecar protocol version: {}",
+            version
+         ));
+      }
+      None => return Err("Database sidecar response was missing protocolVersion".to_string()),
+   }
+
+   if envelope.ok {
+      return envelope
+         .result
+         .ok_or_else(|| "Database sidecar response was missing result".to_string());
+   }
+
+   Err(
+      envelope
+         .error
+         .map(|error| error.message)
+         .unwrap_or_else(|| "Database sidecar returned an unknown error".to_string()),
+   )
+}
+
+fn sidecar_timeout_error(timeout_duration: Duration) -> String {
+   format!(
+      "Database sidecar timed out after {} seconds",
+      timeout_duration.as_secs()
+   )
+}
+
+async fn run_with_database_sidecar_timeout<F, T>(
+   timeout_duration: Duration,
+   future: F,
+) -> Result<T, String>
+where
+   F: Future<Output = Result<T, String>>,
+{
+   timeout(timeout_duration, future)
+      .await
+      .map_err(|_| sidecar_timeout_error(timeout_duration))?
+}
+
+fn build_sidecar_request(provider_id: String, command: String, payload: Value) -> Value {
+   json!({
+      "protocolVersion": DATABASE_SIDECAR_PROTOCOL_VERSION,
+      "providerId": provider_id,
+      "command": command,
+      "payload": payload,
+   })
+}
+
 pub async fn run_database_sidecar(
    app_handle: AppHandle,
    provider_id: String,
@@ -154,16 +278,15 @@ pub async fn run_database_sidecar(
 ) -> Result<Value, String> {
    let payload = hydrate_connection_payload(&app_handle, payload)?;
    if is_builtin_database_provider(&provider_id) {
-      return athas_database::sidecar::run_provider_command(provider_id, command, payload).await;
+      return run_with_database_sidecar_timeout(
+         DATABASE_SIDECAR_TIMEOUT,
+         athas_database::sidecar::run_provider_command(provider_id, command, payload),
+      )
+      .await;
    }
 
    let sidecar_path = resolve_sidecar_path(app_handle, &provider_id)?;
-   let request = json!({
-      "protocolVersion": 1,
-      "providerId": provider_id,
-      "command": command,
-      "payload": payload,
-   });
+   let request = build_sidecar_request(provider_id, command, payload);
 
    let sidecar_dir = sidecar_path
       .parent()
@@ -176,6 +299,7 @@ pub async fn run_database_sidecar(
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
+      .kill_on_drop(true)
       .spawn()
       .map_err(|e| format!("Failed to start database sidecar: {}", e))?;
 
@@ -190,9 +314,9 @@ pub async fn run_database_sidecar(
          .map_err(|e| format!("Failed to close sidecar stdin: {}", e))?;
    }
 
-   let output = child
-      .wait_with_output()
+   let output = timeout(DATABASE_SIDECAR_TIMEOUT, child.wait_with_output())
       .await
+      .map_err(|_| sidecar_timeout_error(DATABASE_SIDECAR_TIMEOUT))?
       .map_err(|e| format!("Failed to wait for database sidecar: {}", e))?;
 
    if !output.status.success() {
@@ -204,8 +328,7 @@ pub async fn run_database_sidecar(
       });
    }
 
-   serde_json::from_slice(&output.stdout)
-      .map_err(|e| format!("Invalid database sidecar response: {}", e))
+   decode_sidecar_response(&output.stdout)
 }
 
 #[command]
@@ -216,4 +339,193 @@ pub async fn run_database_provider_command(
    payload: Value,
 ) -> Result<Value, String> {
    run_database_sidecar(app_handle, provider_id, command, payload).await
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn decodes_typed_sidecar_success_envelope() {
+      let response = include_bytes!("fixtures/sidecar_success_v1.json");
+
+      let value = decode_sidecar_response(response).expect("success envelope");
+
+      assert_eq!(value, json!({ "rows": [[1]], "columns": ["id"] }));
+   }
+
+   #[test]
+   fn builds_v1_sidecar_request_envelope() {
+      let fixture: Value = serde_json::from_str(include_str!(
+         "../../../../crates/database/src/fixtures/sidecar_request_v1.json"
+      ))
+      .expect("request fixture");
+
+      let request = build_sidecar_request(
+         "sqlite".to_string(),
+         "disconnect_database".to_string(),
+         json!({}),
+      );
+
+      assert_eq!(request, fixture);
+   }
+
+   #[test]
+   fn decodes_typed_sidecar_error_envelope() {
+      let response = include_bytes!("fixtures/sidecar_error_v1.json");
+
+      let error = decode_sidecar_response(response).expect_err("error envelope");
+
+      assert_eq!(error, "Query failed");
+   }
+
+   #[test]
+   fn decodes_typed_sidecar_panic_envelope() {
+      let response = include_bytes!("fixtures/sidecar_panic_v1.json");
+
+      let error = decode_sidecar_response(response).expect_err("panic envelope");
+
+      assert_eq!(error, "Database sidecar panic: simulated provider panic");
+   }
+
+   #[test]
+   fn accepts_legacy_raw_sidecar_responses() {
+      let response = include_bytes!("fixtures/sidecar_legacy_raw_result.json");
+
+      let value = decode_sidecar_response(response).expect("legacy response");
+
+      assert_eq!(value, json!({ "rows": [[1]], "columns": ["id"] }));
+   }
+
+   #[test]
+   fn rejects_unsupported_sidecar_protocol_version() {
+      let response = include_bytes!("fixtures/sidecar_unsupported_protocol_v2.json");
+
+      let error = decode_sidecar_response(response).expect_err("unsupported protocol version");
+
+      assert_eq!(error, "Unsupported database sidecar protocol version: 2");
+   }
+
+   #[test]
+   fn rejects_sidecar_envelope_without_protocol_version() {
+      let response = br#"{"ok":true,"result":{"rows":[]}}"#;
+
+      let error = decode_sidecar_response(response).expect_err("missing protocol version");
+
+      assert_eq!(
+         error,
+         "Database sidecar response was missing protocolVersion"
+      );
+   }
+
+   #[test]
+   fn rejects_sidecar_envelope_without_ok_status() {
+      let response = br#"{"protocolVersion":1,"result":{"rows":[]}}"#;
+
+      let error = decode_sidecar_response(response).expect_err("missing ok status");
+
+      assert!(
+         error.starts_with("Invalid database sidecar envelope:"),
+         "{}",
+         error
+      );
+   }
+
+   #[test]
+   fn rejects_success_sidecar_envelope_without_result() {
+      let response = br#"{"protocolVersion":1,"ok":true}"#;
+
+      let error = decode_sidecar_response(response).expect_err("missing result");
+
+      assert_eq!(error, "Database sidecar response was missing result");
+   }
+
+   #[test]
+   fn reports_unknown_sidecar_error_when_error_payload_is_missing() {
+      let response = br#"{"protocolVersion":1,"ok":false}"#;
+
+      let error = decode_sidecar_response(response).expect_err("missing error payload");
+
+      assert_eq!(error, "Database sidecar returned an unknown error");
+   }
+
+   #[test]
+   fn rejects_database_provider_manifest_protocol_mismatches() {
+      let provider = DatabaseProviderContribution {
+         id: "postgres".to_string(),
+         protocol_version: Some(2),
+         sidecar: PlatformArchExecutable {
+            darwin_arm64: Some("bin/athas-db-postgres".to_string()),
+            darwin_x64: None,
+            linux_arm64: None,
+            linux_x64: None,
+            win32_x64: None,
+         },
+      };
+
+      let error =
+         validate_database_provider_protocol(&provider).expect_err("protocol mismatch should fail");
+
+      assert_eq!(
+         error,
+         "Unsupported database sidecar protocol version for provider postgres: 2"
+      );
+   }
+
+   #[test]
+   fn accepts_legacy_database_provider_manifest_without_protocol_version() {
+      let provider = DatabaseProviderContribution {
+         id: "postgres".to_string(),
+         protocol_version: None,
+         sidecar: PlatformArchExecutable {
+            darwin_arm64: Some("bin/athas-db-postgres".to_string()),
+            darwin_x64: None,
+            linux_arm64: None,
+            linux_x64: None,
+            win32_x64: None,
+         },
+      };
+
+      validate_database_provider_protocol(&provider)
+         .expect("legacy v1 manifest should remain supported");
+   }
+
+   #[test]
+   fn formats_sidecar_timeout_error() {
+      assert_eq!(
+         sidecar_timeout_error(Duration::from_secs(60)),
+         "Database sidecar timed out after 60 seconds"
+      );
+   }
+
+   #[tokio::test]
+   async fn times_out_builtin_database_provider_commands() {
+      let error = run_with_database_sidecar_timeout(
+         Duration::from_millis(1),
+         std::future::pending::<Result<Value, String>>(),
+      )
+      .await;
+
+      assert_eq!(
+         error.expect_err("pending provider command should time out"),
+         "Database sidecar timed out after 0 seconds"
+      );
+   }
+
+   #[test]
+   fn rejects_sidecar_manifest_paths_that_escape_the_extension_dir() {
+      assert!(validate_relative_sidecar_path("bin/athas-db-postgres").is_ok());
+
+      for invalid_path in [
+         "",
+         "../athas-db-postgres",
+         "bin/../athas-db-postgres",
+         "/tmp/athas-db-postgres",
+      ] {
+         assert_eq!(
+            validate_relative_sidecar_path(invalid_path).expect_err("invalid sidecar path"),
+            "Invalid database sidecar path"
+         );
+      }
+   }
 }

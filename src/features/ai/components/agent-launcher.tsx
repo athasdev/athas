@@ -10,6 +10,8 @@ import Command from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { isMac } from "@/utils/platform";
+import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 
 export function AgentLauncher() {
   const launcherRef = useRef<HTMLDivElement>(null);
@@ -129,6 +131,12 @@ export function AgentLauncher() {
 
   const submit = useCallback(() => {
     const nextPrompt = prompt.trim();
+    if (selectedAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
+      openClaudeCodeTerminal();
+      close();
+      return;
+    }
+
     if (!nextPrompt) return;
 
     const chatId = createNewChat(selectedAgentId);
@@ -243,7 +251,6 @@ export function AgentLauncher() {
             onClick={toggleVoiceInput}
             disabled={!isSpeechRecognitionSupported}
             variant="ghost"
-            size="icon-xs"
             className={cn(
               "rounded-full text-text-lighter hover:text-text",
               isListening && "bg-accent/12 text-accent",
@@ -256,19 +263,20 @@ export function AgentLauncher() {
                   : "Start voice input"
             }
             aria-label={isListening ? "Stop voice input" : "Start voice input"}
+            compact
           >
             <Mic className={cn("size-3.5", isListening && "animate-pulse")} />
           </Button>
           <Button
             type="button"
             onClick={submit}
-            disabled={!prompt.trim()}
-            variant="secondary"
-            size="xs"
+            disabled={selectedAgentId !== CLAUDE_CODE_TERMINAL_AGENT_ID && !prompt.trim()}
+            variant="default"
             className="rounded-full px-2.5"
             tooltip="Launch agent"
             shortcut="enter"
             aria-label="Launch agent"
+            compact
           >
             <Send className="size-3.5" />
           </Button>

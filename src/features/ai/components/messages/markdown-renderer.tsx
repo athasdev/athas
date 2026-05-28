@@ -335,14 +335,13 @@ function CodeBlock({
       <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
-            <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
+            <div className="editor-font text-text-lighter ui-text-xs">{languageLabel}</div>
           )}
           {code.trim() && (
             <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
                 className="rounded"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
@@ -352,10 +351,9 @@ function CodeBlock({
               {onApplyCode && (
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="xs"
+                  variant="default"
                   onClick={() => onApplyCode(code)}
-                  className="h-5 px-1.5 text-[11px]"
+                  className="h-5 px-1.5 ui-text-xs"
                   tooltip="Apply this code to current buffer"
                 >
                   Apply
@@ -364,7 +362,7 @@ function CodeBlock({
             </div>
           )}
         </div>
-        <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">
+        <code className="editor-font block whitespace-pre-wrap break-all text-text ui-text-xs">
           {renderedCode}
         </code>
       </pre>
@@ -460,7 +458,6 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             onClick={() => setIsExpanded(!isExpanded)}
             className="h-auto px-1 text-error/70 hover:bg-transparent hover:text-error"
           >
@@ -473,8 +470,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="secondary"
-            size="xs"
+            variant="default"
             onClick={() => void handleRestartAgentSession()}
             disabled={isRestartingSession}
             className="h-auto gap-1.5"
@@ -485,8 +481,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           {suggestedCommand ? (
             <Button
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               onClick={() =>
                 openTerminalBuffer({
                   command: suggestedCommand,
@@ -501,8 +496,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
           ) : (
             <Button
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
               className="h-auto gap-1.5"
             >
@@ -533,12 +527,12 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 
 // Header classes scaled for sidebar context
 const headerClasses: Record<number, string> = {
-  1: "mt-3 mb-1.5 font-semibold text-sm text-text",
+  1: "mt-3 mb-1.5 font-semibold ui-text-sm text-text",
   2: "ui-text-sm mt-2.5 mb-1 font-semibold text-text",
-  3: "mt-2 mb-1 font-semibold text-text text-xs",
-  4: "mt-2 mb-0.5 font-medium text-text text-xs",
-  5: "mt-1.5 mb-0.5 font-medium text-text-light text-xs",
-  6: "mt-1.5 mb-0.5 font-medium text-text-lighter text-xs",
+  3: "mt-2 mb-1 font-semibold text-text ui-text-xs",
+  4: "mt-2 mb-0.5 font-medium text-text ui-text-xs",
+  5: "mt-1.5 mb-0.5 font-medium text-text-light ui-text-xs",
+  6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-xs",
 };
 
 function renderHeader(level: number, text: string, key: number): React.ReactNode {
@@ -592,6 +586,11 @@ type MarkdownTable = {
   alignments: TableAlignment[];
   rows: string[][];
 };
+
+const INLINE_CODE_CLASS_NAME =
+  "editor-font inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
+const INLINE_LINK_CLASS_NAME =
+  "inline cursor-pointer break-words font-[inherit] leading-[inherit] text-accent hover:underline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -693,7 +692,7 @@ function getTableAlignmentClass(alignment: TableAlignment): string {
 function renderTable(table: MarkdownTable, key: number): React.ReactNode {
   return (
     <div key={key} className="my-2 max-w-full overflow-x-auto">
-      <table className="w-full min-w-max border-collapse text-xs">
+      <table className="w-full min-w-max border-collapse ui-text-xs">
         <thead>
           <tr className="border-border border-b">
             {table.headers.map((header, index) => (
@@ -736,15 +735,22 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
       elements.push(
-        <code
-          key={key++}
-          className="editor-font rounded border border-border bg-secondary-bg px-1 text-xs"
-        >
+        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
           {codeMatch[1]}
         </code>,
       );
       remaining = remaining.slice(codeMatch[0].length);
       continue;
+    }
+
+    const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
+    if (pendingCodeMatch) {
+      elements.push(
+        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+          {pendingCodeMatch[1]}
+        </code>,
+      );
+      break;
     }
 
     // Strikethrough
@@ -795,7 +801,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
             e.preventDefault();
             import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
           }}
-          className="cursor-pointer text-accent hover:underline"
+          className={INLINE_LINK_CLASS_NAME}
         >
           {linkMatch[1]}
         </a>,
@@ -816,7 +822,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
             e.preventDefault();
             import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
           }}
-          className="cursor-pointer text-accent hover:underline"
+          className={INLINE_LINK_CLASS_NAME}
         >
           {url.length > 60 ? `${url.slice(0, 60)}...` : url}
         </a>,
@@ -906,7 +912,7 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="my-1.5 leading-relaxed">
+          <p key={key++} className="my-1.5 leading-[1.6]">
             {renderInlineFormatting(paragraphText)}
           </p>,
         );

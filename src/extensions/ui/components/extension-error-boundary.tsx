@@ -34,16 +34,16 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
         <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
           <AlertTriangle className="size-8 text-yellow-500" />
           <div>
-            <p className="font-medium text-sm text-text">{this.props.name} crashed</p>
-            <p className="mt-1 text-text-lighter text-xs">
+            <p className="font-medium ui-text-sm text-text">{this.props.name} crashed</p>
+            <p className="mt-1 text-text-lighter ui-text-xs">
               {this.state.error?.message || "An unexpected error occurred"}
             </p>
           </div>
           <Button
             onClick={this.handleRetry}
-            variant="secondary"
-            size="sm"
+            variant="default"
             aria-label={`Retry loading ${this.props.name}`}
+            compact
           >
             Retry
           </Button>

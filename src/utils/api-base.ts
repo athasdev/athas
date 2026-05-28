@@ -1,6 +1,6 @@
-const DEFAULT_API_BASE = "https://athas.dev";
+export const DEFAULT_API_BASE = "https://athas.dev";
 
-function isLocalApiBase(value: string): boolean {
+export function isLocalApiBase(value: string): boolean {
   return value.includes("localhost") || value.includes("127.0.0.1");
 }
 

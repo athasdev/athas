@@ -15,13 +15,13 @@ import {
   useBufferStore,
 } from "@/features/editor/stores/buffer-store";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
+import { getLineSlice } from "@/features/editor/utils/large-file";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame-store";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
-import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/git-diff-parser";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
@@ -102,9 +102,7 @@ const logWorkspaceOpenStep = (
   path: string,
   startedAt?: number,
 ) => {
-  const prefix = "[workspace-open]";
   if (phase === "start") {
-    console.info(`${prefix} ${label}:start`, { path });
     frontendTrace("info", "workspace-open", `${label}:start`, { path });
     return;
   }
@@ -114,12 +112,10 @@ const logWorkspaceOpenStep = (
   const payload = { path, durationMs };
 
   if (phase === "end") {
-    console.info(`${prefix} ${label}:end`, payload);
     frontendTrace("info", "workspace-open", `${label}:end`, payload);
     return;
   }
 
-  console.error(`${prefix} ${label}:error`, payload);
   frontendTrace("error", "workspace-open", `${label}:error`, payload);
 };
 
@@ -366,9 +362,29 @@ const openLocalWorkspace = async (
   const { path, traceLabel, treeState, restoreUiState } = options;
   const openStartedAt = performance.now();
   logWorkspaceOpenStep("start", traceLabel, path);
+  const currentRootPath = get().rootFolderPath;
+  const isReplacingCurrentWorkspace = !!currentRootPath && currentRootPath !== path;
+  const currentBufferIds = isReplacingCurrentWorkspace
+    ? useBufferStore.getState().buffers.map((buffer) => buffer.id)
+    : [];
 
   try {
-    persistCurrentProjectUiState(get().rootFolderPath);
+    if (isReplacingCurrentWorkspace) {
+      const currentBuffers = [...useBufferStore.getState().buffers];
+      if (
+        !(await prepareProjectTransitionWithUnsavedBuffers("switching projects", currentBuffers))
+      ) {
+        logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
+        return false;
+      }
+
+      get().persistActiveProjectSession();
+      if (currentBufferIds.length > 0) {
+        useBufferStore.getState().actions.closeBuffersBatch(currentBufferIds, true);
+      }
+    } else {
+      persistCurrentProjectUiState(currentRootPath);
+    }
 
     set((state) => {
       state.isFileTreeLoading = true;
@@ -478,7 +494,11 @@ export const useFileSystemStore = createSelectors(
         const hasOpenWorkspace =
           !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
 
-        if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+        if (
+          settings.openFoldersInNewWindow &&
+          settings.titleBarProjectMode === "window" &&
+          hasOpenWorkspace
+        ) {
           await createAppWindow({
             path: selected,
             isDirectory: true,
@@ -575,7 +595,7 @@ export const useFileSystemStore = createSelectors(
 
         const terminalsToRestore = buildTerminalRestorePayload({
           projectSessionTerminals: session?.terminals,
-          storageTerminals: session ? [] : readPersistedTerminalSessions(projectPath),
+          storageTerminals: readPersistedTerminalSessions(projectPath),
           preferProjectSession: !!session,
         });
         window.dispatchEvent(
@@ -669,37 +689,6 @@ export const useFileSystemStore = createSelectors(
             }
           };
 
-          if (deferredBuffers.length > 0) {
-            toast.show({
-              type: "warning",
-              message: `Restored ${buffersToRestore.length} of ${candidateBuffersToRestore.length} saved tabs for this workspace.`,
-              action: {
-                label: "Restore Rest",
-                onClick: () => {
-                  void (async () => {
-                    if (get().rootFolderPath !== projectPath) {
-                      toast.warning("Switch back to this workspace before restoring its tabs.");
-                      return;
-                    }
-
-                    await restoreBuffers(deferredBuffers);
-                    restoreProjectPaneState(projectPath);
-                  })();
-                },
-              },
-            });
-            console.warn("[workspace-open] restoreSession:truncated", {
-              projectPath,
-              totalBuffers: candidateBuffersToRestore.length,
-              restoredBuffers: buffersToRestore.length,
-            });
-            frontendTrace("warn", "workspace-open", "restoreSession:truncated", {
-              projectPath,
-              totalBuffers: candidateBuffersToRestore.length,
-              restoredBuffers: buffersToRestore.length,
-            });
-          }
-
           await restoreBuffers(buffersToRestore);
 
           // Restore active buffer
@@ -709,6 +698,42 @@ export const useFileSystemStore = createSelectors(
             if (activeBuffer) {
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
+          }
+
+          if (deferredBuffers.length > 0) {
+            console.info("[workspace-open] restoreSession:deferred", {
+              projectPath,
+              totalBuffers: candidateBuffersToRestore.length,
+              restoredBuffers: buffersToRestore.length,
+              deferredBuffers: deferredBuffers.length,
+            });
+            frontendTrace("info", "workspace-open", "restoreSession:deferred", {
+              projectPath,
+              totalBuffers: candidateBuffersToRestore.length,
+              restoredBuffers: buffersToRestore.length,
+              deferredBuffers: deferredBuffers.length,
+            });
+
+            window.setTimeout(() => {
+              void (async () => {
+                if (get().rootFolderPath !== projectPath) {
+                  return;
+                }
+
+                await restoreBuffers(deferredBuffers);
+                restoreProjectPaneState(projectPath);
+                frontendTrace("info", "workspace-open", "restoreSession:deferred:end", {
+                  projectPath,
+                  restoredBuffers: deferredBuffers.length,
+                });
+              })().catch((error) => {
+                console.warn("[workspace-open] failed to restore deferred saved tabs", error);
+                frontendTrace("warn", "workspace-open", "restoreSession:deferred:error", {
+                  projectPath,
+                  error: getErrorMessage(error),
+                });
+              });
+            }, 250);
           }
         }
 
@@ -973,7 +998,7 @@ export const useFileSystemStore = createSelectors(
             setTimeout(() => {
               window.dispatchEvent(
                 new CustomEvent("menu-go-to-line", {
-                  detail: { line, path },
+                  detail: { line, column, path },
                 }),
               );
             }, 0);
@@ -1150,8 +1175,13 @@ export const useFileSystemStore = createSelectors(
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;
+          const externalEditorEngines = new Set(["nvim", "helix", "vim", "custom"]);
+          const usesExternalEditor = externalEditorEngines.has(settings.editorEngine);
 
-          if (settings.externalEditor !== "none") {
+          const hasExternalEditorCommand =
+            settings.editorEngine !== "custom" || settings.customEditorCommand.trim().length > 0;
+
+          if (usesExternalEditor && hasExternalEditorCommand) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
@@ -1203,47 +1233,33 @@ export const useFileSystemStore = createSelectors(
 
           if (isStaleRequest()) return;
 
-          // Check if this is a diff file
-          if (isDiffFile(path, content)) {
-            const parsedDiff = parseRawDiffContent(content, path);
-            const diffJson = JSON.stringify(parsedDiff);
-            openBuffer(path, fileName, diffJson, false, undefined, true, false);
-            fileOpenBenchmark.finish(path, "diff-content-opened");
-          } else {
-            openBuffer(
-              path,
-              fileName,
-              content,
-              false,
-              undefined,
-              false,
-              false,
-              undefined,
-              undefined,
-              false,
-              false,
-              undefined,
-              isPreview,
-            );
-            fileOpenBenchmark.mark(path, "buffer-opened");
-          }
+          openBuffer(
+            path,
+            fileName,
+            content,
+            false,
+            undefined,
+            false,
+            false,
+            undefined,
+            undefined,
+            false,
+            false,
+            undefined,
+            isPreview,
+          );
+          fileOpenBenchmark.mark(path, "buffer-opened");
 
           // Handle navigation to specific line/column
           if (line && column && codeEditorRef?.current?.textarea) {
             requestAnimationFrame(() => {
               if (codeEditorRef.current?.textarea) {
                 const textarea = codeEditorRef.current.textarea;
-                const lines = content.split("\n");
-                let targetPosition = 0;
-
-                if (line) {
-                  for (let i = 0; i < line - 1 && i < lines.length; i++) {
-                    targetPosition += lines[i].length + 1;
-                  }
-                  if (column) {
-                    targetPosition += Math.min(column - 1, lines[line - 1]?.length || 0);
-                  }
-                }
+                const targetLine = Math.max(0, (line ?? 1) - 1);
+                const targetLineSlice = getLineSlice(content, targetLine);
+                const targetPosition =
+                  targetLineSlice.offset +
+                  (column ? Math.min(column - 1, targetLineSlice.line.length) : 0);
 
                 textarea.focus();
                 if (
@@ -1273,7 +1289,7 @@ export const useFileSystemStore = createSelectors(
           setTimeout(() => {
             window.dispatchEvent(
               new CustomEvent("menu-go-to-line", {
-                detail: { line, path },
+                detail: { line, column, path },
               }),
             );
           }, 100);

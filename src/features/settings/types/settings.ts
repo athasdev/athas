@@ -8,6 +8,24 @@ import type {
 } from "@/features/layout/config/item-order";
 
 export type Theme = string;
+export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
+export type EditorEngine = "monaco" | "athas" | "nvim" | "helix" | "vim" | "custom";
+export type SettingsSection =
+  | "account"
+  | "general"
+  | "editor"
+  | "git"
+  | "appearance"
+  | "databases"
+  | "extensions"
+  | "ai"
+  | "keyboard"
+  | "features"
+  | "collaboration"
+  | "enterprise"
+  | "advanced"
+  | "terminal"
+  | "file-explorer";
 
 export interface Settings {
   // General
@@ -16,11 +34,15 @@ export interface Settings {
   quickOpenPreview: boolean;
   // Editor
   fontFamily: string;
+  editorEngine: EditorEngine;
   fontSize: number;
   editorLineHeight: number;
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  renderWhitespace: RenderWhitespaceMode;
+  renderIndentGuides: boolean;
+  highlightOccurrences: boolean;
   showMinimap: boolean;
   // Terminal
   terminalFontFamily: string;
@@ -44,6 +66,7 @@ export interface Settings {
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
+  windowTransparency: boolean;
   sidebarTabsPosition: "top" | "left";
   titleBarProjectMode: "tabs" | "window";
   headerTrailingItemsOrder: HeaderTrailingItemId[];
@@ -92,7 +115,7 @@ export interface Settings {
   autoCompletion: boolean;
   parameterHints: boolean;
   // External Editor
-  externalEditor: "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom";
+  externalEditor: "none" | "nvim" | "helix" | "vim" | "custom";
   customEditorCommand: string;
   // Features
   coreFeatures: CoreFeaturesState;
@@ -101,6 +124,7 @@ export interface Settings {
   enterpriseRequireExtensionAllowlist: boolean;
   enterpriseAllowedExtensionIds: string[];
   // Other
+  lastSettingsTab: SettingsSection;
   extensionsActiveTab:
     | "all"
     | "core"
@@ -132,8 +156,8 @@ export interface Settings {
   compactGitStatusBadges: boolean;
   collapseEmptyGitSections: boolean;
   rememberLastGitPanelMode: boolean;
-  gitLastPanelMode: "changes" | "history" | "worktrees";
-  gitSidebarTabOrder: Array<"changes" | "history" | "worktrees">;
+  gitLastPanelMode: "changes" | "history";
+  gitSidebarTabOrder: Array<"changes" | "history">;
   githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
   enableInlineGitBlame: boolean;
   enableGitGutter: boolean;

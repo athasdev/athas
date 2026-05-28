@@ -1,10 +1,12 @@
 import { ClockCounterClockwise as History } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { useSettingsStore } from "@/features/settings/store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
-import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
+import { PaneChip, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
 import ChatHistoryDropdown from "../history/sidebar";
@@ -65,7 +67,7 @@ function EditableChatTitle({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 text-xs font-medium focus:border-accent/40 focus:bg-hover"
+        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 ui-text-xs font-medium focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );
@@ -73,7 +75,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 ui-text-xs font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -90,6 +92,7 @@ interface ChatHeaderProps {
 export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const chats = useAIChatStore((state) => state.chats);
+  const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
@@ -103,14 +106,18 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;
+  const workspaceChats = useMemo(
+    () => filterChatsByWorkspace(chats, workspacePath),
+    [chats, workspacePath],
+  );
 
   return (
     <div className={cn("relative z-[10020]", paneHeaderClassName())}>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
+          <PaneChip className="size-6 justify-center px-0">
             <ProviderIcon providerId={currentHeaderIconId} size={12} />
-          </span>
+          </PaneChip>
           {effectiveChatId ? (
             <EditableChatTitle
               title={currentChat ? currentChat.title : "New Chat"}
@@ -140,7 +147,7 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
       <ChatHistoryDropdown
         isOpen={isChatHistoryVisible}
         onClose={() => setIsChatHistoryVisible(false)}
-        chats={chats}
+        chats={workspaceChats}
         currentChatId={effectiveChatId}
         onSwitchToChat={switchToChat}
         onDeleteChat={onDeleteChat ?? (() => {})}

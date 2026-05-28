@@ -1,0 +1,6 @@
+{
+  "protocolVersion": 2,
+  "providerId": "sqlite",
+  "command": "query_sqlite",
+  "payload": {}
+}

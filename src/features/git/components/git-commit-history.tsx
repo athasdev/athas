@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import type { GitCommit } from "../types/git-types";
@@ -31,7 +32,6 @@ const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: Com
       onClick={handleCommitClick}
       className={cn(
         "ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 transition-[transform,background-color,opacity] hover:bg-hover",
-        repoPath && "cursor-grab active:cursor-grabbing",
         isSelected && "bg-hover",
       )}
       draggable={!!repoPath}
@@ -208,8 +208,8 @@ const GitCommitHistory = ({
                 ))}
 
                 {isLoadingMoreCommits && (
-                  <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
-                    Loading...
+                  <div className="flex justify-center px-3 py-1.5 text-text-lighter">
+                    <LoadingIndicator label="Loading commits" showLabel compact />
                   </div>
                 )}
 

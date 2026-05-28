@@ -3,10 +3,9 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import Checkbox from "@/ui/checkbox";
+import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git-types";
-
-const GIT_TREE_INDENT_SIZE = 12;
 
 interface GitFileItemProps {
   file: GitFile;
@@ -44,110 +43,89 @@ export const GitFileItem = ({
   const pathParts = file.path.split("/");
   const fileName = pathParts.pop() || file.path;
   const directory = pathParts.join("/");
-  const indentPx = 14 + indentLevel * GIT_TREE_INDENT_SIZE;
-  const guideLevels = Array.from({ length: indentLevel }, (_, level) => level);
   const hasDiffStats = !!diffStats && (diffStats.additions > 0 || diffStats.deletions > 0);
 
   return (
-    <div className="file-tree-item w-full" data-depth={indentLevel}>
-      <div className="file-tree-guides">
-        {guideLevels.map((level) => (
-          <span
-            key={level}
-            className="file-tree-guide"
-            style={{
-              left: `calc(${14 + level * GIT_TREE_INDENT_SIZE}px + var(--file-tree-guide-icon-offset, 7px))`,
-              top: 0,
-              bottom: 0,
-            }}
-          />
-        ))}
-      </div>
+    <SidebarTreeRow
+      depth={indentLevel}
+      className={cn("group min-w-0 leading-[1.35]", className)}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      draggable={!!repoPath}
+      onDragStart={(event) => {
+        if (!repoPath) return;
+        writeSidebarResourceDragData(event.dataTransfer, {
+          type: "git-file-diff",
+          repoPath,
+          filePath: file.path,
+          staged: file.staged,
+          status: file.status,
+          name: fileName,
+        });
+      }}
+    >
+      {showFileIcon && (
+        <FileExplorerIcon
+          fileName={fileName}
+          isDir={false}
+          className="relative z-1 shrink-0 text-text-lighter"
+          size={SIDEBAR_TREE_ICON_SIZE}
+        />
+      )}
       <div
-        className={cn(
-          "file-tree-row ui-text-sm group relative mx-1 flex min-h-7 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 leading-[1.35] hover:bg-hover",
-          repoPath && "cursor-grab active:cursor-grabbing",
-          className,
-        )}
-        style={{ paddingLeft: `${indentPx}px`, paddingRight: "8px" }}
-        onClick={onClick}
-        onContextMenu={onContextMenu}
-        draggable={!!repoPath}
-        onDragStart={(event) => {
-          if (!repoPath) return;
-          writeSidebarResourceDragData(event.dataTransfer, {
-            type: "git-file-diff",
-            repoPath,
-            filePath: file.path,
-            staged: file.staged,
-            status: file.status,
-            name: fileName,
-          });
-        }}
+        className="relative z-1 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+        title={file.path}
       >
-        {showFileIcon && (
-          <FileExplorerIcon
-            fileName={fileName}
-            isDir={false}
-            className="relative z-1 shrink-0 text-text-lighter"
-            size={14}
-          />
-        )}
-        <div
-          className="relative z-1 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
-          title={file.path}
+        <span
+          className={cn(
+            "min-w-0 truncate leading-[1.35]",
+            showDirectory ? "shrink-0 basis-auto max-w-[45%]" : "flex-1",
+            "text-text",
+          )}
         >
-          <span
+          {fileName}
+        </span>
+        {showDirectory && directory && (
+          <span className="ui-text-sm min-w-0 flex-1 truncate leading-[1.35] text-text-lighter/80">
+            {directory}
+          </span>
+        )}
+      </div>
+      <div className="relative z-1 ml-auto flex shrink-0 items-center gap-1.5">
+        {hasDiffStats && (
+          <div
             className={cn(
-              "min-w-0 truncate leading-[1.35]",
-              showDirectory ? "max-w-[55%]" : "flex-1",
-              "text-text",
+              "flex items-center leading-[1.35]",
+              compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >
-            {fileName}
-          </span>
-          {showDirectory && directory && (
-            <span className="ui-text-sm min-w-0 flex-1 truncate leading-[1.35] text-text-lighter/80">
-              {directory}
-            </span>
-          )}
-        </div>
-        <div className="relative z-1 ml-auto flex shrink-0 items-center gap-1.5">
-          {hasDiffStats && (
-            <div
-              className={cn(
-                "flex items-center leading-[1.35]",
-                compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
-              )}
-            >
-              {diffStats.additions > 0 && (
-                <span className="text-git-added">+{diffStats.additions}</span>
-              )}
-              {diffStats.deletions > 0 && (
-                <span className="text-git-deleted">-{diffStats.deletions}</span>
-              )}
-            </div>
-          )}
-          <div
-            className="shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.stopPropagation()}
-          >
-            <Checkbox
-              checked={file.staged}
-              onChange={(checked) => {
-                if (checked) {
-                  onStage?.();
-                  return;
-                }
-                onUnstage?.();
-              }}
-              disabled={disabled}
-              ariaLabel={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
-            />
+            {diffStats.additions > 0 && (
+              <span className="text-git-added">+{diffStats.additions}</span>
+            )}
+            {diffStats.deletions > 0 && (
+              <span className="text-git-deleted">-{diffStats.deletions}</span>
+            )}
           </div>
+        )}
+        <div
+          className="shrink-0"
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={file.staged}
+            onChange={(checked) => {
+              if (checked) {
+                onStage?.();
+                return;
+              }
+              onUnstage?.();
+            }}
+            disabled={disabled}
+            ariaLabel={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
+          />
         </div>
       </div>
-    </div>
+    </SidebarTreeRow>
   );
 };

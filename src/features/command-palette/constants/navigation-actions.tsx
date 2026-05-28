@@ -11,15 +11,18 @@ import {
 } from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types";
+import type { BottomPaneTab, SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: SidebarView) => void;
+  setIsBottomPaneVisible: (v: boolean) => void;
+  setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
   setIsQuickOpenVisible: (v: boolean) => void;
   openCommandPaletteView?: (view: "outline") => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
+  coreFeatures: { outline: boolean };
   onClose: () => void;
 }
 
@@ -27,9 +30,12 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
   const {
     setIsSidebarVisible,
     setActiveView,
+    setIsBottomPaneVisible,
+    setBottomPaneActiveTab,
     setIsQuickOpenVisible,
     openCommandPaletteView,
     openSettingsDialog,
+    coreFeatures,
     onClose,
   } = params;
 
@@ -81,24 +87,28 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       category: "Navigation",
       commandId: "workbench.showDebugger",
       action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("debugger");
+        setBottomPaneActiveTab("debugger");
+        setIsBottomPaneVisible(true);
         onClose();
       },
     },
-    {
-      id: "view-show-outline",
-      label: "View: Show Outline",
-      description: "Show symbols for the active file in the sidebar",
-      icon: <ListBullets />,
-      category: "Navigation",
-      commandId: "workbench.showOutline",
-      action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("outline");
-        onClose();
-      },
-    },
+    ...(coreFeatures.outline
+      ? [
+          {
+            id: "view-show-outline",
+            label: "View: Show Outline",
+            description: "Show symbols for the active file in the sidebar",
+            icon: <ListBullets />,
+            category: "Navigation",
+            commandId: "workbench.showOutline",
+            action: () => {
+              setIsSidebarVisible(true);
+              setActiveView("outline");
+              onClose();
+            },
+          } satisfies Action,
+        ]
+      : []),
     {
       id: "search-global",
       label: "Search: Global Search",

@@ -10,12 +10,19 @@ import {
   upsertRecentFolder,
 } from "../utils/recent-folders";
 
+export interface RecentFolderImport {
+  path: string;
+  sourceId?: string;
+  sourceName?: string;
+}
+
 interface RecentFoldersState {
   recentFolders: RecentFolder[];
 }
 
 interface RecentFoldersActions {
   addToRecents: (folderPath: string, metadata?: RecentFolderMetadata) => void;
+  importRecentFolders: (folders: RecentFolderImport[]) => number;
   openRecentFolder: (folderPath: string) => Promise<void>;
   removeFromRecents: (folderPath: string) => void;
   clearRecents: () => void;
@@ -33,6 +40,35 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
           set((state) => {
             state.recentFolders = upsertRecentFolder(state.recentFolders, folderPath, metadata);
           });
+        },
+
+        importRecentFolders: (folders: RecentFolderImport[]) => {
+          const uniqueFolders = folders.filter(
+            (folder, index) =>
+              folders.findIndex((candidate) => candidate.path === folder.path) === index,
+          );
+          const existingPaths = new Set(get().recentFolders.map((folder) => folder.path));
+          const importedFolders = uniqueFolders.filter((folder) => !existingPaths.has(folder.path));
+
+          if (importedFolders.length === 0) {
+            return 0;
+          }
+
+          const importBaseTime = Date.now() - 60_000;
+          set((state) => {
+            state.recentFolders = importedFolders.reduce(
+              (recentFolders, folder, index) =>
+                upsertRecentFolder(recentFolders, folder.path, {
+                  lastOpenedAt: importBaseTime - index,
+                  missing: false,
+                  importSourceId: folder.sourceId,
+                  importSourceName: folder.sourceName,
+                }),
+              state.recentFolders,
+            );
+          });
+
+          return importedFolders.length;
         },
 
         openRecentFolder: async (folderPath: string) => {
@@ -60,7 +96,11 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
               return;
             }
 
-            if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
+            if (
+              settings.openFoldersInNewWindow &&
+              settings.titleBarProjectMode === "window" &&
+              hasOpenWorkspace
+            ) {
               await createAppWindow({
                 path: folderPath,
                 isDirectory: true,

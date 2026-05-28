@@ -245,10 +245,10 @@ export const ThemeSelectorContent = ({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             className="rounded"
             onClick={handleBack}
             aria-label="Back to commands"
+            compact
           >
             <CaretLeft className="text-text-lighter" />
           </Button>
@@ -262,9 +262,9 @@ export const ThemeSelectorContent = ({
           <Button
             onClick={handleUploadTheme}
             variant="ghost"
-            size="xs"
             className="shrink-0 gap-1 px-2"
             aria-label="Upload theme"
+            compact
           >
             <Upload />
           </Button>
@@ -274,7 +274,7 @@ export const ThemeSelectorContent = ({
               useUIState.getState().openSettingsDialog("appearance");
             }}
             variant="ghost"
-            size="xs"
+            compact
             className="shrink-0 gap-1 px-2"
             aria-label="Open appearance settings"
           >
@@ -308,7 +308,7 @@ export const ThemeSelectorContent = ({
               >
                 <div className="shrink-0 text-text-lighter">{theme.icon || <Moon />}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 truncate text-xs">
+                  <div className="flex items-center gap-2 truncate ui-text-xs">
                     <span className="truncate">{theme.name}</span>
                     {isCurrent && (
                       <Badge variant="accent" size="compact">

@@ -82,6 +82,7 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(FffSearchState::new());
+   app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
 }
 
 fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
@@ -93,11 +94,12 @@ fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
       return;
    }
 
-   let app_handle = app.handle().clone();
-   tauri::async_runtime::spawn(async move {
-      tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
-      emit_cli_requests_to_frontend(&app_handle, open_requests);
-   });
+   log::info!(
+      "Queued {} CLI open request(s) for frontend",
+      open_requests.len()
+   );
+   app.state::<commands::development::cli_args::PendingCliOpenRequests>()
+      .push_all(open_requests);
 }
 
 pub fn handle_single_instance_open(
@@ -159,8 +161,18 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_new_tab" => Some("workbench.newTab"),
       "command_reopen_closed_tab" => Some("file.reopenClosed"),
       "command_close_all_tabs" => Some("file.closeAll"),
+      "command_close_other_tabs" => Some("file.closeOthers"),
+      "command_close_saved_tabs" => Some("file.closeSaved"),
+      "command_close_tabs_to_left" => Some("file.closeTabsToLeft"),
+      "command_close_tabs_to_right" => Some("file.closeTabsToRight"),
+      "command_save_all" => Some("file.saveAll"),
+      "command_revert_file" => Some("file.revert"),
       "command_local_history" => Some("file.localHistory"),
       "command_format_document" => Some("editor.formatDocument"),
+      "command_format_selection" => Some("editor.formatSelection"),
+      "command_quick_fix" => Some("editor.quickFix"),
+      "command_show_hover" => Some("editor.showHover"),
+      "command_trigger_parameter_hints" => Some("editor.triggerParameterHints"),
       "command_duplicate_line" => Some("editor.duplicateLine"),
       "command_delete_line" => Some("editor.deleteLine"),
       "command_move_line_up" => Some("editor.moveLineUp"),
@@ -173,6 +185,9 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_debugger" => Some("workbench.showDebugger"),
       "command_toggle_sidebar_position" => Some("workbench.toggleSidebarPosition"),
       "command_toggle_minimap" => Some("workbench.toggleMinimap"),
+      "command_toggle_word_wrap" => Some("editor.toggleWordWrap"),
+      "command_toggle_line_numbers" => Some("editor.toggleLineNumbers"),
+      "command_toggle_render_whitespace" => Some("editor.toggleRenderWhitespace"),
       "command_zoom_in" => Some("workbench.zoomIn"),
       "command_zoom_out" => Some("workbench.zoomOut"),
       "command_zoom_reset" => Some("workbench.zoomReset"),
@@ -181,6 +196,8 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_go_back" => Some("navigation.goBack"),
       "command_go_forward" => Some("navigation.goForward"),
       "command_go_to_definition" => Some("editor.goToDefinition"),
+      "command_go_to_implementation" => Some("editor.goToImplementation"),
+      "command_go_to_type_definition" => Some("editor.goToTypeDefinition"),
       "command_go_to_references" => Some("editor.goToReferences"),
       "command_rename_symbol" => Some("editor.renameSymbol"),
       "command_new_terminal" => Some("terminal.new"),
@@ -242,6 +259,9 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                }
                "redo" => {
                   let _ = window.emit("menu_redo", ());
+               }
+               "select_all" => {
+                  let _ = window.emit("menu_select_all", ());
                }
                "find" => {
                   let _ = window.emit("menu_find", ());
@@ -316,6 +336,15 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                command_event_id if command_id_for_menu_event(command_event_id).is_some() => {
                   let command_id = command_id_for_menu_event(command_event_id).unwrap();
                   let _ = window.emit("menu_execute_command", command_id);
+               }
+               "open_web_inspector" => {
+                  #[cfg(any(debug_assertions, feature = "devtools"))]
+                  {
+                     if window.is_devtools_open() {
+                        window.close_devtools();
+                     }
+                     window.open_devtools();
+                  }
                }
                "documentation" => {
                   let _ = window.emit("menu_documentation", ());

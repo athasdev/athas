@@ -15,6 +15,8 @@ describe("recent folder helpers", () => {
       {
         activeProjectTabId: "tab-new",
         customIcon: "/workspace/new/icon.png",
+        importSourceId: "cursor",
+        importSourceName: "Cursor",
         lastOpenedAt: 2000,
       },
     );
@@ -24,6 +26,8 @@ describe("recent folder helpers", () => {
       name: "new",
       activeProjectTabId: "tab-new",
       customIcon: "/workspace/new/icon.png",
+      importSourceId: "cursor",
+      importSourceName: "Cursor",
       missing: false,
     });
   });

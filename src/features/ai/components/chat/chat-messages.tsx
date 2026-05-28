@@ -1,7 +1,6 @@
-import { Plus } from "@phosphor-icons/react";
-import { forwardRef, memo, useMemo, useState } from "react";
+import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
+import { getFollowUpActionsForMessage } from "@/features/ai/lib/follow-up-actions";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -10,10 +9,12 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { useAIChatStore } from "../../store/store";
 import { AcpInlineEvent } from "./acp-inline-event";
+import { ChatFollowUpActions } from "./chat-follow-up-actions";
 import { ChatMessage } from "./chat-message";
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
+  onSendFollowUp?: (message: string) => void | Promise<void>;
   acpEvents?: ChatAcpEvent[];
   chatId?: string | null;
 }
@@ -26,7 +27,7 @@ const getTimestampMs = (value: Date | string): number => {
 
 export const ChatMessages = memo(
   forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
-    { onApplyCode, acpEvents, chatId },
+    { onApplyCode, onSendFollowUp, acpEvents, chatId },
     ref,
   ) {
     const { currentChatId, chats } = useAIChatStore(
@@ -36,8 +37,6 @@ export const ChatMessages = memo(
       })),
     );
     const skills = useSettingsStore((state) => state.settings.aiSkills);
-    const [isSkillsOpen, setIsSkillsOpen] = useState(false);
-    const [skillsInitialView, setSkillsInitialView] = useState<"list" | "editor">("list");
 
     const currentChat = useMemo(
       () => chats.find((chat) => chat.id === (chatId ?? currentChatId)),
@@ -78,11 +77,6 @@ export const ChatMessages = memo(
       [skills],
     );
 
-    const openNewSkill = () => {
-      setSkillsInitialView("editor");
-      setIsSkillsOpen(true);
-    };
-
     const handleSkillSelect = (skill: AIChatSkill) => {
       dispatchAIChatSkillInsert(skill);
     };
@@ -96,32 +90,14 @@ export const ChatMessages = memo(
                 key={skill.id}
                 type="button"
                 variant="ghost"
-                size="xs"
                 onClick={() => handleSkillSelect(skill)}
-                className="h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
-                tooltip={skill.title}
+                className="ui-text-xs h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
                 aria-label={`Use skill ${skill.title}`}
               >
                 <span className="min-w-0 truncate">{skill.title}</span>
               </Button>
             ))}
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={openNewSkill}
-              className="h-6 rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/65 hover:border-border-strong hover:bg-transparent hover:text-text"
-            >
-              <Plus size={12} />
-              <span>New skill</span>
-            </Button>
           </div>
-          <SkillsCommand
-            isOpen={isSkillsOpen}
-            initialView={skillsInitialView}
-            onClose={() => setIsSkillsOpen(false)}
-            onSelectSkill={handleSkillSelect}
-          />
         </div>
       );
     }
@@ -135,6 +111,7 @@ export const ChatMessages = memo(
 
           const message = item.message;
           const index = item.messageIndex;
+          const isLastMessage = index === messages.length - 1;
           const prevMessage = index > 0 ? messages[index - 1] : null;
           const isToolOnlyMessage =
             message.role === "assistant" &&
@@ -164,9 +141,15 @@ export const ChatMessages = memo(
             <div key={item.id} className={messageClassName}>
               <ChatMessage
                 message={message}
-                isLastMessage={index === messages.length - 1}
+                isLastMessage={isLastMessage}
                 onApplyCode={onApplyCode}
               />
+              {isLastMessage && message.role === "assistant" && onSendFollowUp ? (
+                <ChatFollowUpActions
+                  actions={getFollowUpActionsForMessage(message)}
+                  onSelect={(prompt) => void onSendFollowUp(prompt)}
+                />
+              ) : null}
             </div>
           );
         })}

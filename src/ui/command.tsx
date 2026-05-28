@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowClockwise as RefreshCwIcon, X } from "@phosphor-icons/react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/store";
-import { Button } from "@/ui/button";
+import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -21,7 +21,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
+  "ui-font mb-1 flex min-h-7 w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left text-[length:var(--ui-text-xs)] leading-[1.35] transition-colors",
   {
     variants: {
       selected: {
@@ -31,6 +31,33 @@ const commandItemVariants = cva(
     },
     defaultVariants: {
       selected: false,
+    },
+  },
+);
+
+const commandHeaderContentVariants = cva("flex items-center gap-2", {
+  variants: {
+    density: {
+      compact: "px-3 py-2",
+      comfortable: "px-4 py-3",
+    },
+  },
+  defaultVariants: {
+    density: "compact",
+  },
+});
+
+const commandInputVariants = cva(
+  "ui-font min-w-0 flex-1 bg-transparent text-text placeholder-text-lighter outline-none",
+  {
+    variants: {
+      size: {
+        sm: "h-6 text-[length:var(--ui-text-xs)] leading-[1.35]",
+        md: "h-7 text-[length:var(--ui-text-sm)] leading-[1.4]",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
     },
   },
 );
@@ -93,25 +120,31 @@ interface CommandHeaderProps {
   children: React.ReactNode;
   onClose: () => void;
   showClearButton?: boolean;
+  density?: "compact" | "comfortable";
+  className?: string;
+  contentClassName?: string;
 }
 
 export const CommandHeader = ({
   children,
   onClose,
   showClearButton = false,
+  density = "compact",
+  className,
+  contentClassName,
 }: CommandHeaderProps) => {
   const clearActionsStack = useActionsStore.use.clearStack();
 
   return (
-    <div className="border-border border-b">
-      <div className="flex items-center gap-3 px-4 py-3">
+    <div data-command-header className={cn("border-border border-b", className)}>
+      <div className={cn(commandHeaderContentVariants({ density }), contentClassName)}>
         {children}
         <Button
           aria-label="Close command palette"
           onClick={onClose}
           variant="ghost"
-          size="icon-xs"
           className="rounded"
+          compact
         >
           <X className="text-text-lighter" />
         </Button>
@@ -120,8 +153,8 @@ export const CommandHeader = ({
             aria-label="Clear persisted actions"
             onClick={clearActionsStack}
             variant="ghost"
-            size="icon-xs"
             className="rounded"
+            compact
           >
             <RefreshCwIcon className="text-text-lighter" />
           </Button>
@@ -144,12 +177,28 @@ export const CommandList = ({ children, ref }: CommandListProps) => (
 
 CommandList.displayName = "CommandList";
 
+interface CommandFooterProps {
+  children: React.ReactNode;
+}
+
+export const CommandFooter = ({ children }: CommandFooterProps) => (
+  <div
+    data-command-footer
+    className="sticky bottom-0 border-border border-t bg-primary-bg px-2 py-2"
+  >
+    <div className="flex items-center gap-1">{children}</div>
+  </div>
+);
+
+CommandFooter.displayName = "CommandFooter";
+
 interface CommandInputProps {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   className?: string;
+  size?: "sm" | "md";
   ref?: React.Ref<HTMLInputElement>;
 }
 
@@ -159,6 +208,7 @@ export const CommandInput = ({
   onKeyDown,
   placeholder,
   className,
+  size = "sm",
   ref,
 }: CommandInputProps) => (
   <input
@@ -168,10 +218,7 @@ export const CommandInput = ({
     onChange={(e) => onChange(e.target.value)}
     onKeyDown={onKeyDown}
     placeholder={placeholder}
-    className={cn(
-      "ui-text-sm flex-1 bg-transparent text-text placeholder-text-lighter outline-none",
-      className,
-    )}
+    className={cn(commandInputVariants({ size }), className)}
   />
 );
 
@@ -205,14 +252,49 @@ export const CommandItem = ({
     onMouseLeave={onMouseLeave}
     {...props}
     variant="ghost"
-    size="sm"
     className={cn(commandItemVariants({ selected: isSelected }), className)}
+    compact
   >
     {children}
   </Button>
 );
 
 CommandItem.displayName = "CommandItem";
+
+export const CommandItemTitle = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span className={cn("min-w-0 truncate text-text", className)} {...props} />
+);
+
+CommandItemTitle.displayName = "CommandItemTitle";
+
+export const CommandItemMeta = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span className={cn("ml-1.5 min-w-0 truncate text-text-lighter/70", className)} {...props} />
+);
+
+CommandItemMeta.displayName = "CommandItemMeta";
+
+type CommandFooterActionProps = Omit<ButtonProps, "compact" | "variant"> & {
+  variant?: ButtonVariant;
+};
+
+export const CommandFooterAction = ({
+  className,
+  variant = "ghost",
+  ...props
+}: CommandFooterActionProps) => (
+  <Button
+    variant={variant}
+    compact
+    className={cn(
+      "h-6 min-w-0 justify-start px-2 text-[length:var(--ui-text-xs)] leading-[1.35]",
+      variant === "ghost" && "text-text-lighter hover:text-text",
+      className,
+    )}
+    {...props}
+  />
+);
+
+CommandFooterAction.displayName = "CommandFooterAction";
 
 interface CommandEmptyProps {
   children: React.ReactNode;

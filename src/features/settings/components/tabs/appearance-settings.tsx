@@ -144,31 +144,6 @@ export const AppearanceSettings = () => {
     <div className="space-y-4">
       <Section title="Theme">
         <SettingRow
-          label="Color Theme"
-          description="Choose your preferred color theme"
-          onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
-          canReset={settings.theme !== getDefaultSetting("theme")}
-        >
-          <div className="flex items-center gap-2">
-            <Select
-              value={settings.theme}
-              options={normalizedThemeOptions}
-              onChange={(value) => updateSetting("theme", value)}
-              className={SETTINGS_CONTROL_WIDTHS.wide}
-              size="xs"
-              variant="secondary"
-              searchable
-              searchableTrigger="input"
-              disabled={settings.syncSystemTheme}
-            />
-            <Button onClick={handleUploadTheme} variant="default" size="xs" className="gap-1">
-              <Upload />
-              Upload
-            </Button>
-          </div>
-        </SettingRow>
-
-        <SettingRow
           label="Sync With OS"
           description="Automatically switch between your preferred light and dark themes"
           onReset={() => updateSetting("syncSystemTheme", getDefaultSetting("syncSystemTheme"))}
@@ -181,6 +156,38 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
+        {!settings.syncSystemTheme ? (
+          <SettingRow
+            label="Color Theme"
+            description="Choose your preferred color theme"
+            onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
+            canReset={settings.theme !== getDefaultSetting("theme")}
+          >
+            <div className="flex items-center gap-2">
+              <Select
+                value={settings.theme}
+                options={normalizedThemeOptions}
+                onChange={(value) => updateSetting("theme", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+              />
+              <Button
+                type="button"
+                onClick={handleUploadTheme}
+                variant="default"
+                tooltip="Upload theme"
+                aria-label="Upload theme"
+                compact
+              >
+                <Upload />
+              </Button>
+            </div>
+          </SettingRow>
+        ) : null}
+
         {settings.syncSystemTheme ? (
           <>
             <SettingRow
@@ -189,16 +196,28 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
-              <Select
-                value={settings.autoThemeLight}
-                options={lightThemeOptions}
-                onChange={(value) => updateSetting("autoThemeLight", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="secondary"
-                searchable
-                searchableTrigger="input"
-              />
+              <div className="flex items-center gap-2">
+                <Select
+                  value={settings.autoThemeLight}
+                  options={lightThemeOptions}
+                  onChange={(value) => updateSetting("autoThemeLight", value)}
+                  className={SETTINGS_CONTROL_WIDTHS.wide}
+                  size="xs"
+                  variant="default"
+                  searchable
+                  searchableTrigger="input"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUploadTheme}
+                  variant="default"
+                  tooltip="Upload theme"
+                  aria-label="Upload theme"
+                  compact
+                >
+                  <Upload />
+                </Button>
+              </div>
             </SettingRow>
 
             <SettingRow
@@ -207,16 +226,28 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
-              <Select
-                value={settings.autoThemeDark}
-                options={darkThemeOptions}
-                onChange={(value) => updateSetting("autoThemeDark", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="secondary"
-                searchable
-                searchableTrigger="input"
-              />
+              <div className="flex items-center gap-2">
+                <Select
+                  value={settings.autoThemeDark}
+                  options={darkThemeOptions}
+                  onChange={(value) => updateSetting("autoThemeDark", value)}
+                  className={SETTINGS_CONTROL_WIDTHS.wide}
+                  size="xs"
+                  variant="default"
+                  searchable
+                  searchableTrigger="input"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUploadTheme}
+                  variant="default"
+                  tooltip="Upload theme"
+                  aria-label="Upload theme"
+                  compact
+                >
+                  <Upload />
+                </Button>
+              </div>
             </SettingRow>
           </>
         ) : null}
@@ -233,7 +264,7 @@ export const AppearanceSettings = () => {
             onChange={handleIconThemeChange}
             className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -287,7 +318,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -307,7 +338,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -348,6 +379,21 @@ export const AppearanceSettings = () => {
         )}
 
         <SettingRow
+          label="Window Transparency"
+          description="Use translucent app chrome and transparent native windows where supported"
+          onReset={() =>
+            updateSetting("windowTransparency", getDefaultSetting("windowTransparency"))
+          }
+          canReset={settings.windowTransparency !== getDefaultSetting("windowTransparency")}
+        >
+          <Switch
+            checked={settings.windowTransparency}
+            onChange={(checked) => updateSetting("windowTransparency", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Title Bar Project Mode"
           description="Show project tabs or a single window-style title in the custom title bar"
           onReset={() =>
@@ -361,7 +407,7 @@ export const AppearanceSettings = () => {
             onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
-            variant="secondary"
+            variant="default"
             searchable
             searchableTrigger="input"
           />
@@ -369,7 +415,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Open Projects In New Window"
-          description="When the current window already has a project, opening another folder uses a separate window"
+          description="In window title mode, opening another folder uses a separate window when a project is already open"
           onReset={() =>
             updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
           }

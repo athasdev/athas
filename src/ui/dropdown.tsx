@@ -20,8 +20,8 @@ import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
-    variant: "secondary",
-    size: "xs",
+    variant: "default",
+    compact: true,
   }),
   "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
 );
@@ -109,6 +109,7 @@ interface MenuPopoverProps {
   className?: string;
   portalContainer?: Element | DocumentFragment | null;
   style?: CSSProperties;
+  animated?: boolean;
   initial?: { opacity: number; scale: number; y?: number };
   animate?: { opacity: number; scale: number; y?: number };
   exit?: { opacity: number; scale: number; y?: number };
@@ -122,6 +123,7 @@ export function MenuPopover({
   className,
   portalContainer,
   style,
+  animated = true,
   initial = { opacity: 0, scale: 0.95 },
   animate = { opacity: 1, scale: 1 },
   exit = { opacity: 0, scale: 0.95 },
@@ -136,10 +138,10 @@ export function MenuPopover({
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       onWheelCapture={containScrollChain}
-      initial={initial}
-      animate={animate}
-      exit={exit}
-      transition={transition}
+      initial={animated ? initial : false}
+      animate={animated ? animate : { opacity: 1, scale: 1, y: 0 }}
+      exit={animated ? exit : { opacity: 1, scale: 1, y: 0 }}
+      transition={animated ? transition : { duration: 0 }}
       className={cn(dropdownRootVariants(), className)}
       style={style}
     >
@@ -240,6 +242,8 @@ interface DropdownBaseProps {
   menuClassName?: string;
   style?: CSSProperties;
   portalContainer?: Element | DocumentFragment | null;
+  closeOnSelect?: boolean;
+  animated?: boolean;
 }
 
 interface AnchorPositioning {
@@ -325,6 +329,8 @@ export function Dropdown(props: DropdownProps) {
     searchable,
     searchPlaceholder,
     portalContainer,
+    closeOnSelect = true,
+    animated = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -596,13 +602,15 @@ export function Dropdown(props: DropdownProps) {
           e.preventDefault();
           if (focusIndex >= 0 && focusIndex < items.length) {
             items[focusIndex].onClick();
-            onClose();
+            if (closeOnSelect) {
+              onClose();
+            }
           }
           break;
         }
       }
     },
-    [getFilteredItems, focusIndex, onClose],
+    [closeOnSelect, getFilteredItems, focusIndex, onClose],
   );
 
   if (typeof document === "undefined") return null;
@@ -623,10 +631,11 @@ export function Dropdown(props: DropdownProps) {
       portalContainer={portalContainer}
       className={className}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
-      initial={{ opacity: 1, scale: 1, y: 0 }}
+      animated={animated}
+      initial={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0 }}
+      exit={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
+      transition={{ duration: 0.12, ease: "easeOut" }}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (
@@ -651,7 +660,7 @@ export function Dropdown(props: DropdownProps) {
           <MenuItemsList
             items={getFilteredItems()}
             focusIndex={focusIndex}
-            onItemSelect={onClose}
+            onItemSelect={closeOnSelect ? onClose : undefined}
           />
         )}
         {hasSections &&
@@ -661,7 +670,10 @@ export function Dropdown(props: DropdownProps) {
               {section.label && (
                 <div className={dropdownSectionLabelVariants()}>{section.label}</div>
               )}
-              <MenuItemsList items={section.items} onItemSelect={onClose} />
+              <MenuItemsList
+                items={section.items}
+                onItemSelect={closeOnSelect ? onClose : undefined}
+              />
             </div>
           ))}
       </div>

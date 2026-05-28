@@ -182,7 +182,9 @@ export function ProviderApiKeyCommand({
                     size={14}
                     className="shrink-0 text-text-lighter"
                   />
-                  <span className="min-w-0 flex-1 truncate text-xs text-text">{provider.name}</span>
+                  <span className="min-w-0 flex-1 truncate ui-text-xs text-text">
+                    {provider.name}
+                  </span>
                   {hasKey ? (
                     <CheckCircle className="shrink-0 text-success" size={13} />
                   ) : (
@@ -204,7 +206,7 @@ export function ProviderApiKeyCommand({
                   className="shrink-0 text-text-lighter"
                 />
                 <div className="min-w-0">
-                  <div className="truncate text-sm text-text">{selectedProvider.name}</div>
+                  <div className="truncate ui-text-sm text-text">{selectedProvider.name}</div>
                   <div className="ui-text-xs text-text-lighter">
                     {hasExistingKey ? "API key saved" : "API key required"}
                   </div>
@@ -232,13 +234,13 @@ export function ProviderApiKeyCommand({
               />
 
               {status === "valid" && (
-                <div className="flex items-center gap-1.5 text-success text-xs">
+                <div className="flex items-center gap-1.5 text-success ui-text-xs">
                   <CheckCircle />
                   API key saved.
                 </div>
               )}
               {status === "invalid" && errorMessage && (
-                <div className="flex items-center gap-1.5 text-error text-xs">
+                <div className="flex items-center gap-1.5 text-error ui-text-xs">
                   <WarningCircle />
                   {errorMessage}
                 </div>
@@ -250,7 +252,7 @@ export function ProviderApiKeyCommand({
                     href={dashboardLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ui-font text-text-lighter text-xs hover:text-text"
+                    className="ui-font text-text-lighter ui-text-xs hover:text-text"
                   >
                     Open dashboard
                   </a>
@@ -262,7 +264,6 @@ export function ProviderApiKeyCommand({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="xs"
                       onClick={() => void handleRemove()}
                       className="text-error hover:bg-error/10 hover:text-error"
                     >
@@ -272,8 +273,7 @@ export function ProviderApiKeyCommand({
                   )}
                   <Button
                     type="button"
-                    variant="primary"
-                    size="xs"
+                    variant="accent"
                     onClick={() => void handleSave()}
                     disabled={!apiKey.trim() || isValidating || apiKey.startsWith("•")}
                     className={cn(isValidating && "opacity-70")}

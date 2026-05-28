@@ -97,7 +97,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        className={isActive ? "bg-hover/80" : undefined}
+        className={cn("h-5 pl-2 pr-6", isActive && "bg-hover/80")}
         onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
@@ -107,8 +107,8 @@ const TabBarItem = memo(function TabBarItem({
         action={
           <Button
             type="button"
+            compact
             variant="ghost"
-            size="icon-xs"
             onClick={(e) => {
               e.stopPropagation();
               if (buffer.isPinned) {
@@ -118,8 +118,8 @@ const TabBarItem = memo(function TabBarItem({
               }
             }}
             className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-0.5 cursor-pointer select-none rounded-md text-text-lighter transition-opacity",
-              "hover:bg-error/12 hover:text-text",
+              "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
+              "hover:text-text",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
             tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
@@ -185,6 +185,8 @@ const TabBarItem = memo(function TabBarItem({
             <Search className="text-text-lighter" />
           ) : buffer.type === "diagnostics" ? (
             <WarningCircle className="text-text-lighter" />
+          ) : buffer.type === "references" ? (
+            <Search className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={getDiffIconName() ?? buffer.name}
@@ -196,7 +198,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
+            "ui-font ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}

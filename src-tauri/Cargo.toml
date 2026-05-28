@@ -1,6 +1,6 @@
 [package]
 name = "athas"
-version = "0.6.0"
+version = "0.7.2"
 description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
@@ -70,6 +70,8 @@ lsp-types = { version = "0.95", features = ["proposed"] }
 portable-pty = "0.9"
 regex = "1.10"
 reqwest = "0.12"
+roxmltree = "0.20"
+rusqlite = { version = "0.29.0", features = ["bundled"] }
 sha256 = "1.5"
 tar = "0.4"
 flate2 = "1.0"
@@ -123,5 +125,4 @@ tokio-util = { version = "0.7", features = ["compat"] }
 tauri-plugin-window-state = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-rand = "0.8.5"
 objc = "0.2"

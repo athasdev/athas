@@ -1,0 +1,45 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.database.mysql",
+  "name": "MySQL",
+  "displayName": "MySQL Provider",
+  "version": "1.0.0",
+  "description": "MySQL connection, schema, and query provider.",
+  "publisher": "Athas",
+  "categories": ["Database"],
+  "activationEvents": ["onDatabase:mysql"],
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/database/mysql/darwin-arm64.tar.gz",
+    "size": 1602099,
+    "checksum": "c0d78f778da855216e2ea6c20f4fcb4fb33093a77b456017f072f69cf93998f4",
+    "platformArch": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/database/mysql/darwin-arm64.tar.gz",
+        "size": 1602099,
+        "checksum": "c0d78f778da855216e2ea6c20f4fcb4fb33093a77b456017f072f69cf93998f4"
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mysql"
+  },
+  "icon": "icon.svg",
+  "databases": [
+    {
+      "id": "mysql",
+      "label": "MySQL",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 3306,
+      "sidecar": {
+        "darwin-arm64": "bin/athas-db-mysql",
+        "darwin-x64": "bin/athas-db-mysql",
+        "linux-arm64": "bin/athas-db-mysql",
+        "linux-x64": "bin/athas-db-mysql",
+        "win32-x64": "bin/athas-db-mysql.exe"
+      }
+    }
+  ]
+}

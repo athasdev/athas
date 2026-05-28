@@ -40,7 +40,6 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         onClick={() => step.description && setIsExpanded(!isExpanded)}
         className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-left"
       >
@@ -58,7 +57,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
         )}
       </Button>
       {isExpanded && step.description && (
-        <div className="border-border border-t px-3 py-2.5 text-text-light text-xs">
+        <div className="border-border border-t px-3 py-2.5 text-text-light ui-text-xs">
           <MarkdownRenderer content={step.description} />
         </div>
       )}

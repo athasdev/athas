@@ -1,5 +1,6 @@
 import type React from "react";
 import type { AcpToolCallLocation, AcpToolCallStatus, AcpToolKind } from "@/features/ai/types/acp";
+import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
@@ -39,6 +40,7 @@ export interface Message {
   images?: ImageContent[];
   resources?: ResourceContent[];
   ui?: GenerativeUIComponent[];
+  followUpActions?: ChatFollowUpAction[];
 }
 
 // Agent types for AI chat
@@ -68,6 +70,7 @@ export interface Chat {
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
   acpSessionId?: string | null;
+  workspacePath?: string | null;
 }
 
 export interface ContextInfo {

@@ -383,7 +383,7 @@ export const AI_PROVIDERS: ModelProvider[] = [
   },
 ];
 
-// Get all API providers (no longer includes Claude Code since it's now an agent)
+// Get all API providers. CLI agents are handled by the agent selector.
 export const getAvailableProviders = (): ModelProvider[] => {
   return AI_PROVIDERS;
 };

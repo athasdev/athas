@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.agent.claude-code",
+  "name": "Claude Code",
+  "displayName": "Claude Code",
+  "description": "Anthropic's CLI coding agent, connected through the Claude Code ACP adapter.",
+  "version": "1.0.0",
+  "publisher": "Anthropic",
+  "categories": ["Agent"],
+  "agents": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "binaryName": "claude-code-acp",
+      "description": "Anthropic's CLI coding agent, connected through the Claude Code ACP adapter.",
+      "args": [],
+      "install": {
+        "runtime": "node",
+        "package": "@zed-industries/claude-code-acp",
+        "command": "claude-code-acp"
+      }
+    }
+  ]
+}

@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { Hover, MarkedString, MarkupContent } from "vscode-languageserver-types";
+import type { Hover } from "vscode-languageserver-types";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import {
+  formatDiagnosticMessage,
+  getDiagnosticAtPosition,
+} from "@/features/editor/decorations/diagnostic-decorations";
 import { useEditorUIStore } from "../stores/ui-store";
 import { logger } from "../utils/logger";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
+import { formatHoverContents } from "./hover-content";
 
 interface UseHoverProps {
   getHover?: (filePath: string, line: number, character: number) => Promise<Hover | null>;
@@ -12,6 +18,26 @@ interface UseHoverProps {
   lineHeight: number;
   charWidth: number;
   resolveEditorPosition?: EditorCoordinateResolver;
+}
+
+function getLineTextAtLine(content: string, targetLine: number): string {
+  if (targetLine <= 0) {
+    const end = content.indexOf("\n");
+    return end === -1 ? content : content.slice(0, end);
+  }
+
+  let currentLine = 0;
+  let lineStart = 0;
+
+  while (currentLine < targetLine) {
+    const nextNewline = content.indexOf("\n", lineStart);
+    if (nextNewline === -1) return "";
+    lineStart = nextNewline + 1;
+    currentLine++;
+  }
+
+  const lineEnd = content.indexOf("\n", lineStart);
+  return lineEnd === -1 ? content.slice(lineStart) : content.slice(lineStart, lineEnd);
 }
 
 export const useHover = ({
@@ -60,22 +86,56 @@ export const useHover = ({
         const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
         const scrollTop = textarea?.scrollTop ?? 0;
         const scrollLeft = textarea?.scrollLeft ?? 0;
-        const textLines = (textarea?.value ?? "").split("\n");
-        const totalLines = textLines.length;
-
-        if (totalLines === 0) return;
+        const textContent = textarea?.value ?? "";
 
         const resolvedPosition = resolveEditorPosition?.(clientX, clientY);
         const line =
           resolvedPosition?.line ?? Math.floor((y - paddingTop + scrollTop) / lineHeight);
-        const clampedLine = Math.max(0, Math.min(line, totalLines - 1));
-        const lineLength = textLines[clampedLine]?.length ?? 0;
+        const clampedLine = Math.max(0, line);
+        const lineText = getLineTextAtLine(textContent, clampedLine);
+        const lineLength = lineText.length;
 
         const character =
           resolvedPosition?.column ?? Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
         const clampedCharacter = Math.max(0, Math.min(character, lineLength));
 
         if (clampedLine >= 0 && clampedCharacter >= 0) {
+          const diagnostics = useDiagnosticsStore.getState().diagnosticsByFile.get(filePath) ?? [];
+          const diagnostic =
+            diagnostics.length > 0
+              ? getDiagnosticAtPosition(
+                  diagnostics,
+                  textContent.split("\n"),
+                  clampedLine,
+                  clampedCharacter,
+                )
+              : null;
+          if (diagnostic) {
+            const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;
+            const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
+            const gap = 6;
+            const lineTop =
+              rect.top +
+              (resolvedPosition?.top ?? paddingTop + clampedLine * lineHeight) -
+              scrollTop;
+            const spaceAbove = lineTop - margin;
+            const spaceBelow = window.innerHeight - (lineTop + lineHeight) - margin;
+            const opensUpward =
+              spaceAbove >= Math.min(EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT, spaceBelow);
+            const tooltipY = opensUpward ? lineTop - gap : lineTop + lineHeight + gap;
+            const tooltipX = Math.max(
+              margin,
+              Math.min(clientX, window.innerWidth - tooltipWidth - margin),
+            );
+
+            actions.setHoverInfo({
+              content: formatDiagnosticMessage(diagnostic),
+              position: { top: Math.max(margin, tooltipY), left: tooltipX },
+              opensUpward,
+            });
+            return;
+          }
+
           try {
             logger.debug(
               "Editor",
@@ -86,38 +146,7 @@ export const useHover = ({
             if (!useEditorUIStore.getState().isHovering) return;
             logger.debug("Editor", `Hover result:`, hoverResult);
             if (hoverResult?.contents) {
-              let content = "";
-
-              const formatHoverItem = (item: string | MarkedString | MarkupContent): string => {
-                if (typeof item === "string") {
-                  return item;
-                }
-                if ("language" in item && item.language && item.value) {
-                  const singleLine = !item.value.includes("\n");
-                  // Keep single-line signatures compact in tooltip.
-                  if (singleLine && item.value.length <= 220) {
-                    return `\`${item.value}\``;
-                  }
-                  return `\`\`\`${item.language}\n${item.value}\n\`\`\``;
-                }
-                if ("kind" in item && item.value) {
-                  return item.value;
-                }
-                return "";
-              };
-
-              if (typeof hoverResult.contents === "string") {
-                content = hoverResult.contents;
-              } else if (Array.isArray(hoverResult.contents)) {
-                content = hoverResult.contents.map(formatHoverItem).filter(Boolean).join("\n");
-              } else {
-                content = formatHoverItem(hoverResult.contents);
-              }
-
-              content = content
-                .replace(/^\s*---+\s*$/gm, "")
-                .replace(/\n{3,}/g, "\n\n")
-                .trim();
+              const content = formatHoverContents(hoverResult.contents);
 
               if (content.trim()) {
                 const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;

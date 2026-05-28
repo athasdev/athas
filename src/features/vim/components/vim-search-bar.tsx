@@ -73,7 +73,7 @@ export const VimSearchBar: React.FC = () => {
           placeholder="Search..."
           autoComplete="off"
         />
-        {matchInfo && <span className="ui-font text-muted-foreground text-sm">{matchInfo}</span>}
+        {matchInfo && <span className="ui-font text-muted-foreground ui-text-sm">{matchInfo}</span>}
       </div>
     </div>
   );

@@ -9,29 +9,99 @@ use super::{
       LspDiagnosticContext,
    },
 };
+use crate::app_runtime::AppHandle;
 use athas_lsp::{LspError, LspManager, LspResult};
+use athas_tooling::{LanguageToolConfigSet, ToolInstaller, ToolRegistry, ToolType};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, DocumentSymbolResponse, GotoDefinitionResponse, Hover,
    Location, PrepareRenameResponse, SemanticTokensResult, SignatureHelp, WorkspaceEdit,
 };
 use serde_json::Value;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use tauri::State;
+
+fn resolve_lsp_launch_request(
+   app_handle: &AppHandle,
+   language_id: Option<String>,
+   server_path: Option<String>,
+   server_args: Option<Vec<String>>,
+   tools: Option<LanguageToolConfigSet>,
+) -> Result<
+   (
+      Option<String>,
+      Option<Vec<String>>,
+      Option<HashMap<String, String>>,
+   ),
+   String,
+> {
+   let Some(language_id) = language_id else {
+      return Ok((server_path, server_args, None));
+   };
+   let Some(tools) = tools else {
+      return Ok((server_path, server_args, None));
+   };
+   let Some(config) = ToolRegistry::get_tool(&language_id, ToolType::Lsp, Some(tools)) else {
+      return Ok((server_path, server_args, None));
+   };
+
+   let resolved_path =
+      ToolInstaller::get_lsp_launch_path(app_handle, &config).map_err(|e| e.to_string())?;
+   let resolved_args = match server_args {
+      Some(args) if !args.is_empty() => Some(args),
+      _ if !config.args.is_empty() => Some(config.args.clone()),
+      args => args,
+   };
+   let resolved_env = if config.env.is_empty() {
+      None
+   } else {
+      Some(config.env.clone())
+   };
+
+   Ok((
+      Some(resolved_path.to_string_lossy().to_string()),
+      resolved_args,
+      resolved_env,
+   ))
+}
+
+fn locations_from_goto_response(response: Option<GotoDefinitionResponse>) -> Option<Vec<Location>> {
+   match response {
+      Some(GotoDefinitionResponse::Scalar(loc)) => Some(vec![loc]),
+      Some(GotoDefinitionResponse::Array(locs)) => Some(locs),
+      Some(GotoDefinitionResponse::Link(links)) => Some(
+         links
+            .into_iter()
+            .map(|link| Location {
+               uri: link.target_uri,
+               range: link.target_selection_range,
+            })
+            .collect(),
+      ),
+      None => None,
+   }
+}
 
 #[tauri::command]
 pub async fn lsp_start(
+   app_handle: AppHandle,
    lsp_manager: State<'_, LspManager>,
    workspace_path: String,
    server_path: Option<String>,
    server_args: Option<Vec<String>>,
+   language_id: Option<String>,
+   tools: Option<LanguageToolConfigSet>,
    initialization_options: Option<Value>,
 ) -> LspResult<()> {
    log::info!("lsp_start command called with path: {}", workspace_path);
+   let (server_path, server_args, server_env) =
+      resolve_lsp_launch_request(&app_handle, language_id, server_path, server_args, tools)
+         .map_err(|e| LspError::from(anyhow::anyhow!(e)))?;
    lsp_manager
       .start_lsp_for_workspace(
          PathBuf::from(workspace_path),
          server_path,
          server_args,
+         server_env,
          initialization_options,
       )
       .await
@@ -54,20 +124,27 @@ pub fn lsp_stop(lsp_manager: State<'_, LspManager>, workspace_path: String) -> L
 
 #[tauri::command]
 pub async fn lsp_start_for_file(
+   app_handle: AppHandle,
    lsp_manager: State<'_, LspManager>,
    file_path: String,
    workspace_path: String,
    server_path: Option<String>,
    server_args: Option<Vec<String>>,
+   language_id: Option<String>,
+   tools: Option<LanguageToolConfigSet>,
    initialization_options: Option<Value>,
 ) -> LspResult<()> {
    log::info!("lsp_start_for_file command called for file: {}", file_path);
+   let (server_path, server_args, server_env) =
+      resolve_lsp_launch_request(&app_handle, language_id, server_path, server_args, tools)
+         .map_err(|e| LspError::from(anyhow::anyhow!(e)))?;
    lsp_manager
       .start_lsp_for_file(
          PathBuf::from(file_path),
          PathBuf::from(workspace_path),
          server_path,
          server_args,
+         server_env,
          initialization_options,
       )
       .await
@@ -139,18 +216,41 @@ pub async fn lsp_get_definition(
       .await;
 
    match response {
-      Ok(Some(GotoDefinitionResponse::Scalar(loc))) => Ok(Some(vec![loc])),
-      Ok(Some(GotoDefinitionResponse::Array(locs))) => Ok(Some(locs)),
-      Ok(Some(GotoDefinitionResponse::Link(links))) => Ok(Some(
-         links
-            .into_iter()
-            .map(|link| Location {
-               uri: link.target_uri,
-               range: link.target_selection_range,
-            })
-            .collect(),
-      )),
-      Ok(None) => Ok(None),
+      Ok(response) => Ok(locations_from_goto_response(response)),
+      Err(e) => Err(e.into()),
+   }
+}
+
+#[tauri::command]
+pub async fn lsp_get_implementation(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<Vec<Location>>> {
+   let response = lsp_manager
+      .get_implementation(&file_path, line, character)
+      .await;
+
+   match response {
+      Ok(response) => Ok(locations_from_goto_response(response)),
+      Err(e) => Err(e.into()),
+   }
+}
+
+#[tauri::command]
+pub async fn lsp_get_type_definition(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<Vec<Location>>> {
+   let response = lsp_manager
+      .get_type_definition(&file_path, line, character)
+      .await;
+
+   match response {
+      Ok(response) => Ok(locations_from_goto_response(response)),
       Err(e) => Err(e.into()),
    }
 }
@@ -305,6 +405,48 @@ pub async fn lsp_format_document(
       log::error!("Failed to format document with LSP: {}", e);
       LspError::from(e)
    })?;
+
+   Ok(response
+      .unwrap_or_default()
+      .into_iter()
+      .map(|edit| FlatTextEdit {
+         range: FlatTextEditRange {
+            start: FlatTextEditPosition {
+               line: edit.range.start.line,
+               character: edit.range.start.character,
+            },
+            end: FlatTextEditPosition {
+               line: edit.range.end.line,
+               character: edit.range.end.character,
+            },
+         },
+         new_text: edit.new_text,
+      })
+      .collect())
+}
+
+#[tauri::command]
+pub async fn lsp_format_range(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   start_line: u32,
+   start_character: u32,
+   end_line: u32,
+   end_character: u32,
+) -> LspResult<Vec<FlatTextEdit>> {
+   let response = lsp_manager
+      .format_range(
+         &file_path,
+         start_line,
+         start_character,
+         end_line,
+         end_character,
+      )
+      .await
+      .map_err(|e| {
+         log::error!("Failed to format range with LSP: {}", e);
+         LspError::from(e)
+      })?;
 
    Ok(response
       .unwrap_or_default()

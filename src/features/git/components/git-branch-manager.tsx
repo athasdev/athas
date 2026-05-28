@@ -1,22 +1,15 @@
 import { Check, GitBranch, Plus, Trash as Trash2 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
-import {
-  Combobox,
-  ComboboxActionItem,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/ui/combobox";
+import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
 import { createStash } from "../api/git-stash-api";
+import GitCommandSurface from "./git-command-surface";
 
 interface GitBranchManagerProps {
   currentBranch?: string;
@@ -28,8 +21,6 @@ interface GitBranchManagerProps {
   triggerClassName?: string;
   triggerInputClassName?: string;
 }
-
-const BRANCH_MANAGER_DROPDOWN_WIDTH = 360;
 
 function getFilteredBranches(branches: string[], currentBranch: string, query: string) {
   const sorted = [...branches].sort((a, b) => {
@@ -66,6 +57,7 @@ const GitBranchManager = ({
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [branchQuery, setBranchQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const hasBlockingModalOpen = useUIState(
@@ -78,11 +70,9 @@ const GitBranchManager = ({
       state.isDatabaseConnectionVisible,
   );
   const { showToast } = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
   const activeBranch = currentBranch ?? "";
-  const triggerText = isDropdownOpen ? branchQuery || activeBranch : activeBranch;
+  const triggerText = activeBranch;
   const triggerTextWidthCh = Math.min(Math.max(triggerText.length + 1, 6), 40);
-  const normalizedQuery = branchQuery.trim();
   const filteredBranches = useMemo(
     () => getFilteredBranches(branches, activeBranch, branchQuery),
     [activeBranch, branchQuery, branches],
@@ -114,7 +104,6 @@ const GitBranchManager = ({
       if (!paletteTarget || !repoPath) return;
       setIsDropdownOpen(true);
       void loadBranches();
-      window.requestAnimationFrame(() => inputRef.current?.focus());
     };
 
     window.addEventListener("athas:open-branch-manager", handleOpenFromPalette);
@@ -124,8 +113,13 @@ const GitBranchManager = ({
   useEffect(() => {
     if (!isDropdownOpen) {
       setBranchQuery("");
+      setSelectedIndex(0);
     }
   }, [isDropdownOpen]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [branchQuery]);
 
   useEffect(() => {
     if (!isDropdownOpen || !hasBlockingModalOpen) return;
@@ -240,140 +234,140 @@ const GitBranchManager = ({
     await loadBranches();
   };
 
+  const commandEntries = [
+    ...(createBranchName ? [{ type: "create" as const, value: createBranchName }] : []),
+    ...filteredBranches.map((branch) => ({ type: "branch" as const, value: branch })),
+  ];
+
+  const handleCommandKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.min(index + 1, Math.max(commandEntries.length - 1, 0)));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const selectedEntry = commandEntries[selectedIndex];
+      if (!selectedEntry) return;
+      if (selectedEntry.type === "create") {
+        void handleCreateBranch(selectedEntry.value);
+      } else {
+        void handleBranchChange(selectedEntry.value);
+      }
+    }
+  };
+
   return (
-    <Combobox
-      items={filteredBranches}
-      value={currentBranch}
-      inputValue={isDropdownOpen ? branchQuery : currentBranch}
-      open={isDropdownOpen}
-      filter={null}
-      itemToStringLabel={(branch) => branch}
-      itemToStringValue={(branch) => branch}
-      onInputValueChange={(value) => {
-        setBranchQuery(value);
-        if (!isDropdownOpen) {
-          void handleOpenDropdown();
-        }
-      }}
-      onOpenChange={(open) => {
-        setIsDropdownOpen(open);
-        if (open) {
-          void loadBranches();
-        }
-      }}
-      onValueChange={(value) => {
-        if (typeof value === "string") {
-          void handleBranchChange(value);
-        }
-      }}
-    >
-      <ComboboxInput
-        ref={inputRef}
+    <>
+      <Button
         data-branch-manager-trigger="true"
-        onFocus={() => void handleOpenDropdown()}
         onClick={() => void handleOpenDropdown()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            closeDropdown();
-          }
-        }}
         disabled={isLoading}
-        readOnly={!isDropdownOpen}
-        leftIcon={GitBranch}
-        leftIconSize={triggerIconSize}
-        htmlSize={triggerTextWidthCh}
         variant="ghost"
-        showTrigger={false}
-        showClear={false}
         className={cn(
-          "inline-flex w-fit max-w-full shrink overflow-hidden hover:bg-hover/80",
+          "inline-flex max-w-full shrink overflow-hidden px-2 text-text-lighter hover:bg-hover/80",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
           triggerClassName,
         )}
-        inputClassName={cn(
-          "min-w-0 max-w-full flex-initial truncate pr-0 pl-7 font-normal",
-          isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
-          triggerInputClassName,
-        )}
-        placeholder={currentBranch}
         aria-label="Search branches"
-      />
-
-      <ComboboxContent
-        side={placement === "up" ? "top" : "bottom"}
-        className="flex flex-col rounded-2xl p-0"
-        style={{
-          width: `min(${BRANCH_MANAGER_DROPDOWN_WIDTH}px, calc(100vw - 16px))`,
-          maxWidth: "calc(100vw - 16px)",
-          maxHeight: "240px",
-        }}
       >
-        <ComboboxList className="min-h-0 flex-1 p-2">
-          {branches.length === 0 ? <ComboboxEmpty>No branches found</ComboboxEmpty> : null}
+        <GitBranch size={triggerIconSize} className="shrink-0" />
+        <span
+          className={cn("ui-text-sm min-w-0 truncate font-normal", triggerInputClassName)}
+          style={{ maxWidth: `${triggerTextWidthCh}ch` }}
+        >
+          {currentBranch}
+        </span>
+      </Button>
+
+      <GitCommandSurface
+        isOpen={isDropdownOpen}
+        onClose={closeDropdown}
+        query={branchQuery}
+        onQueryChange={setBranchQuery}
+        onInputKeyDown={handleCommandKeyDown}
+        placeholder="Search branches..."
+        meta={`${branches.length} branch${branches.length === 1 ? "" : "es"}`}
+        placement={placement === "up" ? "bottom" : "top"}
+      >
+        <CommandList>
+          {branches.length === 0 ? <CommandEmpty>No branches found</CommandEmpty> : null}
           {branches.length > 0 ? (
             <div className="space-y-1">
               {createBranchName ? (
-                <ComboboxActionItem
+                <CommandItem
                   type="button"
                   onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
-                  className={normalizedQuery ? "bg-hover" : undefined}
+                  isSelected={selectedIndex === 0}
+                  onMouseEnter={() => setSelectedIndex(0)}
+                  className="ui-font"
                 >
-                  <Plus className="shrink-0 text-text-lighter" />
-                  <span className="min-w-0 flex-1 truncate">
+                  <Plus size={14} className="shrink-0 text-text-lighter" />
+                  <span className="ui-text-xs min-w-0 flex-1 truncate text-text">
                     Create new branch "{createBranchName}"
                   </span>
-                </ComboboxActionItem>
+                </CommandItem>
               ) : null}
               {filteredBranches.map((branch, index) => (
                 <BranchRow
                   key={branch}
                   branch={branch}
                   isCurrent={branch === currentBranch}
-                  isFirstMatch={Boolean(normalizedQuery) && !createBranchName && index === 0}
+                  isSelected={selectedIndex === index + (createBranchName ? 1 : 0)}
                   isLoading={isLoading}
+                  onMouseEnter={() => setSelectedIndex(index + (createBranchName ? 1 : 0))}
+                  onSelect={() => void handleBranchChange(branch)}
                   onDelete={() => void handleDeleteBranch(branch)}
                 />
               ))}
             </div>
           ) : null}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
+        </CommandList>
+      </GitCommandSurface>
+    </>
   );
 };
 
 function BranchRow({
   branch,
   isCurrent,
-  isFirstMatch,
+  isSelected,
   isLoading,
+  onMouseEnter,
+  onSelect,
   onDelete,
 }: {
   branch: string;
   isCurrent: boolean;
-  isFirstMatch: boolean;
+  isSelected: boolean;
   isLoading: boolean;
+  onMouseEnter: () => void;
+  onSelect: () => void;
   onDelete: () => void;
 }) {
   return (
-    <ComboboxItem
-      value={branch}
+    <CommandItem
       disabled={isLoading}
-      showIndicator={false}
-      className={cn(
-        "group",
-        isFirstMatch && "bg-hover",
-        isCurrent ? "font-medium text-text" : "text-text-lighter hover:text-text",
-      )}
+      isSelected={isSelected}
+      onMouseEnter={onMouseEnter}
+      onClick={onSelect}
+      className={cn("group ui-font", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
     >
       {isCurrent ? (
-        <Check className="shrink-0 text-success" />
+        <Check size={14} className="shrink-0 text-success" />
       ) : (
-        <GitBranch className="shrink-0 text-text-lighter" />
+        <GitBranch size={14} className="shrink-0 text-text-lighter" />
       )}
-      <span className="min-w-0 flex-1 truncate">{branch}</span>
-      {isCurrent ? <span className="ui-text-sm ml-auto shrink-0 text-success">current</span> : null}
+      <span className="ui-text-xs min-w-0 flex-1 truncate text-text">{branch}</span>
+      {isCurrent ? <span className="ui-text-xs ml-auto shrink-0 text-success">current</span> : null}
       {!isCurrent ? (
         <Button
           onClick={(event) => {
@@ -387,7 +381,7 @@ function BranchRow({
           }}
           disabled={isLoading}
           variant="ghost"
-          size="icon-xs"
+          compact
           className={cn(
             "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
             "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
@@ -400,7 +394,7 @@ function BranchRow({
           <Trash2 />
         </Button>
       ) : null}
-    </ComboboxItem>
+    </CommandItem>
   );
 }
 

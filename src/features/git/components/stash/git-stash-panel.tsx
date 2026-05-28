@@ -127,7 +127,7 @@ const GitStashPanel = ({
                       </div>
                       <div className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
                         <span className="truncate">{formatRelativeDate(stash.date)}</span>
-                        <span className="rounded border border-border/50 px-1 text-[10px] leading-4 text-text-lighter/80">
+                        <span className="rounded border border-border/50 px-1 ui-text-xs leading-4 text-text-lighter/80">
                           {getStashPositionLabel(stash.index)}
                         </span>
                       </div>
@@ -138,7 +138,7 @@ const GitStashPanel = ({
                         onClick={(e) => handleApplyStash(stash.index, e)}
                         disabled={actionLoading.has(stash.index)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="text-text-lighter disabled:opacity-50"
                         tooltip="Apply stash"
                         aria-label="Apply stash"
@@ -150,7 +150,7 @@ const GitStashPanel = ({
                         onClick={(e) => handlePopStash(stash.index, e)}
                         disabled={actionLoading.has(stash.index)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="text-text-lighter disabled:opacity-50"
                         tooltip="Pop stash"
                         aria-label="Pop stash"
@@ -162,7 +162,7 @@ const GitStashPanel = ({
                         onClick={(e) => handleDropStash(stash.index, e)}
                         disabled={actionLoading.has(stash.index)}
                         variant="ghost"
-                        size="icon-xs"
+                        compact
                         className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
                         tooltip="Drop stash"
                         aria-label="Drop stash"

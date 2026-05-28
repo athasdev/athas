@@ -3,9 +3,9 @@ export type SidebarView =
   | "git"
   | "github-prs"
   | "outline"
+  | "databases"
   | "collaboration"
-  | "multi-agents"
-  | "sidebar-builder"
+  | "notifications"
   | (string & {});
 
 interface SidebarPaneState {
@@ -18,6 +18,31 @@ interface SidebarPaneState {
 interface SidebarPaneClickResult {
   nextIsSidebarVisible: boolean;
   nextView: SidebarView;
+}
+
+export type SidebarPosition = "left" | "right";
+export type SidebarTriggerSide = SidebarPosition | "current";
+export type SidebarPaneLevel = "primary" | "edge";
+
+interface SidebarPaneTriggerOptions {
+  currentPosition: SidebarPosition;
+  triggerSide?: SidebarTriggerSide;
+}
+
+interface SidebarPaneTriggerResult extends SidebarPaneClickResult {
+  nextPosition: SidebarPosition;
+}
+
+const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>([
+  "outline",
+  "databases",
+  "collaboration",
+  "notifications",
+]);
+
+export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
+  if (EDGE_SIDEBAR_VIEWS.has(view)) return "edge";
+  return "primary";
 }
 
 export function getActiveSidebarView({
@@ -53,5 +78,37 @@ export function resolveSidebarPaneClick(
   return {
     nextIsSidebarVisible: true,
     nextView: clickedView,
+  };
+}
+
+export function getSidebarPositionForTrigger(
+  currentPosition: SidebarPosition,
+  triggerSide: SidebarTriggerSide = "current",
+): SidebarPosition {
+  return triggerSide === "current" ? currentPosition : triggerSide;
+}
+
+export function resolveSidebarPaneTrigger(
+  state: SidebarPaneState,
+  clickedView: SidebarView,
+  options: SidebarPaneTriggerOptions,
+): SidebarPaneTriggerResult {
+  const nextPosition = getSidebarPositionForTrigger(options.currentPosition, options.triggerSide);
+  const isMovingVisibleSidebar = state.isSidebarVisible && nextPosition !== options.currentPosition;
+
+  if (isMovingVisibleSidebar) {
+    return {
+      nextIsSidebarVisible: true,
+      nextView: clickedView,
+      nextPosition,
+    };
+  }
+
+  const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(state, clickedView);
+
+  return {
+    nextIsSidebarVisible,
+    nextView,
+    nextPosition,
   };
 }

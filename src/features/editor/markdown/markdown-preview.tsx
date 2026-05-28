@@ -2,6 +2,7 @@ import "./styles.css";
 import { exists } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-shell";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -11,9 +12,23 @@ import { logger } from "../utils/logger";
 import { parseMarkdown } from "./parser";
 
 export function MarkdownPreview() {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  const { sourceBufferPath, sourceContent } = useBufferStore(
+    useShallow((state) => {
+      const activeBuffer = state.activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+        : null;
+      const sourceBuffer =
+        activeBuffer?.type === "markdownPreview"
+          ? (state.buffers.find((buffer) => buffer.path === activeBuffer.sourceFilePath) ??
+            activeBuffer)
+          : activeBuffer;
+
+      return {
+        sourceBufferPath: sourceBuffer?.path,
+        sourceContent: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "",
+      };
+    }),
+  );
   const fontSize = useEditorSettingsStore.use.fontSize();
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const { handleFileSelect } = useFileSystemStore();
@@ -21,16 +36,12 @@ export function MarkdownPreview() {
   const [html, setHtml] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Get the source buffer if this is a preview buffer
-  const sourceBuffer =
-    activeBuffer?.type === "markdownPreview"
-      ? (buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer)
-      : activeBuffer;
-
-  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
-
   useEffect(() => {
-    if (!sourceContent) return;
+    if (!sourceContent) {
+      setHtml("");
+      return;
+    }
+
     const parsedHtml = parseMarkdown(sourceContent);
     setHtml(parsedHtml);
   }, [sourceContent]);
@@ -107,9 +118,9 @@ export function MarkdownPreview() {
         return;
       }
 
-      if (!sourceBuffer?.path) return;
+      if (!sourceBufferPath) return;
 
-      const targetPath = resolvePath(href, sourceBuffer.path);
+      const targetPath = resolvePath(href, sourceBufferPath);
 
       try {
         const fileExists = await exists(targetPath);
@@ -130,7 +141,7 @@ export function MarkdownPreview() {
         logger.error("MarkdownPreview", "Failed to handle link:", error);
       }
     },
-    [sourceBuffer, handleFileSelect, resolvePath],
+    [sourceBufferPath, handleFileSelect, resolvePath],
   );
 
   const handleWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {

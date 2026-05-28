@@ -13,6 +13,13 @@ use std::{
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
+#[cfg(target_os = "macos")]
+use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy, clear_vibrancy};
+
+#[cfg(target_os = "macos")]
+const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Menu;
+#[cfg(target_os = "macos")]
+const EMBEDDED_WEBVIEW_CORNER_RADIUS: f64 = 7.0;
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -150,12 +157,13 @@ fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, St
 }
 
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
+   let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+
    #[cfg(target_os = "macos")]
    {
-      use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
-
-      apply_vibrancy(window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
-         .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+      if let Err(error) = apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None) {
+         log::warn!("Failed to initialize macOS window vibrancy: {error}");
+      }
    }
 
    #[cfg(target_os = "windows")]
@@ -169,19 +177,158 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    }
 }
 
+#[cfg(target_os = "macos")]
+fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Result<(), String> {
+   use objc::{class, msg_send, runtime::Object, sel, sel_impl};
+   use std::ffi::CString;
+
+   let appearance_name =
+      CString::new(appearance_name).map_err(|e| format!("Invalid macOS appearance name: {e}"))?;
+
+   unsafe {
+      let name: *mut Object =
+         msg_send![class!(NSString), stringWithUTF8String: appearance_name.as_ptr()];
+      if name.is_null() {
+         return Err("Failed to create macOS appearance name".to_string());
+      }
+
+      let appearance: *mut Object = msg_send![class!(NSAppearance), appearanceNamed: name];
+      if appearance.is_null() {
+         return Err("Failed to resolve macOS appearance".to_string());
+      }
+
+      let target = target.cast::<Object>();
+      let _: () = msg_send![target, setAppearance: appearance];
+   }
+
+   Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn apply_embedded_webview_corner_radius(
+   webview: &tauri::Webview<AthasRuntime>,
+) -> Result<(), String> {
+   webview
+      .with_webview(|platform_webview| unsafe {
+         use objc::{
+            msg_send,
+            runtime::{BOOL, Object, YES},
+            sel, sel_impl,
+         };
+
+         let view = platform_webview.inner().cast::<Object>();
+         if view.is_null() {
+            return;
+         }
+
+         let _: () = msg_send![view, setWantsLayer: YES];
+         let layer: *mut Object = msg_send![view, layer];
+         if layer.is_null() {
+            return;
+         }
+
+         let _: () = msg_send![layer, setCornerRadius: EMBEDDED_WEBVIEW_CORNER_RADIUS];
+         let _: () = msg_send![layer, setMasksToBounds: YES];
+         let _: () = msg_send![layer, setAllowsEdgeAntialiasing: YES as BOOL];
+         let _: () = msg_send![layer, setEdgeAntialiasingMask: 15usize];
+      })
+      .map_err(|e| format!("Failed to apply embedded webview corner radius: {e}"))
+}
+
+#[cfg(target_os = "macos")]
+fn sync_macos_window_appearance(
+   window: &tauri::WebviewWindow<AthasRuntime>,
+   theme_type: &str,
+   transparency_enabled: bool,
+) -> Result<(), String> {
+   let appearance_name = match theme_type {
+      "light" => "NSAppearanceNameAqua",
+      "dark" => "NSAppearanceNameDarkAqua",
+      _ => return Err(format!("Unsupported macOS theme appearance: {theme_type}")),
+   };
+
+   let ns_window = window
+      .ns_window()
+      .map_err(|e| format!("Failed to access macOS window: {e}"))?;
+   set_ns_appearance(ns_window, appearance_name)?;
+
+   let ns_view = window
+      .ns_view()
+      .map_err(|e| format!("Failed to access macOS webview: {e}"))?;
+   set_ns_appearance(ns_view, appearance_name)?;
+
+   if transparency_enabled {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+      let _ = clear_vibrancy(window);
+      apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None)
+         .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
+   } else {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+      let _ = clear_vibrancy(window);
+   }
+
+   Ok(())
+}
+
 #[command]
 pub fn uses_native_window_chrome() -> bool {
    cfg!(all(target_os = "linux", feature = "linux"))
 }
 
-pub fn create_app_window_internal(
+#[command]
+pub fn set_macos_window_appearance(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   theme_type: String,
+   transparency_enabled: Option<bool>,
+) -> Result<(), String> {
+   #[cfg(target_os = "macos")]
+   {
+      sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(true))?;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = window;
+      let _ = theme_type;
+      let _ = transparency_enabled;
+   }
+
+   Ok(())
+}
+
+#[command]
+pub fn set_window_transparency_enabled(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   enabled: bool,
+) -> Result<(), String> {
+   #[cfg(target_os = "macos")]
+   {
+      if enabled {
+         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+         let _ = clear_vibrancy(&window);
+         if let Err(error) = apply_vibrancy(&window, ATHAS_WINDOW_MATERIAL, None, None) {
+            log::warn!("Failed to apply macOS window vibrancy: {error}");
+         }
+      } else {
+         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+         let _ = clear_vibrancy(&window);
+      }
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = window;
+      let _ = enabled;
+   }
+
+   Ok(())
+}
+
+fn create_labeled_app_window_internal(
    app: &tauri::AppHandle<AthasRuntime>,
+   label: String,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
-   let label = format!(
-      "main-{}",
-      APP_WINDOW_COUNTER.fetch_add(1, Ordering::SeqCst) + 1
-   );
    let url = build_window_open_url(request.as_ref());
 
    let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
@@ -190,6 +337,7 @@ pub fn create_app_window_internal(
       .min_inner_size(400.0, 400.0)
       .center()
       .decorations(true)
+      .transparent(true)
       .resizable(true)
       .shadow(true);
 
@@ -211,6 +359,18 @@ pub fn create_app_window_internal(
    configure_app_window(&window);
 
    Ok(label)
+}
+
+pub fn create_app_window_internal(
+   app: &tauri::AppHandle<AthasRuntime>,
+   request: Option<CreateAppWindowRequest>,
+) -> Result<String, String> {
+   let label = format!(
+      "main-{}",
+      APP_WINDOW_COUNTER.fetch_add(1, Ordering::SeqCst) + 1
+   );
+
+   create_labeled_app_window_internal(app, label, request)
 }
 
 #[command]
@@ -495,6 +655,9 @@ pub async fn create_embedded_webview(
       .set_auto_resize(false)
       .map_err(|e| format!("Failed to set auto resize: {e}"))?;
 
+   #[cfg(target_os = "macos")]
+   apply_embedded_webview_corner_radius(&webview)?;
+
    if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
       labels.insert(webview_label.clone());
    }
@@ -628,6 +791,9 @@ pub async fn set_webview_visible(
          webview
             .hide()
             .map_err(|e| format!("Failed to hide webview: {e}"))?;
+         if let Some(main_webview) = app.get_webview_window("main") {
+            let _ = main_webview.set_focus();
+         }
       }
    } else {
       return Err(format!("Webview not found: {webview_label}"));
@@ -654,6 +820,26 @@ pub async fn open_webview_devtools(
       }
    } else {
       Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[command]
+pub async fn reopen_current_webview_devtools(
+   window: tauri::WebviewWindow<AthasRuntime>,
+) -> Result<(), String> {
+   #[cfg(any(debug_assertions, feature = "devtools"))]
+   {
+      if window.is_devtools_open() {
+         window.close_devtools();
+      }
+      window.open_devtools();
+      Ok(())
+   }
+
+   #[cfg(not(any(debug_assertions, feature = "devtools")))]
+   {
+      let _ = window;
+      Err("Webview devtools are unavailable in release builds".to_string())
    }
 }
 

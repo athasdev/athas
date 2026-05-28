@@ -3,7 +3,6 @@ import {
   CheckCircle,
   Eye,
   EyeSlash as EyeOff,
-  SpinnerGap as Loader2,
   HardDrives as Server,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { testRemoteConnection } from "./services/remote-connection-actions";
@@ -155,7 +155,7 @@ const ConnectionDialog = ({
       }}
       footer={
         <>
-          <Button onClick={onClose} variant="ghost" size="sm">
+          <Button onClick={onClose} variant="ghost" compact>
             Cancel
           </Button>
           <Button
@@ -181,18 +181,12 @@ const ConnectionDialog = ({
               }
             }}
             variant="ghost"
-            size="sm"
+            compact
             disabled={isTesting}
           >
-            {isTesting ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="animate-spin" /> Testing
-              </span>
-            ) : (
-              "Test Connection"
-            )}
+            {isTesting ? <LoadingIndicator label="Testing" showLabel compact /> : "Test Connection"}
           </Button>
-          <Button onClick={handleSave} disabled={!isFormValid || isValidating} size="sm">
+          <Button onClick={handleSave} disabled={!isFormValid || isValidating} compact>
             {isValidating
               ? "Saving..."
               : editingConnection
@@ -306,7 +300,6 @@ const ConnectionDialog = ({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={() => setShowPassword(!showPassword)}
               className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter hover:text-text"
               aria-label={showPassword ? "Hide password" : "Show password"}

@@ -25,16 +25,13 @@ export function useChatInitialization() {
 
     async function initialize() {
       try {
-        console.log("Initializing AI chat storage...");
         setIsLoading(true);
         setError(null);
 
         // Step 1: Initialize SQLite database
-        console.log("1. Initializing SQLite database...");
         await initializeDatabase();
 
         // Step 2: Migrate from localStorage if needed
-        console.log("2. Checking for migration...");
         const migrationSuccess = await performMigrationIfNeeded();
 
         if (!migrationSuccess) {
@@ -42,14 +39,11 @@ export function useChatInitialization() {
         }
 
         // Step 3: Load chats from database
-        console.log("3. Loading chats from database...");
         await loadChatsFromDatabase();
 
         // Step 4: Apply default settings from settings store
-        console.log("4. Applying default settings...");
         applyDefaultSettings();
 
-        console.log("AI chat storage initialized successfully");
         setIsInitialized(true);
       } catch (err) {
         const errorMsg = `Failed to initialize chat storage: ${err}`;

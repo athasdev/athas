@@ -135,6 +135,16 @@ class EditorViewStateCacheManager {
 
 const viewStateCache = new EditorViewStateCacheManager();
 
+function positionsEqual(left: Position, right: Position): boolean {
+  return left.line === right.line && left.column === right.column && left.offset === right.offset;
+}
+
+function rangesEqual(left?: Range, right?: Range): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return positionsEqual(left.start, right.start) && positionsEqual(left.end, right.end);
+}
+
 const ensureCursorVisible = (position: Position) => {
   if (typeof window === "undefined") return;
 
@@ -143,10 +153,11 @@ const ensureCursorVisible = (position: Position) => {
 
   const editorElement = useEditorStateStore.getState().editorRef?.current;
   const scopedTextarea =
-    editorElement?.querySelector<HTMLTextAreaElement>("textarea.editor-textarea") ?? null;
+    editorElement?.querySelector<HTMLTextAreaElement>("[data-monaco-editor-scroll] textarea") ??
+    null;
   const focusedTextarea =
     document.activeElement instanceof HTMLTextAreaElement &&
-    document.activeElement.classList.contains("editor-textarea")
+    !!document.activeElement.closest("[data-monaco-editor-scroll]")
       ? document.activeElement
       : null;
   const textarea = scopedTextarea ?? focusedTextarea;
@@ -162,11 +173,16 @@ const ensureCursorVisible = (position: Position) => {
   const targetBottom = targetTop + lineHeight;
   const currentScrollTop = textarea.scrollTop;
   const viewportHeight = textarea.clientHeight || 0;
+  const bottomSafePadding = Math.max(
+    EDITOR_CONSTANTS.COMPLETION_DROPDOWN_SAFE_AREA,
+    lineHeight * EDITOR_CONSTANTS.CURSOR_BOTTOM_SAFE_AREA_LINES,
+  );
+  const safeViewportHeight = Math.max(lineHeight * 2, viewportHeight - bottomSafePadding);
 
   if (targetTop < currentScrollTop) {
     textarea.scrollTop = targetTop;
-  } else if (targetBottom > currentScrollTop + viewportHeight) {
-    textarea.scrollTop = Math.max(0, targetBottom - viewportHeight);
+  } else if (targetBottom > currentScrollTop + safeViewportHeight) {
+    textarea.scrollTop = Math.max(0, targetBottom - safeViewportHeight);
   }
 };
 
@@ -193,6 +209,7 @@ interface EditorState {
     previousValue?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
   ) => void;
   filePath: string;
   editorRef: RefObject<HTMLDivElement | null> | null;
@@ -239,6 +256,7 @@ interface EditorStateActions {
       previousValue?: string,
       previousCursorPosition?: Position,
       previousSelection?: Range,
+      options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
     ) => void,
   ) => void;
   setFileInfo: (filePath: string) => void;
@@ -277,28 +295,42 @@ export const useEditorStateStore = createSelectors(
       actions: {
         // Cursor actions
         setCursorPosition: (position, options) => {
+          const currentState = useEditorStateStore.getState();
           const { activeBufferId } = useBufferStore.getState();
-          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const activeEditorViewKey = currentState.activeEditorViewKey;
           const viewKey = activeEditorViewKey ?? activeBufferId;
           if (viewKey) {
             viewStateCache.setCursor(viewKey, position);
           }
-          set({ cursorPosition: position });
+          if (!positionsEqual(currentState.cursorPosition, position)) {
+            set({ cursorPosition: position });
+          }
           if (options?.ensureVisible !== false) {
             ensureCursorVisible(position);
           }
         },
         setSelection: (selection) => {
+          const currentState = useEditorStateStore.getState();
           const { activeBufferId } = useBufferStore.getState();
-          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const activeEditorViewKey = currentState.activeEditorViewKey;
           const viewKey = activeEditorViewKey ?? activeBufferId;
           if (viewKey) {
             viewStateCache.setSelection(viewKey, selection);
           }
-          set({ selection });
+          if (!rangesEqual(currentState.selection, selection)) {
+            set({ selection });
+          }
         },
-        setDesiredColumn: (column) => set({ desiredColumn: column }),
-        setCursorVisibility: (visible) => set({ cursorVisible: visible }),
+        setDesiredColumn: (column) => {
+          if (useEditorStateStore.getState().desiredColumn !== column) {
+            set({ desiredColumn: column });
+          }
+        },
+        setCursorVisibility: (visible) => {
+          if (useEditorStateStore.getState().cursorVisible !== visible) {
+            set({ cursorVisible: visible });
+          }
+        },
         getCachedPosition: (bufferId) => viewStateCache.getCursor(bufferId),
         getCachedViewState: (bufferId) => viewStateCache.get(bufferId),
         cacheViewStateForBuffer: (bufferId, state) => {
@@ -407,9 +439,7 @@ export const useEditorStateStore = createSelectors(
             if (!state.multiCursorState) return state;
 
             const cursors = state.multiCursorState.cursors.map((cursor) =>
-              cursor.id === cursorId
-                ? { ...cursor, position, selection: selection ?? cursor.selection }
-                : cursor,
+              cursor.id === cursorId ? { ...cursor, position, selection } : cursor,
             );
 
             return {
@@ -444,13 +474,16 @@ export const useEditorStateStore = createSelectors(
 
         // Layout actions
         setScroll: (scrollTop, scrollLeft) => {
+          const currentState = useEditorStateStore.getState();
           const { activeBufferId } = useBufferStore.getState();
-          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const activeEditorViewKey = currentState.activeEditorViewKey;
           const viewKey = activeEditorViewKey ?? activeBufferId;
           if (viewKey) {
             viewStateCache.setScroll(viewKey, scrollTop, scrollLeft);
           }
-          set({ scrollTop, scrollLeft });
+          if (currentState.scrollTop !== scrollTop || currentState.scrollLeft !== scrollLeft) {
+            set({ scrollTop, scrollLeft });
+          }
         },
         setScrollForBuffer: (bufferId, scrollTop, scrollLeft) => {
           // Cache scroll for the specified buffer (avoids race condition when buffer switches)
@@ -460,18 +493,52 @@ export const useEditorStateStore = createSelectors(
           // Only update global state if this is still the active buffer
           const activeBufferId = useBufferStore.getState().activeBufferId;
           if (bufferId === activeBufferId) {
-            set({ scrollTop, scrollLeft });
+            const currentState = useEditorStateStore.getState();
+            if (currentState.scrollTop !== scrollTop || currentState.scrollLeft !== scrollLeft) {
+              set({ scrollTop, scrollLeft });
+            }
           }
         },
-        setViewportHeight: (height) => set({ viewportHeight: height }),
+        setViewportHeight: (height) => {
+          if (useEditorStateStore.getState().viewportHeight !== height) {
+            set({ viewportHeight: height });
+          }
+        },
 
         // Instance actions
-        setRefs: (refs) => set(refs),
-        setContent: (value, onChange) => set({ value, onChange }),
-        setFileInfo: (filePath) => set({ filePath }),
-        setPlaceholder: (placeholder) => set({ placeholder }),
-        setDisabled: (disabled) => set({ disabled }),
-        setActiveEditorViewKey: (activeEditorViewKey) => set({ activeEditorViewKey }),
+        setRefs: (refs) => {
+          if (useEditorStateStore.getState().editorRef !== refs.editorRef) {
+            set(refs);
+          }
+        },
+        setContent: (value, onChange) =>
+          set((state) => {
+            const nextValue = state.value === "" ? value : state.value;
+            if (state.value === nextValue && state.onChange === onChange) {
+              return state;
+            }
+            return { value: nextValue, onChange };
+          }),
+        setFileInfo: (filePath) => {
+          if (useEditorStateStore.getState().filePath !== filePath) {
+            set({ filePath });
+          }
+        },
+        setPlaceholder: (placeholder) => {
+          if (useEditorStateStore.getState().placeholder !== placeholder) {
+            set({ placeholder });
+          }
+        },
+        setDisabled: (disabled) => {
+          if (useEditorStateStore.getState().disabled !== disabled) {
+            set({ disabled });
+          }
+        },
+        setActiveEditorViewKey: (activeEditorViewKey) => {
+          if (useEditorStateStore.getState().activeEditorViewKey !== activeEditorViewKey) {
+            set({ activeEditorViewKey });
+          }
+        },
       },
     })),
   ),

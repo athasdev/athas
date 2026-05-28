@@ -46,9 +46,9 @@ export const CollaborationSettings = () => {
           <Button
             type="button"
             variant="default"
-            size="xs"
             className="ui-text-sm"
             onClick={openDashboardCollaboration}
+            compact
           >
             <UsersThree />
             Open
@@ -56,7 +56,7 @@ export const CollaborationSettings = () => {
         </SettingRow>
 
         <SettingRow label="Members" description={`${invitations.length} pending invitations`}>
-          <Badge variant="default" shape="pill" size="compact">
+          <Badge variant="default" size="compact">
             {activeMembers.length}/{members.length} active
           </Badge>
         </SettingRow>
@@ -65,7 +65,7 @@ export const CollaborationSettings = () => {
           label="Channels"
           description={selectedChannel ? `Joined #${selectedChannel.slug}` : "No channel selected"}
         >
-          <Badge variant="default" shape="pill" size="compact">
+          <Badge variant="default" size="compact">
             {channels.length} channels
           </Badge>
         </SettingRow>
@@ -75,13 +75,12 @@ export const CollaborationSettings = () => {
           description={followedMember ? `Following ${followedMember.name}` : "Not following anyone"}
         >
           <div className="flex items-center gap-2">
-            <Badge variant="default" shape="pill" size="compact">
+            <Badge variant="default" size="compact">
               {collaboration?.presence.length ?? 0} sessions
             </Badge>
             <Button
               type="button"
-              variant="secondary"
-              size="xs"
+              variant="default"
               className="ui-text-sm"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
               onClick={() => {
@@ -104,7 +103,6 @@ export const CollaborationSettings = () => {
         >
           <Badge
             variant={activeDocumentStream.status === "error" ? "error" : "default"}
-            shape="pill"
             size="compact"
           >
             {activeDocumentStream.status}
@@ -112,7 +110,7 @@ export const CollaborationSettings = () => {
         </SettingRow>
 
         <SettingRow label="Workspace Rules" description={`Invites: ${invitePolicy}`}>
-          <Badge variant="default" shape="pill" size="compact">
+          <Badge variant="default" size="compact">
             Seats {seatLimit} · Updates {updateLimit}
           </Badge>
         </SettingRow>
@@ -128,8 +126,7 @@ export const CollaborationSettings = () => {
             >
               <Button
                 type="button"
-                variant={presenceTarget.channelId === channel.id ? "primary" : "secondary"}
-                size="xs"
+                variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
                 className="ui-text-sm"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
@@ -143,8 +140,7 @@ export const CollaborationSettings = () => {
             <SettingRow key={`follow-${member.id}`} label={member.name} description={member.email}>
               <Button
                 type="button"
-                variant={presenceTarget.followingUserId === member.userId ? "primary" : "secondary"}
-                size="xs"
+                variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
                 className="ui-text-sm"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}

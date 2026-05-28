@@ -14,6 +14,7 @@ interface ChatData {
   last_message_at: number;
   agent_id: string | null;
   acp_session_id: string | null;
+  workspace_path: string | null;
 }
 
 interface MessageData {
@@ -77,6 +78,7 @@ function chatToData(chat: Chat): {
     last_message_at: chat.lastMessageAt.getTime(),
     agent_id: chat.agentId,
     acp_session_id: chat.acpSessionId || null,
+    workspace_path: chat.workspacePath || null,
   };
 
   const messages: MessageData[] = chat.messages.map((msg) => ({
@@ -150,6 +152,7 @@ function dataToChat(data: ChatWithMessages): Chat {
     lastMessageAt: new Date(data.chat.last_message_at),
     agentId: (data.chat.agent_id || "custom") as AgentType,
     acpSessionId: data.chat.acp_session_id,
+    workspacePath: data.chat.workspace_path,
   };
 }
 
@@ -180,6 +183,7 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       lastMessageAt: new Date(chat.last_message_at),
       agentId: (chat.agent_id || "custom") as AgentType,
       acpSessionId: chat.acp_session_id,
+      workspacePath: chat.workspace_path,
     }));
   } catch (error) {
     console.error("Error loading chats from database:", error);
@@ -195,7 +199,9 @@ export const loadChatFromDb = async (chatId: string): Promise<Chat> => {
     const data = (await invoke("load_chat", { chatId })) as ChatWithMessages;
     return dataToChat(data);
   } catch (error) {
-    console.error(`Error loading chat ${chatId} from database:`, error);
+    if (!String(error).includes("Query returned no rows")) {
+      console.error(`Error loading chat ${chatId} from database:`, error);
+    }
     throw error;
   }
 };
@@ -226,6 +232,7 @@ export const searchChatsInDb = async (query: string): Promise<Omit<Chat, "messag
       lastMessageAt: new Date(chat.last_message_at),
       agentId: (chat.agent_id || "custom") as AgentType,
       acpSessionId: chat.acp_session_id,
+      workspacePath: chat.workspace_path,
     }));
   } catch (error) {
     console.error(`Error searching chats for "${query}":`, error);

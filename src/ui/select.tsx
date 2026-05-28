@@ -31,9 +31,11 @@ export interface SelectProps {
   className?: string;
   triggerClassName?: string;
   menuClassName?: string;
+  menuMinWidth?: number;
+  menuAnimated?: boolean;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
-  variant?: "default" | "ghost" | "secondary" | "outline";
+  variant?: "default" | "ghost";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
   openDirection?: "up" | "down" | "auto";
@@ -70,7 +72,7 @@ const selectTriggerVariants = cva(
 );
 
 const selectContentVariants = cva(
-  "z-[10040] max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 ease-out",
+  "z-[10040] max-h-96 min-w-0 overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 ease-out",
 );
 
 const selectItemVariants = cva(
@@ -158,6 +160,12 @@ function getFilteredOptions(options: SelectOption[], searchable: boolean, search
   return searchable ? filterSelectOptions(options, searchQuery) : options;
 }
 
+function getAnchorWidth(anchor: HTMLElement | null, minimumWidth = 0) {
+  if (!anchor) return undefined;
+  const width = anchor.getBoundingClientRect().width;
+  return Number.isFinite(width) ? Math.max(minimumWidth, Math.round(width)) : undefined;
+}
+
 function getInputTriggerText(
   open: boolean,
   searchableTrigger: "menu" | "input",
@@ -220,6 +228,8 @@ export default function Select({
   className = "",
   triggerClassName = "",
   menuClassName = "",
+  menuMinWidth = 0,
+  menuAnimated = true,
   disabled = false,
   size = "sm",
   variant = "ghost",
@@ -274,7 +284,7 @@ export default function Select({
     [open, searchableTrigger, searchQuery, selectedOption, value],
   );
   const resolvedTriggerClassName = cn(
-    buttonVariants({ variant, size }),
+    buttonVariants({ variant, compact: size !== "md" }),
     !iconOnly && selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
     !iconOnly && "justify-between text-left",
     triggerClassName,
@@ -389,7 +399,7 @@ export default function Select({
           }
           rightIcon={ChevronDown}
           size={size}
-          variant={variant === "secondary" || variant === "outline" ? "default" : variant}
+          variant={variant}
           containerClassName="min-w-0 w-full"
           className={cn("min-w-0 font-normal text-text", triggerClassName)}
           placeholder={open ? "Search..." : selectedOption?.label || placeholder}
@@ -401,8 +411,10 @@ export default function Select({
           anchorRef={searchInputRef}
           anchorAlign="start"
           onClose={() => handleOpenChange(false)}
-          className={cn("overflow-hidden rounded-xl p-0", menuClassName)}
+          className={cn("min-w-0 overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+          style={{ width: getAnchorWidth(searchInputRef.current, menuMinWidth) }}
+          animated={menuAnimated}
         >
           <div
             ref={listboxRef}
@@ -538,6 +550,8 @@ export default function Select({
         onClose={() => handleOpenChange(false)}
         className={cn(selectContentVariants(), menuClassName)}
         menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+        style={{ width: getAnchorWidth(triggerRef.current, menuMinWidth) }}
+        animated={menuAnimated}
       >
         {searchable && (
           <SelectSearchField

@@ -18,9 +18,9 @@ const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
     <Button
       role="menuitem"
       variant="ghost"
-      size="sm"
       onClick={onClick}
       className="ui-font ui-text-sm flex h-auto w-full cursor-pointer items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover"
+      compact
     >
       <span className="min-w-0 flex-1 truncate whitespace-nowrap">{children}</span>
       {shortcut && <Keybinding binding={shortcut} className="ml-8 shrink-0" />}

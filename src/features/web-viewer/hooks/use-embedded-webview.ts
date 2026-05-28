@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
+import { shouldShowEmbeddedWebview } from "../utils/embedded-webview-visibility";
 
 interface UseEmbeddedWebviewOptions {
   bufferId: string;
@@ -110,7 +111,14 @@ export function useEmbeddedWebview({
 
   const syncWebviewVisibility = useCallback(
     async (label: string) => {
-      await setWebviewVisible(label, isVisible && isActive && !overlayHiddenRef.current);
+      await setWebviewVisible(
+        label,
+        shouldShowEmbeddedWebview({
+          isActive,
+          isVisible,
+          overlayHidden: overlayHiddenRef.current,
+        }),
+      );
     },
     [isActive, isVisible, setWebviewVisible],
   );
@@ -338,13 +346,13 @@ export function useEmbeddedWebview({
     };
 
     const handleContextMenu = () => {
-      // Context menu açıldığında hemen gizle
-      if (isVisible && isActive) {
+      // Hide immediately when the context menu opens.
+      if (isVisible) {
         overlayHiddenRef.current = true;
         void syncWebviewVisibility(webviewLabel);
         lastOverlayState = true;
       }
-      // Sonra tekrar kontrol et (menu kapanmış olabilir)
+      // Check again after the menu may have closed.
       window.setTimeout(() => {
         updateVisibility(hasOverlayCoveringWebview(containerRef.current));
       }, 100);
@@ -371,7 +379,7 @@ export function useEmbeddedWebview({
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("click", handleOverlayChange);
     };
-  }, [isActive, isVisible, syncWebviewVisibility, webviewLabel]);
+  }, [isVisible, syncWebviewVisibility, webviewLabel]);
 
   return { error, resetWebview, webviewLabel };
 }

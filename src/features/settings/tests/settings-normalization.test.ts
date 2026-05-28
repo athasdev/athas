@@ -7,7 +7,7 @@ import {
 import { normalizeSettings, normalizeSettingValue } from "../lib/settings-normalization";
 
 describe("settings normalization", () => {
-  it("migrates legacy Geist font settings to bundled defaults", () => {
+  it("preserves configured font settings that may exist on the system", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       fontFamily: '"Geist Mono"',
@@ -15,17 +15,20 @@ describe("settings normalization", () => {
       uiFontFamily: "Geist",
     });
 
-    expect(normalized.fontFamily).toBe(DEFAULT_MONO_FONT_FAMILY);
-    expect(normalized.terminalFontFamily).toBe(DEFAULT_MONO_FONT_FAMILY);
-    expect(normalized.uiFontFamily).toBe(DEFAULT_UI_FONT_FAMILY);
+    expect(normalized.fontFamily).toBe('"Geist Mono"');
+    expect(normalized.terminalFontFamily).toBe("Geist Mono, monospace");
+    expect(normalized.uiFontFamily).toBe("Geist");
   });
 
-  it("normalizes legacy Geist font updates before persisting", () => {
-    expect(normalizeSettingValue("fontFamily", "Geist Mono")).toBe(DEFAULT_MONO_FONT_FAMILY);
-    expect(normalizeSettingValue("terminalFontFamily", "Geist Mono")).toBe(
-      DEFAULT_MONO_FONT_FAMILY,
-    );
-    expect(normalizeSettingValue("uiFontFamily", "Geist Sans")).toBe(DEFAULT_UI_FONT_FAMILY);
+  it("preserves font updates before persisting", () => {
+    expect(normalizeSettingValue("fontFamily", "Geist Mono")).toBe("Geist Mono");
+    expect(normalizeSettingValue("terminalFontFamily", "Geist Mono")).toBe("Geist Mono");
+    expect(normalizeSettingValue("uiFontFamily", "Geist Sans")).toBe("Geist Sans");
+  });
+
+  it("falls back for empty font updates", () => {
+    expect(normalizeSettingValue("fontFamily", "   ")).toBe(DEFAULT_MONO_FONT_FAMILY);
+    expect(normalizeSettingValue("uiFontFamily", "   ")).toBe(DEFAULT_UI_FONT_FAMILY);
   });
 
   it("migrates the old terminal line-height default to preserve TUI block graphics", () => {
@@ -53,6 +56,67 @@ describe("settings normalization", () => {
   it("normalizes unsupported file tree density values", () => {
     expect(normalizeSettingValue("fileTreeDensity", "compact")).toBe("compact");
     expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
+  });
+
+  it("normalizes legacy custom editor engine settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "custom",
+      customEditorCommand: "",
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+  });
+
+  it("normalizes unsupported editor engines", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "emacs" as never,
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+  });
+
+  it("normalizes unsupported remembered settings tabs", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      lastSettingsTab: "missing" as never,
+    });
+
+    expect(normalized.lastSettingsTab).toBe("general");
+    expect(normalizeSettingValue("lastSettingsTab", "appearance")).toBe("appearance");
+  });
+
+  it("migrates legacy icon theme aliases to Material", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      iconTheme: "colorful-material",
+    });
+
+    expect(normalized.iconTheme).toBe("material");
+    expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("material");
+    expect(normalizeSettingValue("iconTheme", "seti")).toBe("material");
+  });
+
+  it("does not migrate legacy external editor settings into editor engine", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "monaco",
+      externalEditor: "helix",
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+  });
+
+  it("removes legacy worktrees from git sidebar settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      gitLastPanelMode: "worktrees" as never,
+      gitSidebarTabOrder: ["changes", "worktrees", "history"] as never,
+    });
+
+    expect(normalized.gitLastPanelMode).toBe("changes");
+    expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history"]);
   });
 
   it("preserves custom AI provider settings and mirrors the custom model into chat model", () => {

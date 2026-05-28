@@ -27,6 +27,7 @@ import {
 import { resolveInstalledExtensionId } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
+import { getManifestDatabaseContributions } from "../types/extension-contributions";
 import {
   recordExtensionLifecycleTelemetry,
   recordExtensionRegistrySync,
@@ -34,7 +35,7 @@ import {
 } from "@/features/telemetry/services/telemetry";
 
 function isBuiltInDatabaseExtension(manifest: ExtensionManifest): boolean {
-  return manifest.databaseProviders?.some((provider) => provider.id === "sqlite") ?? false;
+  return getManifestDatabaseContributions(manifest).some((provider) => provider.id === "sqlite");
 }
 
 interface ExtensionStoreState {

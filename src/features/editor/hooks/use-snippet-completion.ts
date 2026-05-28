@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { editorAPI } from "@/features/editor/extensions/api";
 import {
   expandSnippet,
   getCurrentTabStop,
@@ -11,6 +12,7 @@ import type { SnippetSession } from "@/features/editor/snippets/types";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import type { Position } from "@/features/editor/types/editor";
+import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { logger } from "@/features/editor/utils/logger";
 
@@ -112,7 +114,10 @@ export function useSnippetCompletion(filePath: string | undefined) {
           const newOffset = cursorPosition.offset - prefixLength + firstTabStop.offset;
           const newPosition = calculatePosition(newContent, newOffset);
 
-          useEditorStateStore.getState().actions.setCursorPosition(newPosition);
+          useEditorStateStore
+            .getState()
+            .actions.setCursorPosition(newPosition, { ensureVisible: false });
+          editorAPI.setCursorPosition(newPosition);
 
           // Select placeholder if it exists
           if (firstTabStop.placeholder && firstTabStop.length > 0) {
@@ -152,7 +157,10 @@ export function useSnippetCompletion(filePath: string | undefined) {
 
     if (buffer && isEditorContent(buffer)) {
       const newPosition = calculatePosition(buffer.content, newOffset);
-      useEditorStateStore.getState().actions.setCursorPosition(newPosition);
+      useEditorStateStore
+        .getState()
+        .actions.setCursorPosition(newPosition, { ensureVisible: false });
+      editorAPI.setCursorPosition(newPosition);
 
       // Select placeholder if it exists
       if (tabStop.placeholder && tabStop.length > 0) {
@@ -182,7 +190,9 @@ export function useSnippetCompletion(filePath: string | undefined) {
 
     if (buffer && isEditorContent(buffer)) {
       const newPosition = calculatePosition(buffer.content, newOffset);
-      useEditorStateStore.getState().actions.setCursorPosition(newPosition);
+      useEditorStateStore
+        .getState()
+        .actions.setCursorPosition(newPosition, { ensureVisible: false });
 
       // Select placeholder if it exists
       if (tabStop.placeholder && tabStop.length > 0) {
@@ -218,39 +228,18 @@ export function useSnippetCompletion(filePath: string | undefined) {
  * Calculate position from offset
  */
 function calculatePosition(content: string, offset: number): Position {
-  const lines = content.split("\n");
-  let currentOffset = 0;
-
-  for (let line = 0; line < lines.length; line++) {
-    const lineLength = lines[line].length;
-
-    if (currentOffset + lineLength >= offset) {
-      return {
-        line,
-        column: offset - currentOffset,
-        offset,
-      };
-    }
-
-    currentOffset += lineLength + 1; // +1 for newline
-  }
-
-  // Fallback
-  return {
-    line: lines.length - 1,
-    column: lines[lines.length - 1].length,
-    offset,
-  };
+  return calculateCursorPositionFromContent(offset, content);
 }
 
 /**
  * Select a range in the textarea
  */
 function selectRange(start: number, end: number) {
-  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.selectionStart = start;
-    textarea.selectionEnd = end;
-    textarea.focus();
-  }
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
+  if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+
+  editorAPI.setSelection({
+    start: calculatePosition(activeBuffer.content, start),
+    end: calculatePosition(activeBuffer.content, end),
+  });
 }

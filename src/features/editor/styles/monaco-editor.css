@@ -1,0 +1,57 @@
+.monaco-editor-shell {
+  --vscode-editor-background: var(--color-primary-bg, var(--primary-bg, #0f1117));
+}
+
+.monaco-editor-shell .monaco-editor,
+.monaco-editor-shell .monaco-editor-background,
+.monaco-editor-shell .monaco-editor .margin {
+  background-color: var(--color-primary-bg, var(--primary-bg, #0f1117));
+}
+
+.monaco-editor-shell .monaco-search-match {
+  background-color: color-mix(in srgb, var(--color-accent, #4f8cff) 26%, transparent);
+}
+
+.monaco-editor-shell .monaco-search-match-current {
+  outline: 1px solid color-mix(in srgb, var(--color-accent, #4f8cff) 72%, white 8%);
+}
+
+.monaco-vim-statusbar {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  left: 10px;
+  z-index: 20;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border, var(--border, rgba(255, 255, 255, 0.12)));
+  border-radius: 6px;
+  background: color-mix(
+    in srgb,
+    var(--color-secondary-bg, var(--secondary-bg, #1c1b19)) 92%,
+    transparent
+  );
+  color: var(--color-text, var(--text, #faf9f5));
+  display: none !important;
+  font: 12px/1.45 var(--font-mono, "JetBrains Mono Variable", monospace);
+  pointer-events: none;
+}
+
+.monaco-vim-statusbar:has(input),
+.monaco-vim-statusbar:has(.vim-notification:not(:empty)) {
+  display: block !important;
+}
+
+.monaco-vim-statusbar input {
+  width: min(520px, calc(100% - 20px));
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  pointer-events: auto;
+}
+
+.monaco-vim-statusbar:empty {
+  display: none !important;
+}

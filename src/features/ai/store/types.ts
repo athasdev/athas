@@ -143,6 +143,7 @@ export interface AIChatActions {
 
   // Chat actions
   createNewChat: (agentId?: AgentType) => string;
+  ensureChatSession: (chatId: string, agentId?: AgentType) => string;
   ensureChatForAgent: (agentId: AgentType) => string;
   switchToChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;

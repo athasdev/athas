@@ -1,0 +1,17 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.protobuf",
+  "name": "Protobuf",
+  "displayName": "Protocol Buffers",
+  "version": "1.0.0",
+  "description": "Protocol Buffers language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "protobuf",
+      "extensions": [".proto"],
+      "aliases": ["Protocol Buffers", "Protobuf", "proto"]
+    }
+  ]
+}

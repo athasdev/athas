@@ -1,0 +1,26 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.dockerfile",
+  "name": "Dockerfile",
+  "displayName": "Dockerfile",
+  "version": "1.0.0",
+  "description": "Dockerfile language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "dockerfile",
+      "extensions": [".dockerfile"],
+      "aliases": ["Dockerfile", "docker"],
+      "filenames": ["Dockerfile", "Containerfile"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "docker-langserver",
+      "runtime": "bun",
+      "package": "dockerfile-language-server-nodejs",
+      "args": ["--stdio"]
+    }
+  }
+}

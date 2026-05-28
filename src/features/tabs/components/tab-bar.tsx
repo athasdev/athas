@@ -16,8 +16,10 @@ import {
   ArrowRight,
   ArrowsOut as Maximize2,
   ArrowsIn as Minimize2,
+  Lock,
+  LockOpen,
+  Plus,
   SidebarSimple as PanelLeftClose,
-  SplitHorizontal as SplitSquareHorizontal,
 } from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -28,8 +30,11 @@ import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
+import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
+import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
@@ -47,21 +52,18 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
-import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
-  onNewTabClose?: () => void;
   disablePaneActions?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
-  onNewTabClose,
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
@@ -71,7 +73,7 @@ const TabBar = ({
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { moveBufferToPane, setActivePane, splitPane, closePane, togglePaneFullscreen } =
+  const { closePane, setActivePane, togglePaneFullscreen, setPaneLocked } =
     usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
@@ -80,8 +82,14 @@ const TabBar = ({
       ? findPaneGroup(bottomRoot, BOTTOM_PANE_ID)
       : findPaneGroup(paneRoot, paneId)
     : null;
-  const buffers = pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers;
-  const activeBufferId = pane ? pane.activeBufferId : globalActiveBufferId;
+  const buffers = (
+    pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers
+  ).filter((buffer) => buffer.type !== "newTab");
+  const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
+  const activeBufferId =
+    activeBufferCandidate && buffers.some((buffer) => buffer.id === activeBufferCandidate)
+      ? activeBufferCandidate
+      : null;
   const {
     handleTabClick,
     handleTabClose,
@@ -93,6 +101,7 @@ const TabBar = ({
     confirmCloseWithoutSaving,
     cancelPendingClose,
     convertPreviewToDefinite,
+    showNewTabView,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
   const { settings } = useSettingsStore();
@@ -114,6 +123,7 @@ const TabBar = ({
     ? Boolean(activeWebViewerNavigation?.canGoForward)
     : jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
+  const isPaneLocked = Boolean(pane?.locked);
   const isInSplit = paneRoot.type === "split";
   const isBottomPane = paneId === BOTTOM_PANE_ID;
 
@@ -214,24 +224,21 @@ const TabBar = ({
     }
   }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
 
-  const handleSplitActivePane = useCallback(() => {
+  const handleShowNewTab = useCallback(() => {
     if (!paneId) return;
-
-    // Terminal, agent, and other session-based buffers cannot be shared
-    // across panes — open the new split with an empty new-tab view instead.
-    const isSessionBuffer =
-      activeBuffer &&
-      (activeBuffer.type === "terminal" ||
-        activeBuffer.type === "agent" ||
-        activeBuffer.type === "webViewer");
-
-    splitPane(paneId, "horizontal", isSessionBuffer ? undefined : (activeBufferId ?? undefined));
-  }, [activeBuffer, activeBufferId, paneId, splitPane]);
+    setActivePane(paneId);
+    showNewTabView();
+  }, [paneId, setActivePane, showNewTabView]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
     togglePaneFullscreen(paneId);
   }, [paneId, togglePaneFullscreen]);
+
+  const handleTogglePaneLocked = useCallback(() => {
+    if (!paneId) return;
+    setPaneLocked(paneId, !isPaneLocked);
+  }, [isPaneLocked, paneId, setPaneLocked]);
 
   const canScrollTabsHorizontally = useCallback(() => {
     const container = tabBarRef.current;
@@ -295,6 +302,10 @@ const TabBar = ({
     (buffer: PaneContent) => {
       if (buffer.type === "terminal") {
         const session = terminalSessions.get(buffer.sessionId);
+        if (session?.customName) {
+          return session.name?.trim() || buffer.name;
+        }
+
         const title = session?.title?.trim();
         if (isUsefulTerminalTitle(title)) return title!;
 
@@ -429,14 +440,10 @@ const TabBar = ({
 
   const closeTab = useCallback(
     (bufferId: string) => {
-      const buffer = buffers.find((item) => item.id === bufferId);
-      if (buffer?.type === "newTab") {
-        onNewTabClose?.();
-      }
       handleTabClose(bufferId);
       clearPositionCache(bufferId);
     },
-    [buffers, clearPositionCache, handleTabClose, onNewTabClose],
+    [clearPositionCache, handleTabClose],
   );
 
   const handleTabSelect = useCallback(
@@ -547,18 +554,18 @@ const TabBar = ({
         target.paneId &&
         (target.paneId !== paneId || (target.zone && target.zone !== "center"))
       ) {
-        let destinationPaneId = target.paneId;
         const preserveEmptySource = target.paneId === paneId;
-        if (target.zone && target.zone !== "center") {
-          const direction =
-            target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-          const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
-          destinationPaneId =
-            splitPane(target.paneId, direction, undefined, placement) ?? target.paneId;
+        const destinationPaneId = moveBufferToPaneDropTarget(
+          dragged.id,
+          paneId,
+          { paneId: target.paneId, zone: target.zone },
+          preserveEmptySource,
+        );
+        if (!destinationPaneId) {
+          resetDrag();
+          return;
         }
-
-        setActivePane(destinationPaneId);
-        moveBufferToPane(dragged.id, paneId, destinationPaneId, preserveEmptySource);
+        activateBufferInPaneAndSync(destinationPaneId, dragged.id);
         if (destinationPaneId === BOTTOM_PANE_ID) {
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
@@ -576,16 +583,7 @@ const TabBar = ({
 
       resetDrag();
     },
-    [
-      handleTabClick,
-      moveBufferToPane,
-      paneId,
-      reorderBuffers,
-      resetDrag,
-      setActivePane,
-      sortedBuffers,
-      splitPane,
-    ],
+    [handleTabClick, paneId, reorderBuffers, resetDrag, sortedBuffers],
   );
 
   useEffect(() => {
@@ -690,7 +688,7 @@ const TabBar = ({
         <div
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1"
+          className="relative flex h-7 shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-0.5"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -701,12 +699,12 @@ const TabBar = ({
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
+              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
+              compact
             >
               <ArrowLeft />
             </Button>
@@ -715,12 +713,12 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
+              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
+              compact
             >
               <ArrowRight />
             </Button>
@@ -755,13 +753,27 @@ const TabBar = ({
           </SortableContext>
 
           <div className="flex shrink-0 items-center gap-1 pl-0.5">
+            {paneId && !isBottomPane && (
+              <Button
+                type="button"
+                onClick={handleShowNewTab}
+                variant="ghost"
+                compact
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                tooltip="New Tab"
+                tooltipSide="bottom"
+                aria-label="New tab"
+              >
+                <Plus weight="bold" />
+              </Button>
+            )}
             {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
               <Button
                 type="button"
                 onClick={() => closePane(paneId)}
                 variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
+                compact
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 tooltip="Close Split"
                 tooltipSide="bottom"
                 aria-label="Close split pane"
@@ -769,18 +781,22 @@ const TabBar = ({
                 <PanelLeftClose />
               </Button>
             )}
-            {paneId && !disablePaneActions && !isBottomPane && activeBufferId && (
+            {paneId && !disablePaneActions && !isBottomPane && (
               <Button
                 type="button"
-                onClick={handleSplitActivePane}
+                onClick={handleTogglePaneLocked}
                 variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
-                tooltip="Split Editor"
+                className={
+                  isPaneLocked
+                    ? "h-5 min-w-5 shrink-0 rounded-md px-1 text-accent"
+                    : "h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                }
+                tooltip={isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group"}
                 tooltipSide="bottom"
-                aria-label="Split editor"
+                aria-label={isPaneLocked ? "Unlock editor group" : "Lock editor group"}
+                compact
               >
-                <SplitSquareHorizontal />
+                {isPaneLocked ? <Lock /> : <LockOpen />}
               </Button>
             )}
             {paneId && !disablePaneActions && !isBottomPane && (
@@ -788,24 +804,21 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
+                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
+                compact
               >
                 {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
               </Button>
             )}
-            <div className="flex shrink-0 items-center">
-              <NewTabMenu />
-            </div>
           </div>
         </div>
 
         <DragOverlay dropAnimation={null}>
           {draggedBuffer ? (
-            <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 text-xs opacity-95 shadow-sm">
+            <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 ui-text-xs opacity-95 shadow-sm">
               <span className="max-w-[200px] truncate text-text">{draggedBuffer.name}</span>
             </div>
           ) : null}
@@ -857,16 +870,14 @@ const TabBar = ({
         onSplitRight={
           paneId
             ? (targetPaneId, bufferId) => {
-                const { splitPane } = usePaneStore.getState().actions;
-                splitPane(targetPaneId, "horizontal", bufferId);
+                splitEditorGroup(targetPaneId, "horizontal", bufferId);
               }
             : undefined
         }
         onSplitDown={
           paneId
             ? (targetPaneId, bufferId) => {
-                const { splitPane } = usePaneStore.getState().actions;
-                splitPane(targetPaneId, "vertical", bufferId);
+                splitEditorGroup(targetPaneId, "vertical", bufferId);
               }
             : undefined
         }

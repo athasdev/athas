@@ -172,6 +172,14 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+Shift+S"),
       )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_save_all",
+         "Save All",
+         true,
+         Some("CmdOrCtrl+Option+S"),
+      )?)
+      .text("command_revert_file", "Revert File")
       .text("command_local_history", "Show Local History")
       .separator()
       .item(&MenuItem::with_id(
@@ -182,6 +190,10 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          close_tab_accelerator,
       )?)
       .text("command_close_all_tabs", "Close All Tabs")
+      .text("command_close_other_tabs", "Close Other Tabs")
+      .text("command_close_saved_tabs", "Close Saved Tabs")
+      .text("command_close_tabs_to_left", "Close Tabs to the Left")
+      .text("command_close_tabs_to_right", "Close Tabs to the Right")
       .item(&MenuItem::with_id(
          app,
          "command_reopen_closed_tab",
@@ -219,7 +231,13 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .cut()
       .copy()
       .paste()
-      .select_all()
+      .item(&MenuItem::with_id(
+         app,
+         "select_all",
+         "Select All",
+         true,
+         Some("CmdOrCtrl+A"),
+      )?)
       .separator()
       .item(&MenuItem::with_id(
          app,
@@ -242,6 +260,15 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+Slash"),
       )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_quick_fix",
+         "Quick Fix",
+         true,
+         Some("CmdOrCtrl+."),
+      )?)
+      .text("command_trigger_parameter_hints", "Trigger Parameter Hints")
+      .text("command_show_hover", "Show Hover")
       .separator()
       .text("command_duplicate_line", "Duplicate Line")
       .item(&MenuItem::with_id(
@@ -260,6 +287,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("Shift+Alt+F"),
       )?)
+      .text("command_format_selection", "Format Selection")
       .separator()
       .item(&MenuItem::with_id(
          app,
@@ -324,6 +352,18 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .separator()
       .text("split_editor", "Split Editor")
       .text("command_toggle_minimap", "Toggle Minimap")
+      .item(&MenuItem::with_id(
+         app,
+         "command_toggle_word_wrap",
+         "Toggle Word Wrap",
+         true,
+         Some("Alt+Z"),
+      )?)
+      .text("command_toggle_line_numbers", "Toggle Line Numbers")
+      .text(
+         "command_toggle_render_whitespace",
+         "Toggle Render Whitespace",
+      )
       .text("command_toggle_sidebar_position", "Toggle Sidebar Position")
       .separator()
       .text("command_zoom_in", "Zoom In")
@@ -372,6 +412,14 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("F12"),
       )?)
+      .item(&MenuItem::with_id(
+         app,
+         "command_go_to_implementation",
+         "Go to Implementation",
+         true,
+         Some("CmdOrCtrl+F12"),
+      )?)
+      .text("command_go_to_type_definition", "Go to Type Definition")
       .item(&MenuItem::with_id(
          app,
          "command_go_to_references",
@@ -463,6 +511,14 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    // Tools menu
    let tools_menu = SubmenuBuilder::new(app, "Tools")
       .text("command_connect_database", "Connect to Database")
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "open_web_inspector",
+         "Web Inspector",
+         cfg!(any(debug_assertions, feature = "devtools")),
+         Some("CmdOrCtrl+Option+I"),
+      )?)
       .separator()
       .text("open_settings", "Preferences")
       .text("open_extensions", "Extensions")

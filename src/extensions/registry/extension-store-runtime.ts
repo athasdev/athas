@@ -8,6 +8,7 @@ import {
 } from "../languages/language-packager";
 import { extensionInstaller } from "../installer/extension-installer";
 import type { AvailableExtension, ExtensionRuntimeIssue } from "./extension-store-types";
+import { getManifestLanguageContributions } from "../types/extension-contributions";
 import type { ExtensionManifest, ToolRuntime } from "../types/extension-manifest";
 
 type ToolType = "lsp" | "formatter" | "linter";
@@ -18,7 +19,7 @@ type BackendToolRuntime = Extract<
   "bun" | "node" | "python" | "go" | "rust" | "binary"
 >;
 
-interface BackendToolConfig {
+export interface BackendToolConfig {
   name: string;
   command?: string;
   runtime: BackendToolRuntime;
@@ -29,7 +30,7 @@ interface BackendToolConfig {
   env?: Record<string, string>;
 }
 
-interface BackendLanguageToolConfigSet {
+export interface BackendLanguageToolConfigSet {
   lsp?: BackendToolConfig;
   formatter?: BackendToolConfig;
   linter?: BackendToolConfig;
@@ -285,7 +286,7 @@ function toBackendToolConfig(
   };
 }
 
-function getLanguageToolConfigSet(
+export function getLanguageToolConfigSet(
   manifest?: ExtensionManifest,
 ): BackendLanguageToolConfigSet | undefined {
   if (!manifest) return undefined;
@@ -362,7 +363,11 @@ export function resolveInstalledExtensionId(
   }
 
   for (const [extensionId, extension] of availableExtensions) {
-    if (extension.manifest.languages?.some((lang) => lang.id === installed.languageId)) {
+    if (
+      getManifestLanguageContributions(extension.manifest).some(
+        (lang) => lang.id === installed.languageId,
+      )
+    ) {
       return extensionId;
     }
   }
@@ -389,7 +394,6 @@ async function installLanguageTools(
       const failureMessage = extractFailedToolMessage(toolStatus);
       if (failureMessage) {
         issues[tool as ToolType] = failureMessage;
-        console.warn(`Tool installation failed for ${languageId}/${tool}: ${failureMessage}`);
       }
     }
   } catch (error) {
@@ -454,17 +458,14 @@ export async function resolveToolPaths(
     if (toolConfig.lsp && !toolPaths.lsp) {
       issues.lsp =
         issues.lsp || "Language server binary could not be resolved. Reinstall the language tools.";
-      console.warn(`LSP configured for ${languageId} but binary path could not be resolved`);
     }
     if (toolConfig.formatter && !toolPaths.formatter) {
       issues.formatter =
         issues.formatter || "Formatter binary could not be resolved. Reinstall the language tools.";
-      console.warn(`Formatter configured for ${languageId} but binary path could not be resolved`);
     }
     if (toolConfig.linter && !toolPaths.linter) {
       issues.linter =
         issues.linter || "Linter binary could not be resolved. Reinstall the language tools.";
-      console.warn(`Linter configured for ${languageId} but binary path could not be resolved`);
     }
   }
 
@@ -483,14 +484,10 @@ export function buildRuntimeManifest(
   toolPaths: ToolPathMap,
 ): ExtensionManifest {
   const managedTools = getLanguageToolConfigSet(manifest);
+  const languages = getManifestLanguageContributions(manifest);
   const runtimeManifest: ExtensionManifest = {
     ...manifest,
-    languages: manifest.languages?.map((lang) => ({
-      ...lang,
-      extensions: [...lang.extensions],
-      aliases: lang.aliases ? [...lang.aliases] : undefined,
-      filenames: lang.filenames ? [...lang.filenames] : undefined,
-    })),
+    ...(languages.length > 0 ? { languages } : {}),
   };
 
   if (runtimeManifest.lsp && managedTools?.lsp) {
@@ -597,7 +594,7 @@ export async function installLanguageExtensionManifest(
   manifest: ExtensionManifest,
   onProgress: (progress: number) => void,
 ) {
-  const languageConfigs = manifest.languages ?? [];
+  const languageConfigs = getManifestLanguageContributions(manifest);
   const languageCount = languageConfigs.length;
 
   for (const [index, languageConfig] of languageConfigs.entries()) {

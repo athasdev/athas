@@ -113,10 +113,6 @@ export const useFontStore = createSelectors(
             lastCacheTime: null,
           };
 
-      if (cache) {
-        console.log("Initializing with cached fonts:", cache.availableFonts.length, "fonts");
-      }
-
       return {
         ...initialValues,
         actions: {
@@ -135,7 +131,6 @@ export const useFontStore = createSelectors(
             });
 
             try {
-              console.log("Loading fonts from system...");
               const fonts = await invoke<FontInfo[]>("get_system_fonts");
               const monospaceFonts = fonts.filter((font) => font.is_monospace);
 
@@ -148,7 +143,6 @@ export const useFontStore = createSelectors(
 
               // Save to cache
               saveFontsToCache(fonts, monospaceFonts);
-              console.log("Loaded and cached", fonts.length, "fonts");
             } catch (error) {
               console.error("Failed to load fonts:", error);
               if (isTauriBridgeError(error)) {
@@ -177,7 +171,6 @@ export const useFontStore = createSelectors(
             // Use cached data if available and not forcing refresh
             // Ensure we have actual fonts loaded
             if (!forceRefresh && current.monospaceFonts.length > 0 && !current.isLoading) {
-              console.log("Using already loaded monospace fonts");
               return;
             }
 
@@ -187,7 +180,6 @@ export const useFontStore = createSelectors(
             });
 
             try {
-              console.log("Loading monospace fonts from system...");
               const fonts = await invoke<FontInfo[]>("get_monospace_fonts");
 
               set((state) => {
@@ -201,8 +193,6 @@ export const useFontStore = createSelectors(
               if (updatedState.availableFonts.length > 0) {
                 saveFontsToCache(updatedState.availableFonts, fonts);
               }
-
-              console.log("Loaded and cached", fonts.length, "monospace fonts");
             } catch (error) {
               console.error("Failed to load monospace fonts:", error);
               if (isTauriBridgeError(error)) {

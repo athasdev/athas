@@ -1,6 +1,8 @@
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content";
+import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 
 function formatContextPath(path: string, projectRoot?: string) {
   return projectRoot && path.startsWith(projectRoot) ? path.slice(projectRoot.length + 1) : path;
@@ -39,7 +41,10 @@ function getTextContextPreview(buffer: PaneContent) {
 // Build a comprehensive context prompt for the AI
 export const buildContextPrompt = (context: ContextInfo): string => {
   let contextPrompt = "";
-  const isAcpAgent = !!context.agentId && context.agentId !== "custom";
+  const isAcpAgent =
+    !!context.agentId &&
+    context.agentId !== "custom" &&
+    context.agentId !== CLAUDE_CODE_TERMINAL_AGENT_ID;
 
   // For ACP agents, include available extension methods
   if (isAcpAgent) {
@@ -58,7 +63,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     const projectName = context.projectRoot.split("/").pop() || "Unknown Project";
     contextPrompt += `Project: ${projectName}\n`;
 
-    // For Claude Code, include the full project path
+    // ACP agents can use the workspace path directly.
     if (isAcpAgent) {
       contextPrompt += `Working directory: ${context.projectRoot}\n`;
     }
@@ -74,7 +79,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
         contextPrompt += `\n\nWeb page content:\n${ab.webViewerContent}`;
       }
     } else if (isAcpAgent) {
-      // For Claude Code, just provide the path
+      // ACP agents can read files themselves, so provide paths instead of full content.
       contextPrompt += `\nCurrently editing: ${ab.path}`;
       if (context.language && context.language !== "Text") {
         contextPrompt += ` (${context.language})`;
@@ -152,7 +157,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
   // Selected project files for context
   if (context.selectedProjectFiles && context.selectedProjectFiles.length > 0) {
     if (isAcpAgent) {
-      // For Claude Code, just list the file paths
+      // ACP agents can read files themselves, so provide paths instead of full content.
       const filePaths = context.selectedProjectFiles
         .map((filePath) => {
           const relativePath =
@@ -274,7 +279,9 @@ Guidelines:
 - Reference the user's actual code when relevant
 - Offer multiple solutions when appropriate
 - Use proper formatting for code snippets
-- Ask clarifying questions if needed`;
+- Ask clarifying questions if needed
+
+${getFollowUpActionsInstruction()}`;
 
   if (hasAcpExtensions) {
     basePrompt += `

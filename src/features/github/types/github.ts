@@ -161,4 +161,13 @@ export interface WorkflowRunListItem {
   headSha: string | null;
 }
 
+export interface WorkflowListItem {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+}
+
 export type PRFilter = "all" | "my-prs" | "review-requests";
+export type IssueFilter = "open" | "closed" | "all";
+export type WorkflowRunFilter = "all" | "in-progress" | "successful" | "failed";

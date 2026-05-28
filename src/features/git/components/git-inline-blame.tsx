@@ -306,25 +306,27 @@ export const InlineGitBlame = ({
           >
             <div className="flex max-w-96 flex-col gap-2 p-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium text-sm text-text">{blameLine.author}</span>
-                <div className="flex shrink-0 items-center gap-1 text-text-lighter text-xs">
+                <span className="truncate font-medium ui-text-sm text-text">
+                  {blameLine.author}
+                </span>
+                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-xs">
                   <Clock />
                   <span>{formatRelativeTime(blameLine.time)}</span>
                 </div>
               </div>
 
-              <pre className="whitespace-pre-wrap break-words text-text-light text-xs leading-relaxed">
+              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-xs leading-relaxed">
                 {blameLine.commit.trim()}
               </pre>
 
-              <div className="flex items-center gap-1.5 text-text-lighter text-xs">
+              <div className="flex items-center gap-1.5 text-text-lighter ui-text-xs">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   className="gap-1.5 px-1.5"
                   onClick={handleViewCommit}
                   tooltip="View commit details"
+                  compact
                 >
                   <GitCommit />
                   <span className="ui-font text-text">{blameLine.commit_hash.substring(0, 7)}</span>
@@ -332,10 +334,10 @@ export const InlineGitBlame = ({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
                   className="ml-auto text-text-lighter hover:text-text"
                   onClick={handleCopyCommitHash}
                   tooltip="Copy commit hash"
+                  compact
                 >
                   {isCopied ? <Check className="text-green-500" /> : <Copy />}
                 </Button>

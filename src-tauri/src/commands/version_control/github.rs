@@ -1,7 +1,7 @@
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
 pub use athas_github::{
-   IssueDetails, IssueListItem, PullRequest, PullRequestComment, PullRequestDetails,
-   PullRequestFile, WorkflowRunDetails, WorkflowRunListItem,
+   IssueDetails, IssueListItem, Label, PullRequest, PullRequestComment, PullRequestDetails,
+   PullRequestFile, WorkflowListItem, WorkflowRunDetails, WorkflowRunListItem,
 };
 
 async fn run_blocking<T, F>(operation: F) -> Result<T, String>
@@ -50,9 +50,17 @@ pub async fn github_get_current_user(app: crate::app_runtime::AppHandle) -> Resu
 pub async fn github_list_issues(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
+   state: Option<String>,
 ) -> Result<Vec<IssueListItem>, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_list_issues(repo_path, github_token)).await
+   run_blocking(move || {
+      athas_github::github_list_issues(
+         repo_path,
+         state.unwrap_or_else(|| "open".to_string()),
+         github_token,
+      )
+   })
+   .await
 }
 
 #[tauri::command]
@@ -62,6 +70,83 @@ pub async fn github_list_workflow_runs(
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || athas_github::github_list_workflow_runs(repo_path, github_token)).await
+}
+
+#[tauri::command]
+pub async fn github_list_workflows(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+) -> Result<Vec<WorkflowListItem>, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_workflows(repo_path, github_token)).await
+}
+
+#[tauri::command]
+pub async fn github_list_labels(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+) -> Result<Vec<Label>, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_labels(repo_path, github_token)).await
+}
+
+#[tauri::command]
+pub async fn github_create_issue(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   title: String,
+   body: String,
+   labels: Vec<String>,
+   assignees: Vec<String>,
+) -> Result<IssueListItem, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_create_issue(repo_path, title, body, labels, assignees, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_create_pull_request(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   title: String,
+   body: String,
+   head: String,
+   base: String,
+   draft: bool,
+   labels: Vec<String>,
+   assignees: Vec<String>,
+) -> Result<PullRequest, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_create_pull_request(
+         repo_path,
+         title,
+         body,
+         head,
+         base,
+         draft,
+         labels,
+         assignees,
+         github_token,
+      )
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_dispatch_workflow(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   workflow_id: i64,
+   reference: String,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_dispatch_workflow(repo_path, workflow_id, reference, github_token)
+   })
+   .await
 }
 
 #[tauri::command]

@@ -37,5 +37,15 @@ describe("native menu accelerators", () => {
         }),
       ),
     ).toBe(true);
+    expect(
+      isNativeMenuAccelerator(
+        keyboardEvent({
+          altKey: true,
+          code: "KeyS",
+          key: "s",
+          metaKey: true,
+        }),
+      ),
+    ).toBe(true);
   });
 });

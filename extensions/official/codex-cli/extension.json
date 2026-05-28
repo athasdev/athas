@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.agent.codex-cli",
+  "name": "Codex CLI",
+  "displayName": "Codex CLI",
+  "description": "OpenAI's CLI coding agent, connected through the Codex ACP adapter.",
+  "version": "1.0.0",
+  "publisher": "OpenAI",
+  "categories": ["Agent"],
+  "agents": [
+    {
+      "id": "codex-cli",
+      "name": "Codex CLI",
+      "binaryName": "codex-acp",
+      "description": "OpenAI Codex agent via ACP adapter.",
+      "args": [],
+      "install": {
+        "runtime": "node",
+        "package": "@zed-industries/codex-acp",
+        "command": "codex-acp"
+      }
+    }
+  ]
+}

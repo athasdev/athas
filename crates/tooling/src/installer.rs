@@ -61,6 +61,10 @@ impl ToolInstaller {
       }
    }
 
+   fn npm_bin_name() -> &'static str {
+      if cfg!(windows) { "npm.cmd" } else { "npm" }
+   }
+
    fn node_bin_names(name: &str) -> Vec<String> {
       if cfg!(windows) {
          vec![
@@ -113,17 +117,64 @@ impl ToolInstaller {
       }
    }
 
+   fn pinned_node_package_version(package: &str) -> Option<&'static str> {
+      match package {
+         "@vtsls/language-server" => Some("0.3.0"),
+         "typescript-language-server" => Some("5.2.0"),
+         "typescript" => Some("6.0.3"),
+         _ => None,
+      }
+   }
+
+   fn node_package_identity(package_spec: &str) -> String {
+      if let Some(scoped) = package_spec.strip_prefix('@')
+         && let Some((scope, scoped_name)) = scoped.split_once('/')
+      {
+         let package_name = scoped_name
+            .split_once('@')
+            .map(|(name, _)| name)
+            .unwrap_or(scoped_name);
+         return format!("@{}/{}", scope, package_name);
+      }
+
+      package_spec
+         .split_once('@')
+         .map(|(name, _)| name)
+         .unwrap_or(package_spec)
+         .to_string()
+   }
+
+   fn node_package_install_spec(package: &str) -> String {
+      Self::pinned_node_package_version(package)
+         .map(|version| format!("{}@{}", package, version))
+         .unwrap_or_else(|| package.to_string())
+   }
+
    fn node_packages_to_install(package: &str, companion_packages: &[String]) -> Vec<String> {
       let mut packages = Vec::with_capacity(
          1 + companion_packages.len() + Self::known_node_companion_packages(package).len(),
       );
-      packages.push(package.to_string());
-      packages.extend(companion_packages.iter().cloned());
+      let mut package_names: Vec<String> = Vec::with_capacity(packages.capacity());
+      let mut push_package = |package: &str| {
+         let package_name = Self::node_package_identity(package);
+         if package_names
+            .iter()
+            .any(|candidate| candidate == &package_name)
+         {
+            return;
+         }
+
+         package_names.push(package_name);
+         packages.push(Self::node_package_install_spec(package));
+      };
+
+      push_package(package);
+      for companion in companion_packages {
+         push_package(companion);
+      }
 
       for companion in Self::known_node_companion_packages(package) {
-         if !packages.iter().any(|candidate| candidate == companion) {
-            packages.push((*companion).to_string());
-         }
+         push_package(companion);
       }
 
       packages
@@ -299,6 +350,92 @@ impl ToolInstaller {
       }
 
       Ok(())
+   }
+
+   async fn npm_path(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let node_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Node)
+         .await
+         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
+
+      if let Some(parent) = node_path.parent() {
+         let adjacent = parent.join(Self::npm_bin_name());
+         if adjacent.exists() {
+            return Ok(adjacent);
+         }
+      }
+
+      Ok(which::which(Self::npm_bin_name()).unwrap_or_else(|_| PathBuf::from(Self::npm_bin_name())))
+   }
+
+   fn install_node_package(
+      package_manager_path: &Path,
+      package_manager_name: &str,
+      package_dir: &Path,
+      package: &str,
+      command_name: &str,
+      companion_packages: &[String],
+      install_command: &str,
+   ) -> Result<PathBuf, ToolError> {
+      log::info!(
+         "Installing {} via {} to {:?}",
+         package,
+         package_manager_name,
+         package_dir
+      );
+
+      let mut command = Command::new(package_manager_path);
+      let mut args = vec![install_command];
+      let packages = Self::node_packages_to_install(package, companion_packages);
+      args.extend(packages.iter().map(String::as_str));
+      let output = configure_background_command(&mut command)
+         .args(args)
+         .current_dir(package_dir)
+         .output()
+         .map_err(|e| {
+            ToolError::InstallationFailed(format!(
+               "{} install could not start: {}",
+               package_manager_name, e
+            ))
+         })?;
+
+      if !output.status.success() {
+         let stderr = String::from_utf8_lossy(&output.stderr);
+         return Err(ToolError::InstallationFailed(format!(
+            "{} install failed: {}",
+            package_manager_name, stderr
+         )));
+      }
+
+      if let Some(binary_path) =
+         Self::resolve_node_package_binary(package_dir, package, command_name)
+      {
+         return Self::validate_and_prepare(&binary_path);
+      }
+
+      Err(ToolError::InstallationFailed(format!(
+         "Binary '{}' not found after installing package '{}' via {}",
+         command_name, package, package_manager_name
+      )))
+   }
+
+   async fn install_node_package_with_npm(
+      app_handle: &AppHandle,
+      package_dir: &Path,
+      package: &str,
+      command_name: &str,
+      companion_packages: &[String],
+   ) -> Result<PathBuf, ToolError> {
+      let npm_path = Self::npm_path(app_handle).await?;
+      Self::install_node_package(
+         &npm_path,
+         "npm",
+         package_dir,
+         package,
+         command_name,
+         companion_packages,
+         "install",
+      )
    }
 
    fn copy_dir_all(source: &Path, target: &Path) -> Result<(), ToolError> {
@@ -598,45 +735,50 @@ impl ToolInstaller {
       companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
       let runtime_root = Self::get_runtime_root(app_handle)?;
-      let bun_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Bun)
-         .await
-         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
-
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let package_dir = tools_dir.join("bun").join(package);
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
-      log::info!("Installing {} via Bun to {:?}", package, package_dir);
+      let bun_result =
+         match RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Bun).await {
+            Ok(bun_path) => Self::install_node_package(
+               &bun_path,
+               "Bun",
+               &package_dir,
+               package,
+               command_name,
+               companion_packages,
+               "add",
+            ),
+            Err(error) => Err(ToolError::RuntimeNotAvailable(error.to_string())),
+         };
 
-      let mut command = Command::new(&bun_path);
-      let mut args = vec!["add"];
-      let packages = Self::node_packages_to_install(package, companion_packages);
-      args.extend(packages.iter().map(String::as_str));
-      let output = configure_background_command(&mut command)
-         .args(args)
-         .current_dir(&package_dir)
-         .output()
-         .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
-
-      if !output.status.success() {
-         let stderr = String::from_utf8_lossy(&output.stderr);
-         return Err(ToolError::InstallationFailed(format!(
-            "Bun install failed: {}",
-            stderr
-         )));
+      match bun_result {
+         Ok(path) => Ok(path),
+         Err(bun_error) => {
+            log::warn!(
+               "Bun install failed for {}; retrying with managed npm in the same tool directory: \
+                {}",
+               package,
+               bun_error
+            );
+            Self::install_node_package_with_npm(
+               app_handle,
+               &package_dir,
+               package,
+               command_name,
+               companion_packages,
+            )
+            .await
+            .map_err(|npm_error| {
+               ToolError::InstallationFailed(format!(
+                  "Bun install failed: {}; npm fallback failed: {}",
+                  bun_error, npm_error
+               ))
+            })
+         }
       }
-
-      if let Some(binary_path) =
-         Self::resolve_node_package_binary(&package_dir, package, command_name)
-      {
-         return Self::validate_and_prepare(&binary_path);
-      }
-
-      Err(ToolError::InstallationFailed(format!(
-         "Binary '{}' not found after installing package '{}' via Bun",
-         command_name, package
-      )))
    }
 
    /// Install a package via npm (global)
@@ -656,42 +798,27 @@ impl ToolInstaller {
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
-      // Get npm path (should be alongside node)
-      let npm_path = node_path
-         .parent()
-         .map(|p| p.join("npm"))
-         .unwrap_or_else(|| which::which("npm").unwrap_or_else(|_| PathBuf::from("npm")));
+      let npm_path = if let Some(parent) = node_path.parent() {
+         let adjacent = parent.join(Self::npm_bin_name());
+         if adjacent.exists() {
+            adjacent
+         } else {
+            which::which(Self::npm_bin_name())
+               .unwrap_or_else(|_| PathBuf::from(Self::npm_bin_name()))
+         }
+      } else {
+         which::which(Self::npm_bin_name()).unwrap_or_else(|_| PathBuf::from(Self::npm_bin_name()))
+      };
 
-      log::info!("Installing {} via npm to {:?}", package, package_dir);
-
-      let mut command = Command::new(&npm_path);
-      let mut args = vec!["install"];
-      let packages = Self::node_packages_to_install(package, companion_packages);
-      args.extend(packages.iter().map(String::as_str));
-      let output = configure_background_command(&mut command)
-         .args(args)
-         .current_dir(&package_dir)
-         .output()
-         .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
-
-      if !output.status.success() {
-         let stderr = String::from_utf8_lossy(&output.stderr);
-         return Err(ToolError::InstallationFailed(format!(
-            "npm install failed: {}",
-            stderr
-         )));
-      }
-
-      if let Some(binary_path) =
-         Self::resolve_node_package_binary(&package_dir, package, command_name)
-      {
-         return Self::validate_and_prepare(&binary_path);
-      }
-
-      Err(ToolError::InstallationFailed(format!(
-         "Binary '{}' not found after installing package '{}' via npm",
-         command_name, package
-      )))
+      Self::install_node_package(
+         &npm_path,
+         "npm",
+         &package_dir,
+         package,
+         command_name,
+         companion_packages,
+         "install",
+      )
    }
 
    /// Install a package via pip (user)
@@ -1260,10 +1387,10 @@ mod tests {
    }
 
    #[test]
-   fn installs_typescript_with_typescript_language_server() {
+   fn installs_pinned_typescript_with_typescript_language_servers() {
       assert_eq!(
          ToolInstaller::node_packages_to_install("typescript-language-server", &[]),
-         vec!["typescript-language-server", "typescript"]
+         vec!["typescript-language-server@5.2.0", "typescript@6.0.3"]
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install("eslint", &[]),
@@ -1271,14 +1398,21 @@ mod tests {
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install("@vtsls/language-server", &[]),
-         vec!["@vtsls/language-server", "typescript"]
+         vec!["@vtsls/language-server@0.3.0", "typescript@6.0.3"]
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install(
             "@vtsls/language-server",
             &["typescript".to_string()]
          ),
-         vec!["@vtsls/language-server", "typescript"]
+         vec!["@vtsls/language-server@0.3.0", "typescript@6.0.3"]
+      );
+      assert_eq!(
+         ToolInstaller::node_packages_to_install(
+            "@vtsls/language-server",
+            &["typescript@5.9.3".to_string()]
+         ),
+         vec!["@vtsls/language-server@0.3.0", "typescript@5.9.3"]
       );
    }
 
@@ -1353,6 +1487,42 @@ mod tests {
          &package_dir,
          "@vue/language-server",
          "vue-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));
+   }
+
+   #[test]
+   fn resolves_lsp_launch_path_to_package_entrypoint_before_platform_shim() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("pyright");
+      let package_root = package_dir.join("node_modules").join("pyright");
+      let entrypoint = package_root.join("langserver.index.js");
+      let shim = package_dir
+         .join("node_modules")
+         .join(".bin")
+         .join(ToolInstaller::default_node_bin_name("pyright-langserver"));
+
+      fs::create_dir_all(entrypoint.parent().unwrap()).unwrap();
+      fs::create_dir_all(shim.parent().unwrap()).unwrap();
+      fs::write(
+         package_root.join("package.json"),
+         r#"{
+  "name": "pyright",
+  "bin": {
+    "pyright": "./index.js",
+    "pyright-langserver": "./langserver.index.js"
+  }
+}"#,
+      )
+      .unwrap();
+      fs::write(&entrypoint, "").unwrap();
+      fs::write(&shim, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_entrypoint(
+         &package_dir,
+         "pyright",
+         "pyright-langserver",
       );
 
       assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));

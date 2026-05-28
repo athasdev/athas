@@ -5,6 +5,10 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
+import {
+  DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
+  getDroppedDatabaseFilePaths,
+} from "@/features/database/utils/database-file-drop";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
@@ -39,8 +43,6 @@ import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
 
-const SIDEBAR_COLLAPSE_THRESHOLD = 48;
-
 export function MainLayout() {
   useChatInitialization();
   usePaneKeyboard();
@@ -48,11 +50,12 @@ export function MainLayout() {
 
   const {
     isSidebarVisible,
-    setIsSidebarVisible,
+    isRightSidebarVisible,
+    activeRightSidebarView,
     isDatabaseConnectionVisible,
     setIsDatabaseConnectionVisible,
   } = useUIState();
-  const { settings, updateSetting } = useSettingsStore();
+  const { settings } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
@@ -70,6 +73,18 @@ export function MainLayout() {
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
+
+    if (isRightSidebarVisible && activeRightSidebarView === "databases" && rootFolderPath) {
+      const databasePaths = getDroppedDatabaseFilePaths(paths);
+      if (databasePaths.length > 0) {
+        window.dispatchEvent(
+          new CustomEvent(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, {
+            detail: { paths: databasePaths },
+          }),
+        );
+        return;
+      }
+    }
 
     const result = await openDroppedWorkspacePaths(paths, {
       getPathInfo: getSymlinkInfo,
@@ -231,12 +246,12 @@ export function MainLayout() {
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
+    <div className="athas-layout-shell relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
           <div className="rounded-lg border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
-            <p className="font-medium text-text text-xl">
+            <p className="ui-text-base font-semibold text-text">
               Drop folder to open project, or file to open buffer
             </p>
           </div>
@@ -245,49 +260,37 @@ export function MainLayout() {
 
       <CustomTitleBarWithSettings />
 
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
-          {/* Left sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <div className={!showInlineAiChat ? "hidden" : undefined}>
+          {sidebarPosition === "left" ? (
+            <>
+              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
               <ResizablePane
                 position="left"
-                widthKey="aiChatWidth"
-                collapsible
-                collapseThreshold={0}
-                onCollapse={() => updateSetting("isAIChatVisible", false)}
+                widthKey="sidebarWidth"
+                hidden={!isSidebarVisible}
+                edgePadding={!showLeftSidebarTabs}
               >
-                <AIChat mode="chat" />
+                <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
-            </div>
-          ) : (
-            sidebarPosition === "left" && (
-              <>
-                {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
-                <ResizablePane
-                  position="left"
-                  widthKey="sidebarWidth"
-                  hidden={!isSidebarVisible}
-                  collapsible
-                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                  edgePadding={!showLeftSidebarTabs}
-                  onCollapse={() => setIsSidebarVisible(false)}
-                >
-                  <MainSidebar showActivityRail={!showLeftSidebarTabs} />
-                </ResizablePane>
-              </>
-            )
-          )}
+            </>
+          ) : null}
 
           {/* Main content area with split view */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
+            <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
             {terminalWidthMode === "editor" && <BottomPane />}
           </div>
 
-          {/* Right sidebar or AI chat based on settings */}
+          {/* Right side panes are ordered from inner to edge. */}
+          {showInlineAiChat ? (
+            <ResizablePane position="right" widthKey="aiChatWidth">
+              <AIChat mode="chat" />
+            </ResizablePane>
+          ) : null}
+
           {sidebarPosition === "right" ? (
             <>
               {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
@@ -295,27 +298,22 @@ export function MainLayout() {
                 position="right"
                 widthKey="sidebarWidth"
                 hidden={!isSidebarVisible}
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 edgePadding={!showLeftSidebarTabs}
-                onCollapse={() => setIsSidebarVisible(false)}
               >
-                <MainSidebar showActivityRail={!showLeftSidebarTabs} />
+                <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
             </>
-          ) : (
-            <div className={!showInlineAiChat ? "hidden" : undefined}>
-              <ResizablePane
-                position="right"
-                widthKey="aiChatWidth"
-                collapsible
-                collapseThreshold={0}
-                onCollapse={() => updateSetting("isAIChatVisible", false)}
-              >
-                <AIChat mode="chat" />
-              </ResizablePane>
-            </div>
-          )}
+          ) : null}
+
+          <ResizablePane position="right" widthKey="sidebarWidth" hidden={!isRightSidebarVisible}>
+            <MainSidebar
+              showActivityRail={false}
+              paneLevel="edge"
+              activeView={activeRightSidebarView}
+              isGitActive={false}
+              isGitHubPRsActive={false}
+            />
+          </ResizablePane>
         </div>
 
         {terminalWidthMode === "full" && (

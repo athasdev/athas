@@ -74,6 +74,10 @@ export interface ProjectPaneGroupSession {
   type: "group";
   bufferPaths: string[];
   activeBufferPath: string | null;
+  mruBufferPaths?: string[];
+  previewBufferPath?: string | null;
+  pinnedBufferPaths?: string[];
+  locked?: boolean;
 }
 
 export interface ProjectPaneSplitSession {
@@ -90,6 +94,7 @@ export interface ProjectPaneSession {
   root: ProjectPaneSessionNode;
   bottomRoot: ProjectPaneSessionNode;
   activePaneId: string;
+  mostRecentActivePaneIds?: string[];
   fullscreenPaneId: string | null;
 }
 

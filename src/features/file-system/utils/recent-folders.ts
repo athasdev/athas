@@ -58,6 +58,8 @@ export function upsertRecentFolder(
     missing: metadata.missing ?? false,
     openInNewWindow: metadata.openInNewWindow ?? existing?.openInNewWindow,
     pinned: existing?.pinned,
+    importSourceId: metadata.importSourceId ?? existing?.importSourceId,
+    importSourceName: metadata.importSourceName ?? existing?.importSourceName,
   };
 
   return limitRecentFolders([

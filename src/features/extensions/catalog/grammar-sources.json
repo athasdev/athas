@@ -1,0 +1,154 @@
+{
+  "bash": {
+    "repository": "tree-sitter/tree-sitter-bash",
+    "path": "."
+  },
+  "c": {
+    "repository": "tree-sitter/tree-sitter-c",
+    "path": "."
+  },
+  "c_sharp": {
+    "repository": "tree-sitter/tree-sitter-c-sharp",
+    "path": "."
+  },
+  "cpp": {
+    "repository": "tree-sitter/tree-sitter-cpp",
+    "path": "."
+  },
+  "css": {
+    "repository": "tree-sitter/tree-sitter-css",
+    "path": "."
+  },
+  "dart": {
+    "repository": "UserNobody14/tree-sitter-dart",
+    "path": "."
+  },
+  "dockerfile": {
+    "repository": "camdencheek/tree-sitter-dockerfile",
+    "path": "."
+  },
+  "elisp": {
+    "repository": "Wilfred/tree-sitter-elisp",
+    "path": "."
+  },
+  "elixir": {
+    "repository": "elixir-lang/tree-sitter-elixir",
+    "path": "."
+  },
+  "elm": {
+    "repository": "elm-tooling/tree-sitter-elm",
+    "path": "."
+  },
+  "go": {
+    "repository": "tree-sitter/tree-sitter-go",
+    "path": "."
+  },
+  "graphql": {
+    "repository": "bkegley/tree-sitter-graphql",
+    "path": "."
+  },
+  "html": {
+    "repository": "tree-sitter/tree-sitter-html",
+    "path": "."
+  },
+  "java": {
+    "repository": "tree-sitter/tree-sitter-java",
+    "path": "."
+  },
+  "javascript": {
+    "repository": "tree-sitter/tree-sitter-javascript",
+    "path": "."
+  },
+  "json": {
+    "repository": "tree-sitter/tree-sitter-json",
+    "path": "."
+  },
+  "kotlin": {
+    "repository": "fwcd/tree-sitter-kotlin",
+    "path": "."
+  },
+  "lua": {
+    "repository": "tree-sitter-grammars/tree-sitter-lua",
+    "path": "."
+  },
+  "nix": {
+    "repository": "nix-community/tree-sitter-nix",
+    "path": "."
+  },
+  "objc": {
+    "repository": "amaanq/tree-sitter-objc",
+    "path": "."
+  },
+  "ocaml": {
+    "repository": "tree-sitter/tree-sitter-ocaml",
+    "path": "grammars/ocaml"
+  },
+  "php": {
+    "repository": "tree-sitter/tree-sitter-php",
+    "path": "php"
+  },
+  "protobuf": {
+    "repository": "treywood/tree-sitter-proto",
+    "path": "."
+  },
+  "python": {
+    "repository": "tree-sitter/tree-sitter-python",
+    "path": "."
+  },
+  "ruby": {
+    "repository": "tree-sitter/tree-sitter-ruby",
+    "path": "."
+  },
+  "rust": {
+    "repository": "tree-sitter/tree-sitter-rust",
+    "path": "."
+  },
+  "scala": {
+    "repository": "tree-sitter/tree-sitter-scala",
+    "path": "."
+  },
+  "sql": {
+    "repository": "maxdeviant/tree-sitter-sql",
+    "path": "."
+  },
+  "svelte": {
+    "repository": "tree-sitter-grammars/tree-sitter-svelte",
+    "path": "."
+  },
+  "swift": {
+    "repository": "alex-pinkus/tree-sitter-swift",
+    "path": "."
+  },
+  "terraform": {
+    "repository": "tree-sitter-grammars/tree-sitter-hcl",
+    "path": "dialects/terraform"
+  },
+  "toml": {
+    "repository": "tree-sitter-grammars/tree-sitter-toml",
+    "path": "."
+  },
+  "tsx": {
+    "repository": "tree-sitter/tree-sitter-typescript",
+    "path": "tsx"
+  },
+  "typescript": {
+    "repository": "tree-sitter/tree-sitter-typescript",
+    "path": "typescript"
+  },
+  "vue": {
+    "repository": "tree-sitter-grammars/tree-sitter-vue",
+    "path": "."
+  },
+  "xml": {
+    "repository": "tree-sitter-grammars/tree-sitter-xml",
+    "path": "xml"
+  },
+  "yaml": {
+    "repository": "tree-sitter-grammars/tree-sitter-yaml",
+    "path": "."
+  },
+  "zig": {
+    "repository": "tree-sitter-grammars/tree-sitter-zig",
+    "path": "."
+  }
+}

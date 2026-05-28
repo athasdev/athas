@@ -1,0 +1,6 @@
+{
+  "protocolVersion": 1,
+  "providerId": "sqlite",
+  "command": "disconnect_database",
+  "payload": {}
+}

@@ -1,78 +1,123 @@
-import { editorAPI } from "@/features/editor/extensions/api";
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import {
-  buildDebugCommand,
-  createGeneratedDebugConfig,
-} from "@/features/debugger/utils/debugger-command";
-import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
-import { useSettingsStore } from "@/features/settings/store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import {
+  closeActiveEditorGroup,
+  closeOtherEditorGroups,
+  moveActiveEditorToAdjacentGroup,
+  resetEditorGroupSizes,
+  splitActiveEditorGroup,
+  toggleActiveEditorGroupLock,
+} from "@/features/panes/utils/pane-command-actions";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
-import { toast } from "@/ui/toast";
-import { isMac } from "@/utils/platform";
+import {
+  startGeneratedDebugSession,
+  stopDebugSession,
+  toggleActiveBreakpoint,
+  toggleDebuggerPane,
+} from "./debug-command-actions";
+import {
+  closeActiveTab,
+  closeAllTabs,
+  closeOtherTabs,
+  closeSavedTabs,
+  closeTabsToLeft,
+  closeTabsToRight,
+  createNewFile,
+  openLocalHistoryForActiveFile,
+  openProjectPicker,
+  openQuickOpen,
+  reopenClosedTab,
+  revertActiveFile,
+  saveActiveFile,
+  saveActiveFileAs,
+  saveAllFiles,
+  showNewTab,
+} from "./file-command-actions";
+import {
+  copyActiveEditorLineDown,
+  copyActiveEditorLineUp,
+  copyActiveEditorSelection,
+  cutActiveEditorSelection,
+  deleteActiveEditorLine,
+  duplicateActiveEditorLine,
+  expandActiveEditorSelection,
+  foldAllActiveEditor,
+  foldLevelActiveEditor,
+  formatActiveEditorDocument,
+  formatActiveEditorSelection,
+  goToActiveEditorMatchingBracket,
+  insertActiveEditorCursorAbove,
+  insertActiveEditorCursorBelow,
+  insertActiveEditorCursorsAtLineEnds,
+  moveActiveEditorLineDown,
+  moveActiveEditorLineUp,
+  pasteIntoActiveEditor,
+  redoActiveEditor,
+  removeActiveEditorBrackets,
+  runQuickFixForActiveEditor,
+  selectAllActiveEditor,
+  selectAllEditorOccurrences,
+  selectNextEditorOccurrence,
+  selectPreviousEditorOccurrence,
+  selectToActiveEditorBracket,
+  showHoverForActiveEditor,
+  showInlineEditToolbar,
+  shrinkActiveEditorSelection,
+  toggleActiveEditorComment,
+  triggerActiveEditorParameterHints,
+  triggerActiveEditorRenameSymbol,
+  triggerActiveEditorSuggest,
+  unfoldAllActiveEditor,
+  undoActiveEditor,
+} from "./editor-command-actions";
+import {
+  goBack,
+  goForward,
+  goToDefinition,
+  goToImplementation,
+  goToReferences,
+  goToTypeDefinition,
+  openOutlinePicker,
+  openOutlineSidebar,
+  promptGoToLine,
+} from "./navigation-command-actions";
+import {
+  openCommandPalette,
+  openDiagnosticsBuffer,
+  openGlobalSearchBuffer,
+  openKeyboardShortcuts,
+  resetZoom,
+  showFind,
+  showFindReplace,
+  showThemeSelector,
+  showWhatsNew,
+  toggleAgentLauncher,
+  toggleAIChat,
+  toggleFilesSidebar,
+  toggleGitHubSidebar,
+  toggleLineNumbers,
+  toggleMinimap,
+  toggleRenderWhitespace,
+  toggleSidebar,
+  toggleSidebarPosition,
+  toggleSourceControlSidebar,
+  toggleTerminalPane,
+  toggleWordWrap,
+  zoomIn,
+  zoomOut,
+} from "./view-command-actions";
+import {
+  maximizeWindow,
+  minimizeWindow,
+  minimizeWindowAlt,
+  minimizeWindowMac,
+  quitApplication,
+  toggleFullscreen,
+  toggleFullscreenMac,
+  toggleNativeMenuBar,
+} from "./window-command-actions";
 import { useKeymapStore } from "../stores/store";
 import type { Command } from "../types";
 import { keymapRegistry } from "../utils/registry";
-
-function getZoomTarget(): "editor" | "terminal" | "webviewer" {
-  const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-  if (terminalContainer?.contains(document.activeElement)) return "terminal";
-
-  const activeBuffer = useBufferStore.getState().buffers.find((b) => b.isActive);
-  if (activeBuffer?.type === "webViewer") return "webviewer";
-
-  return "editor";
-}
-
-async function formatActiveEditorDocument(): Promise<void> {
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-
-  if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
-    toast.warning("No editable file to format.");
-    return;
-  }
-
-  const { formatContent, isFormattingAvailable } =
-    await import("@/features/editor/formatter/formatter-service");
-  const languageId = extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language;
-
-  if (!isFormattingAvailable(activeBuffer.path, languageId || undefined)) {
-    toast.warning("No formatter configured for this file type.");
-    return;
-  }
-
-  const result = await formatContent({
-    filePath: activeBuffer.path,
-    content: activeBuffer.content,
-    languageId: languageId || undefined,
-  });
-
-  if (!result.success || result.formattedContent === undefined) {
-    toast.error(result.error || "Formatting failed.");
-    return;
-  }
-
-  if (result.formattedContent === activeBuffer.content) {
-    toast.info("Document is already formatted.");
-    return;
-  }
-
-  bufferStore.actions.updateBufferContent(activeBuffer.id, result.formattedContent, true);
-  toast.success("Document formatted.");
-}
 
 const fileCommands: Command[] = [
   {
@@ -80,116 +125,98 @@ const fileCommands: Command[] = [
     title: "New Tab",
     category: "File",
     keybinding: "cmd+n",
-    execute: () => {
-      if (useKeymapStore.getState().contexts.terminalFocus) return;
-      useBufferStore.getState().actions.showNewTabView();
-    },
+    execute: showNewTab,
   },
   {
     id: "file.save",
     title: "Save File",
     category: "File",
     keybinding: "cmd+s",
-    execute: () => {
-      useEditorAppStore.getState().actions.handleSave();
-    },
+    execute: saveActiveFile,
   },
   {
     id: "file.saveAs",
     title: "Save File As",
     category: "File",
     keybinding: "cmd+shift+s",
-    execute: async () => {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { invoke } = await import("@tauri-apps/api/core");
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-
-      if (!activeBuffer) return;
-
-      const result = await save({
-        title: "Save As",
-        defaultPath: activeBuffer.name,
-        filters: [
-          { name: "All Files", extensions: ["*"] },
-          {
-            name: "Text Files",
-            extensions: ["txt", "md", "json", "js", "ts", "tsx", "jsx", "css", "html"],
-          },
-        ],
-      });
-
-      if (result) {
-        await invoke("write_file", {
-          path: result,
-          contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
-        });
-      }
-    },
+    execute: saveActiveFileAs,
+  },
+  {
+    id: "file.saveAll",
+    title: "Save All",
+    category: "File",
+    keybinding: "cmd+alt+s",
+    execute: saveAllFiles,
+  },
+  {
+    id: "file.revert",
+    title: "Revert File",
+    category: "File",
+    execute: revertActiveFile,
   },
   {
     id: "file.close",
     title: "Close Tab",
     category: "File",
     keybinding: "cmd+w",
-    execute: () => {
-      if (useKeymapStore.getState().contexts.terminalFocus) return;
-
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-      if (activeBuffer) {
-        bufferStore.actions.closeBuffer(activeBuffer.id);
-      }
-    },
+    execute: closeActiveTab,
   },
   {
     id: "file.closeAll",
     title: "Close All Tabs",
     category: "File",
-    execute: () => {
-      const bufferStore = useBufferStore.getState();
-      bufferStore.actions.closeBuffersBatch(
-        bufferStore.buffers.map((b) => b.id),
-        true,
-      );
-    },
+    execute: closeAllTabs,
+  },
+  {
+    id: "file.closeOthers",
+    title: "Close Other Tabs",
+    category: "File",
+    execute: closeOtherTabs,
+  },
+  {
+    id: "file.closeSaved",
+    title: "Close Saved Tabs",
+    category: "File",
+    execute: closeSavedTabs,
+  },
+  {
+    id: "file.closeTabsToLeft",
+    title: "Close Tabs to the Left",
+    category: "File",
+    execute: closeTabsToLeft,
+  },
+  {
+    id: "file.closeTabsToRight",
+    title: "Close Tabs to the Right",
+    category: "File",
+    execute: closeTabsToRight,
   },
   {
     id: "file.reopenClosed",
     title: "Reopen Closed Tab",
     category: "File",
     keybinding: "cmd+shift+t",
-    execute: async () => {
-      await useBufferStore.getState().actions.reopenClosedTab();
-    },
+    execute: reopenClosedTab,
   },
   {
     id: "file.new",
     title: "New File",
     category: "File",
-    execute: () => {
-      if (useKeymapStore.getState().contexts.terminalFocus) return;
-
-      useFileSystemStore.getState().handleCreateNewFile();
-    },
+    execute: createNewFile,
   },
   {
     id: "file.open",
     title: "Open Project",
     category: "File",
     keybinding: "cmd+o",
-    execute: () => {
-      useUIState.getState().setIsProjectPickerVisible(true);
-    },
+    execute: openProjectPicker,
   },
   {
     id: "file.quickOpen",
     title: "Quick Open",
     category: "File",
     keybinding: "cmd+p",
-    execute: () => {
-      useUIState.getState().setIsQuickOpenVisible(true);
-    },
+    execute: openQuickOpen,
   },
   {
     id: "file.localHistory",
@@ -229,107 +256,164 @@ const terminalCommands: Command[] = [
   },
 ];
 
+const foldLevelCommands: Command[] = Array.from({ length: 7 }, (_, index) => {
+  const level = index + 1;
+
+  return {
+    id: `editor.foldLevel${level}`,
+    title: `Fold Level ${level}`,
+    category: "Edit",
+    keybinding: `cmd+k cmd+${level}`,
+    execute: () => foldLevelActiveEditor(level),
+  };
+});
+
 const editCommands: Command[] = [
   {
     id: "editor.selectAll",
     title: "Select All",
     category: "Edit",
     keybinding: "cmd+a",
-    execute: () => editorAPI.selectAll(),
+    execute: selectAllActiveEditor,
   },
   {
     id: "editor.undo",
     title: "Undo",
     category: "Edit",
     keybinding: "cmd+z",
-    execute: () => editorAPI.undo(),
+    execute: undoActiveEditor,
   },
   {
     id: "editor.redo",
     title: "Redo",
     category: "Edit",
     keybinding: "cmd+shift+z",
-    execute: () => editorAPI.redo(),
+    execute: redoActiveEditor,
   },
   {
     id: "editor.copy",
     title: "Copy",
     category: "Edit",
     keybinding: "cmd+c",
-    execute: () => document.execCommand("copy"),
+    execute: copyActiveEditorSelection,
   },
   {
     id: "editor.cut",
     title: "Cut",
     category: "Edit",
     keybinding: "cmd+x",
-    execute: () => document.execCommand("cut"),
+    execute: cutActiveEditorSelection,
   },
   {
     id: "editor.paste",
     title: "Paste",
     category: "Edit",
     keybinding: "cmd+v",
-    execute: async () => {
-      const text = await navigator.clipboard.readText();
-      const textarea = editorAPI.getTextareaRef();
-      if (textarea) {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
-        textarea.selectionStart = textarea.selectionEnd = start + text.length;
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-    },
+    execute: pasteIntoActiveEditor,
+  },
+  {
+    id: "editor.selectNextOccurrence",
+    title: "Add Selection To Next Find Match",
+    category: "Edit",
+    keybinding: "cmd+d",
+    execute: selectNextEditorOccurrence,
+  },
+  {
+    id: "editor.selectPreviousOccurrence",
+    title: "Add Selection To Previous Find Match",
+    category: "Edit",
+    execute: selectPreviousEditorOccurrence,
+  },
+  {
+    id: "editor.selectAllOccurrences",
+    title: "Select All Occurrences of Find Match",
+    category: "Edit",
+    keybinding: "cmd+shift+l",
+    execute: selectAllEditorOccurrences,
   },
   {
     id: "editor.duplicateLine",
     title: "Duplicate Line",
     category: "Edit",
-    keybinding: "cmd+d",
-    execute: () => editorAPI.duplicateLine(),
+    execute: duplicateActiveEditorLine,
   },
   {
     id: "editor.deleteLine",
     title: "Delete Line",
     category: "Edit",
     keybinding: "cmd+shift+k",
-    execute: () => editorAPI.deleteLine(),
+    execute: deleteActiveEditorLine,
   },
   {
     id: "editor.toggleComment",
     title: "Toggle Comment",
     category: "Edit",
     keybinding: "cmd+/",
-    execute: () => editorAPI.toggleComment(),
+    execute: toggleActiveEditorComment,
+  },
+  {
+    id: "editor.foldAll",
+    title: "Fold All",
+    category: "Edit",
+    keybinding: "cmd+k cmd+0",
+    execute: () => foldAllActiveEditor(),
+  },
+  ...foldLevelCommands,
+  {
+    id: "editor.unfoldAll",
+    title: "Unfold All",
+    category: "Edit",
+    keybinding: "cmd+k cmd+j",
+    execute: () => unfoldAllActiveEditor(),
   },
   {
     id: "editor.moveLineUp",
     title: "Move Line Up",
     category: "Edit",
     keybinding: "alt+up",
-    execute: () => editorAPI.moveLineUp(),
+    execute: moveActiveEditorLineUp,
   },
   {
     id: "editor.moveLineDown",
     title: "Move Line Down",
     category: "Edit",
     keybinding: "alt+down",
-    execute: () => editorAPI.moveLineDown(),
+    execute: moveActiveEditorLineDown,
   },
   {
     id: "editor.copyLineUp",
     title: "Copy Line Up",
     category: "Edit",
     keybinding: "alt+shift+up",
-    execute: () => editorAPI.copyLineUp(),
+    execute: copyActiveEditorLineUp,
   },
   {
     id: "editor.copyLineDown",
     title: "Copy Line Down",
     category: "Edit",
     keybinding: "alt+shift+down",
-    execute: () => editorAPI.copyLineDown(),
+    execute: copyActiveEditorLineDown,
+  },
+  {
+    id: "editor.insertCursorAbove",
+    title: "Add Cursor Above",
+    category: "Edit",
+    keybinding: "cmd+alt+up",
+    execute: insertActiveEditorCursorAbove,
+  },
+  {
+    id: "editor.insertCursorBelow",
+    title: "Add Cursor Below",
+    category: "Edit",
+    keybinding: "cmd+alt+down",
+    execute: insertActiveEditorCursorBelow,
+  },
+  {
+    id: "editor.insertCursorsAtLineEnds",
+    title: "Add Cursors to Line Ends",
+    category: "Edit",
+    keybinding: "shift+alt+i",
+    execute: insertActiveEditorCursorsAtLineEnds,
   },
   {
     id: "editor.formatDocument",
@@ -341,82 +425,54 @@ const editCommands: Command[] = [
     },
   },
   {
+    id: "editor.formatSelection",
+    title: "Format Selection",
+    category: "Edit",
+    keybinding: "cmd+k cmd+f",
+    execute: () => {
+      void formatActiveEditorSelection();
+    },
+  },
+  {
+    id: "editor.triggerSuggest",
+    title: "Trigger Suggest",
+    category: "Edit",
+    keybinding: "ctrl+space",
+    execute: triggerActiveEditorSuggest,
+  },
+  {
+    id: "editor.triggerParameterHints",
+    title: "Trigger Parameter Hints",
+    category: "Edit",
+    keybinding: "cmd+shift+space",
+    execute: triggerActiveEditorParameterHints,
+  },
+  {
+    id: "editor.showHover",
+    title: "Show Hover",
+    category: "Edit",
+    keybinding: "cmd+k cmd+i",
+    execute: () => {
+      void showHoverForActiveEditor();
+    },
+  },
+  {
+    id: "editor.quickFix",
+    title: "Quick Fix",
+    category: "Edit",
+    keybinding: "cmd+.",
+    execute: () => {
+      void runQuickFixForActiveEditor();
+    },
+  },
+  {
     id: "editor.inlineEdit",
     title: "AI Inline Edit",
     category: "Edit",
     keybinding: "cmd+i",
-    execute: () => {
-      useInlineEditToolbarStore.getState().actions.show();
-    },
+    execute: showInlineEditToolbar,
   },
 ];
-
-const toggleTerminalPane = () => {
-  const state = useUIState.getState();
-  if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal") {
-    state.setIsBottomPaneVisible(false);
-  } else {
-    state.setBottomPaneActiveTab("terminal");
-    state.setIsBottomPaneVisible(true);
-    window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
-    setTimeout(() => state.requestTerminalFocus(), 100);
-  }
-};
-
-const getActiveDebugFile = () => {
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
-  if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
-
-  return {
-    path: activeBuffer.path,
-    name: activeBuffer.name,
-    language: activeBuffer.language,
-  };
-};
-
-const toggleActiveBreakpoint = () => {
-  const activeFile = getActiveDebugFile();
-  if (!activeFile) return;
-
-  const line = useEditorStateStore.getState().cursorPosition.line;
-  useDebuggerStore.getState().actions.toggleBreakpoint(activeFile.path, line);
-};
-
-const startGeneratedDebugSession = () => {
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  const activeFile = getActiveDebugFile();
-  const config = createGeneratedDebugConfig(activeFile, rootFolderPath);
-  const command = buildDebugCommand(config);
-  if (!command.trim()) {
-    const state = useUIState.getState();
-    state.setActiveView("debugger");
-    state.setIsSidebarVisible(true);
-    return;
-  }
-
-  window.dispatchEvent(
-    new CustomEvent("create-terminal-with-command", {
-      detail: {
-        name: config.name,
-        command,
-        workingDirectory: config.cwd || rootFolderPath || undefined,
-      },
-    }),
-  );
-
-  useDebuggerStore.getState().actions.startSession({
-    id: `debug_${Date.now()}`,
-    name: config.name,
-    configId: config.id,
-    command,
-    cwd: config.cwd,
-    startedAt: Date.now(),
-    status: "running",
-  });
-};
 
 const viewCommands: Command[] = [
   {
@@ -424,10 +480,7 @@ const viewCommands: Command[] = [
     title: "Toggle Sidebar",
     category: "View",
     keybinding: "cmd+b",
-    execute: () => {
-      const state = useUIState.getState();
-      state.setIsSidebarVisible(!state.isSidebarVisible);
-    },
+    execute: toggleSidebar,
   },
   {
     id: "workbench.toggleTerminal",
@@ -448,130 +501,76 @@ const viewCommands: Command[] = [
     title: "Show Diagnostics",
     category: "View",
     keybinding: "cmd+shift+j",
-    execute: () => {
-      useBufferStore.getState().actions.openDiagnosticsBuffer();
-    },
+    execute: openDiagnosticsBuffer,
   },
   {
     id: "workbench.commandPalette",
     title: "Command Palette",
     category: "View",
     keybinding: "cmd+shift+p",
-    execute: () => {
-      useUIState.getState().setIsCommandPaletteVisible(true);
-    },
+    execute: openCommandPalette,
   },
   {
     id: "workbench.agentLauncher",
     title: "New Agent",
     category: "AI",
     keybinding: "cmd+shift+space",
-    execute: () => {
-      const state = useUIState.getState();
-      state.setIsAgentLauncherVisible(!state.isAgentLauncherVisible);
-    },
+    execute: toggleAgentLauncher,
   },
   {
     id: "workbench.showFind",
     title: "Find",
     category: "View",
     keybinding: "cmd+f",
-    execute: () => {
-      if (useKeymapStore.getState().contexts.terminalFocus) {
-        window.dispatchEvent(new CustomEvent("terminal-open-search"));
-        return;
-      }
-      const state = useUIState.getState();
-      state.setIsFindVisible(!state.isFindVisible);
-    },
+    execute: showFind,
   },
   {
     id: "workbench.showFindReplace",
     title: "Find and Replace",
     category: "View",
     keybinding: "cmd+alt+f",
-    execute: () => {
-      const state = useUIState.getState();
-      state.setIsFindVisible(true);
-      useEditorUIStore.getState().actions.setIsReplaceVisible(true);
-    },
+    execute: showFindReplace,
   },
   {
     id: "workbench.showGlobalSearch",
     title: "Global Search",
     category: "View",
     keybinding: "cmd+shift+f",
-    execute: () => {
-      useBufferStore.getState().actions.openGlobalSearchBuffer();
-    },
+    execute: openGlobalSearchBuffer,
   },
   {
     id: "workbench.showProjectSearch",
     title: "Project Search",
     category: "View",
     keybinding: "cmd+shift+h",
-    execute: () => {
-      useBufferStore.getState().actions.openGlobalSearchBuffer();
-    },
+    execute: openGlobalSearchBuffer,
   },
   {
     id: "workbench.showFileExplorer",
     title: "Show Files",
     category: "View",
     keybinding: "cmd+shift+e",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isSidebarVisible && state.activeSidebarView === "files") {
-        state.setIsSidebarVisible(false);
-      } else {
-        state.setActiveView("files");
-        state.setIsSidebarVisible(true);
-      }
-    },
+    execute: toggleFilesSidebar,
   },
   {
     id: "workbench.showSourceControl",
     title: "Show Source Control",
     category: "View",
     keybinding: "cmd+shift+g",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isSidebarVisible && state.activeSidebarView === "git") {
-        state.setIsSidebarVisible(false);
-      } else {
-        state.setActiveView("git");
-        state.setIsSidebarVisible(true);
-      }
-    },
+    execute: toggleSourceControlSidebar,
   },
   {
     id: "workbench.showGitHub",
     title: "Show GitHub",
     category: "View",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isSidebarVisible && state.activeSidebarView === "github-prs") {
-        state.setIsSidebarVisible(false);
-      } else {
-        state.setActiveView("github-prs");
-        state.setIsSidebarVisible(true);
-      }
-    },
+    execute: toggleGitHubSidebar,
   },
   {
     id: "workbench.showDebugger",
     title: "Show Run and Debug",
     category: "View",
     keybinding: "cmd+shift+d",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isSidebarVisible && state.activeSidebarView === "debugger") {
-        state.setIsSidebarVisible(false);
-      } else {
-        state.setActiveView("debugger");
-        state.setIsSidebarVisible(true);
-      }
-    },
+    execute: toggleDebuggerPane,
   },
   {
     id: "debug.start",
@@ -585,10 +584,7 @@ const viewCommands: Command[] = [
     title: "Stop Debugging",
     category: "Debug",
     keybinding: "shift+F5",
-    execute: () => {
-      window.dispatchEvent(new CustomEvent("close-active-terminal"));
-      useDebuggerStore.getState().actions.stopSession();
-    },
+    execute: stopDebugSession,
   },
   {
     id: "debug.toggleBreakpoint",
@@ -602,97 +598,81 @@ const viewCommands: Command[] = [
     title: "Toggle Sidebar Position",
     category: "View",
     keybinding: "cmd+shift+b",
-    execute: () => {
-      const { settings, updateSetting } = useSettingsStore.getState();
-      updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
-    },
+    execute: toggleSidebarPosition,
   },
   {
     id: "workbench.showThemeSelector",
     title: "Theme Selector",
     category: "View",
     keybinding: "cmd+k cmd+t",
-    execute: () => {
-      useUIState.getState().openCommandPaletteView("color-theme");
-    },
+    execute: showThemeSelector,
   },
   {
     id: "help.showWhatsNew",
     title: "What's New",
     category: "Help",
-    execute: async () => {
-      await useWhatsNewStore.getState().open();
-    },
+    execute: showWhatsNew,
   },
   {
     id: "workbench.toggleAIChat",
     title: "Toggle AI Chat",
     category: "View",
     keybinding: "cmd+r",
-    execute: () => {
-      useSettingsStore.getState().toggleAIChatVisible();
-    },
+    execute: toggleAIChat,
   },
   {
     id: "workbench.toggleMinimap",
     title: "Toggle Minimap",
     category: "View",
     keybinding: "cmd+shift+m",
-    execute: () => {
-      const { settings, updateSetting } = useSettingsStore.getState();
-      updateSetting("showMinimap", !settings.showMinimap);
-    },
+    execute: toggleMinimap,
+  },
+  {
+    id: "editor.toggleWordWrap",
+    title: "Toggle Word Wrap",
+    category: "View",
+    keybinding: "alt+z",
+    execute: toggleWordWrap,
+  },
+  {
+    id: "editor.toggleLineNumbers",
+    title: "Toggle Line Numbers",
+    category: "View",
+    execute: toggleLineNumbers,
+  },
+  {
+    id: "editor.toggleRenderWhitespace",
+    title: "Toggle Render Whitespace",
+    category: "View",
+    execute: toggleRenderWhitespace,
   },
   {
     id: "workbench.zoomIn",
     title: "Zoom In",
     category: "View",
     keybinding: "cmd+=",
-    execute: () => {
-      const target = getZoomTarget();
-      if (target === "webviewer") {
-        window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "in" }));
-      } else {
-        useZoomStore.getState().actions.zoomIn(target);
-      }
-    },
+    execute: zoomIn,
   },
   {
     id: "workbench.zoomOut",
     title: "Zoom Out",
     category: "View",
     keybinding: "cmd+-",
-    execute: () => {
-      const target = getZoomTarget();
-      if (target === "webviewer") {
-        window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "out" }));
-      } else {
-        useZoomStore.getState().actions.zoomOut(target);
-      }
-    },
+    execute: zoomOut,
   },
   {
     id: "workbench.zoomReset",
     title: "Reset Zoom",
     category: "View",
     keybinding: "cmd+0",
-    execute: () => {
-      const target = getZoomTarget();
-      if (target === "webviewer") {
-        window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "reset" }));
-      } else {
-        useZoomStore.getState().actions.resetZoom(target);
-      }
-    },
+    execute: resetZoom,
   },
   {
     id: "workbench.openKeyboardShortcuts",
     title: "Open Keyboard Shortcuts",
     category: "View",
     keybinding: "cmd+k cmd+s",
-    execute: () => {
-      useUIState.getState().openSettingsDialog("keyboard");
-    },
+    execute: openKeyboardShortcuts,
   },
 ];
 
@@ -720,40 +700,20 @@ const navigationCommands: Command[] = [
     title: "Go to Line",
     category: "Navigation",
     keybinding: "cmd+g",
-    execute: async () => {
-      const lineText = await primitivePrompt("Go to line", {
-        title: "Go to Line",
-        placeholder: "Line number",
-      });
-      if (!lineText) return;
-
-      const line = Number.parseInt(lineText, 10);
-      if (!Number.isFinite(line) || line < 1) {
-        toast.warning("Enter a valid line number.");
-        return;
-      }
-
-      window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line } }));
-    },
+    execute: promptGoToLine,
   },
   {
     id: "editor.showOutline",
     title: "Go to Symbol in Editor",
     category: "Navigation",
     keybinding: "cmd+shift+o",
-    execute: () => {
-      useUIState.getState().openCommandPaletteView("outline");
-    },
+    execute: openOutlinePicker,
   },
   {
     id: "workbench.showOutline",
     title: "Show Outline",
     category: "Navigation",
-    execute: () => {
-      const uiState = useUIState.getState();
-      uiState.setIsSidebarVisible(true);
-      uiState.setActiveView("outline");
-    },
+    execute: openOutlineSidebar,
   },
   {
     id: "workbench.nextTab",
@@ -817,212 +777,148 @@ const navigationCommands: Command[] = [
     title: "Go to Definition",
     category: "Navigation",
     keybinding: "F12",
-    execute: async () => {
-      const { LspClient } = await import("@/features/editor/lsp/lsp-client");
-      const { readFileContent } =
-        await import("@/features/file-system/controllers/file-operations");
-
-      const lspClient = LspClient.getInstance();
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-      const editorState = useEditorStateStore.getState();
-      const cursorPosition = editorState.cursorPosition;
-
-      if (!activeBuffer?.path) return;
-
-      const definition = await lspClient.getDefinition(
-        activeBuffer.path,
-        cursorPosition.line,
-        cursorPosition.column,
-      );
-
-      if (definition && definition.length > 0) {
-        // Push current position to jump list before navigating
-        useJumpListStore.getState().actions.pushEntry({
-          bufferId: activeBuffer.id,
-          filePath: activeBuffer.path,
-          line: cursorPosition.line,
-          column: cursorPosition.column,
-          offset: cursorPosition.offset,
-          scrollTop: editorState.scrollTop,
-          scrollLeft: editorState.scrollLeft,
-        });
-
-        const target = definition[0];
-        const filePath = target.uri.replace("file://", "");
-        const existingBuffer = bufferStore.buffers.find((b) => b.path === filePath);
-
-        if (existingBuffer) {
-          bufferStore.actions.setActiveBuffer(existingBuffer.id);
-        } else {
-          const content = await readFileContent(filePath);
-          const fileName = filePath.split("/").pop() || "untitled";
-          const bufferId = bufferStore.actions.openBuffer(filePath, fileName, content);
-          bufferStore.actions.setActiveBuffer(bufferId);
-        }
-
-        setTimeout(() => {
-          const lines = editorAPI.getLines();
-          let offset = 0;
-          for (let i = 0; i < target.range.start.line; i++) {
-            offset += lines[i].length + 1;
-          }
-          offset += target.range.start.character;
-
-          editorAPI.setCursorPosition({
-            line: target.range.start.line,
-            column: target.range.start.character,
-            offset,
-          });
-        }, 100);
-      }
-    },
+    execute: goToDefinition,
+  },
+  {
+    id: "editor.goToImplementation",
+    title: "Go to Implementation",
+    category: "Navigation",
+    keybinding: "cmd+F12",
+    execute: goToImplementation,
+  },
+  {
+    id: "editor.goToTypeDefinition",
+    title: "Go to Type Definition",
+    category: "Navigation",
+    execute: goToTypeDefinition,
   },
   {
     id: "editor.goToReferences",
     title: "Go to References",
     category: "Navigation",
     keybinding: "shift+F12",
-    execute: async () => {
-      const { LspClient } = await import("@/features/editor/lsp/lsp-client");
-      const { useReferencesStore } = await import("@/features/references/stores/references-store");
-      const { readFileContent } =
-        await import("@/features/file-system/controllers/file-operations");
-
-      const lspClient = LspClient.getInstance();
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-      const cursorPosition = useEditorStateStore.getState().cursorPosition;
-
-      if (!activeBuffer?.path) return;
-
-      // Get the symbol name under cursor for display
-      const lines = editorAPI.getLines();
-      const currentLine = lines[cursorPosition.line] || "";
-      const wordMatch = currentLine.slice(0, cursorPosition.column + 1).match(/[\w$]+$/);
-      const wordEnd = currentLine.slice(cursorPosition.column).match(/^[\w$]*/);
-      const symbol = (wordMatch?.[0] || "") + (wordEnd?.[0]?.slice(1) || "");
-
-      const referencesActions = useReferencesStore.getState().actions;
-      referencesActions.setIsLoading(true);
-
-      // Open the references panel
-      const uiState = useUIState.getState();
-      uiState.setBottomPaneActiveTab("references");
-      uiState.setIsBottomPaneVisible(true);
-
-      const references = await lspClient.getReferences(
-        activeBuffer.path,
-        cursorPosition.line,
-        cursorPosition.column,
-      );
-
-      if (references && references.length > 0) {
-        // Collect file contents for line context
-        const fileContentsCache = new Map<string, string[]>();
-
-        // Get content from open buffers first, then read from disk
-        for (const ref of references) {
-          const filePath = ref.uri.replace("file://", "");
-          if (fileContentsCache.has(filePath)) continue;
-
-          const buffer = bufferStore.buffers.find((b) => b.path === filePath);
-          if (buffer && "content" in buffer && typeof buffer.content === "string") {
-            fileContentsCache.set(filePath, buffer.content.split("\n"));
-          } else {
-            try {
-              const content = await readFileContent(filePath);
-              fileContentsCache.set(filePath, content.split("\n"));
-            } catch {
-              fileContentsCache.set(filePath, []);
-            }
-          }
-        }
-
-        const converted = references.map((ref) => {
-          const filePath = ref.uri.replace("file://", "");
-          const fileLines = fileContentsCache.get(filePath) || [];
-          return {
-            filePath,
-            line: ref.range.start.line,
-            column: ref.range.start.character,
-            endLine: ref.range.end.line,
-            endColumn: ref.range.end.character,
-            lineContent: fileLines[ref.range.start.line] || "",
-          };
-        });
-
-        referencesActions.setReferences(
-          {
-            symbol: symbol || "symbol",
-            filePath: activeBuffer.path,
-            line: cursorPosition.line,
-            column: cursorPosition.column,
-          },
-          converted,
-        );
-      } else {
-        referencesActions.setReferences(
-          {
-            symbol: symbol || "symbol",
-            filePath: activeBuffer.path,
-            line: cursorPosition.line,
-            column: cursorPosition.column,
-          },
-          [],
-        );
-      }
-    },
+    execute: goToReferences,
+  },
+  {
+    id: "editor.goToBracket",
+    title: "Go to Bracket",
+    category: "Navigation",
+    keybinding: "cmd+shift+\\",
+    execute: goToActiveEditorMatchingBracket,
+  },
+  {
+    id: "editor.selectToBracket",
+    title: "Select to Bracket",
+    category: "Navigation",
+    execute: selectToActiveEditorBracket,
+  },
+  {
+    id: "editor.removeBrackets",
+    title: "Remove Brackets",
+    category: "Navigation",
+    keybinding: "cmd+alt+backspace",
+    execute: removeActiveEditorBrackets,
+  },
+  {
+    id: "editor.expandSelection",
+    title: "Expand Selection",
+    category: "Selection",
+    keybinding: "cmd+ctrl+shift+right",
+    execute: expandActiveEditorSelection,
+  },
+  {
+    id: "editor.shrinkSelection",
+    title: "Shrink Selection",
+    category: "Selection",
+    keybinding: "cmd+ctrl+shift+left",
+    execute: shrinkActiveEditorSelection,
   },
   {
     id: "editor.renameSymbol",
     title: "Rename Symbol",
     category: "Navigation",
     keybinding: "F2",
-    execute: () => {
-      window.dispatchEvent(new CustomEvent("editor-rename-symbol"));
-    },
+    execute: triggerActiveEditorRenameSymbol,
   },
   {
     id: "navigation.goBack",
     title: "Go Back",
     category: "Navigation",
     keybinding: "ctrl+-",
-    execute: async () => {
-      const bufferStore = useBufferStore.getState();
-      const editorState = useEditorStateStore.getState();
-      const activeBufferId = bufferStore.activeBufferId;
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === activeBufferId);
-
-      const currentPosition =
-        activeBufferId && activeBuffer?.path
-          ? {
-              bufferId: activeBufferId,
-              filePath: activeBuffer.path,
-              line: editorState.cursorPosition.line,
-              column: editorState.cursorPosition.column,
-              offset: editorState.cursorPosition.offset,
-              scrollTop: editorState.scrollTop,
-              scrollLeft: editorState.scrollLeft,
-            }
-          : undefined;
-
-      const entry = useJumpListStore.getState().actions.goBack(currentPosition);
-      if (entry) {
-        await navigateToJumpEntry(entry);
-      }
-    },
+    execute: goBack,
   },
   {
     id: "navigation.goForward",
     title: "Go Forward",
     category: "Navigation",
     keybinding: "ctrl+shift+-",
-    execute: async () => {
-      const entry = useJumpListStore.getState().actions.goForward();
-      if (entry) {
-        await navigateToJumpEntry(entry);
-      }
+    execute: goForward,
+  },
+];
+
+const paneCommands: Command[] = [
+  {
+    id: "workbench.splitEditorRight",
+    title: "Split Editor Right",
+    category: "View",
+    execute: () => {
+      splitActiveEditorGroup("horizontal");
+    },
+  },
+  {
+    id: "workbench.splitEditorDown",
+    title: "Split Editor Down",
+    category: "View",
+    execute: () => {
+      splitActiveEditorGroup("vertical");
+    },
+  },
+  {
+    id: "workbench.closeEditorGroup",
+    title: "Close Editor Group",
+    category: "View",
+    execute: () => {
+      closeActiveEditorGroup();
+    },
+  },
+  {
+    id: "workbench.closeOtherEditorGroups",
+    title: "Close Other Editor Groups",
+    category: "View",
+    execute: () => {
+      closeOtherEditorGroups();
+    },
+  },
+  {
+    id: "workbench.moveEditorToNextGroup",
+    title: "Move Editor Into Next Group",
+    category: "View",
+    execute: () => {
+      moveActiveEditorToAdjacentGroup("next");
+    },
+  },
+  {
+    id: "workbench.moveEditorToPreviousGroup",
+    title: "Move Editor Into Previous Group",
+    category: "View",
+    execute: () => {
+      moveActiveEditorToAdjacentGroup("previous");
+    },
+  },
+  {
+    id: "workbench.resetEditorGroupSizes",
+    title: "Reset Editor Group Sizes",
+    category: "View",
+    execute: () => {
+      resetEditorGroupSizes();
+    },
+  },
+  {
+    id: "workbench.toggleEditorGroupLock",
+    title: "Toggle Editor Group Lock",
+    category: "View",
+    execute: () => {
+      toggleActiveEditorGroupLock();
     },
   },
 ];
@@ -1030,10 +926,12 @@ const navigationCommands: Command[] = [
 const databaseCommands: Command[] = [
   {
     id: "database.connect",
-    title: "Connect to Database",
+    title: "Show Databases",
     category: "Database",
     execute: () => {
-      useUIState.getState().setIsDatabaseConnectionVisible(true);
+      const state = useUIState.getState();
+      state.setActiveRightSidebarView("databases");
+      state.setIsRightSidebarVisible(true);
     },
   },
 ];
@@ -1044,80 +942,55 @@ const windowCommands: Command[] = [
     title: "Toggle Fullscreen",
     category: "Window",
     keybinding: "F11",
-    execute: () => {
-      window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
-    },
+    execute: toggleFullscreen,
   },
   {
     id: "window.toggleFullscreenMac",
     title: "Toggle Fullscreen (Mac)",
     category: "Window",
     keybinding: "cmd+ctrl+f",
-    execute: () => {
-      if (isMac()) window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
-    },
+    execute: toggleFullscreenMac,
   },
   {
     id: "window.minimize",
     title: "Minimize Window",
     category: "Window",
-    execute: () => {
-      window.dispatchEvent(new CustomEvent("minimize-window"));
-    },
+    execute: minimizeWindow,
   },
   {
     id: "window.minimize.mac",
     title: "Minimize (Mac)",
     category: "Window",
     keybinding: "cmd+m",
-    execute: () => {
-      if (isMac()) window.dispatchEvent(new CustomEvent("minimize-window"));
-    },
+    execute: minimizeWindowMac,
   },
   {
     id: "window.minimize.alt",
     title: "Minimize (Alt)",
     category: "Window",
     keybinding: "alt+F9",
-    execute: () => {
-      if (!isMac()) window.dispatchEvent(new CustomEvent("minimize-window"));
-    },
+    execute: minimizeWindowAlt,
   },
   {
     id: "window.maximize",
     title: "Maximize Window",
     category: "Window",
     keybinding: "alt+F10",
-    execute: () => {
-      if (!isMac()) window.dispatchEvent(new CustomEvent("maximize-window"));
-    },
+    execute: maximizeWindow,
   },
   {
     id: "window.quit",
     title: "Quit Application",
     category: "Window",
     keybinding: "cmd+q",
-    execute: async () => {
-      if (isMac()) {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().close();
-      }
-    },
+    execute: quitApplication,
   },
   {
     id: "window.toggleMenuBar",
     title: "Toggle Menu Bar",
     category: "Window",
     keybinding: "alt+m",
-    execute: async () => {
-      if (!isMac()) {
-        const { settings } = useSettingsStore.getState();
-        if (settings.nativeMenuBar) {
-          const { invoke } = await import("@tauri-apps/api/core");
-          invoke("toggle_menu_bar").catch(console.error);
-        }
-      }
-    },
+    execute: toggleNativeMenuBar,
   },
 ];
 
@@ -1127,6 +1000,7 @@ const allCommands: Command[] = [
   ...terminalCommands,
   ...viewCommands,
   ...navigationCommands,
+  ...paneCommands,
   ...databaseCommands,
   ...windowCommands,
 ];

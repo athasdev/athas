@@ -4,10 +4,10 @@ import {
   ArrowsIn as Minimize2,
   Plus,
   MagnifyingGlass as Search,
-  SplitHorizontal as SplitSquareHorizontal,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
@@ -255,6 +255,15 @@ const TerminalContainer = ({
       if (!trimmedName) return;
 
       updateTerminalName(terminalId, trimmedName);
+      useTerminalStore.getState().updateSession(terminalId, {
+        name: trimmedName,
+        customName: true,
+      });
+
+      const { buffers, actions } = useBufferStore.getState();
+      buffers
+        .filter((buffer) => buffer.type === "terminal" && buffer.sessionId === terminalId)
+        .forEach((buffer) => actions.updateBuffer({ ...buffer, name: trimmedName }));
     },
     [updateTerminalName],
   );
@@ -605,13 +614,11 @@ const TerminalContainer = ({
     onCloseOtherTabs: handleCloseOtherTabs,
     onCloseAllTabs: handleCloseAllTabs,
     onCloseTabsToRight: handleCloseTabsToRight,
-    onSplitView: handleSplitView,
     onSearchTerminal: handleSearchTerminal,
     onNextTerminal: switchToNextTerminal,
     onPrevTerminal: switchToPrevTerminal,
     onFullScreen,
     isFullScreen,
-    isSplitView: terminals.find((t) => t.id === activeTerminalId)?.splitMode || false,
   };
 
   const terminalSessions = (
@@ -674,7 +681,6 @@ const TerminalContainer = ({
 
   const isVertical = tabLayout === "vertical";
   const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
-  const isSplitActive = terminals.find((t) => t.id === activeTerminalId)?.splitMode || false;
 
   return (
     <div
@@ -689,9 +695,9 @@ const TerminalContainer = ({
               type="button"
               onClick={handleSearchTerminal}
               variant="ghost"
-              size="icon-sm"
               className="size-6 shrink-0 text-text-lighter"
               aria-label="Find in Terminal"
+              compact
             >
               <Search />
             </Button>
@@ -701,29 +707,11 @@ const TerminalContainer = ({
               type="button"
               onClick={() => handleNewTerminal()}
               variant="ghost"
-              size="icon-sm"
+              compact
               className="size-6 shrink-0 text-text-lighter"
               aria-label="New Terminal"
             >
               <Plus />
-            </Button>
-          </Tooltip>
-          <Tooltip
-            content={isSplitActive ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
-            side="bottom"
-          >
-            <Button
-              type="button"
-              onClick={handleSplitView}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(
-                "size-6 shrink-0",
-                isSplitActive ? "border-border/80 bg-primary-bg text-text" : "text-text-lighter",
-              )}
-              aria-label="Split Terminal"
-            >
-              <SplitSquareHorizontal />
             </Button>
           </Tooltip>
           {onFullScreen && (
@@ -735,9 +723,9 @@ const TerminalContainer = ({
                 type="button"
                 onClick={onFullScreen}
                 variant="ghost"
-                size="icon-sm"
                 className="size-6 shrink-0 text-text-lighter"
                 aria-label="Full Screen Terminal"
+                compact
               >
                 {isFullScreen ? <Minimize2 /> : <Maximize2 />}
               </Button>

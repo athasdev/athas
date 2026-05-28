@@ -76,7 +76,7 @@ export const FileTreeSettings = () => {
             onChange={(value) => updateSetting("fileTreeDensity", value as FileTreeDensity)}
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
-            variant="secondary"
+            variant="default"
           />
         </SettingRow>
 
@@ -165,7 +165,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-sm w-48 resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "ui-font ui-text-sm w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>
@@ -195,7 +195,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-sm w-48 resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "ui-font ui-text-sm w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>

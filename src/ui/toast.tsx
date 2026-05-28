@@ -4,10 +4,10 @@ import {
   Warning as AlertTriangle,
   CheckCircle as CheckCircle2,
   Info,
-  SpinnerGap as Loader2,
   X,
 } from "@phosphor-icons/react";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
+import { LoadingIndicator } from "@/ui/loading";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface Toast {
@@ -49,6 +49,7 @@ interface ToastState {
     warning: (message: string, description?: string) => string;
     error: (message: string, description?: string) => string;
     markAllNotificationsRead: () => void;
+    removeNotification: (id: string) => void;
     clearNotifications: () => void;
   };
 }
@@ -193,6 +194,10 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
       set((state) => ({
         notifications: state.notifications.map((item) => ({ ...item, read: true })),
       })),
+    removeNotification: (id) =>
+      set((state) => ({
+        notifications: state.notifications.filter((item) => item.id !== id),
+      })),
     clearNotifications: () => set({ notifications: [] }),
   },
 }));
@@ -268,7 +273,7 @@ export const ToastContainer = () => {
         info: <Info size={18} />,
         warning: <AlertTriangle size={18} />,
         error: <AlertTriangle size={18} />,
-        loading: <Loader2 size={18} className="animate-spin" />,
+        loading: <LoadingIndicator label="Loading" compact />,
         close: <X size={14} />,
       }}
       toastOptions={{
@@ -279,8 +284,8 @@ export const ToastContainer = () => {
           toast:
             "group ui-font rounded-xl border border-border bg-primary-bg text-text font-normal shadow-xl backdrop-blur-sm",
           content: "pr-8",
-          title: "ui-font text-sm font-normal leading-5 text-text",
-          description: "ui-font text-sm font-normal leading-5 text-text-light",
+          title: "ui-font ui-text-sm font-normal leading-5 text-text",
+          description: "ui-font ui-text-sm font-normal leading-5 text-text-light",
           icon: "mt-0.5",
           success: "border-border",
           info: "border-border",

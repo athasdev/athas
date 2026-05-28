@@ -9,14 +9,20 @@ import {
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import type { IssueDetails } from "../types/github";
 import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
-import { copyToClipboard } from "../utils/pr-viewer-utils";
+import { copyToClipboard } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
 import GitHubMarkdown from "./github-markdown";
 import { AssigneesList, LabelBadges } from "./pr-status";
+import {
+  GitHubViewerHeader,
+  GitHubViewerLoadingState,
+  GitHubViewerShell,
+} from "./github-viewer-shell";
 
 interface GitHubIssueViewerProps {
   issueNumber: number;
@@ -166,20 +172,12 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   }, [details?.url]);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-primary-bg">
-      {isLoading && (
-        <div className="h-px w-full overflow-hidden bg-border">
-          <div className="h-full w-1/3 animate-pulse bg-accent/70" />
-        </div>
-      )}
-
-      <div className="shrink-0 px-3 py-4 sm:px-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="ui-font ui-text-lg leading-tight font-medium text-text">
-              {details?.title ?? buffer?.name ?? `Issue #${issueNumber}`}
-            </h1>
-            <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 text-text-lighter">
+    <GitHubViewerShell
+      header={
+        <GitHubViewerHeader
+          title={details?.title ?? buffer?.name ?? `Issue #${issueNumber}`}
+          meta={
+            <>
               <span>{`Issue #${issueNumber}`}</span>
               {details?.author.login ? (
                 <>
@@ -210,107 +208,115 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   <span>{`${details.comments.length} comments`}</span>
                 </>
               ) : null}
+            </>
+          }
+          actions={
+            <>
+              <Tooltip content="Refresh issue" side="bottom">
+                <Button
+                  onClick={() => void fetchIssue(true)}
+                  variant="ghost"
+                  compact
+                  aria-label="Refresh issue"
+                >
+                  {isLoading && details ? (
+                    <LoadingIndicator label="Loading issue" compact />
+                  ) : (
+                    <RefreshCw />
+                  )}
+                </Button>
+              </Tooltip>
+              <Tooltip content="Open on GitHub" side="bottom">
+                <Button
+                  onClick={handleOpenInBrowser}
+                  variant="ghost"
+                  aria-label="Open issue on GitHub"
+                  compact
+                >
+                  <ExternalLink />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Copy issue link" side="bottom">
+                <Button
+                  onClick={handleCopyIssueLink}
+                  variant="ghost"
+                  aria-label="Copy issue link"
+                  compact
+                >
+                  <Copy />
+                </Button>
+              </Tooltip>
+            </>
+          }
+        >
+          {details ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <AssigneesList assignees={details.assignees ?? []} />
+              <LabelBadges labels={details.labels ?? []} />
             </div>
-            {details ? (
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <AssigneesList assignees={details.assignees ?? []} />
-                <LabelBadges labels={details.labels ?? []} />
+          ) : null}
+        </GitHubViewerHeader>
+      }
+    >
+      {error ? (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <p className="ui-font ui-text-sm text-error">{error}</p>
+            <Button
+              onClick={() => void fetchIssue(true)}
+              variant="default"
+              compact
+              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      ) : details ? (
+        <div className="space-y-5">
+          {details.body ? (
+            <GitHubMarkdown
+              content={details.body}
+              className="github-markdown-pr"
+              contentClassName="github-markdown-pr-content"
+              issueBaseUrl={issueBaseUrl}
+              repoPath={repoPath}
+            />
+          ) : (
+            <p className="ui-font ui-text-sm italic text-text-lighter">No description provided</p>
+          )}
+
+          <div className="space-y-1">
+            {details.comments.length > 0 ? (
+              visibleComments.map((comment, index) => (
+                <CommentItem
+                  key={`${comment.author.login}-${comment.createdAt}-${index}`}
+                  comment={comment}
+                  issueBaseUrl={issueBaseUrl}
+                  repoPath={repoPath}
+                />
+              ))
+            ) : (
+              <div className="flex items-center gap-2 px-1 py-2 text-text-lighter">
+                <MessageSquare className="size-4" />
+                <p className="ui-font ui-text-sm">No comments</p>
+              </div>
+            )}
+            {details.comments.length > visibleComments.length ? (
+              <div className="px-1 py-2">
+                <LoadingIndicator
+                  label={`Loading ${details.comments.length - visibleComments.length} more comments`}
+                  showLabel
+                  compact
+                />
               </div>
             ) : null}
           </div>
-
-          <div className="flex items-center gap-1">
-            <Tooltip content="Refresh issue" side="bottom">
-              <Button
-                onClick={() => void fetchIssue(true)}
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Refresh issue"
-              >
-                <RefreshCw className={isLoading ? "animate-spin" : ""} />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Open on GitHub" side="bottom">
-              <Button
-                onClick={handleOpenInBrowser}
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Open issue on GitHub"
-              >
-                <ExternalLink />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Copy issue link" side="bottom">
-              <Button
-                onClick={handleCopyIssueLink}
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Copy issue link"
-              >
-                <Copy />
-              </Button>
-            </Tooltip>
-          </div>
         </div>
-      </div>
-
-      <div className="min-w-0 px-3 pb-4 sm:px-5">
-        {error ? (
-          <div className="flex items-center justify-center p-8">
-            <div className="text-center">
-              <p className="ui-font ui-text-sm text-error">{error}</p>
-              <Button
-                onClick={() => void fetchIssue(true)}
-                variant="outline"
-                size="xs"
-                className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
-        ) : details ? (
-          <div className="space-y-5">
-            {details.body ? (
-              <GitHubMarkdown
-                content={details.body}
-                className="github-markdown-pr"
-                contentClassName="github-markdown-pr-content"
-                issueBaseUrl={issueBaseUrl}
-                repoPath={repoPath}
-              />
-            ) : (
-              <p className="ui-font ui-text-sm italic text-text-lighter">No description provided</p>
-            )}
-
-            <div className="space-y-1">
-              {details.comments.length > 0 ? (
-                visibleComments.map((comment, index) => (
-                  <CommentItem
-                    key={`${comment.author.login}-${comment.createdAt}-${index}`}
-                    comment={comment}
-                    issueBaseUrl={issueBaseUrl}
-                    repoPath={repoPath}
-                  />
-                ))
-              ) : (
-                <div className="flex items-center gap-2 px-1 py-2 text-text-lighter">
-                  <MessageSquare className="size-4" />
-                  <p className="ui-font ui-text-sm">No comments</p>
-                </div>
-              )}
-              {details.comments.length > visibleComments.length ? (
-                <div className="px-1 py-2 text-text-lighter">
-                  <p className="ui-font ui-text-sm">
-                    Loading {details.comments.length - visibleComments.length} more comments...
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
+      ) : (
+        <GitHubViewerLoadingState label="Loading issue" />
+      )}
+    </GitHubViewerShell>
   );
 });
 

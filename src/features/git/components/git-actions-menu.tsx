@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { LoadingIndicator } from "@/ui/loading";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import { toast } from "@/ui/toast";
 import {
@@ -238,7 +239,11 @@ const GitActionsMenu = ({
         {
           id: "refresh",
           label: "Refresh Status",
-          icon: <RefreshCw className={isRefreshing ? "animate-spin" : ""} />,
+          icon: isRefreshing ? (
+            <LoadingIndicator label="Refreshing status" compact />
+          ) : (
+            <RefreshCw />
+          ),
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },
@@ -264,7 +269,11 @@ const GitActionsMenu = ({
         {
           id: "refresh",
           label: "Refresh Status",
-          icon: <RefreshCw className={isRefreshing ? "animate-spin" : ""} />,
+          icon: isRefreshing ? (
+            <LoadingIndicator label="Refreshing status" compact />
+          ) : (
+            <RefreshCw />
+          ),
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },

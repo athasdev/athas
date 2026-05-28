@@ -5,8 +5,8 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { createSettingsExportPayload } from "@/features/settings/lib/settings-import-export";
 import {
-  REQUIRED_UPDATE_TELEMETRY_NOTICE,
-  USAGE_TELEMETRY_DESCRIPTION,
+  TELEMETRY_DESCRIPTION,
+  TELEMETRY_LEARN_MORE_URL,
 } from "@/features/settings/lib/telemetry-copy";
 import { useSettingsStore } from "@/features/settings/store";
 import {
@@ -106,7 +106,7 @@ export const AdvancedSettings = () => {
     <div className="space-y-4">
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
-          <Button variant="default" size="xs" onClick={() => void handleExportSettings()}>
+          <Button variant="default" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
@@ -114,7 +114,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button variant="default" size="xs" onClick={handleImportSettings}>
+          <Button variant="default" onClick={handleImportSettings} compact>
             Import
           </Button>
         </SettingRow>
@@ -123,29 +123,37 @@ export const AdvancedSettings = () => {
         </SettingRow>
       </Section>
       <Section title="Telemetry">
-        <SettingRow label="Anonymous Usage Telemetry" description={USAGE_TELEMETRY_DESCRIPTION}>
+        <SettingRow
+          label="Anonymous Usage Telemetry"
+          description={
+            <>
+              {TELEMETRY_DESCRIPTION}{" "}
+              <a
+                href={TELEMETRY_LEARN_MORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-link hover:underline"
+              >
+                Learn more
+              </a>
+            </>
+          }
+        >
           <Switch
             checked={settings.telemetry}
             onChange={(checked) => updateSetting("telemetry", checked)}
             size="sm"
           />
         </SettingRow>
-        <p className="ui-font ui-text-sm px-1 text-text-lighter">
-          {REQUIRED_UPDATE_TELEMETRY_NOTICE}
-        </p>
         <SettingRow
           label="Telemetry Log"
           description="Inspect the local queue and recent telemetry delivery results."
         >
           <div className="flex gap-2">
-            <Button
-              variant="default"
-              size="xs"
-              onClick={() => setShowTelemetryLog((value) => !value)}
-            >
+            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="default" size="xs" onClick={handleClearTelemetryLog}>
+            <Button variant="default" onClick={handleClearTelemetryLog} compact>
               Clear
             </Button>
           </div>

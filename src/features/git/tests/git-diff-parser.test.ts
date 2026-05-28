@@ -13,6 +13,32 @@ describe("git diff parser", () => {
     expect(isDiffFile("/tmp/fix.patch")).toBe(true);
   });
 
+  test("does not treat plain text adblock exception rules as diff files", () => {
+    expect(
+      isDiffFile(
+        "/tmp/easylist.txt",
+        ["[Adblock Plus 2.0]", "!", "@@||example.com^$document", "||ads.example.com^"].join("\n"),
+      ),
+    ).toBe(false);
+  });
+
+  test("recognizes pasted git patches without relying on the extension", () => {
+    expect(
+      isDiffFile(
+        "/tmp/change.txt",
+        [
+          "diff --git a/src/app.ts b/src/app.ts",
+          "index 1111111..2222222 100644",
+          "--- a/src/app.ts",
+          "+++ b/src/app.ts",
+          "@@ -1 +1 @@",
+          "-old",
+          "+new",
+        ].join("\n"),
+      ),
+    ).toBe(true);
+  });
+
   test("parses a single-file git patch using the patched file path", () => {
     const result = parseRawDiffContent(
       [

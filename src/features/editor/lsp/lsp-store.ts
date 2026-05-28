@@ -4,6 +4,7 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { expandSnippet } from "@/features/editor/snippets/snippet-expander";
 import { logger } from "@/features/editor/utils/logger";
+import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
 import { toast } from "@/ui/toast";
 import { detectCompletionContext, extractPrefix, filterCompletions } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -121,6 +122,7 @@ interface LspActions {
     cursorPos: number;
     value: string;
     editorRef: React.RefObject<HTMLDivElement | null>;
+    manual?: boolean;
   }) => Promise<void>;
 
   performCompletionRequest: (params: {
@@ -128,6 +130,7 @@ interface LspActions {
     cursorPos: number;
     value: string;
     editorRef: React.RefObject<HTMLDivElement | null>;
+    manual?: boolean;
   }) => Promise<void>;
 
   getCacheKey: (filePath: string, line: number, character: number) => string;
@@ -238,14 +241,20 @@ export const useLspStore = createSelectors(
         }
       },
 
-      requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
+      requestCompletion: async ({ filePath, cursorPos, value, editorRef, manual = false }) => {
         const { actions } = get();
         logger.debug("LSP", "requestCompletion called", { filePath, cursorPos });
         // Debouncing is handled by use-lsp-integration, execute immediately
-        await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
+        await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef, manual });
       },
 
-      performCompletionRequest: async ({ filePath, cursorPos, value, editorRef }) => {
+      performCompletionRequest: async ({
+        filePath,
+        cursorPos,
+        value,
+        editorRef,
+        manual = false,
+      }) => {
         const {
           getCompletions,
           isLanguageSupported,
@@ -272,11 +281,11 @@ export const useLspStore = createSelectors(
         const prefix = extractPrefix(value, cursorPos);
         completionActions.setCurrentPrefix(prefix);
 
-        const lines = value.substring(0, cursorPos).split("\n");
-        const character = lines[lines.length - 1].length;
+        const cursorPosition = calculateCursorPositionFromContent(cursorPos, value);
+        const character = cursorPosition.column;
 
         // Hide immediately when cursor is at start of line (after deletion) or no prefix
-        if (character === 0 || (prefix.length === 0 && cursorPos === 0)) {
+        if (!manual && (character === 0 || (prefix.length === 0 && cursorPos === 0))) {
           completionActions.setIsLspCompletionVisible(false);
           return;
         }
@@ -290,12 +299,12 @@ export const useLspStore = createSelectors(
         const currentChar = cursorPos > 0 ? value[cursorPos - 1] : "";
 
         // Only skip if we just typed whitespace - use delayed hide to prevent flicker
-        if (/\s/.test(currentChar)) {
+        if (!manual && /\s/.test(currentChar)) {
           actions.scheduleHideCompletion();
           return;
         }
 
-        const line = lines.length - 1;
+        const line = cursorPosition.line;
 
         // Cache by prefix start position so "st", "str", "struct" all hit the same cache
         const prefixStartColumn = Math.max(0, character - prefix.length);
@@ -328,6 +337,13 @@ export const useLspStore = createSelectors(
               } else {
                 actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
+            } else if (manual) {
+              actions.cancelHideCompletion();
+              completionActions.setFilteredCompletions(
+                completions.map((item) => ({ item, score: 1, indices: [] })),
+              );
+              completionActions.setIsLspCompletionVisible(true);
+              completionActions.setSelectedLspIndex(0);
             } else {
               actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
             }
@@ -411,6 +427,13 @@ export const useLspStore = createSelectors(
                 logger.debug("LSP", "No filtered results, hiding");
                 actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
+            } else if (manual) {
+              actions.cancelHideCompletion();
+              completionActions.setFilteredCompletions(
+                completions.map((item) => ({ item, score: 1, indices: [] })),
+              );
+              completionActions.setIsLspCompletionVisible(true);
+              completionActions.setSelectedLspIndex(0);
             } else {
               logger.debug("LSP", "No prefix, hiding completions");
               actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
@@ -459,9 +482,7 @@ export const useLspStore = createSelectors(
             }
 
             // Calculate position for snippet expansion
-            const lines = value.substring(0, cursorPos).split("\n");
-            const line = lines.length - 1;
-            const column = lines[lines.length - 1].length;
+            const { line, column } = calculateCursorPositionFromContent(cursorPos, value);
 
             // Expand the snippet with variables resolved
             const session = expandSnippet(

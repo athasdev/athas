@@ -1,0 +1,17 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.tlaplus",
+  "name": "TLAPLUS",
+  "displayName": "TLA+",
+  "version": "1.0.0",
+  "description": "TLA+ language support",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "tlaplus",
+      "extensions": [".tla"],
+      "aliases": ["TLA+", "TLAPLUS", "tlaplus"]
+    }
+  ]
+}

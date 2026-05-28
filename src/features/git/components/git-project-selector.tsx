@@ -1,31 +1,24 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { Check, FolderOpen, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/ui/button";
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/ui/combobox";
+  CaretDown,
+  Check,
+  FolderOpen,
+  Plus,
+  ArrowClockwise as RefreshCw,
+} from "@phosphor-icons/react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Button } from "@/ui/button";
+import { Dropdown } from "@/ui/dropdown";
+import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { resolveRepositoryPath } from "../api/git-repo-api";
 import { useRepositoryStore } from "../stores/git-repository-store";
 
 interface GitProjectSelectorProps {
-  placement?: "up" | "down";
   className?: string;
-  inputClassName?: string;
   onRepositoryChange?: (repoPath: string | null) => void;
-}
-
-const PROJECT_SELECTOR_DROPDOWN_WIDTH = 380;
-
-function getRepositoryLabel(repoPath: string | null) {
-  return repoPath ? getFolderName(repoPath) : "Select repo";
 }
 
 function getFilteredRepositoryPaths(
@@ -48,16 +41,11 @@ function getFilteredRepositoryPaths(
   });
 }
 
-const GitProjectSelector = ({
-  placement = "down",
-  className,
-  inputClassName,
-  onRepositoryChange,
-}: GitProjectSelectorProps) => {
+const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelectorProps) => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
-  const manualRepoPath = useRepositoryStore.use.manualRepoPath();
+  const manualRepoPaths = useRepositoryStore.use.manualRepoPaths();
   const isDiscovering = useRepositoryStore.use.isDiscovering();
   const {
     selectRepository,
@@ -65,33 +53,23 @@ const GitProjectSelector = ({
     clearManualRepository,
     refreshWorkspaceRepositories,
   } = useRepositoryStore.use.actions();
-  const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const triggerText = isOpen
-    ? query || getRepositoryLabel(activeRepoPath)
-    : getRepositoryLabel(activeRepoPath);
-  const triggerTextWidthCh = Math.min(Math.max(triggerText.length + 1, 8), 38);
   const filteredRepoPaths = useMemo(
     () => getFilteredRepositoryPaths(availableRepoPaths, activeRepoPath, query),
     [activeRepoPath, availableRepoPaths, query],
   );
-
-  useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      setSelectionError(null);
-    }
-  }, [isOpen]);
-
-  const handleOpenDropdown = async () => {
-    if (isOpen) return;
-    setIsOpen(true);
-    await refreshWorkspaceRepositories();
-  };
+  const activeRelativePath =
+    activeRepoPath && workspaceRootPath ? getRelativePath(activeRepoPath, workspaceRootPath) : null;
+  const activeRepoLabel = activeRepoPath ? getFolderName(activeRepoPath) : "Select Repository";
+  const activeRepoTitle =
+    activeRepoPath && activeRelativePath && activeRelativePath !== "."
+      ? activeRelativePath
+      : activeRepoPath;
 
   const handleSelectRepositoryPath = (repoPath: string) => {
     selectRepository(repoPath);
@@ -125,131 +103,123 @@ const GitProjectSelector = ({
     }
   }, [onRepositoryChange, setManualRepository]);
 
-  const handleUseWorkspaceRepositories = () => {
+  const handleClearAddedRepositories = () => {
     clearManualRepository();
     setSelectionError(null);
-    setIsOpen(false);
     onRepositoryChange?.(useRepositoryStore.getState().activeRepoPath);
   };
 
   return (
-    <Combobox
-      items={filteredRepoPaths}
-      value={activeRepoPath ?? ""}
-      inputValue={isOpen ? query : getRepositoryLabel(activeRepoPath)}
-      open={isOpen}
-      filter={null}
-      itemToStringLabel={(repoPath) => getRepositoryLabel(repoPath)}
-      itemToStringValue={(repoPath) => repoPath}
-      onInputValueChange={(value) => {
-        setQuery(value);
-        if (!isOpen) {
-          void handleOpenDropdown();
-        }
-      }}
-      onOpenChange={(openValue) => {
-        setIsOpen(openValue);
-        if (openValue) {
-          void refreshWorkspaceRepositories();
-        }
-      }}
-      onValueChange={(value) => {
-        if (typeof value === "string" && value) {
-          handleSelectRepositoryPath(value);
-        }
-      }}
-    >
-      <ComboboxInput
-        ref={inputRef}
-        onFocus={() => void handleOpenDropdown()}
-        onClick={() => void handleOpenDropdown()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            setIsOpen(false);
-          }
-        }}
-        readOnly={!isOpen}
-        disabled={isSelectingRepo}
-        leftIcon={FolderOpen}
-        htmlSize={triggerTextWidthCh}
-        variant="ghost"
-        showTrigger={false}
-        showClear={false}
-        className={cn(
-          "inline-flex w-fit max-w-full shrink overflow-hidden hover:bg-hover/80 sm:max-w-[360px]",
-          isOpen ? "bg-hover/80" : "cursor-pointer",
-          className,
-        )}
-        inputClassName={cn(
-          "min-w-0 max-w-full flex-initial truncate pr-0 pl-7 font-normal",
-          isOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
-          inputClassName,
-        )}
-        placeholder={getRepositoryLabel(activeRepoPath)}
-        aria-label="Search repositories"
-      />
-
-      <ComboboxContent
-        side={placement === "up" ? "top" : "bottom"}
-        className="flex flex-col rounded-2xl p-0"
-        style={{
-          width: `min(${PROJECT_SELECTOR_DROPDOWN_WIDTH}px, calc(100vw - 16px))`,
-          maxWidth: "calc(100vw - 16px)",
-          maxHeight: "280px",
-        }}
+    <div className={cn("min-w-0 shrink-0", className)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="ui-font flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-secondary-bg/45 px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        title={activeRepoTitle ?? undefined}
+        onClick={() => setIsOpen((open) => !open)}
       >
-        <ComboboxList className="min-h-0 flex-1 p-2">
-          {filteredRepoPaths.length === 0 ? (
-            <ComboboxEmpty>
-              {isDiscovering ? "Detecting repositories..." : "No repositories found"}
-            </ComboboxEmpty>
-          ) : null}
-          {filteredRepoPaths.length > 0 ? (
-            <div className="space-y-1">
-              {filteredRepoPaths.map((repoPath) => (
-                <RepositoryRow
-                  key={repoPath}
-                  repoPath={repoPath}
-                  workspaceRootPath={workspaceRootPath}
-                  isCurrent={repoPath === activeRepoPath}
-                />
-              ))}
-            </div>
-          ) : null}
-        </ComboboxList>
+        <FolderOpen className="size-3.5 shrink-0" />
+        <span className="ui-text-sm min-w-0 flex-1 truncate text-text">{activeRepoLabel}</span>
+        <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
+          {availableRepoPaths.length}
+        </span>
+        <CaretDown
+          className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-180")}
+        />
+      </button>
 
-        <div className="border-border/70 border-t p-2">
-          <Button
-            type="button"
-            onClick={() => void handleBrowseRepository()}
-            disabled={isSelectingRepo}
-            variant="ghost"
-            size="sm"
-            className="h-7 w-full justify-start px-2 text-text-lighter"
-          >
-            <FolderOpen />
-            {isSelectingRepo ? "Selecting..." : "Browse"}
-          </Button>
-          {manualRepoPath ? (
+      <Dropdown
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        anchorRef={triggerRef}
+        anchorAlign="start"
+        className="w-[min(360px,calc(100vw-16px))]"
+        closeOnSelect={false}
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="px-1 pb-1">
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              variant="ghost"
+              size="xs"
+              placeholder="Filter repositories"
+              className="h-7 rounded-md border-transparent bg-transparent"
+            />
+          </div>
+
+          <div className="scrollbar-none flex max-h-60 min-w-0 flex-col gap-0.5 overflow-y-auto">
+            {isDiscovering && availableRepoPaths.length === 0 ? (
+              <div className="ui-text-xs flex h-8 items-center gap-2 px-2 text-text-lighter">
+                <LoadingIndicator label="Detecting repositories" compact />
+                Detecting repositories
+              </div>
+            ) : null}
+
+            {!isDiscovering && filteredRepoPaths.length === 0 ? (
+              <div className="ui-text-xs px-2 py-2 text-text-lighter">
+                {query.trim() ? "No matching repositories" : "No repositories found"}
+              </div>
+            ) : null}
+
+            {filteredRepoPaths.map((repoPath) => (
+              <RepositoryRow
+                key={repoPath}
+                repoPath={repoPath}
+                workspaceRootPath={workspaceRootPath}
+                isCurrent={repoPath === activeRepoPath}
+                isAdded={manualRepoPaths.includes(repoPath)}
+                onSelect={() => handleSelectRepositoryPath(repoPath)}
+              />
+            ))}
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center gap-1 border-border/60 border-t px-1 pt-1">
             <Button
               type="button"
-              onClick={handleUseWorkspaceRepositories}
               variant="ghost"
-              size="sm"
-              className="mt-1 h-7 w-full justify-start px-2 text-text-lighter"
+              compact
+              className="h-6 px-1.5 ui-text-xs text-text-lighter"
+              onClick={() => void handleBrowseRepository()}
+              disabled={isSelectingRepo}
+            >
+              <Plus />
+              {isSelectingRepo ? "Adding..." : "Add"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              compact
+              className="h-6 px-1.5 ui-text-xs text-text-lighter"
+              onClick={() => void refreshWorkspaceRepositories()}
+              disabled={isDiscovering}
             >
               <RefreshCw />
-              Use workspace repositories
+              Refresh
             </Button>
-          ) : null}
+            {manualRepoPaths.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                compact
+                className="h-6 px-1.5 ui-text-xs text-text-lighter"
+                onClick={handleClearAddedRepositories}
+              >
+                Clear Added
+              </Button>
+            ) : null}
+          </div>
+
           {selectionError ? (
-            <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
+            <div className="ui-text-xs mx-1 rounded-md border border-error/30 bg-error/5 px-2 py-1 text-error/90">
               {selectionError}
             </div>
           ) : null}
         </div>
-      </ComboboxContent>
-    </Combobox>
+      </Dropdown>
+    </div>
   );
 };
 
@@ -257,35 +227,43 @@ function RepositoryRow({
   repoPath,
   workspaceRootPath,
   isCurrent,
+  isAdded,
+  onSelect,
 }: {
   repoPath: string;
   workspaceRootPath: string | null;
   isCurrent: boolean;
+  isAdded: boolean;
+  onSelect: () => void;
 }) {
   const relativePath = workspaceRootPath ? getRelativePath(repoPath, workspaceRootPath) : repoPath;
 
   return (
-    <ComboboxItem
-      value={repoPath}
-      showIndicator={false}
+    <button
+      type="button"
+      onClick={onSelect}
       className={cn(
-        "group",
-        isCurrent ? "font-medium text-text" : "text-text-lighter hover:text-text",
+        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left transition-colors",
+        isCurrent ? "bg-hover/70 text-text" : "text-text-lighter hover:bg-hover/50 hover:text-text",
       )}
     >
       {isCurrent ? (
-        <Check className="shrink-0 text-success" />
+        <Check className="size-3.5 shrink-0 text-success" />
       ) : (
-        <FolderOpen className="shrink-0 text-text-lighter" />
+        <FolderOpen className="size-3.5 shrink-0" />
       )}
-      <span className="min-w-0 flex-1 truncate">
-        <span>{getFolderName(repoPath)}</span>
-        <span className="ui-text-sm ml-2 text-text-lighter/80">
+      <span className="min-w-0 flex-1">
+        <span className="ui-text-sm block truncate">{getFolderName(repoPath)}</span>
+        <span className="ui-text-xs block truncate text-text-lighter/80">
           {relativePath === "." ? repoPath : relativePath}
         </span>
       </span>
-      {isCurrent ? <span className="ui-text-sm ml-auto shrink-0 text-success">current</span> : null}
-    </ComboboxItem>
+      {isAdded ? (
+        <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 text-text-lighter">
+          added
+        </span>
+      ) : null}
+    </button>
   );
 }
 

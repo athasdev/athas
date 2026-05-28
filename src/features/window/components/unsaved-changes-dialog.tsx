@@ -31,19 +31,19 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
       size="sm"
       footer={
         <>
-          <Button onClick={onCancel} variant="outline" size="sm">
+          <Button onClick={onCancel} variant="default" compact>
             Cancel
           </Button>
-          <Button onClick={onDiscard} variant="outline" size="sm">
+          <Button onClick={onDiscard} variant="default" compact>
             Don't Save
           </Button>
-          <Button onClick={onSave} variant="primary" size="sm">
+          <Button onClick={onSave} variant="accent" compact>
             Save
           </Button>
         </>
       }
     >
-      <p className="text-text text-xs">
+      <p className="text-text ui-text-xs">
         Do you want to save the changes you made to <strong>{fileName}</strong>?
       </p>
     </Dialog>

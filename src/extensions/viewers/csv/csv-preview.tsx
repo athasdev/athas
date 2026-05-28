@@ -91,7 +91,7 @@ export function CsvPreview() {
         actions={
           <div className="flex items-center gap-1">
             {/* Delimiter selector */}
-            <label htmlFor="csv-delimiter" className="ui-font mr-1 text-text-lighter text-xs">
+            <label htmlFor="csv-delimiter" className="ui-font mr-1 text-text-lighter ui-text-xs">
               Delimiter
             </label>
             <Select
@@ -113,8 +113,8 @@ export function CsvPreview() {
             {/* Header toggle */}
             <Button
               onClick={() => setHasHeader((v) => !v)}
-              variant="outline"
-              size="xs"
+              variant="default"
+              compact
               className="h-6 gap-1 text-text-lighter"
               tooltip="Toggle header row"
             >
@@ -124,10 +124,10 @@ export function CsvPreview() {
             {/* Copy CSV */}
             <Button
               onClick={handleCopyCsv}
-              variant="outline"
-              size="xs"
+              variant="default"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Copy as CSV"
+              compact
             >
               <Download /> CSV
             </Button>
@@ -135,10 +135,10 @@ export function CsvPreview() {
             {/* Copy JSON */}
             <Button
               onClick={handleCopyJson}
-              variant="outline"
-              size="xs"
+              variant="default"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Copy as JSON"
+              compact
             >
               <FileJson /> JSON
             </Button>

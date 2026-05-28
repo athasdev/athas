@@ -5,6 +5,7 @@ import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "../utils/logger";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
@@ -65,8 +66,7 @@ export const useGoToDefinition = ({
       const scrollTop = textarea?.scrollTop ?? 0;
       const scrollLeft = textarea?.scrollLeft ?? 0;
 
-      // Always use EDITOR_PADDING_LEFT since mouse events are captured on the
-      // overlay-editor-container which is positioned AFTER the gutter
+      // Keep the fallback coordinate path aligned with editor content padding.
       const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
       const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
@@ -113,12 +113,11 @@ export const useGoToDefinition = ({
 
             // Set cursor position after buffer is ready
             setTimeout(() => {
-              const lines = editorAPI.getLines();
-              let offset = 0;
-              for (let i = 0; i < target.range.start.line; i++) {
-                offset += (lines[i]?.length || 0) + 1;
-              }
-              offset += target.range.start.character;
+              const offset = calculateOffsetFromContentPosition(
+                editorAPI.getContent(),
+                target.range.start.line,
+                target.range.start.character,
+              );
 
               editorAPI.setCursorPosition({
                 line: target.range.start.line,

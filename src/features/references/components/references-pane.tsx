@@ -2,16 +2,14 @@ import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
   FileCode,
-  SpinnerGap as Loader2,
   ArrowsOut as Maximize2,
   ArrowsIn as Minimize2,
   X,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
-import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { LoadingIndicator } from "@/ui/loading";
+import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { useReferencesStore } from "../stores/references-store";
 import type { Reference } from "../types/reference";
 
@@ -35,6 +33,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
   const references = useReferencesStore.use.references();
   const query = useReferencesStore.use.query();
   const isLoading = useReferencesStore.use.isLoading();
+  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const grouped = useMemo<ReferenceGroup[]>(() => {
@@ -57,34 +56,12 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
     setCollapsedGroups((prev) => ({ ...prev, [filePath]: !prev[filePath] }));
   }, []);
 
-  const handleReferenceClick = useCallback(async (ref: Reference) => {
-    const bufferStore = useBufferStore.getState();
-    const existingBuffer = bufferStore.buffers.find((b) => b.path === ref.filePath);
-
-    if (existingBuffer) {
-      bufferStore.actions.setActiveBuffer(existingBuffer.id);
-    } else {
-      const content = await readFileContent(ref.filePath);
-      const fileName = getFileName(ref.filePath);
-      const bufferId = bufferStore.actions.openBuffer(ref.filePath, fileName, content);
-      bufferStore.actions.setActiveBuffer(bufferId);
-    }
-
-    setTimeout(() => {
-      const lines = editorAPI.getLines();
-      let offset = 0;
-      for (let i = 0; i < ref.line; i++) {
-        offset += (lines[i]?.length || 0) + 1;
-      }
-      offset += ref.column;
-
-      editorAPI.setCursorPosition({
-        line: ref.line,
-        column: ref.column,
-        offset,
-      });
-    }, 100);
-  }, []);
+  const handleReferenceClick = useCallback(
+    (ref: Reference) => {
+      void handleFileSelect?.(ref.filePath, false, ref.line + 1, ref.column + 1, undefined, false);
+    },
+    [handleFileSelect],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -92,8 +69,8 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       <div className={paneHeaderClassName("justify-between border-border/70 border-b")}>
         <div className="flex items-center gap-1.5">
           <span className="ui-font ui-text-sm font-medium text-text">References</span>
-          {query && <span className={PANE_CHIP_BASE}>{query.symbol}</span>}
-          <span className={PANE_CHIP_BASE}>{isLoading ? "..." : references.length}</span>
+          {query && <PaneChip>{query.symbol}</PaneChip>}
+          <PaneChip>{isLoading ? "..." : references.length}</PaneChip>
         </div>
         <div className="flex items-center gap-0.5">
           {onFullScreen && (
@@ -117,8 +94,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center gap-2 px-3 py-4 text-text-lighter">
-            <Loader2 size={14} className="animate-spin" />
-            <span className="ui-font ui-text-sm">Finding references...</span>
+            <LoadingIndicator label="Finding references" showLabel compact />
           </div>
         ) : references.length === 0 ? (
           <div className="px-3 py-4 text-text-lighter">

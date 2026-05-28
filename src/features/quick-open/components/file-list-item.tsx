@@ -36,20 +36,20 @@ export const FileListItem = ({
     >
       <FileExplorerIcon fileName={file.name} isDir={false} size={14} className="shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-xs">
+        <div className="truncate ui-text-xs">
           <span className="text-text">{file.name}</span>
           {directoryPath && (
-            <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">{directoryPath}</span>
+            <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">{directoryPath}</span>
           )}
         </div>
       </div>
       {category === "open" && (
-        <span className="rounded bg-accent/20 px-1 py-0.5 font-medium text-[10px] text-accent">
+        <span className="rounded bg-accent/20 px-1 py-0.5 font-medium ui-text-xs text-accent">
           open
         </span>
       )}
       {category === "recent" && (
-        <span className="rounded px-1 py-0.5 font-medium text-[10px] text-text-lighter">
+        <span className="rounded px-1 py-0.5 font-medium ui-text-xs text-text-lighter">
           <ClockIcon />
         </span>
       )}

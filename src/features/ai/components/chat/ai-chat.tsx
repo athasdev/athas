@@ -7,11 +7,11 @@ import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
   truncateDetail,
-  updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import {
   createToolCall,
   markToolCallComplete,
@@ -21,7 +21,7 @@ import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpEvent, AcpPermissionOption, AcpToolKind } from "@/features/ai/types/acp";
+import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
@@ -122,66 +122,6 @@ function getPermissionOptionClassName(option: AcpPermissionOption) {
   }
 }
 
-function getAcpToolTarget(event: Extract<AcpEvent, { type: "tool_start" | "tool_update" }>) {
-  const locations = "locations" in event ? event.locations : null;
-  const location = locations?.[0]?.path;
-  if (location) return location.split("/").pop() || location;
-
-  const input = event.input;
-  if (typeof input === "string") return input;
-  if (input && typeof input === "object") {
-    const record = input as Record<string, unknown>;
-    const path =
-      typeof record.file_path === "string"
-        ? record.file_path
-        : typeof record.path === "string"
-          ? record.path
-          : typeof record.filename === "string"
-            ? record.filename
-            : undefined;
-
-    if (path) return path.split("/").pop() || path;
-    if (typeof record.command === "string") return truncateDetail(record.command, 120);
-    if (typeof record.query === "string") return truncateDetail(record.query, 120);
-  }
-
-  const output = "output" in event ? event.output : null;
-  if (Array.isArray(output)) {
-    const diffItems = output.filter(
-      (item) => item && typeof item === "object" && item.type === "diff",
-    );
-    if (diffItems.length > 0) {
-      const firstPath = (diffItems[0] as Record<string, unknown>).path;
-      const firstFile =
-        typeof firstPath === "string" ? firstPath.split("/").pop() || firstPath : "file";
-      return diffItems.length === 1 ? firstFile : `${diffItems.length} files`;
-    }
-  }
-
-  return undefined;
-}
-
-function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false) {
-  switch (kind) {
-    case "edit":
-      return completed ? "Edited file" : "Editing file";
-    case "read":
-      return completed ? "Read file" : "Reading file";
-    case "delete":
-      return completed ? "Deleted file" : "Deleting file";
-    case "move":
-      return completed ? "Moved file" : "Moving file";
-    case "search":
-      return completed ? "Searched" : "Searching";
-    case "execute":
-      return completed ? "Ran command" : "Running command";
-    case "fetch":
-      return completed ? "Fetched" : "Fetching";
-    default:
-      return completed ? "Tool completed" : "Using tool";
-  }
-}
-
 const AIChat = memo(function AIChat({
   className,
   chatId,
@@ -228,11 +168,19 @@ const AIChat = memo(function AIChat({
   }, [activeBuffer, chatActions.autoSelectBuffer, isActiveSurface]);
 
   useEffect(() => {
+    if (chatId) return;
     if (!isActiveSurface || !effectiveChatId || effectiveChatId === chatState.currentChatId) return;
     if (!chatState.chats.some((chat) => chat.id === effectiveChatId)) return;
 
     chatActions.switchToChat(effectiveChatId);
-  }, [chatActions, chatState.chats, chatState.currentChatId, effectiveChatId, isActiveSurface]);
+  }, [
+    chatActions,
+    chatId,
+    chatState.chats,
+    chatState.currentChatId,
+    effectiveChatId,
+    isActiveSurface,
+  ]);
 
   useEffect(() => {
     chatActions.checkApiKey(settings.aiProviderId);
@@ -310,8 +258,7 @@ const AIChat = memo(function AIChat({
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
 
-  // Agent availability is now handled dynamically by the model-provider-selector component
-  // No need to check Claude Code status on mount
+  // Agent availability is handled dynamically by the agent selector.
 
   const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -483,17 +430,22 @@ const AIChat = memo(function AIChat({
 
   const processMessage = async (messageContent: string) => {
     const store = useAIChatStore.getState();
-    const currentAgentId = store.getCurrentAgentId();
+    const targetChat = effectiveChatId
+      ? store.chats.find((chat) => chat.id === effectiveChatId)
+      : null;
+    const currentAgentId = targetChat?.agentId ?? store.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
-    // For ACP agents (Claude Code, etc.), we don't need an API key
+    // For ACP agents, we don't need an API key.
     // For Custom API, we need an API key to be set
     if (!messageContent.trim() || (!isAcp && !store.hasApiKey)) return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
-    let chatId = store.currentChatId;
-    if (!chatId) {
-      chatId = chatActions.createNewChat(currentAgentId);
+    let targetChatId = effectiveChatId ?? store.currentChatId;
+    if (!targetChatId) {
+      targetChatId = chatActions.createNewChat(currentAgentId);
+    } else {
+      targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId);
     }
 
     const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
@@ -520,12 +472,12 @@ const AIChat = memo(function AIChat({
       isStreaming: true,
     };
 
-    chatActions.addMessage(chatId, userMessage);
-    chatActions.addMessage(chatId, assistantMessage);
+    chatActions.addMessage(targetChatId, userMessage);
+    chatActions.addMessage(targetChatId, assistantMessage);
 
-    const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
+    const currentMessages = useAIChatStore.getState().getMessagesForChat(targetChatId);
     if (currentMessages.length === 2) {
-      void updateInitialAgentSessionTitle(chatId, userMessage.content);
+      void updateInitialAgentSessionTitle(targetChatId, userMessage.content);
     }
 
     chatActions.setIsTyping(true);
@@ -535,6 +487,7 @@ const AIChat = memo(function AIChat({
 
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
+    let currentAssistantRawContent = "";
     let acpProducedStateOnlyUpdate = false;
     let acpCommandResultLabel: string | null = null;
 
@@ -546,7 +499,7 @@ const AIChat = memo(function AIChat({
           const bufferActions = useBufferStore.getState().actions;
           if (directAction.kind === "open_web_viewer" && directAction.url) {
             bufferActions.openWebViewerBuffer(directAction.url);
-            chatActions.updateMessage(chatId, currentAssistantMessageId, {
+            chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
               content: `Opened ${directAction.url} in Athas web viewer.`,
               isStreaming: false,
             });
@@ -555,7 +508,7 @@ const AIChat = memo(function AIChat({
               command: directAction.command,
               name: directAction.command,
             });
-            chatActions.updateMessage(chatId, currentAssistantMessageId, {
+            chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
               content: `Opened terminal and ran \`${directAction.command}\`.`,
               isStreaming: false,
             });
@@ -571,7 +524,7 @@ const AIChat = memo(function AIChat({
 
       const conversationContext = useAIChatStore
         .getState()
-        .getMessagesForChat(chatId)
+        .getMessagesForChat(targetChatId)
         .filter((msg) => msg.role !== "system")
         .map((msg) => ({
           role: msg.role as "user" | "assistant",
@@ -590,14 +543,17 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            content: (currentMessage?.content || "") + chunk,
+          currentAssistantRawContent += chunk;
+          const extracted = extractFollowUpActions(currentAssistantRawContent);
+          updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+            content: extracted.content,
+            followUpActions: extracted.actions,
           }));
           requestAnimationFrame(() => scrollToBottom());
         },
         () => {
           const currentMessage = chatActions
-            .getMessagesForChat(chatId)
+            .getMessagesForChat(targetChatId)
             .find((message) => message.id === currentAssistantMessageId);
           const hasVisibleResponse = Boolean(
             currentMessage?.content?.trim() ||
@@ -613,7 +569,7 @@ const AIChat = memo(function AIChat({
                 acpCommandResultLabel ||
                 (slashCommand ? `Applied \`/${slashCommand}\`.` : "Session updated.");
 
-              updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+              updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
                 content: fallbackContent,
                 isStreaming: false,
               }));
@@ -626,7 +582,7 @@ const AIChat = memo(function AIChat({
 
             const fallbackMessage =
               "The selected agent did not return a visible response. Try sending the message again.";
-            updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
               content: `[ERROR_BLOCK]
 title: No Response
 code: EMPTY_RESPONSE
@@ -642,7 +598,7 @@ details: The agent session started, but no content, tool output, or resource was
             return;
           }
 
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
+          chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
             isStreaming: false,
           });
           chatActions.setIsTyping(false);
@@ -735,10 +691,14 @@ message: ${errorMessage}
 details: ${errorDetails || mainError}
 [/ERROR_BLOCK]`;
 
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            content: currentMessage?.content || formattedError,
-            isStreaming: false,
-          }));
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) => ({
+              content: currentMessage?.content || formattedError,
+              isStreaming: false,
+            }),
+          );
           if (!shouldSuppressToast) {
             showToast({
               message: errorMessage,
@@ -753,6 +713,7 @@ details: ${errorDetails || mainError}
         conversationContext,
         () => {
           const newMessageId = Date.now().toString();
+          currentAssistantRawContent = "";
           const newAssistantMessage: Message = {
             id: newMessageId,
             content: "",
@@ -761,104 +722,64 @@ details: ${errorDetails || mainError}
             isStreaming: true,
           };
 
-          chatActions.addMessage(chatId, newAssistantMessage);
+          chatActions.addMessage(targetChatId, newAssistantMessage);
           currentAssistantMessageId = newMessageId;
           chatActions.setStreamingMessageId(newMessageId);
           requestAnimationFrame(() => scrollToBottom(true));
         },
         (event) => {
-          appendAcpEvent({
-            id: `tool-${event.toolId}`,
-            kind: "tool",
-            label: getAcpToolLabel(event.kind),
-            detail: getAcpToolTarget(event),
-            state: event.status === "pending" ? "info" : "running",
-          });
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            isToolUse: true,
-            toolName: event.toolName,
-            toolCalls: [
-              ...(currentMessage?.toolCalls || []),
-              createToolCall(
-                event.toolName,
-                event.input,
-                event.toolId,
-                event.kind,
-                event.status,
-                event.locations,
-              ),
-            ],
-          }));
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) => ({
+              isToolUse: true,
+              toolName: event.toolName,
+              toolCalls: [
+                ...(currentMessage?.toolCalls || []),
+                createToolCall(
+                  event.toolName,
+                  event.input,
+                  event.toolId,
+                  event.kind,
+                  event.status,
+                  event.locations,
+                ),
+              ],
+            }),
+          );
         },
         (event) => {
-          if (
-            event.kind ||
-            event.input ||
-            event.output ||
-            event.locations?.length ||
-            event.status
-          ) {
-            setAcpEvents((prev) => {
-              const activityId = `tool-${event.toolId}`;
-              const nextState =
-                event.status === "failed"
-                  ? "error"
-                  : event.status === "completed"
-                    ? "success"
-                    : event.status === "pending"
-                      ? "info"
-                      : "running";
-              const detail = getAcpToolTarget(event);
-
-              if (!prev.some((activity) => activity.id === activityId)) {
-                return appendChatAcpEvent(prev, {
-                  id: activityId,
-                  kind: "tool",
-                  label: getAcpToolLabel(event.kind),
-                  detail,
-                  state: nextState,
-                });
-              }
-
-              return prev.map((activity) =>
-                activity.id === activityId
-                  ? {
-                      ...activity,
-                      label: event.kind ? getAcpToolLabel(event.kind) : activity.label,
-                      detail: detail ?? activity.detail,
-                      state: nextState,
-                      timestamp: new Date(),
-                    }
-                  : activity,
-              );
-            });
-          }
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
-              id: event.toolId,
-              name: event.toolName,
-              input: event.input,
-              output: event.output,
-              error: event.error,
-              kind: event.kind,
-              status: event.status,
-              locations: event.locations,
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) => ({
+              toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
+                id: event.toolId,
+                name: event.toolName,
+                input: event.input,
+                output: event.output,
+                error: event.error,
+                kind: event.kind,
+                status: event.status,
+                locations: event.locations,
+              }),
             }),
-          }));
+          );
         },
         (toolName: string, toolId?: string, output?: unknown, error?: string) => {
-          if (toolId) {
-            setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, `tool-${toolId}`, !error));
-          }
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            toolCalls: markToolCallComplete(
-              currentMessage?.toolCalls || [],
-              toolName,
-              toolId,
-              output,
-              error,
-            ),
-          }));
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) => ({
+              toolCalls: markToolCallComplete(
+                currentMessage?.toolCalls || [],
+                toolName,
+                toolId,
+                output,
+                error,
+              ),
+            }),
+          );
         },
         (event) => {
           appendAcpEvent({
@@ -895,9 +816,6 @@ details: ${errorDetails || mainError}
             case "tool_update":
               break;
             case "tool_complete":
-              setAcpEvents((prev) =>
-                updateToolCompletionAcpEvent(prev, `tool-${event.toolId}`, event.success),
-              );
               break;
             case "permission_request":
               break; // Handled separately with permission UI
@@ -972,22 +890,30 @@ details: ${errorDetails || mainError}
         chatState.mode,
         chatState.outputStyle,
         (data: string, mediaType: string) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            images: [...(currentMessage?.images || []), { data, mediaType }],
-          }));
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) => ({
+              images: [...(currentMessage?.images || []), { data, mediaType }],
+            }),
+          );
           requestAnimationFrame(() => scrollToBottom());
         },
         (uri: string, name: string | null) => {
-          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
-            resources: [...(currentMessage?.resources || []), { uri, name }],
-          }));
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) => ({
+              resources: [...(currentMessage?.resources || []), { uri, name }],
+            }),
+          );
           requestAnimationFrame(() => scrollToBottom());
         },
-        chatId,
+        targetChatId,
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
-      chatActions.updateMessage(chatId, assistantMessageId, {
+      chatActions.updateMessage(targetChatId, assistantMessageId, {
         content: "Error: Failed to connect to AI service. Please check your API key and try again.",
         isStreaming: false,
       });
@@ -1014,7 +940,7 @@ details: ${errorDetails || mainError}
     async (messageContent: string) => {
       const currentAgentId = chatActions.getCurrentAgentId();
       const isAcp = isAcpAgent(currentAgentId);
-      // For ACP agents (Claude Code, etc.), we don't need an API key
+      // For ACP agents, we don't need an API key.
       if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
       chatActions.setInput("");
@@ -1095,14 +1021,14 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
+      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text ui-text-xs ${className || ""}`}
     >
       <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
-            <p className="font-medium text-sm text-text">AI chat is disabled</p>
-            <p className="mt-2 text-text-lighter text-xs">
+            <p className="font-medium ui-text-sm text-text">AI chat is disabled</p>
+            <p className="mt-2 text-text-lighter ui-text-xs">
               Your organization policy has disabled AI chat for this workspace.
             </p>
           </div>
@@ -1118,12 +1044,13 @@ details: ${errorDetails || mainError}
               ref={messagesEndRef}
               chatId={effectiveChatId}
               onApplyCode={onApplyCode}
+              onSendFollowUp={handleSendMessage}
               acpEvents={acpEvents}
             />
           </div>
 
           {currentPermission && (
-            <div className="bg-transparent px-3 pt-2 text-xs">
+            <div className="bg-transparent px-3 pt-2 ui-text-xs">
               <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-sm">
                 <KeyRound className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
                 <div
@@ -1135,7 +1062,7 @@ details: ${errorDetails || mainError}
                   <span className="editor-font">{currentPermissionSummary}</span>
                 </div>
                 {permissionQueue.length > 1 ? (
-                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 ui-text-xs text-text-lighter">
                     +{permissionQueue.length - 1}
                   </span>
                 ) : null}
@@ -1146,8 +1073,7 @@ details: ${errorDetails || mainError}
                       <Button
                         key={option.id}
                         type="button"
-                        variant={approved ? "outline" : "danger"}
-                        size="xs"
+                        variant={approved ? "default" : "danger"}
                         onClick={() =>
                           handlePermission(
                             approved,

@@ -333,7 +333,6 @@ const GlobalSearchBuffer = () => {
                 type="button"
                 onClick={option.onToggle}
                 variant="ghost"
-                size="icon-sm"
                 className={cn(
                   "h-full w-7 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none",
                   option.active && "bg-hover/80 text-text",
@@ -341,6 +340,7 @@ const GlobalSearchBuffer = () => {
                 tooltip={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
+                compact
               >
                 {option.icon}
               </Button>

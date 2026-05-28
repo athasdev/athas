@@ -1,5 +1,5 @@
 import type { SettingSearchRecord } from "../types/search";
-import { IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // Enterprise Settings
@@ -108,6 +108,38 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Line Numbers",
     description: "Show line numbers in the editor",
     keywords: ["line", "numbers", "gutter", "display"],
+  },
+  {
+    id: "editor-render-whitespace",
+    tab: "editor",
+    section: "Display",
+    label: "Render Whitespace",
+    description: "Show visible markers for spaces and tabs",
+    keywords: ["whitespace", "spaces", "tabs", "invisible", "render", "display"],
+  },
+  {
+    id: "editor-render-indent-guides",
+    tab: "editor",
+    section: "Display",
+    label: "Indent Guides",
+    description: "Show vertical guides for indentation levels",
+    keywords: ["indent", "guides", "indentation", "tabs", "spaces", "display"],
+  },
+  {
+    id: "editor-highlight-occurrences",
+    tab: "editor",
+    section: "Display",
+    label: "Highlight Occurrences",
+    description: "Highlight visible matches for the word under the cursor",
+    keywords: ["highlight", "occurrences", "matches", "word", "symbol", "cursor"],
+  },
+  {
+    id: "editor-engine",
+    tab: "editor",
+    section: "Editor",
+    label: "Editor Engine",
+    description: "Choose Monaco or Athas",
+    keywords: ["engine", "monaco", "athas", "editor"],
   },
   {
     id: "editor-show-minimap",
@@ -378,7 +410,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show sidebar activity tabs across the top or in a left rail",
     keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
   },
-  ...(IS_MAC
+  ...(!IS_MAC && !IS_WINDOWS
     ? [
         {
           id: "appearance-native-menu-bar",
@@ -390,13 +422,25 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
         } satisfies SettingSearchRecord,
       ]
     : []),
+  ...(!IS_MAC
+    ? [
+        {
+          id: "appearance-compact-menu-bar",
+          tab: "appearance",
+          section: "Layout",
+          label: "Compact Menu Bar",
+          description: "Requires UI menu bar; compact hamburger or full UI menu",
+          keywords: ["menu", "bar", "compact", "hamburger", "ui"],
+        } satisfies SettingSearchRecord,
+      ]
+    : []),
   {
-    id: "appearance-compact-menu-bar",
+    id: "appearance-window-transparency",
     tab: "appearance",
     section: "Layout",
-    label: "Compact Menu Bar",
-    description: "Requires UI menu bar; compact hamburger or full UI menu",
-    keywords: ["menu", "bar", "compact", "hamburger", "ui"],
+    label: "Window Transparency",
+    description: "Use translucent app chrome and transparent native windows where supported",
+    keywords: ["window", "transparency", "transparent", "translucent", "glass", "chrome"],
   },
   {
     id: "appearance-title-bar-project-mode",
@@ -412,7 +456,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Layout",
     label: "Open Projects In New Window",
     description:
-      "When the current window already has a project, opening another folder uses a separate window",
+      "In window title mode, opening another folder uses a separate window when a project is already open",
     keywords: ["open", "folder", "project", "new", "window", "separate"],
   },
 
@@ -423,7 +467,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Connections",
     label: "New Connection",
     description:
-      "Open the database connection dialog to connect to SQLite, PostgreSQL, MySQL, MongoDB, or Redis",
+      "Open workspace database connections for SQLite, DuckDB, PostgreSQL, MySQL, MongoDB, or Redis",
     keywords: [
       "database",
       "connection",
@@ -440,7 +484,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "databases",
     section: "Connections",
     label: "Saved Connections",
-    description: "Manage saved network database connections",
+    description: "Manage saved workspace database connections",
     keywords: [
       "database",
       "saved",
@@ -733,28 +777,20 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["debug", "debugger", "breakpoint", "launch", "run"],
   },
   {
+    id: "features-outline",
+    tab: "features",
+    section: "Features",
+    label: "Outline",
+    description: "Document symbols and quick navigation for the active file",
+    keywords: ["outline", "symbols", "navigation", "document", "active file"],
+  },
+  {
     id: "features-ai-chat",
     tab: "features",
     section: "Features",
     label: "AI Assistant",
     description: "AI-powered code assistance and chat",
     keywords: ["ai", "assistant", "chat"],
-  },
-  {
-    id: "features-multi-agents",
-    tab: "features",
-    section: "Features",
-    label: "Multi Agents",
-    description: "Multi-agent session sidebar",
-    keywords: ["ai", "agents", "multi", "sidebar", "experimental"],
-  },
-  {
-    id: "features-sidebar-builder",
-    tab: "features",
-    section: "Features",
-    label: "Sidebar Builder",
-    description: "Customizable vertical sidebar with Git, terminal, browser, and workspace items",
-    keywords: ["sidebar", "builder", "custom", "experimental", "git", "terminal", "browser"],
   },
   {
     id: "features-breadcrumbs",
@@ -871,23 +907,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show open buffers as a horizontally scrollable carousel in the main view",
     keywords: ["tabs", "buffers", "carousel", "scroll", "horizontal", "trackpad", "main view"],
   },
-  {
-    id: "editor-external-editor",
-    tab: "editor",
-    section: "External Editor",
-    label: "Default Editor",
-    description: "Open files in an external terminal editor instead of the built-in editor",
-    keywords: ["external", "editor", "neovim", "vim", "helix", "nano", "emacs", "terminal"],
-  },
-  {
-    id: "editor-custom-editor-command",
-    tab: "editor",
-    section: "External Editor",
-    label: "Custom Command",
-    description: "Command to run for custom external editor",
-    keywords: ["custom", "command", "editor", "external"],
-  },
-
   // Extensions Settings
   {
     id: "extensions-browse",
@@ -916,6 +935,25 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["import", "settings", "restore", "backup", "json"],
   },
   {
+    id: "general-import-editor-settings",
+    tab: "general",
+    section: "General",
+    label: "Import Settings",
+    description: "Import matching setup from another editor",
+    keywords: [
+      "import",
+      "settings",
+      "keybindings",
+      "projects",
+      "recent",
+      "vscode",
+      "cursor",
+      "windsurf",
+      "zed",
+      "jetbrains",
+    ],
+  },
+  {
     id: "advanced-reset-settings",
     tab: "advanced",
     section: "Data",
@@ -929,7 +967,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Telemetry",
     label: "Anonymous Usage Telemetry",
     description:
-      "Send anonymous heartbeat, extension, and crash-report metadata; update checks always send required delivery metadata",
+      "Send anonymous operational metadata for updates, heartbeats, extensions, and crashes",
     keywords: ["telemetry", "analytics", "tracking", "privacy", "crash", "updates", "extensions"],
   },
 ];

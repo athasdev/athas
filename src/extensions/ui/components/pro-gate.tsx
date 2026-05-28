@@ -26,10 +26,10 @@ export function ProGate({ children, fallback }: ProGateProps) {
       </div>
       <div>
         <div className="flex items-center justify-center gap-2">
-          <p className="font-medium text-sm text-text">Pro Feature</p>
+          <p className="font-medium ui-text-sm text-text">Pro Feature</p>
           <ProBadge />
         </div>
-        <p className="mt-1 text-text-lighter text-xs">Upgrade to Pro to unlock this feature.</p>
+        <p className="mt-1 text-text-lighter ui-text-xs">Upgrade to Pro to unlock this feature.</p>
       </div>
     </div>
   );

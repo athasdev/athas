@@ -29,7 +29,6 @@ import {
   PushPin as Pin,
   Plus,
   MagnifyingGlass as Search,
-  SplitHorizontal as SplitSquareHorizontal,
   TerminalWindow as TerminalIcon,
   SidebarSimple as PanelLeft,
   SidebarSimple as PanelRight,
@@ -42,7 +41,8 @@ import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-st
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import {
   type TerminalTabLayout,
   type TerminalTabSidebarPosition,
@@ -77,7 +77,6 @@ interface ToolbarContextMenuProps {
   onSidebarPositionChange: (position: TerminalTabSidebarPosition) => void;
   onNewTerminal?: () => void;
   onSearchTerminal?: () => void;
-  onSplitView?: () => void;
   onNextTerminal?: () => void;
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
@@ -96,7 +95,6 @@ const ToolbarContextMenu = ({
   onSidebarPositionChange,
   onNewTerminal,
   onSearchTerminal,
-  onSplitView,
   onNextTerminal,
   onPrevTerminal,
   onFullScreen,
@@ -176,16 +174,6 @@ const ToolbarContextMenu = ({
           },
         ]
       : []),
-    ...(onSplitView
-      ? [
-          {
-            id: "toggle-split-view",
-            label: "Toggle Split View",
-            icon: <SplitSquareHorizontal />,
-            onClick: onSplitView,
-          },
-        ]
-      : []),
     ...(onNextTerminal
       ? [
           {
@@ -256,13 +244,11 @@ interface TerminalTabBarProps {
   onCloseOtherTabs?: (terminalId: string) => void;
   onCloseAllTabs?: () => void;
   onCloseTabsToRight?: (terminalId: string) => void;
-  onSplitView?: () => void;
   onSearchTerminal?: () => void;
   onNextTerminal?: () => void;
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
-  isSplitView?: boolean;
   orientation?: TerminalTabLayout;
 }
 
@@ -280,13 +266,11 @@ const TerminalTabBar = ({
   onCloseOtherTabs,
   onCloseAllTabs,
   onCloseTabsToRight,
-  onSplitView,
   onSearchTerminal,
   onNextTerminal,
   onPrevTerminal,
   onFullScreen,
   isFullScreen = false,
-  isSplitView = false,
   orientation = "horizontal",
 }: TerminalTabBarProps) => {
   const renameStartedAtRef = useRef<number>(0);
@@ -315,8 +299,6 @@ const TerminalTabBar = ({
   const sessions = useTerminalStore((state) => state.sessions);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
-  const { setActivePane } = usePaneStore.use.actions();
-  const { splitPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
@@ -374,7 +356,7 @@ const TerminalTabBar = ({
       renameStartedAtRef.current = Date.now();
       onTabClick(terminalId);
       setEditingTerminalId(terminalId);
-      setEditingName(terminal.name);
+      setEditingName(getTerminalDisplayName(terminal));
     });
   };
 
@@ -476,6 +458,8 @@ const TerminalTabBar = ({
     return true;
   };
   const getTerminalDisplayName = (terminal: Terminal) => {
+    if (terminal.customName && terminal.name.trim()) return terminal.name;
+
     const session = sessions.get(terminal.id);
     const title = session?.title?.trim();
     if (isUsefulTerminalTitle(title)) return title!;
@@ -571,23 +555,23 @@ const TerminalTabBar = ({
     const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
 
     if (terminal && isOutsideTabBar && target.paneId) {
-      let destinationPaneId = target.paneId;
-      if (target.zone && target.zone !== "center") {
-        const direction =
-          target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-        const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
-        destinationPaneId =
-          splitPane(target.paneId, direction, undefined, placement) ?? target.paneId;
+      const destinationPaneId = getOrCreatePaneDropTarget({
+        paneId: target.paneId,
+        zone: target.zone,
+      });
+      if (!destinationPaneId) {
+        resetDrag();
+        return;
       }
 
-      setActivePane(destinationPaneId);
-      openTerminalBuffer({
+      const bufferId = openTerminalBuffer({
         sessionId: terminal.id,
         name: terminal.name,
         command: terminal.initialCommand,
         workingDirectory: terminal.currentDirectory,
         remoteConnectionId: terminal.remoteConnectionId,
       });
+      activateBufferInPaneAndSync(destinationPaneId, bufferId);
       window.dispatchEvent(
         new CustomEvent("terminal-detach-to-buffer", {
           detail: { terminalId: terminal.id },
@@ -655,8 +639,8 @@ const TerminalTabBar = ({
               <Button
                 onClick={onNewTerminal}
                 variant="ghost"
-                size="icon-sm"
                 className="rounded-lg text-text-lighter"
+                compact
               >
                 <Plus />
               </Button>
@@ -667,8 +651,8 @@ const TerminalTabBar = ({
                   ref={profileMenuButtonRef}
                   onClick={openProfileMenu}
                   variant="ghost"
-                  size="icon-sm"
                   className="h-6 w-5 rounded-lg text-text-lighter"
+                  compact
                 >
                   <ChevronDown />
                 </Button>
@@ -695,7 +679,7 @@ const TerminalTabBar = ({
           className={cn(
             orientation === "vertical"
               ? "relative flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg"
-              : "relative flex min-h-8 items-center justify-between gap-1 overflow-hidden bg-primary-bg px-1.5 py-1",
+              : "relative flex h-7 min-h-7 items-center justify-between gap-1 overflow-hidden bg-primary-bg px-1.5 py-0.5",
             "scrollbar-hidden [overscroll-behavior-x:contain]",
           )}
           style={orientation === "vertical" ? { width: tabSidebarWidth } : undefined}
@@ -830,8 +814,8 @@ const TerminalTabBar = ({
                   <Button
                     onClick={onSearchTerminal}
                     variant="ghost"
-                    size="icon-sm"
                     className="shrink-0 rounded-lg text-text-lighter"
+                    compact
                   >
                     <Search />
                   </Button>
@@ -842,8 +826,8 @@ const TerminalTabBar = ({
                   <Button
                     onClick={onNewTerminal}
                     variant="ghost"
-                    size="icon-sm"
                     className="shrink-0 rounded-lg text-text-lighter"
+                    compact
                   >
                     <Plus />
                   </Button>
@@ -854,32 +838,14 @@ const TerminalTabBar = ({
                       ref={profileMenuButtonRef}
                       onClick={openProfileMenu}
                       variant="ghost"
-                      size="icon-sm"
                       className="h-6 w-5 shrink-0 rounded-lg text-text-lighter"
+                      compact
                     >
                       <ChevronDown />
                     </Button>
                   </Tooltip>
                 )}
               </div>
-              {onSplitView && (
-                <Tooltip
-                  content={isSplitView ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
-                  side="bottom"
-                >
-                  <Button
-                    onClick={onSplitView}
-                    variant={isSplitView ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    className={cn(
-                      "shrink-0 rounded-lg",
-                      isSplitView ? "text-text" : "text-text-lighter",
-                    )}
-                  >
-                    <SplitSquareHorizontal />
-                  </Button>
-                </Tooltip>
-              )}
               {onFullScreen && (
                 <Tooltip
                   content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
@@ -888,8 +854,8 @@ const TerminalTabBar = ({
                   <Button
                     onClick={onFullScreen}
                     variant="ghost"
-                    size="icon-sm"
                     className="shrink-0 rounded-lg text-text-lighter"
+                    compact
                   >
                     {isFullScreen ? <Minimize2 /> : <Maximize2 />}
                   </Button>
@@ -1023,7 +989,6 @@ const TerminalTabBar = ({
             onSidebarPositionChange={setTabSidebarPosition}
             onNewTerminal={onNewTerminal}
             onSearchTerminal={onSearchTerminal}
-            onSplitView={onSplitView}
             onNextTerminal={onNextTerminal}
             onPrevTerminal={onPrevTerminal}
             onFullScreen={onFullScreen}

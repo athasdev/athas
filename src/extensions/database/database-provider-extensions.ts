@@ -20,6 +20,7 @@ const PROVIDER_DEFINITIONS: Array<{
       id: "sqlite",
       label: "SQLite",
       isFileBased: true,
+      protocolVersion: 1,
       fileExtensions: [".sqlite", ".db", ".sqlite3"],
       sidecar: {
         "darwin-arm64": "bin/athas-db-sqlite",
@@ -39,6 +40,7 @@ const PROVIDER_DEFINITIONS: Array<{
       id: "duckdb",
       label: "DuckDB",
       isFileBased: true,
+      protocolVersion: 1,
       fileExtensions: [".duckdb", ".duck"],
       sidecar: {
         "darwin-arm64": "bin/athas-db-duckdb",
@@ -58,6 +60,7 @@ const PROVIDER_DEFINITIONS: Array<{
       id: "postgres",
       label: "PostgreSQL",
       isFileBased: false,
+      protocolVersion: 1,
       defaultPort: 5432,
       sidecar: {
         "darwin-arm64": "bin/athas-db-postgres",
@@ -77,6 +80,7 @@ const PROVIDER_DEFINITIONS: Array<{
       id: "mysql",
       label: "MySQL",
       isFileBased: false,
+      protocolVersion: 1,
       defaultPort: 3306,
       sidecar: {
         "darwin-arm64": "bin/athas-db-mysql",
@@ -96,6 +100,7 @@ const PROVIDER_DEFINITIONS: Array<{
       id: "mongodb",
       label: "MongoDB",
       isFileBased: false,
+      protocolVersion: 1,
       defaultPort: 27017,
       sidecar: {
         "darwin-arm64": "bin/athas-db-mongodb",
@@ -115,6 +120,7 @@ const PROVIDER_DEFINITIONS: Array<{
       id: "redis",
       label: "Redis",
       isFileBased: false,
+      protocolVersion: 1,
       defaultPort: 6379,
       sidecar: {
         "darwin-arm64": "bin/athas-db-redis",
@@ -137,12 +143,12 @@ export function getDatabaseProviderExtensions(): ExtensionManifest[] {
       version: "1.0.0",
       publisher: "Athas",
       categories: ["Database"],
-      databaseProviders: [provider],
+      databases: [provider],
       activationEvents: [`onDatabase:${provider.id}`],
       license: "MIT",
       repository: {
         type: "git",
-        url: "https://github.com/athasdev/extensions",
+        url: "https://github.com/athasdev/athas/tree/master/extensions",
       },
       icon: "icon.svg",
     }),

@@ -18,6 +18,7 @@ export interface LanguageConfig {
   extensions: string[];
   aliases?: string[];
   filenames?: string[];
+  filenamePatterns?: string[];
   description?: string;
   wasmPath?: string;
   highlightQueryPath?: string;
@@ -32,6 +33,7 @@ export abstract class BaseLanguageProvider implements LanguageExtension {
   readonly extensions: string[];
   readonly aliases?: string[];
   readonly filenames?: string[];
+  readonly filenamePatterns?: string[];
   readonly description?: string;
   readonly wasmPath: string;
   readonly highlightQueryPath: string;
@@ -44,6 +46,7 @@ export abstract class BaseLanguageProvider implements LanguageExtension {
     this.extensions = config.extensions;
     this.aliases = config.aliases;
     this.filenames = config.filenames;
+    this.filenamePatterns = config.filenamePatterns;
     this.description = config.description;
     this.wasmPath = config.wasmPath || `${CDN_BASE_URL}/${config.id}/parser.wasm`;
     this.highlightQueryPath =

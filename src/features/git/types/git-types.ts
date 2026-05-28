@@ -39,6 +39,9 @@ export interface GitDiff {
   is_image?: boolean;
   old_blob_base64?: string;
   new_blob_base64?: string;
+  raw_patch?: string;
+  additions?: number;
+  deletions?: number;
 }
 
 export interface GitHunk {

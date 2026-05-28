@@ -466,7 +466,7 @@ impl acp::Client for AthasAcpClient {
 
             if response.approved {
                if let Some(url) = fallback_webviewer_url.clone() {
-                  // Claude Code adapters may try to invoke ext_method via shell command.
+                  // Some ACP adapters may try to invoke ext_method via shell command.
                   // Execute the equivalent Athas UI action directly and reject the shell tool call.
                   self.emit_event(AcpEvent::UiAction {
                      session_id: session_id.clone(),

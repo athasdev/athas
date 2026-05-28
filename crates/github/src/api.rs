@@ -1,7 +1,7 @@
 use crate::models::{
    IssueComment, IssueDetails, IssueListItem, Label, PullRequest, PullRequestAuthor,
    PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest, StatusCheck,
-   WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
+   WorkflowListItem, WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
 };
 use git2::Repository;
 use reqwest::{
@@ -143,6 +143,19 @@ struct WorkflowRunsResponse {
 }
 
 #[derive(Deserialize)]
+struct WorkflowsResponse {
+   workflows: Vec<RestWorkflow>,
+}
+
+#[derive(Deserialize)]
+struct RestWorkflow {
+   id: i64,
+   name: Option<String>,
+   path: Option<String>,
+   state: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct WorkflowJobsResponse {
    jobs: Vec<RestWorkflowJob>,
 }
@@ -264,6 +277,57 @@ impl GitHubApi {
       response
          .text()
          .map_err(|e| format!("Failed to read GitHub API response: {e}"))
+   }
+
+   fn post_json<T, B>(&self, path: &str, body: &B) -> Result<T, String>
+   where
+      T: for<'de> Deserialize<'de>,
+      B: Serialize + ?Sized,
+   {
+      let response = send_github_request(
+         self
+            .apply_headers(
+               self.client.post(format!("{GITHUB_API_BASE}{path}")),
+               GITHUB_JSON_ACCEPT,
+            )
+            .json(body),
+      )?;
+      response
+         .json::<T>()
+         .map_err(|e| format!("Failed to parse GitHub API response: {e}"))
+   }
+
+   fn post_empty<B>(&self, path: &str, body: &B) -> Result<(), String>
+   where
+      B: Serialize + ?Sized,
+   {
+      send_github_request(
+         self
+            .apply_headers(
+               self.client.post(format!("{GITHUB_API_BASE}{path}")),
+               GITHUB_JSON_ACCEPT,
+            )
+            .json(body),
+      )?;
+      Ok(())
+   }
+
+   fn patch_json<T, B>(&self, path: &str, body: &B) -> Result<T, String>
+   where
+      T: for<'de> Deserialize<'de>,
+      B: Serialize + ?Sized,
+   {
+      let response = send_github_request(
+         self
+            .apply_headers(
+               self.client.patch(format!("{GITHUB_API_BASE}{path}")),
+               GITHUB_JSON_ACCEPT,
+            )
+            .json(body),
+      )?;
+      response
+         .json::<T>()
+         .map_err(|e| format!("Failed to parse GitHub API response: {e}"))
    }
 
    fn apply_headers(&self, request: RequestBuilder, accept: &str) -> RequestBuilder {
@@ -637,6 +701,15 @@ fn workflow_run_from_rest(run: RestWorkflowRun) -> WorkflowRunListItem {
    }
 }
 
+fn workflow_from_rest(workflow: RestWorkflow) -> WorkflowListItem {
+   WorkflowListItem {
+      id: workflow.id,
+      name: workflow.name.unwrap_or_default(),
+      path: workflow.path.unwrap_or_default(),
+      state: workflow.state.unwrap_or_default(),
+   }
+}
+
 fn workflow_details_from_rest(
    run: RestWorkflowRun,
    jobs: Vec<WorkflowRunJob>,
@@ -804,14 +877,20 @@ pub fn github_get_current_user(github_token: Option<String>) -> Result<String, S
 
 pub fn github_list_issues(
    repo_path_value: String,
+   state: String,
    github_token: Option<String>,
 ) -> Result<Vec<IssueListItem>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
+   let state = match state.as_str() {
+      "closed" => "closed",
+      "all" => "all",
+      _ => "open",
+   };
    let issues: Vec<RestIssue> = api.get_json_with_query(
       &repo_path(&slug, "issues"),
       &[
-         ("state", "open".to_string()),
+         ("state", state.to_string()),
          ("sort", "updated".to_string()),
          ("direction", "desc".to_string()),
          ("per_page", "50".to_string()),
@@ -841,6 +920,144 @@ pub fn github_list_workflow_runs(
       .into_iter()
       .map(workflow_run_from_rest)
       .collect())
+}
+
+pub fn github_list_workflows(
+   repo_path_value: String,
+   github_token: Option<String>,
+) -> Result<Vec<WorkflowListItem>, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let response: WorkflowsResponse = api.get_json_with_query(
+      &repo_path(&slug, "actions/workflows"),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(response
+      .workflows
+      .into_iter()
+      .map(workflow_from_rest)
+      .collect())
+}
+
+pub fn github_list_labels(
+   repo_path_value: String,
+   github_token: Option<String>,
+) -> Result<Vec<Label>, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let labels: Vec<RestLabel> = api.get_json_with_query(
+      &repo_path(&slug, "labels"),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(labels_from_rest(Some(labels)))
+}
+
+pub fn github_create_issue(
+   repo_path_value: String,
+   title: String,
+   body: String,
+   labels: Vec<String>,
+   assignees: Vec<String>,
+   github_token: Option<String>,
+) -> Result<IssueListItem, String> {
+   let title = title.trim();
+   if title.is_empty() {
+      return Err("Issue title is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let issue: RestIssue = api.post_json(
+      &repo_path(&slug, "issues"),
+      &serde_json::json!({
+         "title": title,
+         "body": body.trim(),
+         "labels": labels,
+         "assignees": assignees,
+      }),
+   )?;
+
+   Ok(issue_from_rest(issue))
+}
+
+pub fn github_create_pull_request(
+   repo_path_value: String,
+   title: String,
+   body: String,
+   head: String,
+   base: String,
+   draft: bool,
+   labels: Vec<String>,
+   assignees: Vec<String>,
+   github_token: Option<String>,
+) -> Result<PullRequest, String> {
+   let title = title.trim();
+   let head = head.trim();
+   let base = base.trim();
+
+   if title.is_empty() {
+      return Err("Pull request title is required.".to_string());
+   }
+   if head.is_empty() {
+      return Err("Pull request head branch is required.".to_string());
+   }
+   if base.is_empty() {
+      return Err("Pull request base branch is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let pr: RestPullRequest = api.post_json(
+      &repo_path(&slug, "pulls"),
+      &serde_json::json!({
+         "title": title,
+         "body": body.trim(),
+         "head": head,
+         "base": base,
+         "draft": draft,
+         "maintainer_can_modify": true,
+      }),
+   )?;
+
+   let pr_number = pr.number;
+   if !labels.is_empty() || !assignees.is_empty() {
+      let _: RestIssue = api.patch_json(
+         &repo_path(&slug, &format!("issues/{pr_number}")),
+         &serde_json::json!({
+            "labels": labels,
+            "assignees": assignees,
+         }),
+      )?;
+   }
+
+   Ok(pr_from_rest(pr))
+}
+
+pub fn github_dispatch_workflow(
+   repo_path_value: String,
+   workflow_id: i64,
+   reference: String,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let reference = reference.trim();
+   if workflow_id <= 0 {
+      return Err("Workflow is required.".to_string());
+   }
+   if reference.is_empty() {
+      return Err("Workflow ref is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.post_empty(
+      &repo_path(
+         &slug,
+         &format!("actions/workflows/{workflow_id}/dispatches"),
+      ),
+      &serde_json::json!({ "ref": reference }),
+   )
 }
 
 pub fn github_checkout_pr(

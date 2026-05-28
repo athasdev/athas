@@ -24,6 +24,7 @@ export const serializeTerminals = (terminals: Terminal[]): PersistedTerminal[] =
     shell: terminal.shell,
     profileId: terminal.profileId,
     title: terminal.title,
+    customName: terminal.customName,
     remoteConnectionId: terminal.remoteConnectionId,
   }));
 
@@ -54,8 +55,9 @@ export const buildTerminalRestorePayload = ({
   storageTerminals: PersistedTerminal[] | null | undefined;
   preferProjectSession: boolean;
 }): PersistedTerminal[] => {
-  if (preferProjectSession) {
-    return dedupePersistedTerminals(projectSessionTerminals);
+  const sessionTerminals = dedupePersistedTerminals(projectSessionTerminals);
+  if (preferProjectSession && sessionTerminals.length > 0) {
+    return sessionTerminals;
   }
 
   return dedupePersistedTerminals(storageTerminals);

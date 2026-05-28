@@ -24,7 +24,6 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import { Tabs } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import ProjectIconPicker from "./project-icon-picker";
-import ProjectPickerDialog from "./project-picker-dialog";
 
 const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
@@ -37,7 +36,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
   const { switchToProject, closeProject } = useFileSystemStore();
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
-  const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
+  const { setIsProjectPickerVisible } = useUIState();
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
   const contextMenu = useContextMenu<ProjectTab>();
 
@@ -219,7 +218,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           ),
           label: <span className="max-w-32 truncate">{tab.name}</span>,
           className: cn(
-            "px-6",
+            "border border-transparent px-6",
             isRemote &&
               (tab.isActive ? "bg-sky-500/15 text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
             isSwitchingProject && "cursor-wait",
@@ -229,7 +228,6 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
               onClick={(event) => handleTabActionsClick(event, tab)}
               className={cn(
                 "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
@@ -253,7 +251,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
 
   return (
     <>
-      <div className="group flex min-w-0 items-stretch">
+      <div className="group flex min-w-0 items-center">
         <Tabs
           items={projectTabItems}
           size="xs"
@@ -273,17 +271,17 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
               currentIds.splice(targetIndex, 0, tabId);
             });
           }}
-          className="scrollbar-hidden min-w-0 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
+          className="athas-title-project-tabs-list scrollbar-hidden min-w-0 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
         />
-        <div className="w-0 overflow-hidden transition-[width,opacity] duration-150 ease-out group-hover:w-6 focus-within:w-6">
+        <div className="ml-1 flex h-6 w-7 shrink-0 items-center">
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
             onClick={handleAddProject}
-            className="h-full w-6 rounded-none border-0 text-text-lighter opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 hover:bg-hover/60 hover:text-text"
+            className="athas-title-project-add-button h-6 w-7 rounded-md border border-transparent px-0 text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
             tooltip="Open folder"
             aria-label="Open folder"
+            compact
           >
             <Plus weight="bold" />
           </Button>
@@ -296,14 +294,6 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           position={contextMenu.position}
           items={getContextMenuItems(contextMenu.data)}
           onClose={contextMenu.close}
-        />,
-        document.body,
-      )}
-
-      {createPortal(
-        <ProjectPickerDialog
-          isOpen={isProjectPickerVisible}
-          onClose={() => setIsProjectPickerVisible(false)}
         />,
         document.body,
       )}

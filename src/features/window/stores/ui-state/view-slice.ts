@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-session";
@@ -8,10 +9,12 @@ export interface ViewState {
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   activeSidebarView: SidebarView;
+  activeRightSidebarView: SidebarView;
 }
 
 export interface ViewActions {
   setActiveView: (view: SidebarView) => void;
+  setActiveRightSidebarView: (view: SidebarView) => void;
 }
 
 export type ViewSlice = ViewState & ViewActions;
@@ -20,6 +23,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
   isGitViewActive: false,
   isGitHubPRsViewActive: false,
   activeSidebarView: "files",
+  activeRightSidebarView: "notifications",
 
   setActiveView: (view: SidebarView) => {
     set({
@@ -36,7 +40,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
     const state = get() as ViewSlice & {
       isSidebarVisible?: boolean;
       isBottomPaneVisible?: boolean;
-      bottomPaneActiveTab?: "terminal" | "diagnostics" | "references" | "buffers";
+      bottomPaneActiveTab?: BottomPaneTab;
     };
 
     useSessionStore.getState().saveUiState(projectPath, {
@@ -47,5 +51,8 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
         state.bottomPaneActiveTab ?? DEFAULT_PROJECT_UI_STATE.bottomPaneActiveTab,
       activeSidebarView: view,
     });
+  },
+  setActiveRightSidebarView: (view: SidebarView) => {
+    set({ activeRightSidebarView: view });
   },
 });

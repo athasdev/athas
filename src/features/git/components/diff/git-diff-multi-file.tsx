@@ -3,9 +3,9 @@ import {
   CaretDown as ChevronDown,
   CaretRight as ChevronRight,
   FileText,
-  SpinnerGap as Loader2,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import type { FileDiffSummary, MultiFileDiffViewerProps } from "../../types/git-diff-types";
@@ -288,12 +288,13 @@ const MultiFileDiffViewer = memo(({ multiDiff, onClose }: MultiFileDiffViewerPro
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-border border-t bg-primary-bg px-3 py-1 text-[10px] text-text-lighter">
+      <div className="flex items-center justify-between border-border border-t bg-primary-bg px-3 py-1 ui-text-xs text-text-lighter">
         <span className="flex items-center gap-1.5">
-          {multiDiff.isLoading && <Loader2 className="size-3 animate-spin" />}
-          {multiDiff.isLoading
-            ? "Loading remaining files..."
-            : `${multiDiff.totalFiles} file${multiDiff.totalFiles !== 1 ? "s" : ""} changed`}
+          {multiDiff.isLoading ? (
+            <LoadingIndicator label="Loading remaining files" showLabel compact />
+          ) : (
+            `${multiDiff.totalFiles} file${multiDiff.totalFiles !== 1 ? "s" : ""} changed`
+          )}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-git-added">+{multiDiff.totalAdditions}</span>

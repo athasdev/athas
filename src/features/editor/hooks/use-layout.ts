@@ -38,7 +38,7 @@ export function useEditorLayout() {
   const baseFontSize = useEditorSettingsStore.use.fontSize();
   const lineHeightMultiplier = useEditorSettingsStore.use.lineHeight();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
-  const lines = useEditorViewStore.use.lines();
+  const lineCount = useEditorViewStore.use.lineCount();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = baseFontSize * zoomLevel;
 
@@ -58,9 +58,9 @@ export function useEditorLayout() {
   }, [fontSize, fontFamily]);
 
   const gutterWidth = useMemo(() => {
-    const totalLines = lines.length || 100;
+    const totalLines = lineCount || 100;
     return calculateTotalGutterWidth(totalLines);
-  }, [lines.length]);
+  }, [lineCount]);
 
   const lineHeight = useMemo(() => {
     return Math.ceil(fontSize * lineHeightMultiplier);

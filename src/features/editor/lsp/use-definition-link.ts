@@ -33,10 +33,19 @@ function getWordBoundaries(
   line: number,
   column: number,
 ): { startColumn: number; endColumn: number } | null {
-  const lines = content.split("\n");
-  if (line < 0 || line >= lines.length) return null;
+  if (line < 0) return null;
 
-  const lineText = lines[line];
+  let currentLine = 0;
+  let lineStart = 0;
+  while (currentLine < line) {
+    const nextNewline = content.indexOf("\n", lineStart);
+    if (nextNewline === -1) return null;
+    lineStart = nextNewline + 1;
+    currentLine++;
+  }
+
+  const lineEnd = content.indexOf("\n", lineStart);
+  const lineText = lineEnd === -1 ? content.slice(lineStart) : content.slice(lineStart, lineEnd);
   if (column < 0 || column >= lineText.length) return null;
 
   // Word characters: letters, digits, underscore
@@ -70,6 +79,7 @@ export const useDefinitionLink = ({
   resolveEditorPosition,
 }: UseDefinitionLinkProps) => {
   const { actions } = useEditorUIStore();
+  const latestContentRef = useRef(content);
   const isModifierHeldRef = useRef(false);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const editorRefCache = useRef<HTMLElement | null>(null);
@@ -83,6 +93,10 @@ export const useDefinitionLink = ({
   // Track pending LSP request to cancel/ignore stale results
   const pendingRequestRef = useRef<{ cancelled: boolean } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    latestContentRef.current = content;
+  }, [content]);
 
   const setPointerCursor = useCallback((editor: HTMLElement | null, enabled: boolean) => {
     if (!editor) return;
@@ -112,8 +126,7 @@ export const useDefinitionLink = ({
       const scrollTop = textarea?.scrollTop ?? 0;
       const scrollLeft = textarea?.scrollLeft ?? 0;
 
-      // Always use EDITOR_PADDING_LEFT since mouse events are captured on the
-      // overlay-editor-container which is positioned AFTER the gutter
+      // Keep the fallback coordinate path aligned with editor content padding.
       const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
       const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
@@ -146,7 +159,7 @@ export const useDefinitionLink = ({
         return;
       }
 
-      const boundaries = getWordBoundaries(content, pos.line, pos.column);
+      const boundaries = getWordBoundaries(latestContentRef.current, pos.line, pos.column);
       if (!boundaries) {
         currentWordRef.current = null;
         actions.setDefinitionLinkRange(null);
@@ -215,15 +228,7 @@ export const useDefinitionLink = ({
           }
         });
     },
-    [
-      content,
-      filePath,
-      isLanguageSupported,
-      getDefinition,
-      calculatePosition,
-      actions,
-      setPointerCursor,
-    ],
+    [filePath, isLanguageSupported, getDefinition, calculatePosition, actions, setPointerCursor],
   );
 
   // Handle mouse move - track position and update highlight if modifier held

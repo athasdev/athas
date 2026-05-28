@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.solidity",
+  "name": "Solidity",
+  "displayName": "Solidity",
+  "version": "1.0.0",
+  "description": "Solidity language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "solidity",
+      "extensions": [".sol"],
+      "aliases": ["Solidity"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "solidity-language-server",
+      "runtime": "binary",
+      "args": ["--stdio"]
+    }
+  }
+}

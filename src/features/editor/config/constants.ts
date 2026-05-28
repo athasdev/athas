@@ -16,11 +16,13 @@ export const EDITOR_CONSTANTS = {
   SIGNIFICANT_LINE_DIFF: 10, // Lines - threshold for significant range change
   VIEWPORT_OVERLAP_THRESHOLD: 50, // Percentage - consider significant if overlap is more than 50%
 
-  // Editor padding (must match CSS variables in overlay-editor.css)
+  // Editor padding used by legacy coordinate helpers and LSP overlays.
   EDITOR_PADDING_TOP: 8,
   EDITOR_PADDING_LEFT: 16,
   EDITOR_PADDING_BOTTOM: 8,
   EDITOR_PADDING_RIGHT: 16,
+  CURSOR_BOTTOM_SAFE_AREA_LINES: 6,
+  COMPLETION_DROPDOWN_SAFE_AREA: 128,
 
   // Gutter
   MIN_GUTTER_WIDTH: 40,
@@ -85,5 +87,5 @@ export const EDITOR_CONSTANTS = {
   MAX_CLOSED_BUFFERS_HISTORY: 10,
 
   // Precision
-  WIDTH_PRECISION_MULTIPLIER: 100, // For rounding width calculations
+  WIDTH_PRECISION_MULTIPLIER: 1000, // For rounding width calculations
 } as const;

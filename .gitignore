@@ -79,5 +79,8 @@ public/tree-sitter/queries/
 # Bundled tree-sitter grammars
 src/extensions/bundled/*/grammars/*.wasm
 
+# Generated extension CDN output
+extensions/generated/
+
 # local codex settings
 src-tauri/.claude/settings.local.json

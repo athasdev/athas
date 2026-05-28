@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { normalizeLineEndings } from "../utils/html";
 import { LspClient } from "./lsp-client";
 
 export interface SemanticToken {
@@ -9,6 +10,12 @@ export interface SemanticToken {
   length: number;
   tokenType: number;
   tokenModifiers: number;
+}
+
+export interface SemanticTokenState {
+  tokens: SemanticToken[];
+  content: string;
+  filePath?: string;
 }
 
 // Standard LSP semantic token types (order matters — matches capability declaration)
@@ -40,46 +47,76 @@ export const TOKEN_TYPE_NAMES = [
 
 const DEBOUNCE_MS = 800;
 
-export const useSemanticTokens = (filePath: string | undefined, enabled: boolean) => {
-  const [tokens, setTokens] = useState<SemanticToken[]>([]);
+export const useSemanticTokens = (
+  filePath: string | undefined,
+  enabled: boolean,
+  content = "",
+): SemanticTokenState => {
+  const [tokenState, setTokenState] = useState<SemanticTokenState>(() => ({
+    tokens: [],
+    content: normalizeLineEndings(content),
+    filePath,
+  }));
+  const contentRef = useRef(content);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
-  const fetchTokens = useCallback(async () => {
-    if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
-      setTokens([]);
-      return;
-    }
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
 
-    const id = ++requestIdRef.current;
-    const lspClient = LspClient.getInstance();
-    if (!lspClient.getActiveServerEntryForFile(filePath)) {
-      setTokens([]);
-      return;
-    }
-    const result = await lspClient.getSemanticTokens(filePath);
+  const fetchTokens = useCallback(
+    async (contentSnapshot = normalizeLineEndings(contentRef.current)) => {
+      const id = ++requestIdRef.current;
 
-    if (id !== requestIdRef.current) return;
-    setTokens(result);
-  }, [filePath, enabled]);
+      if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
+        setTokenState({ tokens: [], content: contentSnapshot, filePath });
+        return;
+      }
+
+      const lspClient = LspClient.getInstance();
+      if (!lspClient.getActiveServerEntryForFile(filePath)) {
+        setTokenState({ tokens: [], content: contentSnapshot, filePath });
+        return;
+      }
+      const requestFilePath = filePath;
+      const result = await lspClient.getSemanticTokens(filePath);
+
+      if (id !== requestIdRef.current) return;
+      setTokenState({ tokens: result, content: contentSnapshot, filePath: requestFilePath });
+    },
+    [filePath, enabled],
+  );
 
   useEffect(() => {
     void fetchTokens();
   }, [fetchTokens]);
 
   useEffect(() => {
-    if (lastInputTimestamp === 0) return;
+    if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
+      return;
+    }
 
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      void fetchTokens();
-    }, DEBOUNCE_MS);
+    let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastInputTimestamp) {
+        return;
+      }
+
+      lastInputTimestamp = state.lastInputTimestamp;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        const contentSnapshot = normalizeLineEndings(contentRef.current);
+        void fetchTokens(contentSnapshot);
+      }, DEBOUNCE_MS);
+    });
 
     return () => {
+      unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [lastInputTimestamp, fetchTokens]);
+  }, [fetchTokens]);
 
-  return tokens;
+  return tokenState;
 };

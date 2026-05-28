@@ -1,18 +1,30 @@
+import { CopySimple } from "@phosphor-icons/react";
 import { memo, useCallback } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
+import { formatTime } from "@/features/ai/lib/formatting";
+import { Button } from "@/ui/button";
 import { useAIChatStore } from "../../store/store";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
-import ToolCallDisplay from "../messages/tool-call-display";
+import { ToolCallGroupDisplay } from "../messages/tool-call-display";
 import { ChatLoadingIndicator } from "./chat-loading-indicator";
 
 interface ChatMessageProps {
   message: Message;
   isLastMessage: boolean;
   onApplyCode?: (code: string, language?: string) => void;
+}
+
+async function copyText(text: string) {
+  try {
+    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+    await writeText(text);
+  } catch {
+    await navigator.clipboard.writeText(text);
+  }
 }
 
 export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: ChatMessageProps) {
@@ -31,12 +43,30 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
   }, []);
 
   if (message.role === "user") {
+    const messageTime = formatTime(message.timestamp);
+
     return (
-      <div className="w-full">
-        <div className="relative rounded-2xl bg-secondary-bg/42 px-3 py-2.5">
+      <div className="group flex w-full flex-col items-end">
+        <div
+          className="inline-block max-w-[min(72ch,100%)] rounded-2xl bg-secondary-bg/42 px-3 py-2.5"
+          title={messageTime}
+        >
           <div className="ai-chat-message-content whitespace-pre-wrap break-words">
             {message.content}
           </div>
+        </div>
+        <div className="mt-1 flex items-center gap-1.5">
+          <span className="ui-text-xs text-text-lighter/55">{messageTime}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            compact
+            onClick={() => void copyText(message.content)}
+            className="size-6 rounded-md border-transparent bg-transparent p-0 text-text-lighter/55 shadow-none hover:bg-transparent hover:text-text-lighter"
+            aria-label="Copy prompt"
+          >
+            <CopySimple className="size-3.5" />
+          </Button>
         </div>
       </div>
     );
@@ -44,20 +74,8 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
 
   if (isToolOnlyMessage) {
     return (
-      <div className="space-y-0.5">
-        {message.toolCalls!.map((toolCall, toolIndex) => (
-          <ToolCallDisplay
-            key={`${message.id}-tool-${toolIndex}`}
-            toolName={toolCall.name}
-            input={toolCall.input}
-            output={toolCall.output}
-            error={toolCall.error}
-            kind={toolCall.kind}
-            status={toolCall.status}
-            locations={toolCall.locations}
-            isStreaming={!toolCall.isComplete && message.isStreaming}
-          />
-        ))}
+      <div>
+        <ToolCallGroupDisplay toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
       </div>
     );
   }
@@ -94,7 +112,7 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
               href={resource.uri}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent text-xs hover:bg-hover"
+              className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent ui-text-xs hover:bg-hover"
             >
               <span className="truncate">{resource.name || resource.uri}</span>
             </a>
@@ -127,20 +145,8 @@ export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: C
       )}
 
       {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="mt-2 space-y-0.5">
-          {message.toolCalls!.map((toolCall, toolIndex) => (
-            <ToolCallDisplay
-              key={`${message.id}-tool-${toolIndex}`}
-              toolName={toolCall.name}
-              input={toolCall.input}
-              output={toolCall.output}
-              error={toolCall.error}
-              kind={toolCall.kind}
-              status={toolCall.status}
-              locations={toolCall.locations}
-              isStreaming={!toolCall.isComplete && message.isStreaming}
-            />
-          ))}
+        <div className="mt-2">
+          <ToolCallGroupDisplay toolCalls={message.toolCalls} isStreaming={message.isStreaming} />
         </div>
       )}
     </div>

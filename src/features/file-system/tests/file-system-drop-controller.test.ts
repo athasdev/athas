@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   handleDroppedExternalPaths,
   handleExternalFileDropPayload,
+  getExternalFileDropRoute,
   isExternalFileDragTypeList,
 } from "../utils/file-system-drop-controller";
 
@@ -92,5 +93,19 @@ describe("file system drop controller", () => {
     expect(isExternalFileDragTypeList(["Files", "text/plain"])).toBe(true);
     expect(isExternalFileDragTypeList(["text/plain"])).toBe(false);
     expect(isExternalFileDragTypeList(null)).toBe(false);
+  });
+
+  it("routes external file drops away from the global project opener for local surfaces", () => {
+    const target = (matchedSelector: string | null) =>
+      ({
+        closest: (selector: string) =>
+          matchedSelector && selector.includes(matchedSelector) ? ({} as Element) : null,
+      }) as Element;
+
+    expect(getExternalFileDropRoute(target("[data-terminal-drop-target]"))).toBe("terminal");
+    expect(getExternalFileDropRoute(target("[data-pane-container]"))).toBe("local");
+    expect(getExternalFileDropRoute(target("[data-external-file-drop-scope]"))).toBe("local");
+    expect(getExternalFileDropRoute(target(null))).toBe("global");
+    expect(getExternalFileDropRoute(null)).toBe("global");
   });
 });

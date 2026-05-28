@@ -20,11 +20,15 @@ type SyncableSettingsKey =
   | "sidebarPosition"
   | "quickOpenPreview"
   | "fontFamily"
+  | "editorEngine"
   | "fontSize"
   | "editorLineHeight"
   | "tabSize"
   | "wordWrap"
   | "lineNumbers"
+  | "renderWhitespace"
+  | "renderIndentGuides"
+  | "highlightOccurrences"
   | "showMinimap"
   | "terminalFontFamily"
   | "terminalFontSize"
@@ -42,6 +46,7 @@ type SyncableSettingsKey =
   | "autoThemeLight"
   | "autoThemeDark"
   | "compactMenuBar"
+  | "windowTransparency"
   | "sidebarTabsPosition"
   | "titleBarProjectMode"
   | "headerTrailingItemsOrder"
@@ -77,7 +82,7 @@ type SyncableSettingsKey =
   | "lintOnSave"
   | "autoCompletion"
   | "parameterHints"
-  | "externalEditor"
+  | "customEditorCommand"
   | "coreFeatures"
   | "extensionsActiveTab"
   | "maxOpenTabs"
@@ -107,11 +112,15 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "sidebarPosition",
   "quickOpenPreview",
   "fontFamily",
+  "editorEngine",
   "fontSize",
   "editorLineHeight",
   "tabSize",
   "wordWrap",
   "lineNumbers",
+  "renderWhitespace",
+  "renderIndentGuides",
+  "highlightOccurrences",
   "showMinimap",
   "terminalFontFamily",
   "terminalFontSize",
@@ -129,6 +138,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeLight",
   "autoThemeDark",
   "compactMenuBar",
+  "windowTransparency",
   "sidebarTabsPosition",
   "titleBarProjectMode",
   "headerTrailingItemsOrder",
@@ -164,7 +174,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "lintOnSave",
   "autoCompletion",
   "parameterHints",
-  "externalEditor",
+  "customEditorCommand",
   "coreFeatures",
   "extensionsActiveTab",
   "maxOpenTabs",

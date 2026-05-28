@@ -15,10 +15,14 @@ import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import {
-  resolveSidebarPaneClick,
-  type SidebarView,
-} from "@/features/layout/utils/sidebar-pane-utils";
+  chromeControl,
+  chromeControlGroup,
+  chromeIcon,
+  chromeItemWrapper,
+} from "@/features/layout/components/chrome-control-styles";
+import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -32,7 +36,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "./account-menu";
-import { NotificationsMenu } from "./notifications-menu";
+import ProjectPicker from "./project-picker";
 import ProjectTabs from "./project-tabs";
 import RunActionsButton from "./run-actions-button";
 import WindowTitleDisplay from "./window-title-display";
@@ -49,12 +53,6 @@ type HeaderItem<T extends string> = {
   content: ReactNode;
 };
 
-const CHROME_ICON_CLASS_NAME = "size-4";
-const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
-  "pointer-events-auto border-transparent bg-transparent p-0";
-const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
-  "h-6 w-7 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md";
-
 function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const orderedItems = orderedIds
@@ -64,36 +62,35 @@ function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, ordered
   return [...orderedItems, ...missingItems];
 }
 
-function placeAiChatBeforeAccount<T extends string>(items: Array<HeaderItem<T>>) {
-  const aiChatIndex = items.findIndex((item) => item.id === "ai-chat");
+function placeHeaderItemsBeforeAccount<T extends string>(items: Array<HeaderItem<T>>) {
   const accountIndex = items.findIndex((item) => item.id === "account");
+  if (accountIndex < 0) return items;
 
-  if (aiChatIndex < 0 || accountIndex < 0 || aiChatIndex === accountIndex - 1) {
-    return items;
+  let nextItems = [...items];
+  for (const id of ["ai-chat"] as const) {
+    const itemIndex = nextItems.findIndex((item) => item.id === id);
+    const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
+    if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
+      continue;
+    }
+
+    const [item] = nextItems.splice(itemIndex, 1);
+    const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
+    nextItems.splice(insertionIndex, 0, item);
   }
 
-  const nextItems = [...items];
-  const [aiChatItem] = nextItems.splice(aiChatIndex, 1);
-  const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
-  nextItems.splice(nextAccountIndex, 0, aiChatItem);
   return nextItems;
 }
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
-  const { settings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const {
-    isGitViewActive,
-    isGitHubPRsViewActive,
-    activeSidebarView,
-    isSidebarVisible,
-    setActiveView,
-    setIsSidebarVisible,
-    setIsProjectPickerVisible,
-  } = useUIState();
+  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView, setIsProjectPickerVisible } =
+    useUIState();
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const { openSidebarView } = useSidebarPaneController();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -182,18 +179,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   };
 
   const handleSidebarViewChange = (view: SidebarView) => {
-    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
-      {
-        isSidebarVisible,
-        isGitViewActive,
-        isGitHubPRsViewActive,
-        activeSidebarView,
-      },
-      view,
-    );
-
-    setActiveView(nextView);
-    setIsSidebarVisible(nextIsSidebarVisible);
+    openSidebarView(view, { triggerSide: "left" });
   };
 
   const handleTitleBarContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -226,6 +212,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       await closeProject(tab.id);
     }
   }, [closeProject]);
+
+  const handleCompactMenuToggle = useCallback(() => {
+    setMenuBarActiveMenu((activeMenu) => (activeMenu ? null : "File"));
+  }, []);
 
   const titleBarContextMenuItems: ContextMenuItem[] = [
     {
@@ -267,6 +257,39 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           },
         ]
       : []),
+    { id: "sep-layout", label: "", separator: true, onClick: () => {} },
+    {
+      id: "sidebar-left",
+      label: "Move Sidebar Left",
+      disabled: settings.sidebarPosition === "left",
+      onClick: () => {
+        void updateSetting("sidebarPosition", "left");
+      },
+    },
+    {
+      id: "sidebar-right",
+      label: "Move Sidebar Right",
+      disabled: settings.sidebarPosition === "right",
+      onClick: () => {
+        void updateSetting("sidebarPosition", "right");
+      },
+    },
+    {
+      id: "activity-tabs-top",
+      label: "Show Activity Tabs in Title Bar",
+      disabled: settings.sidebarTabsPosition === "top",
+      onClick: () => {
+        void updateSetting("sidebarTabsPosition", "top");
+      },
+    },
+    {
+      id: "activity-tabs-left",
+      label: "Show Activity Tabs in Sidebar",
+      disabled: settings.sidebarTabsPosition === "left",
+      onClick: () => {
+        void updateSetting("sidebarTabsPosition", "left");
+      },
+    },
   ];
 
   const titleBarContextMenuPortal = createPortal(
@@ -279,47 +302,39 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     document.body,
   );
 
-  const menuItem = !shouldUseNativeMenuBar ? (
-    settings.compactMenuBar ? (
-      <div className="relative">
-        <Tooltip content="Menu" side="bottom">
-          <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
-            <Button
-              ref={menuButtonRef}
-              onClick={() => {
-                setMenuBarActiveMenu("File");
-              }}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(
-                TITLE_BAR_ICON_BUTTON_CLASS_NAME,
-                menuBarActiveMenu && "bg-hover/70 text-text",
-              )}
-              aria-label="Menu"
-            >
-              <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
-            </Button>
-          </TabsList>
-        </Tooltip>
-        <CustomMenuBar
-          activeMenu={menuBarActiveMenu}
-          setActiveMenu={setMenuBarActiveMenu}
-          compactFloating
-          anchorRef={menuButtonRef}
-        />
-      </div>
-    ) : (
-      <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-    )
-  ) : null;
+  const menuItem =
+    !isMacOS && !shouldUseNativeMenuBar ? (
+      settings.compactMenuBar ? (
+        <div className="relative">
+          <Tooltip content="Menu" side="bottom">
+            <TabsList variant="segmented" className={chromeControlGroup()}>
+              <Button
+                ref={menuButtonRef}
+                onClick={handleCompactMenuToggle}
+                variant="ghost"
+                compact
+                className={cn(chromeControl(), menuBarActiveMenu && "bg-hover/70 text-text")}
+                aria-label="Menu"
+                aria-expanded={Boolean(menuBarActiveMenu)}
+              >
+                <List className={chromeIcon()} weight="duotone" />
+              </Button>
+            </TabsList>
+          </Tooltip>
+          <CustomMenuBar
+            activeMenu={menuBarActiveMenu}
+            setActiveMenu={setMenuBarActiveMenu}
+            compactFloating
+            anchorRef={menuButtonRef}
+          />
+        </div>
+      ) : (
+        <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+      )
+    ) : null;
 
   const headerTrailingItems: Array<HeaderItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
-    {
-      id: "notifications",
-      label: "Notifications",
-      content: <NotificationsMenu />,
-    },
     {
       id: "ai-chat",
       label: "AI Chat",
@@ -327,7 +342,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
           active={settings.isAIChatVisible}
           tooltip="Toggle AI Chat"
           tooltipSide="bottom"
@@ -335,10 +349,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
-          className={cn(TITLE_BAR_ICON_BUTTON_CLASS_NAME, "[&_svg]:size-4")}
+          className={chromeControl()}
           aria-label="Toggle AI Chat"
         >
-          <Sparkle weight="duotone" />
+          <Sparkle className={chromeIcon()} weight="duotone" />
         </Button>
       ),
     },
@@ -353,7 +367,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className={`relative z-50 flex select-none items-center justify-between ${
+        className={`athas-title-bar relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-8" : "h-8"
         } bg-secondary-bg px-2`}
       >
@@ -364,35 +378,31 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content="Minimize" side="bottom">
               <Button
                 onClick={handleMinimize}
-                variant="secondary"
-                size="icon-md"
-                className="pointer-events-auto"
+                variant="ghost"
+                className={cn("pointer-events-auto", chromeControl())}
+                compact
               >
-                <Minus className="size-4 text-text-lighter" weight="bold" />
+                <Minus weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
-                variant="secondary"
-                size="icon-md"
-                className="pointer-events-auto"
+                variant="ghost"
+                className={cn("pointer-events-auto", chromeControl())}
+                compact
               >
-                {isMaximized ? (
-                  <CornersIn className="size-4 text-text-lighter" weight="duotone" />
-                ) : (
-                  <CornersOut className="size-4 text-text-lighter" weight="duotone" />
-                )}
+                {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
               </Button>
             </Tooltip>
             <Tooltip content="Close" side="bottom">
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-md"
-                className="pointer-events-auto group"
+                className={cn("pointer-events-auto group hover:text-white", chromeControl())}
+                compact
               >
-                <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
+                <X weight="bold" />
               </Button>
             </Tooltip>
           </div>
@@ -408,7 +418,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         data-tauri-drag-region
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
-          "relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
+          "athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
@@ -441,11 +451,15 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Account menu */}
         <div className="flex h-8 items-center">
           <div className="flex items-center gap-1">
-            {placeAiChatBeforeAccount(
+            {placeHeaderItemsBeforeAccount(
               orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
-            ).map((item) => (
-              <div key={item.id}>{item.content}</div>
-            ))}
+            ).map((item) =>
+              item.content ? (
+                <div key={item.id} className={chromeItemWrapper()}>
+                  {item.content}
+                </div>
+              ) : null,
+            )}
           </div>
         </div>
         {titleBarContextMenuPortal}
@@ -458,12 +472,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     <div
       data-tauri-drag-region
       onContextMenu={handleTitleBarContextMenu}
-      className="relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
+      className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
     >
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center">
         <div className="pointer-events-auto">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {menuItem}
             {showTopSidebarTabs ? (
               <SidebarPaneSelector
@@ -493,47 +507,47 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       {/* Right side */}
       <div className="z-20 flex items-center">
         <div className="flex items-center gap-1">
-          {placeAiChatBeforeAccount(
+          {placeHeaderItemsBeforeAccount(
             orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
-          ).map((item) => (
-            <div key={item.id}>{item.content}</div>
-          ))}
+          ).map((item) =>
+            item.content ? (
+              <div key={item.id} className={chromeItemWrapper()}>
+                {item.content}
+              </div>
+            ) : null,
+          )}
         </div>
 
         {showCustomWindowControls && (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             <Tooltip content="Minimize" side="bottom">
               <Button
                 onClick={handleMinimize}
-                variant="secondary"
-                size="icon-md"
-                className="pointer-events-auto"
+                variant="ghost"
+                className={cn("pointer-events-auto", chromeControl())}
+                compact
               >
-                <Minus className="size-4 text-text-lighter" weight="bold" />
+                <Minus weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
-                variant="secondary"
-                size="icon-md"
-                className="pointer-events-auto"
+                variant="ghost"
+                className={cn("pointer-events-auto", chromeControl())}
+                compact
               >
-                {isMaximized ? (
-                  <CornersIn className="size-4 text-text-lighter" weight="duotone" />
-                ) : (
-                  <CornersOut className="size-4 text-text-lighter" weight="duotone" />
-                )}
+                {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
               </Button>
             </Tooltip>
             <Tooltip content="Close" side="bottom">
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-md"
-                className="pointer-events-auto group"
+                className={cn("pointer-events-auto group hover:text-white", chromeControl())}
+                compact
               >
-                <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
+                <X weight="bold" />
               </Button>
             </Tooltip>
           </div>
@@ -546,7 +560,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
 const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
   const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
+  const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
   useEffect(() => {
@@ -570,6 +586,13 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
         isOpen={isSettingsDialogVisible}
         onClose={() => setIsSettingsDialogVisible(false)}
       />
+      {createPortal(
+        <ProjectPicker
+          isOpen={isProjectPickerVisible}
+          onClose={() => setIsProjectPickerVisible(false)}
+        />,
+        document.body,
+      )}
     </>
   );
 };

@@ -320,6 +320,17 @@ pub struct WorkflowRunListItem {
    pub head_sha: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkflowListItem {
+   pub id: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub name: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub path: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub state: String,
+}
+
 impl Default for PullRequestAuthor {
    fn default() -> Self {
       Self {

@@ -21,6 +21,7 @@ interface FoldState {
     computeFoldRegions: (filePath: string, content: string) => void;
     toggleFold: (filePath: string, lineNumber: number) => void;
     foldAll: (filePath: string) => void;
+    foldLevel: (filePath: string, level: number) => void;
     unfoldAll: (filePath: string) => void;
     isFoldable: (filePath: string, lineNumber: number) => boolean;
     isCollapsed: (filePath: string, lineNumber: number) => boolean;
@@ -32,20 +33,43 @@ interface FoldState {
   };
 }
 
+function forEachContentLine(
+  content: string,
+  callback: (line: string, lineNumber: number) => void,
+): number {
+  let lineStart = 0;
+  let lineNumber = 0;
+
+  for (let index = 0; index < content.length; index++) {
+    if (content.charCodeAt(index) !== 10) continue;
+
+    let lineEnd = index;
+    if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13) {
+      lineEnd--;
+    }
+
+    callback(content.slice(lineStart, lineEnd), lineNumber);
+    lineNumber++;
+    lineStart = index + 1;
+  }
+
+  callback(content.slice(lineStart), lineNumber);
+  return lineNumber + 1;
+}
+
 function detectDiffFoldRegions(content: string): FoldRegion[] {
-  const lines = content.split(/\r?\n/);
   const regions: FoldRegion[] = [];
   const fileStarts: number[] = [];
 
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].startsWith("\uE000ATHAS_DIFF_FILE ")) {
-      fileStarts.push(i);
+  const lineCount = forEachContentLine(content, (line, lineNumber) => {
+    if (line.startsWith("\uE000ATHAS_DIFF_FILE ")) {
+      fileStarts.push(lineNumber);
     }
-  }
+  });
 
   for (let i = 0; i < fileStarts.length; i++) {
     const startLine = fileStarts[i];
-    const endLine = (fileStarts[i + 1] ?? lines.length) - 1;
+    const endLine = (fileStarts[i + 1] ?? lineCount) - 1;
     if (endLine > startLine) {
       regions.push({ startLine, endLine, indentLevel: 0, kind: "diff-file" });
     }
@@ -59,7 +83,6 @@ function detectFoldRegions(filePath: string, content: string): FoldRegion[] {
     return detectDiffFoldRegions(content);
   }
 
-  const lines = content.split(/\r?\n/);
   const regions: FoldRegion[] = [];
   const stack: Array<{
     startLine: number;
@@ -68,15 +91,14 @@ function detectFoldRegions(filePath: string, content: string): FoldRegion[] {
   }> = [];
 
   const getIndentLevel = (line: string): number => {
-    const match = line.match(/^(\s*)/);
-    if (!match) return 0;
-    // Count spaces (1 space = 1 level) and tabs (1 tab = 4 levels)
     let level = 0;
-    for (const char of match[1]) {
+    for (const char of line) {
       if (char === "\t") {
         level += 4;
-      } else {
+      } else if (char === " " || /\s/.test(char)) {
         level += 1;
+      } else {
+        break;
       }
     }
     return level;
@@ -89,10 +111,8 @@ function detectFoldRegions(filePath: string, content: string): FoldRegion[] {
 
   let lastMeaningfulLine = -1;
 
-  for (let i = 0; i < lines.length; i++) {
-    const currentLine = lines[i];
-
-    if (isBlankOrComment(currentLine)) continue;
+  forEachContentLine(content, (currentLine, lineNumber) => {
+    if (isBlankOrComment(currentLine)) return;
 
     const currentIndent = getIndentLevel(currentLine);
 
@@ -113,12 +133,12 @@ function detectFoldRegions(filePath: string, content: string): FoldRegion[] {
     }
 
     stack.push({
-      startLine: i,
+      startLine: lineNumber,
       indentLevel: currentIndent,
       hasChildLines: false,
     });
-    lastMeaningfulLine = i;
-  }
+    lastMeaningfulLine = lineNumber;
+  });
 
   while (stack.length > 0) {
     const region = stack.pop()!;
@@ -133,6 +153,29 @@ function detectFoldRegions(filePath: string, content: string): FoldRegion[] {
   }
 
   return regions;
+}
+
+function computeFoldDepths(regions: FoldRegion[]): Map<number, number> {
+  const depths = new Map<number, number>();
+  const ancestors: FoldRegion[] = [];
+  const sortedRegions = [...regions].sort(
+    (a, b) => a.startLine - b.startLine || b.endLine - a.endLine,
+  );
+
+  for (const region of sortedRegions) {
+    while (
+      ancestors.length > 0 &&
+      (region.startLine > ancestors[ancestors.length - 1].endLine ||
+        region.endLine > ancestors[ancestors.length - 1].endLine)
+    ) {
+      ancestors.pop();
+    }
+
+    depths.set(region.startLine, ancestors.length + 1);
+    ancestors.push(region);
+  }
+
+  return depths;
 }
 
 export const useFoldStore = createSelectors(
@@ -198,6 +241,31 @@ export const useFoldStore = createSelectors(
 
           const newCollapsed = new Set<number>();
           fileState.regions.forEach((r) => newCollapsed.add(r.startLine));
+
+          newMap.set(filePath, {
+            ...fileState,
+            collapsedLines: newCollapsed,
+          });
+          return { foldsByFile: newMap };
+        });
+      },
+
+      foldLevel: (filePath, level) => {
+        const normalizedLevel = Math.max(1, Math.trunc(level));
+
+        set((state) => {
+          const newMap = new Map(state.foldsByFile);
+          const fileState = newMap.get(filePath);
+          if (!fileState) return state;
+
+          const depths = computeFoldDepths(fileState.regions);
+          const newCollapsed = new Set(fileState.collapsedLines);
+
+          for (const region of fileState.regions) {
+            if (depths.get(region.startLine) === normalizedLevel) {
+              newCollapsed.add(region.startLine);
+            }
+          }
 
           newMap.set(filePath, {
             ...fileState,

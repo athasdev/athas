@@ -8,6 +8,7 @@ export interface Diagnostic {
   message: string;
   source?: string;
   code?: string;
+  owner?: string;
 }
 
 export interface DiagnosticCodeAction {

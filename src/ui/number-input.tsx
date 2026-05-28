@@ -23,16 +23,10 @@ const numberInputFieldPadding = {
   md: "px-3",
 } as const;
 
-const numberInputButtonSize = {
-  xs: "icon-xs",
-  sm: "icon-sm",
-  md: "icon-md",
-} as const;
-
 const numberInputTextSize = {
   xs: "ui-text-sm",
   sm: "ui-text-sm",
-  md: "ui-text-md",
+  md: "ui-text-base",
 } as const;
 
 export default function NumberInput({
@@ -140,7 +134,7 @@ export default function NumberInput({
       <Button
         type="button"
         variant="ghost"
-        size={numberInputButtonSize[size]}
+        compact
         onClick={() => handleStep(-1)}
         disabled={!canDecrement}
         aria-label="Decrease value"
@@ -171,7 +165,7 @@ export default function NumberInput({
       <Button
         type="button"
         variant="ghost"
-        size={numberInputButtonSize[size]}
+        compact
         onClick={() => handleStep(1)}
         disabled={!canIncrement}
         aria-label="Increase value"

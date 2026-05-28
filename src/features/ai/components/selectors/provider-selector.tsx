@@ -103,7 +103,7 @@ export function ProviderSelector({
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("w-fit max-w-[128px]")
-      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 text-xs",
+      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
 
@@ -155,8 +155,8 @@ export function ProviderSelector({
           aria-expanded={isOpen}
           className={cn(
             buttonVariants({
-              variant: isComposer ? "ghost" : "secondary",
-              size: isComposer ? "xs" : "sm",
+              variant: isComposer ? "ghost" : "default",
+              compact: true,
             }),
             triggerClass,
             "cursor-text",
@@ -188,8 +188,8 @@ export function ProviderSelector({
             triggerRef.current = node;
           }}
           type="button"
-          variant={isComposer ? "ghost" : "secondary"}
-          size={isComposer ? "xs" : "sm"}
+          variant={isComposer ? "ghost" : "default"}
+          compact
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"
@@ -219,6 +219,7 @@ export function ProviderSelector({
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
         style={{ maxHeight: "260px", minWidth: 0, width: dropdownWidth }}
+        animated={!isComposer}
       >
         <div
           ref={listRef}
@@ -247,7 +248,7 @@ export function ProviderSelector({
                 onPointerMove={() => setActiveIndex(filteredProviders.indexOf(provider))}
                 className={cn(
                   dropdownItemClassName(),
-                  "mb-1 min-h-8 gap-2 py-2 text-xs last:mb-0",
+                  "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
                   isActive && "bg-hover",
                   isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                 )}

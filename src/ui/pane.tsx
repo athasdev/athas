@@ -1,44 +1,72 @@
-import { Button, type ButtonProps, buttonVariants } from "@/ui/button";
+import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
+import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
-export const PANE_HEADER_BASE = "flex min-h-7 items-center gap-1.5 bg-primary-bg px-1.5 py-1";
+const paneHeaderVariants = cva("flex min-h-7 items-center gap-1.5 bg-primary-bg px-1.5 py-1");
 
-export const PANE_TITLE_BASE = "ui-font ui-text-sm font-medium text-text";
+const paneTitleVariants = cva("ui-font ui-text-sm font-medium text-text");
 
-export const PANE_CHIP_BASE =
-  "ui-font ui-text-sm inline-flex h-5 items-center rounded-md border border-border/70 bg-primary-bg px-1.5 text-text-lighter";
-
-export const PANE_ICON_BUTTON_BASE = cn(
-  buttonVariants({
-    variant: "secondary",
-    size: "icon-sm",
-  }),
-  "shrink-0 rounded-lg text-text-lighter",
+const paneChipVariants = cva(
+  "ui-font ui-text-sm inline-flex h-5 items-center rounded-md border border-border/70 bg-primary-bg px-1.5 text-text-lighter",
 );
 
-export const PANE_GROUP_BASE = "flex items-center gap-1";
+const paneGroupVariants = cva("flex items-center gap-1");
+
+type PaneHeaderProps = React.ComponentProps<"div"> & VariantProps<typeof paneHeaderVariants>;
+
+function PaneHeader({ className, ...props }: PaneHeaderProps) {
+  return (
+    <div data-slot="pane-header" className={cn(paneHeaderVariants({ className }))} {...props} />
+  );
+}
+
+type PaneTitleProps = React.ComponentProps<"span"> & VariantProps<typeof paneTitleVariants>;
+
+function PaneTitle({ className, ...props }: PaneTitleProps) {
+  return (
+    <span data-slot="pane-title" className={cn(paneTitleVariants({ className }))} {...props} />
+  );
+}
+
+type PaneChipProps = React.ComponentProps<"span"> & VariantProps<typeof paneChipVariants>;
+
+function PaneChip({ className, ...props }: PaneChipProps) {
+  return <span data-slot="pane-chip" className={cn(paneChipVariants({ className }))} {...props} />;
+}
+
+type PaneGroupProps = React.ComponentProps<"div"> & VariantProps<typeof paneGroupVariants>;
+
+function PaneGroup({ className, ...props }: PaneGroupProps) {
+  return <div data-slot="pane-group" className={cn(paneGroupVariants({ className }))} {...props} />;
+}
 
 export function paneHeaderClassName(className?: string) {
-  return cn(PANE_HEADER_BASE, className);
+  return paneHeaderVariants({ className });
 }
 
 export function paneTitleClassName(className?: string) {
-  return cn(PANE_TITLE_BASE, className);
+  return paneTitleVariants({ className });
 }
 
 export function paneChipClassName(className?: string) {
-  return cn(PANE_CHIP_BASE, className);
+  return paneChipVariants({ className });
 }
 
-export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;
+export function paneGroupClassName(className?: string) {
+  return paneGroupVariants({ className });
+}
 
-export function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
+export function paneIconButtonClassName(className?: string) {
+  return cn("shrink-0 rounded-lg text-text-lighter", className);
+}
+
+export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "compact">;
+
+function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
   return (
-    <Button
-      variant="secondary"
-      size="icon-sm"
-      className={cn("shrink-0 rounded-lg text-text-lighter", className)}
-      {...props}
-    />
+    <Button variant="default" compact className={paneIconButtonClassName(className)} {...props} />
   );
 }
+
+export { PaneChip, PaneGroup, PaneHeader, PaneIconButton, PaneTitle };

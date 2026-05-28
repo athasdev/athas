@@ -6,41 +6,31 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "ui-font inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent text-[length:var(--app-ui-control-font-size)] leading-none transition-all duration-150 select-none outline-none focus:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg:not([class*='size-'])]:size-[length:var(--app-ui-control-icon-size)] [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "ui-font inline-flex h-[var(--app-ui-button-height,2rem)] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent text-[length:var(--app-ui-control-font-size)] leading-none transition-all duration-150 select-none outline-none focus:outline-none focus-visible:border-accent/45 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:pointer-events-none disabled:opacity-50 [&_svg:not([class*='size-'])]:size-[length:var(--app-ui-control-icon-size)] [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-hover text-text hover:bg-selected",
-        primary:
-          "border-blue-500/30 bg-blue-500/20 text-blue-600 hover:bg-blue-500/30 data-[active=true]:border-blue-500/40 data-[active=true]:bg-blue-500/30",
-        secondary:
-          "bg-primary-bg/45 text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text data-[active=true]:border-border/60 data-[active=true]:bg-hover/80 data-[active=true]:text-text",
+        accent:
+          "border-accent/30 bg-accent/12 text-accent hover:bg-accent/20 data-[active=true]:border-accent/45 data-[active=true]:bg-accent/24",
         ghost:
           "bg-transparent text-text-lighter hover:bg-hover hover:text-text data-[active=true]:bg-hover data-[active=true]:text-text",
-        outline:
-          "border-border/70 bg-transparent text-text hover:bg-hover data-[active=true]:bg-hover",
         danger:
-          "bg-transparent text-text-lighter hover:border-error/40 hover:bg-error/90 hover:text-white data-[active=true]:border-error/40 data-[active=true]:bg-error/90 data-[active=true]:text-white",
+          "bg-transparent text-text hover:bg-error/10 hover:text-error data-[active=true]:bg-error/12 data-[active=true]:text-error",
       },
-      size: {
-        xs: "h-6 min-w-[24px] px-1.5",
-        sm: "h-7 min-w-[28px] px-2",
-        md: "h-8 px-3",
-        lg: "h-10 px-4",
-        "icon-xs": "size-5 p-0",
-        "icon-sm": "size-6 p-0",
-        "icon-md": "size-7 p-0",
+      compact: {
+        true: "h-[var(--app-ui-button-compact-height,1.5rem)] min-w-[var(--app-ui-button-compact-min-width,1.5rem)] px-1.5",
+        false: "min-w-[var(--app-ui-button-min-width,2rem)] px-3",
       },
     },
     defaultVariants: {
       variant: "default",
-      size: "md",
+      compact: false,
     },
   },
 );
 
 export type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
-export type ButtonSize = NonNullable<VariantProps<typeof buttonVariants>["size"]>;
 
 export type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -55,7 +45,7 @@ export type ButtonProps = React.ComponentProps<"button"> &
 export function Button({
   className,
   variant = "default",
-  size = "md",
+  compact = false,
   active,
   asChild = false,
   tooltip,
@@ -74,9 +64,9 @@ export function Button({
     <Comp
       data-slot="button"
       data-variant={variant}
-      data-size={size}
+      data-compact={compact}
       data-active={active}
-      className={cn(buttonVariants({ variant, size }), className)}
+      className={cn(buttonVariants({ variant, compact }), className)}
       aria-label={ariaLabel ?? (tooltip ? tooltip : undefined)}
       {...props}
     />

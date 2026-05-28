@@ -8,9 +8,11 @@ import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buf
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
 import {
   closeNewTabInActivePane,
+  getWritablePaneForBuffer,
   removeBufferFromPanes,
   syncAndFocusBufferInPane,
   syncBufferToPane,
+  syncPanePreviewForBuffer,
 } from "@/features/editor/stores/buffer-pane-sync";
 import {
   clearQueuedWorkspaceSessionSave,
@@ -23,7 +25,8 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
-import { cleanupBufferHistoryTracking } from "@/features/editor/stores/editor-app-store";
+import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
+import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
   EditorContent,
   OpenContentSpec,
@@ -44,7 +47,8 @@ export type Buffer = PaneContent;
 
 interface PendingClose {
   bufferId: string;
-  type: "single" | "others" | "all" | "to-right";
+  type: "single" | "others" | "all" | "to-left" | "to-right";
+  anchorBufferId?: string;
   keepBufferId?: string;
 }
 
@@ -119,6 +123,7 @@ interface BufferActions {
   openAgentBuffer: (sessionId?: string) => string;
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
+  openReferencesBuffer: () => string;
   openOnboardingBuffer: (
     context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
   ) => string;
@@ -143,6 +148,8 @@ interface BufferActions {
   handleTabPin: (bufferId: string) => void;
   handleCloseOtherTabs: (keepBufferId: string) => void;
   handleCloseAllTabs: () => void;
+  handleCloseSavedTabs: () => void;
+  handleCloseTabsToLeft: (bufferId: string) => void;
   handleCloseTabsToRight: (bufferId: string) => void;
   reorderBuffers: (startIndex: number, endIndex: number) => void;
   switchToNextBuffer: () => void;
@@ -177,6 +184,32 @@ const applyAutoEviction = (
   }
 
   return nextBuffers;
+};
+
+const getPaneReplacementBufferId = (
+  closingBufferIds: string[],
+  buffers: PaneContent[],
+): string | null => {
+  const paneStore = usePaneStore.getState();
+  const closingBufferIdSet = new Set(closingBufferIds);
+  const activePane = paneStore.actions.getActivePane();
+  const sourcePane =
+    (closingBufferIds.length === 1
+      ? paneStore.actions.getPaneByBufferId(closingBufferIds[0])
+      : null) ?? activePane;
+
+  if (!sourcePane) return null;
+
+  const openBufferIds = new Set(
+    buffers.filter((buffer) => !closingBufferIdSet.has(buffer.id)).map((buffer) => buffer.id),
+  );
+  const candidates = [
+    ...(sourcePane.mruBufferIds ?? []),
+    ...sourcePane.bufferIds,
+    ...buffers.map((buffer) => buffer.id),
+  ];
+
+  return candidates.find((bufferId) => openBufferIds.has(bufferId)) ?? null;
 };
 
 /**
@@ -272,16 +305,22 @@ export const useBufferStore = createSelectors(
                   }));
                 });
                 syncBufferToPane(existing.id);
+                syncPanePreviewForBuffer(existing.id, shouldBePreview);
                 return existing.id;
               }
 
+              const previewTargetPane = shouldBePreview ? getWritablePaneForBuffer() : null;
               let newBuffers = closeNewTabInActivePane([...buffers]);
 
               if (shouldBePreview) {
-                const existingPreview = newBuffers.find((b) => b.isPreview);
+                const existingPreview = previewTargetPane?.previewBufferId
+                  ? newBuffers.find(
+                      (b) => b.id === previewTargetPane.previewBufferId && b.isPreview,
+                    )
+                  : null;
                 if (existingPreview) {
                   cleanupBufferHistoryTracking(existingPreview.id);
-                  removeBufferFromPanes(existingPreview.id);
+                  removeBufferFromPanes(existingPreview.id, true);
                   newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
                 }
               }
@@ -299,6 +338,7 @@ export const useBufferStore = createSelectors(
               });
 
               syncBufferToPane(newBuffer.id);
+              syncPanePreviewForBuffer(newBuffer.id, shouldBePreview);
 
               // Track in recent files and check extensions (only for real files)
               if (shouldStartLsp(newBuffer)) {
@@ -447,39 +487,20 @@ export const useBufferStore = createSelectors(
             }
 
             case "newTab": {
-              const paneStore = usePaneStore.getState();
-              const activePane = paneStore.actions.getActivePane();
-              const paneBufferIds = activePane?.bufferIds ?? [];
-              const existingNewTab = buffers.find(
-                (b) => b.type === "newTab" && paneBufferIds.includes(b.id),
-              );
-
-              if (existingNewTab) {
-                set((state) => {
-                  state.activeBufferId = existingNewTab.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existingNewTab.id,
-                  }));
-                });
-                if (activePane) {
-                  paneStore.actions.setActivePaneBuffer(activePane.id, existingNewTab.id);
-                }
-                return existingNewTab.id;
-              }
-
-              const newTabId = `buffer_new_tab_${Date.now()}`;
-              const newBuffer = createPaneContent(newTabId, spec);
+              const cleanedBuffers = closeNewTabInActivePane([...buffers]);
+              const id = generateBufferId(`newtab://${Date.now()}`);
+              const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = state.buffers
-                  .map((b) => ({ ...b, isActive: false }))
-                  .concat(newBuffer);
-                state.activeBufferId = newTabId;
+                state.buffers = [
+                  ...cleanedBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
               });
-
-              syncBufferToPane(newTabId);
-              return newTabId;
+              syncBufferToPane(newBuffer.id);
+              saveSessionToStore(get().buffers, get().activeBufferId);
+              return newBuffer.id;
             }
 
             case "pullRequest": {
@@ -656,7 +677,8 @@ export const useBufferStore = createSelectors(
             }
 
             case "globalSearch":
-            case "diagnostics": {
+            case "diagnostics":
+            case "references": {
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
@@ -674,7 +696,11 @@ export const useBufferStore = createSelectors(
               newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
               const path =
-                spec.type === "globalSearch" ? "search://global" : "diagnostics://problems";
+                spec.type === "globalSearch"
+                  ? "search://global"
+                  : spec.type === "diagnostics"
+                    ? "diagnostics://problems"
+                    : "references://results";
               const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
 
@@ -948,6 +974,10 @@ export const useBufferStore = createSelectors(
           return get().actions.openContent({ type: "diagnostics" });
         },
 
+        openReferencesBuffer: (): string => {
+          return get().actions.openContent({ type: "references" });
+        },
+
         openOnboardingBuffer: (context): string => {
           return get().actions.openContent({ type: "onboarding", context });
         },
@@ -978,6 +1008,9 @@ export const useBufferStore = createSelectors(
           if (bufferIndex === -1) return;
 
           cleanupBufferHistoryTracking(bufferId);
+
+          const replacementBufferId =
+            activeBufferId === bufferId ? getPaneReplacementBufferId([bufferId], buffers) : null;
 
           removeBufferFromPanes(bufferId);
 
@@ -1040,7 +1073,9 @@ export const useBufferStore = createSelectors(
           let newActiveId = activeBufferId;
 
           if (activeBufferId === bufferId) {
-            if (newBuffers.length > 0) {
+            if (replacementBufferId) {
+              newActiveId = replacementBufferId;
+            } else if (newBuffers.length > 0) {
               const newIndex = Math.min(bufferIndex, newBuffers.length - 1);
               newActiveId = newBuffers[newIndex].id;
             } else {
@@ -1056,11 +1091,21 @@ export const useBufferStore = createSelectors(
             state.activeBufferId = newActiveId;
           });
 
+          if (newActiveId) {
+            syncAndFocusBufferInPane(newActiveId);
+          }
+
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
           if (bufferIds.length === 0) return;
+
+          const { buffers, activeBufferId } = get();
+          const replacementBufferId =
+            activeBufferId && bufferIds.includes(activeBufferId)
+              ? getPaneReplacementBufferId(bufferIds, buffers)
+              : null;
 
           bufferIds.forEach((id) => removeBufferFromPanes(id));
 
@@ -1068,14 +1113,28 @@ export const useBufferStore = createSelectors(
             state.buffers = state.buffers.filter((b) => !bufferIds.includes(b.id));
 
             if (bufferIds.includes(state.activeBufferId || "")) {
-              if (state.buffers.length > 0) {
-                state.activeBufferId = state.buffers[0].id;
-                state.buffers[0].isActive = true;
+              if (replacementBufferId) {
+                state.activeBufferId = replacementBufferId;
+                state.buffers = state.buffers.map((buffer) => ({
+                  ...buffer,
+                  isActive: buffer.id === replacementBufferId,
+                }));
+              } else if (state.buffers.length > 0) {
+                const nextBufferId = state.buffers[0].id;
+                state.activeBufferId = nextBufferId;
+                state.buffers = state.buffers.map((buffer) => ({
+                  ...buffer,
+                  isActive: buffer.id === nextBufferId,
+                }));
               } else {
                 state.activeBufferId = null;
               }
             }
           });
+
+          if (replacementBufferId) {
+            syncAndFocusBufferInPane(replacementBufferId);
+          }
 
           if (!skipSessionSave) {
             saveSessionToStore(get().buffers, get().activeBufferId);
@@ -1112,6 +1171,7 @@ export const useBufferStore = createSelectors(
 
           if (buffer.content === content && !diffData) return;
 
+          let promotedPreviewBufferId: string | null = null;
           set((state) => {
             const buf = state.buffers.find((b) => b.id === bufferId);
             if (!buf || !isEditableContent(buf)) return;
@@ -1128,12 +1188,17 @@ export const useBufferStore = createSelectors(
                 buf.isDirty = content !== buf.savedContent;
                 if (buf.isPreview && content !== buf.savedContent) {
                   buf.isPreview = false;
+                  promotedPreviewBufferId = buf.id;
                 }
               }
             } else if (buf.type === "diff") {
               buf.savedContent = content;
             }
           });
+
+          if (promotedPreviewBufferId) {
+            usePaneStore.getState().actions.clearPreviewBufferEverywhere(promotedPreviewBufferId);
+          }
         },
 
         updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => {
@@ -1199,16 +1264,19 @@ export const useBufferStore = createSelectors(
         },
 
         handleTabPin: (bufferId: string) => {
+          let isPinned = false;
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isPinned = !buffer.isPinned;
+              isPinned = buffer.isPinned;
               if (buffer.isPinned) {
                 buffer.isPreview = false;
               }
             }
           });
 
+          usePaneStore.getState().actions.setBufferPinnedEverywhere(bufferId, isPinned);
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
@@ -1234,6 +1302,8 @@ export const useBufferStore = createSelectors(
               buffer.isPreview = false;
             }
           });
+          usePaneStore.getState().actions.clearPreviewBufferEverywhere(bufferId);
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
@@ -1273,6 +1343,37 @@ export const useBufferStore = createSelectors(
           buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
+        handleCloseSavedTabs: () => {
+          const { buffers } = get();
+          const buffersToClose = buffers.filter(
+            (buffer) => !buffer.isPinned && !(isEditorContent(buffer) && buffer.isDirty),
+          );
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+        },
+
+        handleCloseTabsToLeft: (bufferId: string) => {
+          const { buffers } = get();
+          const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+          if (bufferIndex === -1) return;
+
+          const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
+
+          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                anchorBufferId: bufferId,
+                type: "to-left",
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+        },
+
         handleCloseTabsToRight: (bufferId: string) => {
           const { buffers } = get();
           const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
@@ -1285,6 +1386,7 @@ export const useBufferStore = createSelectors(
             set((state) => {
               state.pendingClose = {
                 bufferId: dirtyBuffer.id,
+                anchorBufferId: bufferId,
                 type: "to-right",
               };
             });
@@ -1322,7 +1424,7 @@ export const useBufferStore = createSelectors(
           const nextBufferId = cyclableIds[nextIndex];
 
           if (activePane) {
-            paneStore.actions.setActivePaneBuffer(activePane.id, nextBufferId);
+            ensureBufferInPane(activePane.id, nextBufferId, true);
           }
           set((state) => {
             state.activeBufferId = nextBufferId;
@@ -1351,7 +1453,7 @@ export const useBufferStore = createSelectors(
           const prevBufferId = cyclableIds[prevIndex];
 
           if (activePane) {
-            paneStore.actions.setActivePaneBuffer(activePane.id, prevBufferId);
+            ensureBufferInPane(activePane.id, prevBufferId, true);
           }
           set((state) => {
             state.activeBufferId = prevBufferId;
@@ -1406,7 +1508,7 @@ export const useBufferStore = createSelectors(
           const { pendingClose } = get();
           if (!pendingClose) return;
 
-          const { bufferId, type, keepBufferId } = pendingClose;
+          const { anchorBufferId, bufferId, type, keepBufferId } = pendingClose;
 
           set((state) => {
             state.pendingClose = null;
@@ -1430,10 +1532,20 @@ export const useBufferStore = createSelectors(
                 buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
               }
               break;
+            case "to-left":
+              {
+                const { buffers } = get();
+                const bufferIndex = buffers.findIndex((b) => b.id === (anchorBufferId ?? bufferId));
+                if (bufferIndex !== -1) {
+                  const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
+                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                }
+              }
+              break;
             case "to-right":
               {
                 const { buffers } = get();
-                const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+                const bufferIndex = buffers.findIndex((b) => b.id === (anchorBufferId ?? bufferId));
                 if (bufferIndex !== -1) {
                   const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
                   buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));

@@ -5,9 +5,11 @@ import { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { splitActiveEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -72,10 +74,14 @@ export function useMenuEventsWrapper() {
     const activeElement = document.activeElement as HTMLElement | null;
     return activeElement?.closest(".terminal-container") !== null;
   };
+  const isFileTreeFocused = () => {
+    const activeElement = document.activeElement as HTMLElement | null;
+    return activeElement?.closest(".file-tree-container") !== null;
+  };
   const shouldRouteEditMenuToEditor = () => {
     const activeElement = document.activeElement as HTMLElement | null;
 
-    if (activeElement?.classList.contains("editor-textarea")) {
+    if (isEditorKeyboardTarget(activeElement)) {
       return true;
     }
 
@@ -201,7 +207,22 @@ export function useMenuEventsWrapper() {
 
       document.execCommand("redo");
     },
-    onFind: () => uiState.setIsFindVisible(true),
+    onSelectAll: () => {
+      if (shouldRouteEditMenuToEditor()) {
+        editorAPI.selectAll();
+        return;
+      }
+
+      document.execCommand("selectAll");
+    },
+    onFind: () => {
+      if (isFileTreeFocused()) {
+        window.dispatchEvent(new CustomEvent("file-tree-open-search"));
+        return;
+      }
+
+      uiState.setIsFindVisible(true);
+    },
     onFindReplace: () => {
       void keymapRegistry.executeCommand("workbench.showFindReplace");
     },
@@ -227,11 +248,7 @@ export function useMenuEventsWrapper() {
       useSettingsStore.getState().toggleAIChatVisible();
     },
     onSplitEditor: () => {
-      const paneStore = usePaneStore.getState();
-      const activePane = paneStore.actions.getActivePane();
-      if (activePane?.activeBufferId) {
-        paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
-      }
+      splitActiveEditorGroup("horizontal");
     },
     onToggleVim: async () => {
       // For now, we'll show a notification about vim mode

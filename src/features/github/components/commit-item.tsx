@@ -3,8 +3,8 @@ import { Copy, ArrowSquareOut as ExternalLink } from "@phosphor-icons/react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import type { Commit } from "../types/pr-viewer";
-import { copyToClipboard, getTimeAgo } from "../utils/pr-viewer-utils";
+import type { Commit } from "../types/github-pr-viewer";
+import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import GitHubMarkdown from "./github-markdown";
 
 interface CommitItemProps {
@@ -52,7 +52,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
             <Button
               onClick={() => void copyToClipboard(commit.oid, "Commit SHA copied")}
               variant="ghost"
-              size="icon-xs"
+              compact
               className="rounded text-text-lighter"
               aria-label="Copy commit SHA"
             >
@@ -64,7 +64,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
               <Button
                 onClick={() => commit.url && void openUrl(commit.url)}
                 variant="ghost"
-                size="icon-xs"
+                compact
                 className="rounded text-text-lighter"
                 aria-label="Open commit in browser"
               >

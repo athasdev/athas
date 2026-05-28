@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { getActiveSidebarView, resolveSidebarPaneClick } from "../utils/sidebar-pane-utils";
+import {
+  getActiveSidebarView,
+  getSidebarPositionForTrigger,
+  resolveSidebarPaneClick,
+  resolveSidebarPaneTrigger,
+} from "../utils/sidebar-pane-utils";
 
 describe("getActiveSidebarView", () => {
   test("defaults to files when no alternate pane is active", () => {
@@ -34,9 +39,9 @@ describe("getActiveSidebarView", () => {
       getActiveSidebarView({
         isGitViewActive: false,
         isGitHubPRsViewActive: false,
-        activeSidebarView: "multi-agents",
+        activeSidebarView: "notifications",
       }),
-    ).toBe("multi-agents");
+    ).toBe("notifications");
   });
 
   test("returns collaboration when the collaboration pane is active", () => {
@@ -122,13 +127,13 @@ describe("resolveSidebarPaneClick", () => {
           isSidebarVisible: true,
           isGitViewActive: false,
           isGitHubPRsViewActive: false,
-          activeSidebarView: "multi-agents",
+          activeSidebarView: "notifications",
         },
-        "multi-agents",
+        "notifications",
       ),
     ).toEqual({
       nextIsSidebarVisible: false,
-      nextView: "multi-agents",
+      nextView: "notifications",
     });
   });
 
@@ -146,6 +151,84 @@ describe("resolveSidebarPaneClick", () => {
     ).toEqual({
       nextIsSidebarVisible: true,
       nextView: "collaboration",
+    });
+  });
+});
+
+describe("getSidebarPositionForTrigger", () => {
+  test("keeps the current sidebar position by default", () => {
+    expect(getSidebarPositionForTrigger("right")).toBe("right");
+  });
+
+  test("uses an explicit trigger side when provided", () => {
+    expect(getSidebarPositionForTrigger("right", "left")).toBe("left");
+  });
+});
+
+describe("resolveSidebarPaneTrigger", () => {
+  test("moves a visible sidebar to the trigger side without closing the active pane", () => {
+    expect(
+      resolveSidebarPaneTrigger(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "files",
+        {
+          currentPosition: "right",
+          triggerSide: "left",
+        },
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: true,
+      nextView: "files",
+      nextPosition: "left",
+    });
+  });
+
+  test("still toggles the active pane closed when the trigger is on the current side", () => {
+    expect(
+      resolveSidebarPaneTrigger(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "files",
+        {
+          currentPosition: "left",
+          triggerSide: "left",
+        },
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: false,
+      nextView: "files",
+      nextPosition: "left",
+    });
+  });
+
+  test("opens the clicked pane on a right-side utility trigger", () => {
+    expect(
+      resolveSidebarPaneTrigger(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "notifications",
+        {
+          currentPosition: "left",
+          triggerSide: "right",
+        },
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: true,
+      nextView: "notifications",
+      nextPosition: "right",
     });
   });
 });

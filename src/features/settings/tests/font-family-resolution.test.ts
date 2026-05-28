@@ -14,12 +14,16 @@ describe("font family resolution", () => {
     expect(getPrimaryFontFamily('"Geist Mono", Menlo, monospace')).toBe("Geist Mono");
   });
 
-  it("migrates legacy Geist font names", () => {
+  it("preserves configured font names that may exist on the system", () => {
     expect(normalizeConfiguredFontFamily("Geist Mono", DEFAULT_MONO_FONT_FAMILY)).toBe(
-      DEFAULT_MONO_FONT_FAMILY,
+      "Geist Mono",
     );
-    expect(normalizeConfiguredFontFamily("Geist Sans", DEFAULT_UI_FONT_FAMILY)).toBe(
-      DEFAULT_UI_FONT_FAMILY,
+    expect(normalizeConfiguredFontFamily("Geist Sans", DEFAULT_UI_FONT_FAMILY)).toBe("Geist Sans");
+  });
+
+  it("falls back when the configured font is empty", () => {
+    expect(normalizeConfiguredFontFamily("   ", DEFAULT_MONO_FONT_FAMILY)).toBe(
+      DEFAULT_MONO_FONT_FAMILY,
     );
   });
 
@@ -38,5 +42,11 @@ describe("font family resolution", () => {
     expect(
       resolveAvailableFontFamily("Berkeley Mono", DEFAULT_MONO_FONT_FAMILY, ["berkeley mono"]),
     ).toBe("Berkeley Mono");
+  });
+
+  it("keeps Geist Mono when it is available as a system font", () => {
+    expect(resolveAvailableFontFamily("Geist Mono", DEFAULT_MONO_FONT_FAMILY, ["geist mono"])).toBe(
+      "Geist Mono",
+    );
   });
 });

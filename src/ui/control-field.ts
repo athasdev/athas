@@ -25,7 +25,7 @@ export const controlFieldSizeVariants = cva("", {
     size: {
       xs: "h-6 ui-text-sm",
       sm: "h-7 ui-text-sm",
-      md: "h-8 ui-text-md",
+      md: "h-8 ui-text-base",
     },
   },
   defaultVariants: {

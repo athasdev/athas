@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { getTimeAgo } from "../utils/pr-viewer-utils";
+import { getTimeAgo } from "../utils/github-viewer-utils";
 import GitHubMarkdown from "./github-markdown";
 
 interface CommentItemProps {

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.kotlin",
+  "name": "Kotlin",
+  "displayName": "Kotlin",
+  "version": "1.0.0",
+  "description": "Kotlin language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "kotlin",
+      "extensions": [".kt", ".kts"],
+      "aliases": ["Kotlin"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "kotlin-language-server",
+      "runtime": "binary",
+      "args": []
+    }
+  }
+}

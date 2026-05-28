@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
 import type { Decoration } from "@/features/editor/types/editor";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -51,30 +51,17 @@ function shouldSkipGitGutter(relativePath: string, contentLength: number): boole
 export function useGitGutter({ filePath, content, enabled = true }: GitGutterHookOptions) {
   const gitDecorationIdsRef = useRef<string[]>([]);
   const lastDiffRef = useRef<GitDiff | null>(null);
-  const lastContentKeyRef = useRef<string>("");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const latestRequestedContentRef = useRef<string>(content);
-  const latestContentKeyRef = useRef<string>("");
+  const lastScheduledContentRef = useRef<string>(content);
 
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const fileIdentity = rootFolderPath && filePath ? `${rootFolderPath}:${filePath}` : "";
 
-  const contentHash = useMemo(() => {
-    if (!content) return "";
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash |= 0;
-    }
-    return hash.toString(36);
-  }, [content]);
-
   useEffect(() => {
     latestRequestedContentRef.current = content;
-    latestContentKeyRef.current = fileIdentity ? `${fileIdentity}:${contentHash}` : "";
-  }, [content, contentHash, fileIdentity]);
+  }, [content]);
 
   const processGitDiff = useCallback((diff: GitDiff): ProcessedGitChanges => {
     const addedLines = new Set<number>();
@@ -247,8 +234,29 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
     if (filePath && rootFolderPath) {
       // File switches should refresh immediately, but content edits already have
       // their own debounced diff path below.
-      lastContentKeyRef.current = latestContentKeyRef.current;
-      updateGitGutter(false);
+      lastScheduledContentRef.current = latestRequestedContentRef.current;
+      let cancelled = false;
+      const refreshGitGutter = () => {
+        if (!cancelled) {
+          void updateGitGutter(false);
+        }
+      };
+
+      if ("requestIdleCallback" in window) {
+        const idleId = window.requestIdleCallback(refreshGitGutter, { timeout: 500 });
+        return () => {
+          cancelled = true;
+          window.cancelIdleCallback(idleId);
+          clearGitDecorations();
+        };
+      }
+
+      const timeoutId = globalThis.setTimeout(refreshGitGutter, 0);
+      return () => {
+        cancelled = true;
+        globalThis.clearTimeout(timeoutId);
+        clearGitDecorations();
+      };
     }
 
     return () => {
@@ -257,18 +265,17 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
   }, [filePath, rootFolderPath, updateGitGutter, clearGitDecorations]);
 
   useEffect(() => {
-    if (!contentHash || !fileIdentity) {
+    if (!fileIdentity) {
       return;
     }
 
-    const contentKey = latestContentKeyRef.current;
-    if (contentKey === lastContentKeyRef.current) {
+    if (content === lastScheduledContentRef.current) {
       return;
     }
 
-    lastContentKeyRef.current = contentKey;
+    lastScheduledContentRef.current = content;
     debouncedUpdate();
-  }, [contentHash, debouncedUpdate, fileIdentity]);
+  }, [content, debouncedUpdate, fileIdentity]);
 
   useEffect(() => {
     if (!enabled || !filePath) return;

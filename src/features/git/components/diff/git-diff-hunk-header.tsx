@@ -115,7 +115,7 @@ const DiffHunkHeader = memo(
               aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
             >
               {isStaged ? <Minus /> : <Plus />}
-              <span className="text-[11px]">{isStaged ? "Unstage" : "Stage"}</span>
+              <span className="ui-text-xs">{isStaged ? "Unstage" : "Stage"}</span>
             </button>
           )}
         </div>

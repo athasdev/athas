@@ -3,6 +3,7 @@ import {
   GitBranch,
   GitCommit,
   GitFork,
+  ArrowSquareOut,
   Plus,
   ArrowClockwise as RefreshCw,
   Trash as Trash2,
@@ -13,7 +14,9 @@ import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import {
@@ -33,7 +36,8 @@ interface GitWorktreeManagerProps {
   onClose?: () => void;
   repoPath?: string;
   onRefresh?: () => void;
-  onSelectWorktree?: (repoPath: string) => void;
+  onSelectWorktree?: (repoPath: string) => void | Promise<void>;
+  onOpenWorktreeInNewWindow?: (repoPath: string) => void | Promise<void>;
   embedded?: boolean;
 }
 
@@ -48,6 +52,7 @@ const GitWorktreeManager = ({
   repoPath,
   onRefresh,
   onSelectWorktree,
+  onOpenWorktreeInNewWindow,
   embedded = false,
 }: GitWorktreeManagerProps) => {
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
@@ -107,17 +112,22 @@ const GitWorktreeManager = ({
     }
   };
 
-  const handleRemoveWorktree = async (worktreePath: string) => {
+  const handleRemoveWorktree = async (worktreePath: string, force = false) => {
     if (!repoPath) return;
-    const confirmed = await primitiveConfirm(`Remove worktree at "${worktreePath}"?`, {
-      title: "Remove Worktree",
-      confirmLabel: "Remove",
-    });
+    const confirmed = await primitiveConfirm(
+      force
+        ? `Force remove worktree at "${worktreePath}"? This can discard uncommitted changes in that checkout.`
+        : `Remove worktree at "${worktreePath}"?`,
+      {
+        title: force ? "Force Remove Worktree" : "Remove Worktree",
+        confirmLabel: force ? "Force Remove" : "Remove",
+      },
+    );
     if (!confirmed) return;
 
     setActionLoading((prev) => new Set(prev).add(worktreePath));
     try {
-      const success = await removeWorktree(repoPath, worktreePath, true);
+      const success = await removeWorktree(repoPath, worktreePath, force);
       if (success) {
         await loadWorktrees();
         onRefresh?.();
@@ -161,9 +171,20 @@ const GitWorktreeManager = ({
     ? [
         {
           id: "open-worktree",
-          label: "Open",
+          label: "Open Workspace",
+          icon: <GitFork />,
           onClick: () => onSelectWorktree?.(contextMenu.data!.path),
         },
+        ...(onOpenWorktreeInNewWindow
+          ? [
+              {
+                id: "open-worktree-new-window",
+                label: "Open in New Window",
+                icon: <ArrowSquareOut />,
+                onClick: () => onOpenWorktreeInNewWindow(contextMenu.data!.path),
+              },
+            ]
+          : []),
         {
           id: "copy-worktree-path",
           label: "Copy Path",
@@ -185,10 +206,18 @@ const GitWorktreeManager = ({
                 className: "text-error hover:!bg-error/10 hover:!text-error",
                 onClick: () => void handleRemoveWorktree(contextMenu.data!.path),
               },
+              {
+                id: "force-remove-worktree",
+                label: "Force Remove",
+                icon: <Trash2 />,
+                className: "text-error hover:!bg-error/10 hover:!text-error",
+                onClick: () => void handleRemoveWorktree(contextMenu.data!.path, true),
+              },
             ]
           : []),
       ]
     : [];
+  const hasPrunableWorktrees = worktrees.some((worktree) => Boolean(worktree.prunable_reason));
 
   const content = (
     <div
@@ -204,7 +233,7 @@ const GitWorktreeManager = ({
               <Button
                 onClick={() => setIsAddFormOpen((value) => !value)}
                 variant="ghost"
-                size="icon-sm"
+                compact
                 className={cn(
                   gitSidebarSectionActionButtonClassName(),
                   isAddFormOpen && "bg-hover text-text",
@@ -215,17 +244,23 @@ const GitWorktreeManager = ({
               >
                 <Plus />
               </Button>
-              <Button
-                onClick={() => void handlePruneWorktrees()}
-                disabled={isLoading}
-                variant="ghost"
-                size="icon-sm"
-                className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                aria-label="Prune worktrees"
-                tooltip="Prune worktrees"
-              >
-                <RefreshCw className={cn(isLoading && "animate-spin")} />
-              </Button>
+              {hasPrunableWorktrees ? (
+                <Button
+                  onClick={() => void handlePruneWorktrees()}
+                  disabled={isLoading}
+                  variant="ghost"
+                  compact
+                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                  aria-label="Prune worktrees"
+                  tooltip="Prune prunable worktrees"
+                >
+                  {isLoading ? (
+                    <LoadingIndicator label="Pruning worktrees" compact />
+                  ) : (
+                    <RefreshCw />
+                  )}
+                </Button>
+              ) : null}
             </>
           }
         />
@@ -233,12 +268,6 @@ const GitWorktreeManager = ({
 
       {isAddFormOpen && (
         <div className="mx-1 mb-1 rounded-lg border border-border/60 bg-secondary-bg/25 px-2.5 py-2">
-          <div className="mb-2">
-            <div className="ui-text-sm font-medium text-text">Create worktree</div>
-            <div className="ui-text-sm text-text-lighter">
-              Add another checkout for this repository.
-            </div>
-          </div>
           <div className="space-y-2">
             <Input
               type="text"
@@ -268,7 +297,7 @@ const GitWorktreeManager = ({
                 type="button"
                 onClick={() => setIsAddFormOpen(false)}
                 variant="ghost"
-                size="sm"
+                compact
                 className="h-7 px-2"
               >
                 Cancel
@@ -276,8 +305,8 @@ const GitWorktreeManager = ({
               <Button
                 onClick={() => void handleAddWorktree()}
                 disabled={isLoading || !path.trim() || (createBranch && !branch.trim())}
-                variant="secondary"
-                size="sm"
+                variant="default"
+                compact
                 className="h-7 px-2"
               >
                 {isLoading ? "Adding..." : "Create Worktree"}
@@ -290,7 +319,7 @@ const GitWorktreeManager = ({
       <div className="min-h-0 flex-1 overflow-y-auto px-1 py-1">
         {isLoading && worktrees.length === 0 ? (
           <div className="ui-text-sm flex h-full min-h-[160px] items-center justify-center px-4 text-center text-text-lighter">
-            Loading worktrees...
+            <LoadingIndicator label="Loading worktrees" showLabel compact />
           </div>
         ) : worktrees.length === 0 ? (
           <div className="ui-text-sm flex h-full min-h-[160px] items-center justify-center px-4 text-center text-text-lighter">
@@ -303,9 +332,16 @@ const GitWorktreeManager = ({
             const worktreeName = getFolderName(worktree.path);
             const branchLabel =
               worktree.branch || (worktree.is_detached ? "Detached HEAD" : "No branch");
+            const statusLabel = worktree.locked_reason
+              ? "Locked"
+              : worktree.prunable_reason
+                ? "Prunable"
+                : worktree.is_bare
+                  ? "Bare"
+                  : null;
 
             return (
-              <div
+              <SidebarListItem
                 key={worktree.path}
                 onClick={() => onSelectWorktree?.(worktree.path)}
                 onContextMenu={(e) =>
@@ -321,51 +357,47 @@ const GitWorktreeManager = ({
                   });
                 }}
                 className={cn(
-                  "mb-1 cursor-grab rounded-xl border border-transparent px-2.5 py-2.5 transition-[transform,background-color,border-color,opacity] active:cursor-grabbing",
-                  worktree.is_current
-                    ? "border-border/60 bg-primary-bg/55"
-                    : "bg-primary-bg/20 hover:bg-hover/70",
+                  "mb-px items-start rounded-md border border-transparent px-2 py-2 transition-[transform,background-color,border-color,opacity]",
+                  worktree.is_current && "border-border/60",
                 )}
+                active={worktree.is_current}
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className="truncate ui-text-sm font-medium text-text"
-                      title={worktree.path}
-                    >
+                    <span className="truncate ui-text-sm text-text leading-4" title={worktree.path}>
                       {worktreeName}
                     </span>
                     {worktree.is_current && (
-                      <span className="ui-text-sm shrink-0 rounded-md border border-border/60 bg-primary-bg/80 px-1.5 py-0.5 text-text-lighter">
+                      <span className="ui-text-xs shrink-0 rounded-md bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter">
                         Current
                       </span>
                     )}
-                    {isActionBusy && (
-                      <span className="ui-text-sm shrink-0 text-text-lighter">Removing...</span>
+                    {statusLabel && (
+                      <span className="ui-text-xs shrink-0 rounded-md bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter">
+                        {statusLabel}
+                      </span>
                     )}
-                  </div>
-                  <div className="ui-text-sm mt-1 truncate text-text-lighter/90">
-                    {relativePath === worktree.path ? worktree.path : relativePath}
+                    {isActionBusy ? (
+                      <span className="ui-text-xs shrink-0 text-text-lighter">Removing...</span>
+                    ) : null}
                   </div>
 
-                  <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-1.5 text-text-lighter">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary-bg/45 px-1.5 py-0.5">
-                      <GitBranch className="size-3.5" />
-                      <span>{branchLabel}</span>
+                  <div className="mt-1 flex min-w-0 items-center gap-2 text-text-lighter/90">
+                    <span className="ui-text-xs inline-flex min-w-0 flex-1 items-center gap-1 editor-font">
+                      <GitBranch className="size-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">{branchLabel}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary-bg/45 px-1.5 py-0.5">
-                      <GitCommit className="size-3.5" />
+                    <span className="ui-text-xs inline-flex shrink-0 items-center gap-1 editor-font">
+                      <GitCommit className="size-3.5 shrink-0" />
                       <span>{worktree.head.slice(0, 7)}</span>
                     </span>
-                    {worktree.prunable_reason && (
-                      <span className="rounded-md bg-secondary-bg/45 px-1.5 py-0.5">Prunable</span>
-                    )}
-                    {worktree.locked_reason && (
-                      <span className="rounded-md bg-secondary-bg/45 px-1.5 py-0.5">Locked</span>
-                    )}
+                  </div>
+
+                  <div className="ui-text-xs mt-1 truncate text-text-lighter/70">
+                    {relativePath === worktree.path ? worktree.path : relativePath}
                   </div>
                 </div>
-              </div>
+              </SidebarListItem>
             );
           })
         )}

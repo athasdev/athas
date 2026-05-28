@@ -50,6 +50,14 @@ describe("auth-api desktop auth parsers", () => {
     expect(apiBaseTest.isLocalApiBase("https://athas.dev")).toBe(false);
   });
 
+  it("falls back from local desktop auth to production", () => {
+    expect(__test__.getAuthApiBaseCandidates("http://localhost:3000")).toEqual([
+      "http://localhost:3000",
+      "https://athas.dev",
+    ]);
+    expect(__test__.getAuthApiBaseCandidates("https://athas.dev")).toEqual(["https://athas.dev"]);
+  });
+
   it("only treats authorization failures as invalid auth", () => {
     expect(isAuthInvalidError(new AuthApiError("Unauthorized", 401))).toBe(true);
     expect(isAuthInvalidError(new AuthApiError("Forbidden", 403))).toBe(true);

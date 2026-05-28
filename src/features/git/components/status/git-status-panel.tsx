@@ -1,4 +1,13 @@
-import { Archive, Check, FileText, Minus, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  Archive,
+  CaretDown,
+  CaretRight,
+  Check,
+  FileText,
+  Minus,
+  Plus,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
@@ -8,6 +17,8 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { SidebarEmptyActionState } from "@/ui/sidebar";
+import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -46,13 +57,13 @@ interface ContextMenuState {
 }
 
 type StatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";
+type StatusSection = "tracked" | "untracked";
 
 const STATUS_ORDER: StatusGroup[] = ["added", "modified", "deleted", "renamed", "untracked"];
 const SECTION_LABELS = {
   tracked: "Tracked",
   untracked: "Untracked",
 } as const;
-const GIT_TREE_INDENT_SIZE = 12;
 
 const createEmptyStatusGroups = (): Record<StatusGroup, GitFile[]> => ({
   added: [],
@@ -157,6 +168,7 @@ const GitStatusPanel = ({
   const contextMenu = useContextMenu<ContextMenuState>();
   const [isLoading, setIsLoading] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<StatusSection>>(new Set());
   const [optimisticStageMap, setOptimisticStageMap] = useState<Record<string, boolean>>({});
 
   const [stashModal, setStashModal] = useState<{
@@ -342,6 +354,18 @@ const GitStatusPanel = ({
     });
   };
 
+  const toggleSectionCollapsed = (section: StatusSection) => {
+    setCollapsedSections((previous) => {
+      const next = new Set(previous);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
+
   const renderFlatFileList = (groupedFiles: Record<StatusGroup, GitFile[]>) => {
     return STATUS_ORDER.map((status) => {
       const statusFiles = groupedFiles[status];
@@ -368,13 +392,25 @@ const GitStatusPanel = ({
     });
   };
 
-  const renderSectionHeader = (title: string, count: number) => (
-    <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center justify-between gap-2 px-2.5 py-1 text-text-lighter">
-      <span>{title}</span>
-      <span className="rounded bg-hover px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-text-lighter/80">
-        {count}
+  const renderSectionHeader = (section: StatusSection, title: string, count: number) => (
+    <button
+      type="button"
+      className="ui-text-sm mt-2 flex w-full min-w-0 items-center justify-between gap-2 rounded-none px-2.5 py-1 text-left text-text-lighter transition-colors hover:bg-hover"
+      onClick={() => toggleSectionCollapsed(section)}
+      aria-expanded={!collapsedSections.has(section)}
+    >
+      <span className="min-w-0 truncate">{title}</span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <span className="rounded bg-hover px-1.5 py-0.5 ui-text-xs uppercase tracking-[0.08em] text-text-lighter/80">
+          {count}
+        </span>
+        {collapsedSections.has(section) ? (
+          <CaretRight className="size-3 text-text-lighter" />
+        ) : (
+          <CaretDown className="size-3 text-text-lighter" />
+        )}
       </span>
-    </div>
+    </button>
   );
 
   const renderFolderTree = (fileList: GitFile[], section: "changes") => {
@@ -384,72 +420,53 @@ const GitStatusPanel = ({
       const folderRows = sortFoldersByName(node.folders.values()).map((folderNode) => {
         const collapseKey = `${section}:${folderNode.fullPath}`;
         const isCollapsed = collapsedFolders.has(collapseKey);
-        const paddingLeft = 14 + depth * GIT_TREE_INDENT_SIZE;
-        const guideLevels = Array.from({ length: depth }, (_, level) => level);
         const folderFiles = collectNodeFiles(folderNode);
         const areAllFolderFilesStaged =
           folderFiles.length > 0 && folderFiles.every((file) => file.staged);
 
         return (
           <Fragment key={folderNode.fullPath}>
-            <div className="file-tree-item w-full" data-depth={depth}>
-              <div className="file-tree-guides">
-                {guideLevels.map((level) => (
-                  <span
-                    key={level}
-                    className="file-tree-guide"
-                    style={{
-                      left: `calc(${14 + level * GIT_TREE_INDENT_SIZE}px + var(--file-tree-guide-icon-offset, 7px))`,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                ))}
-              </div>
-              <Button
-                type="button"
-                onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
-                variant="ghost"
-                className="file-tree-row ui-font ui-text-sm mx-1 flex min-h-7 w-[calc(100%-8px)] cursor-grab justify-start gap-1.5 rounded-md px-1.5 py-1 text-left leading-[1.35] text-text hover:bg-hover active:cursor-grabbing"
-                style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
-                draggable={!!repoPath}
-                onDragStart={(event) => {
-                  if (!repoPath) return;
-                  writeSidebarResourceDragData(event.dataTransfer, {
-                    type: "file",
-                    path: `${repoPath}/${folderNode.fullPath}`,
-                    name: folderNode.name,
-                    isDir: true,
-                  });
-                }}
-              >
-                <FileExplorerIcon
-                  fileName={folderNode.name}
-                  isDir
-                  isExpanded={!isCollapsed}
-                  className="relative z-1 shrink-0 text-text-lighter"
-                  size={14}
+            <SidebarTreeRow
+              depth={depth}
+              onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
+              className="min-w-0 leading-[1.35]"
+              draggable={!!repoPath}
+              onDragStart={(event) => {
+                if (!repoPath) return;
+                writeSidebarResourceDragData(event.dataTransfer, {
+                  type: "file",
+                  path: `${repoPath}/${folderNode.fullPath}`,
+                  name: folderNode.name,
+                  isDir: true,
+                });
+              }}
+            >
+              <FileExplorerIcon
+                fileName={folderNode.name}
+                isDir
+                isExpanded={!isCollapsed}
+                className="relative z-1 shrink-0 text-text-lighter"
+                size={SIDEBAR_TREE_ICON_SIZE}
+              />
+              <span className="relative z-1 truncate leading-[1.35]">{folderNode.name}</span>
+              <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={areAllFolderFilesStaged}
+                  onChange={(checked) =>
+                    void handleSetFilesStaged(
+                      folderFiles.map((file) => file.path),
+                      checked,
+                    )
+                  }
+                  disabled={isLoading || folderFiles.length === 0}
+                  ariaLabel={
+                    areAllFolderFilesStaged
+                      ? `Unstage folder ${folderNode.name}`
+                      : `Stage folder ${folderNode.name}`
+                  }
                 />
-                <span className="relative z-1 truncate leading-[1.35]">{folderNode.name}</span>
-                <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={areAllFolderFilesStaged}
-                    onChange={(checked) =>
-                      void handleSetFilesStaged(
-                        folderFiles.map((file) => file.path),
-                        checked,
-                      )
-                    }
-                    disabled={isLoading || folderFiles.length === 0}
-                    ariaLabel={
-                      areAllFolderFilesStaged
-                        ? `Unstage folder ${folderNode.name}`
-                        : `Stage folder ${folderNode.name}`
-                    }
-                  />
-                </div>
-              </Button>
-            </div>
+              </div>
+            </SidebarTreeRow>
             {!isCollapsed ? renderNode(folderNode, depth + 1) : null}
           </Fragment>
         );
@@ -518,7 +535,7 @@ const GitStatusPanel = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col select-none">
-      <div className="shrink-0 px-1 pb-1">
+      <div className="shrink-0">
         <GitSidebarSectionHeader
           title="Changes"
           actions={
@@ -528,11 +545,11 @@ const GitStatusPanel = ({
                   onClick={handleStashAllUnstaged}
                   disabled={isLoading}
                   variant="ghost"
-                  size="icon-sm"
                   className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                   tooltip="Stash all unstaged changes"
                   tooltipSide="bottom"
                   aria-label="Stash all unstaged changes"
+                  compact
                 >
                   <Archive />
                 </Button>
@@ -542,11 +559,11 @@ const GitStatusPanel = ({
                   onClick={handleStageAll}
                   disabled={isLoading}
                   variant="ghost"
-                  size="icon-sm"
                   className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                   tooltip="Stage all changes"
                   tooltipSide="bottom"
                   aria-label="Stage all changes"
+                  compact
                 >
                   <Plus />
                 </Button>
@@ -556,11 +573,11 @@ const GitStatusPanel = ({
                   onClick={handleUnstageAll}
                   disabled={isLoading}
                   variant="ghost"
-                  size="icon-sm"
                   className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                   tooltip="Unstage all changes"
                   tooltipSide="bottom"
                   aria-label="Unstage all changes"
+                  compact
                 >
                   <Minus />
                 </Button>
@@ -571,31 +588,35 @@ const GitStatusPanel = ({
       </div>
 
       {hasFiles ? (
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-1 pb-1">
+        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
           {trackedFiles.length > 0 && (
             <>
-              {renderSectionHeader(SECTION_LABELS.tracked, trackedFiles.length)}
-              {gitChangesFolderView
-                ? renderFolderTree(trackedFiles, "changes")
-                : renderFlatFileList(groupedTrackedFiles)}
+              {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
+              {!collapsedSections.has("tracked") &&
+                (gitChangesFolderView
+                  ? renderFolderTree(trackedFiles, "changes")
+                  : renderFlatFileList(groupedTrackedFiles))}
             </>
           )}
           {untrackedFiles.length > 0 && (
             <>
-              {renderSectionHeader(SECTION_LABELS.untracked, untrackedFiles.length)}
-              {gitChangesFolderView
-                ? renderFolderTree(untrackedFiles, "changes")
-                : renderFlatFileList(groupedUntrackedFiles)}
+              {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
+              {!collapsedSections.has("untracked") &&
+                (gitChangesFolderView
+                  ? renderFolderTree(untrackedFiles, "changes")
+                  : renderFlatFileList(groupedUntrackedFiles))}
             </>
           )}
         </div>
       ) : null}
 
       {collapseEmptyGitSections && !hasFiles && (
-        <div className="ui-text-sm mx-1 flex items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/55 px-3 py-2 text-text-lighter">
-          <Check className="text-success" />
-          <span className="italic">Working tree clean</span>
-        </div>
+        <SidebarEmptyActionState
+          className="min-h-24"
+          icon={<Check />}
+          message="Working tree clean"
+          tone="success"
+        />
       )}
 
       <ContextMenu

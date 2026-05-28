@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
@@ -34,12 +35,13 @@ const CustomMenuBar = ({
     setActiveMenu(null);
   };
 
-  const handleCommand = (commandId: string) => {
-    handleClickEmit("menu_execute_command", commandId);
+  const handleOpenWebInspector = () => {
+    void invoke("reopen_current_webview_devtools");
+    setActiveMenu(null);
   };
 
-  const handleLocalAction = (action: () => unknown | Promise<unknown>) => {
-    void Promise.resolve(action()).finally(() => setActiveMenu(null));
+  const handleCommand = (commandId: string) => {
+    handleClickEmit("menu_execute_command", commandId);
   };
 
   useEffect(() => {
@@ -76,12 +78,24 @@ const CustomMenuBar = ({
           <MenuItem shortcut="mod+shift+s" onClick={() => handleClickEmit("menu_save_as")}>
             Save As...
           </MenuItem>
+          <MenuItem shortcut="mod+alt+s" onClick={() => handleCommand("file.saveAll")}>
+            Save All
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("file.revert")}>Revert File</MenuItem>
           <MenuItem onClick={() => handleCommand("file.localHistory")}>Show Local History</MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+w" onClick={() => handleClickEmit("menu_close_tab")}>
             Close Tab
           </MenuItem>
           <MenuItem onClick={() => handleCommand("file.closeAll")}>Close All Tabs</MenuItem>
+          <MenuItem onClick={() => handleCommand("file.closeOthers")}>Close Other Tabs</MenuItem>
+          <MenuItem onClick={() => handleCommand("file.closeSaved")}>Close Saved Tabs</MenuItem>
+          <MenuItem onClick={() => handleCommand("file.closeTabsToLeft")}>
+            Close Tabs to the Left
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("file.closeTabsToRight")}>
+            Close Tabs to the Right
+          </MenuItem>
           <MenuItem shortcut="mod+shift+t" onClick={() => handleCommand("file.reopenClosed")}>
             Reopen Closed Tab
           </MenuItem>
@@ -100,16 +114,10 @@ const CustomMenuBar = ({
             Redo
           </MenuItem>
           <MenuItem separator />
-          <MenuItem
-            shortcut="mod+x"
-            onClick={() => handleLocalAction(() => document.execCommand("cut"))}
-          >
+          <MenuItem shortcut="mod+x" onClick={() => handleCommand("editor.cut")}>
             Cut
           </MenuItem>
-          <MenuItem
-            shortcut="mod+c"
-            onClick={() => handleLocalAction(() => document.execCommand("copy"))}
-          >
+          <MenuItem shortcut="mod+c" onClick={() => handleCommand("editor.copy")}>
             Copy
           </MenuItem>
           <MenuItem shortcut="mod+v" onClick={() => handleCommand("editor.paste")}>
@@ -128,6 +136,18 @@ const CustomMenuBar = ({
           <MenuItem shortcut="mod+/" onClick={() => handleClickEmit("menu_toggle_comment")}>
             Toggle Comment
           </MenuItem>
+          <MenuItem shortcut="mod+." onClick={() => handleCommand("editor.quickFix")}>
+            Quick Fix
+          </MenuItem>
+          <MenuItem
+            shortcut="mod+shift+space"
+            onClick={() => handleCommand("editor.triggerParameterHints")}
+          >
+            Trigger Parameter Hints
+          </MenuItem>
+          <MenuItem shortcut="mod+k mod+i" onClick={() => handleCommand("editor.showHover")}>
+            Show Hover
+          </MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+d" onClick={() => handleCommand("editor.duplicateLine")}>
             Duplicate Line
@@ -143,6 +163,9 @@ const CustomMenuBar = ({
           </MenuItem>
           <MenuItem shortcut="shift+alt+f" onClick={() => handleCommand("editor.formatDocument")}>
             Format Document
+          </MenuItem>
+          <MenuItem shortcut="mod+k mod+f" onClick={() => handleCommand("editor.formatSelection")}>
+            Format Selection
           </MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="mod+shift+p" onClick={() => handleClickEmit("menu_command_palette")}>
@@ -191,6 +214,15 @@ const CustomMenuBar = ({
           <MenuItem onClick={() => handleCommand("workbench.toggleMinimap")}>
             Toggle Minimap
           </MenuItem>
+          <MenuItem shortcut="alt+z" onClick={() => handleCommand("editor.toggleWordWrap")}>
+            Toggle Word Wrap
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("editor.toggleLineNumbers")}>
+            Toggle Line Numbers
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("editor.toggleRenderWhitespace")}>
+            Toggle Render Whitespace
+          </MenuItem>
           <MenuItem onClick={() => handleCommand("workbench.toggleSidebarPosition")}>
             Toggle Sidebar Position
           </MenuItem>
@@ -235,6 +267,12 @@ const CustomMenuBar = ({
           <MenuItem separator />
           <MenuItem shortcut="f12" onClick={() => handleCommand("editor.goToDefinition")}>
             Go to Definition
+          </MenuItem>
+          <MenuItem shortcut="mod+f12" onClick={() => handleCommand("editor.goToImplementation")}>
+            Go to Implementation
+          </MenuItem>
+          <MenuItem onClick={() => handleCommand("editor.goToTypeDefinition")}>
+            Go to Type Definition
           </MenuItem>
           <MenuItem shortcut="shift+f12" onClick={() => handleCommand("editor.goToReferences")}>
             Go to References
@@ -289,7 +327,11 @@ const CustomMenuBar = ({
       ),
       Tools: (
         <Menu aria-label="Tools">
-          <MenuItem onClick={() => handleCommand("database.connect")}>Connect to Database</MenuItem>
+          <MenuItem onClick={() => handleCommand("database.connect")}>Databases</MenuItem>
+          <MenuItem separator />
+          <MenuItem shortcut="mod+alt+i" onClick={handleOpenWebInspector}>
+            Web Inspector
+          </MenuItem>
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_open_settings")}>Preferences</MenuItem>
           <MenuItem onClick={() => handleClickEmit("menu_open_extensions")}>Extensions</MenuItem>
@@ -356,7 +398,7 @@ const CustomMenuBar = ({
         </Menu>
       ),
     }),
-    [handleClickEmit, handleCommand, handleLocalAction, setActiveMenu, themes],
+    [handleClickEmit, handleCommand, setActiveMenu, themes],
   );
 
   useEffect(() => {
@@ -400,29 +442,27 @@ const CustomMenuBar = ({
         )}
       >
         {Object.keys(menus).map((menuName) => (
-          <Button
-            key={menuName}
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
-              activeMenu === menuName
-                ? "bg-hover/80 text-text"
-                : "hover:bg-hover/50 hover:text-text",
+          <div key={menuName} className="relative flex h-full items-center">
+            <Button
+              variant="ghost"
+              className={cn(
+                "ui-text-sm h-5 rounded-md px-1.5 text-text-lighter",
+                activeMenu === menuName
+                  ? "bg-hover/80 text-text"
+                  : "hover:bg-hover/50 hover:text-text",
+              )}
+              onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
+            >
+              {menuName}
+            </Button>
+            {activeMenu === menuName && (
+              <div className="absolute top-full left-0 z-[10031] mt-1 w-max min-w-[180px]">
+                {menus[menuName as keyof typeof menus]}
+              </div>
             )}
-            onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
-          >
-            {menuName}
-          </Button>
+          </div>
         ))}
       </div>
-
-      {/* Dropdown — rendered below the tab bar, not overlapping it */}
-      {activeMenu && (
-        <div className="z-[10031] mt-1 w-max min-w-[180px]">
-          {menus[activeMenu as keyof typeof menus]}
-        </div>
-      )}
     </div>
   );
 };

@@ -19,7 +19,7 @@ import {
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings, SettingsSection } from "@/features/settings/types/settings";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
   anthropic: {
@@ -53,6 +53,37 @@ const EDITOR_LINE_HEIGHT_MIN = 1;
 const EDITOR_LINE_HEIGHT_MAX = 2;
 const FILE_TREE_INDENT_SIZE_MIN = 8;
 const FILE_TREE_INDENT_SIZE_MAX = 32;
+const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
+  "none",
+  "boundary",
+  "trailing",
+  "all",
+]);
+const EDITOR_ENGINES = new Set<Settings["editorEngine"]>(["monaco", "athas"]);
+const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
+  "none",
+  "nvim",
+  "helix",
+  "vim",
+  "custom",
+]);
+const SETTINGS_SECTIONS = new Set<SettingsSection>([
+  "account",
+  "general",
+  "editor",
+  "git",
+  "appearance",
+  "databases",
+  "extensions",
+  "ai",
+  "keyboard",
+  "features",
+  "collaboration",
+  "enterprise",
+  "advanced",
+  "terminal",
+  "file-explorer",
+]);
 
 function normalizeEditorLineHeight(value: number): number {
   if (!Number.isFinite(value)) {
@@ -74,6 +105,51 @@ function normalizeFileTreeIndentSize(value: number): number {
 
 function normalizeBaseUrl(value: string | undefined): string {
   return value?.trim().replace(/\/+$/, "") || "";
+}
+
+function isRenderWhitespaceMode(value: unknown): value is Settings["renderWhitespace"] {
+  return (
+    typeof value === "string" && RENDER_WHITESPACE_MODES.has(value as Settings["renderWhitespace"])
+  );
+}
+
+function normalizeRenderWhitespace(value: unknown): Settings["renderWhitespace"] {
+  if (isRenderWhitespaceMode(value)) {
+    return value;
+  }
+
+  return "none";
+}
+
+function normalizeEditorEngine(value: unknown): Settings["editorEngine"] {
+  if (!EDITOR_ENGINES.has(value as Settings["editorEngine"])) {
+    return "monaco";
+  }
+
+  return value as Settings["editorEngine"];
+}
+
+function normalizeExternalEditor(
+  value: unknown,
+  customEditorCommand: string | undefined,
+): Settings["externalEditor"] {
+  if (!EXTERNAL_EDITOR_MODES.has(value as Settings["externalEditor"])) {
+    return "none";
+  }
+
+  if (value === "custom" && !customEditorCommand?.trim()) {
+    return "none";
+  }
+
+  return value as Settings["externalEditor"];
+}
+
+function normalizeSettingsSection(value: unknown): SettingsSection {
+  if (typeof value === "string" && SETTINGS_SECTIONS.has(value as SettingsSection)) {
+    return value as SettingsSection;
+  }
+
+  return "general";
 }
 
 const MAX_SYNCED_AI_SKILLS = 200;
@@ -202,9 +278,15 @@ export function normalizeSettings(settings: Settings): Settings {
 
   if (
     persistedGitPanelMode === "none" ||
-    (persistedGitPanelMode && !["changes", "history", "worktrees"].includes(persistedGitPanelMode))
+    (persistedGitPanelMode && !["changes", "history"].includes(persistedGitPanelMode))
   ) {
     normalizedSettings.gitLastPanelMode = "changes";
+  }
+  normalizedSettings.gitSidebarTabOrder = normalizedSettings.gitSidebarTabOrder.filter(
+    (item): item is "changes" | "history" => item === "changes" || item === "history",
+  );
+  if (normalizedSettings.gitSidebarTabOrder.length === 0) {
+    normalizedSettings.gitSidebarTabOrder = ["changes", "history"];
   }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
@@ -226,10 +308,23 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.editorLineHeight = normalizeEditorLineHeight(
     normalizedSettings.editorLineHeight,
   );
+  normalizedSettings.renderWhitespace = normalizeRenderWhitespace(
+    (normalizedSettings as { renderWhitespace?: unknown }).renderWhitespace,
+  );
+  normalizedSettings.externalEditor = normalizeExternalEditor(
+    (normalizedSettings as { externalEditor?: unknown }).externalEditor,
+    normalizedSettings.customEditorCommand,
+  );
+  normalizedSettings.editorEngine = normalizeEditorEngine(
+    (normalizedSettings as { editorEngine?: unknown }).editorEngine,
+  );
   normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
     normalizedSettings.fileTreeIndentSize,
   );
   normalizedSettings.fileTreeDensity = normalizeFileTreeDensity(normalizedSettings.fileTreeDensity);
+  normalizedSettings.lastSettingsTab = normalizeSettingsSection(
+    (normalizedSettings as { lastSettingsTab?: unknown }).lastSettingsTab,
+  );
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -290,12 +385,24 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return normalizeEditorLineHeight(value as number) as Settings[K];
   }
 
+  if (key === "renderWhitespace") {
+    return normalizeRenderWhitespace(value) as Settings[K];
+  }
+
+  if (key === "editorEngine") {
+    return normalizeEditorEngine(value) as Settings[K];
+  }
+
   if (key === "fileTreeIndentSize") {
     return normalizeFileTreeIndentSize(value as number) as Settings[K];
   }
 
   if (key === "fileTreeDensity") {
     return normalizeFileTreeDensity(value as string) as Settings[K];
+  }
+
+  if (key === "lastSettingsTab") {
+    return normalizeSettingsSection(value) as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {

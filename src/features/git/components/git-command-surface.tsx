@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEventHandler, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import Command, { CommandHeader, CommandInput } from "@/ui/command";
 
@@ -7,8 +7,10 @@ interface GitCommandSurfaceProps {
   onClose: () => void;
   query: string;
   onQueryChange: (value: string) => void;
+  onInputKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   meta?: ReactNode;
+  placement?: "top" | "bottom";
   children: ReactNode;
 }
 
@@ -17,8 +19,10 @@ const GitCommandSurface = ({
   onClose,
   query,
   onQueryChange,
+  onInputKeyDown,
   placeholder,
   meta,
+  placement = "top",
   children,
 }: GitCommandSurfaceProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,16 +39,13 @@ const GitCommandSurface = ({
   }, [isOpen]);
 
   return (
-    <Command
-      isVisible={isOpen}
-      onClose={onClose}
-      className="max-h-[70vh] w-[min(560px,calc(100vw_-_32px))]"
-    >
+    <Command isVisible={isOpen} onClose={onClose} placement={placement}>
       <CommandHeader onClose={onClose}>
         <CommandInput
           ref={inputRef}
           value={query}
           onChange={onQueryChange}
+          onKeyDown={onInputKeyDown}
           placeholder={placeholder}
           className="ui-font"
         />

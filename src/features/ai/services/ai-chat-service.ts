@@ -21,10 +21,11 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
+import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "../lib/claude-code";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
-  return agentId !== "custom";
+  return agentId !== "custom" && agentId !== CLAUDE_CODE_TERMINAL_AGENT_ID;
 };
 
 function resolveProviderModelPair(providerId: string, modelId: string) {
@@ -140,7 +141,7 @@ export const getChatCompletionStream = async (
   systemPromptOverride?: string,
 ): Promise<void> => {
   try {
-    // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
+    // Handle ACP-based CLI agents (Gemini CLI, Codex CLI, etc.)
     if (isAcpAgent(agentId)) {
       const handler = new AcpStreamHandler(
         agentId,

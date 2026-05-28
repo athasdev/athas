@@ -188,12 +188,12 @@ function PrimitiveDialogHost({
         onClose={() => onClose(dialog.resolve)}
         size="sm"
         footer={
-          <Button variant="primary" size="sm" onClick={() => onClose(dialog.resolve)}>
+          <Button variant="accent" onClick={() => onClose(dialog.resolve)}>
             OK
           </Button>
         }
       >
-        <div className="whitespace-pre-wrap text-text text-xs">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -207,20 +207,16 @@ function PrimitiveDialogHost({
         size="sm"
         footer={
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onClose(() => dialog.resolve(false))}
-            >
+            <Button variant="default" onClick={() => onClose(() => dialog.resolve(false))}>
               {dialog.cancelLabel}
             </Button>
-            <Button variant="primary" size="sm" onClick={() => onClose(() => dialog.resolve(true))}>
+            <Button variant="accent" onClick={() => onClose(() => dialog.resolve(true))}>
               {dialog.confirmLabel}
             </Button>
           </>
         }
       >
-        <div className="whitespace-pre-wrap text-text text-xs">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -237,8 +233,7 @@ function PrimitiveDialogHost({
             {dialog.choices.map((choice) => (
               <Button
                 key={choice.value}
-                variant={choice.variant ?? "outline"}
-                size="sm"
+                variant={choice.variant ?? "default"}
                 onClick={() => onClose(() => dialog.resolve(choice.value))}
               >
                 {choice.label}
@@ -247,7 +242,7 @@ function PrimitiveDialogHost({
           </>
         }
       >
-        <div className="whitespace-pre-wrap text-text text-xs">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -260,14 +255,10 @@ function PrimitiveDialogHost({
       size="sm"
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={() => onClose(() => dialog.resolve(null))}>
+          <Button variant="default" onClick={() => onClose(() => dialog.resolve(null))}>
             {dialog.cancelLabel}
           </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => onClose(() => dialog.resolve(promptValue))}
-          >
+          <Button variant="accent" onClick={() => onClose(() => dialog.resolve(promptValue))}>
             {dialog.confirmLabel}
           </Button>
         </>

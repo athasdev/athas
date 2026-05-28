@@ -10,6 +10,15 @@ export interface FormatOptions {
   languageId?: string;
 }
 
+export interface FormatRange {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+}
+
+export interface FormatRangeOptions extends FormatOptions {
+  range: FormatRange;
+}
+
 export interface FormatResult {
   success: boolean;
   formattedContent?: string;
@@ -103,12 +112,53 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
   }
 }
 
+export async function formatRange(options: FormatRangeOptions): Promise<FormatResult> {
+  const { filePath, content, range } = options;
+
+  try {
+    const lspFormatted = await formatRangeWithLsp(filePath, content, range);
+    if (lspFormatted !== null) {
+      return {
+        success: true,
+        formattedContent: lspFormatted,
+      };
+    }
+
+    logger.debug("FormatterService", `No range formatter configured for ${filePath}`);
+    return {
+      success: false,
+      error: "No range formatter configured for this file type",
+    };
+  } catch (error) {
+    logger.error("FormatterService", `Failed to format range in ${filePath}:`, error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 async function formatWithLsp(filePath: string, content: string): Promise<string | null> {
   try {
     const { LspClient } = await import("@/features/editor/lsp/lsp-client");
     return await LspClient.getInstance().formatDocument(filePath, content);
   } catch (error) {
     logger.debug("FormatterService", `LSP formatter unavailable for ${filePath}:`, error);
+    return null;
+  }
+}
+
+async function formatRangeWithLsp(
+  filePath: string,
+  content: string,
+  range: FormatRange,
+): Promise<string | null> {
+  try {
+    const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+    return await LspClient.getInstance().formatRange(filePath, content, range);
+  } catch (error) {
+    logger.debug("FormatterService", `LSP range formatter unavailable for ${filePath}:`, error);
     return null;
   }
 }

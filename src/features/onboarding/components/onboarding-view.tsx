@@ -1,6 +1,7 @@
-import { FileText, FolderOpen } from "@phosphor-icons/react";
+import { FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import {
   type KeybindingPreset,
@@ -11,8 +12,8 @@ import { markOnboardingCompleted } from "@/features/onboarding/lib/onboarding-st
 import type { OnboardingContext } from "@/features/onboarding/lib/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
 import {
-  REQUIRED_UPDATE_TELEMETRY_NOTICE,
-  USAGE_TELEMETRY_DESCRIPTION,
+  TELEMETRY_DESCRIPTION,
+  TELEMETRY_LEARN_MORE_URL,
 } from "@/features/settings/lib/telemetry-copy";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
@@ -31,7 +32,7 @@ function SettingRow({
   children,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -58,6 +59,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
   const [openFoldersInNewWindow, setOpenFoldersInNewWindow] = useState(
     settings.openFoldersInNewWindow,
   );
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [keybindingPreset, setKeybindingPreset] = useState<KeybindingPreset>(
     settings.keybindingPreset,
   );
@@ -113,7 +115,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
     <div className="flex h-full min-h-0 w-full overflow-auto bg-primary-bg">
       <div className="mx-auto flex w-full max-w-[820px] flex-col px-8 py-10">
         <div className="mb-7">
-          <h1 className="ui-font text-2xl font-semibold text-text">{viewModel.title}</h1>
+          <h1 className="ui-font ui-text-base font-semibold text-text">{viewModel.title}</h1>
           <p className="ui-font ui-text-sm mt-2 text-text-light">{viewModel.description}</p>
         </div>
 
@@ -128,14 +130,26 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
                 onChange={(value) => setKeybindingPreset(value as KeybindingPreset)}
                 options={keybindingPresetOptions}
                 size="sm"
-                variant="outline"
+                variant="default"
                 aria-label="Keybinding preset"
               />
             </SettingRow>
 
             <SettingRow
               title="Share anonymous telemetry"
-              description={`${USAGE_TELEMETRY_DESCRIPTION} ${REQUIRED_UPDATE_TELEMETRY_NOTICE}`}
+              description={
+                <>
+                  {TELEMETRY_DESCRIPTION}{" "}
+                  <a
+                    href={TELEMETRY_LEARN_MORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-link hover:underline"
+                  >
+                    Learn more
+                  </a>
+                </>
+              }
             >
               <Switch checked={telemetry} onChange={setTelemetry} />
             </SettingRow>
@@ -146,6 +160,15 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
 
             <SettingRow title="Open folders in a new window">
               <Switch checked={openFoldersInNewWindow} onChange={setOpenFoldersInNewWindow} />
+            </SettingRow>
+
+            <SettingRow
+              title="Import settings from another editor"
+              description="Import matching setup from VS Code, Cursor, Windsurf, Zed, or JetBrains."
+            >
+              <Button variant="default" onClick={() => setIsImportDialogOpen(true)}>
+                Import
+              </Button>
             </SettingRow>
           </div>
         ) : (
@@ -161,15 +184,19 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
         )}
 
         <div className="mt-6 flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => void handleFinish(false)}>
+          <Button variant="ghost" onClick={() => void handleFinish(false)}>
             {viewModel.secondaryLabel}
           </Button>
-          <Button variant="primary" size="sm" onClick={() => void handlePrimaryAction()}>
-            {viewModel.primaryAction === "open-whats-new" ? <FileText /> : <FolderOpen />}
+          <Button variant="accent" onClick={() => void handlePrimaryAction()}>
+            {viewModel.primaryAction !== "open-whats-new" && <FolderOpen />}
             {viewModel.primaryLabel}
           </Button>
         </div>
       </div>
+
+      {isImportDialogOpen && (
+        <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />
+      )}
     </div>
   );
 }

@@ -205,10 +205,10 @@ export function FilePathBreadcrumb({
             <Button
               onClick={handleGoBack}
               variant="ghost"
-              size="sm"
               className={dropdownItemClassName(
                 "justify-start border-border/70 border-b text-text-lighter hover:text-text",
               )}
+              compact
             >
               <ArrowLeft className="shrink-0" />
               <span>Go back</span>
@@ -241,7 +241,7 @@ export function FilePathBreadcrumb({
                 }
               }}
               variant="ghost"
-              size="sm"
+              compact
               className={dropdownItemClassName("justify-start")}
             >
               <PathBreadcrumb

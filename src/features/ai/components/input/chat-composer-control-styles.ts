@@ -2,7 +2,7 @@ import { cn } from "@/utils/cn";
 
 export function chatComposerControlClassName(className?: string) {
   return cn(
-    "h-6 min-w-0 gap-1 rounded-md border-transparent bg-transparent px-1.5 text-xs leading-none text-text-lighter shadow-none [&_svg]:size-3",
+    "h-6 min-w-0 gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-none text-text-lighter shadow-none [&_svg]:size-3",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-[state=open]:bg-hover data-[state=open]:text-text",
@@ -12,7 +12,7 @@ export function chatComposerControlClassName(className?: string) {
 
 export function chatComposerIconButtonClassName(className?: string) {
   return cn(
-    "size-6 rounded-md border-transparent bg-transparent p-0 text-xs leading-none text-text-lighter shadow-none [&_svg]:size-3",
+    "size-6 rounded-md border-transparent bg-transparent p-0 ui-text-xs leading-none text-text-lighter shadow-none [&_svg]:size-3",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-[active=true]:bg-hover data-[active=true]:text-text data-[state=open]:bg-hover data-[state=open]:text-text",
@@ -35,7 +35,7 @@ export const chatComposerDropdownListClassName =
 
 export function chatComposerDropdownItemClassName(className?: string) {
   return cn(
-    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left text-xs leading-[1.35] text-text",
+    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-xs leading-[1.35] text-text",
     "hover:bg-hover focus:outline-none focus:ring-1 focus:ring-border-strong/35",
     className,
   );

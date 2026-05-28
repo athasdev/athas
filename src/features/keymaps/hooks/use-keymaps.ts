@@ -14,6 +14,8 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
+import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
 import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
@@ -78,6 +80,18 @@ export function useKeymaps() {
         return;
       }
 
+      const target = e.target as HTMLElement | null;
+      const isEditorTarget =
+        isEditorKeyboardTarget(target) ||
+        isEditorKeyboardTarget(document.activeElement as HTMLElement | null);
+      const isTerminalTarget =
+        target?.closest(".terminal-container") !== null ||
+        (document.activeElement as HTMLElement | null)?.closest(".terminal-container") !== null;
+      const effectiveContexts = resolveEffectiveKeymapContexts(contexts, {
+        isEditorTarget,
+        isTerminalTarget,
+      });
+
       // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
       if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
         return;
@@ -87,13 +101,19 @@ export function useKeymaps() {
         lastCloseTabShortcutAtRef.current = Date.now();
         e.preventDefault();
         e.stopPropagation();
-        keymapRegistry.executeCommand(contexts.terminalFocus ? "terminal.close" : "file.close");
+        keymapRegistry.executeCommand(
+          effectiveContexts.terminalFocus ? "terminal.close" : "file.close",
+        );
         return;
       }
 
       // When the native menu bar is active, let Tauri's menu accelerators be the only source
       // of truth for overlapping shortcuts to avoid duplicate execution.
-      if (useSettingsStore.getState().settings.nativeMenuBar && isNativeMenuAccelerator(e)) {
+      if (
+        useSettingsStore.getState().settings.nativeMenuBar &&
+        isNativeMenuAccelerator(e) &&
+        !isEditorTarget
+      ) {
         return;
       }
 
@@ -125,12 +145,11 @@ export function useKeymaps() {
       }
 
       // Skip if target is an input (except our editor textarea or terminal)
-      const target = e.target as HTMLElement;
-      const isEditorTextarea = target.classList.contains("editor-textarea");
-      const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
+      const isEditorTextarea = isEditorTarget;
+      const isTerminalTextarea = target?.classList.contains("xterm-helper-textarea") ?? false;
       if (
-        target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)
+        target?.tagName === "INPUT" ||
+        (target?.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)
       ) {
         return;
       }
@@ -156,7 +175,7 @@ export function useKeymaps() {
         }
 
         // Evaluate when clause
-        if (keybinding.when && !evaluateWhenClause(keybinding.when, contexts)) {
+        if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) {
           continue;
         }
 

@@ -12,8 +12,8 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useMemo, useState } from "react";
 import {
-  KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
   KeybindingRow,
+  keybindingTableMinWidth,
 } from "@/features/keymaps/components/keybinding-row";
 import {
   type KeybindingPreset,
@@ -226,8 +226,7 @@ export const KeyboardSettings = () => {
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <Button
-                variant="secondary"
-                size="xs"
+                variant="default"
                 onClick={() => setIsEditingKeybindings(false)}
                 className="gap-1.5"
               >
@@ -236,10 +235,10 @@ export const KeyboardSettings = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" size="xs" onClick={handleImport}>
+                <Button variant="default" onClick={handleImport} compact>
                   Import
                 </Button>
-                <Button variant="default" size="xs" onClick={() => void handleExport()}>
+                <Button variant="default" onClick={() => void handleExport()}>
                   Export
                 </Button>
               </div>
@@ -298,7 +297,7 @@ export const KeyboardSettings = () => {
 
             <div className="flex-1 overflow-hidden">
               <div className="h-full overflow-x-auto overflow-y-auto">
-                <div className={KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME}>
+                <div className={keybindingTableMinWidth()}>
                   <TableHeader
                     gridCols="minmax(220px,2fr) minmax(156px,1fr) minmax(128px,1.25fr) 72px 92px"
                     className="gap-3 px-1.5 py-1"
@@ -311,7 +310,7 @@ export const KeyboardSettings = () => {
                   </TableHeader>
 
                   {filteredCommands.length === 0 ? (
-                    <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
+                    <div className="ui-font ui-text-base flex items-center justify-center py-12 text-text-lighter">
                       No keybindings found
                     </div>
                   ) : (
@@ -354,7 +353,7 @@ export const KeyboardSettings = () => {
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
                 size="sm"
-                variant="outline"
+                variant="default"
                 searchable
                 searchableTrigger="input"
                 aria-label="Keybinding preset"
@@ -371,7 +370,7 @@ export const KeyboardSettings = () => {
             ) : null}
 
             <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
-              <Button variant="default" size="xs" onClick={() => setIsEditingKeybindings(true)}>
+              <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
                 Open Editor
               </Button>
             </SettingRow>

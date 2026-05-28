@@ -7,6 +7,7 @@ import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { primitiveConfirm } from "@/ui/primitive-dialog-service";
 import {
   createTerminalAddons,
@@ -18,6 +19,7 @@ import {
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import { useTerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal-store";
+import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
@@ -133,6 +135,27 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminal: xtermRef.current,
     updateSession,
   });
+
+  const handleTerminalFileDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      const paths = extractDroppedFilePaths(event.dataTransfer);
+      const text = formatDroppedPathsForTerminal(paths);
+      if (!text) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      writeBuffered(text);
+      requestAnimationFrame(() => xtermRef.current?.focus());
+    },
+    [writeBuffered],
+  );
+
+  const handleTerminalDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
 
   const initializeTerminal = useCallback(async () => {
     const container = terminalContainerRef.current;
@@ -725,7 +748,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         <div
           ref={terminalContainerRef}
           id={`terminal-${sessionId}`}
+          data-terminal-drop-target
+          data-terminal-session-id={sessionId}
           className={`xterm-container flex h-full min-h-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          onDragOver={handleTerminalDragOver}
+          onDrop={handleTerminalFileDrop}
           onMouseDown={() => {
             requestAnimationFrame(() => xtermRef.current?.focus());
           }}

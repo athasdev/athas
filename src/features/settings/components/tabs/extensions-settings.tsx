@@ -4,7 +4,6 @@ import {
   Package,
   PaintBrush,
   Plus,
-  ArrowClockwise as RefreshCw,
   Robot,
   MagnifyingGlass as Search,
   TextT,
@@ -16,6 +15,10 @@ import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry"
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import {
+  getManifestDatabaseContributions,
+  getManifestIconContributions,
+} from "@/extensions/types/extension-contributions";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import {
   createSkillFromMarketplace,
@@ -34,6 +37,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { LoadingIndicator } from "@/ui/loading";
 import { SegmentedControl } from "@/ui/segmented-control";
 import { PLATFORM_ARCH } from "@/utils/platform";
 
@@ -98,6 +102,12 @@ function resolvePackageSize(manifest: {
   return typeof size === "number" && size > 0 ? size : undefined;
 }
 
+function getErrorMessage(error: unknown, fallback = "Unknown error"): string {
+  if (error instanceof Error) return error.message || fallback;
+  if (typeof error === "string") return error || fallback;
+  return String(error || fallback);
+}
+
 const getCategoryLabel = (category: UnifiedExtension["category"]) => {
   switch (category) {
     case "language":
@@ -146,11 +156,11 @@ const ExtensionRow = ({
       : extension.extensions?.map((ext) => `.${ext}`);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
+    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="ui-font ui-text-md text-text">{extension.name}</span>
-          <Badge variant="default" size="compact" shape="pill">
+          <span className="ui-font ui-text-base text-text">{extension.name}</span>
+          <Badge variant="default" size="compact">
             {getCategoryLabel(extension.category)}
           </Badge>
           {extension.version && (
@@ -160,7 +170,6 @@ const ExtensionRow = ({
             <Badge
               variant="default"
               size="compact"
-              shape="pill"
               className="border-warning/25 bg-warning/10 text-warning"
             >
               Local override
@@ -194,32 +203,32 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge variant="accent" size="compact" className="rounded-full">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
+          <Badge variant="accent" size="compact">
             Built-in
           </Badge>
         </div>
       ) : isInstalling ? (
         <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
       ) : isUnavailableAgent ? (
-        <div className="flex shrink-0 items-center gap-2">
-          <Button disabled variant="secondary" size="xs" tooltip="Unavailable">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
+          <Button disabled variant="default" tooltip="Unavailable" compact>
             Unavailable
           </Button>
         </div>
       ) : extension.isInstalled ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
-            <Button onClick={onUpdate} variant="default" size="xs" tooltip="Update available">
+            <Button onClick={onUpdate} variant="default" tooltip="Update available" compact>
               {hasRuntimeIssue ? "Reinstall" : "Update"}
             </Button>
           )}
           {hasLocalOverride && onResetOverride && (
             <Button
               onClick={onResetOverride}
-              variant="secondary"
-              size="xs"
+              variant="default"
               tooltip="Reset to marketplace version"
+              compact
             >
               Reset
             </Button>
@@ -227,16 +236,16 @@ const ExtensionRow = ({
           <Button
             onClick={onToggle}
             variant="danger"
-            size="xs"
             className="border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error"
             tooltip={uninstallLabel}
+            compact
           >
             {uninstallLabel}
           </Button>
         </div>
       ) : (
-        <div className="flex shrink-0 items-center gap-2">
-          <Button onClick={onToggle} variant="default" size="xs" tooltip={installLabel}>
+        <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
+          <Button onClick={onToggle} variant="default" tooltip={installLabel} compact>
             {installLabel}
           </Button>
         </div>
@@ -335,8 +344,9 @@ export const ExtensionsSettings = () => {
         });
       }
 
-      if (ext.manifest.databaseProviders && ext.manifest.databaseProviders.length > 0) {
-        const provider = ext.manifest.databaseProviders[0];
+      const databaseContributions = getManifestDatabaseContributions(ext.manifest);
+      if (databaseContributions.length > 0) {
+        const provider = databaseContributions[0];
         const isBuiltInDatabase = isBuiltInDatabaseProvider(provider.id);
         allExtensions.push({
           id: ext.manifest.id,
@@ -372,7 +382,8 @@ export const ExtensionsSettings = () => {
         });
       }
 
-      if (ext.manifest.iconThemes && ext.manifest.iconThemes.length > 0) {
+      const iconContributions = getManifestIconContributions(ext.manifest);
+      if (iconContributions.length > 0) {
         allExtensions.push({
           id: ext.manifest.id,
           name: ext.manifest.displayName,
@@ -385,7 +396,7 @@ export const ExtensionsSettings = () => {
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
-          contributionSummary: ext.manifest.iconThemes.map((theme) => `icon-theme:${theme.id}`),
+          contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
         });
       }
     }
@@ -531,7 +542,7 @@ export const ExtensionsSettings = () => {
       } catch (error) {
         console.error(`Failed to update ${extension.name}:`, error);
         showToast({
-          message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
           type: "error",
           duration: 5000,
         });
@@ -549,7 +560,7 @@ export const ExtensionsSettings = () => {
     } catch (error) {
       console.error(`Failed to update ${extension.name}:`, error);
       showToast({
-        message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
         type: "error",
         duration: 5000,
       });
@@ -574,7 +585,7 @@ export const ExtensionsSettings = () => {
     } catch (error) {
       console.error(`Failed to reset ${extension.name}:`, error);
       showToast({
-        message: `Failed to reset ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to reset ${extension.name}: ${getErrorMessage(error)}`,
         type: "error",
         duration: 5000,
       });
@@ -625,9 +636,9 @@ export const ExtensionsSettings = () => {
           error,
         );
         showToast({
-          message: `Failed to ${extension.isInstalled ? "uninstall" : "install"} ${extension.name}: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+          message: `Failed to ${extension.isInstalled ? "uninstall" : "install"} ${extension.name}: ${getErrorMessage(
+            error,
+          )}`,
           type: "error",
           duration: 5000,
         });
@@ -675,7 +686,7 @@ export const ExtensionsSettings = () => {
       } catch (error) {
         console.error(`Failed to update ${extension.name}:`, error);
         showToast({
-          message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
           type: "error",
           duration: 5000,
         });
@@ -695,7 +706,7 @@ export const ExtensionsSettings = () => {
         } catch (error) {
           console.error(`Failed to uninstall ${extension.name}:`, error);
           showToast({
-            message: `Failed to uninstall ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            message: `Failed to uninstall ${extension.name}: ${getErrorMessage(error)}`,
             type: "error",
             duration: 5000,
           });
@@ -711,7 +722,7 @@ export const ExtensionsSettings = () => {
         } catch (error) {
           console.error(`Failed to install ${extension.name}:`, error);
           showToast({
-            message: `Failed to install ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            message: `Failed to install ${extension.name}: ${getErrorMessage(error)}`,
             type: "error",
             duration: 5000,
           });
@@ -767,7 +778,7 @@ export const ExtensionsSettings = () => {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3">
-        <p className="ui-font ui-text-md font-medium text-text">Extensions</p>
+        <p className="ui-font ui-text-base font-medium text-text">Extensions</p>
         <p className="mt-1 ui-font ui-text-sm text-text-lighter">
           Install built-in tools, manage marketplace extensions, skills, and agents.
         </p>
@@ -800,32 +811,18 @@ export const ExtensionsSettings = () => {
         />
       </div>
 
-      {(settings.extensionsActiveTab === "skill" || settings.extensionsActiveTab === "all") && (
+      {settings.extensionsActiveTab === "skill" && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="xs"
-            onClick={() => setIsSkillsCommandOpen(true)}
-          >
+          <Button type="button" variant="default" onClick={() => setIsSkillsCommandOpen(true)}>
             <Plus />
             New Skill
           </Button>
-          {isLoadingSkills ? (
-            <div className="ui-text-sm flex items-center gap-1.5 text-text-lighter">
-              <RefreshCw className="animate-spin" />
-              Loading skills
-            </div>
-          ) : null}
+          {isLoadingSkills ? <LoadingIndicator label="Loading skills" showLabel compact /> : null}
         </div>
       )}
 
-      {(settings.extensionsActiveTab === "agent" || settings.extensionsActiveTab === "all") &&
-      isLoadingAgents ? (
-        <div className="ui-text-sm mb-3 flex items-center gap-1.5 text-text-lighter">
-          <RefreshCw className="animate-spin" />
-          Loading agents
-        </div>
+      {settings.extensionsActiveTab === "agent" && isLoadingAgents ? (
+        <LoadingIndicator label="Loading agents" showLabel compact className="mb-3" />
       ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">

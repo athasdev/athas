@@ -1,7 +1,7 @@
 import { memo } from "react";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { cn } from "@/utils/cn";
-import { renderTokenizedContent } from "../utils/pr-viewer-utils";
+import { renderTokenizedContent } from "../utils/github-pr-viewer-utils";
 
 interface DiffLineDisplayProps {
   line: string;

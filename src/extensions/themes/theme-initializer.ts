@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionManager } from "@/features/editor/extensions/manager";
+import type { EditorAPI } from "@/features/editor/extensions/types";
 import { themeLoader } from "./theme-loader";
 import { themeRegistry } from "./theme-registry";
 
@@ -23,22 +24,19 @@ const rebuildNativeMenu = async () => {
 
 export const initializeThemeSystem = async () => {
   if (isThemeSystemInitialized) {
-    console.log("initializeThemeSystem: Already initialized, skipping...");
     return;
   }
 
   try {
-    console.log("initializeThemeSystem: Starting...");
     isThemeSystemInitialized = true;
 
     // Initialize extension manager if not already done
     if (!extensionManager.isInitialized()) {
-      console.log("initializeThemeSystem: Initializing extension manager...");
       extensionManager.initialize();
     }
 
     // Create a dummy editor API for theme extensions (they don't need editor functionality)
-    const dummyEditorAPI = {
+    const dummyEditorAPI: EditorAPI = {
       getContent: () => "",
       setContent: () => {},
       insertText: () => {},
@@ -59,6 +57,14 @@ export const initializeThemeSystem = async () => {
       duplicateLine: () => {},
       deleteLine: () => {},
       toggleComment: () => {},
+      goToMatchingBracket: () => {},
+      selectToBracket: () => {},
+      removeBrackets: () => {},
+      expandSelection: () => {},
+      shrinkSelection: () => {},
+      insertCursorAbove: () => {},
+      insertCursorBelow: () => {},
+      insertCursorsAtLineEnds: () => {},
       moveLineUp: () => {},
       moveLineDown: () => {},
       copyLineUp: () => {},
@@ -73,6 +79,8 @@ export const initializeThemeSystem = async () => {
         tabSize: 2,
         lineNumbers: true,
         wordWrap: false,
+        renderWhitespace: "none",
+        renderIndentGuides: true,
         theme: "athas-dark",
       }),
       updateSettings: () => {},
@@ -81,20 +89,14 @@ export const initializeThemeSystem = async () => {
       emitEvent: () => {},
     };
 
-    console.log("initializeThemeSystem: Setting editor API...");
     extensionManager.setEditor(dummyEditorAPI);
 
     // Load theme loader
     try {
-      console.log("initializeThemeSystem: Loading theme loader...");
       await extensionManager.loadExtension(themeLoader);
-      console.log(`initializeThemeSystem: Themes loaded - ${themeLoader.themes.length} themes`);
     } catch (error) {
       console.error("initializeThemeSystem: Failed to load themes:", error);
     }
-
-    // Check what's in the registry
-    console.log("initializeThemeSystem: Themes in registry:", themeRegistry.getAllThemes());
 
     // Mark theme registry as ready
     themeRegistry.markAsReady();
@@ -106,8 +108,6 @@ export const initializeThemeSystem = async () => {
     themeRegistry.onRegistryChange(() => {
       rebuildNativeMenu();
     });
-
-    console.log("Theme system initialized successfully");
   } catch (error) {
     console.error("Failed to initialize theme system:", error);
     isThemeSystemInitialized = false; // Reset flag on error

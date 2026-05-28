@@ -81,7 +81,7 @@ describe("undo grouping", () => {
     }
   });
 
-  it("matches VS Code style spacing boundaries", () => {
+  it("groups spacing boundaries predictably", () => {
     const firstSpace = classifyUndoEdit("abc", "abc ", "typing.other");
     const nextCharacter = classifyUndoEdit("abc ", "abc d", firstSpace);
     const consecutiveSpace = classifyUndoEdit("abc ", "abc  ", firstSpace);
@@ -113,5 +113,15 @@ describe("undo grouping", () => {
 
   it("starts a new group when typing resumes at a different offset", () => {
     expect(collectSnapshots(["", "a", "ab", "abc", "xabc"])).toEqual(["", "abc"]);
+  });
+
+  it("does not retain huge inserted text in undo delta metadata", () => {
+    const pastedText = "x".repeat(300 * 1024);
+    const delta = getUndoEditDelta("", pastedText);
+
+    expect(delta.operation).toBe("other");
+    expect(delta.insertedText).toBe("");
+    expect(delta.insertedLength).toBe(pastedText.length);
+    expect(delta.endOffset).toBe(pastedText.length);
   });
 });

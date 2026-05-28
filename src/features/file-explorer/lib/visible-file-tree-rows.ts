@@ -11,6 +11,18 @@ export interface BuildVisibleFileTreeRowsOptions {
   compactFolders?: boolean;
 }
 
+export interface FilterFileTreeForSearchResult {
+  files: FileEntry[];
+  expandedPaths: Set<string>;
+  matchedPaths: Set<string>;
+  orderedMatchedPaths: string[];
+  matchCount: number;
+}
+
+export interface FileTreeSearchHit {
+  path: string;
+}
+
 function getCompactFolderChild(item: FileEntry): FileEntry | null {
   if (!item.isDir || item.isEditing || item.isRenaming || item.isNewItem || !item.children) {
     return null;
@@ -67,6 +79,79 @@ export function buildVisibleFileTreeRows(
 
   walk(files, 0);
   return rows;
+}
+
+function normalizeSearchPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  if (normalized === "/") return normalized;
+  return normalized.replace(/\/+$/g, "");
+}
+
+export function filterFileTreeForFffHits(
+  files: FileEntry[],
+  hits: readonly FileTreeSearchHit[],
+): FilterFileTreeForSearchResult {
+  const expandedPaths = new Set<string>();
+  const matchedPaths = new Set<string>();
+  const hitPaths = hits.map((hit) => normalizeSearchPath(hit.path));
+  const hitPathSet = new Set(hitPaths);
+  const matchedTreePathByHitPath = new Map<string, string>();
+
+  if (hitPathSet.size === 0) {
+    return {
+      files: [],
+      expandedPaths,
+      matchedPaths,
+      orderedMatchedPaths: [],
+      matchCount: 0,
+    };
+  }
+
+  const walk = (items: FileEntry[]): FileEntry[] =>
+    items.flatMap((item) => {
+      const matchingChildren = item.children ? walk(item.children) : [];
+      const normalizedPath = normalizeSearchPath(item.path);
+      const isMatch = hitPathSet.has(normalizedPath);
+
+      if (!isMatch && matchingChildren.length === 0) {
+        return [];
+      }
+
+      if (isMatch) {
+        matchedPaths.add(item.path);
+        matchedTreePathByHitPath.set(normalizedPath, item.path);
+      }
+
+      if (item.isDir && matchingChildren.length > 0) {
+        expandedPaths.add(item.path);
+      }
+
+      return [
+        {
+          ...item,
+          children: matchingChildren.length > 0 ? matchingChildren : item.children,
+        },
+      ];
+    });
+
+  const filteredFiles = walk(files);
+  const orderedMatchedPaths: string[] = [];
+  const seenOrderedPaths = new Set<string>();
+
+  for (const hitPath of hitPaths) {
+    const treePath = matchedTreePathByHitPath.get(hitPath);
+    if (!treePath || seenOrderedPaths.has(treePath)) continue;
+    seenOrderedPaths.add(treePath);
+    orderedMatchedPaths.push(treePath);
+  }
+
+  return {
+    files: filteredFiles,
+    expandedPaths,
+    matchedPaths,
+    orderedMatchedPaths,
+    matchCount: matchedPaths.size,
+  };
 }
 
 export function getStickyAncestorRow(

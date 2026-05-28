@@ -1,12 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { getApiBase } from "@/utils/api-base";
+import { DEFAULT_API_BASE, getApiBase, isLocalApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();
 const DESKTOP_AUTH_POLL_INTERVAL_MS = 1500;
 const DESKTOP_AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const DESKTOP_SESSION_SECRET_HEADER = "X-Desktop-Session-Secret";
+const AUTH_API_BASE_STORAGE_KEY = "athas_auth_api_base";
 let authTokenCache: string | null | undefined;
+let authApiBaseCache: string | null | undefined;
 let collaborationDeviceIdCache: string | null = null;
 const COLLABORATION_DEVICE_ID_STORAGE_KEY = "athas_collaboration_device_id";
 const COLLABORATION_CLIENT_SEQ_STORAGE_KEY = "athas_collaboration_client_seq";
@@ -85,6 +87,13 @@ export interface SubscriptionInfo {
       contentMarkdown: string;
       version: number;
       updatedAt: string | null;
+    }>;
+    privateChats: Array<{
+      id: number;
+      conversationMemberId: number;
+      authorMemberId: number;
+      body: string;
+      createdAt: string | null;
     }>;
     channelGuests: Array<{
       id: number;
@@ -353,6 +362,9 @@ function parseCollaborationSnapshot(payload: unknown): SubscriptionInfo["collabo
     channelNotes: asArray(payload.channelNotes) as NonNullable<
       SubscriptionInfo["collaboration"]
     >["channelNotes"],
+    privateChats: asArray(payload.privateChats) as NonNullable<
+      SubscriptionInfo["collaboration"]
+    >["privateChats"],
     channelGuests: asArray(payload.channelGuests) as NonNullable<
       SubscriptionInfo["collaboration"]
     >["channelGuests"],
@@ -418,11 +430,77 @@ export function isAuthInvalidError(error: unknown): boolean {
 }
 
 function getApiBaseUnavailableMessage(apiBase = API_BASE): string {
-  if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
+  if (isLocalApiBase(apiBase)) {
     return `Could not reach local auth server at ${apiBase}. Start the local web app/server first, then try sign-in again.`;
   }
 
   return `Could not reach auth server at ${apiBase}.`;
+}
+
+function normalizeApiBase(apiBase: string): string {
+  return apiBase.replace(/\/+$/, "");
+}
+
+function getStoredAuthApiBase(): string | null {
+  if (authApiBaseCache !== undefined) return authApiBaseCache;
+  if (typeof window === "undefined") {
+    authApiBaseCache = null;
+    return authApiBaseCache;
+  }
+
+  try {
+    const value = window.localStorage.getItem(AUTH_API_BASE_STORAGE_KEY)?.trim();
+    authApiBaseCache = value ? normalizeApiBase(value) : null;
+  } catch {
+    authApiBaseCache = null;
+  }
+
+  return authApiBaseCache;
+}
+
+function rememberAuthApiBase(apiBase: string): void {
+  const normalized = normalizeApiBase(apiBase);
+  authApiBaseCache = normalized;
+
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(AUTH_API_BASE_STORAGE_KEY, normalized);
+  } catch {
+    // Auth still works without localStorage; the in-memory cache covers this session.
+  }
+}
+
+function clearAuthApiBase(): void {
+  authApiBaseCache = null;
+
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(AUTH_API_BASE_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures while clearing local auth state.
+  }
+}
+
+function getPreferredAuthApiBase(apiBase?: string): string {
+  return normalizeApiBase(apiBase ?? getStoredAuthApiBase() ?? API_BASE);
+}
+
+function getAuthApiBaseCandidates(apiBase?: string): string[] {
+  const preferred = getPreferredAuthApiBase(apiBase);
+  const candidates = [preferred];
+  const productionBase = normalizeApiBase(DEFAULT_API_BASE);
+
+  if (isLocalApiBase(preferred) && preferred !== productionBase) {
+    candidates.push(productionBase);
+  }
+
+  return candidates;
+}
+
+function shouldFallbackFromAuthApiBase(apiBase: string): boolean {
+  return (
+    isLocalApiBase(apiBase) && normalizeApiBase(apiBase) !== normalizeApiBase(DEFAULT_API_BASE)
+  );
 }
 
 // Secure token storage via Rust backend
@@ -446,6 +524,7 @@ export const storeAuthToken = async (token: string): Promise<void> => {
 
 export const removeAuthToken = async (): Promise<void> => {
   authTokenCache = null;
+  clearAuthApiBase();
   await invoke("remove_auth_token");
 };
 
@@ -460,14 +539,37 @@ async function authenticatedFetch(
     throw new Error("Not authenticated");
   }
 
-  return tauriFetch(`${API_BASE}${path}`, {
+  const requestOptions = {
     ...options,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
-  });
+  };
+
+  let fallbackError: unknown = null;
+  for (const apiBase of getAuthApiBaseCandidates()) {
+    try {
+      const response = await tauriFetch(`${apiBase}${path}`, requestOptions);
+      if (response.status === 404 && shouldFallbackFromAuthApiBase(apiBase)) {
+        fallbackError = new Error(`Auth endpoint not found at ${apiBase}`);
+        continue;
+      }
+
+      rememberAuthApiBase(apiBase);
+      return response;
+    } catch (error) {
+      fallbackError = error;
+      if (!shouldFallbackFromAuthApiBase(apiBase)) {
+        throw error;
+      }
+    }
+  }
+
+  throw fallbackError instanceof Error
+    ? fallbackError
+    : new Error(getApiBaseUnavailableMessage(getPreferredAuthApiBase()));
 }
 
 export async function fetchCurrentUser(tokenOverride?: string): Promise<AuthUser> {
@@ -596,6 +698,64 @@ export async function updateCollaborationChannelNote(input: {
   if (!response.ok) {
     throw new AuthApiError(
       payload?.error || `Failed to update collaboration channel note: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export async function createCollaborationChannel(input: {
+  name: string;
+  description?: string;
+  visibility?: string;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch("/api/collaboration/channels", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      visibility: input.visibility ?? "workspace",
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to create collaboration channel: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return payload?.collaboration ?? null;
+}
+
+export async function appendCollaborationPrivateChatMessage(input: {
+  memberId: number;
+  body: string;
+}): Promise<SubscriptionInfo["collaboration"] | null> {
+  const response = await authenticatedFetch(
+    `/api/collaboration/private-chats/${input.memberId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        body: input.body,
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as {
+    collaboration?: SubscriptionInfo["collaboration"];
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      payload?.error || `Failed to send private chat message: ${response.status}`,
       response.status,
     );
   }
@@ -959,46 +1119,73 @@ export async function beginDesktopAuthSession(options: DesktopAuthApiOptions = {
   sessionId: string;
   pollSecret: string;
   loginUrl: string;
+  apiBase: string;
 }> {
-  const apiBase = options.apiBase ?? API_BASE;
-  let response: Response;
-  try {
-    response = await tauriFetch(`${apiBase}/api/auth/desktop/session/init`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
-    throw new DesktopAuthError(
+  let fallbackError: DesktopAuthError | null = null;
+
+  for (const apiBase of getAuthApiBaseCandidates(options.apiBase)) {
+    let response: Response;
+    try {
+      response = await tauriFetch(`${apiBase}/api/auth/desktop/session/init`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (error) {
+      fallbackError = new DesktopAuthError(
+        "failed",
+        error instanceof Error
+          ? `${getApiBaseUnavailableMessage(apiBase)} ${error.message}`
+          : getApiBaseUnavailableMessage(apiBase),
+      );
+
+      if (shouldFallbackFromAuthApiBase(apiBase)) {
+        continue;
+      }
+
+      throw fallbackError;
+    }
+
+    if (response.status === 404) {
+      fallbackError = new DesktopAuthError(
+        "endpoint_unavailable",
+        "Desktop auth session endpoint is unavailable on this server.",
+      );
+
+      if (shouldFallbackFromAuthApiBase(apiBase)) {
+        continue;
+      }
+
+      throw fallbackError;
+    }
+
+    if (!response.ok) {
+      throw new DesktopAuthError(
+        "failed",
+        `Failed to initialize desktop sign-in (${response.status}).`,
+      );
+    }
+
+    const payload = (await response.json()) as DesktopAuthInitResponse;
+    const parsed = parseDesktopAuthInitResponse(payload);
+    if (!parsed) {
+      throw new DesktopAuthError("failed", "Invalid desktop sign-in initialization response.");
+    }
+
+    return {
+      ...parsed,
+      apiBase,
+    };
+  }
+
+  throw (
+    fallbackError ??
+    new DesktopAuthError(
       "failed",
-      error instanceof Error
-        ? `${getApiBaseUnavailableMessage(apiBase)} ${error.message}`
-        : getApiBaseUnavailableMessage(apiBase),
-    );
-  }
-
-  if (response.status === 404) {
-    throw new DesktopAuthError(
-      "endpoint_unavailable",
-      "Desktop auth session endpoint is unavailable on this server.",
-    );
-  }
-
-  if (!response.ok) {
-    throw new DesktopAuthError(
-      "failed",
-      `Failed to initialize desktop sign-in (${response.status}).`,
-    );
-  }
-
-  const payload = (await response.json()) as DesktopAuthInitResponse;
-  const parsed = parseDesktopAuthInitResponse(payload);
-  if (!parsed) {
-    throw new DesktopAuthError("failed", "Invalid desktop sign-in initialization response.");
-  }
-
-  return parsed;
+      getApiBaseUnavailableMessage(getPreferredAuthApiBase(options.apiBase)),
+    )
+  );
 }
 
 function parseDesktopAuthInitResponse(payload: unknown): {
@@ -1053,7 +1240,7 @@ export async function waitForDesktopAuthToken(
   timeoutMs = DESKTOP_AUTH_TIMEOUT_MS,
   options: DesktopAuthApiOptions = {},
 ): Promise<string> {
-  const apiBase = options.apiBase ?? API_BASE;
+  const apiBase = getPreferredAuthApiBase(options.apiBase);
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
@@ -1098,6 +1285,7 @@ export async function waitForDesktopAuthToken(
     }
 
     if (parsed.status === "ready") {
+      rememberAuthApiBase(apiBase);
       return parsed.token;
     }
 
@@ -1124,4 +1312,5 @@ export const __test__ = {
   parseSubscriptionInfoResponse,
   parseCollaborationSseBlock,
   getApiBaseUnavailableMessage,
+  getAuthApiBaseCandidates,
 };

@@ -56,19 +56,19 @@ export const SymbolListItem = ({
     >
       <span className="shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-xs">
+        <div className="truncate ui-text-xs">
           <span className="text-text">{symbol.name}</span>
           {symbol.containerName && (
-            <span className="ml-1.5 text-[10px] text-text-lighter opacity-60">
+            <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
               {symbol.containerName}
             </span>
           )}
         </div>
       </div>
-      <span className="rounded px-1 py-0.5 font-medium text-[10px] text-text-lighter">
+      <span className="rounded px-1 py-0.5 font-medium ui-text-xs text-text-lighter">
         {symbol.kind}
       </span>
-      <span className="tabular-nums text-[10px] text-text-lighter opacity-50">
+      <span className="tabular-nums ui-text-xs text-text-lighter opacity-50">
         :{symbol.line + 1}
       </span>
     </CommandItem>

@@ -1,18 +1,13 @@
 import { Check, GitBranch, GitFork, Plus } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Combobox,
-  ComboboxActionItem,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/ui/combobox";
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/ui/button";
+import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
+import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
 import type { GitWorktree } from "../types/git-types";
+import GitCommandSurface from "./git-command-surface";
 
 interface GitWorktreeSwitcherProps {
   repoPath?: string;
@@ -22,8 +17,6 @@ interface GitWorktreeSwitcherProps {
   triggerClassName?: string;
   triggerInputClassName?: string;
 }
-
-const WORKTREE_SWITCHER_DROPDOWN_WIDTH = 380;
 
 function getWorktreeLabel(worktree: GitWorktree | undefined, fallbackPath: string) {
   return getFolderName(worktree?.path ?? fallbackPath);
@@ -76,14 +69,12 @@ const GitWorktreeSwitcher = ({
 }: GitWorktreeSwitcherProps) => {
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
   const [worktreeQuery, setWorktreeQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const activeRepoPath = repoPath ?? "";
   const activeWorktree = worktrees.find((worktree) => worktree.path === activeRepoPath);
-  const triggerText = isDropdownOpen
-    ? worktreeQuery || getWorktreeLabel(activeWorktree, activeRepoPath)
-    : getWorktreeLabel(activeWorktree, activeRepoPath);
+  const triggerText = getWorktreeLabel(activeWorktree, activeRepoPath);
   const triggerTextWidthCh = Math.min(Math.max(triggerText.length + 1, 6), 38);
   const filteredWorktrees = useMemo(
     () => getFilteredWorktrees(worktrees, activeRepoPath, worktreeQuery),
@@ -115,8 +106,13 @@ const GitWorktreeSwitcher = ({
   useEffect(() => {
     if (!isDropdownOpen) {
       setWorktreeQuery("");
+      setSelectedIndex(0);
     }
   }, [isDropdownOpen]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [worktreeQuery]);
 
   if (!repoPath) {
     return null;
@@ -155,136 +151,147 @@ const GitWorktreeSwitcher = ({
     }
   };
 
-  return (
-    <Combobox
-      items={filteredWorktrees.map((worktree) => worktree.path)}
-      value={repoPath}
-      inputValue={isDropdownOpen ? worktreeQuery : getWorktreeLabel(activeWorktree, repoPath)}
-      open={isDropdownOpen}
-      filter={null}
-      itemToStringLabel={(worktreePath) =>
-        getWorktreeLabel(
-          worktrees.find((worktree) => worktree.path === worktreePath),
-          worktreePath,
-        )
+  const commandEntries = [
+    ...(createWorktreePath ? [{ type: "create" as const, value: createWorktreePath }] : []),
+    ...filteredWorktrees.map((worktree) => ({ type: "worktree" as const, value: worktree.path })),
+  ];
+
+  const handleCommandKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.min(index + 1, Math.max(commandEntries.length - 1, 0)));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const selectedEntry = commandEntries[selectedIndex];
+      if (!selectedEntry) return;
+      if (selectedEntry.type === "create") {
+        void handleCreateWorktree(selectedEntry.value);
+      } else {
+        handleWorktreeChange(selectedEntry.value);
       }
-      itemToStringValue={(worktreePath) => worktreePath}
-      onInputValueChange={(value) => {
-        setWorktreeQuery(value);
-        if (!isDropdownOpen) {
-          void handleOpenDropdown();
-        }
-      }}
-      onOpenChange={(open) => {
-        setIsDropdownOpen(open);
-        if (open) {
-          void loadWorktrees();
-        }
-      }}
-      onValueChange={(value) => {
-        if (typeof value === "string") {
-          handleWorktreeChange(value);
-        }
-      }}
-    >
-      <ComboboxInput
-        ref={inputRef}
-        onFocus={() => void handleOpenDropdown()}
+    }
+  };
+
+  return (
+    <>
+      <Button
         onClick={() => void handleOpenDropdown()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            setIsDropdownOpen(false);
-          }
-        }}
         disabled={isLoading}
-        readOnly={!isDropdownOpen}
-        leftIcon={GitFork}
-        leftIconSize={triggerIconSize}
-        htmlSize={triggerTextWidthCh}
         variant="ghost"
-        showTrigger={false}
-        showClear={false}
         className={cn(
-          "inline-flex w-fit shrink-0 hover:bg-hover/80",
+          "inline-flex max-w-full shrink-0 overflow-hidden px-2 text-text-lighter hover:bg-hover/80",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
           triggerClassName,
         )}
-        inputClassName={cn(
-          "max-w-[360px] truncate pr-0 pl-7 font-normal",
-          isDropdownOpen ? "cursor-text text-text" : "cursor-pointer text-text-lighter",
-          triggerInputClassName,
-        )}
-        placeholder={getWorktreeLabel(activeWorktree, repoPath)}
         aria-label="Search worktrees"
-      />
-
-      <ComboboxContent
-        side={placement === "up" ? "top" : "bottom"}
-        className="flex flex-col rounded-2xl p-0"
-        style={{
-          width: `min(${WORKTREE_SWITCHER_DROPDOWN_WIDTH}px, calc(100vw - 16px))`,
-          maxWidth: "calc(100vw - 16px)",
-          maxHeight: "260px",
-        }}
       >
-        <ComboboxList className="min-h-0 flex-1 p-2">
+        <GitFork size={triggerIconSize} className="shrink-0" />
+        <span
+          className={cn("ui-text-sm min-w-0 truncate font-normal", triggerInputClassName)}
+          style={{ maxWidth: `${triggerTextWidthCh}ch` }}
+        >
+          {triggerText}
+        </span>
+      </Button>
+
+      <GitCommandSurface
+        isOpen={isDropdownOpen}
+        onClose={() => setIsDropdownOpen(false)}
+        query={worktreeQuery}
+        onQueryChange={setWorktreeQuery}
+        onInputKeyDown={handleCommandKeyDown}
+        placeholder="Search worktrees..."
+        meta={`${worktrees.length} worktree${worktrees.length === 1 ? "" : "s"}`}
+        placement={placement === "up" ? "bottom" : "top"}
+      >
+        <CommandList>
           {filteredWorktrees.length === 0 ? (
-            <ComboboxEmpty>
-              {isLoading ? "Loading worktrees..." : "No worktrees found"}
-            </ComboboxEmpty>
+            <CommandEmpty>
+              {isLoading ? (
+                <LoadingIndicator label="Loading worktrees" showLabel compact />
+              ) : (
+                "No worktrees found"
+              )}
+            </CommandEmpty>
           ) : null}
           {worktrees.length > 0 ? (
             <div className="space-y-1">
               {createWorktreePath ? (
-                <ComboboxActionItem
+                <CommandItem
                   type="button"
                   onClick={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoading}
-                  className={filteredWorktrees.length === 0 ? "bg-hover" : undefined}
+                  isSelected={selectedIndex === 0}
+                  onMouseEnter={() => setSelectedIndex(0)}
+                  className="ui-font"
                 >
-                  <Plus className="shrink-0 text-text-lighter" />
-                  <span className="min-w-0 flex-1 truncate">
+                  <Plus size={14} className="shrink-0 text-text-lighter" />
+                  <span className="ui-text-xs min-w-0 flex-1 truncate text-text">
                     Create worktree "{createWorktreePath}"
                   </span>
-                </ComboboxActionItem>
+                </CommandItem>
               ) : null}
-              {filteredWorktrees.map((worktree) => (
+              {filteredWorktrees.map((worktree, index) => (
                 <WorktreeRow
                   key={worktree.path}
                   worktree={worktree}
                   isCurrent={worktree.path === repoPath}
+                  isSelected={selectedIndex === index + (createWorktreePath ? 1 : 0)}
+                  onMouseEnter={() => setSelectedIndex(index + (createWorktreePath ? 1 : 0))}
+                  onSelect={() => handleWorktreeChange(worktree.path)}
                 />
               ))}
             </div>
           ) : null}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
+        </CommandList>
+      </GitCommandSurface>
+    </>
   );
 };
 
-function WorktreeRow({ worktree, isCurrent }: { worktree: GitWorktree; isCurrent: boolean }) {
+function WorktreeRow({
+  worktree,
+  isCurrent,
+  isSelected,
+  onMouseEnter,
+  onSelect,
+}: {
+  worktree: GitWorktree;
+  isCurrent: boolean;
+  isSelected: boolean;
+  onMouseEnter: () => void;
+  onSelect: () => void;
+}) {
   return (
-    <ComboboxItem
-      value={worktree.path}
-      showIndicator={false}
-      className={cn(
-        "group min-h-7 py-1",
-        isCurrent ? "font-medium text-text" : "text-text-lighter hover:text-text",
-      )}
+    <CommandItem
+      isSelected={isSelected}
+      onMouseEnter={onMouseEnter}
+      onClick={onSelect}
+      className={cn("group ui-font", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
     >
       {isCurrent ? (
-        <Check className="shrink-0 text-success" />
+        <Check size={14} className="shrink-0 text-success" />
       ) : (
-        <GitFork className="shrink-0 text-text-lighter" />
+        <GitFork size={14} className="shrink-0 text-text-lighter" />
       )}
-      <span className="min-w-0 flex-1 truncate">{getFolderName(worktree.path)}</span>
-      <span className="flex max-w-[45%] shrink min-w-0 items-center gap-1.5 text-text-lighter/80 ui-text-sm">
+      <span className="ui-text-xs min-w-0 flex-1 truncate text-text">
+        {getFolderName(worktree.path)}
+      </span>
+      <span className="ui-text-xs flex max-w-[45%] shrink min-w-0 items-center gap-1.5 text-text-lighter/80">
         <GitBranch className="size-3.5 shrink-0" />
         <span className="truncate">{getBranchLabel(worktree)}</span>
       </span>
-      {isCurrent ? <span className="ui-text-sm ml-auto shrink-0 text-success">current</span> : null}
-    </ComboboxItem>
+      {isCurrent ? <span className="ui-text-xs ml-auto shrink-0 text-success">current</span> : null}
+    </CommandItem>
   );
 }
 

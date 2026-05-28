@@ -2,6 +2,7 @@ import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
+import { invoke } from "@tauri-apps/api/core";
 import type { Settings, Theme } from "@/features/settings/types/settings";
 
 const ALL_THEME_CLASSES = [
@@ -26,6 +27,19 @@ interface LegacyMediaQueryList extends MediaQueryList {
 
 let currentThemeSyncQuery: MediaQueryList | null = null;
 let removeThemeSyncListener: (() => void) | null = null;
+
+function applyWindowTransparency(enabled: boolean) {
+  if (typeof document === "undefined") return;
+
+  document.documentElement.setAttribute(
+    "data-window-transparency",
+    enabled ? "enabled" : "disabled",
+  );
+
+  void invoke("set_window_transparency_enabled", { enabled }).catch((error) => {
+    console.warn("Failed to sync window transparency", error);
+  });
+}
 
 function getSystemThemePreference(): SystemThemePreference {
   if (typeof window !== "undefined" && window.matchMedia) {
@@ -95,6 +109,7 @@ export async function applyTheme(theme: Theme) {
         const appliedTheme = themeRegistry.getTheme(theme);
         if (appliedTheme) {
           cacheThemeForBootstrap(appliedTheme);
+          syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
         }
       });
       return;
@@ -104,11 +119,23 @@ export async function applyTheme(theme: Theme) {
     const appliedTheme = themeRegistry.getTheme(theme);
     if (appliedTheme) {
       cacheThemeForBootstrap(appliedTheme);
+      syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
     }
   } catch (error) {
     console.error("Failed to apply theme via registry:", error);
     applyFallbackTheme(theme);
   }
+}
+
+function syncMacOSWindowAppearance(themeType: "light" | "dark") {
+  const transparencyEnabled =
+    typeof document === "undefined"
+      ? true
+      : document.documentElement.getAttribute("data-window-transparency") !== "disabled";
+
+  void invoke("set_macos_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
+    console.warn("Failed to sync macOS window appearance", error);
+  });
 }
 
 export function cacheFontSettings(
@@ -153,6 +180,7 @@ export async function syncOllamaApiKey() {
 
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
+  applyWindowTransparency(settings.windowTransparency);
   void applyTheme(getEffectiveTheme(settings));
   if (settings.syncSystemTheme) {
     syncThemeWithSystem(settings);
@@ -194,5 +222,9 @@ export function applySettingSideEffect<K extends keyof Settings>(
 
   if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
     cacheFontSettings(getSettings());
+  }
+
+  if (key === "windowTransparency") {
+    applyWindowTransparency(value as boolean);
   }
 }

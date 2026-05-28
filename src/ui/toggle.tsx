@@ -17,7 +17,7 @@ const toggleVariants = cva(
       size: {
         xs: "ui-text-sm h-5 min-w-[20px] px-1 py-1",
         sm: "ui-text-sm h-6 min-w-[24px] px-1.5 py-1",
-        md: "ui-text-md h-7 min-w-[28px] px-2 py-1.5",
+        md: "ui-text-base h-7 min-w-[28px] px-2 py-1.5",
       },
       variant: {
         default: "border border-transparent",

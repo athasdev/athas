@@ -12,6 +12,7 @@ export interface Terminal {
   connectionId?: string;
   selection?: string;
   title?: string;
+  customName?: boolean;
   ref?: any;
   splitMode?: boolean;
   splitWithId?: string; // ID of the terminal to split with
@@ -49,6 +50,7 @@ export interface PersistedTerminal {
   shell?: string;
   profileId?: string;
   title?: string;
+  customName?: boolean;
   remoteConnectionId?: string;
 }
 
@@ -63,6 +65,7 @@ export type TerminalAction =
         remoteConnectionId?: string;
         profileId?: string;
         initialCommand?: string;
+        customName?: boolean;
       };
     }
   | { type: "CLOSE_TERMINAL"; payload: { id: string } }

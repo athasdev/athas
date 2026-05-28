@@ -14,6 +14,7 @@ import {
 } from "@/features/image-editor/utils/image-file-utils";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -234,7 +235,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       >
         <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
           <FileIcon className="shrink-0 text-text" />
-          <span className="ui-font truncate text-text text-xs" title={fileName}>
+          <span className="ui-font truncate text-text ui-text-xs" title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
         </div>
@@ -267,7 +268,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             onResetZoom={handleManualReset}
           />
           {onClose && (
-            <Button onClick={handleClose} variant="ghost" size="xs" tooltip="Close image viewer">
+            <Button onClick={handleClose} variant="ghost" tooltip="Close image viewer" compact>
               <X />
             </Button>
           )}
@@ -297,8 +298,8 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             draggable={false}
           />
         ) : (
-          <div className="flex items-center justify-center p-8 text-sm text-text-lighter">
-            Loading image...
+          <div className="flex items-center justify-center p-8 ui-text-sm text-text-lighter">
+            <LoadingIndicator label="Loading image" showLabel />
           </div>
         )}
       </div>

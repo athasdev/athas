@@ -1,7 +1,12 @@
 import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
+import {
+  getManifestDatabaseContributions,
+  getManifestIconContributions,
+} from "../types/extension-contributions";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
 const ATHAS_EXTENSIONS_CDN_PREFIX = "https://athas.dev/extensions";
+const USE_LOCAL_MARKETPLACE_SOURCES = import.meta.env.VITE_EXTENSION_MARKETPLACE_LOCAL === "true";
 const withCdnCacheBuster = (url: string) => {
   if (!url.startsWith(ATHAS_EXTENSIONS_CDN_PREFIX)) {
     return url;
@@ -13,7 +18,7 @@ const withCdnCacheBuster = (url: string) => {
 
 const MANIFEST_SOURCES = import.meta.env.VITE_PARSER_CDN_URL
   ? [withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`)]
-  : import.meta.env.DEV
+  : import.meta.env.DEV && USE_LOCAL_MARKETPLACE_SOURCES
     ? [
         "http://localhost:3000/api/extensions/manifests",
         "http://localhost:3001/manifests.json",
@@ -44,10 +49,12 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
 
 function isContributionExtension(manifest: ExtensionManifest): boolean {
   return Boolean(
-    manifest.databaseProviders?.length ||
+    getManifestDatabaseContributions(manifest).length ||
     manifest.agents?.length ||
+    manifest.contributes?.agents?.length ||
     manifest.themes?.length ||
-    manifest.iconThemes?.length,
+    manifest.contributes?.themes?.length ||
+    getManifestIconContributions(manifest).length,
   );
 }
 

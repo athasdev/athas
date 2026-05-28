@@ -78,7 +78,6 @@ export function KeybindingInput({
         <Button
           type="button"
           variant="ghost"
-          size="xs"
           onClick={(e) => {
             e.stopPropagation();
             handleCancel();

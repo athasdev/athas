@@ -6,6 +6,7 @@ import {
   GitBranch,
   Hash,
   Info,
+  ListBullets,
   Translate as Languages,
   Lightbulb,
   ChatCircleText as MessageSquare,
@@ -13,7 +14,6 @@ import {
   FloppyDisk as Save,
   MagnifyingGlass as Search,
   GearSix as Settings,
-  SidebarSimple,
   Sparkle as Sparkles,
   TerminalWindow as Terminal,
   TextAlignJustify as WrapText,
@@ -68,6 +68,7 @@ function getMatchingSettingsRecords(query: string) {
   if (trimmedQuery.length < 2) return [];
 
   return settingsSearchIndex
+    .filter((record) => record.id !== "editor-vim-mode")
     .map((record) => {
       const score = scoreSearchQuery(trimmedQuery, [
         { value: record.label, weight: 11 },
@@ -239,8 +240,8 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     },
     {
       id: "toggle-vim-mode",
-      label: settings.vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim keybindings",
-      description: settings.vimMode ? "Switch to normal editing mode" : "Enable Vim keybindings",
+      label: "Vim Mode: Toggle",
+      description: settings.vimMode ? "Currently enabled" : "Currently disabled",
       icon: <Terminal />,
       category: "Vim",
       action: () => {
@@ -285,7 +286,11 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       icon: <Hash />,
       category: "Editor",
       action: () => {
-        updateSetting("vimRelativeLineNumbers", !settings.vimRelativeLineNumbers);
+        const nextEnabled = !settings.vimRelativeLineNumbers;
+        if (nextEnabled && !settings.lineNumbers) {
+          updateSetting("lineNumbers", true);
+        }
+        updateSetting("vimRelativeLineNumbers", nextEnabled);
         onClose();
       },
     },
@@ -456,6 +461,24 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "toggle-outline-feature",
+      label: settings.coreFeatures.outline
+        ? "Features: Disable Outline"
+        : "Features: Enable Outline",
+      description: settings.coreFeatures.outline
+        ? "Hide document symbol outline"
+        : "Show document symbol outline",
+      icon: <ListBullets />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          outline: !settings.coreFeatures.outline,
+        });
+        onClose();
+      },
+    },
+    {
       id: "toggle-search-feature",
       label: settings.coreFeatures.search ? "Features: Disable Search" : "Features: Enable Search",
       description: settings.coreFeatures.search
@@ -515,42 +538,6 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           aiChat: !settings.coreFeatures.aiChat,
-        });
-        onClose();
-      },
-    },
-    {
-      id: "toggle-multi-agents-feature",
-      label: settings.coreFeatures.multiAgents
-        ? "Features: Disable Multi Agents"
-        : "Features: Enable Multi Agents",
-      description: settings.coreFeatures.multiAgents
-        ? "Disable multi-agent sidebar"
-        : "Enable multi-agent sidebar",
-      icon: <Sparkles />,
-      category: "Features",
-      action: () => {
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          multiAgents: !settings.coreFeatures.multiAgents,
-        });
-        onClose();
-      },
-    },
-    {
-      id: "toggle-sidebar-builder-feature",
-      label: settings.coreFeatures.sidebarBuilder
-        ? "Features: Disable Sidebar Builder"
-        : "Features: Enable Sidebar Builder",
-      description: settings.coreFeatures.sidebarBuilder
-        ? "Disable the custom sidebar builder"
-        : "Enable the custom sidebar builder",
-      icon: <SidebarSimple />,
-      category: "Features",
-      action: () => {
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          sidebarBuilder: !settings.coreFeatures.sidebarBuilder,
         });
         onClose();
       },

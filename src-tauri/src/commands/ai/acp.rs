@@ -16,6 +16,7 @@ use tokio::sync::Mutex;
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
+const TERMINAL_ONLY_AGENT_IDS: &[&str] = &["claude-code"];
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -252,6 +253,7 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    let mut agents = manifests
       .into_values()
       .flat_map(|manifest| manifest.agents)
+      .filter(|agent| !TERMINAL_ONLY_AGENT_IDS.contains(&agent.id.as_str()))
       .map(to_agent_config)
       .collect::<Vec<_>>();
    agents.sort_by_key(|agent| agent.name.clone());

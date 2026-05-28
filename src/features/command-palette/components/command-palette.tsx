@@ -45,8 +45,8 @@ import { createGitActions } from "../constants/git-actions";
 import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
+import { createPaneActions } from "../constants/pane-actions";
 import { createSettingsActions } from "../constants/settings-actions";
-import { createSidebarBuilderActions } from "../constants/sidebar-builder-actions";
 import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../models/action.types";
@@ -69,9 +69,10 @@ const CommandPalette = () => {
     isFindVisible,
     setIsFindVisible,
     setActiveView,
+    setActiveRightSidebarView,
     setIsQuickOpenVisible,
     openCommandPaletteView,
-    setIsDatabaseConnectionVisible,
+    setIsRightSidebarVisible,
     openSettingsDialog,
   } = useUIState();
   const { openQuickEdit } = useEditorAppStore.use.actions();
@@ -197,18 +198,17 @@ const CommandPalette = () => {
     ...createNavigationActions({
       setIsSidebarVisible,
       setActiveView,
+      setIsBottomPaneVisible,
+      setBottomPaneActiveTab,
       setIsQuickOpenVisible,
       openCommandPaletteView,
       openSettingsDialog,
+      coreFeatures: settings.coreFeatures,
       onClose,
     }),
-    ...(settings.coreFeatures.sidebarBuilder
-      ? createSidebarBuilderActions({
-          setIsSidebarVisible,
-          setActiveView,
-          onClose,
-        })
-      : []),
+    ...createPaneActions({
+      onClose,
+    }),
     ...createFileActions({
       activeBufferId,
       buffers,
@@ -258,7 +258,10 @@ const CommandPalette = () => {
     }),
     ...createDatabaseActions({
       onClose,
-      setIsDatabaseConnectionVisible,
+      openDatabaseSidebar: () => {
+        setActiveRightSidebarView("databases");
+        setIsRightSidebarVisible(true);
+      },
     }),
     ...createAdvancedActions({
       lspStatus,
@@ -443,7 +446,7 @@ const CommandPalette = () => {
                   >
                     {isRecent && <History className="shrink-0 text-text-lighter" />}
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs">{action.label}</div>
+                      <div className="truncate ui-text-xs">{action.label}</div>
                     </div>
                     {binding && (
                       <div className="shrink-0">

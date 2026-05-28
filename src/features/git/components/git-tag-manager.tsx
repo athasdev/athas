@@ -231,8 +231,8 @@ const GitTagManager = ({
             <Button
               type="button"
               onClick={() => setIsCreateOpen(true)}
-              size="xs"
-              variant="secondary"
+              compact
+              variant="default"
               className="gap-1.5"
             >
               <Plus />
@@ -288,15 +288,15 @@ const GitTagManager = ({
               <Button
                 onClick={() => void handleCreateTag()}
                 disabled={isLoading || !newTagName.trim()}
-                size="xs"
-                variant="secondary"
+                compact
+                variant="default"
               >
                 {isLoading ? "Creating..." : "Create"}
               </Button>
               <Button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                size="icon-xs"
+                compact
                 variant="ghost"
                 tooltip="Cancel"
                 aria-label="Cancel create tag"
@@ -388,7 +388,7 @@ const GitTagManager = ({
                       void handleCopy(tag.name, "Tag name");
                     }}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-text-lighter"
                     tooltip="Copy tag name"
                     aria-label={`Copy ${tag.name}`}
@@ -402,7 +402,7 @@ const GitTagManager = ({
                       void handleCopy(tag.commit, "Commit SHA");
                     }}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-text-lighter"
                     tooltip="Copy commit SHA"
                     aria-label={`Copy commit ${shortCommit}`}
@@ -423,7 +423,7 @@ const GitTagManager = ({
                     }}
                     disabled={!previousTag}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-text-lighter disabled:opacity-50"
                     tooltip="Compare with previous tag"
                     aria-label={`Compare ${tag.name} with previous tag`}
@@ -438,7 +438,7 @@ const GitTagManager = ({
                       onClose();
                     }}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-text-lighter"
                     tooltip="Compare with HEAD"
                     aria-label={`Compare ${tag.name} with HEAD`}
@@ -453,7 +453,7 @@ const GitTagManager = ({
                     }}
                     disabled={actionLoading.has(`checkout:${tag.name}`)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-text-lighter disabled:opacity-50"
                     tooltip="Checkout tag"
                     aria-label={`Checkout ${tag.name}`}
@@ -471,7 +471,7 @@ const GitTagManager = ({
                     }}
                     disabled={!selectedRemoteName || actionLoading.has(`Push tag:${tag.name}`)}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-text-lighter disabled:opacity-50"
                     tooltip={selectedRemoteName ? `Push tag to ${selectedRemoteName}` : "No remote"}
                     aria-label={`Push ${tag.name}`}
@@ -497,7 +497,7 @@ const GitTagManager = ({
                       !selectedRemoteName || actionLoading.has(`Delete remote tag:${tag.name}`)
                     }
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
                     tooltip={
                       selectedRemoteName ? `Delete tag from ${selectedRemoteName}` : "No remote"
@@ -514,7 +514,7 @@ const GitTagManager = ({
                     }}
                     disabled={isActionLoading}
                     variant="ghost"
-                    size="icon-xs"
+                    compact
                     className="text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
                     tooltip="Delete tag"
                     aria-label={`Delete ${tag.name}`}
@@ -549,7 +549,7 @@ const GitTagManager = ({
                       ) : null}
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Type</span>
-                        <Badge variant="muted" size="compact" className="text-[10px]">
+                        <Badge variant="muted" size="compact" className="ui-text-xs">
                           {tag.is_annotated ? "Annotated" : "Lightweight"}
                         </Badge>
                       </div>
@@ -578,7 +578,7 @@ const GitTagManager = ({
             onChange={setSelectedRemote}
             options={remotes.map((remote) => ({ value: remote.name, label: remote.name }))}
             size="xs"
-            variant="outline"
+            variant="default"
             aria-label="Tag remote"
           />
         </div>

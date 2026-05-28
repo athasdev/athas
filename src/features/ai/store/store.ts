@@ -3,7 +3,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
+import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
   getProviderApiToken,
@@ -21,7 +23,10 @@ import {
   saveChatToDb,
 } from "@/features/ai/services/ai-chat-history-service";
 import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import type { AIChatActions, AIChatState } from "./types";
+
+const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
   immer(
@@ -252,6 +257,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             lastMessageAt: new Date(),
             agentId: chatAgentId,
             acpSessionId: null,
+            workspacePath: getCurrentWorkspacePath(),
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -273,17 +279,55 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           );
           return newChat.id;
         },
+        ensureChatSession: (chatId, agentId) => {
+          const state = get();
+          const existingChat = state.chats.find((chat) => chat.id === chatId);
+          if (existingChat) {
+            return existingChat.id;
+          }
+
+          const chatAgentId = agentId || state.selectedAgentId;
+          const newChat: Chat = {
+            id: chatId,
+            title: "New Chat",
+            messages: [],
+            createdAt: new Date(),
+            lastMessageAt: new Date(),
+            agentId: chatAgentId,
+            acpSessionId: null,
+            workspacePath: getCurrentWorkspacePath(),
+          };
+
+          set((state) => {
+            state.chats.unshift(newChat);
+            state.currentChatId = newChat.id;
+            state.activeAgentChatIds = [
+              newChat.id,
+              ...state.activeAgentChatIds.filter((item) => item !== newChat.id),
+            ];
+            state.isChatHistoryVisible = false;
+          });
+
+          saveChatToDb(newChat).catch((err) =>
+            console.error("Failed to save new agent chat to database:", err),
+          );
+
+          return newChat.id;
+        },
         ensureChatForAgent: (agentId: AgentType) => {
           const state = get();
+          const workspacePath = getCurrentWorkspacePath();
 
           if (state.currentChatId) {
             const current = state.chats.find((c) => c.id === state.currentChatId);
-            if (current) {
+            if (current && isChatInWorkspace(current, workspacePath)) {
               return current.id;
             }
           }
 
-          const matchingChat = state.chats.find((c) => c.agentId === agentId);
+          const matchingChat = state.chats.find(
+            (c) => c.agentId === agentId && isChatInWorkspace(c, workspacePath),
+          );
           if (matchingChat) {
             set((state) => {
               state.currentChatId = matchingChat.id;
@@ -292,8 +336,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             return matchingChat.id;
           }
 
-          if (state.chats.length > 0) {
-            const fallback = state.chats[0];
+          const fallback = state.chats.find((chat) => isChatInWorkspace(chat, workspacePath));
+          if (fallback) {
             set((state) => {
               state.currentChatId = fallback.id;
               state.isChatHistoryVisible = false;
@@ -330,8 +374,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
             // If we deleted the current chat, switch to the most recent one
             if (chatId === state.currentChatId) {
-              if (state.chats.length > 0) {
-                const mostRecent = [...state.chats].sort(
+              const workspacePath = getCurrentWorkspacePath();
+              const workspaceChats = state.chats.filter((chat) =>
+                isChatInWorkspace(chat, workspacePath),
+              );
+              if (workspaceChats.length > 0) {
+                const mostRecent = [...workspaceChats].sort(
                   (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
                 )[0];
                 state.currentChatId = mostRecent.id;
@@ -353,20 +401,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.title = title;
             }
           });
-          void import("@/features/editor/stores/buffer-store")
-            .then(({ useBufferStore }) => {
-              const { buffers, actions } = useBufferStore.getState();
-              for (const buffer of buffers) {
-                if (
-                  buffer.type === "agent" &&
-                  buffer.sessionId === chatId &&
-                  buffer.name !== title
-                ) {
-                  actions.updateBuffer({ ...buffer, name: title });
-                }
+          try {
+            const { buffers, actions } = useBufferStore.getState();
+            for (const buffer of buffers) {
+              if (buffer.type === "agent" && buffer.sessionId === chatId && buffer.name !== title) {
+                actions.updateBuffer({ ...buffer, name: title });
               }
-            })
-            .catch((error) => console.error("Failed to sync agent tab title:", error));
+            }
+          } catch (error) {
+            console.error("Failed to sync agent tab title:", error);
+          }
           // Save to SQLite
           get().syncChatToDatabase(chatId);
         },
@@ -857,7 +901,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         initializeDatabase: async () => {
           try {
             await initChatDatabase();
-            console.log("Chat database initialized");
           } catch (error) {
             console.error("Failed to initialize chat database:", error);
           }
@@ -869,7 +912,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             set((state) => {
               state.chats = chatsMetadata as Chat[];
             });
-            console.log(`Loaded ${chatsMetadata.length} chats from database`);
           } catch (error) {
             console.error("Failed to load chats from database:", error);
           }
@@ -885,6 +927,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             });
           } catch (error) {
+            if (String(error).includes("Query returned no rows")) {
+              set((state) => {
+                state.chats = state.chats.filter((chat) => chat.id !== chatId);
+                if (state.currentChatId === chatId) {
+                  state.currentChatId = null;
+                }
+              });
+              return;
+            }
             console.error(`Failed to load messages for chat ${chatId}:`, error);
           }
         },

@@ -16,7 +16,6 @@ export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
   const [lenses, setLenses] = useState<CodeLensItem[]>([]);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
-  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const fetchLenses = useCallback(async () => {
     if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
@@ -37,17 +36,29 @@ export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
   }, [fetchLenses]);
 
   useEffect(() => {
-    if (lastInputTimestamp === 0) return;
+    if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
+      return;
+    }
 
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      void fetchLenses();
-    }, DEBOUNCE_MS);
+    let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
+
+    const unsubscribe = useEditorUIStore.subscribe((state) => {
+      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastInputTimestamp) {
+        return;
+      }
+
+      lastInputTimestamp = state.lastInputTimestamp;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        void fetchLenses();
+      }, DEBOUNCE_MS);
+    });
 
     return () => {
+      unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [lastInputTimestamp, fetchLenses]);
+  }, [fetchLenses]);
 
   return lenses;
 };

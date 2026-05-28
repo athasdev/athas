@@ -23,14 +23,16 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   }, [buffer, chatTitle, updateBuffer]);
 
   return (
-    <div className="h-full w-full">
-      <AIChat
-        mode="chat"
-        chatId={buffer.sessionId}
-        activeBuffer={activeBuffer}
-        buffers={buffers}
-        isActiveSurface={isActive}
-      />
+    <div className="h-full w-full overflow-hidden">
+      <div className="mx-auto h-full w-full max-w-4xl">
+        <AIChat
+          mode="chat"
+          chatId={buffer.sessionId}
+          activeBuffer={activeBuffer}
+          buffers={buffers}
+          isActiveSurface={isActive}
+        />
+      </div>
     </div>
   );
 }

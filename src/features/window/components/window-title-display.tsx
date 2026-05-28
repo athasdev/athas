@@ -1,5 +1,5 @@
-import { Folder, HardDrives as Server } from "@phosphor-icons/react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { cn } from "@/utils/cn";
 
@@ -12,27 +12,25 @@ const getWorkspaceName = (path?: string) => {
 export default function WindowTitleDisplay() {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const activeProject = projectTabs.find((tab) => tab.isActive);
   const title = activeProject?.name || getWorkspaceName(rootFolderPath);
-  const isRemote = (activeProject?.path || rootFolderPath || "").startsWith("remote://");
 
   if (!title) {
     return <div className="h-6 min-w-[120px]" aria-hidden="true" />;
   }
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => setIsProjectPickerVisible(true)}
       className={cn(
-        "flex h-6 min-w-[120px] max-w-[260px] items-center justify-center gap-1.5 px-2",
-        "ui-text-sm text-text-lighter",
+        "athas-title-project-surface flex h-6 min-w-[120px] max-w-[260px] items-center justify-center rounded-md border border-transparent px-2",
+        "ui-text-sm text-text-lighter transition-colors hover:bg-hover/60 hover:text-text",
       )}
+      aria-label="Switch project"
     >
-      {isRemote ? (
-        <Server className="size-3.5 shrink-0" />
-      ) : (
-        <Folder className="size-3.5 shrink-0" />
-      )}
       <span className="truncate">{title}</span>
-    </div>
+    </button>
   );
 }

@@ -77,11 +77,13 @@ export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, "childre
   onReorder?: (orderedIds: string[]) => void;
 }
 
-export const EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME =
-  "grid h-auto w-full shrink-0 grid-cols-3 gap-1 rounded-xl border border-border/60 bg-secondary-bg/40 p-1";
+export const equalWidthSegmentedTabs = cva(
+  "grid h-auto w-full shrink-0 grid-cols-3 gap-1 rounded-xl border border-border/60 bg-secondary-bg/40 p-1",
+);
 
-export const EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME =
-  "h-10 w-full min-w-0 rounded-lg px-2.5 py-2 transition-colors [&>div]:gap-1.5";
+export const equalWidthSegmentedTabItem = cva(
+  "h-10 w-full min-w-0 rounded-lg px-2.5 py-2 transition-colors [&>div]:gap-1.5",
+);
 
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
@@ -233,6 +235,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   return (
     <div
       ref={ref}
+      data-active={isActive}
       className={cn(
         tabVariants({ size, variant, active: isActive, dragged: isDragged }),
         actionInsetClass,

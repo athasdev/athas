@@ -85,7 +85,7 @@ export function ScrollDebugOverlay() {
 
   return (
     <div
-      className="fixed right-4 bottom-4 rounded border border-border bg-primary-bg p-3 editor-font text-text text-xs shadow-lg"
+      className="fixed right-4 bottom-4 rounded border border-border bg-primary-bg p-3 editor-font text-text ui-text-xs shadow-lg"
       style={{
         zIndex: 9999,
         backdropFilter: "blur(8px)",

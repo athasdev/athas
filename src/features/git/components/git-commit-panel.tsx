@@ -12,6 +12,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { SidebarComposerBody } from "@/ui/sidebar";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { toast } from "@/ui/toast";
@@ -357,7 +358,7 @@ const GitCommitPanel = ({
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
   const composerButtonClassName =
-    "h-6 rounded-md border-transparent bg-transparent px-1.5 text-xs leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
+    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
   const generateModeItems: MenuItem[] = [
     {
       id: "title",
@@ -374,13 +375,13 @@ const GitCommitPanel = ({
   ];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1">
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]">
+    <>
+      <SidebarComposerBody>
         {error && (
           <div
             className={cn(
               "mx-2 mt-2 flex items-center gap-2 rounded border border-error/30",
-              "bg-error/20 px-2 py-1 text-[0.84em] text-error",
+              "bg-error/20 px-2 py-1 ui-text-xs text-error",
             )}
           >
             <AlertCircle />
@@ -403,11 +404,11 @@ const GitCommitPanel = ({
           rows={2}
           disabled={isCommitting}
         />
-      </div>
+      </SidebarComposerBody>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <span className="px-1 text-[0.82em] text-text-lighter">
+          <span className="px-1 ui-text-xs text-text-lighter">
             {stagedFilesCount > 0
               ? `${stagedFilesCount} file${stagedFilesCount !== 1 ? "s" : ""} staged`
               : "No files staged"}
@@ -421,7 +422,7 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("push", () => pushChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  size="xs"
+                  compact
                   className={cn(composerButtonClassName, "text-git-added hover:text-git-added")}
                   tooltip={`Push ${ahead} commit${ahead !== 1 ? "s" : ""}`}
                 >
@@ -436,7 +437,7 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("pull", () => pullChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  size="xs"
+                  compact
                   className={cn(composerButtonClassName, "text-git-deleted hover:text-git-deleted")}
                   tooltip={`Pull ${behind} commit${behind !== 1 ? "s" : ""}`}
                 >
@@ -499,7 +500,7 @@ const GitCommitPanel = ({
             onClick={() => void handleCommit()}
             disabled={isCommitDisabled}
             variant="ghost"
-            size="xs"
+            compact
             className={cn(
               composerButtonClassName,
               isCommitDisabled
@@ -511,7 +512,7 @@ const GitCommitPanel = ({
           </Button>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

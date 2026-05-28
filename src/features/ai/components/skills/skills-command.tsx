@@ -327,9 +327,9 @@ export function SkillsCommand({
               <Button
                 type="button"
                 variant="ghost"
-                size="xs"
                 onClick={openNewSkill}
                 className="shrink-0 ui-text-sm"
+                compact
               >
                 <Plus />
                 <span>New skill</span>
@@ -338,7 +338,6 @@ export function SkillsCommand({
               <Button
                 type="button"
                 variant="ghost"
-                size="xs"
                 onClick={() => setView("list")}
                 className="shrink-0 ui-text-sm"
               >
@@ -348,10 +347,10 @@ export function SkillsCommand({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               onClick={openBrowseSkills}
               className="shrink-0 ui-text-sm"
               active={view === "browse"}
+              compact
             >
               <CloudArrowDown />
               <span>Browse</span>
@@ -388,7 +387,7 @@ export function SkillsCommand({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
-                          <div className="truncate text-xs text-text">{skill.title}</div>
+                          <div className="truncate ui-text-xs text-text">{skill.title}</div>
                           {skill.version ? (
                             <span className="ui-text-xs shrink-0 text-text-lighter">
                               v{skill.version}
@@ -414,8 +413,7 @@ export function SkillsCommand({
                       </div>
                       <Button
                         type="button"
-                        variant={isInstalled ? "secondary" : "default"}
-                        size="xs"
+                        variant={isInstalled ? "default" : "default"}
                         disabled={isInstalled}
                         onClick={(event) => {
                           event.stopPropagation();
@@ -433,11 +431,11 @@ export function SkillsCommand({
             ) : skills.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
                 <CommandEmpty>No skills yet</CommandEmpty>
-                <Button type="button" variant="secondary" size="xs" onClick={openNewSkill}>
+                <Button type="button" variant="default" onClick={openNewSkill} compact>
                   <Plus />
                   <span>New skill</span>
                 </Button>
-                <Button type="button" variant="ghost" size="xs" onClick={openBrowseSkills}>
+                <Button type="button" variant="ghost" onClick={openBrowseSkills} compact>
                   <CloudArrowDown />
                   <span>Browse skills</span>
                 </Button>
@@ -459,7 +457,7 @@ export function SkillsCommand({
                     className="group mb-1 px-3 py-2 last:mb-0"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs text-text">{skill.title}</div>
+                      <div className="truncate ui-text-xs text-text">{skill.title}</div>
                       {(skill.source === "marketplace" || hasLocalOverride) && (
                         <div className="ui-text-xs mt-1 flex items-center gap-1.5 text-text-lighter">
                           {skill.source === "marketplace" ? <span>Marketplace</span> : null}
@@ -480,7 +478,6 @@ export function SkillsCommand({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-xs"
                       onClick={(event) => {
                         event.stopPropagation();
                         openSkillEditor(skill);
@@ -494,7 +491,6 @@ export function SkillsCommand({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-xs"
                       onClick={(event) => {
                         event.stopPropagation();
                         void handleDelete(skill.id);
@@ -568,13 +564,12 @@ export function SkillsCommand({
           </div>
 
           <div className="flex items-center justify-between gap-2 border-border border-t px-3 py-2">
-            <Button type="button" variant="ghost" size="xs" onClick={closeEditor}>
+            <Button type="button" variant="ghost" onClick={closeEditor} compact>
               Cancel
             </Button>
             <Button
               type="button"
-              variant="primary"
-              size="xs"
+              variant="accent"
               onClick={() => void handleSave()}
               disabled={!canSave}
               className={cn(!canSave && "opacity-50")}

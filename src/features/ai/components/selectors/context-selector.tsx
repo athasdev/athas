@@ -202,12 +202,12 @@ export function ContextSelector({
         <Button
           onClick={onToggleOpen}
           variant="ghost"
-          size="icon-xs"
           className={chatComposerIconButtonClassName()}
           tooltip="Add context"
           aria-label="Add context"
           aria-expanded={isOpen}
           aria-haspopup="true"
+          compact
         >
           <Plus />
         </Button>
@@ -302,7 +302,7 @@ export function ContextSelector({
                       onClick={() => onToggleBuffer(buffer.id)}
                       onMouseEnter={() => setSelectedContextIndex(index)}
                       className={cn(
-                        "ui-font flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left text-xs leading-[1.35] transition-colors",
+                        "ui-font flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left ui-text-xs leading-[1.35] transition-colors",
                         selectedContextIndex === index
                           ? "bg-selected text-text"
                           : isSelected
@@ -417,12 +417,7 @@ export function ContextSelector({
               {item.name}
             </span>
             {item.type === "buffer" && item.isDirty && (
-              <span
-                className="text-[length:calc(var(--ui-text-xs)*0.7)] text-warning"
-                title="Unsaved changes"
-              >
-                ●
-              </span>
+              <span className="size-1.5 rounded-full bg-warning" title="Unsaved changes" />
             )}
             <Button
               onClick={() => {
@@ -433,7 +428,7 @@ export function ContextSelector({
                 }
               }}
               variant="ghost"
-              size="icon-xs"
+              compact
               className="size-4 rounded text-text-lighter opacity-0 hover:bg-hover hover:text-text focus:opacity-100 group-hover:opacity-100"
               aria-label={`Remove ${item.name} from context`}
               tabIndex={0}

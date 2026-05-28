@@ -1,6 +1,7 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import { shouldRestoreBufferSwitchState } from "../utils/buffer-switch-state";
 
 interface UseBufferSwitchOptions {
   enabled?: boolean;
@@ -24,20 +25,41 @@ export function useBufferSwitch({
   resetTokenizer,
 }: UseBufferSwitchOptions) {
   const prevBufferIdRef = useRef<string | null>(null);
+  const prevViewKeyRef = useRef<string | null>(null);
+  const hasInitializedRef = useRef(false);
+  const latestContentRef = useRef(content);
+  const latestTotalLinesRef = useRef(totalLines);
   const switchGuardRef = useRef(0);
+
+  useLayoutEffect(() => {
+    latestContentRef.current = content;
+    latestTotalLinesRef.current = totalLines;
+  }, [content, totalLines]);
 
   useLayoutEffect(() => {
     if (!enabled) return;
     if (!bufferId) return;
 
-    const isSwitch = prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId;
+    const viewKey = viewStateKey ?? bufferId;
+    const hasRestoredInitialState = !!useEditorStateStore
+      .getState()
+      .actions.getCachedViewState(viewKey);
+    const shouldRestoreState = shouldRestoreBufferSwitchState({
+      hasInitialized: hasInitializedRef.current,
+      previousBufferId: prevBufferIdRef.current,
+      previousViewKey: prevViewKeyRef.current,
+      nextBufferId: bufferId,
+      nextViewKey: viewKey,
+      hasCachedViewState: hasRestoredInitialState,
+    });
+
     prevBufferIdRef.current = bufferId;
+    prevViewKeyRef.current = viewKey;
+    hasInitializedRef.current = true;
 
     const stateActions = useEditorStateStore.getState().actions;
     const uiActions = useEditorUIStore.getState().actions;
-    const viewKey = viewStateKey ?? bufferId;
-    const hasRestoredInitialState = !!stateActions.getCachedViewState(viewKey);
-    if (!isSwitch && !hasRestoredInitialState) return;
+    if (!shouldRestoreState) return;
 
     // Increment guard — stale RAF callbacks will check this and bail
     switchGuardRef.current += 1;
@@ -49,7 +71,7 @@ export function useBufferSwitch({
     // 2. Sync textarea content before restoring position
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.value = content;
+      textarea.value = latestContentRef.current;
     }
 
     // 3. Restore cursor & scroll from cache (no DOM side-effects in store)
@@ -69,21 +91,12 @@ export function useBufferSwitch({
     }
 
     // 5. Recalculate viewport range
-    forceUpdateViewport(restored.scrollTop, totalLines);
+    forceUpdateViewport(restored.scrollTop, latestTotalLinesRef.current);
 
     // 6. Reset token state. Tokenization is triggered by the editor effect
     // once viewport state is ready, avoiding duplicate work on buffer open.
     resetTokenizer();
-  }, [
-    enabled,
-    bufferId,
-    viewStateKey,
-    content,
-    textareaRef,
-    forceUpdateViewport,
-    totalLines,
-    resetTokenizer,
-  ]);
+  }, [enabled, bufferId, viewStateKey, textareaRef, forceUpdateViewport, resetTokenizer]);
 
   return { switchGuardRef };
 }

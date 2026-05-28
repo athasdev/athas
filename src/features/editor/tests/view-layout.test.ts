@@ -30,6 +30,34 @@ describe("buildEditorViewLayout", () => {
     ]);
   });
 
+  it("uses sparse segment lookups in compact non-wrapped layouts", () => {
+    const layout = buildEditorViewLayout({
+      lines: ["alpha", "beta", "gamma"],
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(10),
+      measureText,
+      compact: true,
+    });
+
+    expect(layout.segments).toEqual([]);
+    expect(layout.totalViewLines).toBe(3);
+    expect(layout.totalHeight).toBe(60);
+    expect(layout.getSegmentForModelPosition(2, 2)).toMatchObject({
+      viewLine: 2,
+      modelLine: 2,
+      startColumn: 0,
+      endColumn: 5,
+      top: 48,
+    });
+    expect(layout.modelPositionToViewPosition(1, 3)).toMatchObject({
+      viewLine: 1,
+      modelLine: 1,
+      column: 3,
+      left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 30,
+    });
+  });
+
   it("projects a wrapped model line into multiple view lines", () => {
     const layout = buildEditorViewLayout({
       lines: ["abcdefg", "hi"],
@@ -114,6 +142,30 @@ describe("buildEditorViewLayout", () => {
     expect(position.left).toBe(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 10);
   });
 
+  it("hit-tests long unwrapped lines without scanning every column", () => {
+    let measureCallCount = 0;
+    const measuredText = (text: string) => {
+      measureCallCount++;
+      return text.length * 10;
+    };
+    const layout = buildEditorViewLayout({
+      lines: ["a".repeat(1024)],
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(2000),
+      measureText: measuredText,
+    });
+
+    measureCallCount = 0;
+    const position = layout.editorPointToModelPosition(
+      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 5050,
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+    );
+
+    expect(position.column).toBe(505);
+    expect(measureCallCount).toBeLessThan(30);
+  });
+
   it("keeps empty model lines addressable", () => {
     const layout = buildEditorViewLayout({
       lines: [""],
@@ -128,5 +180,70 @@ describe("buildEditorViewLayout", () => {
       viewLine: 0,
       left: EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
     });
+  });
+
+  it("reserves vertical space for view zones after model lines", () => {
+    const layout = buildEditorViewLayout({
+      lines: ["first", "second"],
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(10),
+      measureText,
+      zones: [{ id: "inline-diff", afterLine: 0, height: 48 }],
+    });
+
+    expect(layout.totalZoneHeight).toBe(48);
+    expect(layout.totalHeight).toBe(88);
+    expect(layout.zones[0]).toMatchObject({
+      id: "inline-diff",
+      afterLine: 0,
+      top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20,
+      height: 48,
+    });
+    expect(layout.modelPositionToViewPosition(1, 0).top).toBe(
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20 + 48,
+    );
+  });
+
+  it("stacks multiple view zones deterministically after the same model line", () => {
+    const layout = buildEditorViewLayout({
+      lines: ["first", "second"],
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(10),
+      measureText,
+      zones: [
+        { id: "inline-edit", afterLine: 0, height: 96 },
+        { id: "inline-diff", afterLine: 0, height: 42 },
+      ],
+    });
+
+    expect(layout.totalZoneHeight).toBe(138);
+    expect(layout.zones.map((zone) => zone.id)).toEqual(["inline-diff", "inline-edit"]);
+    expect(layout.zones.map((zone) => zone.top)).toEqual([
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20,
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20 + 42,
+    ]);
+    expect(layout.modelPositionToViewPosition(1, 0).top).toBe(
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20 + 138,
+    );
+  });
+
+  it("hit-tests editor points after a view zone against shifted model lines", () => {
+    const layout = buildEditorViewLayout({
+      lines: ["first", "second"],
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(10),
+      measureText,
+      zones: [{ id: "inline-diff", afterLine: 0, height: 48 }],
+    });
+
+    const position = layout.editorPointToModelPosition(
+      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP + 20 + 48 + 1,
+    );
+
+    expect(position.modelLine).toBe(1);
   });
 });

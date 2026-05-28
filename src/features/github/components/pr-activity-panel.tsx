@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
-import type { Commit } from "../types/pr-viewer";
+import { LoadingIndicator } from "@/ui/loading";
+import type { Commit } from "../types/github-pr-viewer";
 import { CommentItem } from "./comment-item";
 import { CommitItem } from "./commit-item";
 import GitHubMarkdown from "./github-markdown";
@@ -100,8 +100,7 @@ export function PRActivityPanel({
       <div className="space-y-2">
         {isLoadingContent && activityItems.length === 0 ? (
           <div className="flex items-center justify-center p-8">
-            <RefreshCw className="animate-spin text-text-lighter" />
-            <span className="ml-2 ui-font ui-text-sm text-text-lighter">Loading activity...</span>
+            <LoadingIndicator label="Loading activity" showLabel />
           </div>
         ) : contentError ? (
           <div className="flex items-center justify-center p-8 text-center">
@@ -109,9 +108,9 @@ export function PRActivityPanel({
               <p className="ui-font ui-text-sm text-error">{contentError}</p>
               <Button
                 onClick={onRetry}
-                variant="outline"
-                size="xs"
+                variant="default"
                 className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+                compact
               >
                 Retry
               </Button>

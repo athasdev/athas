@@ -3,9 +3,9 @@ import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {
-  PANE_GROUP_BASE,
-  PANE_ICON_BUTTON_BASE,
+  PaneGroup,
   paneHeaderClassName,
+  paneIconButtonClassName,
   paneTitleClassName,
 } from "@/ui/pane";
 import { cn } from "@/utils/cn";
@@ -31,7 +31,7 @@ const GitSidebarSectionHeader = ({
 }: GitSidebarSectionHeaderProps) => {
   const content = (
     <>
-      <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1")}>
+      <PaneGroup className="min-w-0 flex-1">
         {collapsible &&
           (isCollapsed ? (
             <ChevronRight className="size-3.5 shrink-0 text-text-lighter" />
@@ -40,8 +40,8 @@ const GitSidebarSectionHeader = ({
           ))}
         {Icon ? <Icon className="size-3.5 shrink-0 text-text-lighter" /> : null}
         <span className={paneTitleClassName()}>{title}</span>
-      </div>
-      {actions ? <div className={cn(PANE_GROUP_BASE, "shrink-0")}>{actions}</div> : null}
+      </PaneGroup>
+      {actions ? <PaneGroup className="shrink-0">{actions}</PaneGroup> : null}
     </>
   );
 
@@ -50,12 +50,12 @@ const GitSidebarSectionHeader = ({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         onClick={onToggle}
         className={cn(
           paneHeaderClassName("w-full shrink-0 justify-between rounded-none px-2.5 hover:bg-hover"),
           className,
         )}
+        compact
       >
         {content}
       </Button>
@@ -72,6 +72,6 @@ const GitSidebarSectionHeader = ({
 };
 
 export const gitSidebarSectionActionButtonClassName = (className?: string) =>
-  cn(PANE_ICON_BUTTON_BASE, "size-6", className);
+  cn(paneIconButtonClassName("size-6"), className);
 
 export default GitSidebarSectionHeader;

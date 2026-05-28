@@ -1,5 +1,5 @@
 use super::{
-   client::LspClient,
+   client::{LspClient, LspServerEnv},
    config::{LspRegistry, LspSettings},
    manager_state::{LspInstance, WorkspaceClients},
    manager_support,
@@ -36,19 +36,30 @@ impl LspManager {
    pub fn get_server_path(&self, server_name: &str) -> Result<PathBuf> {
       // For TypeScript, try multiple detection strategies
       if server_name == "typescript" {
-         // First try: globally installed server via package managers
+         // Prefer Athas-managed tools so stale global language servers do not
+         // shadow the version installed by the extension manager.
+         if let Ok(app_dir) = self.app_handle.path().app_data_dir() {
+            let tools_dir = app_dir.join("tools");
+            if let Some(path) = utils::find_managed_binary(&tools_dir, "typescript-language-server")
+            {
+               log::info!("Using managed TypeScript server: {:?}", path);
+               return Ok(path);
+            }
+         }
+
+         // Next try: globally installed server via package managers
          if let Some(path) = utils::find_global_binary("typescript-language-server") {
             log::info!("Using global TypeScript server: {:?}", path);
             return Ok(path);
          }
 
-         // Second try: check if it's in PATH
+         // Then try: check if it's in PATH
          if let Some(path) = utils::find_in_path("typescript-language-server") {
             log::info!("Using TypeScript server from PATH: {:?}", path);
             return Ok(path);
          }
 
-         // Third try: local node_modules in current working directory
+         // Finally try: local node_modules in current working directory
          let local_path = std::env::current_dir()
             .context("Failed to get current directory")?
             .join("node_modules/.bin/typescript-language-server");
@@ -132,15 +143,6 @@ impl LspManager {
          return Ok(requested_path);
       }
 
-      if let Some(path_on_disk) = utils::find_in_path(path) {
-         log::info!(
-            "Resolved LSP bare command '{}' from PATH: {:?}",
-            path,
-            path_on_disk
-         );
-         return Ok(path_on_disk);
-      }
-
       let tools_dir = self
          .app_handle
          .path()
@@ -157,6 +159,15 @@ impl LspManager {
          return Ok(managed_path);
       }
 
+      if let Some(path_on_disk) = utils::find_in_path(path) {
+         log::info!(
+            "Resolved LSP bare command '{}' from PATH: {:?}",
+            path,
+            path_on_disk
+         );
+         return Ok(path_on_disk);
+      }
+
       Ok(requested_path)
    }
 
@@ -165,6 +176,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      server_env_override: Option<LspServerEnv>,
       initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for workspace: {:?}", workspace_path);
@@ -207,6 +219,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
+         Some(workspace_path.clone()),
+         server_env_override.unwrap_or_default(),
       )
       .await?;
 
@@ -253,6 +267,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      server_env_override: Option<LspServerEnv>,
       initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for file: {:?}", file_path);
@@ -303,6 +318,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
+         Some(workspace_path.clone()),
+         server_env_override.unwrap_or_default(),
       )
       .await?;
 
@@ -467,6 +484,76 @@ impl LspManager {
       }
    }
 
+   pub async fn get_implementation(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = GotoDefinitionParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_implementation(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/implementation") {
+               log::debug!("Implementation method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_type_definition(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = GotoDefinitionParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_type_definition(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/typeDefinition") {
+               log::debug!("TypeDefinition method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_semantic_tokens(
       &self,
       file_path: &str,
@@ -592,6 +679,54 @@ impl LspManager {
          Err(error) => {
             if manager_support::is_unsupported_method(&error, "textDocument/formatting") {
                log::debug!("Formatting method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn format_range(
+      &self,
+      file_path: &str,
+      start_line: u32,
+      start_character: u32,
+      end_line: u32,
+      end_character: u32,
+   ) -> Result<Option<Vec<TextEdit>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+      };
+
+      let params = DocumentRangeFormattingParams {
+         text_document,
+         range: Range {
+            start: Position {
+               line: start_line,
+               character: start_character,
+            },
+            end: Position {
+               line: end_line,
+               character: end_character,
+            },
+         },
+         options: FormattingOptions {
+            tab_size: 3,
+            insert_spaces: true,
+            ..Default::default()
+         },
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_range_formatting(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            if manager_support::is_unsupported_method(&error, "textDocument/rangeFormatting") {
+               log::debug!("Range formatting method is not supported by this language server");
                return Ok(None);
             }
             Err(error)
