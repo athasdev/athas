@@ -163,8 +163,7 @@ impl TerminalConnection {
          cmd.env(key, value);
       }
 
-      let no_color_requested =
-         Self::has_env_key(&user_env, "NO_COLOR") || Self::custom_env_has_key(config, "NO_COLOR");
+      let custom_no_color_requested = Self::custom_env_has_key(config, "NO_COLOR");
 
       // Then override with terminal-specific environment variables
       cmd.env("TERM", "xterm-256color");
@@ -175,13 +174,12 @@ impl TerminalConnection {
          cmd.env("SHELL", shell_path);
       }
       cmd.env("CLICOLOR", "1");
-      if no_color_requested {
-         cmd.env_remove("FORCE_COLOR");
-         cmd.env_remove("CLICOLOR_FORCE");
-      } else {
-         cmd.env("FORCE_COLOR", "1");
-         cmd.env("CLICOLOR_FORCE", "1");
+
+      if !custom_no_color_requested {
+         cmd.env_remove("NO_COLOR");
       }
+      cmd.env_remove("FORCE_COLOR");
+      cmd.env_remove("CLICOLOR_FORCE");
 
       // Copy over custom environment variables (highest priority)
       if let Some(env_vars) = &config.environment {
@@ -428,13 +426,23 @@ mod tests {
    }
 
    #[test]
-   fn removes_forced_color_when_custom_no_color_is_set() {
+   fn keeps_custom_no_color_without_forced_color() {
       let mut environment = HashMap::new();
       environment.insert("NO_COLOR".to_string(), "1".to_string());
 
       let cmd = TerminalConnection::build_command(&config_with_env(environment)).unwrap();
 
       assert_eq!(cmd.get_env("NO_COLOR"), Some(OsStr::new("1")));
+      assert_eq!(cmd.get_env("CLICOLOR"), Some(OsStr::new("1")));
+      assert!(cmd.get_env("FORCE_COLOR").is_none());
+      assert!(cmd.get_env("CLICOLOR_FORCE").is_none());
+   }
+
+   #[test]
+   fn removes_inherited_no_color_for_interactive_terminal_color() {
+      let cmd = TerminalConnection::build_command(&config_with_env(HashMap::new())).unwrap();
+
+      assert!(cmd.get_env("NO_COLOR").is_none());
       assert_eq!(cmd.get_env("CLICOLOR"), Some(OsStr::new("1")));
       assert!(cmd.get_env("FORCE_COLOR").is_none());
       assert!(cmd.get_env("CLICOLOR_FORCE").is_none());
