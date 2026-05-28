@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
-import { cloneElement, isValidElement } from "react";
+import { cloneElement, isValidElement, useSyncExternalStore } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
-import { useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 
 interface FileExplorerIconProps {
   fileName: string;
@@ -21,7 +21,14 @@ export function FileExplorerIcon({
   className = "text-text-lighter",
 }: FileExplorerIconProps) {
   const { settings } = useSettingsStore();
-  const iconTheme = iconThemeRegistry.getTheme(settings.iconTheme);
+  useSyncExternalStore(
+    (callback) => iconThemeRegistry.onRegistryChange(callback),
+    () => iconThemeRegistry.getVersion(),
+    () => iconThemeRegistry.getVersion(),
+  );
+  const iconTheme =
+    iconThemeRegistry.getTheme(settings.iconTheme) ??
+    iconThemeRegistry.getTheme(getDefaultSetting("iconTheme"));
 
   if (!iconTheme) {
     return <span className={className}>&#8226;</span>;
@@ -55,6 +62,22 @@ export function FileExplorerIcon({
             lineHeight: 0,
           }}
           dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
+        />
+      );
+    }
+
+    if (iconResult.url) {
+      return (
+        <img
+          src={iconResult.url}
+          alt=""
+          aria-hidden="true"
+          className={className}
+          style={{
+            width: `${size}px`,
+            height: `${size}px`,
+            display: "inline-block",
+          }}
         />
       );
     }

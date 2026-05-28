@@ -96,7 +96,6 @@
     "framer-motion": "^12.34.3",
     "ignore": "^7.0.5",
     "immer": "^10.2.0",
-    "material-file-icons": "^2.4.0",
     "monaco-editor": "^0.55.1",
     "monaco-vim": "^0.4.4",
     "nanoid": "^3.3.11",

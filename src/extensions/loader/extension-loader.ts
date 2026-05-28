@@ -12,6 +12,7 @@ import {
   getManifestCommandContributions,
   getManifestLanguageContributions,
 } from "../types/extension-contributions";
+import { activateExtensionContributions } from "../runtime/extension-contribution-runtime";
 import type { BundledExtension } from "../types/extension-manifest";
 
 /**
@@ -316,6 +317,8 @@ class ExtensionLoader {
 
     // Mark extension as activated in registry
     extensionRegistry.setExtensionState(extension.manifest.id, "activated");
+
+    await activateExtensionContributions(extension.manifest.id, extension.manifest, extension.path);
 
     this.loadedExtensions.add(extension.manifest.id);
     logger.info(

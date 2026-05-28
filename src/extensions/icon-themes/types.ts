@@ -12,6 +12,7 @@ export interface IconThemeDefinition {
 
 export interface IconResult {
   svg?: string;
+  url?: string;
   component?: React.ReactNode;
 }
 

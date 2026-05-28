@@ -6,6 +6,7 @@
 
 import { logger } from "@/features/editor/utils/logger";
 import { NODE_PLATFORM } from "@/utils/platform";
+import { bundledExtensionManifests } from "../bundled/bundled-extension-manifests";
 
 import type {
   BundledExtension,
@@ -44,8 +45,6 @@ class ExtensionRegistry {
    * Note: Language extensions are fetched from the server, not bundled
    */
   private async loadBundledExtensions() {
-    const bundledManifests: ExtensionManifest[] = [];
-
     // Get absolute path to bundled extensions
     let basePath = "";
 
@@ -58,10 +57,10 @@ class ExtensionRegistry {
       basePath = "./extensions/bundled";
     }
 
-    for (const manifest of bundledManifests) {
+    for (const { manifest, relativePath } of bundledExtensionManifests) {
       const extension: BundledExtension = {
         manifest,
-        path: `${basePath}/${manifest.name.toLowerCase()}`,
+        path: `${basePath}/${relativePath}`,
         isBundled: true,
         isEnabled: true,
         state: "installed",
