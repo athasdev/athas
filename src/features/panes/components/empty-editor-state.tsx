@@ -14,6 +14,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -34,6 +35,7 @@ export function EmptyEditorState() {
     useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
 
   const allCustomActions = useCustomActionsStore.use.actions();
   const { addAction, updateAction, deleteAction, getActionsForWorkspace } =
@@ -166,12 +168,16 @@ export function EmptyEditorState() {
         icon: <Sparkles />,
         onClick: handleOpenAgent,
       },
-      {
-        id: "open-url",
-        label: "Open URL",
-        icon: <Globe />,
-        onClick: handleOpenWebViewer,
-      },
+      ...(webViewerEnabled
+        ? [
+            {
+              id: "open-url",
+              label: "Open URL",
+              icon: <Globe />,
+              onClick: handleOpenWebViewer,
+            },
+          ]
+        : []),
     ];
   }, [
     handleNewFile,
@@ -180,6 +186,7 @@ export function EmptyEditorState() {
     handleOpenTerminal,
     handleOpenAgent,
     handleOpenWebViewer,
+    webViewerEnabled,
   ]);
 
   const actions: ActionItem[] = [
@@ -213,12 +220,16 @@ export function EmptyEditorState() {
       icon: <Sparkles className="text-text-light" />,
       action: handleOpenAgent,
     },
-    {
-      id: "web",
-      label: "Open URL",
-      icon: <Globe className="text-text-light" />,
-      action: handleOpenWebViewer,
-    },
+    ...(webViewerEnabled
+      ? [
+          {
+            id: "web",
+            label: "Open URL",
+            icon: <Globe className="text-text-light" />,
+            action: handleOpenWebViewer,
+          },
+        ]
+      : []),
   ];
 
   return (

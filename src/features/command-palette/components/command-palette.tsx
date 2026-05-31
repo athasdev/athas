@@ -167,6 +167,7 @@ const CommandPalette = () => {
         sidebarPosition: settings.sidebarPosition,
         nativeMenuBar: settings.nativeMenuBar,
         compactMenuBar: settings.compactMenuBar,
+        webViewerEnabled: settings.coreFeatures.webViewer,
       },
       updateSetting: useSettingsStore.getState().updateSetting as (
         key: string,

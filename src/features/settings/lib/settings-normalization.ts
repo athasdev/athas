@@ -5,6 +5,7 @@ import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,
   DEFAULT_AI_PROVIDER_ID,
+  defaultSettings,
 } from "@/features/settings/config/default-settings";
 import {
   DEFAULT_MONO_FONT_FAMILY,
@@ -275,6 +276,11 @@ export function normalizeSettings(settings: Settings): Settings {
   const normalizedSettings = normalizeAISettings(settings);
   const persistedGitPanelMode = (normalizedSettings as { gitLastPanelMode?: string })
     .gitLastPanelMode;
+
+  normalizedSettings.coreFeatures = {
+    ...defaultSettings.coreFeatures,
+    ...normalizedSettings.coreFeatures,
+  };
 
   if (
     persistedGitPanelMode === "none" ||

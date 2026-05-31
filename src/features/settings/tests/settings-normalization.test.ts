@@ -87,6 +87,28 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("lastSettingsTab", "appearance")).toBe("appearance");
   });
 
+  it("fills missing core feature flags from defaults", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      coreFeatures: {
+        git: true,
+        github: true,
+        remote: true,
+        terminal: true,
+        search: true,
+        diagnostics: true,
+        debugger: false,
+        outline: true,
+        aiChat: true,
+        teamCollaboration: true,
+        breadcrumbs: true,
+        persistentCommands: true,
+      } as never,
+    });
+
+    expect(normalized.coreFeatures.webViewer).toBe(false);
+  });
+
   it("migrates legacy icon theme aliases to Material", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

@@ -33,6 +33,7 @@ interface ViewActionsParams {
     sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
+    webViewerEnabled: boolean;
   };
   updateSetting: (key: string, value: any) => void | Promise<void>;
   zoomIn: (target: "editor" | "terminal") => void;
@@ -267,34 +268,38 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    {
-      id: "open-web-viewer",
-      label: "View: Open Web Viewer",
-      description: "Open a new web viewer tab",
-      icon: <Globe />,
-      category: "View",
-      action: () => {
-        openWebViewerBuffer("about:blank");
-        onClose();
-      },
-    },
-    {
-      id: "open-url",
-      label: "View: Open URL...",
-      description: "Open a URL in web viewer",
-      icon: <Globe />,
-      category: "View",
-      action: async () => {
-        const url = await primitivePrompt("Enter URL:", {
-          title: "Open URL",
-          defaultValue: "https://",
-          placeholder: "https://",
-        });
-        if (url?.trim()) {
-          openWebViewerBuffer(url.trim());
-        }
-        onClose();
-      },
-    },
+    ...(settings.webViewerEnabled
+      ? [
+          {
+            id: "open-web-viewer",
+            label: "View: Open Web Viewer",
+            description: "Open a new web viewer tab",
+            icon: <Globe />,
+            category: "View",
+            action: () => {
+              openWebViewerBuffer("about:blank");
+              onClose();
+            },
+          },
+          {
+            id: "open-url",
+            label: "View: Open URL...",
+            description: "Open a URL in web viewer",
+            icon: <Globe />,
+            category: "View",
+            action: async () => {
+              const url = await primitivePrompt("Enter URL:", {
+                title: "Open URL",
+                defaultValue: "https://",
+                placeholder: "https://",
+              });
+              if (url?.trim()) {
+                openWebViewerBuffer(url.trim());
+              }
+              onClose();
+            },
+          },
+        ]
+      : []),
   ];
 };

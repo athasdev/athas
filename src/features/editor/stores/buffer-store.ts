@@ -26,6 +26,7 @@ import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
+import { useSettingsStore } from "@/features/settings/store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
   EditorContent,
@@ -908,6 +909,10 @@ export const useBufferStore = createSelectors(
         },
 
         openWebViewerBuffer: (url: string): string => {
+          if (!useSettingsStore.getState().settings.coreFeatures.webViewer) {
+            return get().activeBufferId ?? "";
+          }
+
           return get().actions.openContent({ type: "webViewer", url });
         },
 

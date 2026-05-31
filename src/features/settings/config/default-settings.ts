@@ -116,6 +116,7 @@ export const defaultSettings: Settings = {
     teamCollaboration: true,
     breadcrumbs: true,
     persistentCommands: true,
+    webViewer: false,
   },
   // Advanced
   enterpriseManagedMode: false,

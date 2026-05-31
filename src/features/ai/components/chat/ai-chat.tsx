@@ -498,6 +498,16 @@ const AIChat = memo(function AIChat({
         if (directAction) {
           const bufferActions = useBufferStore.getState().actions;
           if (directAction.kind === "open_web_viewer" && directAction.url) {
+            if (!useSettingsStore.getState().settings.coreFeatures.webViewer) {
+              chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
+                content: "Web Viewer is disabled. Enable it in Settings > Features to open URLs.",
+                isStreaming: false,
+              });
+              chatActions.setIsTyping(false);
+              chatActions.setStreamingMessageId(null);
+              return;
+            }
+
             bufferActions.openWebViewerBuffer(directAction.url);
             chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
               content: `Opened ${directAction.url} in Athas web viewer.`,

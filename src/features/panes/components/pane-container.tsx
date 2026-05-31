@@ -235,6 +235,19 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
   );
 }
 
+function WebViewerDisabledState() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-primary-bg px-6">
+      <div className="max-w-sm text-center">
+        <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
+        <div className="mt-1 ui-text-xs text-text-lighter">
+          Enable it in Settings &gt; Features to open URLs in embedded editor tabs.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function isStandardEditorBuffer(buffer: PaneRenderBuffer): buffer is EditorBufferShell {
   return buffer.type === "editor";
 }
@@ -246,6 +259,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
+  const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isTabDragOver, setIsTabDragOver] = useState(false);
@@ -814,6 +828,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           );
 
         case "webViewer":
+          if (!webViewerEnabled) {
+            return <WebViewerDisabledState />;
+          }
+
           return <WebViewer url={buffer.url} bufferId={buffer.id} isActive={isActivePane} />;
 
         case "agent":
@@ -1043,15 +1061,19 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         </div>
                       ) : buffer.type === "webViewer" && isActiveBuffer ? (
                         <div className="h-full w-full">
-                          <WebViewer
-                            url={buffer.url}
-                            bufferId={buffer.id}
-                            profileKey={buffer.profileKey}
-                            history={buffer.history}
-                            historyIndex={buffer.historyIndex}
-                            isActive={isActivePane && isActiveBuffer}
-                            isVisible={true}
-                          />
+                          {webViewerEnabled ? (
+                            <WebViewer
+                              url={buffer.url}
+                              bufferId={buffer.id}
+                              profileKey={buffer.profileKey}
+                              history={buffer.history}
+                              historyIndex={buffer.historyIndex}
+                              isActive={isActivePane && isActiveBuffer}
+                              isVisible={true}
+                            />
+                          ) : (
+                            <WebViewerDisabledState />
+                          )}
                         </div>
                       ) : buffer.type === "pullRequest" ? (
                         <PullRequestPreviewCard buffer={buffer} />
@@ -1083,7 +1105,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                   ): b is
                     | import("../types/pane-content").TerminalContent
                     | import("../types/pane-content").WebViewerContent =>
-                    b.type === "terminal" || b.type === "webViewer",
+                    b.type === "terminal" || (webViewerEnabled && b.type === "webViewer"),
                 )
                 .map((b) => {
                   const isActive = b.id === activeBuffer?.id;
@@ -1119,7 +1141,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 })}
               {activeBuffer &&
                 activeBuffer.type !== "terminal" &&
-                activeBuffer.type !== "webViewer" &&
+                (activeBuffer.type !== "webViewer" || !webViewerEnabled) &&
                 renderActiveBuffer(activeBuffer)}
             </>
           )}
