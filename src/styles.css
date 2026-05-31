@@ -15,7 +15,6 @@
 @import "./features/editor/styles/overlay-card.css";
 @import "./features/editor/markdown/styles.css";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
