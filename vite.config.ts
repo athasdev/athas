@@ -2,7 +2,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { codeInspectorPlugin } from "code-inspector-plugin";
-import { defineConfig } from "vite-plus";
+import { defaultExclude, defineConfig } from "vite-plus";
 
 const host = process.env.TAURI_DEV_HOST || "127.0.0.1";
 const isVitest = Boolean(process.env.VITEST);
@@ -37,6 +37,21 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+
+  test: {
+    // The runner's default exclude only covers node_modules/.git, so it would
+    // otherwise discover stale duplicate suites inside generated or vendored
+    // trees — notably the direnv-materialized copy of the source under
+    // .direnv/flake-inputs/<hash>-source/.
+    exclude: [
+      ...defaultExclude,
+      "**/.direnv/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/target/**",
+      "**/src-tauri/**",
+    ],
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
