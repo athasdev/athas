@@ -1,4 +1,11 @@
-import { ArrowLeft, ArrowRight, Columns, Lock, Rows, X } from "@phosphor-icons/react";
+import {
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  ColumnsIcon as Columns,
+  LockIcon as Lock,
+  RowsIcon as Rows,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import {
   closeActiveEditorGroup,
   closeOtherEditorGroups,

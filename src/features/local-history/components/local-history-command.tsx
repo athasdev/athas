@@ -1,12 +1,12 @@
 import {
-  ArrowCounterClockwise,
-  ArrowLeft,
-  ArrowsLeftRight,
-  ClockCounterClockwise,
-  Eye,
-  PencilSimple,
-  Plus,
-  Trash,
+  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowsLeftRightIcon as ArrowsLeftRight,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  EyeIcon as Eye,
+  PencilSimpleIcon as PencilSimple,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

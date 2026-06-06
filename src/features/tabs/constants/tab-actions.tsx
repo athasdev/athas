@@ -1,8 +1,8 @@
 import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowCounterClockwise as RotateCcw,
-  X,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import type { Action } from "@/features/command-palette/models/action.types";
 

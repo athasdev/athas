@@ -1,14 +1,14 @@
 import {
-  Columns as Columns2,
-  Copy,
-  FolderOpen,
-  PencilSimpleLine,
-  PushPin as Pin,
-  PushPinSlash as PinOff,
-  ArrowCounterClockwise as RotateCcw,
-  Rows as Rows2,
-  TerminalWindow as Terminal,
-  X,
+  ColumnsIcon as Columns2,
+  CopyIcon as Copy,
+  FolderOpenIcon as FolderOpen,
+  PencilSimpleLineIcon as PencilSimpleLine,
+  PushPinIcon as Pin,
+  PushPinSlashIcon as PinOff,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  RowsIcon as Rows2,
+  TerminalWindowIcon as Terminal,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";

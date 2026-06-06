@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { WarningCircle } from "@phosphor-icons/react";
+import { WarningCircleIcon as WarningCircle } from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

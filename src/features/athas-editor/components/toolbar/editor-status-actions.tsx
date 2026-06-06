@@ -1,10 +1,10 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import {
-  Check,
-  SlidersHorizontal,
-  Square,
-  Lightning as Zap,
-  LightningSlash as ZapOff,
+  CheckIcon as Check,
+  SlidersHorizontalIcon as SlidersHorizontal,
+  SquareIcon as Square,
+  LightningIcon as Zap,
+  LightningSlashIcon as ZapOff,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";

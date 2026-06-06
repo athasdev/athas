@@ -1,11 +1,11 @@
 import {
-  Check,
-  CaretDown as ChevronDown,
-  CaretUp as ChevronUp,
-  Columns as Columns2,
-  Rows as Rows3,
-  Trash as Trash2,
-  X,
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  CaretUpIcon as ChevronUp,
+  ColumnsIcon as Columns2,
+  RowsIcon as Rows3,
+  TrashIcon as Trash2,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { memo } from "react";
 import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";

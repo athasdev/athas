@@ -1,4 +1,8 @@
-import { FileText, GitDiff, TerminalWindow as TerminalSquare } from "@phosphor-icons/react";
+import {
+  FileTextIcon as FileText,
+  GitDiffIcon as GitDiff,
+  TerminalWindowIcon as TerminalSquare,
+} from "@phosphor-icons/react";
 import { getAcpDiffOutputs, openAcpDiffOutput } from "@/features/ai/lib/acp-diff-output";
 import {
   getAcpTerminalOutputs,

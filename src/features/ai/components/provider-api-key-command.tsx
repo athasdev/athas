@@ -1,8 +1,8 @@
 import {
-  CheckCircle,
-  MagnifyingGlass as Search,
-  Trash,
-  WarningCircle,
+  CheckCircleIcon as CheckCircle,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash,
+  WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";

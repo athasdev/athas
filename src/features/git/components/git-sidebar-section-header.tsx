@@ -1,5 +1,8 @@
 import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
-import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
+import {
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {

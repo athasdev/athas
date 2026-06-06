@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva } from "class-variance-authority";
 import { motion } from "framer-motion";
-import { type IconProps as PhosphorIconProps, X } from "@phosphor-icons/react";
+import { type IconProps as PhosphorIconProps, XIcon as X } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";

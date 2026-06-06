@@ -1,5 +1,9 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ArrowSquareOut, List, Sparkle } from "@phosphor-icons/react";
+import {
+  ArrowSquareOutIcon as ArrowSquareOut,
+  ListIcon as List,
+  SparkleIcon as Sparkle,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

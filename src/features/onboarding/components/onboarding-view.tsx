@@ -1,4 +1,4 @@
-import { FolderOpen } from "@phosphor-icons/react";
+import { FolderOpenIcon as FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";

@@ -1,4 +1,8 @@
-import { FileText, Folder, FolderOpen } from "@phosphor-icons/react";
+import {
+  FileTextIcon as FileText,
+  FolderIcon as Folder,
+  FolderOpenIcon as FolderOpen,
+} from "@phosphor-icons/react";
 import type { IconThemeDefinition } from "../types";
 
 export const classicIconTheme: IconThemeDefinition = {

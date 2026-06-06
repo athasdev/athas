@@ -1,5 +1,5 @@
 import type React from "react";
-import { ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";

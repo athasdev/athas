@@ -1,4 +1,4 @@
-import { Microphone as Mic, PaperPlaneTilt as Send } from "@phosphor-icons/react";
+import { MicrophoneIcon as Mic, PaperPlaneTiltIcon as Send } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContextSelector } from "@/features/ai/components/selectors/context-selector";
 import { AgentSelector } from "@/features/ai/components/selectors/agent-selector";

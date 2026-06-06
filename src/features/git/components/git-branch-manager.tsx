@@ -1,4 +1,9 @@
-import { Check, GitBranch, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  GitBranchIcon as GitBranch,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
+} from "@phosphor-icons/react";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state-store";

@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  ArrowClockwise as RefreshCw,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
+  ArrowClockwiseIcon as RefreshCw,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { primitiveAlert } from "@/ui/primitive-dialog-service";

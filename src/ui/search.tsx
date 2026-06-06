@@ -1,14 +1,14 @@
 import { cva } from "class-variance-authority";
 import {
-  TextAa as CaseSensitive,
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  CaretUp as ChevronUp,
-  BracketsCurly as Regex,
-  ArrowsLeftRight as Replace,
-  MagnifyingGlass as Search,
-  TextT as WholeWord,
-  X,
+  TextAaIcon as CaseSensitive,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  CaretUpIcon as ChevronUp,
+  BracketsCurlyIcon as Regex,
+  ArrowsLeftRightIcon as Replace,
+  MagnifyingGlassIcon as Search,
+  TextTIcon as WholeWord,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import type { ReactNode, RefObject } from "react";
 import { Button } from "@/ui/button";

@@ -1,12 +1,12 @@
 import {
-  ArrowLeft,
-  Database,
-  FilePlus,
-  FolderOpen,
-  MagnifyingGlass,
-  PlugsConnected,
-  Plus,
-  Trash,
+  ArrowLeftIcon as ArrowLeft,
+  DatabaseIcon as Database,
+  FilePlusIcon as FilePlus,
+  FolderOpenIcon as FolderOpen,
+  MagnifyingGlassIcon as MagnifyingGlass,
+  PlugsConnectedIcon as PlugsConnected,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";

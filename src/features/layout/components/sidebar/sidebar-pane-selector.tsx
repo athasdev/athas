@@ -1,4 +1,9 @@
-import { Folder, GitBranch, GitPullRequest, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  FolderIcon as Folder,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  MagnifyingGlassIcon as MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
   chromeControl,

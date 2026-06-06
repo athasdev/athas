@@ -1,15 +1,15 @@
 import {
-  Bell,
-  CaretRight,
-  Check,
-  ClipboardText,
-  Copy,
-  Funnel,
-  Info,
-  MagnifyingGlass as Search,
-  Trash,
-  WarningCircle,
-  XCircle,
+  BellIcon as Bell,
+  CaretRightIcon as CaretRight,
+  CheckIcon as Check,
+  ClipboardTextIcon as ClipboardText,
+  CopyIcon as Copy,
+  FunnelIcon as Funnel,
+  InfoIcon as Info,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash,
+  WarningCircleIcon as WarningCircle,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { forwardRef, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";

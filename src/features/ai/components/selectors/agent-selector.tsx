@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CaretDown as ChevronDown,
-  Plus,
-  MagnifyingGlass as Search,
-  SlidersHorizontal as Settings2,
+  CaretDownIcon as ChevronDown,
+  PlusIcon as Plus,
+  MagnifyingGlassIcon as Search,
+  SlidersHorizontalIcon as Settings2,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";

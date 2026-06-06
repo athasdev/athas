@@ -1,8 +1,8 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  FileText,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  FileTextIcon as FileText,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoadingIndicator } from "@/ui/loading";

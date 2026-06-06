@@ -1,13 +1,13 @@
 import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  RowsPlusTop as Columns3,
-  SignIn as LogIn,
-  CursorClick as MousePointerClick,
-  PuzzlePiece as Puzzle,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  CheckIcon as Check,
+  RowsPlusTopIcon as Columns3,
+  SignInIcon as LogIn,
+  CursorClickIcon as MousePointerClick,
+  PuzzlePieceIcon as Puzzle,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";

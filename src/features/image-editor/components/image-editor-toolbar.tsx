@@ -1,12 +1,12 @@
 import {
-  CaretDown as ChevronDown,
-  FlipHorizontal,
-  FlipVertical,
-  Image,
-  ArrowCounterClockwise as RotateCcw,
-  ArrowClockwise as RotateCw,
-  FloppyDisk as Save,
-  ArrowCounterClockwise as Undo2,
+  CaretDownIcon as ChevronDown,
+  FlipHorizontalIcon as FlipHorizontal,
+  FlipVerticalIcon as FlipVertical,
+  ImageIcon as Image,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  ArrowClockwiseIcon as RotateCw,
+  FloppyDiskIcon as Save,
+  ArrowCounterClockwiseIcon as Undo2,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/ui/button";

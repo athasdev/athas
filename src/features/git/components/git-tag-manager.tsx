@@ -1,17 +1,17 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  Calendar,
-  CaretDown,
-  CaretRight,
-  ClockCounterClockwise,
-  Copy,
-  GitBranch,
-  GitCommit,
-  Plus,
-  Tag,
-  Trash as Trash2,
-  Upload,
-  X,
+  CalendarIcon as Calendar,
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  CopyIcon as Copy,
+  GitBranchIcon as GitBranch,
+  GitCommitIcon as GitCommit,
+  PlusIcon as Plus,
+  TagIcon as Tag,
+  TrashIcon as Trash2,
+  UploadIcon as Upload,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "@/ui/badge";

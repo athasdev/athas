@@ -1,13 +1,13 @@
 import {
-  Brain,
-  Database,
-  Package,
-  PaintBrush,
-  Plus,
-  Robot,
-  MagnifyingGlass as Search,
-  TextT,
-  WarningCircle,
+  BrainIcon as Brain,
+  DatabaseIcon as Database,
+  PackageIcon as Package,
+  PaintBrushIcon as PaintBrush,
+  PlusIcon as Plus,
+  RobotIcon as Robot,
+  MagnifyingGlassIcon as Search,
+  TextTIcon as TextT,
+  WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";

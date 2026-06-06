@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  Plus,
-  MagnifyingGlass as Search,
+  ArrowsOutIcon as Maximize2,
+  ArrowsInIcon as Minimize2,
+  PlusIcon as Plus,
+  MagnifyingGlassIcon as Search,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";

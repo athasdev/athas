@@ -1,13 +1,13 @@
 import {
-  ArrowUp,
-  Archive,
-  ClockCounterClockwise,
-  FolderOpen,
-  GitBranch,
-  GitCommit,
-  HardDrives as Server,
-  Tag,
-  ArrowClockwise as RefreshCw,
+  ArrowUpIcon as ArrowUp,
+  ArchiveIcon as Archive,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  FolderOpenIcon as FolderOpen,
+  GitBranchIcon as GitBranch,
+  GitCommitIcon as GitCommit,
+  HardDrivesIcon as Server,
+  TagIcon as Tag,
+  ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
 import { primitiveConfirm, primitivePrompt } from "@/ui/primitive-dialog-service";

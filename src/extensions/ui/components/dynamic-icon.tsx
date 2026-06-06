@@ -1,5 +1,5 @@
 import * as PhosphorIcons from "@phosphor-icons/react";
-import { PuzzlePiece } from "@phosphor-icons/react";
+import { PuzzlePieceIcon } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 
 interface DynamicIconProps {
@@ -17,10 +17,11 @@ function toPhosphorKey(name: string): string {
 
 export function DynamicIcon({ name, className, size }: DynamicIconProps) {
   const key = toPhosphorKey(name);
-  const Icon = PhosphorIcons[key as keyof typeof PhosphorIcons] as Icon | undefined;
+  const iconKey = `${key}Icon`;
+  const Icon = PhosphorIcons[iconKey as keyof typeof PhosphorIcons] as Icon | undefined;
 
   if (!Icon) {
-    return <PuzzlePiece className={className} size={size} />;
+    return <PuzzlePieceIcon className={className} size={size} />;
   }
 
   return <Icon className={className} size={size} />;

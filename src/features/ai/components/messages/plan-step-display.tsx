@@ -1,8 +1,8 @@
 import {
-  CheckCircle as CheckCircle2,
-  CaretRight as ChevronRight,
-  Circle,
-  Play,
+  CheckCircleIcon as CheckCircle2,
+  CaretRightIcon as ChevronRight,
+  CircleIcon as Circle,
+  PlayIcon as Play,
 } from "@phosphor-icons/react";
 import { memo, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";

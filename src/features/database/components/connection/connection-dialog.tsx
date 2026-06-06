@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, PlugsConnected as PlugZap } from "@phosphor-icons/react";
+import { FolderOpenIcon as FolderOpen, PlugsConnectedIcon as PlugZap } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";

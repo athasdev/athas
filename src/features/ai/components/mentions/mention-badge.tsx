@@ -1,4 +1,4 @@
-import { FileText } from "@phosphor-icons/react";
+import { FileTextIcon as FileText } from "@phosphor-icons/react";
 import Badge from "@/ui/badge";
 import { cn } from "@/utils/cn";
 

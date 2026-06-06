@@ -1,4 +1,10 @@
-import { CaretRight, Circle, Pause, Stack, Trash } from "@phosphor-icons/react";
+import {
+  CaretRightIcon as CaretRight,
+  CircleIcon as Circle,
+  PauseIcon as Pause,
+  StackIcon as Stack,
+  TrashIcon as Trash,
+} from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import type { ReactNode } from "react";
 import { useState } from "react";

@@ -1,4 +1,8 @@
-import { Download, Trash as Trash2, Upload } from "@phosphor-icons/react";
+import {
+  DownloadIcon as Download,
+  TrashIcon as Trash2,
+  UploadIcon as Upload,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

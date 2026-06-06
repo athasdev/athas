@@ -1,11 +1,11 @@
 import {
-  Check,
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  Columns as Columns2,
-  ArrowSquareOut as ExternalLink,
-  Rows as Rows3,
-  Trash as Trash2,
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  ColumnsIcon as Columns2,
+  ArrowSquareOutIcon as ExternalLink,
+  RowsIcon as Rows3,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import {
   type MouseEvent,

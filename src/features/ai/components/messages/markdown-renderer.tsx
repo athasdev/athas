@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  Copy,
-  TerminalWindow as Terminal,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  CopyIcon as Copy,
+  TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";

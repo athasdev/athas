@@ -1,15 +1,15 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  Copy,
-  DotsThreeVertical,
-  Folder,
-  FolderOpen,
-  HardDrives,
-  Image,
-  Plus,
-  X,
-  ArrowSquareOut,
+  CopyIcon as Copy,
+  DotsThreeVerticalIcon as DotsThreeVertical,
+  FolderIcon as Folder,
+  FolderOpenIcon as FolderOpen,
+  HardDrivesIcon as HardDrives,
+  ImageIcon as Image,
+  PlusIcon as Plus,
+  XIcon as X,
+  ArrowSquareOutIcon as ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";

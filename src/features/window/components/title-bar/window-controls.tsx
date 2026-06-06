@@ -1,4 +1,9 @@
-import { CornersIn, CornersOut, Minus, X } from "@phosphor-icons/react";
+import {
+  CornersInIcon as CornersIn,
+  CornersOutIcon as CornersOut,
+  MinusIcon as Minus,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import { chromeControl } from "@/features/layout/components/chrome-control-styles";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";

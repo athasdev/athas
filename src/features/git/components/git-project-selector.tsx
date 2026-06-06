@@ -1,10 +1,10 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  CaretDown,
-  Check,
-  FolderOpen,
-  Plus,
-  ArrowClockwise as RefreshCw,
+  CaretDownIcon as CaretDown,
+  CheckIcon as Check,
+  FolderOpenIcon as FolderOpen,
+  PlusIcon as Plus,
+  ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";

@@ -1,4 +1,4 @@
-import { Database } from "@phosphor-icons/react";
+import { DatabaseIcon as Database } from "@phosphor-icons/react";
 import type { Action } from "../models/action.types";
 
 interface DatabaseActionsParams {

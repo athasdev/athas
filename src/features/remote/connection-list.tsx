@@ -1,11 +1,11 @@
 import {
-  PencilSimple as Edit,
-  FolderOpen,
-  Plus,
-  HardDrives as Server,
-  Trash as Trash2,
-  WifiHigh as Wifi,
-  WifiSlash as WifiOff,
+  PencilSimpleIcon as Edit,
+  FolderOpenIcon as FolderOpen,
+  PlusIcon as Plus,
+  HardDrivesIcon as Server,
+  TrashIcon as Trash2,
+  WifiHighIcon as Wifi,
+  WifiSlashIcon as WifiOff,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { Button } from "@/ui/button";

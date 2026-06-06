@@ -1,16 +1,16 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  ArrowSquareOut,
-  BracketsCurly as Braces,
-  CaretDown,
-  CaretRight,
-  Check,
-  Code,
-  Copy,
-  Funnel,
-  Function as FunctionIcon,
-  MagnifyingGlass as Search,
-  SquaresFour,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  BracketsCurlyIcon as Braces,
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  CheckIcon as Check,
+  CodeIcon as Code,
+  CopyIcon as Copy,
+  FunnelIcon as Funnel,
+  FunctionIcon,
+  MagnifyingGlassIcon as Search,
+  SquaresFourIcon as SquaresFour,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";

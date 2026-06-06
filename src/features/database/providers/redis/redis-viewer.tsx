@@ -1,10 +1,10 @@
 import {
-  Clock,
-  Key,
-  ArrowClockwise as RefreshCw,
-  MagnifyingGlass as Search,
-  HardDrives as Server,
-  Trash as Trash2,
+  ClockIcon as Clock,
+  KeyIcon as Key,
+  ArrowClockwiseIcon as RefreshCw,
+  MagnifyingGlassIcon as Search,
+  HardDrivesIcon as Server,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";

@@ -1,16 +1,16 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  CaretLeft,
-  Check,
-  ChatCircleText,
-  FileText,
-  Funnel,
-  Folder,
-  Hash,
-  Microphone as Mic,
-  Monitor,
-  MagnifyingGlass as Search,
-  UsersThree,
+  CaretLeftIcon as CaretLeft,
+  CheckIcon as Check,
+  ChatCircleTextIcon as ChatCircleText,
+  FileTextIcon as FileText,
+  FunnelIcon as Funnel,
+  FolderIcon as Folder,
+  HashIcon as Hash,
+  MicrophoneIcon as Mic,
+  MonitorIcon as Monitor,
+  MagnifyingGlassIcon as Search,
+  UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
 import {
   type ReactNode,

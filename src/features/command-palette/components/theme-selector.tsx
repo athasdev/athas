@@ -1,11 +1,11 @@
 import {
-  CaretLeft,
-  Monitor,
-  Moon,
-  Palette,
-  GearSix as Settings,
-  Sun,
-  Upload,
+  CaretLeftIcon as CaretLeft,
+  MonitorIcon as Monitor,
+  MoonIcon as Moon,
+  PaletteIcon as Palette,
+  GearSixIcon as Settings,
+  SunIcon as Sun,
+  UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";

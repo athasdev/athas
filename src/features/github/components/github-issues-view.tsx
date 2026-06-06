@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  WarningCircle as AlertCircle,
-  ChatCircleText as MessageSquare,
+  WarningCircleIcon as AlertCircle,
+  ChatCircleTextIcon as MessageSquare,
 } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarState } from "./github-sidebar-state";

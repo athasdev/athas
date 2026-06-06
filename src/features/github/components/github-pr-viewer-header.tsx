@@ -1,12 +1,12 @@
 import {
-  Check,
-  CheckCircle as CheckCircle2,
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  FileCode as FileCode2,
-  GitBranch,
-  GitPullRequest,
-  ArrowClockwise as RefreshCw,
+  CheckIcon as Check,
+  CheckCircleIcon as CheckCircle2,
+  CopyIcon as Copy,
+  ArrowSquareOutIcon as ExternalLink,
+  FileCodeIcon as FileCode2,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";

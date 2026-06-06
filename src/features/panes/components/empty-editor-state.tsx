@@ -1,12 +1,12 @@
 import {
-  FileText,
-  FolderOpen,
-  GlobeHemisphereWest as Globe,
-  Pencil,
-  Plus,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
-  Trash as Trash2,
+  FileTextIcon as FileText,
+  FolderOpenIcon as FolderOpen,
+  GlobeHemisphereWestIcon as Globe,
+  PencilIcon as Pencil,
+  PlusIcon as Plus,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";

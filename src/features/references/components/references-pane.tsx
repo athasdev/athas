@@ -1,10 +1,10 @@
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  FileCode,
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  X,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  FileCodeIcon as FileCode,
+  ArrowsOutIcon as Maximize2,
+  ArrowsInIcon as Minimize2,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

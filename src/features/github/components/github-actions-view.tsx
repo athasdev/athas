@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CheckCircle as CheckCircle2,
-  Clock,
-  Pulse as Activity,
-  WarningCircle as AlertCircle,
-  XCircle,
+  CheckCircleIcon as CheckCircle2,
+  ClockIcon as Clock,
+  PulseIcon as Activity,
+  WarningCircleIcon as AlertCircle,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarState } from "./github-sidebar-state";

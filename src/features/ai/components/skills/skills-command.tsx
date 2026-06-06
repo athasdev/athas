@@ -1,10 +1,10 @@
 import {
-  CloudArrowDown,
-  FloppyDisk,
-  MagnifyingGlass as Search,
-  PencilSimple,
-  Plus,
-  Trash,
+  CloudArrowDownIcon as CloudArrowDown,
+  FloppyDiskIcon as FloppyDisk,
+  MagnifyingGlassIcon as Search,
+  PencilSimpleIcon as PencilSimple,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {

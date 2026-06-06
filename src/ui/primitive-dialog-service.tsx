@@ -1,4 +1,8 @@
-import { Info, Question, Warning } from "@phosphor-icons/react";
+import {
+  InfoIcon as Info,
+  QuestionIcon as Question,
+  WarningIcon as Warning,
+} from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, type ButtonVariant } from "@/ui/button";
 import Dialog from "@/ui/dialog";

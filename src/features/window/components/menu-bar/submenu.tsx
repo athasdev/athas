@@ -1,4 +1,4 @@
-import { CaretRight as ChevronRight } from "@phosphor-icons/react";
+import { CaretRightIcon as ChevronRight } from "@phosphor-icons/react";
 import { type ReactNode, useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

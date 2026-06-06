@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { WarningCircle as AlertCircle } from "@phosphor-icons/react";
+import { WarningCircleIcon as AlertCircle } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { isWebViewerContent, type WebViewerContent } from "@/features/panes/types/pane-content";

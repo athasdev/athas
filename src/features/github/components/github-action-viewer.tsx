@@ -1,14 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  CheckCircle as CheckCircle2,
-  Clock,
-  Pulse as Activity,
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  ArrowClockwise as RefreshCw,
-  FileText,
-  XCircle,
+  CheckCircleIcon as CheckCircle2,
+  ClockIcon as Clock,
+  PulseIcon as Activity,
+  CopyIcon as Copy,
+  ArrowSquareOutIcon as ExternalLink,
+  ArrowClockwiseIcon as RefreshCw,
+  FileTextIcon as FileText,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

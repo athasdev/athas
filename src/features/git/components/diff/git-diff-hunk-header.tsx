@@ -1,8 +1,8 @@
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  Minus,
-  Plus,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
 } from "@phosphor-icons/react";
 import { memo, useCallback } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

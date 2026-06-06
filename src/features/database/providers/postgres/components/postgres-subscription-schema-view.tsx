@@ -1,4 +1,4 @@
-import { RadioButton as Radio } from "@phosphor-icons/react";
+import { RadioButtonIcon as Radio } from "@phosphor-icons/react";
 import type { PostgresSubscriptionInfo } from "../../../models/common.types";
 
 interface PostgresSubscriptionSchemaViewProps {

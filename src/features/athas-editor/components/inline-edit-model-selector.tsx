@@ -1,4 +1,8 @@
-import { CaretLeft, Check, MagnifyingGlass as Search } from "@phosphor-icons/react";
+import {
+  CaretLeftIcon as CaretLeft,
+  CheckIcon as Check,
+  MagnifyingGlassIcon as Search,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";

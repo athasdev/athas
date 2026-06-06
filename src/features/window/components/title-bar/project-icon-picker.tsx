@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir } from "@tauri-apps/plugin-fs";
-import { Trash as Trash2 } from "@phosphor-icons/react";
+import { TrashIcon as Trash2 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";

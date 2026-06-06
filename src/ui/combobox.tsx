@@ -1,4 +1,8 @@
-import { Check, CaretDown as ChevronDown, X } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";

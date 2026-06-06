@@ -1,13 +1,13 @@
 import {
-  WarningCircle as AlertCircle,
-  CheckCircle as CheckCircle2,
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  DotOutline as CircleDot,
-  GitMerge,
-  LinkSimple as Link2,
-  User,
-  XCircle,
+  WarningCircleIcon as AlertCircle,
+  CheckCircleIcon as CheckCircle2,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  DotOutlineIcon as CircleDot,
+  GitMergeIcon as GitMerge,
+  LinkSimpleIcon as Link2,
+  UserIcon as User,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import { memo, useMemo, useState } from "react";
 import Badge from "@/ui/badge";

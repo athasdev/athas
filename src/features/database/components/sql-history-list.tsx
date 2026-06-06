@@ -1,4 +1,10 @@
-import { ClipboardText, Code, Play, Trash, X } from "@phosphor-icons/react";
+import {
+  ClipboardTextIcon as ClipboardText,
+  CodeIcon as Code,
+  PlayIcon as Play,
+  TrashIcon as Trash,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { formatSqlHistoryPreview } from "../lib/sql-history";
 import { writeDatabaseClipboardText } from "../utils/clipboard";

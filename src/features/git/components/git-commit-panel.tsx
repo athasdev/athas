@@ -1,10 +1,10 @@
 import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  CaretDown as ChevronDown,
-  WarningCircle as AlertCircle,
-  Sparkle as Sparkles,
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  WarningCircleIcon as AlertCircle,
+  SparkleIcon as Sparkles,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useLayoutEffect, useRef, useState } from "react";

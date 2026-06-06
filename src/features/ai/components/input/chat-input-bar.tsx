@@ -1,11 +1,11 @@
 import {
-  BookOpen,
-  Command as CommandIcon,
-  ArrowUp,
-  Key,
-  Microphone as Mic,
-  Stop,
-  X,
+  BookOpenIcon as BookOpen,
+  CommandIcon,
+  ArrowUpIcon as ArrowUp,
+  KeyIcon as Key,
+  MicrophoneIcon as Mic,
+  StopIcon as Stop,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";

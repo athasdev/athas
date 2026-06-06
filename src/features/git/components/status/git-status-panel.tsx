@@ -1,12 +1,12 @@
 import {
-  Archive,
-  CaretDown,
-  CaretRight,
-  Check,
-  FileText,
-  Minus,
-  Plus,
-  Trash as Trash2,
+  ArchiveIcon as Archive,
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  CheckIcon as Check,
+  FileTextIcon as FileText,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";

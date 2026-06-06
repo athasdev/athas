@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check } from "@phosphor-icons/react";
+import { CheckIcon as Check } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useToast } from "@/features/layout/contexts/toast-context";

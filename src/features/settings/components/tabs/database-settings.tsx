@@ -1,4 +1,8 @@
-import { Database, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  DatabaseIcon as Database,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
+} from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";

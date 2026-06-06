@@ -1,4 +1,12 @@
-import { Bug, FolderOpen, ListBullets, Pause, Play, Square, Trash } from "@phosphor-icons/react";
+import {
+  BugIcon as Bug,
+  FolderOpenIcon as FolderOpen,
+  ListBulletsIcon as ListBullets,
+  PauseIcon as Pause,
+  PlayIcon as Play,
+  SquareIcon as Square,
+  TrashIcon as Trash,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";

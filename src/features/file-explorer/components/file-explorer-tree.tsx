@@ -1,11 +1,11 @@
 import ignore from "ignore";
 import {
-  Check,
-  Eye,
-  Funnel,
-  GitBranch,
-  MagnifyingGlass as Search,
-  Warning as AlertTriangle,
+  CheckIcon as Check,
+  EyeIcon as Eye,
+  FunnelIcon as Funnel,
+  GitBranchIcon as GitBranch,
+  MagnifyingGlassIcon as Search,
+  WarningIcon as AlertTriangle,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";

@@ -1,4 +1,4 @@
-import { Lock } from "@phosphor-icons/react";
+import { LockIcon as Lock } from "@phosphor-icons/react";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button, type ButtonProps } from "@/ui/button";
 import { useUpgradeToPro } from "../hooks/use-upgrade-to-pro";

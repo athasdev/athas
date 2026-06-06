@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { Check } from "@phosphor-icons/react";
+import { CheckIcon as Check } from "@phosphor-icons/react";
 import { cn } from "@/utils/cn";
 
 interface CheckboxProps {

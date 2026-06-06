@@ -1,14 +1,14 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  Archive,
-  ClockCounterClockwise,
-  Download,
-  DotsThree as MoreHorizontal,
-  FolderSimpleStar,
-  GitBranch,
-  ArrowClockwise as RefreshCw,
-  Trash as Trash2,
-  Upload,
+  ArchiveIcon as Archive,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  DownloadIcon as Download,
+  DotsThreeIcon as MoreHorizontal,
+  FolderSimpleStarIcon as FolderSimpleStar,
+  GitBranchIcon as GitBranch,
+  ArrowClockwiseIcon as RefreshCw,
+  TrashIcon as Trash2,
+  UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

@@ -1,15 +1,15 @@
 import {
-  ArrowDown,
-  ArrowUp,
-  Calendar,
-  Copy,
-  FileText,
-  Funnel as Filter,
-  Hash,
-  Key,
-  Link,
-  Plus,
-  TextT as Type,
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  CalendarIcon as Calendar,
+  CopyIcon as Copy,
+  FileTextIcon as FileText,
+  FunnelIcon as Filter,
+  HashIcon as Hash,
+  KeyIcon as Key,
+  LinkIcon as Link,
+  PlusIcon as Plus,
+  TextTIcon as Type,
 } from "@phosphor-icons/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";

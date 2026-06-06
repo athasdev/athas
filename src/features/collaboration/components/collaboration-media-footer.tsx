@@ -1,4 +1,4 @@
-import { Microphone as Mic, Monitor } from "@phosphor-icons/react";
+import { MicrophoneIcon as Mic, MonitorIcon as Monitor } from "@phosphor-icons/react";
 import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
 import { SidebarFooter } from "@/ui/sidebar";

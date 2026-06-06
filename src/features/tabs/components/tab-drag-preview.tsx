@@ -1,4 +1,8 @@
-import { Database, Package, PushPin as Pin } from "@phosphor-icons/react";
+import {
+  DatabaseIcon as Database,
+  PackageIcon as Package,
+  PushPinIcon as Pin,
+} from "@phosphor-icons/react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 

@@ -1,12 +1,12 @@
 import {
-  Copy,
-  GitBranch,
-  GitCommit,
-  GitFork,
-  ArrowSquareOut,
-  Plus,
-  ArrowClockwise as RefreshCw,
-  Trash as Trash2,
+  CopyIcon as Copy,
+  GitBranchIcon as GitBranch,
+  GitCommitIcon as GitCommit,
+  GitForkIcon as GitFork,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  PlusIcon as Plus,
+  ArrowClockwiseIcon as RefreshCw,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";

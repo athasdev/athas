@@ -1,15 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  WarningCircle as AlertCircle,
-  CheckCircle,
-  Cloud,
-  ArrowSquareOut as ExternalLink,
-  GlobeHemisphereWest as Globe,
-  Key,
-  Laptop,
-  ArrowClockwise as RefreshCw,
-  ArrowCounterClockwise as RotateCcw,
-  Trash as Trash2,
+  WarningCircleIcon as AlertCircle,
+  CheckCircleIcon as CheckCircle,
+  CloudIcon as Cloud,
+  ArrowSquareOutIcon as ExternalLink,
+  GlobeHemisphereWestIcon as Globe,
+  KeyIcon as Key,
+  LaptopIcon as Laptop,
+  ArrowClockwiseIcon as RefreshCw,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";

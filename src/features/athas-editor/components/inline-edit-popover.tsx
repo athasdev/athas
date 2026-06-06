@@ -1,4 +1,4 @@
-import { ArrowBendDownLeft as CornerDownLeft, X } from "@phosphor-icons/react";
+import { ArrowBendDownLeftIcon as CornerDownLeft, XIcon as X } from "@phosphor-icons/react";
 import { forwardRef } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

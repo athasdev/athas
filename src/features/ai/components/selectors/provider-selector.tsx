@@ -1,4 +1,4 @@
-import { Check } from "@phosphor-icons/react";
+import { CheckIcon as Check } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";

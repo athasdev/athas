@@ -19,20 +19,20 @@ import { CSS } from "@dnd-kit/utilities";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-  TextAlignCenter as AlignCenter,
-  ArrowDown,
-  ArrowUp,
-  CaretDown as ChevronDown,
-  ArrowsOut as Maximize,
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  PushPin as Pin,
-  Plus,
-  MagnifyingGlass as Search,
-  TerminalWindow as TerminalIcon,
-  SidebarSimple as PanelLeft,
-  SidebarSimple as PanelRight,
-  Rows as Rows3,
+  TextAlignCenterIcon as AlignCenter,
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  CaretDownIcon as ChevronDown,
+  ArrowsOutIcon as Maximize,
+  ArrowsOutIcon as Maximize2,
+  ArrowsInIcon as Minimize2,
+  PushPinIcon as Pin,
+  PlusIcon as Plus,
+  MagnifyingGlassIcon as Search,
+  TerminalWindowIcon as TerminalIcon,
+  SidebarSimpleIcon as PanelLeft,
+  SidebarSimpleIcon as PanelRight,
+  RowsIcon as Rows3,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";

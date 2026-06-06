@@ -1,4 +1,9 @@
-import { PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
+import {
+  PencilSimpleIcon as PencilSimple,
+  PlayIcon as Play,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import {

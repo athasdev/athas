@@ -1,5 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { ClockCounterClockwise as History } from "@phosphor-icons/react";
+import { ClockCounterClockwiseIcon as History } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";

@@ -1,4 +1,4 @@
-import { File, MagnifyingGlass } from "@phosphor-icons/react";
+import { FileIcon as File, MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";

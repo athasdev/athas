@@ -1,12 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { MagnifyingGlass as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import {
-  ArrowLeft,
-  CirclesThree,
-  Cube,
-  DownloadSimple,
-  Sliders,
-  User,
+  ArrowLeftIcon as ArrowLeft,
+  CirclesThreeIcon as CirclesThree,
+  CubeIcon as Cube,
+  DownloadSimpleIcon as DownloadSimple,
+  SlidersIcon as Sliders,
+  UserIcon as User,
 } from "@phosphor-icons/react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";

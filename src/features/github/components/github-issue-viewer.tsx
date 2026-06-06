@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  ChatCircleText as MessageSquare,
-  ArrowClockwise as RefreshCw,
+  CopyIcon as Copy,
+  ArrowSquareOutIcon as ExternalLink,
+  ChatCircleTextIcon as MessageSquare,
+  ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

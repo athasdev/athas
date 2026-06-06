@@ -1,13 +1,13 @@
 import {
-  Database,
-  FileText,
-  GitPullRequest,
-  Globe,
-  MagnifyingGlass as Search,
-  PlayCircle,
-  Plus,
-  TerminalWindow,
-  X,
+  DatabaseIcon as Database,
+  FileTextIcon as FileText,
+  GitPullRequestIcon as GitPullRequest,
+  GlobeIcon as Globe,
+  MagnifyingGlassIcon as Search,
+  PlayCircleIcon as PlayCircle,
+  PlusIcon as Plus,
+  TerminalWindowIcon as TerminalWindow,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { Key as KeyRound } from "@phosphor-icons/react";
+import { KeyIcon as KeyRound } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";

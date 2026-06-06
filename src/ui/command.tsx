@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowClockwise as RefreshCwIcon, X } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";

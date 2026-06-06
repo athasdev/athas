@@ -1,9 +1,9 @@
 import { forwardRef, memo, type ReactNode, useMemo, useRef } from "react";
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  FileCode as FileJson2,
-  FileText,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  FileCodeIcon as FileJson2,
+  FileTextIcon as FileText,
 } from "@phosphor-icons/react";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";

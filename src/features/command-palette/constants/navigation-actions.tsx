@@ -1,13 +1,13 @@
 import {
-  FileText,
-  FolderOpen,
-  BugBeetle,
-  GitBranch,
-  GitPullRequest,
-  Hash,
-  ListBullets,
-  Package,
-  MagnifyingGlass as Search,
+  FileTextIcon as FileText,
+  FolderOpenIcon as FolderOpen,
+  BugBeetleIcon as BugBeetle,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  HashIcon as Hash,
+  ListBulletsIcon as ListBullets,
+  PackageIcon as Package,
+  MagnifyingGlassIcon as Search,
 } from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";

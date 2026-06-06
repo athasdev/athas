@@ -1,18 +1,21 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
-  ArrowSquareOut,
-  ChatCircleText,
-  Check,
-  Copy,
-  Funnel,
-  GitBranch,
-  GitPullRequest,
-  Lightning,
-  MagnifyingGlass as Search,
-  Plus,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  ChatCircleTextIcon as ChatCircleText,
+  CheckIcon as Check,
+  CopyIcon as Copy,
+  FunnelIcon as Funnel,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  LightningIcon as Lightning,
+  MagnifyingGlassIcon as Search,
+  PlusIcon as Plus,
 } from "@phosphor-icons/react";
-import { WarningCircle as AlertCircle, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
+import {
+  WarningCircleIcon as AlertCircle,
+  ArrowClockwiseIcon as RefreshCw,
+} from "@phosphor-icons/react";
 import {
   memo,
   type ReactNode,

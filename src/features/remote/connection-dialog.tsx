@@ -1,9 +1,9 @@
 import {
-  WarningCircle as AlertCircle,
-  CheckCircle,
-  Eye,
-  EyeSlash as EyeOff,
-  HardDrives as Server,
+  WarningCircleIcon as AlertCircle,
+  CheckCircleIcon as CheckCircle,
+  EyeIcon as Eye,
+  EyeSlashIcon as EyeOff,
+  HardDrivesIcon as Server,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";

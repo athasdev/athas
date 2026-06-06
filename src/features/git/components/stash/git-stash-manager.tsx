@@ -1,4 +1,12 @@
-import { Archive, Clock, Download, Plus, Trash as Trash2, Upload, X } from "@phosphor-icons/react";
+import {
+  ArchiveIcon as Archive,
+  ClockIcon as Clock,
+  DownloadIcon as Download,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
+  UploadIcon as Upload,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

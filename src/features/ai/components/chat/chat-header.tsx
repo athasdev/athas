@@ -1,4 +1,4 @@
-import { ClockCounterClockwise as History } from "@phosphor-icons/react";
+import { ClockCounterClockwiseIcon as History } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";

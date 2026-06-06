@@ -1,6 +1,11 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Folder, PushPin, HardDrives as Server, WarningCircle } from "@phosphor-icons/react";
+import {
+  FolderIcon as Folder,
+  PushPinIcon as PushPin,
+  HardDrivesIcon as Server,
+  WarningCircleIcon as WarningCircle,
+} from "@phosphor-icons/react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";

@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Warning as AlertTriangle } from "@phosphor-icons/react";
+import { WarningIcon as AlertTriangle } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 
 interface Props {

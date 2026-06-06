@@ -12,14 +12,14 @@ import {
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  Lock,
-  LockOpen,
-  Plus,
-  SidebarSimple as PanelLeftClose,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  ArrowsOutIcon as Maximize2,
+  ArrowsInIcon as Minimize2,
+  LockIcon as Lock,
+  LockOpenIcon as LockOpen,
+  PlusIcon as Plus,
+  SidebarSimpleIcon as PanelLeftClose,
 } from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";

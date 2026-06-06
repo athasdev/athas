@@ -1,13 +1,13 @@
 import {
-  BugBeetle,
-  CaretUp,
-  Database,
-  DownloadSimple,
-  ListBullets,
-  PuzzlePiece,
-  TerminalWindow,
-  UsersThree,
-  WarningCircle,
+  BugBeetleIcon as BugBeetle,
+  CaretUpIcon as CaretUp,
+  DatabaseIcon as Database,
+  DownloadSimpleIcon as DownloadSimple,
+  ListBulletsIcon as ListBullets,
+  PuzzlePieceIcon as PuzzlePiece,
+  TerminalWindowIcon as TerminalWindow,
+  UsersThreeIcon as UsersThree,
+  WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";

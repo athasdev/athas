@@ -1,8 +1,8 @@
 import {
-  Minus,
-  Plus,
-  MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  MagnifyingGlassPlusIcon as ZoomIn,
+  MagnifyingGlassMinusIcon as ZoomOut,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";

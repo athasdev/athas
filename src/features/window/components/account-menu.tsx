@@ -1,14 +1,14 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  BookOpen,
-  CreditCard,
-  CurrencyDollar,
-  SignIn,
-  SignOut,
-  UserCircle,
-  GearSix,
-  ArrowSquareOut,
-  UsersThree,
+  BookOpenIcon as BookOpen,
+  CreditCardIcon as CreditCard,
+  CurrencyDollarIcon as CurrencyDollar,
+  SignInIcon as SignIn,
+  SignOutIcon as SignOut,
+  UserCircleIcon as UserCircle,
+  GearSixIcon as GearSix,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";

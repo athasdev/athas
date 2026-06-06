@@ -1,4 +1,7 @@
-import { MagnifyingGlass as Search, SlidersHorizontal } from "@phosphor-icons/react";
+import {
+  MagnifyingGlassIcon as Search,
+  SlidersHorizontalIcon as SlidersHorizontal,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useMemo } from "react";
 import { Button, buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";

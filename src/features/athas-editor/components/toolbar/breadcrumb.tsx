@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { Eye, MagnifyingGlass as Search, Sparkle as Sparkles } from "@phosphor-icons/react";
+import {
+  EyeIcon as Eye,
+  MagnifyingGlassIcon as Search,
+  SparkleIcon as Sparkles,
+} from "@phosphor-icons/react";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

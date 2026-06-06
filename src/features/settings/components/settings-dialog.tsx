@@ -1,4 +1,4 @@
-import { CaretDown, MagnifyingGlass as Search } from "@phosphor-icons/react";
+import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";

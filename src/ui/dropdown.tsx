@@ -14,7 +14,7 @@ import Input from "@/ui/input";
 import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { MagnifyingGlass as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({

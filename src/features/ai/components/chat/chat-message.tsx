@@ -1,4 +1,4 @@
-import { CopySimple } from "@phosphor-icons/react";
+import { CopySimpleIcon as CopySimple } from "@phosphor-icons/react";
 import { memo, useCallback } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";

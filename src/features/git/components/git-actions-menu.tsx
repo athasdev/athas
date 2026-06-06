@@ -1,14 +1,14 @@
 import {
-  Archive,
-  Download,
-  FolderOpen,
-  GitPullRequest,
-  ArrowClockwise as RefreshCw,
-  ArrowCounterClockwise as RotateCcw,
-  HardDrives as Server,
-  GearSix as Settings,
-  Tag,
-  Upload,
+  ArchiveIcon as Archive,
+  DownloadIcon as Download,
+  FolderOpenIcon as FolderOpen,
+  GitPullRequestIcon as GitPullRequest,
+  ArrowClockwiseIcon as RefreshCw,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  HardDrivesIcon as Server,
+  GearSixIcon as Settings,
+  TagIcon as Tag,
+  UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";

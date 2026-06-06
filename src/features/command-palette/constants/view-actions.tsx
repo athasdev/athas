@@ -1,16 +1,16 @@
 import {
-  WarningCircle as AlertCircle,
-  ArrowsLeftRight as ArrowLeftRight,
-  GlobeHemisphereWest as Globe,
-  List as Menu,
-  ChatCircleText as MessageSquare,
-  SidebarSimple as PanelBottom,
-  SidebarSimple as PanelLeft,
-  ArrowCounterClockwise as RotateCcw,
-  MagnifyingGlass as Search,
-  TerminalWindow as Terminal,
-  MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut,
+  WarningCircleIcon as AlertCircle,
+  ArrowsLeftRightIcon as ArrowLeftRight,
+  GlobeHemisphereWestIcon as Globe,
+  ListIcon as Menu,
+  ChatCircleTextIcon as MessageSquare,
+  SidebarSimpleIcon as PanelBottom,
+  SidebarSimpleIcon as PanelLeft,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  MagnifyingGlassIcon as Search,
+  TerminalWindowIcon as Terminal,
+  MagnifyingGlassPlusIcon as ZoomIn,
+  MagnifyingGlassMinusIcon as ZoomOut,
 } from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";

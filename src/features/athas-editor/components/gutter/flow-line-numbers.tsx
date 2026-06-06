@@ -1,5 +1,8 @@
 import { memo, useCallback, useMemo } from "react";
-import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
+import {
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+} from "@phosphor-icons/react";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";

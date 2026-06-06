@@ -1,4 +1,4 @@
-import { Eye, EyeSlash as EyeOff } from "@phosphor-icons/react";
+import { EyeIcon as Eye, EyeSlashIcon as EyeOff } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";

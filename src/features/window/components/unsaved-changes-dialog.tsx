@@ -1,4 +1,4 @@
-import { Warning as AlertTriangle } from "@phosphor-icons/react";
+import { WarningIcon as AlertTriangle } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";

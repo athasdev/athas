@@ -1,8 +1,8 @@
 import {
-  Clock as ClockIcon,
-  FolderPlus,
-  FolderOpen,
-  SidebarSimple as PanelTopClose,
+  ClockIcon,
+  FolderPlusIcon as FolderPlus,
+  FolderOpenIcon as FolderOpen,
+  SidebarSimpleIcon as PanelTopClose,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";

@@ -1,4 +1,8 @@
-import { Check, Lock, WarningCircle } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  LockIcon as Lock,
+  WarningCircleIcon as WarningCircle,
+} from "@phosphor-icons/react";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";

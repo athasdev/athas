@@ -1,4 +1,4 @@
-import { CaretRight, type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { CaretRightIcon as CaretRight, type Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,

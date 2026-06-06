@@ -1,8 +1,4 @@
-import {
-  PencilSimple as EditIcon,
-  Plus as PlusIcon,
-  Trash as TrashIcon,
-} from "@phosphor-icons/react";
+import { PencilSimpleIcon as EditIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import type { DatabaseRow } from "../models/common.types";

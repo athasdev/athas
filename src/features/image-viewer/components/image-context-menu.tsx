@@ -1,14 +1,14 @@
 import {
-  Copy,
-  FileText,
-  FlipHorizontal,
-  FlipVertical,
-  FolderOpen,
-  Image,
-  ArrowCounterClockwise as RotateCcw,
-  ArrowClockwise as RotateCw,
-  FloppyDisk as Save,
-  ArrowCounterClockwise as Undo2,
+  CopyIcon as Copy,
+  FileTextIcon as FileText,
+  FlipHorizontalIcon as FlipHorizontal,
+  FlipVerticalIcon as FlipVertical,
+  FolderOpenIcon as FolderOpen,
+  ImageIcon as Image,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  ArrowClockwiseIcon as RotateCw,
+  FloppyDiskIcon as Save,
+  ArrowCounterClockwiseIcon as Undo2,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

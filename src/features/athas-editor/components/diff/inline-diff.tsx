@@ -1,6 +1,9 @@
 import type React from "react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowCounterClockwise, X } from "@phosphor-icons/react";
+import {
+  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import type { GitDiffLine } from "@/features/git/types/git-types";
 import { Button } from "@/ui/button";

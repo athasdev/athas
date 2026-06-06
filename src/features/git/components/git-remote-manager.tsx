@@ -1,4 +1,8 @@
-import { GlobeHemisphereWest as Globe, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  GlobeHemisphereWestIcon as Globe,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
