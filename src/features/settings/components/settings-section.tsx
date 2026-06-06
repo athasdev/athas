@@ -104,14 +104,14 @@ export function SettingRow({
     }
 
     const segmentedControl = controlRef.current?.querySelector<HTMLElement>(
-      "[data-setting-segmented-control='true']",
+      "[data-slot='segmented-control']",
     );
     if (segmentedControl) {
       const segmentedItems = Array.from(
         segmentedControl.querySelectorAll<HTMLElement>("[role='button']"),
       ).filter((item) => !item.hasAttribute("disabled"));
       const activeIndex = segmentedItems.findIndex(
-        (item) => item.getAttribute("data-setting-segmented-active") === "true",
+        (item) => item.getAttribute("data-active") === "true",
       );
 
       if (segmentedItems.length > 0) {

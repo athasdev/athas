@@ -27,7 +27,7 @@ export function SegmentedControl({
   return (
     <TabsList
       variant="segmented"
-      data-setting-segmented-control="true"
+      data-slot="segmented-control"
       className={
         className ??
         (wrap
@@ -38,7 +38,6 @@ export function SegmentedControl({
       {options.map((option) => (
         <Tab
           key={option.value}
-          data-setting-segmented-active={value === option.value ? "true" : undefined}
           isActive={value === option.value}
           variant="segmented"
           size={size}
