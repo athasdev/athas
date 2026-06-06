@@ -18,7 +18,10 @@ import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import { SidebarEmptyActionState } from "@/ui/sidebar";
-import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
+import {
+  SIDEBAR_TREE_ICON_SIZE,
+  SidebarTreeRow,
+} from "@/features/sidebar-tree/components/sidebar-tree";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -33,7 +36,6 @@ import GitSidebarSectionHeader, {
 } from "../git-sidebar-section-header";
 import { StashMessageModal } from "../stash/git-stash-modal";
 import { GitFileItem } from "./git-status-file-item";
-import "@/features/file-explorer/styles/file-explorer-tree.css";
 
 interface GitFileDiffStats {
   additions: number;

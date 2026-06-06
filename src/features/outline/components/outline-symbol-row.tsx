@@ -12,7 +12,11 @@ import {
   TextTIcon as TextT,
 } from "@phosphor-icons/react";
 import { forwardRef } from "react";
-import { SidebarTreeDisclosure, SidebarTreeIcon, SidebarTreeRow } from "@/ui/sidebar-tree";
+import {
+  SidebarTreeDisclosure,
+  SidebarTreeIcon,
+  SidebarTreeRow,
+} from "@/features/sidebar-tree/components/sidebar-tree";
 import type { OutlineSymbol } from "../types/outline-symbol";
 
 function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; className?: string }) {

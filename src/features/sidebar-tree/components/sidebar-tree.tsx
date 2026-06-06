@@ -1,4 +1,4 @@
-import "@/features/file-explorer/styles/file-explorer-tree.css";
+import "@/features/sidebar-tree/styles/sidebar-tree.css";
 import { CaretDownIcon as CaretDown, CaretRightIcon as CaretRight } from "@phosphor-icons/react";
 import type React from "react";
 import { forwardRef } from "react";

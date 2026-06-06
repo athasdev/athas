@@ -3,7 +3,10 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import Checkbox from "@/ui/checkbox";
-import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
+import {
+  SIDEBAR_TREE_ICON_SIZE,
+  SidebarTreeRow,
+} from "@/features/sidebar-tree/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git-types";
 
