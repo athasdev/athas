@@ -35,7 +35,7 @@ const Submenu = ({ title, children, disabled = false }: Props) => {
 
       {/* Submenu content */}
       {isOpen && !disabled && (
-        <div className="absolute top-0 left-full z-[10050] ml-1">
+        <div className="absolute top-0 left-full z-10050 ml-1">
           <Menu>{children}</Menu>
         </div>
       )}

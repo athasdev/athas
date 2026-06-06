@@ -31,10 +31,10 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
       size="sm"
       footer={
         <>
-          <Button onClick={onCancel} variant="default" compact>
+          <Button onClick={onCancel} compact>
             Cancel
           </Button>
-          <Button onClick={onDiscard} variant="default" compact>
+          <Button onClick={onDiscard} compact>
             Don't Save
           </Button>
           <Button onClick={onSave} variant="accent" compact>
