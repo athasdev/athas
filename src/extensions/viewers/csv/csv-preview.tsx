@@ -10,7 +10,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
-import { TableView } from "@/ui/table-view";
+import { TableView } from "./csv-table-view";
 import { parseCsv } from "./csv-utils";
 
 type Delim = "," | "\t" | ";" | "|";

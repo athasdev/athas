@@ -9,7 +9,7 @@ import {
   RocketLaunchIcon as RocketLaunch,
   WrenchIcon as Wrench,
 } from "@phosphor-icons/react";
-import { EmojiPicker } from "@/ui/emoji-picker";
+import { EmojiPicker } from "./emoji-picker";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
