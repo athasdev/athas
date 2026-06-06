@@ -1,14 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
-  ArrowSquareOut,
-  CornersIn,
-  CornersOut,
-  List,
-  Minus,
-  Sparkle,
-  X,
-} from "@phosphor-icons/react";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ArrowSquareOut, List, Sparkle } from "@phosphor-icons/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -35,51 +27,17 @@ import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
-import { AccountMenu } from "./account-menu";
-import ProjectPicker from "./project-picker";
-import ProjectTabs from "./project-tabs";
-import RunActionsButton from "./run-actions-button";
-import WindowTitleDisplay from "./window-title-display";
-import CustomMenuBar from "./menu-bar/window-menu-bar";
+import { AccountMenu } from "../account-menu";
+import ProjectPicker from "../project-picker";
+import RunActionsButton from "../run-actions-button";
+import { type HeaderItem, orderHeaderItems, placeHeaderItemsBeforeAccount } from "./header-items";
+import { TitleBarProjectArea } from "./title-bar-project-area";
+import { WindowControls } from "./window-controls";
+import CustomMenuBar from "../menu-bar/window-menu-bar";
 
 interface CustomTitleBarProps {
   title?: string;
   showMinimal?: boolean;
-}
-
-type HeaderItem<T extends string> = {
-  id: T;
-  label: string;
-  content: ReactNode;
-};
-
-function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, orderedIds: T[]) {
-  const itemMap = new Map(items.map((item) => [item.id, item]));
-  const orderedItems = orderedIds
-    .map((id) => itemMap.get(id))
-    .filter((item): item is HeaderItem<T> => Boolean(item));
-  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
-  return [...orderedItems, ...missingItems];
-}
-
-function placeHeaderItemsBeforeAccount<T extends string>(items: Array<HeaderItem<T>>) {
-  const accountIndex = items.findIndex((item) => item.id === "account");
-  if (accountIndex < 0) return items;
-
-  let nextItems = [...items];
-  for (const id of ["ai-chat"] as const) {
-    const itemIndex = nextItems.findIndex((item) => item.id === id);
-    const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
-    if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
-      continue;
-    }
-
-    const [item] = nextItems.splice(itemIndex, 1);
-    const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
-    nextItems.splice(insertionIndex, 0, item);
-  }
-
-  return nextItems;
 }
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
@@ -151,32 +109,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       cleanup?.();
     };
   }, []);
-
-  const handleMinimize = async () => {
-    try {
-      await currentWindow?.minimize();
-    } catch (error) {
-      console.error("Error minimizing window:", error);
-    }
-  };
-
-  const handleToggleMaximize = async () => {
-    try {
-      await currentWindow?.toggleMaximize();
-      const maximized = await currentWindow?.isMaximized();
-      setIsMaximized(maximized);
-    } catch (error) {
-      console.error("Error toggling maximize:", error);
-    }
-  };
-
-  const handleClose = async () => {
-    try {
-      await currentWindow?.close();
-    } catch (error) {
-      console.error("Error closing window:", error);
-    }
-  };
 
   const handleSidebarViewChange = (view: SidebarView) => {
     openSidebarView(view, { triggerSide: "left" });
@@ -374,38 +306,11 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <div className="flex-1" />
 
         {showCustomWindowControls && (
-          <div className="flex items-center">
-            <Tooltip content="Minimize" side="bottom">
-              <Button
-                onClick={handleMinimize}
-                variant="ghost"
-                className={cn("pointer-events-auto", chromeControl())}
-                compact
-              >
-                <Minus weight="bold" />
-              </Button>
-            </Tooltip>
-            <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
-              <Button
-                onClick={handleToggleMaximize}
-                variant="ghost"
-                className={cn("pointer-events-auto", chromeControl())}
-                compact
-              >
-                {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
-              </Button>
-            </Tooltip>
-            <Tooltip content="Close" side="bottom">
-              <Button
-                onClick={handleClose}
-                variant="danger"
-                className={cn("pointer-events-auto group hover:text-white", chromeControl())}
-                compact
-              >
-                <X weight="bold" />
-              </Button>
-            </Tooltip>
-          </div>
+          <WindowControls
+            currentWindow={currentWindow}
+            isMaximized={isMaximized}
+            onMaximizedChange={setIsMaximized}
+          />
         )}
       </div>
     );
@@ -438,15 +343,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           ) : null}
         </div>
 
-        {/* Center - Project tabs for macOS */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-8 justify-center">
-          <div
-            data-title-bar-project-tabs="true"
-            className="pointer-events-auto flex h-8 items-center"
-          >
-            {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
-          </div>
-        </div>
+        <TitleBarProjectArea mode={titleBarProjectMode} />
 
         {/* Account menu */}
         <div className="flex h-8 items-center">
@@ -494,15 +391,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
       </div>
 
-      {/* Center - Project tabs */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex h-8 justify-center">
-        <div
-          data-title-bar-project-tabs="true"
-          className="pointer-events-auto flex h-8 items-center"
-        >
-          {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
-        </div>
-      </div>
+      <TitleBarProjectArea mode={titleBarProjectMode} />
 
       {/* Right side */}
       <div className="z-20 flex items-center">
@@ -519,38 +408,11 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {showCustomWindowControls && (
-          <div className="flex items-center gap-1">
-            <Tooltip content="Minimize" side="bottom">
-              <Button
-                onClick={handleMinimize}
-                variant="ghost"
-                className={cn("pointer-events-auto", chromeControl())}
-                compact
-              >
-                <Minus weight="bold" />
-              </Button>
-            </Tooltip>
-            <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
-              <Button
-                onClick={handleToggleMaximize}
-                variant="ghost"
-                className={cn("pointer-events-auto", chromeControl())}
-                compact
-              >
-                {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
-              </Button>
-            </Tooltip>
-            <Tooltip content="Close" side="bottom">
-              <Button
-                onClick={handleClose}
-                variant="danger"
-                className={cn("pointer-events-auto group hover:text-white", chromeControl())}
-                compact
-              >
-                <X weight="bold" />
-              </Button>
-            </Tooltip>
-          </div>
+          <WindowControls
+            currentWindow={currentWindow}
+            isMaximized={isMaximized}
+            onMaximizedChange={setIsMaximized}
+          />
         )}
       </div>
       {titleBarContextMenuPortal}

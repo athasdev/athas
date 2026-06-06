@@ -216,7 +216,6 @@ html:not([data-window-transparency="disabled"]) .athas-footer-bar {
   backdrop-filter: var(--athas-macos-glass-chrome-filter);
 }
 
-html:not([data-window-transparency="disabled"]) .athas-title-project-surface,
 html:not([data-window-transparency="disabled"]) [data-title-bar-project-tabs="true"] [role="tab"],
 html:not([data-window-transparency="disabled"]) .athas-title-project-add-button {
   border-color: var(--athas-macos-glass-control-border) !important;

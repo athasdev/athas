@@ -36,7 +36,7 @@ import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
-import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
+import CustomTitleBarWithSettings from "../../window/components/title-bar/custom-title-bar";
 import { TerminalHost } from "@/features/terminal/components/terminal-host";
 import BottomPane from "./bottom-pane/bottom-pane";
 import Footer from "./footer/footer";
