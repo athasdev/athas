@@ -15,7 +15,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -114,7 +114,7 @@ const GitWorktreeManager = ({
 
   const handleRemoveWorktree = async (worktreePath: string, force = false) => {
     if (!repoPath) return;
-    const confirmed = await primitiveConfirm(
+    const confirmed = await showConfirmDialog(
       force
         ? `Force remove worktree at "${worktreePath}"? This can discard uncommitted changes in that checkout.`
         : `Remove worktree at "${worktreePath}"?`,

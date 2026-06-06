@@ -15,7 +15,7 @@ import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
 
@@ -131,7 +131,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       e.preventDefault();
       // External links start with http etc.
       if (anchor.href.startsWith("http")) {
-        const confirmed = await primitiveConfirm(
+        const confirmed = await showConfirmDialog(
           `Do you want to open this external link?\n\n${anchor.href}`,
           { title: "External Link", confirmLabel: "Open" },
         );

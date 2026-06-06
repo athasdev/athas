@@ -5,7 +5,7 @@ import {
   TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { primitiveAlert } from "@/ui/primitive-dialog-service";
+import { showAlertDialog } from "@/features/dialogs/dialog-service";
 import type { Action } from "../models/action.types";
 import type { CommandPaletteViewId } from "../models/view.types";
 
@@ -99,7 +99,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       icon: <Terminal />,
       category: "LSP",
       action: async () => {
-        await primitiveAlert(
+        await showAlertDialog(
           `LSP Status: ${lspStatus.status}\nActive workspaces: ${lspStatus.activeWorkspaces.join(", ") || "None"}\nError: ${lspStatus.lastError || "None"}`,
           "LSP Status",
         );

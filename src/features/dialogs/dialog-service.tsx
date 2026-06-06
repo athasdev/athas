@@ -84,13 +84,13 @@ function enqueue(request: PrimitiveDialogRequest) {
   pendingDialogs.push(request);
 }
 
-export function primitiveAlert(message: ReactNode, title = "Notice"): Promise<void> {
+export function showAlertDialog(message: ReactNode, title = "Notice"): Promise<void> {
   return new Promise((resolve) => {
     enqueue({ id: nextDialogId++, type: "alert", title, message, resolve });
   });
 }
 
-export function primitiveConfirm(
+export function showConfirmDialog(
   message: ReactNode,
   options: PrimitiveConfirmOptions = {},
 ): Promise<boolean> {
@@ -107,7 +107,7 @@ export function primitiveConfirm(
   });
 }
 
-export function primitiveChoice<T extends string>(
+export function showChoiceDialog<T extends string>(
   message: ReactNode,
   options: PrimitiveChoiceOptions<T>,
 ): Promise<T | null> {
@@ -123,7 +123,7 @@ export function primitiveChoice<T extends string>(
   });
 }
 
-export function primitivePrompt(
+export function showPromptDialog(
   message: ReactNode,
   options: PrimitivePromptOptions = {},
 ): Promise<string | null> {
@@ -142,7 +142,7 @@ export function primitivePrompt(
   });
 }
 
-export function PrimitiveDialogProvider({ children }: { children: ReactNode }) {
+export function DialogServiceProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<PrimitiveDialogRequest[]>([]);
 
   useEffect(() => {

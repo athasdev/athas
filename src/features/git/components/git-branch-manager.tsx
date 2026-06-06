@@ -9,7 +9,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
@@ -196,7 +196,7 @@ const GitBranchManager = ({
   const handleDeleteBranch = async (branchName: string) => {
     if (!repoPath || !branchName || branchName === currentBranch) return;
 
-    const confirmed = await primitiveConfirm(
+    const confirmed = await showConfirmDialog(
       `Are you sure you want to delete branch "${branchName}"?`,
       { title: "Delete Branch", confirmLabel: "Delete" },
     );

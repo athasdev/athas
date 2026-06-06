@@ -16,7 +16,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import { SidebarEmptyActionState } from "@/ui/sidebar";
 import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
 import { createStash } from "../../api/git-stash-api";
@@ -284,7 +284,7 @@ const GitStatusPanel = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !(await primitiveConfirm(`Discard changes for "${filePath}"? This cannot be undone.`, {
+      !(await showConfirmDialog(`Discard changes for "${filePath}"? This cannot be undone.`, {
         title: "Discard File Changes",
         confirmLabel: "Discard",
       }))

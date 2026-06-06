@@ -23,7 +23,7 @@ import { useLocalHistoryStore } from "@/features/local-history/store/local-histo
 import { createLocalHistoryDiff } from "@/features/local-history/utils/local-history-diff";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
+import { showPromptDialog } from "@/features/dialogs/dialog-service";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
@@ -154,7 +154,7 @@ export function LocalHistoryCommandContent({
   const createSnapshot = useCallback(async () => {
     if (!targetPath) return;
 
-    const label = await primitivePrompt("Name this local history entry:", {
+    const label = await showPromptDialog("Name this local history entry:", {
       title: "Create Local History Entry",
       placeholder: "Optional name",
       confirmLabel: "Create",
@@ -321,7 +321,7 @@ export function LocalHistoryCommandContent({
     async (entry: LocalHistoryEntry) => {
       if (!targetPath) return;
 
-      const label = await primitivePrompt("Name this local history entry:", {
+      const label = await showPromptDialog("Name this local history entry:", {
         title: "Rename Local History Entry",
         defaultValue: entry.label ?? "",
         placeholder: "Entry name",

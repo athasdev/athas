@@ -19,7 +19,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import Select from "@/ui/select";
 import { toast } from "@/ui/toast";
 import { formatShortDate } from "@/utils/date";
@@ -160,7 +160,7 @@ const GitTagManager = ({
   const handleCheckoutTag = async (tagName: string) => {
     if (!repoPath) return;
     if (
-      !(await primitiveConfirm(`Checkout ${tagName} in detached HEAD?`, {
+      !(await showConfirmDialog(`Checkout ${tagName} in detached HEAD?`, {
         title: "Checkout Tag",
         confirmLabel: "Checkout",
       }))
@@ -483,7 +483,7 @@ const GitTagManager = ({
                     onClick={(event) => {
                       event.stopPropagation();
                       if (!repoPath || !selectedRemoteName) return;
-                      void primitiveConfirm(`Delete ${tag.name} from ${selectedRemoteName}?`, {
+                      void showConfirmDialog(`Delete ${tag.name} from ${selectedRemoteName}?`, {
                         title: "Delete Remote Tag",
                         confirmLabel: "Delete",
                       }).then((confirmed) => {

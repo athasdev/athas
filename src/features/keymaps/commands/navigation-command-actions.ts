@@ -11,7 +11,7 @@ import {
 import { useReferencesStore } from "@/features/references/stores/references-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
+import { showPromptDialog } from "@/features/dialogs/dialog-service";
 import { toast } from "@/ui/toast";
 
 type LspNavigationLocation = {
@@ -115,7 +115,7 @@ async function goToActiveLspLocation(
 }
 
 export async function promptGoToLine(): Promise<void> {
-  const lineText = await primitivePrompt("Go to line", {
+  const lineText = await showPromptDialog("Go to line", {
     title: "Go to Line",
     placeholder: "Line number",
   });

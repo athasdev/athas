@@ -41,7 +41,7 @@ import {
   loadWorkspaceTerminalsFromStorage,
 } from "@/features/terminal/lib/terminal-session-storage";
 import type { PaneContent } from "@/features/panes/types/pane-content";
-import { primitiveAlert, primitivePrompt } from "@/ui/primitive-dialog-service";
+import { showAlertDialog, showPromptDialog } from "@/features/dialogs/dialog-service";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -1566,7 +1566,7 @@ export const useFileSystemStore = createSelectors(
         }
 
         if (!effectiveRootPath) {
-          await primitiveAlert("Unable to determine root folder path", "New File");
+          await showAlertDialog("Unable to determine root folder path", "New File");
           return;
         }
 
@@ -1589,7 +1589,7 @@ export const useFileSystemStore = createSelectors(
       handleCreateNewFileInDirectory: async (dirPath: string, fileName?: string) => {
         if (!fileName) {
           fileName =
-            (await primitivePrompt("Enter the name for the new file:", {
+            (await showPromptDialog("Enter the name for the new file:", {
               title: "New File",
               placeholder: "File name",
             })) ?? undefined;
@@ -1599,7 +1599,7 @@ export const useFileSystemStore = createSelectors(
         const parts = fileName.split("/").filter(Boolean);
         // Validate input
         if (parts.length === 0) {
-          await primitiveAlert("Invalid file name", "New File");
+          await showAlertDialog("Invalid file name", "New File");
           return;
         }
 
@@ -1611,7 +1611,7 @@ export const useFileSystemStore = createSelectors(
 
         // Check all directory parts AND the final filename
         if (parts.some(hasIllegalCharacters) || hasIllegalCharacters(finalFileName)) {
-          await primitiveAlert(
+          await showAlertDialog(
             "Invalid file name: path traversal and special characters are not allowed",
             "New File",
           );
@@ -1638,7 +1638,7 @@ export const useFileSystemStore = createSelectors(
           return await get().createFile(currentPath, finalFileName);
         } catch (error) {
           console.error("Failed to create nested file:", error);
-          await primitiveAlert(
+          await showAlertDialog(
             `Failed to create file: ${error instanceof Error ? error.message : "Unknown error"}`,
             "New File",
           );
@@ -1651,7 +1651,7 @@ export const useFileSystemStore = createSelectors(
         const { activePath } = useSidebarStore.getState();
 
         if (!rootFolderPath) {
-          await primitiveAlert("Please open a folder first", "New Folder");
+          await showAlertDialog("Please open a folder first", "New Folder");
           return;
         }
 
@@ -1666,7 +1666,7 @@ export const useFileSystemStore = createSelectors(
         }
 
         if (!effectiveRootPath) {
-          await primitiveAlert("Unable to determine root folder path", "New Folder");
+          await showAlertDialog("Unable to determine root folder path", "New Folder");
           return;
         }
 
@@ -1687,7 +1687,7 @@ export const useFileSystemStore = createSelectors(
       handleCreateNewFolderInDirectory: async (dirPath: string, folderName?: string) => {
         if (!folderName) {
           folderName =
-            (await primitivePrompt("Enter the name for the new folder:", {
+            (await showPromptDialog("Enter the name for the new folder:", {
               title: "New Folder",
               placeholder: "Folder name",
             })) ?? undefined;

@@ -18,7 +18,7 @@ import {
   resolveSelectPreviousOccurrenceAction,
   type OccurrenceRange,
 } from "@/features/editor/utils/select-next-occurrence";
-import { primitiveChoice } from "@/ui/primitive-dialog-service";
+import { showChoiceDialog } from "@/features/dialogs/dialog-service";
 import { toast } from "@/ui/toast";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 
@@ -546,7 +546,7 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     codeActions.length === 1
       ? codeActions[0]
       : await (async () => {
-          const selected = await primitiveChoice("Choose a quick fix:", {
+          const selected = await showChoiceDialog("Choose a quick fix:", {
             title: "Quick Fix",
             choices: codeActions.slice(0, 8).map((codeAction, index) => ({
               value: String(index),

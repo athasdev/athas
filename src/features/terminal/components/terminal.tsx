@@ -8,7 +8,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import {
   createTerminalAddons,
   injectLinkStyles,
@@ -234,7 +234,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             if (requiresConfirmation) {
               event.preventDefault();
               event.stopImmediatePropagation();
-              void primitiveConfirm(
+              void showConfirmDialog(
                 `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
                 { title: "Paste Into Terminal", confirmLabel: "Paste" },
               ).then((confirmed) => {

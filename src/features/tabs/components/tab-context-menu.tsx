@@ -15,7 +15,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content";
 import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
+import { showPromptDialog } from "@/features/dialogs/dialog-service";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
@@ -75,7 +75,7 @@ const TabContextMenu = ({
             icon: <PencilSimpleLine />,
             onClick: async () => {
               const nextName = (
-                await primitivePrompt("Enter a terminal name:", {
+                await showPromptDialog("Enter a terminal name:", {
                   title: "Rename Terminal",
                   defaultValue: buffer.name,
                   placeholder: "Terminal name",

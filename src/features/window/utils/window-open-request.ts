@@ -132,8 +132,8 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
 
   if (request.type === "terminal") {
     if (shouldConfirmTerminalCommand(request)) {
-      const { primitiveConfirm } = await import("@/ui/primitive-dialog-service");
-      const confirmed = await primitiveConfirm(getTerminalCommandConfirmationMessage(request), {
+      const { showConfirmDialog } = await import("@/features/dialogs/dialog-service");
+      const confirmed = await showConfirmDialog(getTerminalCommandConfirmationMessage(request), {
         title: "Run Terminal Command",
         confirmLabel: "Run Command",
       });

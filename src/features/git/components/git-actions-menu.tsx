@@ -14,7 +14,7 @@ import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/dialog-service";
 import { toast } from "@/ui/toast";
 import {
   fetchChanges,
@@ -136,7 +136,7 @@ const GitActionsMenu = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !(await primitiveConfirm("Discard all unstaged changes? This cannot be undone.", {
+      !(await showConfirmDialog("Discard all unstaged changes? This cannot be undone.", {
         title: "Discard Changes",
         confirmLabel: "Discard",
       }))

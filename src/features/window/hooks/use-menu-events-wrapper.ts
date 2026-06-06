@@ -16,7 +16,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { primitiveAlert } from "@/ui/primitive-dialog-service";
+import { showAlertDialog } from "@/features/dialogs/dialog-service";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
@@ -164,7 +164,7 @@ export function useMenuEventsWrapper() {
             // This would require updating the buffer store with the new file path
           } catch (writeError) {
             console.error("Failed to save file:", writeError);
-            await primitiveAlert("Failed to save file. Please try again.", "Save As");
+            await showAlertDialog("Failed to save file. Please try again.", "Save As");
           }
         }
       } catch (error) {
@@ -253,7 +253,7 @@ export function useMenuEventsWrapper() {
     onToggleVim: async () => {
       // For now, we'll show a notification about vim mode
       console.log("Toggle Vim keybindings");
-      await primitiveAlert(
+      await showAlertDialog(
         "Vim mode is coming soon!\n\nThis will enable vim-style keybindings in the editor for power users.",
         "Vim Mode",
       );
