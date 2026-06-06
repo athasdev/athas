@@ -30,6 +30,7 @@ export interface ThemeRegistryAPI {
   getTheme(id: string): ThemeDefinition | undefined;
   getThemeSource(id: string): ThemeSource | undefined;
   getAllThemes(): ThemeDefinition[];
+  getVersion(): number;
   getThemesByCategory(category: ThemeDefinition["category"]): ThemeDefinition[];
   applyTheme(id: string): void;
   getCurrentTheme(): string | null;

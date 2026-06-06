@@ -4,7 +4,7 @@ import {
   ListIcon as List,
   SparkleIcon as Sparkle,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -37,7 +37,7 @@ import RunActionsButton from "../run-actions-button";
 import { type HeaderItem, orderHeaderItems, placeHeaderItemsBeforeAccount } from "./header-items";
 import { TitleBarProjectArea } from "./title-bar-project-area";
 import { WindowControls } from "./window-controls";
-import CustomMenuBar from "../menu-bar/window-menu-bar";
+import WindowMenuBar from "../window-menu-bar";
 
 interface CustomTitleBarProps {
   title?: string;
@@ -55,7 +55,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { openSidebarView } = useSidebarPaneController();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -245,7 +244,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           <Tooltip content="Menu" side="bottom">
             <TabsList variant="segmented" className={chromeControlGroup()}>
               <Button
-                ref={menuButtonRef}
                 onClick={handleCompactMenuToggle}
                 variant="ghost"
                 compact
@@ -257,15 +255,14 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               </Button>
             </TabsList>
           </Tooltip>
-          <CustomMenuBar
+          <WindowMenuBar
             activeMenu={menuBarActiveMenu}
             setActiveMenu={setMenuBarActiveMenu}
             compactFloating
-            anchorRef={menuButtonRef}
           />
         </div>
       ) : (
-        <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+        <WindowMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
       )
     ) : null;
 

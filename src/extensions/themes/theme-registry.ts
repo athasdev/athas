@@ -8,6 +8,7 @@ class ThemeRegistry implements ThemeRegistryAPI {
   private registryCallbacks = new Set<() => void>();
   private isReady = false;
   private readyCallbacks = new Set<() => void>();
+  private version = 0;
 
   registerTheme(theme: ThemeDefinition, source?: ThemeSource): void {
     this.themes.set(theme.id, theme);
@@ -56,6 +57,10 @@ class ThemeRegistry implements ThemeRegistryAPI {
 
   getAllThemes(): ThemeDefinition[] {
     return Array.from(this.themes.values());
+  }
+
+  getVersion(): number {
+    return this.version;
   }
 
   getThemesByCategory(category: ThemeDefinition["category"]): ThemeDefinition[] {
@@ -121,6 +126,7 @@ class ThemeRegistry implements ThemeRegistryAPI {
   }
 
   private notifyRegistryChange(): void {
+    this.version += 1;
     this.registryCallbacks.forEach((callback) => {
       try {
         callback();

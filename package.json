@@ -65,6 +65,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-menubar": "^1.1.17",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
