@@ -6,7 +6,12 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
-import { PaneChip, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
+import {
+  PaneChip,
+  PaneIconButton,
+  paneHeaderClassName,
+  paneTitleClassName,
+} from "@/features/panes/components/pane-chrome";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
 import ChatHistoryDropdown from "../history/sidebar";

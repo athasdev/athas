@@ -15,7 +15,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { PaneIconButton } from "@/ui/pane";
+import { PaneIconButton } from "@/features/panes/components/pane-chrome";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import {

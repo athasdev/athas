@@ -9,7 +9,11 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { LoadingIndicator } from "@/ui/loading";
-import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import {
+  PaneChip,
+  PaneIconButton,
+  paneHeaderClassName,
+} from "@/features/panes/components/pane-chrome";
 import { useReferencesStore } from "../stores/references-store";
 import type { Reference } from "../types/reference";
 

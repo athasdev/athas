@@ -25,7 +25,11 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
+import {
+  PaneChip,
+  PaneIconButton,
+  paneHeaderClassName,
+} from "@/features/panes/components/pane-chrome";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";

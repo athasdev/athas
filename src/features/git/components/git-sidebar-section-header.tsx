@@ -10,7 +10,7 @@ import {
   paneHeaderClassName,
   paneIconButtonClassName,
   paneTitleClassName,
-} from "@/ui/pane";
+} from "@/features/panes/components/pane-chrome";
 import { cn } from "@/utils/cn";
 
 interface GitSidebarSectionHeaderProps {
