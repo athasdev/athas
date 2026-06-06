@@ -1,19 +1,17 @@
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, type Transition } from "framer-motion";
 import {
   type CSSProperties,
   type ReactNode,
   type RefObject,
-  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
+import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { MagnifyingGlass as Search } from "@phosphor-icons/react";
@@ -24,10 +22,6 @@ export const DROPDOWN_TRIGGER_BASE = cn(
     compact: true,
   }),
   "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
-);
-
-const dropdownRootVariants = cva(
-  "pointer-events-auto fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 const dropdownItemVariants = cva(
@@ -62,35 +56,6 @@ export function dropdownItemClassName(className?: string) {
   return cn(DROPDOWN_ITEM_BASE, className);
 }
 
-function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
-  const root = event.currentTarget;
-  const deltaY = event.deltaY;
-
-  if (deltaY === 0) return;
-
-  let node = event.target instanceof HTMLElement ? event.target : null;
-
-  while (node) {
-    const style = window.getComputedStyle(node);
-    const canScrollY =
-      (style.overflowY === "auto" || style.overflowY === "scroll") &&
-      node.scrollHeight > node.clientHeight;
-
-    if (canScrollY) {
-      const maxScrollTop = node.scrollHeight - node.clientHeight;
-      if ((deltaY < 0 && node.scrollTop > 0) || (deltaY > 0 && node.scrollTop < maxScrollTop)) {
-        return;
-      }
-    }
-
-    if (node === root) break;
-    node = node.parentElement;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-}
-
 export interface MenuItem {
   id: string;
   label: string;
@@ -100,56 +65,6 @@ export interface MenuItem {
   separator?: boolean;
   keybinding?: ReactNode;
   className?: string;
-}
-
-interface MenuPopoverProps {
-  isOpen: boolean;
-  menuRef: RefObject<HTMLDivElement | null>;
-  children: ReactNode;
-  className?: string;
-  portalContainer?: Element | DocumentFragment | null;
-  style?: CSSProperties;
-  animated?: boolean;
-  initial?: { opacity: number; scale: number; y?: number };
-  animate?: { opacity: number; scale: number; y?: number };
-  exit?: { opacity: number; scale: number; y?: number };
-  transition?: Transition;
-}
-
-export function MenuPopover({
-  isOpen,
-  menuRef,
-  children,
-  className,
-  portalContainer,
-  style,
-  animated = true,
-  initial = { opacity: 0, scale: 0.95 },
-  animate = { opacity: 1, scale: 1 },
-  exit = { opacity: 0, scale: 0.95 },
-  transition = { duration: 0.12, ease: "easeOut" as const },
-}: MenuPopoverProps) {
-  if (typeof document === "undefined") return null;
-
-  const node = isOpen ? (
-    <motion.div
-      ref={menuRef}
-      data-prevent-dialog-escape="true"
-      onMouseDown={(event) => event.stopPropagation()}
-      onPointerDown={(event) => event.stopPropagation()}
-      onWheelCapture={containScrollChain}
-      initial={animated ? initial : false}
-      animate={animated ? animate : { opacity: 1, scale: 1, y: 0 }}
-      exit={animated ? exit : { opacity: 1, scale: 1, y: 0 }}
-      transition={animated ? transition : { duration: 0 }}
-      className={cn(dropdownRootVariants(), className)}
-      style={style}
-    >
-      {children}
-    </motion.div>
-  ) : null;
-
-  return createPortal(<AnimatePresence>{node}</AnimatePresence>, portalContainer ?? document.body);
 }
 
 interface MenuItemsListProps {
@@ -244,6 +159,8 @@ interface DropdownBaseProps {
   portalContainer?: Element | DocumentFragment | null;
   closeOnSelect?: boolean;
   animated?: boolean;
+  matchAnchorWidth?: boolean;
+  anchorMinWidth?: number;
 }
 
 interface AnchorPositioning {
@@ -331,6 +248,8 @@ export function Dropdown(props: DropdownProps) {
     portalContainer,
     closeOnSelect = true,
     animated = true,
+    matchAnchorWidth = false,
+    anchorMinWidth = 0,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -394,8 +313,17 @@ export function Dropdown(props: DropdownProps) {
       menu.style.maxHeight = `${nextHeight}px`;
     };
 
+    const applyAnchorWidth = (anchorRect: DOMRect) => {
+      if (!matchAnchorWidth || hasExplicitWidth) return;
+
+      const anchorWidth = Math.round(anchorRect.width);
+      if (Number.isFinite(anchorWidth)) {
+        menu.style.width = `${Math.max(anchorMinWidth, anchorWidth)}px`;
+      }
+    };
+
     const applyLockedWidth = () => {
-      if (hasExplicitWidth) return;
+      if (hasExplicitWidth || matchAnchorWidth) return;
 
       if (lockedWidthRef.current == null) {
         lockedWidthRef.current = menu.getBoundingClientRect().width;
@@ -424,6 +352,7 @@ export function Dropdown(props: DropdownProps) {
 
       const availableHeight = finalSide === "bottom" ? spaceBelow : spaceAbove;
       applyMaxHeight(Math.max(120, Math.min(viewportMaxHeight, availableHeight)));
+      applyAnchorWidth(anchorRect);
       applyLockedWidth();
 
       const menuRect = menu.getBoundingClientRect();
@@ -625,9 +554,9 @@ export function Dropdown(props: DropdownProps) {
     originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
 
   return (
-    <MenuPopover
+    <PopoverContent
       isOpen={isOpen}
-      menuRef={menuRef}
+      contentRef={menuRef}
       portalContainer={portalContainer}
       className={className}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
@@ -677,6 +606,6 @@ export function Dropdown(props: DropdownProps) {
             </div>
           ))}
       </div>
-    </MenuPopover>
+    </PopoverContent>
   );
 }

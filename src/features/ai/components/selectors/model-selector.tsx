@@ -18,7 +18,6 @@ import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
 } from "../input/chat-composer-control-styles";
-import { getSelectorDropdownWidth } from "./selector-dropdown-width";
 
 type SelectorModel = {
   id: string;
@@ -209,29 +208,6 @@ export function ModelSelector({
     }
     return indexes;
   }, [canUseCustomQueryModel, filteredModels, isPro]);
-  const dropdownWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: canUseCustomQueryModel
-          ? [...filteredModels.map((model) => model.name), customQueryModelId]
-          : filteredModels.map((model) => model.name),
-        min: isComposer ? 156 : 160,
-        max: isComposer ? 260 : 300,
-        chrome: 58,
-      }),
-    [canUseCustomQueryModel, customQueryModelId, filteredModels, isComposer],
-  );
-  const openTriggerWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: [currentModelName],
-        min: isComposer ? 120 : 180,
-        max: isComposer ? 176 : 260,
-        chrome: isComposer ? 24 : 36,
-      }),
-    [currentModelName, isComposer],
-  );
-
   useEffect(() => {
     if (!isOpen) return;
     const currentIndex = filteredModels.findIndex((model) => model.id === modelId);
@@ -333,7 +309,6 @@ export function ModelSelector({
             triggerClass,
             "cursor-text text-left outline-none placeholder:text-text",
           )}
-          style={{ width: openTriggerWidth }}
         />
       ) : (
         <Button
@@ -366,7 +341,9 @@ export function ModelSelector({
             : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
-        style={{ maxHeight: "280px", minWidth: 0, width: dropdownWidth }}
+        style={{ maxHeight: "280px", minWidth: 0 }}
+        matchAnchorWidth
+        anchorMinWidth={isComposer ? 260 : 0}
         animated={!isComposer}
       >
         <div

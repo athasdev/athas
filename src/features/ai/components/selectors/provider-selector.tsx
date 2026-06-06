@@ -10,7 +10,6 @@ import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
 } from "../input/chat-composer-control-styles";
-import { getSelectorDropdownWidth } from "./selector-dropdown-width";
 
 interface ProviderSelectorProps {
   providerId: string;
@@ -68,27 +67,6 @@ export function ProviderSelector({
     return providers.filter((provider) => matchesSearchQuery(query, [provider.name, provider.id]));
   }, [providers, query]);
   const currentProviderName = currentProvider?.name || providerId;
-  const dropdownWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: filteredProviders.map((provider) => provider.name),
-        min: isComposer ? 112 : 128,
-        max: isComposer ? 220 : 240,
-        chrome: 62,
-      }),
-    [filteredProviders, isComposer],
-  );
-  const openTriggerWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: [currentProviderName],
-        min: isComposer ? 96 : 160,
-        max: isComposer ? 128 : 220,
-        chrome: isComposer ? 34 : 48,
-      }),
-    [currentProviderName, isComposer],
-  );
-
   useEffect(() => {
     if (!isOpen) return;
     const currentIndex = filteredProviders.findIndex((provider) => provider.id === providerId);
@@ -161,7 +139,6 @@ export function ProviderSelector({
             triggerClass,
             "cursor-text",
           )}
-          style={{ width: openTriggerWidth }}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={() => triggerInputRef.current?.focus()}
         >
@@ -218,7 +195,9 @@ export function ProviderSelector({
             : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
-        style={{ maxHeight: "260px", minWidth: 0, width: dropdownWidth }}
+        style={{ maxHeight: "260px", minWidth: 0 }}
+        matchAnchorWidth
+        anchorMinWidth={isComposer ? 220 : 0}
         animated={!isComposer}
       >
         <div
