@@ -1,113 +1,163 @@
-import * as MenubarPrimitive from "@radix-ui/react-menubar";
+import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import * as React from "react";
 import { cn } from "@/utils/cn";
 
-function Menubar({ className, ...props }: React.ComponentProps<typeof MenubarPrimitive.Root>) {
+interface MenubarContextValue {
+  value: string;
+  onValueChange: (value: string) => void;
+}
+
+const MenubarContext = React.createContext<MenubarContextValue>({
+  value: "",
+  onValueChange: () => {},
+});
+
+type MenubarProps = React.ComponentProps<typeof BaseMenubar> & {
+  value?: string;
+  onValueChange?: (value: string) => void;
+};
+
+function Menubar({ className, value = "", onValueChange, ...props }: MenubarProps) {
+  const contextValue = React.useMemo(
+    () => ({
+      value,
+      onValueChange: onValueChange ?? (() => {}),
+    }),
+    [onValueChange, value],
+  );
+
   return (
-    <MenubarPrimitive.Root
-      data-slot="menubar"
-      className={cn(
-        "flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65 px-0.5 py-0.5",
-        className,
-      )}
+    <MenubarContext.Provider value={contextValue}>
+      <BaseMenubar
+        data-slot="menubar"
+        className={cn(
+          "flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65 px-0.5 py-0.5",
+          className,
+        )}
+        {...props}
+      />
+    </MenubarContext.Provider>
+  );
+}
+
+type MenubarMenuProps = Omit<React.ComponentProps<typeof Menu.Root>, "open" | "onOpenChange"> & {
+  value: string;
+  onOpenChange?: React.ComponentProps<typeof Menu.Root>["onOpenChange"];
+};
+
+function MenubarMenu({ value, onOpenChange, ...props }: MenubarMenuProps) {
+  const menubar = React.useContext(MenubarContext);
+
+  return (
+    <Menu.Root
+      data-slot="menubar-menu"
+      open={menubar.value === value}
+      onOpenChange={(open, eventDetails) => {
+        onOpenChange?.(open, eventDetails);
+        if (eventDetails.isCanceled) return;
+
+        if (open) {
+          menubar.onValueChange(value);
+        } else if (menubar.value === value) {
+          menubar.onValueChange("");
+        }
+      }}
       {...props}
     />
   );
 }
 
-function MenubarMenu({ ...props }: React.ComponentProps<typeof MenubarPrimitive.Menu>) {
-  return <MenubarPrimitive.Menu data-slot="menubar-menu" {...props} />;
+function MenubarGroup({ ...props }: React.ComponentProps<typeof Menu.Group>) {
+  return <Menu.Group data-slot="menubar-group" {...props} />;
 }
 
-function MenubarGroup({ ...props }: React.ComponentProps<typeof MenubarPrimitive.Group>) {
-  return <MenubarPrimitive.Group data-slot="menubar-group" {...props} />;
+function MenubarPortal({ ...props }: React.ComponentProps<typeof Menu.Portal>) {
+  return <Menu.Portal data-slot="menubar-portal" {...props} />;
 }
 
-function MenubarPortal({ ...props }: React.ComponentProps<typeof MenubarPrimitive.Portal>) {
-  return <MenubarPrimitive.Portal data-slot="menubar-portal" {...props} />;
-}
-
-function MenubarTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Trigger>) {
+function MenubarTrigger({ className, ...props }: React.ComponentProps<typeof Menu.Trigger>) {
   return (
-    <MenubarPrimitive.Trigger
+    <Menu.Trigger
       data-slot="menubar-trigger"
+      openOnHover
       className={cn(
-        "ui-font ui-text-sm flex h-5 select-none items-center rounded-md px-1.5 text-text-lighter outline-none transition-colors hover:bg-hover/50 hover:text-text focus:bg-hover/50 focus:text-text data-[state=open]:bg-hover/80 data-[state=open]:text-text",
+        "ui-font ui-text-sm flex h-5 select-none items-center rounded-md px-1.5 text-text-lighter outline-none transition-colors hover:bg-hover/50 hover:text-text focus:bg-hover/50 focus:text-text data-[popup-open]:bg-hover/80 data-[popup-open]:text-text",
         className,
       )}
       {...props}
     />
   );
 }
+
+type MenubarContentProps = React.ComponentProps<typeof Menu.Popup> & {
+  align?: React.ComponentProps<typeof Menu.Positioner>["align"];
+  alignOffset?: React.ComponentProps<typeof Menu.Positioner>["alignOffset"];
+  side?: React.ComponentProps<typeof Menu.Positioner>["side"];
+  sideOffset?: React.ComponentProps<typeof Menu.Positioner>["sideOffset"];
+  collisionPadding?: React.ComponentProps<typeof Menu.Positioner>["collisionPadding"];
+};
 
 function MenubarContent({
   className,
   align = "start",
   alignOffset = -4,
+  side = "bottom",
   sideOffset = 4,
+  collisionPadding = 8,
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Content>) {
+}: MenubarContentProps) {
   return (
-    <MenubarPrimitive.Portal>
-      <MenubarPrimitive.Content
-        data-slot="menubar-content"
+    <Menu.Portal>
+      <Menu.Positioner
         align={align}
         alignOffset={alignOffset}
+        side={side}
         sideOffset={sideOffset}
-        className={cn(
-          "z-[10031] w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-          "data-[side=bottom]:animate-in data-[side=bottom]:fade-in-0 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
-          className,
-        )}
-        {...props}
-      />
-    </MenubarPrimitive.Portal>
+        collisionPadding={collisionPadding}
+      >
+        <Menu.Popup
+          data-slot="menubar-content"
+          className={cn(
+            "z-[10031] w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+            "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[side=bottom]:data-[starting-style]:-translate-y-1 data-[side=left]:data-[starting-style]:translate-x-1 data-[side=right]:data-[starting-style]:-translate-x-1 data-[side=top]:data-[starting-style]:translate-y-1 transition-[opacity,transform] duration-100",
+            className,
+          )}
+          {...props}
+        />
+      </Menu.Positioner>
+    </Menu.Portal>
   );
 }
 
-type MenubarItemProps = Omit<React.ComponentProps<typeof MenubarPrimitive.Item>, "onClick"> & {
+type MenubarItemProps = Omit<React.ComponentProps<typeof Menu.Item>, "onClick"> & {
   shortcut?: string;
   onClick?: () => void;
 };
 
-function MenubarItem({
-  className,
-  shortcut,
-  onClick,
-  onSelect,
-  children,
-  ...props
-}: MenubarItemProps) {
+function MenubarItem({ className, shortcut, onClick, children, ...props }: MenubarItemProps) {
   return (
-    <MenubarPrimitive.Item
+    <Menu.Item
       data-slot="menubar-item"
       className={cn(
-        "ui-font ui-text-sm flex min-h-7 cursor-default select-none items-center justify-between gap-6 rounded-lg px-2.5 py-1.5 text-text outline-none transition-colors focus:bg-hover focus:text-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "ui-font ui-text-sm flex min-h-7 cursor-default select-none items-center justify-between gap-6 rounded-lg px-2.5 py-1.5 text-text outline-none transition-colors focus:bg-hover focus:text-text data-[highlighted]:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
-      onSelect={(event) => {
-        onSelect?.(event);
+      {...props}
+      onClick={(event) => {
         if (event.defaultPrevented) return;
         onClick?.();
       }}
-      {...props}
     >
       <span className="min-w-0 truncate whitespace-nowrap">{children}</span>
       {shortcut ? <MenubarShortcut>{shortcut}</MenubarShortcut> : null}
-    </MenubarPrimitive.Item>
+    </Menu.Item>
   );
 }
 
-function MenubarSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Separator>) {
+function MenubarSeparator({ className, ...props }: React.ComponentProps<typeof Menu.Separator>) {
   return (
-    <MenubarPrimitive.Separator
+    <Menu.Separator
       data-slot="menubar-separator"
       className={cn("-mx-1 my-1 h-px bg-border", className)}
       {...props}
@@ -125,46 +175,60 @@ function MenubarShortcut({ className, ...props }: React.ComponentProps<"span">) 
   );
 }
 
-function MenubarSub({ ...props }: React.ComponentProps<typeof MenubarPrimitive.Sub>) {
-  return <MenubarPrimitive.Sub data-slot="menubar-sub" {...props} />;
+function MenubarSub({ ...props }: React.ComponentProps<typeof Menu.SubmenuRoot>) {
+  return <Menu.SubmenuRoot data-slot="menubar-sub" {...props} />;
 }
 
 function MenubarSubTrigger({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.SubTrigger>) {
+}: React.ComponentProps<typeof Menu.SubmenuTrigger>) {
   return (
-    <MenubarPrimitive.SubTrigger
+    <Menu.SubmenuTrigger
       data-slot="menubar-sub-trigger"
+      openOnHover
       className={cn(
-        "ui-font ui-text-sm flex min-h-7 cursor-default select-none items-center rounded-lg px-2.5 py-1.5 text-text outline-none transition-colors focus:bg-hover focus:text-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "ui-font ui-text-sm flex min-h-7 cursor-default select-none items-center rounded-lg px-2.5 py-1.5 text-text outline-none transition-colors focus:bg-hover focus:text-text data-[highlighted]:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
     >
       <span className="min-w-0 flex-1 truncate whitespace-nowrap">{children}</span>
       <CaretRightIcon className="ml-2 size-4 shrink-0 text-text-lighter" />
-    </MenubarPrimitive.SubTrigger>
+    </Menu.SubmenuTrigger>
   );
 }
 
+type MenubarSubContentProps = MenubarContentProps;
+
 function MenubarSubContent({
   className,
+  align = "start",
+  side = "right",
+  sideOffset = 4,
+  collisionPadding = 8,
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.SubContent>) {
+}: MenubarSubContentProps) {
   return (
-    <MenubarPrimitive.Portal>
-      <MenubarPrimitive.SubContent
-        data-slot="menubar-sub-content"
-        className={cn(
-          "z-[10050] w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-          "data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1",
-          className,
-        )}
-        {...props}
-      />
-    </MenubarPrimitive.Portal>
+    <Menu.Portal>
+      <Menu.Positioner
+        align={align}
+        side={side}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+      >
+        <Menu.Popup
+          data-slot="menubar-sub-content"
+          className={cn(
+            "z-[10050] w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+            "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[side=left]:data-[starting-style]:translate-x-1 data-[side=right]:data-[starting-style]:-translate-x-1 transition-[opacity,transform] duration-100",
+            className,
+          )}
+          {...props}
+        />
+      </Menu.Positioner>
+    </Menu.Portal>
   );
 }
 

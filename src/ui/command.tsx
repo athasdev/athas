@@ -1,4 +1,4 @@
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
@@ -82,30 +82,35 @@ const Command = ({
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
             <div className={containerClassName}>
-              <DialogPrimitive.Overlay asChild>
-                <motion.button
-                  type="button"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-0 z-0 cursor-default bg-black/20"
-                  aria-label="Close command palette"
-                  tabIndex={-1}
-                />
-              </DialogPrimitive.Overlay>
-              <DialogPrimitive.Content asChild aria-describedby={undefined}>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: motionY }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: motionY }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className={cn(commandContentVariants(), className)}
-                >
-                  <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-                  {children}
-                </motion.div>
-              </DialogPrimitive.Content>
+              <DialogPrimitive.Backdrop
+                render={
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  />
+                }
+                className="absolute inset-0 z-0 cursor-default bg-black/20"
+                aria-label="Close command palette"
+                tabIndex={-1}
+              />
+              <DialogPrimitive.Popup
+                aria-describedby={undefined}
+                render={
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: motionY }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: motionY }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                  />
+                }
+                className={cn(commandContentVariants(), className)}
+              >
+                <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+                {children}
+              </DialogPrimitive.Popup>
             </div>
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>

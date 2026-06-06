@@ -1,4 +1,4 @@
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { motion } from "framer-motion";
 import { type IconProps as PhosphorIconProps, XIcon as X } from "@phosphor-icons/react";
@@ -59,83 +59,88 @@ const Dialog = ({
   classNames,
 }: DialogProps) => {
   return (
-    <DialogPrimitive.Root open onOpenChange={(open) => !open && onClose()}>
+    <DialogPrimitive.Root
+      open
+      onOpenChange={(open, eventDetails) => {
+        if (open) return;
+
+        if (eventDetails.reason === "escape-key") {
+          const target = eventDetails.event.target as HTMLElement | null;
+          const activeElement =
+            typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+          const { dismissTarget, blurTarget } = resolveEscapeGuard(target, activeElement);
+
+          if (dismissTarget) {
+            eventDetails.cancel();
+            return;
+          }
+
+          if (blurTarget) {
+            eventDetails.cancel();
+            blurTarget.blur();
+            return;
+          }
+        }
+
+        onClose();
+      }}
+    >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay asChild>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className={cn("fixed inset-0 z-[9998] bg-black/20", classNames?.backdrop)}
-          />
-        </DialogPrimitive.Overlay>
+        <DialogPrimitive.Backdrop
+          render={
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            />
+          }
+          className={cn("fixed inset-0 z-[9998] bg-black/20", classNames?.backdrop)}
+        />
 
-        <DialogPrimitive.Content
-          asChild
+        <DialogPrimitive.Popup
           aria-describedby={undefined}
-          onEscapeKeyDown={(event) => {
-            const target = event.target as HTMLElement | null;
-            const activeElement =
-              typeof document !== "undefined"
-                ? (document.activeElement as HTMLElement | null)
-                : null;
-            const { dismissTarget, blurTarget } = resolveEscapeGuard(target, activeElement);
-
-            if (event.defaultPrevented || dismissTarget) {
-              event.preventDefault();
-              return;
-            }
-
-            if (blurTarget) {
-              event.preventDefault();
-              blurTarget.blur();
-              return;
-            }
-            onClose();
-          }}
+          render={
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            />
+          }
+          data-dialog-content=""
+          className={cn(dialogContentVariants({ size }), classNames?.modal)}
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            data-dialog-content=""
-            className={cn(dialogContentVariants({ size }), classNames?.modal)}
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
+              classNames?.header,
+            )}
           >
-            <div
-              className={cn(
-                "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
-                classNames?.header,
-              )}
-            >
-              <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
-                {Icon && <Icon className="text-text-lighter" />}
-                <DialogPrimitive.Title className="min-w-0 ui-font ui-text-base font-medium text-text">
-                  {title}
-                </DialogPrimitive.Title>
-              </div>
-
-              <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
-                {headerActions}
-                <DialogPrimitive.Close asChild>
-                  <button
-                    className="flex size-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
-                    aria-label="Close dialog"
-                  >
-                    <X />
-                  </button>
-                </DialogPrimitive.Close>
-              </div>
+            <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
+              {Icon && <Icon className="text-text-lighter" />}
+              <DialogPrimitive.Title className="min-w-0 ui-font ui-text-base font-medium text-text">
+                {title}
+              </DialogPrimitive.Title>
             </div>
 
-            <div className={cn("flex-1 overflow-y-auto p-4", classNames?.content)}>{children}</div>
+            <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
+              {headerActions}
+              <DialogPrimitive.Close
+                className="flex size-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+                aria-label="Close dialog"
+              >
+                <X />
+              </DialogPrimitive.Close>
+            </div>
+          </div>
 
-            {footer && (
-              <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>
-            )}
-          </motion.div>
-        </DialogPrimitive.Content>
+          <div className={cn("flex-1 overflow-y-auto p-4", classNames?.content)}>{children}</div>
+
+          {footer && (
+            <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>
+          )}
+        </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
