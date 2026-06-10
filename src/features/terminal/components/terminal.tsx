@@ -1,7 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
@@ -40,7 +47,7 @@ interface XtermTerminalProps {
   remoteConnectionId?: string;
 }
 
-export const XtermTerminal: React.FC<XtermTerminalProps> = ({
+export const XtermTerminal = ({
   sessionId,
   isActive,
   isVisible = true,
@@ -50,7 +57,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   initialCommand,
   workingDirectory,
   remoteConnectionId,
-}) => {
+}: XtermTerminalProps) => {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const addonsRef = useRef<TerminalAddons | null>(null);
@@ -137,7 +144,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   });
 
   const handleTerminalFileDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+    (event: DragEvent<HTMLDivElement>) => {
       const paths = extractDroppedFilePaths(event.dataTransfer);
       const text = formatDroppedPathsForTerminal(paths);
       if (!text) return;
@@ -150,7 +157,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     [writeBuffered],
   );
 
-  const handleTerminalDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleTerminalDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     if (!Array.from(event.dataTransfer.types).includes("Files")) return;
     event.preventDefault();
     event.stopPropagation();
@@ -727,7 +734,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     xtermRef.current?.focus();
   }, [clearSearch]);
 
-  React.useImperativeHandle(
+  useImperativeHandle(
     getSession(sessionId)?.ref,
     () => ({
       terminal: xtermRef.current,

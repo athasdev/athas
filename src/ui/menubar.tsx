@@ -1,6 +1,6 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { CaretRightIcon } from "@phosphor-icons/react";
-import * as React from "react";
+import { createContext, useContext, useMemo, type ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
 interface MenubarContextValue {
@@ -8,18 +8,18 @@ interface MenubarContextValue {
   onValueChange: (value: string) => void;
 }
 
-const MenubarContext = React.createContext<MenubarContextValue>({
+const MenubarContext = createContext<MenubarContextValue>({
   value: "",
   onValueChange: () => {},
 });
 
-type MenubarProps = React.ComponentProps<typeof BaseMenubar> & {
+type MenubarProps = ComponentProps<typeof BaseMenubar> & {
   value?: string;
   onValueChange?: (value: string) => void;
 };
 
 function Menubar({ className, value = "", onValueChange, ...props }: MenubarProps) {
-  const contextValue = React.useMemo(
+  const contextValue = useMemo(
     () => ({
       value,
       onValueChange: onValueChange ?? (() => {}),
@@ -41,13 +41,13 @@ function Menubar({ className, value = "", onValueChange, ...props }: MenubarProp
   );
 }
 
-type MenubarMenuProps = Omit<React.ComponentProps<typeof Menu.Root>, "open" | "onOpenChange"> & {
+type MenubarMenuProps = Omit<ComponentProps<typeof Menu.Root>, "open" | "onOpenChange"> & {
   value: string;
-  onOpenChange?: React.ComponentProps<typeof Menu.Root>["onOpenChange"];
+  onOpenChange?: ComponentProps<typeof Menu.Root>["onOpenChange"];
 };
 
 function MenubarMenu({ value, onOpenChange, ...props }: MenubarMenuProps) {
-  const menubar = React.useContext(MenubarContext);
+  const menubar = useContext(MenubarContext);
 
   return (
     <Menu.Root
@@ -68,15 +68,15 @@ function MenubarMenu({ value, onOpenChange, ...props }: MenubarMenuProps) {
   );
 }
 
-function MenubarGroup({ ...props }: React.ComponentProps<typeof Menu.Group>) {
+function MenubarGroup({ ...props }: ComponentProps<typeof Menu.Group>) {
   return <Menu.Group data-slot="menubar-group" {...props} />;
 }
 
-function MenubarPortal({ ...props }: React.ComponentProps<typeof Menu.Portal>) {
+function MenubarPortal({ ...props }: ComponentProps<typeof Menu.Portal>) {
   return <Menu.Portal data-slot="menubar-portal" {...props} />;
 }
 
-function MenubarTrigger({ className, ...props }: React.ComponentProps<typeof Menu.Trigger>) {
+function MenubarTrigger({ className, ...props }: ComponentProps<typeof Menu.Trigger>) {
   return (
     <Menu.Trigger
       data-slot="menubar-trigger"
@@ -90,12 +90,12 @@ function MenubarTrigger({ className, ...props }: React.ComponentProps<typeof Men
   );
 }
 
-type MenubarContentProps = React.ComponentProps<typeof Menu.Popup> & {
-  align?: React.ComponentProps<typeof Menu.Positioner>["align"];
-  alignOffset?: React.ComponentProps<typeof Menu.Positioner>["alignOffset"];
-  side?: React.ComponentProps<typeof Menu.Positioner>["side"];
-  sideOffset?: React.ComponentProps<typeof Menu.Positioner>["sideOffset"];
-  collisionPadding?: React.ComponentProps<typeof Menu.Positioner>["collisionPadding"];
+type MenubarContentProps = ComponentProps<typeof Menu.Popup> & {
+  align?: ComponentProps<typeof Menu.Positioner>["align"];
+  alignOffset?: ComponentProps<typeof Menu.Positioner>["alignOffset"];
+  side?: ComponentProps<typeof Menu.Positioner>["side"];
+  sideOffset?: ComponentProps<typeof Menu.Positioner>["sideOffset"];
+  collisionPadding?: ComponentProps<typeof Menu.Positioner>["collisionPadding"];
 };
 
 function MenubarContent({
@@ -130,7 +130,7 @@ function MenubarContent({
   );
 }
 
-type MenubarItemProps = Omit<React.ComponentProps<typeof Menu.Item>, "onClick"> & {
+type MenubarItemProps = Omit<ComponentProps<typeof Menu.Item>, "onClick"> & {
   shortcut?: string;
   onClick?: () => void;
 };
@@ -155,7 +155,7 @@ function MenubarItem({ className, shortcut, onClick, children, ...props }: Menub
   );
 }
 
-function MenubarSeparator({ className, ...props }: React.ComponentProps<typeof Menu.Separator>) {
+function MenubarSeparator({ className, ...props }: ComponentProps<typeof Menu.Separator>) {
   return (
     <Menu.Separator
       data-slot="menubar-separator"
@@ -165,7 +165,7 @@ function MenubarSeparator({ className, ...props }: React.ComponentProps<typeof M
   );
 }
 
-function MenubarShortcut({ className, ...props }: React.ComponentProps<"span">) {
+function MenubarShortcut({ className, ...props }: ComponentProps<"span">) {
   return (
     <span
       data-slot="menubar-shortcut"
@@ -175,7 +175,7 @@ function MenubarShortcut({ className, ...props }: React.ComponentProps<"span">) 
   );
 }
 
-function MenubarSub({ ...props }: React.ComponentProps<typeof Menu.SubmenuRoot>) {
+function MenubarSub({ ...props }: ComponentProps<typeof Menu.SubmenuRoot>) {
   return <Menu.SubmenuRoot data-slot="menubar-sub" {...props} />;
 }
 
@@ -183,7 +183,7 @@ function MenubarSubTrigger({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof Menu.SubmenuTrigger>) {
+}: ComponentProps<typeof Menu.SubmenuTrigger>) {
   return (
     <Menu.SubmenuTrigger
       data-slot="menubar-sub-trigger"
