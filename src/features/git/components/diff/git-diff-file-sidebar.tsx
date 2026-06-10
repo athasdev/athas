@@ -172,7 +172,7 @@ export const GitDiffFileSidebar = memo(function GitDiffFileSidebar({
   return (
     <aside
       className={cn(
-        "min-h-0 w-56 shrink-0 overflow-auto border-border border-r bg-secondary-bg/20 px-1 py-2",
+        "m-2 mr-0 min-h-0 w-56 shrink-0 overflow-auto rounded-md border border-border/70 bg-secondary-bg/20 p-1",
         className,
       )}
       aria-label={ariaLabel}

@@ -841,7 +841,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         ) : null}
 
         <div
-          className="min-h-0 flex-1 overflow-auto px-2 pb-2"
+          className="min-h-0 flex-1 overflow-auto px-2 pt-2 pb-2"
           style={{ overflowAnchor: "none" }}
           data-diff-stack-scroll-container
           onWheelCapture={handleStackWheelCapture}
