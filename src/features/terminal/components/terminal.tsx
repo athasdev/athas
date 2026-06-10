@@ -197,6 +197,23 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
       terminal.open(terminalContainerRef.current);
       terminal.attachCustomKeyEventHandler((event) => {
+        if (
+          event.type === "keydown" &&
+          event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          !event.shiftKey &&
+          (event.key === "PageUp" || event.key === "PageDown")
+        ) {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("terminal-switch-tab", {
+              detail: event.key === "PageDown" ? "next" : "prev",
+            }),
+          );
+          return false;
+        }
+
         if (event.ctrlKey && !event.metaKey) return true;
         if (
           event.metaKey &&
